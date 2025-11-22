@@ -48,7 +48,7 @@ This regenerates all code from the DSL. Generated artifacts live in `build/`.
 ### 3. Run the application
 ```bash
 # If using Docker stack:
-cd build/infra_docker
+cd build/docker
 docker compose up
 
 # If using Django directly:
@@ -164,8 +164,8 @@ Backends generate concrete artifacts from AppSpec:
 - `django_api` → Django REST Framework
 - `nextjs_frontend` → Next.js app with TypeScript
 - `openapi` → OpenAPI 3.0 specification
-- `infra_docker` → Docker Compose setup
-- `infra_terraform` → Terraform infrastructure
+- `docker` → Docker Compose setup
+- `terraform` → Terraform infrastructure
 
 ### 4. Stacks
 Stacks are preset combinations of backends:
@@ -271,8 +271,8 @@ Generates:
 - Includes schemas, paths, responses
 
 ### Infrastructure Backends
-- `infra_docker` → Dockerfile, compose.yaml
-- `infra_terraform` → Terraform modules for AWS
+- `docker` → Dockerfile, compose.yaml
+- `terraform` → Terraform modules for AWS
 
 ## Common Patterns
 
@@ -447,7 +447,7 @@ dazzle build --force  # Full rebuild
 When testing:
 ```bash
 cd build/django_api && python manage.py runserver  # If Django
-cd build/infra_docker && docker compose up         # If Docker
+cd build/docker && docker compose up         # If Docker
 ```
 
 ## This Project's Specifics

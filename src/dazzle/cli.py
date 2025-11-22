@@ -80,7 +80,7 @@ Command Types:
   • Project Creation: init, clone, demo
     → Create NEW directories with project structure
 
-  • Project Operations: validate, build, lint, backends, infra
+  • Project Operations: validate, build, lint, stacks
     → Operate in CURRENT directory (must have dazzle.toml)
 """,
     no_args_is_help=True,
@@ -161,7 +161,7 @@ def init(
             typer.echo("  # 1. Edit SPEC.md with your project requirements")
             typer.echo("  # 2. Work with an AI assistant to create DSL from your spec")
         typer.echo("  dazzle validate")
-        typer.echo("  dazzle build  # Uses django_micro_modular by default")
+        typer.echo("  dazzle build  # Uses 'micro' stack by default")
 
     except InitError as e:
         typer.echo(f"Initialization failed: {e}", err=True)
@@ -253,61 +253,88 @@ def lint(
 
 
 @app.command()
+def stacks() -> None:
+    """
+    List all available stacks (technology combinations).
+
+    Shows both preset stacks and available stack implementations.
+
+    ⚠ No directory required - shows available options.
+    """
+    from dazzle.stacks import list_backends, get_backend
+    from dazzle.core.stacks import list_stack_presets, get_stack_preset
+
+    # Show preset stacks first
+    presets = list_stack_presets()
+    if presets:
+        typer.echo("Preset Stacks:\n")
+        for preset_name in presets:
+            preset = get_stack_preset(preset_name)
+            if preset:
+                typer.echo(f"  {preset_name}")
+                typer.echo(f"    {preset.description}")
+                typer.echo(f"    Implementations: {', '.join(preset.backends)}")
+                typer.echo()
+
+    # Show available stack implementations
+    available = list_backends()
+    if available:
+        typer.echo("Stack Implementations:\n")
+        for name in sorted(available):
+            try:
+                backend = get_backend(name)
+                capabilities = backend.get_capabilities()
+                typer.echo(f"  {name}")
+                typer.echo(f"    {capabilities.description}")
+                typer.echo(f"    Formats: {', '.join(capabilities.output_formats)}")
+            except Exception:
+                typer.echo(f"  {name}")
+                typer.echo(f"    (Error loading implementation)")
+
+
+@app.command()
 def backends() -> None:
     """
+    DEPRECATED: Use 'dazzle stacks' instead.
+
     List all available backends.
-
-    ⚠ No directory required - shows available backend plugins.
     """
-    from dazzle.backends import list_backends, get_backend
-
-    available = list_backends()
-
-    if not available:
-        typer.echo("No backends available.")
-        return
-
-    typer.echo("Available backends:\n")
-    for name in sorted(available):
-        try:
-            backend = get_backend(name)
-            capabilities = backend.get_capabilities()
-            typer.echo(f"  {name}")
-            typer.echo(f"    {capabilities.description}")
-            typer.echo(f"    Formats: {', '.join(capabilities.output_formats)}")
-        except Exception:
-            typer.echo(f"  {name}")
-            typer.echo(f"    (Error loading backend)")
+    typer.echo("⚠️  'dazzle backends' is deprecated. Use 'dazzle stacks' instead.\n")
+    # Delegate to stacks command
+    from dazzle.cli import stacks as stacks_cmd
+    stacks_cmd()
 
 
 @app.command()
 def build(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    backend: Optional[str] = typer.Option(None, "--backend", "-b", help="Single backend (legacy, use --backends)"),
-    backends: Optional[str] = typer.Option(None, "--backends", help="Comma-separated backend list"),
-    stack: Optional[str] = typer.Option(None, "--stack", help="Use a stack preset"),
+    stack: Optional[str] = typer.Option(None, "--stack", "-s", help="Stack preset or comma-separated list (e.g., 'micro' or 'django_api,nextjs')"),
+    backend: Optional[str] = typer.Option(None, "--backend", "-b", help="DEPRECATED: Use --stack instead"),
+    backends: Optional[str] = typer.Option(None, "--backends", help="DEPRECATED: Use --stack instead"),
     out: str = typer.Option("./build", "--out", "-o", help="Output directory"),
     incremental: bool = typer.Option(False, "--incremental", "-i", help="Incremental build (only regenerate changed parts)"),
     force: bool = typer.Option(False, "--force", help="Force full rebuild (ignore previous state)"),
     diff: bool = typer.Option(False, "--diff", help="Show what would change without building"),
 ) -> None:
     """
-    Generate artefacts from the merged AppSpec using backend(s) or stack.
+    Generate artifacts from the merged AppSpec using a stack.
 
     ⚠ Operates in CURRENT directory (must contain dazzle.toml).
 
-    By default, uses the stack defined in dazzle.toml. You can override with
-    --stack, --backends, or --backend flags.
+    A stack can be a preset name (like 'micro', 'django_next') or a custom
+    comma-separated list of stack implementations.
+
+    By default, uses the stack defined in dazzle.toml or falls back to 'micro'.
 
     Examples:
-        dazzle build                              # Use default (django_micro_modular)
-        dazzle build --stack django_next          # Use specific stack
-        dazzle build --backends django_api,nextjs # Build multiple backends
-        dazzle build --backend openapi            # Single backend (legacy)
-        dazzle build --incremental                # Incremental build
-        dazzle build --diff                       # Show changes without building
+        dazzle build                                    # Use default stack (micro)
+        dazzle build --stack django_next                # Use preset stack
+        dazzle build --stack openapi                    # Single-implementation stack
+        dazzle build --stack django_api,nextjs,docker   # Custom stack
+        dazzle build --incremental                      # Incremental build
+        dazzle build --diff                             # Show changes without building
     """
-    from dazzle.backends import get_backend
+    from dazzle.stacks import get_backend
     from dazzle.core.errors import BackendError
     from dazzle.core.stacks import resolve_stack_backends, validate_stack_backends, StackError
 
@@ -335,21 +362,27 @@ def build(
                 typer.echo(f"WARNING: {warn}", err=False)
             typer.echo()
 
-        # Resolve which backends to build
+        # Resolve which stack implementations to build
         backend_list = []
 
-        # Priority: --backends > --backend > --stack > manifest stack > default
-        if backends:
-            # Explicit comma-separated backend list
+        # Show deprecation warnings for old flags
+        if backends or backend:
+            typer.echo("⚠️  --backend and --backends are deprecated. Use --stack instead.", err=True)
+            typer.echo("   Example: dazzle build --stack openapi", err=True)
+            typer.echo()
+
+        # Priority: --stack > --backends (deprecated) > --backend (deprecated) > manifest stack > default
+        if stack:
+            # Stack flag: can be preset name OR comma-separated list
+            backend_list = resolve_stack_backends(stack, None)
+        elif backends:
+            # DEPRECATED: Explicit comma-separated backend list
             backend_list = [b.strip() for b in backends.split(",")]
         elif backend:
-            # Legacy single backend flag
+            # DEPRECATED: Legacy single backend flag
             backend_list = [backend]
-        elif stack:
-            # Explicit stack flag
-            backend_list = resolve_stack_backends(stack, None)
         elif mf.stack and mf.stack.backends:
-            # Stack from manifest
+            # Stack from manifest (explicit backend list)
             backend_list = mf.stack.backends
             typer.echo(f"Using stack '{mf.stack.name}' from manifest")
         elif mf.stack and mf.stack.name:
@@ -357,8 +390,9 @@ def build(
             backend_list = resolve_stack_backends(mf.stack.name, None)
             typer.echo(f"Using stack preset '{mf.stack.name}'")
         else:
-            # Default to django_micro_modular (production-ready modular backend)
+            # Default to 'micro' stack (django_micro_modular)
             backend_list = ["django_micro_modular"]
+            typer.echo("Using default stack: 'micro'")
 
         # Validate all backends exist
         validate_stack_backends(backend_list)
@@ -641,12 +675,12 @@ def demo(
 
         if "docker" in preset.backends:
             typer.echo("\nTo run with Docker:")
-            typer.echo("  cd build/infra_docker")
+            typer.echo("  cd build/docker")
             typer.echo("  docker compose up -d")
 
         if "terraform" in preset.backends:
             typer.echo("\nTo deploy with Terraform:")
-            typer.echo("  cd build/infra_terraform/envs/dev")
+            typer.echo("  cd build/terraform/envs/dev")
             typer.echo("  terraform init")
             typer.echo("  terraform plan")
 
@@ -900,13 +934,13 @@ Or use a tool like Swagger UI to visualize it.
 
 """
 
-    if "infra_docker" in preset.backends:
+    if "docker" in preset.backends:
         readme_content += """
 #### Docker Setup
 
 Run the application locally with Docker:
 ```bash
-cd build/infra_docker
+cd build/docker
 docker compose up -d
 ```
 
@@ -914,13 +948,13 @@ The compose setup includes all required services (database, cache, etc.).
 
 """
 
-    if "infra_terraform" in preset.backends:
+    if "terraform" in preset.backends:
         readme_content += """
 #### Terraform Infrastructure
 
 Deploy to AWS:
 ```bash
-cd build/infra_terraform/envs/dev
+cd build/terraform/envs/dev
 terraform init
 terraform plan
 terraform apply
@@ -940,8 +974,8 @@ Configure your AWS credentials before running terraform commands.
 ## Learn More
 
 - **DSL Reference**: See DAZZLE documentation for DSL syntax
-- **Stack Presets**: Run `dazzle demo --list` to see other available stacks
-- **Backend Options**: Run `dazzle backends` to see all available backends
+- **Stack Options**: Run `dazzle stacks` to see all available stacks
+- **Other Stacks**: Run `dazzle demo --list` to try different technology combinations
 
 ## Need Help?
 
@@ -1219,7 +1253,7 @@ def _clone_from_github(url: str, path: Optional[str], branch: Optional[str], no_
 def _get_available_stacks() -> list[str]:
     """Get list of stacks that have all their backends available."""
     from dazzle.core.stacks import list_stack_presets, get_stack_preset
-    from dazzle.backends import list_backends
+    from dazzle.stacks import list_backends
 
     available_backends = set(list_backends())
     all_stacks = list_stack_presets()
@@ -1236,7 +1270,7 @@ def _get_available_stacks() -> list[str]:
 def _clone_example(example_name: str, path: Optional[str], stack_name: Optional[str], no_build: bool) -> None:
     """Clone a built-in example app."""
     from dazzle.core.stacks import get_stack_preset, list_stack_presets, get_stack_description
-    from dazzle.backends import list_backends
+    from dazzle.stacks import list_backends
 
     # Validate example exists
     examples = list_examples()
@@ -1247,11 +1281,11 @@ def _clone_example(example_name: str, path: Optional[str], stack_name: Optional[
 
     # Prompt for stack if not provided
     if stack_name is None:
-        # Only show stacks with available backends
+        # Only show stacks with available implementations
         stacks = _get_available_stacks()
         if not stacks:
             typer.echo("Error: No compatible stack presets available.", err=True)
-            typer.echo(f"Available backends: {', '.join(list_backends())}", err=True)
+            typer.echo(f"Available stack implementations: {', '.join(list_backends())}", err=True)
             raise typer.Exit(code=1)
 
         typer.echo("\nAvailable stacks:\n")
@@ -1287,14 +1321,14 @@ def _clone_example(example_name: str, path: Optional[str], stack_name: Optional[
         typer.echo("Use 'dazzle clone --list-stacks' to see available stacks.", err=True)
         raise typer.Exit(code=1)
 
-    # Validate stack backends are available
+    # Validate stack implementations are available
     available_backends = set(list_backends())
     missing_backends = [b for b in preset.backends if b not in available_backends]
     if missing_backends:
-        typer.echo(f"Error: Stack '{stack_name}' requires unavailable backends: {', '.join(missing_backends)}", err=True)
-        typer.echo(f"Available backends: {', '.join(sorted(available_backends))}", err=True)
-        typer.echo("\nUse a different stack or build with explicit backends:", err=True)
-        typer.echo(f"  dazzle build --backends {','.join([b for b in preset.backends if b in available_backends])}", err=True)
+        typer.echo(f"Error: Stack '{stack_name}' requires unavailable implementations: {', '.join(missing_backends)}", err=True)
+        typer.echo(f"Available implementations: {', '.join(sorted(available_backends))}", err=True)
+        typer.echo("\nUse a different stack or specify custom stack:", err=True)
+        typer.echo(f"  dazzle build --stack {','.join([b for b in preset.backends if b in available_backends])}", err=True)
         raise typer.Exit(code=1)
 
     # Determine target directory
@@ -1398,9 +1432,9 @@ def _clone_example(example_name: str, path: Optional[str], stack_name: Optional[
             typer.echo("\nOpenAPI:")
             typer.echo("  View spec: build/openapi/openapi.yaml")
 
-        if "infra_docker" in preset.backends:
+        if "docker" in preset.backends:
             typer.echo("\nDocker:")
-            typer.echo("  cd build/infra_docker")
+            typer.echo("  cd build/docker")
             typer.echo("  docker compose up -d")
 
         typer.echo("=" * 60)
@@ -1412,129 +1446,50 @@ def _clone_example(example_name: str, path: Optional[str], stack_name: Optional[
 
 @app.command()
 def infra(
-    backend: Optional[str] = typer.Argument(None, help="Infrastructure backend (docker, terraform, all)"),
+    type: Optional[str] = typer.Argument(None, help="DEPRECATED: Use 'dazzle build --stack' instead"),
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    out: Optional[str] = typer.Option(None, "--out", "-o", help="Output directory (default: ./infra)"),
-    list_backends: bool = typer.Option(False, "--list", "-l", help="List available infra backends"),
-    force: bool = typer.Option(False, "--force", help="Overwrite existing files"),
+    out: Optional[str] = typer.Option(None, "--out", "-o", help="Output directory"),
+    list_types: bool = typer.Option(False, "--list", "-l", help="List available stacks"),
+    force: bool = typer.Option(False, "--force", help="Force rebuild"),
 ) -> None:
     """
-    Generate infrastructure configurations (Docker, Terraform, etc.).
+    DEPRECATED: Use 'dazzle build --stack' instead.
 
-    ⚠ Operates in CURRENT directory (must contain dazzle.toml).
+    This command is deprecated. Use the unified build command:
+        dazzle build --stack docker
+        dazzle build --stack terraform
+        dazzle build --stack docker,terraform
 
-    Examples:
-        dazzle infra docker           # Generate Docker setup
-        dazzle infra terraform        # Generate Terraform setup
-        dazzle infra all              # Generate all infra
-        dazzle infra --list           # List available backends
+    Examples (new way):
+        dazzle build --stack docker           # Generate Docker setup
+        dazzle build --stack terraform        # Generate Terraform setup
+        dazzle stacks                         # List available stacks
     """
-    from dazzle.backends.infra_docker import DockerBackend
-    from dazzle.backends.infra_terraform import TerraformBackend
-    from dazzle.core.errors import BackendError
+    typer.echo("⚠️  'dazzle infra' is deprecated. Use 'dazzle build --stack' instead.\n", err=True)
 
-    # List backends
-    if list_backends:
-        typer.echo("Available infrastructure backends:\n")
-        typer.echo("  docker      - Docker Compose for local development")
-        typer.echo("  terraform   - Terraform for cloud deployment (AWS)")
-        typer.echo("  all         - Generate all infrastructure")
-        return
-
-    # Require backend argument
-    if backend is None:
-        typer.echo("Error: Missing argument 'BACKEND'.", err=True)
-        typer.echo("Usage: dazzle infra <backend>", err=True)
-        typer.echo("       dazzle infra --list", err=True)
+    # Show migration examples
+    if list_types or type is None:
+        typer.echo("Migration guide:", err=True)
+        typer.echo("  Old: dazzle infra --list", err=True)
+        typer.echo("  New: dazzle stacks", err=True)
+        typer.echo("", err=True)
+        typer.echo("  Old: dazzle infra docker", err=True)
+        typer.echo("  New: dazzle build --stack docker", err=True)
+        typer.echo("", err=True)
+        typer.echo("  Old: dazzle infra terraform", err=True)
+        typer.echo("  New: dazzle build --stack terraform", err=True)
+        typer.echo("", err=True)
+        typer.echo("  Old: dazzle infra all", err=True)
+        typer.echo("  New: dazzle build --stack docker,terraform", err=True)
         raise typer.Exit(code=1)
 
-    # Load manifest and parse DSL
-    root = Path(".").resolve()
-    manifest_path = root / manifest
+    typer.echo(f"Redirecting to: dazzle build --stack {type}", err=True)
+    typer.echo("", err=True)
 
-    try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
-
-        # Validate appspec
-        errors, warnings = lint_appspec(appspec)
-        if errors:
-            typer.echo("Cannot generate infrastructure; spec has validation errors:", err=True)
-            for err in errors:
-                typer.echo(f"ERROR: {err}", err=True)
-            raise typer.Exit(code=1)
-
-        if warnings:
-            typer.echo("Infrastructure generation warnings:", err=False)
-            for warn in warnings:
-                typer.echo(f"WARNING: {warn}", err=False)
-            typer.echo()
-
-        # Determine output directory
-        if out is None:
-            out = "./infra"
-        base_out = Path(out).resolve()
-
-        # Determine which backends to run
-        backends_to_run = []
-        if backend == "all":
-            backends_to_run = ["docker", "terraform"]
-        else:
-            backends_to_run = [backend]
-
-        # Generate infrastructure
-        for backend_name in backends_to_run:
-            if backend_name == "docker":
-                docker_dir = base_out / "docker"
-
-                # Check if directory exists
-                if docker_dir.exists() and not force:
-                    typer.echo(
-                        f"⚠ Docker infrastructure already exists at {docker_dir}. "
-                        f"Use --force to overwrite.",
-                        err=False,
-                    )
-                    continue
-
-                typer.echo(f"Generating Docker infrastructure...")
-                docker_backend = DockerBackend()
-                docker_config = mf.infra.docker if mf.infra else None
-                docker_backend.generate(appspec, docker_dir, docker_config=docker_config)
-                typer.echo(f"✓ Docker: {docker_dir}")
-
-            elif backend_name == "terraform":
-                terraform_dir = base_out / "terraform"
-
-                # Check if directory exists
-                if terraform_dir.exists() and not force:
-                    typer.echo(
-                        f"⚠ Terraform infrastructure already exists at {terraform_dir}. "
-                        f"Use --force to overwrite.",
-                        err=False,
-                    )
-                    continue
-
-                typer.echo(f"Generating Terraform infrastructure...")
-                terraform_backend = TerraformBackend()
-                terraform_config = mf.infra.terraform if mf.infra else None
-                terraform_backend.generate(appspec, terraform_dir, terraform_config=terraform_config)
-                typer.echo(f"✓ Terraform: {terraform_dir}")
-
-            else:
-                typer.echo(f"Unknown infrastructure backend: {backend_name}", err=True)
-                typer.echo("Use 'dazzle infra --list' to see available backends.", err=True)
-                raise typer.Exit(code=1)
-
-        typer.echo(f"\n✓ Infrastructure generation complete: {out}")
-
-    except BackendError as e:
-        typer.echo(f"Backend error: {e}", err=True)
-        raise typer.Exit(code=1)
-    except Exception as e:
-        typer.echo(f"Unexpected error during infrastructure generation: {e}", err=True)
-        raise typer.Exit(code=1)
+    # For now, just tell them the new command rather than executing it
+    # (executing would be complex due to different parameter handling)
+    typer.echo(f"Please run: dazzle build --stack {type} --out {out or './build'}", err=True)
+    raise typer.Exit(code=1)
 
 
 @app.command(name="analyze-spec")
