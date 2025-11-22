@@ -1,0 +1,89 @@
+{
+  "timestamp": "2025-11-21T22:09:36.047196Z",
+  "backend": "django_micro_modular",
+  "output_dir": "/private/tmp/modular_django",
+  "dsl_file_hashes": {
+    "dsl/app.dsl": "ce656700cee27c58c519e828116a1ebf2ed6a593c6bd43e1ee48edc841ef9407"
+  },
+  "appspec_snapshot": {
+    "app": {
+      "name": "simple_task",
+      "title": "Simple Task Manager",
+      "version": "0.1.0"
+    },
+    "entities": {
+      "Task": {
+        "title": "Task",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "title": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "description": {
+            "type": "kind=<FieldTypeKind.TEXT: 'text'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "status": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['todo', 'in_progress', 'done'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "priority": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['low', 'medium', 'high'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "created_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          },
+          "updated_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_UPDATE"
+            ]
+          }
+        }
+      }
+    },
+    "surfaces": {
+      "task_list": {
+        "title": "Task List",
+        "mode": "list",
+        "entity": "Task"
+      },
+      "task_detail": {
+        "title": "Task Detail",
+        "mode": "view",
+        "entity": "Task"
+      },
+      "task_create": {
+        "title": "Create Task",
+        "mode": "create",
+        "entity": "Task"
+      },
+      "task_edit": {
+        "title": "Edit Task",
+        "mode": "edit",
+        "entity": "Task"
+      }
+    },
+    "services": {},
+    "experiences": {}
+  }
+}

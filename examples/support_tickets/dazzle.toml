@@ -1,0 +1,7 @@
+[project]
+name = "support_tickets"
+version = "0.1.0"
+root = "support_tickets.core"
+
+[modules]
+paths = ["./dsl"]

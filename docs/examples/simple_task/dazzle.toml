@@ -1,0 +1,7 @@
+[project]
+name = "simple_task"
+version = "0.1.0"
+root = "simpletask.core"
+
+[modules]
+paths = ["./dsl"]

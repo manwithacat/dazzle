@@ -1,0 +1,20 @@
+# Include documentation
+include README.md
+include LICENSE
+include CONTRIBUTING.md
+
+# Include type stubs
+recursive-include src/dazzle py.typed *.pyi
+
+# Include templates
+recursive-include src/dazzle/templates *.dsl *.toml *.md .gitignore
+
+# Include test data but not test code
+recursive-include tests/fixtures *.dsl *.toml
+
+# Exclude
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.so

@@ -1,0 +1,23 @@
+# Build output
+build/
+*.spec.yaml
+*.spec.json
+
+# DAZZLE state
+.dazzle/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store

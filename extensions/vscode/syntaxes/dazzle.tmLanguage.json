@@ -1,0 +1,198 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "DAZZLE DSL",
+  "scopeName": "source.dazzle",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#module-declaration" },
+    { "include": "#app-declaration" },
+    { "include": "#entity-declaration" },
+    { "include": "#surface-declaration" },
+    { "include": "#field-declaration" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#types" },
+    { "include": "#operators" },
+    { "include": "#identifiers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.dazzle",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.dazzle",
+          "match": "\\b(module|use|uses|from|import|as)\\b"
+        },
+        {
+          "name": "keyword.declaration.dazzle",
+          "match": "\\b(app|entity|surface|experience|service|foreign_model|integration)\\b"
+        },
+        {
+          "name": "keyword.other.dazzle",
+          "match": "\\b(section|action|step|field|constraint|key|mode|sync|when|call|map|with|on|submitted|owner|spec|auth_profile)\\b"
+        },
+        {
+          "name": "storage.modifier.dazzle",
+          "match": "\\b(required|unique|pk|auto_add|auto_update|on_delete|cascade|protect|set_null)\\b"
+        }
+      ]
+    },
+    "module-declaration": {
+      "patterns": [
+        {
+          "match": "\\b(module)\\s+([a-zA-Z_][a-zA-Z0-9_.]*)",
+          "captures": {
+            "1": { "name": "keyword.control.dazzle" },
+            "2": { "name": "entity.name.type.module.dazzle" }
+          }
+        }
+      ]
+    },
+    "app-declaration": {
+      "patterns": [
+        {
+          "match": "\\b(app)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+(\"[^\"]*\")",
+          "captures": {
+            "1": { "name": "keyword.declaration.dazzle" },
+            "2": { "name": "entity.name.type.app.dazzle" },
+            "3": { "name": "string.quoted.double.dazzle" }
+          }
+        }
+      ]
+    },
+    "entity-declaration": {
+      "patterns": [
+        {
+          "match": "\\b(entity|surface|experience|service)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+(\"[^\"]*\")\\s*:",
+          "captures": {
+            "1": { "name": "keyword.declaration.dazzle" },
+            "2": { "name": "entity.name.type.class.dazzle" },
+            "3": { "name": "string.quoted.double.dazzle" }
+          }
+        }
+      ]
+    },
+    "surface-declaration": {
+      "patterns": [
+        {
+          "match": "\\b(mode)\\s*:\\s*(list|view|create|edit|delete)",
+          "captures": {
+            "1": { "name": "keyword.other.dazzle" },
+            "2": { "name": "constant.language.mode.dazzle" }
+          }
+        }
+      ]
+    },
+    "field-declaration": {
+      "patterns": [
+        {
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*",
+          "captures": {
+            "1": { "name": "variable.other.property.dazzle" }
+          }
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.dazzle",
+          "match": "\\b(uuid|str|int|float|bool|date|datetime|time|text|json|decimal)\\b"
+        },
+        {
+          "name": "support.type.reference.dazzle",
+          "match": "\\b(ref)\\s+([A-Z][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.other.dazzle" },
+            "2": { "name": "entity.name.type.dazzle" }
+          }
+        },
+        {
+          "name": "support.type.enum.dazzle",
+          "match": "\\b(enum)\\s*\\[([^\\]]+)\\]",
+          "captures": {
+            "1": { "name": "keyword.other.dazzle" },
+            "2": { "name": "constant.other.enum.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(str|text)\\s*\\(\\s*(\\d+)\\s*\\)",
+          "captures": {
+            "1": { "name": "support.type.primitive.dazzle" },
+            "2": { "name": "constant.numeric.dazzle" }
+          }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.dazzle",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.dazzle",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.dazzle",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.dazzle",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.dazzle",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.dazzle",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.arrow.dazzle",
+          "match": "->"
+        },
+        {
+          "name": "punctuation.separator.dazzle",
+          "match": "[,:]"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "entity.name.type.class.dazzle",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        },
+        {
+          "name": "variable.other.dazzle",
+          "match": "\\b[a-z_][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,706 @@
+"""
+Project initialization utilities for DAZZLE.
+
+Handles:
+- Creating new projects from templates
+- Copying example projects
+- Substituting template variables
+- LLM instrumentation setup
+- Git repository initialization
+"""
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Optional
+
+from .errors import DazzleError
+from .llm_context import create_llm_instrumentation
+
+
+class InitError(DazzleError):
+    """Raised when project initialization fails."""
+    pass
+
+
+def list_examples(examples_dir: Optional[Path] = None) -> list[str]:
+    """
+    List available example projects.
+
+    Args:
+        examples_dir: Path to examples directory (defaults to package examples/)
+
+    Returns:
+        List of example names
+    """
+    if examples_dir is None:
+        # Use installed examples directory
+        examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+
+    if not examples_dir.exists():
+        return []
+
+    examples = []
+    for item in examples_dir.iterdir():
+        if item.is_dir() and (item / "dazzle.toml").exists():
+            examples.append(item.name)
+
+    return sorted(examples)
+
+
+def sanitize_name(name: str) -> str:
+    """
+    Convert a project name to a valid Python module name.
+
+    Args:
+        name: Project name (can include spaces, hyphens)
+
+    Returns:
+        Valid Python identifier (lowercase, underscores)
+
+    Examples:
+        "My Project" -> "my_project"
+        "my-app" -> "my_app"
+        "MyApp" -> "myapp"
+    """
+    # Convert to lowercase
+    name = name.lower()
+    # Replace non-alphanumeric with underscores
+    name = re.sub(r'[^a-z0-9_]', '_', name)
+    # Remove leading/trailing underscores
+    name = name.strip('_')
+    # Collapse multiple underscores
+    name = re.sub(r'_+', '_', name)
+
+    # Ensure doesn't start with digit
+    if name and name[0].isdigit():
+        name = f"project_{name}"
+
+    return name or "my_project"
+
+
+def substitute_template_vars(content: str, variables: dict[str, str]) -> str:
+    """
+    Substitute {{variable}} patterns in template content.
+
+    Args:
+        content: Template content with {{var}} placeholders
+        variables: Dict mapping variable names to values
+
+    Returns:
+        Content with variables substituted
+
+    Examples:
+        substitute_template_vars("Hello {{name}}", {"name": "World"})
+        # -> "Hello World"
+    """
+    for key, value in variables.items():
+        pattern = f"{{{{{key}}}}}"
+        content = content.replace(pattern, value)
+
+    return content
+
+
+def copy_template(
+    template_dir: Path,
+    target_dir: Path,
+    variables: Optional[dict[str, str]] = None,
+) -> None:
+    """
+    Copy a template directory to target, substituting variables.
+
+    Args:
+        template_dir: Source template directory
+        target_dir: Destination directory (must not exist)
+        variables: Optional dict for template variable substitution
+
+    Raises:
+        InitError: If target exists or copy fails
+    """
+    if target_dir.exists():
+        raise InitError(f"Directory already exists: {target_dir}")
+
+    if not template_dir.exists():
+        raise InitError(f"Template not found: {template_dir}")
+
+    variables = variables or {}
+
+    try:
+        # Create target directory
+        target_dir.mkdir(parents=True, exist_ok=False)
+
+        # Copy all files, substituting variables
+        for src_path in template_dir.rglob("*"):
+            if src_path.is_file():
+                # Compute relative path
+                rel_path = src_path.relative_to(template_dir)
+                dst_path = target_dir / rel_path
+
+                # Create parent directories
+                dst_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Read, substitute, and write
+                try:
+                    content = src_path.read_text(encoding="utf-8")
+                    content = substitute_template_vars(content, variables)
+                    dst_path.write_text(content, encoding="utf-8")
+                except UnicodeDecodeError:
+                    # Binary file, just copy
+                    shutil.copy2(src_path, dst_path)
+
+    except Exception as e:
+        # Clean up on failure
+        if target_dir.exists():
+            shutil.rmtree(target_dir, ignore_errors=True)
+        raise InitError(f"Failed to copy template: {e}") from e
+
+
+def verify_project(project_dir: Path, show_diff: bool = False) -> bool:
+    """
+    Verify a DAZZLE project after creation.
+
+    Runs validation and optionally shows what would be generated.
+
+    Args:
+        project_dir: Path to project directory
+        show_diff: If True, show what would be generated (default: False)
+
+    Returns:
+        True if validation passes, False otherwise
+    """
+    try:
+        # Run validation
+        result = subprocess.run(
+            ["python3", "-m", "dazzle.cli", "validate"],
+            cwd=project_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            # Validation failed
+            return False
+
+        # Optionally show diff
+        if show_diff:
+            result = subprocess.run(
+                ["python3", "-m", "dazzle.cli", "build", "--diff"],
+                cwd=project_dir,
+                capture_output=True,
+                text=True,
+            )
+            # Note: we don't fail on diff errors, just on validation errors
+
+        return True
+
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # If we can't run validation, consider it a failure
+        return False
+
+
+def create_spec_template(target_dir: Path, project_name: str, title: str) -> None:
+    """
+    Create a SPEC.md template file to guide founders in defining their project.
+
+    Args:
+        target_dir: Project directory
+        project_name: Project name
+        title: Human-readable project title
+    """
+    spec_path = target_dir / "SPEC.md"
+
+    spec_content = f'''# {title} - Product Specification
+
+**Project Type**: _[e.g., Personal Tool, Team App, Customer Portal]_
+**Target Users**: _[Who will use this? Be specific!]_
+**Deployment**: _[Single-user, Multi-user, Public-facing]_
+
+---
+
+## Project Overview
+
+_Describe your project in 2-3 sentences from a founder's perspective._
+
+I need a [type of application] that helps [target users] to [main goal]. The key problem I'm solving is [problem statement]. Users should be able to [primary actions] with minimal friction.
+
+**Example**:
+> I need a simple task management application where I can keep track of my to-do items. Nothing fancy - just a straightforward way to create tasks, mark their status, and set priorities. I want to be able to see all my tasks at a glance, view details when needed, and mark tasks as complete when I finish them.
+
+---
+
+## Core Features
+
+### What I Need to Track
+
+_List the main "things" (entities/objects) in your system._
+
+**[Entity Name]** (e.g., Task, User, Order, Ticket):
+- **[Field Name]** (required/optional) - Brief description
+- **[Field Name]** (required/optional) - Brief description
+- **Status/State** - List possible values (e.g., "Draft, Active, Complete")
+- **Timestamps** - Created, Updated, etc.
+
+**Example**:
+> **Task**:
+> - **Title** (required) - Short name for the task
+> - **Description** (optional) - Detailed information
+> - **Status** - To Do, In Progress, Done
+> - **Priority** - Low, Medium, High
+> - **Created At** - Auto-timestamp
+
+### User Stories
+
+**As a [user type], I want to:**
+
+1. **[Action/Goal]**
+   - [Specific detail about what this enables]
+   - [Why this is important]
+   - [Expected result]
+
+2. **[Action/Goal]**
+   - [Details...]
+
+**Example**:
+> **As a user, I want to:**
+>
+> 1. **View all my tasks**
+>    - See a list of all tasks with their title, status, and priority
+>    - Quickly scan what needs to be done
+>    - Have the most recent tasks appear first
+>
+> 2. **Create new tasks**
+>    - Enter a title (required)
+>    - Optionally add a description
+>    - Set an initial priority (defaults to Medium)
+
+---
+
+## User Interface
+
+### Pages I Need
+
+1. **[Page Name]** (e.g., Task List, Home Dashboard)
+   - Shows: [What data/information]
+   - Actions: [What users can do]
+   - Features: [Filters, sorting, etc.]
+
+2. **[Page Name]** (e.g., Create Form, Detail View)
+   - Purpose: [Why users come here]
+   - Fields: [What they fill out or see]
+   - Next step: [Where they go after]
+
+**Example**:
+> 1. **Task List Page**
+>    - Shows: All tasks in a table (Title, Status, Priority)
+>    - Actions: Create new task, Edit, Delete, View details
+>    - Features: Sort by date, Filter by status
+
+---
+
+## What the System Provides Automatically
+
+_These features are built into DAZZLE-generated applications - you don't need to ask for them!_
+
+### Admin Dashboard
+A powerful admin interface is automatically generated with:
+- Browse all your data in tables
+- Search and filter capabilities
+- Bulk actions (delete multiple items)
+- Direct database editing
+- Data export
+- **Access**: Available in navigation and home page
+
+### Home Page
+A central hub that shows:
+- Quick access to all your resources
+- Links to create new items
+- Admin dashboard access
+- System status
+
+### Navigation
+Automatic navigation menu with:
+- Links to all main pages
+- Admin interface link
+- Mobile-responsive design (hamburger menu on phones)
+
+### Data Persistence
+- Database with automatic migrations
+- Data persists when you close the browser
+- Timestamps auto-update when editing
+- Relationships between entities maintained
+
+### Deployment Support
+- One-click deployment configs for Heroku, Railway, Vercel
+- Environment variable management
+- Production-ready settings
+- SQLite for development, easy migration to PostgreSQL
+
+---
+
+## Example Scenarios
+
+_Write 2-3 concrete examples of how someone would use your application._
+
+### Scenario 1: [Common Use Case]
+
+1. User does [action]
+2. System shows [result]
+3. User then [next action]
+4. Final outcome: [what's achieved]
+
+**Example**:
+> ### Scenario 1: Creating My First Task
+>
+> 1. Open the app - see empty task list
+> 2. Click "Create New Task"
+> 3. Enter: "Buy groceries" (title)
+> 4. Select priority: High
+> 5. Click Save
+> 6. Return to list - see my new task with status "To Do"
+
+---
+
+## Success Criteria
+
+_How will you know this project is successful?_
+
+This app is successful if:
+- [Measurable outcome 1]
+- [User experience goal 2]
+- [Technical goal 3]
+- [Adoption/usage goal 4]
+
+**Example**:
+> This app is successful if:
+> - I can create a task in under 10 seconds
+> - I can see my entire task list at a glance
+> - I never lose my task data
+> - The app "just works" without configuration
+> - I can deploy it for free on a cloud platform
+
+---
+
+## Technical Requirements
+
+### Must Have
+- Works on desktop and mobile browsers
+- Fast page loads
+- Data persists across sessions
+- Easy deployment
+
+### Nice to Have
+- [Feature that would be great but not essential]
+- [Enhancement for later]
+
+### Out of Scope (For Version 1)
+_Important: List what you explicitly DON'T need for the first version._
+
+- User authentication (if single-user)
+- Advanced search
+- File attachments
+- Email notifications
+- Mobile apps
+- API access
+
+---
+
+## Notes for Development
+
+### Keep It Simple
+- I'd rather have it working quickly than have lots of features
+- Use sensible defaults wherever possible
+- Automatic timestamps - I don't want to enter dates manually
+- Standard web technologies that are easy to maintain
+
+### Data Relationships
+_If your entities relate to each other, describe how:_
+
+- [Entity A] can have many [Entity B] (one-to-many)
+- [Entity X] must have a [Entity Y] (required relationship)
+- [Entity M] can optionally link to [Entity N]
+
+**Example**:
+> - A User can create many Tasks (one-to-many)
+> - Every Task must have a creator (required)
+> - Tasks can be assigned to a User (optional)
+
+### Priority Guidance
+_If using priority/status fields, explain what they mean:_
+
+**Status Options**:
+- [Option 1] - When to use this
+- [Option 2] - When to use this
+
+**Priority Levels**:
+- [Level 1] - Example situations
+- [Level 2] - Example situations
+
+---
+
+## Working with AI Assistants to Build This
+
+_Tips for collaborating with LLM agents to turn this spec into DAZZLE DSL:_
+
+### Getting Started
+
+1. **Share this SPEC.md** with your AI assistant (Claude, ChatGPT, etc.)
+
+2. **Ask the AI to help translate** your requirements into DAZZLE DSL:
+   - "Based on my SPEC.md, help me create the entity definitions in DAZZLE DSL"
+   - "What fields should I define for the [Entity] entity?"
+   - "How do I express the relationship between [Entity A] and [Entity B]?"
+
+3. **Iterate on the DSL**:
+   - Start with one entity to get the pattern right
+   - Add fields incrementally
+   - Test with `dazzle validate` frequently
+   - The AI can help debug validation errors
+
+4. **Build and refine**:
+   - Run `dazzle build` to see your application
+   - Show the AI what was generated
+   - Discuss what needs adjustment
+   - Update the DSL based on feedback
+
+### Helpful Prompts for AI
+
+- "Review my entity definitions - are there any missing required fields?"
+- "I want users to be able to [action] - what surfaces do I need to define?"
+- "The validation is failing - can you help me understand this error?"
+- "How do I make [field] optional instead of required?"
+- "I need a dropdown field with options [A, B, C] - how do I define that in DSL?"
+
+### What to Show the AI
+
+✅ **DO share**:
+- This SPEC.md file
+- Your DSL files (dsl/*.dsl)
+- Validation errors from `dazzle validate`
+- Generated code if you have questions about behavior
+
+❌ **DON'T stress about**:
+- Perfect DSL syntax on first try - iterate!
+- Getting every field right immediately
+- Knowing all DAZZLE features upfront
+
+### Example Conversation Flow
+
+> **You**: "I've created a SPEC.md for a task management app. Can you help me create the DAZZLE DSL?"
+>
+> **AI**: "I'll help! Based on your spec, let's start with the Task entity. Here's a first draft..."
+>
+> **You**: "Great! How do I make the description optional?"
+>
+> **AI**: "Remove the 'required' keyword from that field..."
+>
+> **You**: [runs `dazzle validate`] "I'm getting an error about the status field"
+>
+> **AI**: "That error means... try changing it to..."
+
+---
+
+## Next Steps
+
+1. **Fill out this template** with your project requirements
+2. **Share with your AI assistant** to create DAZZLE DSL together
+3. **Run `dazzle validate`** to check your DSL
+4. **Run `dazzle build`** to generate your application
+5. **Test and iterate** - update DSL based on what you see
+
+**Remember**: Start simple! You can always add more features later. Better to have a working v1 than a perfect plan that never ships. 🚀
+'''
+
+    spec_path.write_text(spec_content)
+
+
+def init_project(
+    target_dir: Path,
+    project_name: Optional[str] = None,
+    from_example: Optional[str] = None,
+    title: Optional[str] = None,
+    no_llm: bool = False,
+    no_git: bool = False,
+    stack_name: Optional[str] = None,
+) -> None:
+    """
+    Initialize a new DAZZLE project.
+
+    Args:
+        target_dir: Directory to create project in (must not exist)
+        project_name: Project name (defaults to directory name)
+        from_example: Optional example to copy from (e.g., "simple_task")
+        title: Optional human-readable title (defaults to project_name)
+        no_llm: If True, skip LLM instrumentation (default: False)
+        no_git: If True, skip git initialization (default: False)
+        stack_name: Optional stack name to include in LLM context
+
+    Raises:
+        InitError: If initialization fails
+    """
+    # Determine project name
+    if project_name is None:
+        project_name = target_dir.name
+
+    # Sanitize for use as module name
+    module_name = sanitize_name(project_name)
+
+    # Determine title
+    if title is None:
+        # Convert project_name to title case
+        title = project_name.replace("_", " ").replace("-", " ").title()
+
+    # Prepare template variables
+    variables = {
+        "project_name": project_name,
+        "module_name": module_name,
+        "project_title": title,
+    }
+
+    # Determine source directory
+    if from_example:
+        # Copy from example
+        examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+        template_dir = examples_dir / from_example
+
+        if not template_dir.exists():
+            available = list_examples(examples_dir)
+            raise InitError(
+                f"Example '{from_example}' not found. "
+                f"Available examples: {', '.join(available) if available else 'none'}"
+            )
+    else:
+        # Use blank template
+        template_dir = Path(__file__).parent.parent / "templates" / "blank"
+
+        if not template_dir.exists():
+            raise InitError(f"Blank template not found at {template_dir}")
+
+    # Copy template
+    copy_template(template_dir, target_dir, variables)
+
+    # Create SPEC.md template (only for blank projects, not examples)
+    if not from_example:
+        create_spec_template(target_dir, project_name, title)
+
+    # Create LLM instrumentation (unless disabled)
+    if not no_llm:
+        try:
+            create_llm_instrumentation(
+                project_dir=target_dir,
+                project_name=project_name,
+                stack_name=stack_name,
+            )
+        except Exception as e:
+            # Don't fail the entire init if LLM instrumentation fails
+            # Just warn the user
+            import warnings
+            warnings.warn(f"Failed to create LLM instrumentation: {e}")
+
+    # Initialize git repository (unless disabled)
+    if not no_git:
+        try:
+            # Initialize git repo
+            subprocess.run(
+                ["git", "init"],
+                cwd=target_dir,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            # Create .gitignore if it doesn't exist
+            gitignore_path = target_dir / ".gitignore"
+            if not gitignore_path.exists():
+                gitignore_content = """# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# DAZZLE
+.dazzle/
+dev_docs/
+
+# Database
+*.sqlite3
+*.db
+"""
+                gitignore_path.write_text(gitignore_content)
+
+            # Make initial commit (optional - only if we have content)
+            # Check if we have files to commit
+            status_result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=target_dir,
+                capture_output=True,
+                text=True,
+            )
+            if status_result.stdout.strip():
+                # Add all files
+                subprocess.run(
+                    ["git", "add", "."],
+                    cwd=target_dir,
+                    check=True,
+                    capture_output=True,
+                )
+                # Make initial commit
+                subprocess.run(
+                    ["git", "commit", "-m", "Initial commit: DAZZLE project setup"],
+                    cwd=target_dir,
+                    check=True,
+                    capture_output=True,
+                )
+
+        except subprocess.CalledProcessError as e:
+            # Don't fail the entire init if git initialization fails
+            # Just warn the user
+            import warnings
+            warnings.warn(f"Failed to initialize git repository: {e}")
+        except FileNotFoundError:
+            # git not installed
+            import warnings
+            warnings.warn("git command not found - skipping git initialization")
+
+
+__all__ = [
+    "InitError",
+    "list_examples",
+    "sanitize_name",
+    "substitute_template_vars",
+    "copy_template",
+    "init_project",
+    "verify_project",
+]

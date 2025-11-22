@@ -1,0 +1,78 @@
+from typing import List, Tuple
+
+from . import ir
+from .validator import (
+    validate_entities,
+    validate_surfaces,
+    validate_experiences,
+    validate_services,
+    validate_foreign_models,
+    validate_integrations,
+    extended_lint,
+)
+
+
+def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> Tuple[List[str], List[str]]:
+    """
+    Validate AppSpec for semantic errors and warnings.
+
+    Performs comprehensive validation:
+    - Entity validation (pk, field types, constraints)
+    - Surface validation (entity refs, field refs, action outcomes)
+    - Experience validation (reachability, transitions)
+    - Service validation (spec URLs, auth profiles)
+    - Foreign model validation (service refs, fields)
+    - Integration validation (all refs, mappings, schedules)
+
+    Extended mode adds:
+    - Naming convention checks (snake_case, PascalCase)
+    - Unused entity/surface detection
+    - Missing titles/descriptions
+
+    Args:
+        appspec: Complete application specification
+        extended: If True, perform extended lint checks (naming, unused code)
+
+    Returns:
+        Tuple of (errors, warnings)
+        - errors: List of error messages that must be fixed
+        - warnings: List of warnings that should be addressed
+    """
+    all_errors: List[str] = []
+    all_warnings: List[str] = []
+
+    # Basic check
+    if not appspec.domain.entities and not appspec.surfaces:
+        all_warnings.append("No entities or surfaces defined in app.")
+
+    # Run all validation rules
+    errors, warnings = validate_entities(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_surfaces(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_experiences(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_services(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_foreign_models(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_integrations(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Extended lint rules
+    if extended:
+        extended_warnings = extended_lint(appspec)
+        all_warnings.extend(extended_warnings)
+
+    return all_errors, all_warnings
