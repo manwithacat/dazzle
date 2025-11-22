@@ -9,7 +9,7 @@ class Dazzle < Formula
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
   url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "TODO_CALCULATE_AFTER_RELEASE"
+  sha256 "19380833103fed6e7f07e04657a990ea4d3f500fc73d9fc5578087e41b65a3a2"
   license "MIT"
   head "https://github.com/manwithacat/dazzle.git", branch: "main"
 
