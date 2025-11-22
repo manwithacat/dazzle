@@ -14,6 +14,7 @@ class Dazzle < Formula
   head "https://github.com/manwithacat/dazzle.git", branch: "main"
 
   depends_on "python@3.12"
+  depends_on "rust" => :build  # Required for building pydantic-core
 
   # Core dependencies from pyproject.toml
   resource "pydantic" do
@@ -57,7 +58,7 @@ class Dazzle < Formula
   end
 
   resource "markdown-it-py" do
-    url "https://files.pythonhosted.org/packages/source/m/markdown-it-py/markdown_it_py-3.0.0.tar.gz"
+    url "https://files.pythonhosted.org/packages/source/m/markdown-it-py/markdown-it-py-3.0.0.tar.gz"
     sha256 "e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"
   end
 

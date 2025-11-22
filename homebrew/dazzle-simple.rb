@@ -1,6 +1,10 @@
 # DAZZLE Homebrew Formula (Simplified for Testing)
 #
-# Installation: brew install ./homebrew/dazzle-simple.rb
+# ⚠️  WARNING: This simplified formula is INCOMPLETE and does NOT work.
+# It does not install dependencies correctly because virtualenv_install_with_resources
+# uses --no-deps flag by default. Use homebrew/dazzle.rb instead.
+#
+# This file is kept for reference only.
 
 class DazzleSimple < Formula
   include Language::Python::Virtualenv

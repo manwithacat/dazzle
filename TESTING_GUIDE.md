@@ -68,18 +68,30 @@ curl -I "https://files.pythonhosted.org/packages/source/p/pydantic/pydantic-2.9.
 
 ## Phase 2: Local Installation Test
 
-### Step 2.1: Install from Simplified Formula
+### Step 2.1: Install Formula via Test Tap
+
+**Note**: The simplified formula (dazzle-simple.rb) is broken and should not be used. Use the full formula (dazzle.rb) instead.
 
 ```bash
 cd /Volumes/SSD/Dazzle
 
-# Install simplified formula (from local git)
-brew install --verbose ./homebrew/dazzle-simple.rb
+# Create a local test tap
+brew tap-new dazzle/test
+
+# Copy the full formula to the tap
+cp homebrew/dazzle.rb /opt/homebrew/Library/Taps/dazzle/homebrew-test/Formula/
+
+# Modify the formula to use local git (for testing)
+# Edit line 11-13 to use: url "file:///Volumes/SSD/Dazzle", using: :git, branch: "main"
+
+# Install from tap
+brew install --verbose dazzle/test/dazzle
 
 # This will:
+# - Install Rust (build dependency, ~10 minutes)
 # - Create virtualenv with Python 3.12
 # - Install dazzle from local source
-# - Install all dependencies from pyproject.toml
+# - Install all dependencies
 # - Create symlinks in /opt/homebrew/bin/
 
 # Watch for errors during installation
@@ -87,14 +99,13 @@ brew install --verbose ./homebrew/dazzle-simple.rb
 
 **Expected output**:
 ```
-==> Installing dazzle-simple from /Volumes/SSD/Dazzle/homebrew/dazzle-simple.rb
-==> Downloading https://github.com/manwithacat/dazzle.git
+==> Installing dazzle from dazzle/test
+==> Installing dependencies for dazzle/test/dazzle: libssh2, libgit2, z3, llvm and rust
+==> Installing dazzle/test/dazzle dependency: rust
 ...
-==> Installing dependencies for dazzle-simple: python@3.12
+==> Installing dazzle/test/dazzle
 ...
-==> Installing dazzle-simple
-...
-🍺  /opt/homebrew/Cellar/dazzle-simple/HEAD-xxxxxxx: XXX files, XXX MB
+🍺  /opt/homebrew/Cellar/dazzle/0.1.0-dev: ~1,000 files, ~17MB
 ```
 
 ### Step 2.2: Verify Installation
@@ -106,13 +117,9 @@ which dazzle
 
 # Check it's a symlink to Cellar
 ls -la $(which dazzle)
-# Expected: ... -> ../Cellar/dazzle-simple/...
+# Expected: ... -> ../Cellar/dazzle/0.1.0-dev/bin/dazzle
 
-# Check version
-dazzle --version
-# Expected: DAZZLE 0.1.0 (or current version)
-
-# Check help
+# Check help (note: --version flag not implemented yet)
 dazzle --help
 # Expected: Usage information, commands listed
 ```
@@ -121,9 +128,9 @@ dazzle --help
 
 ```bash
 # Find installation location
-INSTALL_PATH=$(brew --prefix dazzle-simple)
+INSTALL_PATH=$(brew --prefix dazzle/test/dazzle)
 echo $INSTALL_PATH
-# Expected: /opt/homebrew/opt/dazzle-simple
+# Expected: /opt/homebrew/opt/dazzle
 
 # Check Python location
 ls -la $INSTALL_PATH/libexec/bin/python
@@ -254,11 +261,11 @@ rm -rf dazzle-test
 
 ```bash
 # Get Python path that VS Code should use
-brew --prefix dazzle-simple
+brew --prefix dazzle
 # Copy this path and append: /libexec/bin/python
 
 # Example:
-# /opt/homebrew/opt/dazzle-simple/libexec/bin/python
+# /opt/homebrew/opt/dazzle/libexec/bin/python
 ```
 
 ### Step 4.2: Test VS Code Extension
@@ -286,15 +293,20 @@ code .
 
 ```bash
 # Uninstall
-brew uninstall dazzle-simple
+brew uninstall dazzle/test/dazzle
+
+# This will also auto-remove build dependencies (rust, llvm, etc.)
 
 # Verify dazzle command removed
 which dazzle
-# Expected: (empty - command not found)
+# Expected: (empty - command not found, unless pyenv version exists)
 
 # Verify files removed
 ls /opt/homebrew/Cellar/ | grep dazzle
 # Expected: (empty - no dazzle directories)
+
+# Cleanup test tap
+brew untap dazzle/test
 ```
 
 ---
@@ -358,11 +370,11 @@ source ~/.zshrc
 **Solution**:
 ```bash
 # Check virtualenv integrity
-brew --prefix dazzle-simple
-ls -la $(brew --prefix dazzle-simple)/libexec/lib/python3.12/site-packages/
+brew --prefix dazzle
+ls -la $(brew --prefix dazzle)/libexec/lib/python3.12/site-packages/
 
 # Reinstall if needed
-brew reinstall dazzle-simple
+brew reinstall dazzle/test/dazzle
 ```
 
 ### Issue: "Permission denied"
@@ -384,11 +396,24 @@ brew doctor
 **Solution**:
 ```bash
 # Check logs
-brew gist-logs dazzle-simple
+brew gist-logs dazzle
 
 # Clean and retry
 brew cleanup
-brew install --build-from-source --verbose ./homebrew/dazzle-simple.rb
+brew install --build-from-source --verbose dazzle/test/dazzle
+```
+
+### Issue: "Can't find Rust compiler"
+
+**Symptom**: `error: can't find Rust compiler` during pydantic-core build
+
+**Solution**: This should not happen if using the updated formula (which includes Rust dependency). If it does:
+```bash
+# Install Rust manually
+brew install rust
+
+# Retry installation
+brew install dazzle/test/dazzle
 ```
 
 ---
@@ -493,6 +518,65 @@ If you find issues during testing:
 _____________________________________
 _____________________________________
 _____________________________________
+
+---
+
+## Test Results Log
+
+### Test Run: 2025-11-22
+
+**Tester**: Claude Code (Automated)
+**Platform**: macOS 26.2 (Apple Silicon)
+**Homebrew**: 5.0.3
+**Result**: ✅ PASS (with fixes applied)
+
+#### Issues Found and Resolved
+
+1. **markdown-it-py URL Issue** (dazzle.rb:60)
+   - **Problem**: URL used underscore in filename (`markdown_it_py-3.0.0.tar.gz`)
+   - **Status**: ✅ FIXED - Changed to hyphen (`markdown-it-py-3.0.0.tar.gz`)
+   - **Commit**: Applied to homebrew/dazzle.rb
+
+2. **Missing Rust Build Dependency** (dazzle.rb:17)
+   - **Problem**: `pydantic-core` requires Rust compiler to build from source
+   - **Error**: `error: can't find Rust compiler` during installation
+   - **Status**: ✅ FIXED - Added `depends_on "rust" => :build`
+   - **Commit**: Applied to homebrew/dazzle.rb
+
+3. **Simplified Formula Broken** (dazzle-simple.rb)
+   - **Problem**: Dependencies not installed (virtualenv_install_with_resources uses --no-deps)
+   - **Status**: ⚠️ DOCUMENTED - Added warning, formula kept for reference only
+   - **Recommendation**: Use full formula (dazzle.rb) for all installations
+
+#### Phase Results
+
+- **Phase 1 (Formula Validation)**: ✅ PASSED
+  - Ruby syntax: ✅ Valid
+  - Resource URLs: ✅ All accessible (after fix)
+
+- **Phase 2 (Installation)**: ✅ PASSED
+  - Installation time: ~15 minutes (includes Rust compilation)
+  - Disk space: ~2.2 GB (includes Rust, LLVM dependencies)
+  - dazzle command: ✅ Available in PATH
+  - Python environment: ✅ Python 3.12.12
+  - Dependencies: ✅ All installed (pydantic 2.9.2, typer 0.12.5, rich)
+
+- **Phase 3 (Functional Testing)**: ✅ PASSED
+  - `dazzle init`: ✅ Creates project structure
+  - `dazzle validate`: ✅ Validates DSL
+  - `dazzle build`: ✅ Generates Django project (migrations fail as expected in v0.1)
+
+- **Phase 4 (VS Code Integration)**: ⏭️ SKIPPED (requires manual testing)
+
+- **Phase 5 (Uninstall)**: ✅ PASSED
+  - Clean removal: ✅ Complete
+  - No leftover files: ✅ Verified
+
+#### Notes
+
+- Formula requires Rust as build dependency (adds ~2GB, ~10min build time)
+- Consider pre-built wheels or binary distribution to avoid Rust requirement
+- Simplified formula (dazzle-simple.rb) does not work and should not be used
 
 ---
 
