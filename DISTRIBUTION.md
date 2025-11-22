@@ -18,21 +18,36 @@ Complete strategy for distributing DAZZLE as a standalone CLI tool across platfo
 ### Installation UX
 
 ```bash
-# Install from Homebrew
-brew install dazzle
-
-# Or from our tap
-brew tap dazzle/tap
+# Install from our tap
+brew tap manwithacat/tap
 brew install dazzle
 
 # Verify installation
-dazzle --version
-# → DAZZLE 0.1.0
+dazzle --help
 
 # Start using immediately
 dazzle init my-app
 cd my-app
 dazzle build
+```
+
+**⏱️ Installation Time (v0.1.0):**
+- First install: ~15 minutes (builds from source, includes Rust)
+- Upgrades: ~2-5 minutes (only changed dependencies)
+- With bottles (v0.1.1+): ~30 seconds
+
+**Fast Alternatives:**
+```bash
+# Option 1: pipx (30 seconds)
+brew install pipx
+pipx install dazzle
+
+# Option 2: uv (10 seconds, fastest)
+brew install uv
+uv tool install dazzle
+
+# Option 3: pip (30 seconds)
+pip install dazzle
 ```
 
 ### What Gets Installed
@@ -93,6 +108,39 @@ brew install dazzle
 3. Users get update:
    brew upgrade dazzle
 ```
+
+### Homebrew Tap Status
+
+**Repository**: https://github.com/manwithacat/homebrew-tap
+
+**Current Status (v0.1.0):**
+- ✅ Formula published and working
+- ✅ SHA256 verified from real GitHub release
+- ✅ Documentation complete (README, BOTTLES.md)
+- ✅ GitHub Actions workflow ready
+- ⏸️ Bottles not yet built (planned for v0.1.1)
+
+**Installation Methods:**
+
+| Method | Time | Status |
+|--------|------|--------|
+| `brew install manwithacat/tap/dazzle` | 15 min | ✅ Available |
+| `pipx install dazzle` | 30 sec | ✅ Available |
+| `uv tool install dazzle` | 10 sec | ✅ Available |
+| `pip install dazzle` | 30 sec | ✅ Available |
+| With bottles (v0.1.1+) | 30 sec | 🔜 Planned |
+
+**Bottles (Pre-compiled Binaries):**
+- Infrastructure ready (GitHub Actions + docs)
+- Builds bottles for macOS 14 (arm64, x86_64)
+- Uploads to GitHub Releases automatically
+- Reduces install time from 15 min → 30 sec
+- Planned for v0.1.1 release
+
+**Resources:**
+- Tap: https://github.com/manwithacat/homebrew-tap
+- Formula: https://github.com/manwithacat/homebrew-tap/blob/main/Formula/dazzle.rb
+- Bottles guide: https://github.com/manwithacat/homebrew-tap/blob/main/BOTTLES.md
 
 ---
 
