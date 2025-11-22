@@ -4,7 +4,7 @@
 
 A DSL-first toolkit for designing and generating applications from high-level specifications. DAZZLE enables you to define your application's domain model, UI surfaces, and integrations in a concise, machine-first language, then generate concrete artifacts like OpenAPI specs, database schemas, and application code.
 
-[![CI](https://github.com/yourusername/dazzle/workflows/CI/badge.svg)](https://github.com/yourusername/dazzle/actions)
+[![CI](https://github.com/manwithacat/dazzle/workflows/CI/badge.svg)](https://github.com/manwithacat/dazzle/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
