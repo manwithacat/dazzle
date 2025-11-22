@@ -1,8 +1,12 @@
 """
 Stack registry and preset definitions for DAZZLE.
 
-Stacks are preset combinations of backends that work together
-to generate full-stack applications.
+Stacks are technology combinations that generate applications.
+A stack can be a preset (like 'micro' or 'django_next') or a custom
+list of stack implementations (what used to be called "backends").
+
+User-facing terminology: "stack"
+Internal implementation: Backend class
 """
 
 from dataclasses import dataclass, field
@@ -51,19 +55,19 @@ BUILTIN_STACKS: Dict[str, StackPreset] = {
     "django_next": StackPreset(
         name="django_next",
         description="Django REST API + Next.js frontend + Docker",
-        backends=["django_api", "nextjs_frontend", "infra_docker"],
+        backends=["django_api", "nextjs_frontend", "docker"],
         example_dsl="support_tickets",
     ),
     "django_next_cloud": StackPreset(
         name="django_next_cloud",
         description="Django + Next.js + Docker + Terraform (AWS)",
-        backends=["django_api", "nextjs_frontend", "infra_docker", "infra_terraform"],
+        backends=["django_api", "nextjs_frontend", "docker", "terraform"],
         example_dsl="support_tickets",
     ),
     "api_only": StackPreset(
         name="api_only",
         description="Django REST API + OpenAPI spec + Docker",
-        backends=["django_api", "openapi", "infra_docker"],
+        backends=["django_api", "openapi", "docker"],
         example_dsl="simple_task",
     ),
     "openapi_only": StackPreset(
@@ -106,7 +110,8 @@ def resolve_stack_backends(
     Resolve backend list from stack name or explicit list.
 
     Args:
-        stack_name: Stack preset name (e.g., "django_next")
+        stack_name: Stack preset name (e.g., "django_next") OR comma-separated
+                   list of backends (e.g., "django_api,nextjs,docker")
         explicit_backends: Explicit backend list (overrides stack)
 
     Returns:
@@ -119,16 +124,21 @@ def resolve_stack_backends(
     if explicit_backends:
         return explicit_backends
 
-    # Look up stack preset
+    # Parse stack_name
     if stack_name:
+        # Check if it's a comma-separated list first
+        if "," in stack_name:
+            # Custom stack: comma-separated backend list
+            return [b.strip() for b in stack_name.split(",")]
+
+        # Try to look up as preset
         preset = get_stack_preset(stack_name)
         if preset:
             return preset.backends
-        else:
-            raise StackError(
-                f"Stack '{stack_name}' not found. "
-                f"Available stacks: {', '.join(list_stack_presets())}"
-            )
+
+        # Not a preset, treat as single backend name
+        # (allows users to specify single backends like "openapi")
+        return [stack_name]
 
     # No stack or backends specified
     return []
@@ -144,7 +154,7 @@ def validate_stack_backends(backends: List[str]) -> None:
     Raises:
         StackError: If any backend is not registered
     """
-    from ..backends import list_backends
+    from ..stacks import list_backends
 
     available_backends = set(list_backends())
 
