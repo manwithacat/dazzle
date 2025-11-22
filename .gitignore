@@ -45,8 +45,7 @@ build/
 htmlcov/
 .pytest_cache/
 
-# Development Docs
+# Development Docs (legacy)
 /devdocs
-/dev_docs
 # Example build outputs
 examples/*/build/

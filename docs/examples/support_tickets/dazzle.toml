@@ -1,7 +1,0 @@
-[project]
-name = "support_hub"
-version = "0.1.0"
-root = "support.core"
-
-[modules]
-paths = ["./dsl"]
