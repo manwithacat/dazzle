@@ -180,7 +180,7 @@ class BackendRegistry:
 
             try:
                 # Import module
-                module = importlib.import_module(f"dazzle.backends.{module_name}")
+                module = importlib.import_module(f"dazzle.stacks.{module_name}")
 
                 # Find Backend subclasses
                 for name, obj in inspect.getmembers(module, inspect.isclass):

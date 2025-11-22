@@ -14,9 +14,9 @@ from ..core.manifest import DockerConfig
 from ..core.infra_analyzer import InfraRequirements, analyze_infra_requirements, get_required_env_vars
 
 
-class DockerBackend(Backend):
+class DockerStack(Backend):
     """
-    Generate Docker-based local development infrastructure.
+    Docker stack for local development infrastructure.
 
     Creates:
     - Dockerfile for the application

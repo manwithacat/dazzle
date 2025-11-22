@@ -15,9 +15,9 @@ from ..core.manifest import TerraformConfig
 from ..core.infra_analyzer import InfraRequirements, analyze_infra_requirements
 
 
-class TerraformBackend(Backend):
+class TerraformStack(Backend):
     """
-    Generate Terraform infrastructure for cloud deployment.
+    Terraform stack for cloud infrastructure deployment.
 
     Creates modular Terraform configuration with:
     - Compute resources (ECS, Cloud Run)
