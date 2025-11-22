@@ -1,0 +1,10 @@
+{
+  "commitMessage": {
+    "instructions": [
+      "Use the Conventional Commits specification (https://www.conventionalcommits.org/en/v1.0.0/).",
+      "Prefix each commit with one of: feat:, fix:, docs:, style:, refactor:, perf:, test:, chore:, or ci:.",
+      "Keep subject lines under 72 characters and use the imperative mood.",
+      "Add an optional blank line followed by details if needed."
+    ]
+  }
+}
