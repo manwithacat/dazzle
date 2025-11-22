@@ -1,0 +1,166 @@
+{
+  "name": "dazzle-dsl",
+  "displayName": "DAZZLE DSL",
+  "description": "Language support for DAZZLE DSL - DSL-first application development",
+  "version": "0.4.0",
+  "publisher": "dazzle",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dazzle/dazzle"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "dazzle",
+    "dsl",
+    "django",
+    "api",
+    "code-generation"
+  ],
+  "activationEvents": [
+    "onLanguage:dazzle-dsl",
+    "workspaceContains:**/*.dsl",
+    "workspaceContains:dazzle.toml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "dazzle-dsl",
+        "aliases": [
+          "DAZZLE",
+          "Dazzle DSL"
+        ],
+        "extensions": [
+          ".dsl",
+          ".dazzle"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dazzle-dsl",
+        "scopeName": "source.dazzle",
+        "path": "./syntaxes/dazzle.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "DAZZLE",
+      "properties": {
+        "dazzle.cliPath": {
+          "type": "string",
+          "default": "dazzle",
+          "description": "Path to the DAZZLE CLI executable (e.g., 'dazzle', 'python -m dazzle.cli', or absolute path)"
+        },
+        "dazzle.manifest": {
+          "type": "string",
+          "default": "dazzle.toml",
+          "description": "Name of the DAZZLE manifest file"
+        },
+        "dazzle.validateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically validate DSL files on save"
+        },
+        "dazzle.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to Python interpreter with dazzle installed (leave empty to auto-detect)"
+        },
+        "dazzle.llm.provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai"],
+          "default": "anthropic",
+          "description": "LLM provider for spec analysis (anthropic or openai)"
+        },
+        "dazzle.llm.model": {
+          "type": "string",
+          "default": "claude-3-5-sonnet-20241022",
+          "description": "LLM model to use (e.g., claude-3-5-sonnet-20241022, gpt-4-turbo)"
+        },
+        "dazzle.llm.maxCostPerAnalysis": {
+          "type": "number",
+          "default": 1.0,
+          "description": "Maximum cost per spec analysis in USD (warning shown if exceeded)"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "dazzle.validate",
+        "title": "DAZZLE: Validate Project"
+      },
+      {
+        "command": "dazzle.build",
+        "title": "DAZZLE: Build Project"
+      },
+      {
+        "command": "dazzle.lint",
+        "title": "DAZZLE: Lint Project"
+      },
+      {
+        "command": "dazzle.analyzeSpec",
+        "title": "DAZZLE: Analyze Specification"
+      }
+    ],
+    "problemMatchers": [
+      {
+        "name": "dazzle",
+        "owner": "dazzle",
+        "fileLocation": [
+          "relative",
+          "${workspaceFolder}"
+        ],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "dazzle",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "task": {
+            "type": "string",
+            "description": "The DAZZLE task to execute (validate, build, lint)"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "@vscode/test-electron": "^2.3.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}
