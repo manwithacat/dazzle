@@ -40,7 +40,13 @@ Thumbs.db
 build/
 *.pyc
 
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
 # Development Docs
 /devdocs
+/dev_docs
 # Example build outputs
 examples/*/build/

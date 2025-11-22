@@ -13,8 +13,8 @@ A DSL-first toolkit for designing and generating applications from high-level sp
 - **🎯 Machine-First DSL**: Optimized for LLM consumption and generation
 - **🔗 Multi-Module Support**: Organize large projects across multiple files
 - **✨ Semantic Validation**: Catch errors early with comprehensive validation
-- **🔌 Plugin System**: Extensible backend architecture with stacks
-- **📊 OpenAPI Generation**: Built-in OpenAPI 3.0 backend
+- **🔌 Plugin System**: Extensible stack architecture for multiple technologies
+- **📊 OpenAPI Generation**: Built-in OpenAPI 3.0 stack
 - **💡 IDE Support**: Full Language Server Protocol (LSP) with VSCode extension
 - **🔍 Real-time Diagnostics**: Live validation and error reporting in your editor
 - **🧪 Production-Ready**: Full test suite with CI/CD and build validation
@@ -73,7 +73,7 @@ Generate OpenAPI spec:
 
 ```bash
 dazzle validate                        # Validate DSL
-dazzle build --backend openapi --out ./build
+dazzle build --stack openapi --out ./build
 ```
 
 View the generated `build/openapi.yaml` in Swagger UI!
@@ -247,16 +247,20 @@ dazzle validate
 dazzle lint --strict
 
 # Generate artifacts
-dazzle build --backend openapi --out ./build
+dazzle build --stack openapi --out ./build
 
-# List available backends
-dazzle backends
+# List available stacks
+dazzle stacks
 ```
 
-## Available Backends
+## Available Stacks
 
-- **openapi**: Generate OpenAPI 3.0 specifications (YAML/JSON)
-- More backends coming soon: Django, FastAPI, Prisma, React...
+- **micro**: Django micro-modular stack (single app, SQLite)
+- **openapi**: OpenAPI 3.0 specification generation
+- **django_next**: Django REST API + Next.js + Docker
+- **docker**: Docker Compose for local development
+- **terraform**: Terraform infrastructure for AWS
+- More stacks coming: FastAPI, additional combinations...
 
 ## IDE Support
 
@@ -339,7 +343,7 @@ See the [`examples/`](examples/) directory for:
 
 ### Developer Documentation
 - [Developer Docs Index](devdocs/README.md) - Development documentation hub
-- [Backend Development](docs/BACKEND_GUIDE.md) - Creating custom backends
+- [Stack Development](docs/STACK_GUIDE.md) - Creating custom stack implementations
 - [Architecture](docs/ARCHITECTURE.md) - System design
 - [Build Validation](tests/build_validation/README.md) - Testing infrastructure
 - [Contributing](CONTRIBUTING.md) - How to contribute
@@ -403,22 +407,22 @@ Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guideli
 - [x] DSL Parser with comprehensive error handling
 - [x] Multi-module support with dependency resolution
 - [x] Semantic validation and linting
-- [x] OpenAPI 3.0 backend
-- [x] Stack system for coordinated backend generation
+- [x] OpenAPI 3.0 stack
+- [x] Multiple technology stacks (Django, Express, Docker, Terraform)
 - [x] Language Server Protocol (LSP) implementation
 - [x] VSCode extension with full IDE features
 - [x] Build validation and testing infrastructure
 
 ### In Progress 🚧
-- [ ] Django backend with model generation
-- [ ] Infrastructure backend (Docker, Terraform)
+- [ ] Enhanced Django stacks with more features
 - [ ] Service integration profiles
+- [ ] Additional Next.js frontend stacks
 
 ### Planned 📋
-- [ ] FastAPI backend
-- [ ] Prisma backend
+- [ ] FastAPI stack
+- [ ] Prisma stack
 - [ ] React UI generation
-- [ ] GraphQL backend
+- [ ] GraphQL stack
 - [ ] Additional IDE support (JetBrains, Emacs, Vim)
 - [ ] Web-based playground/IDE
 

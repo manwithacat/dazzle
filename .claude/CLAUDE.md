@@ -8,7 +8,7 @@ DAZZLE (Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps) is a machine-fir
 - Humans describe business intent in natural language
 - LLMs translate intent into a compact DSL
 - Tooling converts the DSL into an internal representation (IR)
-- Backends generate concrete artifacts (APIs, UIs, infrastructure)
+- Stacks generate concrete artifacts (APIs, UIs, infrastructure)
 
 This is version 0.1, focusing on proving the core loop is viable and token-efficient.
 
@@ -27,10 +27,10 @@ This is version 0.1, focusing on proving the core loop is viable and token-effic
    - Source of truth for all code generation
    - Lives in `ir.py` (to be implemented)
 
-3. **Backend Layer** (Code Generation)
+3. **Stack Layer** (Code Generation)
    - Plugins that consume IR to produce artifacts
-   - Each backend (django_drf, fastapi, openapi, react_ui, infra) is independent
-   - Located in `src/dazzle/backends/` (to be implemented)
+   - Each stack (django_micro_modular, openapi, docker, terraform, etc.) is independent
+   - Located in `src/dazzle/stacks/`
 
 ### Module System
 
@@ -85,11 +85,14 @@ python -m dazzle.cli lint --strict
 ### Building
 
 ```bash
-# Generate artifacts using a backend (currently only openapi is planned)
-python -m dazzle.cli build --backend openapi --out ./build
+# Generate artifacts using a stack
+python -m dazzle.cli build --stack openapi --out ./build
+
+# Build with multiple stacks
+python -m dazzle.cli build --stack django_micro_modular,docker --out ./build
 
 # Build with custom manifest
-python -m dazzle.cli build --manifest path/to/dazzle.toml --backend openapi
+python -m dazzle.cli build --manifest path/to/dazzle.toml --stack openapi
 ```
 
 ### Working with DSL Files
