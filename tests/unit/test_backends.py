@@ -2,13 +2,13 @@
 """Test backend plugin system."""
 
 from pathlib import Path
-from src.dazzle.backends import (
+from dazzle.stacks import (
     Backend,
     BackendCapabilities,
     BackendRegistry,
     BackendError,
 )
-from src.dazzle.core import ir
+from dazzle.core import ir
 
 
 class MockBackend(Backend):

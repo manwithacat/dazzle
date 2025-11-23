@@ -6,9 +6,9 @@ import yaml as pyyaml
 from pathlib import Path
 import tempfile
 
-from src.dazzle.backends.openapi import OpenAPIBackend
-from src.dazzle.core.parser import parse_modules
-from src.dazzle.core.linker import build_appspec
+from dazzle.stacks.openapi import OpenAPIBackend
+from dazzle.core.parser import parse_modules
+from dazzle.core.linker import build_appspec
 
 
 @pytest.fixture

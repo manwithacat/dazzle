@@ -2,7 +2,7 @@
 """Test parser implementation."""
 
 from pathlib import Path
-from src.dazzle.core.dsl_parser import parse_dsl
+from dazzle.core.dsl_parser import parse_dsl
 
 # Test entity parsing
 test_dsl = """

@@ -2,9 +2,9 @@
 """Test linker implementation."""
 
 from pathlib import Path
-from src.dazzle.core import ir
-from src.dazzle.core.linker_impl import resolve_dependencies, build_symbol_table, validate_references
-from src.dazzle.core.errors import LinkError
+from dazzle.core import ir
+from dazzle.core.linker_impl import resolve_dependencies, build_symbol_table, validate_references
+from dazzle.core.errors import LinkError
 
 
 def test_dependency_resolution():

@@ -8,7 +8,7 @@ A proper test suite will be added in later stages.
 
 from pathlib import Path
 
-from src.dazzle.core import ir
+from dazzle.core import ir
 
 
 def test_field_types():

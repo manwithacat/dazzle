@@ -25,7 +25,7 @@ def test_project(tmp_path: Path):
     # Create a simple DSL file
     dsl_file = dsl_dir / "test.dsl"
     dsl_file.write_text("""
-module test.app
+module testapp
 
 app test_app "Test App"
 
@@ -49,7 +49,7 @@ surface task_list "Tasks":
 [project]
 name = "test_app"
 version = "0.1.0"
-root = "test.app"
+root = "testapp"
 
 [modules]
 paths = ["./dsl"]
@@ -76,7 +76,7 @@ def test_validate_command_with_errors(cli_runner: CliRunner, tmp_path: Path):
     
     dsl_file = dsl_dir / "test.dsl"
     dsl_file.write_text("""
-module test.app
+module testapp
 
 app test_app "Test App"
 
@@ -87,17 +87,17 @@ entity Task:
 surface task_list:
   uses entity Task
   mode: list
-  
+
   section main:
     field nonexistent "Nonexistent Field"
 """)
-    
+
     manifest = tmp_path / "dazzle.toml"
     manifest.write_text("""
 [project]
 name = "test_app"
 version = "0.1.0"
-root = "test.app"
+root = "testapp"
 
 [modules]
 paths = ["./dsl"]
@@ -160,6 +160,53 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
             "--out", "/tmp/output",
         ]
     )
-    
+
     assert result.exit_code == 1
     assert "Backend error" in result.stdout or "not found" in result.stdout
+
+
+def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
+    """Test inspect command with default options (interfaces and patterns)."""
+    result = cli_runner.invoke(
+        app,
+        ["inspect", "--manifest", str(test_project / "dazzle.toml")]
+    )
+
+    assert result.exit_code == 0
+    # Should show module interfaces
+    assert "Module Interface" in result.stdout or "module:" in result.stdout
+    # Should show pattern analysis
+    assert "Pattern" in result.stdout or "CRUD" in result.stdout
+
+
+def test_inspect_command_interfaces_only(cli_runner: CliRunner, test_project: Path):
+    """Test inspect command with --no-patterns flag."""
+    result = cli_runner.invoke(
+        app,
+        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-patterns"]
+    )
+
+    assert result.exit_code == 0
+    assert "Module" in result.stdout
+
+
+def test_inspect_command_patterns_only(cli_runner: CliRunner, test_project: Path):
+    """Test inspect command with --no-interfaces flag."""
+    result = cli_runner.invoke(
+        app,
+        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-interfaces"]
+    )
+
+    assert result.exit_code == 0
+    assert "Pattern" in result.stdout or "CRUD" in result.stdout
+
+
+def test_inspect_command_type_catalog(cli_runner: CliRunner, test_project: Path):
+    """Test inspect command with --types flag."""
+    result = cli_runner.invoke(
+        app,
+        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--types"]
+    )
+
+    assert result.exit_code == 0
+    assert "Type Catalog" in result.stdout or "Field Types" in result.stdout

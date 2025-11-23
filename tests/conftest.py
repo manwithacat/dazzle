@@ -2,9 +2,9 @@
 
 from pathlib import Path
 import pytest
-from src.dazzle.core import ir
-from src.dazzle.core.parser import parse_modules
-from src.dazzle.core.linker import build_appspec
+from dazzle.core import ir
+from dazzle.core.parser import parse_modules
+from dazzle.core.linker import build_appspec
 
 
 @pytest.fixture

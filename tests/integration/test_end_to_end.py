@@ -4,10 +4,10 @@ import pytest
 from pathlib import Path
 import tempfile
 
-from src.dazzle.core.parser import parse_modules
-from src.dazzle.core.linker import build_appspec
-from src.dazzle.core.lint import lint_appspec
-from src.dazzle.backends.openapi import OpenAPIBackend
+from dazzle.core.parser import parse_modules
+from dazzle.core.linker import build_appspec
+from dazzle.core.lint import lint_appspec
+from dazzle.stacks.openapi import OpenAPIBackend
 
 
 def test_full_pipeline_dsl_to_openapi(tmp_path: Path):
@@ -184,7 +184,7 @@ entity Post:
     modules = parse_modules([dsl_file])
     
     # Should raise LinkError for invalid reference
-    from src.dazzle.core.errors import LinkError
+    from dazzle.core.errors import LinkError
     with pytest.raises(LinkError) as exc_info:
         build_appspec(modules, "test.app")
     
