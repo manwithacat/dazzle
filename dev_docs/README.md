@@ -2,7 +2,15 @@
 
 This directory contains internal development documentation, implementation plans, completion reports, and release notes for the DAZZLE project.
 
-**Last Updated**: November 22, 2025
+**Last Updated**: November 23, 2025
+
+---
+
+## 📑 Complete Documentation Index
+
+**For comprehensive documentation navigation, see**: [`../docs/DOCUMENTATION_INDEX.md`](../docs/DOCUMENTATION_INDEX.md)
+
+This index catalogs all DAZZLE documentation (user docs, development docs, specs, examples) with categorization by audience, purpose, and use case.
 
 ---
 
@@ -18,16 +26,35 @@ dev_docs/
 │   └── plans/        # Implementation roadmaps
 ├── llm/              # LLM integration documentation
 ├── specs/            # Feature specifications
-└── features/         # Feature implementation docs
+├── features/         # Feature implementation docs
+├── architecture/     # Architecture docs and evaluations
+└── archive/          # Archived documentation
+    └── bug_fixes_v0_1_1/  # Detailed bug fix reports (v0.1.1)
 ```
 
 ---
 
 ## 📦 Releases
 
+### v0.1.1 (November 23, 2025)
+
+**Current Release - Patch Release**:
+- [**v0.1.1 Release Summary**](release_v0_1_1_summary.md) - Complete release summary
+- [**Bug Fixes Consolidated Summary**](BUG_FIXES_CONSOLIDATED_SUMMARY.md) - All 10 bug fixes documented
+- [**v0.2.0 Roadmap**](roadmap_v0_2_0.md) - Next release planning
+
+**Critical Fixes**:
+- ✅ AdminJS Node.js v25 compatibility
+- ✅ Environment variable support
+- ✅ Decimal field parameters (Django)
+- ✅ Partial CRUD patterns (Django)
+- ✅ Multi-word entity names (Django)
+
+**Detailed Bug Reports**: See [`archive/bug_fixes_v0_1_1/`](archive/bug_fixes_v0_1_1/)
+
 ### v0.1.0 (November 22, 2025)
 
-**Current Release**:
+**Initial Release**:
 - [**v0.1.0 Release Summary**](releases/2025-11-22-v0.1.0-release-summary.md) - Complete session summary of v0.1.0 release
 - [**Release Announcement**](releases/2025-11-22-release-announcement.md) - Public release announcement
 
