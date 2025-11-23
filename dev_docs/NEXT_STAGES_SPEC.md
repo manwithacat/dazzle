@@ -3,6 +3,9 @@
 **Version**: Post v0.1.0
 **Status**: Ready for Implementation
 
+> **📍 Navigation**: This document provides detailed specifications for immediate post-v0.1.0 work.
+> For the master roadmap and overall planning, see **`/ROADMAP.md`** (single source of truth).
+
 ---
 
 ## Overview

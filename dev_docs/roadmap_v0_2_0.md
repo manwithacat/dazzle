@@ -1,8 +1,11 @@
 # DAZZLE v0.2.0 Roadmap
 
 **Status**: Planning
-**Target Release**: TBD
+**Target Release**: Q1 2026
 **Focus**: Testing, Quality, Production Readiness
+
+> **📍 Navigation**: This document details v0.2.0 feature planning.
+> For the master roadmap and version timeline, see **`/ROADMAP.md`** (single source of truth).
 
 ---
 
