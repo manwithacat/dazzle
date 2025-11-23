@@ -37,6 +37,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - Planned
+
+### Planned Features
+
+**Pattern Support** (Phase 1):
+- Add `@pattern` annotation syntax to DSL for explicit architectural pattern modeling
+- Support 5 core patterns: repository, service, ports_and_adapters, cqrs, observer
+- Implement pattern-aware code generation in django_micro_modular and express_micro stacks
+- Pattern annotations are optional - apps work without them
+- Documentation: Pattern usage guide and examples
+
+**Design Pattern DSL Evaluation**:
+- Comprehensive evaluation of proposed Design Pattern DSL (DP-DSL) layer completed
+- Full implementation roadmap defined across v0.3.0 - v0.5.0
+- Phased approach: Pattern Annotations (v0.3.0) → DP-DSL Prototype (v0.4.0) → Full DP-DSL (v0.5.0)
+- See `dev_docs/architecture/dp_dsl_evaluation_and_roadmap.md` for complete analysis and roadmap
+
+**Additional Planned**:
+- Enhanced pattern detection and architectural linting
+- Stack compatibility matrix for pattern support
+- Pattern-based example projects
+- Design spike: ports-and-adapters implementation for UserRegistration use case
+
+**Status**: Under evaluation for Q1 2026 release
+
+---
+
+## [0.2.0] - Planned
+
+### Planned Features
+
+**Testing Infrastructure** (Priority 1):
+- Generate Jest/pytest test structure for all CRUD operations
+- Model tests with fixtures and validation
+- Route/endpoint tests with supertest/pytest-django
+- Test coverage reporting
+
+**Database Migrations** (Priority 2):
+- Replace `sync({force: true})` with proper migration system
+- Sequelize CLI integration for express_micro
+- Django migrations already supported in django stacks
+- Migration history and rollback support
+
+**Production Features** (Priority 3-7):
+- Health check endpoint with database connectivity checks
+- Security headers (helmet/django-csp)
+- Pagination support for list views
+- Auto-generated database indexes on foreign keys
+- Logging framework (winston/python logging)
+
+**Timeline**: 7-8 weeks estimated
+**Status**: See `dev_docs/roadmap_v0_2_0.md` for detailed specifications
+
+---
+
 ## [0.1.0] - 2025-11-22
 
 ### Added
