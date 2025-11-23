@@ -70,17 +70,48 @@ class UrlsGenerator(Generator):
             '',
         ]
 
-        # Generate URLs for each entity
-        for entity in self.spec.domain.entities:
-            entity_lower = entity.name.lower()
-            lines.append(f'    # {entity.name} URLs')
-            lines.append(f'    path("{entity_lower}/", views.{entity.name}ListView.as_view(), name="{entity_lower}-list"),')
+        # Group surfaces by entity to determine which URLs to generate
+        entity_surfaces = {}
+        for surface in self.spec.surfaces:
+            if surface.entity_ref:
+                entity_name = surface.entity_ref
+                if entity_name not in entity_surfaces:
+                    entity_surfaces[entity_name] = set()
+                entity_surfaces[entity_name].add(surface.mode)
 
+        # Generate URLs only for surfaces that exist in DSL
+        for entity in self.spec.domain.entities:
+            entity_name = entity.name
+            entity_lower = entity_name.lower()
+
+            # Skip entities with no surfaces defined
+            if entity_name not in entity_surfaces:
+                continue
+
+            modes = entity_surfaces[entity_name]
+            lines.append(f'    # {entity_name} URLs')
+
+            # List view (if mode: list exists)
+            if ir.SurfaceMode.LIST in modes:
+                lines.append(f'    path("{entity_lower}/", views.{entity_name}ListView.as_view(), name="{entity_lower}-list"),')
+
+            # Create view (if mode: create exists)
             # IMPORTANT: Put create/ before <pk>/ to avoid matching issues
-            lines.append(f'    path("{entity_lower}/create/", views.{entity.name}CreateView.as_view(), name="{entity_lower}-create"),')
-            lines.append(f'    path("{entity_lower}/<pk>/", views.{entity.name}DetailView.as_view(), name="{entity_lower}-detail"),')
-            lines.append(f'    path("{entity_lower}/<pk>/edit/", views.{entity.name}UpdateView.as_view(), name="{entity_lower}-update"),')
-            lines.append(f'    path("{entity_lower}/<pk>/delete/", views.{entity.name}DeleteView.as_view(), name="{entity_lower}-delete"),')
+            if ir.SurfaceMode.CREATE in modes:
+                lines.append(f'    path("{entity_lower}/create/", views.{entity_name}CreateView.as_view(), name="{entity_lower}-create"),')
+
+            # Detail view (if mode: view exists)
+            if ir.SurfaceMode.VIEW in modes:
+                lines.append(f'    path("{entity_lower}/<pk>/", views.{entity_name}DetailView.as_view(), name="{entity_lower}-detail"),')
+
+            # Update view (if mode: edit exists)
+            if ir.SurfaceMode.EDIT in modes:
+                lines.append(f'    path("{entity_lower}/<pk>/edit/", views.{entity_name}UpdateView.as_view(), name="{entity_lower}-update"),')
+
+            # Delete view - always generate if entity has any surfaces
+            # (Delete is a safety mechanism, keep it available)
+            lines.append(f'    path("{entity_lower}/<pk>/delete/", views.{entity_name}DeleteView.as_view(), name="{entity_lower}-delete"),')
+
             lines.append('')
 
         lines.append(']')
@@ -94,10 +125,16 @@ class UrlsGenerator(Generator):
             '"""',
             'from django.contrib import admin',
             'from django.urls import path, include',
+            'from django.conf import settings',
+            'from django.conf.urls.static import static',
             '',
             'urlpatterns = [',
             '    path("admin/", admin.site.urls),',
             f'    path("", include("{self.app_name}.urls")),',
             ']',
+            '',
+            '# Serve static files during development',
+            'if settings.DEBUG:',
+            '    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)',
         ]
         return '\n'.join(lines)

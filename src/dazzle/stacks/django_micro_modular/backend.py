@@ -106,6 +106,12 @@ class DjangoMicroModularBackend(ModularBackend):
         # Create basic project structure first
         self._create_project_structure(appspec, output_dir)
 
+        # Add normalized project name/path to options for hooks to use
+        project_name = self._get_project_name(appspec)
+        project_path = output_dir / project_name
+        options['project_name'] = project_name
+        options['project_path'] = project_path
+
         # Run the full modular generate workflow
         super().generate(appspec, output_dir, **options)
 

@@ -60,12 +60,29 @@ class ModelsGenerator(Generator):
             '"""',
             'import uuid',
             'from django.db import models',
+            'from django.utils import timezone',
             '',
             '',
         ]
 
+        # Check if any entity uses soft_delete pattern
+        has_soft_delete = any(self._has_soft_delete_pattern(e) for e in self.spec.domain.entities)
+
+        # Generate SoftDeleteManager if needed
+        if has_soft_delete:
+            lines.extend(self._generate_soft_delete_manager())
+            lines.append('')
+            lines.append('')
+
         # Generate model for each entity
         for entity in self.spec.domain.entities:
+            # Generate TextChoices classes for enum fields first
+            enum_classes = self._generate_enum_choices(entity)
+            if enum_classes:
+                lines.extend(enum_classes)
+                lines.append('')
+                lines.append('')
+
             lines.append(self._generate_model_class(entity))
             lines.append('')
             lines.append('')
@@ -76,6 +93,61 @@ class ModelsGenerator(Generator):
             lines.append('')
 
         return '\n'.join(lines)
+
+    def _generate_enum_choices(self, entity: ir.EntitySpec) -> list[str]:
+        """
+        Generate Django TextChoices classes for enum fields.
+
+        Returns list of TextChoices class definitions to insert before the model.
+        """
+        enum_classes = []
+
+        for field in entity.fields:
+            if field.type.kind == ir.FieldTypeKind.ENUM and field.type.enum_values:
+                # Generate class name: {EntityName}{FieldName}Choices
+                class_name = f'{entity.name}{self._to_pascal_case(field.name)}Choices'
+
+                # Start class definition
+                lines = [
+                    f'class {class_name}(models.TextChoices):',
+                    f'    """{field.name.replace("_", " ").title()} choices for {entity.name}."""'
+                ]
+
+                # Generate choice constants
+                for enum_value in field.type.enum_values:
+                    # Constant name: ALL_CAPS_WITH_UNDERSCORES
+                    const_name = self._to_constant_case(enum_value)
+                    # Display name: Title Case With Spaces
+                    display_name = self._to_display_name(enum_value)
+                    lines.append(f'    {const_name} = "{enum_value}", "{display_name}"')
+
+                enum_classes.extend(lines)
+
+        return enum_classes
+
+    def _to_pascal_case(self, snake_str: str) -> str:
+        """Convert snake_case to PascalCase."""
+        return ''.join(word.capitalize() for word in snake_str.split('_'))
+
+    def _to_constant_case(self, camel_or_word: str) -> str:
+        """Convert CamelCase or word to CONSTANT_CASE."""
+        # Insert underscores before uppercase letters (except at start)
+        result = []
+        for i, char in enumerate(camel_or_word):
+            if i > 0 and char.isupper() and camel_or_word[i-1].islower():
+                result.append('_')
+            result.append(char.upper())
+        return ''.join(result)
+
+    def _to_display_name(self, camel_or_word: str) -> str:
+        """Convert CamelCase to Display Name with spaces."""
+        # Insert spaces before uppercase letters (except at start)
+        result = []
+        for i, char in enumerate(camel_or_word):
+            if i > 0 and char.isupper() and camel_or_word[i-1].islower():
+                result.append(' ')
+            result.append(char)
+        return ''.join(result)
 
     def _generate_model_class(self, entity: ir.EntitySpec) -> str:
         """Generate a complete Django model class."""
@@ -96,6 +168,14 @@ class ModelsGenerator(Generator):
         if not has_fields:
             lines.append('    pass')
 
+        # Add managers if soft delete pattern detected
+        has_soft_delete = self._has_soft_delete_pattern(entity)
+        if has_soft_delete:
+            lines.append('')
+            lines.append('    # Soft delete managers')
+            lines.append('    objects = SoftDeleteManager()  # Default: exclude deleted')
+            lines.append('    all_objects = models.Manager()  # Include deleted')
+
         # Meta class
         lines.append('')
         lines.append('    class Meta:')
@@ -113,6 +193,11 @@ class ModelsGenerator(Generator):
         lines.append('    def __str__(self):')
         str_field = self._get_string_field(entity)
         lines.append(f'        return str(self.{str_field})')
+
+        # Add soft delete methods if pattern detected
+        if has_soft_delete:
+            lines.append('')
+            lines.append(self._generate_soft_delete_methods(entity))
 
         return '\n'.join(lines)
 
@@ -159,6 +244,13 @@ class ModelsGenerator(Generator):
         verbose_name = field.name.replace("_", " ").title()
         field_params.append(f'verbose_name="{verbose_name}"')
 
+        # Handle decimal precision (DecimalField requires max_digits and decimal_places)
+        if field_type.kind == ir.FieldTypeKind.DECIMAL:
+            max_digits = field_type.precision if field_type.precision else 10
+            decimal_places = field_type.scale if field_type.scale else 2
+            field_params.insert(0, f'max_digits={max_digits}')
+            field_params.insert(1, f'decimal_places={decimal_places}')
+
         # Handle string and enum max length (CharField requires max_length)
         if field_type.kind in [ir.FieldTypeKind.STR, ir.FieldTypeKind.ENUM]:
             if field_type.kind == ir.FieldTypeKind.STR:
@@ -166,6 +258,19 @@ class ModelsGenerator(Generator):
             else:  # ENUM
                 max_len = 50  # Reasonable default for enum values
             field_params.insert(0, f'max_length={max_len}')
+
+        # Handle enum choices
+        if field_type.kind == ir.FieldTypeKind.ENUM and field_type.enum_values:
+            choices_class = f'{entity.name}{self._to_pascal_case(field.name)}Choices'
+            field_params.insert(1, f'choices={choices_class}.choices')
+
+            # Handle default value for enums - use the constant
+            if field.default is not None:
+                # Find and remove the default parameter if it exists
+                field_params = [p for p in field_params if not p.startswith('default=')]
+                # Convert default value to constant name
+                const_name = self._to_constant_case(field.default)
+                field_params.append(f'default={choices_class}.{const_name}')
 
         params_str = ', '.join(field_params)
         return f'{field.name} = models.{django_field}({params_str})'
@@ -249,3 +354,61 @@ class ModelsGenerator(Generator):
                 return field.name
 
         return 'id'
+
+    def _has_soft_delete_pattern(self, entity: ir.EntitySpec) -> bool:
+        """
+        Detect if entity uses soft_delete_behavior pattern.
+
+        Pattern detected by presence of deleted_at field (datetime optional).
+        This field is created by vocabulary expansion of @use soft_delete_behavior().
+        """
+        for field in entity.fields:
+            if field.name == 'deleted_at' and field.type.kind == ir.FieldTypeKind.DATETIME:
+                return True
+        return False
+
+    def _generate_soft_delete_manager(self) -> list[str]:
+        """
+        Generate SoftDeleteManager class for soft delete pattern.
+
+        This manager excludes soft-deleted records from default queries.
+        """
+        return [
+            'class SoftDeleteManager(models.Manager):',
+            '    """Manager that excludes soft-deleted records from default queries."""',
+            '',
+            '    def get_queryset(self):',
+            '        """Return queryset excluding deleted records."""',
+            '        return super().get_queryset().filter(deleted_at__isnull=True)',
+        ]
+
+    def _generate_soft_delete_methods(self, entity: ir.EntitySpec) -> str:
+        """
+        Generate soft delete and hard delete methods.
+
+        Implements soft_delete_behavior pattern:
+        - delete() method marks record as deleted
+        - hard_delete() method permanently removes record
+        """
+        # Check if entity has deleted_by field
+        has_deleted_by = any(f.name == 'deleted_by' for f in entity.fields)
+
+        lines = [
+            '    def delete(self, *args, **kwargs):',
+            '        """Soft delete: mark as deleted without removing from database."""',
+            '        self.deleted_at = timezone.now()',
+        ]
+
+        # Only set deleted_by if the field exists
+        if has_deleted_by:
+            lines.append('        # Note: deleted_by should be set by the caller if user context available')
+
+        lines.extend([
+            '        self.save()',
+            '',
+            '    def hard_delete(self):',
+            '        """Permanently delete record from database."""',
+            '        super().delete()',
+        ])
+
+        return '\n'.join(lines)

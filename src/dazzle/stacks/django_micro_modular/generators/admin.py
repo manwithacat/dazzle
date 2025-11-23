@@ -87,8 +87,16 @@ class AdminGenerator(Generator):
             f'    """{entity.title or entity.name} admin."""',
         ]
 
+        # Detect soft delete pattern
+        has_soft_delete = self._has_soft_delete_pattern(entity)
+
         # List display
         list_display_fields = self._get_list_display_fields(entity)
+
+        # Add is_deleted indicator for soft delete pattern
+        if has_soft_delete:
+            list_display_fields.append('is_deleted')
+
         if list_display_fields:
             fields_str = ', '.join(f'"{f}"' for f in list_display_fields)
             # Add trailing comma for single-item tuples
@@ -126,6 +134,32 @@ class AdminGenerator(Generator):
                 lines.append(f'    readonly_fields = ({fields_str},)')
             else:
                 lines.append(f'    readonly_fields = ({fields_str})')
+
+        # Add soft delete support if pattern detected
+        if has_soft_delete:
+            lines.append(f'    actions = ["restore_deleted"]')
+            lines.append('')
+            lines.append('    def get_queryset(self, request):')
+            lines.append('        """Show all records including deleted in admin."""')
+            lines.append(f'        return {entity.name}.all_objects.all()')
+            lines.append('')
+            lines.append('    def is_deleted(self, obj):')
+            lines.append('        """Display deleted status as boolean indicator."""')
+            lines.append('        return obj.deleted_at is not None')
+            lines.append('    is_deleted.boolean = True')
+            lines.append('    is_deleted.short_description = "Deleted"')
+            lines.append('')
+            lines.append('    def restore_deleted(self, request, queryset):')
+            lines.append('        """Restore soft-deleted records."""')
+            lines.append('        count = 0')
+            lines.append('        for obj in queryset:')
+            lines.append('            if obj.deleted_at is not None:')
+            lines.append('                obj.deleted_at = None')
+            lines.append('                obj.deleted_by = None')
+            lines.append('                obj.save()')
+            lines.append('                count += 1')
+            lines.append('        self.message_user(request, f"{count} record(s) restored.")')
+            lines.append('    restore_deleted.short_description = "Restore selected deleted items"')
 
         return '\n'.join(lines)
 
@@ -185,3 +219,15 @@ class AdminGenerator(Generator):
                 readonly.append(field.name)
 
         return readonly
+
+    def _has_soft_delete_pattern(self, entity: ir.EntitySpec) -> bool:
+        """
+        Detect if entity uses soft_delete_behavior pattern.
+
+        Pattern detected by presence of deleted_at field (datetime optional).
+        This field is created by vocabulary expansion of @use soft_delete_behavior().
+        """
+        for field in entity.fields:
+            if field.name == 'deleted_at' and field.type.kind == ir.FieldTypeKind.DATETIME:
+                return True
+        return False

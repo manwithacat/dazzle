@@ -56,8 +56,9 @@ Or for automatic setup (development only):
 2. python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('{username}', '{email}', '{password}')"
 """
 
-        # Write credentials file
-        creds_file = context.output_dir / context.spec.name / ".admin_credentials"
+        # Write credentials file using normalized project path
+        project_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        creds_file = project_path / ".admin_credentials"
         creds_file.write_text(creds_content)
 
         return HookResult(
@@ -86,8 +87,9 @@ class DisplayDjangoInstructionsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Display instructions."""
-        app_name = context.spec.name
-        output_path = context.output_dir / app_name
+        # Use normalized project path
+        output_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_name = context.options.get('project_name', context.spec.name)
 
         instructions = f"""
 {'=' * 60}
@@ -159,7 +161,7 @@ class SetupUvEnvironmentHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Setup virtual environment and install dependencies."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
         requirements_path = app_path / "requirements.txt"
 
@@ -264,7 +266,7 @@ class CreateMigrationsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Generate Django migration files."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -341,7 +343,7 @@ class RunMigrationsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Run Django migrations."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -410,7 +412,7 @@ class CreateSuperuserHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Create Django superuser."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -517,7 +519,7 @@ class RunTestsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Run Django tests."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -605,7 +607,7 @@ class ValidateEndpointsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Validate all endpoints."""
-        app_path = context.output_dir / context.spec.name
+        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS

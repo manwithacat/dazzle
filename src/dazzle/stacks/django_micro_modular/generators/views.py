@@ -50,7 +50,7 @@ class ViewsGenerator(Generator):
         view_names = []
         for surface in self.spec.surfaces:
             if surface.entity_ref:
-                view_class_name = self._get_view_class_name(surface)
+                view_class_name = self._get_view_class_name(surface, surface.entity_ref)
                 view_names.append(view_class_name)
 
         result.add_artifact("view_names", view_names)
@@ -132,7 +132,7 @@ class ViewsGenerator(Generator):
     def _generate_view_for_surface(self, surface: ir.SurfaceSpec) -> str:
         """Generate view class for a surface."""
         entity_name = surface.entity_ref
-        view_class_name = self._get_view_class_name(surface)
+        view_class_name = self._get_view_class_name(surface, entity_name)
 
         # Map surface mode to Django view type
         if surface.mode == ir.SurfaceMode.LIST:
@@ -203,7 +203,7 @@ class ViewsGenerator(Generator):
                 for fk_field in missing_required_fks:
                     ref_entity = fk_field.type.ref_entity
                     lines.append(f'        # Auto-populate {fk_field.name} (required but not in form)')
-                    lines.append(f'        # TODO: Replace with proper authentication (form.instance.{fk_field.name} = self.request.user)')
+                    lines.append(f'        # NOTE: Customize this logic based on your authentication requirements')
                     lines.append(f'        if not form.instance.{fk_field.name}_id:')
                     lines.append(f'            form.instance.{fk_field.name} = {ref_entity}.objects.first()')
                     lines.append(f'            if not form.instance.{fk_field.name}:')
@@ -273,13 +273,35 @@ class ViewsGenerator(Generator):
         ]
         return '\n'.join(lines)
 
-    def _get_view_class_name(self, surface: ir.SurfaceSpec) -> str:
-        """Get Django view class name for a surface."""
-        # Convert surface name to PascalCase and add View suffix
-        parts = surface.name.split('_')
-        class_name = ''.join(word.capitalize() for word in parts)
-        if not class_name.endswith('View'):
-            class_name += 'View'
+    def _get_view_class_name(self, surface: ir.SurfaceSpec, entity_name: str) -> str:
+        """
+        Get Django view class name for a surface.
+
+        Uses entity name + mode to ensure consistent naming.
+        Example: MaintenanceTask + list -> MaintenanceTaskListView
+        """
+        # Map surface mode to view suffix
+        mode_suffix_map = {
+            ir.SurfaceMode.LIST: 'List',
+            ir.SurfaceMode.VIEW: 'Detail',
+            ir.SurfaceMode.CREATE: 'Create',
+            ir.SurfaceMode.EDIT: 'Update',
+        }
+
+        # Get the suffix for this mode
+        suffix = mode_suffix_map.get(surface.mode, '')
+
+        # Build class name: EntityName + Suffix + View
+        # Example: MaintenanceTask + List + View = MaintenanceTaskListView
+        if suffix:
+            class_name = f'{entity_name}{suffix}View'
+        else:
+            # For custom modes, use surface name as fallback
+            parts = surface.name.split('_')
+            class_name = ''.join(word.capitalize() for word in parts)
+            if not class_name.endswith('View'):
+                class_name += 'View'
+
         return class_name
 
     def _find_surface_for_entity(self, entity_name: str, mode: ir.SurfaceMode) -> Optional[ir.SurfaceSpec]:
