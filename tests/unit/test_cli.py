@@ -48,10 +48,10 @@ surface task_list "Tasks":
 [project]
 name = "test_app"
 version = "0.1.0"
-root = "testapp"
+root_module = "testapp"
 
-[modules]
-paths = ["./dsl"]
+[dazzle]
+dsl_paths = ["dsl/"]
 """)
 
     return tmp_path

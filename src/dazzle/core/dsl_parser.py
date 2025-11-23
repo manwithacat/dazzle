@@ -80,12 +80,18 @@ class Parser:
 
         # Allow keywords to be used as identifiers in certain contexts
         if token.type in (
+            TokenType.APP,
+            TokenType.MODULE,
+            TokenType.USE,
             TokenType.SURFACE,
             TokenType.ENTITY,
             TokenType.INTEGRATION,
             TokenType.EXPERIENCE,
             TokenType.SERVICE,
             TokenType.FOREIGN_MODEL,
+            # Boolean literals (for default values)
+            TokenType.TRUE,
+            TokenType.FALSE,
             # Test DSL keywords (can be used as field names)
             TokenType.TEST,
             TokenType.SETUP,
@@ -160,7 +166,7 @@ class Parser:
         # Parse app declaration
         if self.match(TokenType.APP):
             self.advance()
-            app_name = self.expect(TokenType.IDENTIFIER).value
+            app_name = self.expect_identifier_or_keyword().value
 
             if self.match(TokenType.STRING):
                 app_title = self.advance().value
@@ -316,8 +322,14 @@ class Parser:
                 elif self.match(TokenType.NUMBER):
                     num_str = self.advance().value
                     default = float(num_str) if "." in num_str else int(num_str)
+                elif self.match(TokenType.TRUE):
+                    self.advance()
+                    default = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    default = False
                 elif self.match(TokenType.IDENTIFIER):
-                    # Could be enum value or boolean
+                    # Could be enum value or boolean (for backwards compatibility)
                     val = self.advance().value
                     if val in ("true", "false"):
                         default = val == "true"

@@ -254,22 +254,26 @@ class DSLGenerator:
         ops = crud.operations_mentioned
 
         # List surface
-        if ops.get("list", {}).get("found", False):
+        list_op = ops.get("list")
+        if list_op and list_op.found:
             lines.extend(self._generate_list_surface(entity_name))
             lines.append("")
 
         # Detail surface
-        if ops.get("read", {}).get("found", False):
+        read_op = ops.get("read")
+        if read_op and read_op.found:
             lines.extend(self._generate_detail_surface(entity_name))
             lines.append("")
 
         # Create surface
-        if ops.get("create", {}).get("found", False):
+        create_op = ops.get("create")
+        if create_op and create_op.found:
             lines.extend(self._generate_create_surface(entity_name))
             lines.append("")
 
         # Edit surface
-        if ops.get("update", {}).get("found", False):
+        update_op = ops.get("update")
+        if update_op and update_op.found:
             lines.extend(self._generate_edit_surface(entity_name))
             lines.append("")
 

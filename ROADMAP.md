@@ -280,6 +280,41 @@ This document serves as the **master roadmap** for DAZZLE development. It consol
 - Ruby on Rails
 - Spring Boot
 
+### Distribution & Platform Support
+
+**Windows Distribution**:
+- [ ] Chocolatey package (`choco install dazzle`)
+- [ ] winget package (`winget install dazzle.dazzle`)
+- [ ] Scoop package (`scoop install dazzle`)
+
+**Linux Packages**:
+- [ ] .deb package (Ubuntu/Debian)
+- [ ] .rpm package (Fedora/Red Hat)
+- [ ] Snap package (`snap install dazzle`)
+- [ ] AppImage
+
+**Container & Cloud**:
+- [ ] Docker image (Docker Hub)
+- [ ] Multi-platform container support
+- [ ] Cloud IDE integration (GitHub Codespaces, Gitpod)
+
+**Developer Experience**:
+- [ ] Shell completions (bash, zsh, fish)
+- [ ] Man pages (`man dazzle`)
+- [ ] GUI installer (macOS .pkg)
+- [ ] Auto-update mechanism
+- [ ] In-app version checking
+
+**Integration Improvements**:
+- [ ] JetBrains IDEs plugin (IntelliJ, PyCharm)
+- [ ] Vim/Neovim plugin
+- [ ] Emacs mode
+- [ ] Language Server Protocol enhancements
+
+**Status**: ✅ Homebrew distribution complete (macOS/Linux)
+**Priority**: Medium (user demand driven)
+**Timeline**: As needed based on platform adoption
+
 ### Advanced Features
 
 **Pattern Detection**:

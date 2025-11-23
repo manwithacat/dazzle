@@ -1,7 +1,26 @@
-# DAZZLE - Next Steps
+# DAZZLE - Next Steps (ARCHIVED)
 
+> **⚠️ ARCHIVED**: This document was superseded on 2025-11-23 by `/ROADMAP.md`
+>
+> **Status**: Historical document, preserved for reference
+> **Replaced By**: `/ROADMAP.md` (single source of truth for all planning)
+> **Reason**: Consolidation of planning documents into master roadmap
+>
+> **What Was Migrated**:
+> - Distribution tasks → ROADMAP.md v0.4.0+ "Distribution & Platform Support"
+> - Windows/Linux/Docker packaging plans
+> - Shell completions, man pages, GUI installer
+> - IDE integration improvements
+>
+> **What's Obsolete**:
+> - Version roadmap (v0.2.0, v0.3.0) - superseded by ROADMAP.md versions
+> - Immediate actions (v0.1.0 release) - already complete
+> - Timeline estimates - superseded by ROADMAP.md timelines
+
+---
+
+**Original Document Date**: November 22, 2025
 **Current Status**: Homebrew distribution complete, ready for v0.1.0 release
-**Date**: November 22, 2025
 
 ---
 
