@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,113 @@ from dazzle.core.init import init_project, list_examples, InitError
 from dazzle.core.state import load_state, save_state, clear_state, compute_dsl_hashes
 from dazzle.core.changes import detect_changes
 from dazzle.core.errors import DazzleError, ParseError
+
+
+def get_version() -> str:
+    """Get DAZZLE version from package metadata."""
+    try:
+        from importlib.metadata import version
+        return version("dazzle")
+    except Exception:
+        # Fallback if not installed as package
+        return "0.1.0-dev"
+
+
+def version_callback(value: bool) -> None:
+    """Display version and environment information."""
+    if value:
+        import subprocess
+
+        # Get DAZZLE version
+        dazzle_version = get_version()
+
+        # Get Python version
+        python_version = platform.python_version()
+        python_impl = platform.python_implementation()
+
+        # Get installation location
+        try:
+            import dazzle
+            install_location = Path(dazzle.__file__).parent.parent.parent
+        except Exception:
+            install_location = Path.cwd()
+
+        # Check if installed via pip (editable or not)
+        install_method = "unknown"
+        try:
+            from importlib.metadata import distribution
+            dist = distribution("dazzle")
+            if dist.read_text('direct_url.json'):
+                install_method = "pip (editable)"
+            else:
+                install_method = "pip"
+        except Exception:
+            # Check if we're in development directory
+            if (install_location / "pyproject.toml").exists():
+                install_method = "development"
+
+        # Check LSP server availability
+        lsp_available = False
+        try:
+            # Suppress verbose pygls logging during import check
+            # MUST set logging level BEFORE importing pygls/dazzle.lsp.server
+            import logging
+            logging.getLogger("pygls.feature_manager").setLevel(logging.ERROR)
+            logging.getLogger("pygls").setLevel(logging.ERROR)
+
+            import dazzle.lsp.server
+            lsp_available = True
+        except ImportError:
+            pass
+
+        # Check available stacks
+        available_stacks = []
+        try:
+            from dazzle.stacks import list_backends
+            available_stacks = sorted(list_backends())
+        except Exception:
+            pass
+
+        # Check LLM support
+        llm_available = False
+        llm_providers = []
+        try:
+            import anthropic
+            llm_providers.append("anthropic")
+            llm_available = True
+        except ImportError:
+            pass
+        try:
+            import openai
+            llm_providers.append("openai")
+            llm_available = True
+        except ImportError:
+            pass
+
+        # Output version information
+        typer.echo(f"DAZZLE version {dazzle_version}")
+        typer.echo("")
+        typer.echo("Environment:")
+        typer.echo(f"  Python:        {python_impl} {python_version}")
+        typer.echo(f"  Platform:      {platform.system()} {platform.release()}")
+        typer.echo(f"  Architecture:  {platform.machine()}")
+        typer.echo("")
+        typer.echo("Installation:")
+        typer.echo(f"  Method:        {install_method}")
+        typer.echo(f"  Location:      {install_location}")
+        typer.echo("")
+        typer.echo("Features:")
+        typer.echo(f"  LSP Server:    {'✓ Available' if lsp_available else '✗ Not available (install with: pip install dazzle)'}")
+        typer.echo(f"  LLM Support:   {'✓ Available (' + ', '.join(llm_providers) + ')' if llm_available else '✗ Not available (install with: pip install dazzle[llm])'}")
+        typer.echo("")
+        if available_stacks:
+            typer.echo("Available Stacks:")
+            for stack in available_stacks:
+                typer.echo(f"  - {stack}")
+        else:
+            typer.echo("Available Stacks: None")
+
+        raise typer.Exit()
 
 
 def _print_human_diagnostics(errors: list[str], warnings: list[str]) -> None:
@@ -73,36 +181,96 @@ def _print_vscode_parse_error(error: ParseError, root: Path) -> None:
     else:
         typer.echo(f"::error: {error.message}", err=True)
 
+def _is_directory_empty(directory: Path) -> bool:
+    """
+    Check if directory is empty (or has only files we commonly allow).
+
+    A directory is considered "empty" for init purposes if it contains:
+    - No files at all, OR
+    - Only .git directory, OR
+    - Only .git and common files (.gitignore, README.md, LICENSE, .DS_Store)
+
+    Args:
+        directory: Path to check
+
+    Returns:
+        True if directory is empty or only has allowed files
+    """
+    if not directory.exists():
+        return True
+
+    contents = list(directory.iterdir())
+
+    if len(contents) == 0:
+        return True
+
+    # Allow some common files that might be pre-created
+    allowed_files = {'.git', '.gitignore', 'README.md', 'LICENSE', '.DS_Store'}
+    actual_files = {item.name for item in contents}
+
+    # If all files are in allowed list, consider it empty
+    if actual_files.issubset(allowed_files):
+        return True
+
+    return False
+
+
 app = typer.Typer(
     help="""DAZZLE – DSL-first app generator
 
 Command Types:
   • Project Creation: init, clone, demo
-    → Create NEW directories with project structure
+    → init: Initialize in current directory (or create new)
+    → clone/demo: Create NEW directories
 
   • Project Operations: validate, build, lint, stacks
     → Operate in CURRENT directory (must have dazzle.toml)
 """,
     no_args_is_help=True,
+    add_completion=False,
 )
+
+
+@app.callback()
+def main_callback(
+    version: Optional[bool] = typer.Option(
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
+        help="Show version and environment information"
+    ),
+) -> None:
+    """DAZZLE CLI main callback for global options."""
+    pass
 
 
 @app.command()
 def init(
-    path: Optional[str] = typer.Argument(None, help="Directory to create project in"),
+    path: Optional[str] = typer.Argument(
+        None,
+        help="Directory to create project in (defaults to current directory if empty)"
+    ),
     from_example: Optional[str] = typer.Option(
         None, "--from", "-f", help="Copy from example (e.g., 'simple_task', 'support_tickets')"
     ),
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Project name (defaults to directory name)"),
     title: Optional[str] = typer.Option(None, "--title", "-t", help="Project title"),
+    here: bool = typer.Option(
+        False,
+        "--here",
+        help="Initialize in current directory even if not empty"
+    ),
     list_examples_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
     no_llm: bool = typer.Option(False, "--no-llm", help="Skip LLM instrumentation (context files for AI assistants)"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
 ) -> None:
     """
-    Initialize a new DAZZLE project in a NEW directory.
+    Initialize a new DAZZLE project.
 
-    ⚠ Creates a NEW directory at the specified path.
+    By default, initializes in current directory if it's empty,
+    or creates a new directory if a path is provided.
 
     Creates project structure with:
     - dazzle.toml manifest
@@ -112,11 +280,13 @@ def init(
     - LLM context files for AI assistants (unless --no-llm)
 
     Examples:
-        dazzle init ./my-project                    # Create blank project
-        dazzle init ./my-app --from simple_task     # Copy from example
-        dazzle init ./my-app --from support_tickets # Multi-module example
-        dazzle init --list                          # Show available examples
-        dazzle init ./my-app --no-llm --no-git      # Minimal setup without LLM/git
+        dazzle init                              # Init in current dir (if empty)
+        dazzle init --here                       # Force init in current dir
+        dazzle init ./my-project                 # Create new directory
+        dazzle init --from simple_task           # Init from example (current dir)
+        dazzle init ./my-app --from support_tickets  # New dir from example
+        dazzle init --list                       # Show available examples
+        dazzle init --no-llm --no-git            # Minimal setup
     """
     if list_examples_flag:
         examples = list_examples()
@@ -127,18 +297,47 @@ def init(
         typer.echo("Available examples:\n")
         for example in examples:
             typer.echo(f"  {example}")
-        typer.echo("\nUse: dazzle init ./my-project --from <example>")
+        typer.echo("\nUse: dazzle init --from <example>  # Current directory")
+        typer.echo("Or:  dazzle init ./my-project --from <example>  # New directory")
         return
 
+    # Determine target directory
     if path is None:
-        typer.echo("Error: Missing argument 'PATH'.", err=True)
-        typer.echo("Use: dazzle init ./my-project", err=True)
-        typer.echo("Or: dazzle init --list", err=True)
-        raise typer.Exit(code=1)
+        # No path provided, use current directory
+        target = Path(".").resolve()
 
-    target = Path(path).resolve()
+        # Check if current directory is suitable
+        if not _is_directory_empty(target) and not here:
+            # Directory is not empty
+            typer.echo(f"Error: Current directory is not empty: {target}", err=True)
+            typer.echo("", err=True)
+
+            # Show what's in the directory
+            contents = [item.name for item in target.iterdir() if not item.name.startswith('.')]
+            if contents:
+                typer.echo("Current directory contains:", err=True)
+                for item in sorted(contents)[:5]:  # Show first 5 items
+                    typer.echo(f"  - {item}", err=True)
+                if len(contents) > 5:
+                    typer.echo(f"  ... and {len(contents) - 5} more items", err=True)
+                typer.echo("", err=True)
+
+            typer.echo("Options:", err=True)
+            typer.echo("  1. Initialize anyway:  dazzle init --here", err=True)
+            typer.echo("  2. Create new dir:     dazzle init ./my-project", err=True)
+            typer.echo("  3. Clear directory first (be careful!)", err=True)
+            typer.echo("", err=True)
+            typer.echo("Tip: --here will not overwrite existing files", err=True)
+            raise typer.Exit(code=1)
+    else:
+        # Path provided, create new directory
+        target = Path(path).resolve()
 
     try:
+        # Determine if we're initializing in place
+        # If path is None, we're in current directory and already checked it's suitable
+        allow_existing = (path is None)
+
         init_project(
             target_dir=target,
             project_name=name,
@@ -146,17 +345,25 @@ def init(
             title=title,
             no_llm=no_llm,
             no_git=no_git,
+            allow_existing=allow_existing,
         )
 
-        typer.echo(f"✓ Created project: {target}")
+        # Success message
+        if path is None:
+            typer.echo(f"✓ Initialized project in current directory: {target.name}")
+        else:
+            typer.echo(f"✓ Created project: {target}")
+
         if not from_example:
             typer.echo("✓ Created SPEC.md template (fill out your requirements)")
         if not no_git:
             typer.echo("✓ Initialized git repository")
         if not no_llm:
             typer.echo("✓ Created LLM context files (LLM_CONTEXT.md, .llm/, .claude/, .copilot/)")
+
         typer.echo("\nNext steps:")
-        typer.echo(f"  cd {path}")
+        if path is not None:
+            typer.echo(f"  cd {path}")
         if not from_example:
             typer.echo("  # 1. Edit SPEC.md with your project requirements")
             typer.echo("  # 2. Work with an AI assistant to create DSL from your spec")
@@ -250,6 +457,126 @@ def lint(
         raise typer.Exit(code=1)
 
     typer.echo("OK: no lint issues.")
+
+
+@app.command()
+def inspect(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    show_interfaces: bool = typer.Option(True, "--interfaces/--no-interfaces", help="Show module interfaces"),
+    show_patterns: bool = typer.Option(True, "--patterns/--no-patterns", help="Show detected patterns"),
+    show_types: bool = typer.Option(False, "--types", help="Show type catalog"),
+) -> None:
+    """
+    Inspect AppSpec structure, module interfaces, and detected patterns.
+
+    ⚠ Operates in CURRENT directory (must contain dazzle.toml).
+
+    Provides insights into:
+    - Module interfaces (what each module exports/imports)
+    - Detected patterns (CRUD, integrations, experiences)
+    - Type catalog (field types used across entities)
+
+    Useful for understanding module boundaries and identifying boilerplate.
+    """
+    from dazzle.core.patterns import analyze_patterns, format_pattern_report
+    from dazzle.core.linker_impl import build_symbol_table
+
+    root = Path(".").resolve()
+    manifest_path = root / manifest
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        # Show module interfaces
+        if show_interfaces:
+            typer.echo("Module Interfaces")
+            typer.echo("=" * 60)
+            typer.echo()
+
+            # Build symbol table to get module sources
+            symbols = build_symbol_table(modules)
+
+            for module in modules:
+                typer.echo(f"module: {module.name}")
+
+                # Collect exports
+                entities = [e.name for e in module.fragment.entities]
+                surfaces = [s.name for s in module.fragment.surfaces]
+                experiences = [ex.name for ex in module.fragment.experiences]
+                services = [srv.name for srv in module.fragment.services]
+                foreign_models = [fm.name for fm in module.fragment.foreign_models]
+                integrations = [i.name for i in module.fragment.integrations]
+
+                if entities:
+                    typer.echo(f"  exports:")
+                    if entities:
+                        typer.echo(f"    entities: {', '.join(entities)}")
+                    if surfaces:
+                        typer.echo(f"    surfaces: {', '.join(surfaces)}")
+                    if experiences:
+                        typer.echo(f"    experiences: {', '.join(experiences)}")
+                    if services:
+                        typer.echo(f"    services: {', '.join(services)}")
+                    if foreign_models:
+                        typer.echo(f"    foreign_models: {', '.join(foreign_models)}")
+                    if integrations:
+                        typer.echo(f"    integrations: {', '.join(integrations)}")
+                else:
+                    typer.echo(f"  exports: (none)")
+
+                # Show imports
+                if module.uses:
+                    typer.echo(f"  imports:")
+                    for used_module in module.uses:
+                        typer.echo(f"    from {used_module}")
+                else:
+                    typer.echo(f"  imports: (none)")
+
+                typer.echo()
+
+        # Show detected patterns
+        if show_patterns:
+            patterns = analyze_patterns(appspec)
+            report = format_pattern_report(patterns)
+            typer.echo(report)
+
+        # Show type catalog
+        if show_types:
+            typer.echo("\nType Catalog")
+            typer.echo("=" * 60)
+
+            type_catalog = appspec.type_catalog
+            if not type_catalog:
+                typer.echo("No types defined.")
+            else:
+                for field_name, types in sorted(type_catalog.items()):
+                    typer.echo(f"\n{field_name}:")
+                    for field_type in types:
+                        type_desc = f"  {field_type.kind.value}"
+                        if field_type.max_length:
+                            type_desc += f"({field_type.max_length})"
+                        elif field_type.precision:
+                            type_desc += f"({field_type.precision},{field_type.scale})"
+                        elif field_type.enum_values:
+                            type_desc += f"[{','.join(field_type.enum_values)}]"
+                        elif field_type.ref_entity:
+                            type_desc += f" -> {field_type.ref_entity}"
+                        typer.echo(type_desc)
+
+            # Show type conflicts if any
+            conflicts = appspec.get_field_type_conflicts()
+            if conflicts:
+                typer.echo("\n⚠ Type Conflicts:")
+                for conflict in conflicts:
+                    typer.echo(f"  {conflict}")
+
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -1736,168 +2063,501 @@ def _generate_dsl(analysis, answers: dict, spec_file: Path) -> None:
 
 @app.command()
 def example(
-    name: Optional[str] = typer.Argument(None, help="Example name to build (e.g., 'simple_task', 'support_tickets')"),
+    name: Optional[str] = typer.Argument(None, help="Example name (e.g., 'simple_task', 'urban_canopy')"),
+    stack: Optional[str] = typer.Option(None, "--stack", "-s", help="Stack preset to use (e.g., 'micro', 'api_only')"),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Directory to create (default: ./<example-name>)"),
     list_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
-    out: Optional[str] = typer.Option(None, "--out", "-o", help="Output directory (default: ./build)"),
-    backend: Optional[str] = typer.Option(None, "--backend", "-b", help="Backend to use (defaults to project default)"),
+    list_stacks: bool = typer.Option(False, "--list-stacks", help="List available stack presets"),
+    no_build: bool = typer.Option(False, "--no-build", help="Skip automatic build after creation"),
 ) -> None:
     """
-    Build one of the built-in examples in-situ (without creating a new project).
+    Create a new project from a built-in example with interactive selection.
 
-    This is useful for quickly trying out examples or building them for demonstration.
-    Unlike 'dazzle clone', this doesn't create a new project directory - it just builds
-    the example using the current backend configuration.
+    ⚠ Creates a NEW directory (default: ./<example-name>).
+
+    This command provides an interactive way to explore and use DAZZLE examples.
+    It creates a complete project directory with DSL files, ready for LLM-driven
+    development.
+
+    Interactive modes:
+        dazzle example                        # List examples, select example and stack
+        dazzle example simple_task            # Select stack for simple_task
+        dazzle example simple_task --stack micro  # Direct creation with stack
+
+    List options:
+        dazzle example --list                 # List available examples
+        dazzle example --list-stacks          # List available stack presets
 
     Examples:
-        dazzle example --list                      # List available examples
-        dazzle example simple_task                 # Build to ./build
-        dazzle example support_tickets --out /tmp  # Build to /tmp
-        dazzle example simple_task --backend openapi  # Build with specific backend
+        dazzle example                               # Interactive mode
+        dazzle example urban_canopy                  # Select stack for example
+        dazzle example simple_task --stack micro     # Create with specific stack
+        dazzle example simple_task --path ./my-app   # Create in custom directory
+        dazzle example --no-build                    # Skip automatic build
     """
+    from dazzle.core.stacks import get_stack_preset, list_stack_presets, get_stack_description
     from dazzle.core.init import list_examples
-    from pathlib import Path
-    import subprocess
-    import os
 
-    # List available examples
-    if list_flag or name is None:
-        examples_list = list_examples()
-
-        if not examples_list:
-            typer.echo("No examples found.", err=True)
+    # List stacks
+    if list_stacks:
+        stacks = list_stack_presets()
+        if not stacks:
+            typer.echo("No stack presets available.")
             return
 
-        if name is None:
-            typer.echo("Usage: dazzle example [NAME] [OPTIONS]\n")
-            typer.echo("Build a built-in example project.\n")
+        typer.echo("Available stack presets:\n")
+        for stack_name in stacks:
+            desc = get_stack_description(stack_name)
+            typer.echo(f"  {stack_name}")
+            for line in desc.split('\n'):
+                typer.echo(f"    {line}")
+            typer.echo()
 
-        typer.echo("Available examples:\n")
+        typer.echo("Use: dazzle example <name> --stack <stack-name>")
+        return
 
+    # Get available examples
+    examples_list = list_examples()
+    if not examples_list:
+        typer.echo("No examples found.", err=True)
+        return
+
+    # List examples or interactive selection
+    if list_flag or name is None:
         # Get examples directory to read descriptions
         examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
 
+        typer.echo("Available DAZZLE Examples:\n")
+
+        example_descriptions = []
         for example_name in examples_list:
             example_dir = examples_dir / example_name
-            spec_file = example_dir / "SPEC.md"
+            readme_file = example_dir / "README.md"
 
-            # Try to get description from SPEC.md
+            # Try to get description from README.md
             description = ""
-            if spec_file.exists():
-                with open(spec_file, 'r') as f:
+            if readme_file.exists():
+                with open(readme_file, 'r') as f:
                     lines = f.readlines()
-                    # Look for the first descriptive line after title
-                    for i, line in enumerate(lines):
-                        if line.startswith('**Project Type**:'):
-                            description = line.replace('**Project Type**:', '').strip()
-                            break
-                        elif line.startswith('**Target Users**:'):
-                            description = line.replace('**Target Users**:', '').strip()
+                    # Look for overview or first descriptive paragraph
+                    in_overview = False
+                    for line in lines:
+                        if '## Overview' in line or '## What This Example Demonstrates' in line:
+                            in_overview = True
+                            continue
+                        if in_overview and line.strip() and not line.startswith('#'):
+                            # Get first sentence
+                            description = line.strip().split('.')[0] + '.'
+                            if len(description) > 100:
+                                description = description[:97] + '...'
                             break
 
-            typer.echo(f"  {example_name}")
-            if description:
-                typer.echo(f"    {description}")
-            typer.echo()
+            if not description:
+                # Fallback to default descriptions
+                description_map = {
+                    'simple_task': 'Basic CRUD app - learn DAZZLE fundamentals',
+                    'support_tickets': 'Multi-entity system with relationships',
+                    'urban_canopy': 'Real-world citizen science application',
+                }
+                description = description_map.get(example_name, 'DAZZLE example project')
 
-        typer.echo("Examples:")
-        typer.echo("  dazzle example simple_task                 # Build to ./build")
-        typer.echo("  dazzle example support_tickets --out /tmp  # Build to /tmp")
-        typer.echo("\nFor creating a new project based on an example, use: dazzle clone")
-        return
+            example_descriptions.append((example_name, description))
+
+        # Display examples with numbering
+        for i, (example_name, description) in enumerate(example_descriptions, 1):
+            typer.echo(f"  {i}. {example_name:20s} - {description}")
+
+        typer.echo()
+
+        # If just listing, show usage and return
+        if list_flag:
+            typer.echo("Usage:")
+            typer.echo("  dazzle example                          # Interactive selection")
+            typer.echo("  dazzle example <name>                   # Select stack for example")
+            typer.echo("  dazzle example <name> --stack <stack>   # Direct creation")
+            return
+
+        # Interactive selection
+        typer.echo("Select an example to create a new project:\n")
+        while True:
+            choice = typer.prompt("Enter number or name")
+
+            # Try as number first
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(examples_list):
+                    name = examples_list[idx]
+                    break
+            except ValueError:
+                pass
+
+            # Try as example name
+            if choice in examples_list:
+                name = choice
+                break
+
+            typer.echo(f"Invalid choice. Please enter a number (1-{len(examples_list)}) or example name.")
+
+        typer.echo(f"\n✓ Selected: {name}\n")
 
     # Validate example exists
-    examples_list = list_examples()
     if name not in examples_list:
         typer.echo(f"Error: Example '{name}' not found.", err=True)
         typer.echo(f"Available examples: {', '.join(examples_list)}", err=True)
         typer.echo("Use 'dazzle example --list' to see details.", err=True)
         raise typer.Exit(code=1)
 
-    # Get example directory
-    examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
-    example_dir = examples_dir / name
+    # Prompt for stack if not provided
+    if stack is None:
+        # Only show stacks with available implementations
+        stacks = _get_available_stacks()
+        if not stacks:
+            typer.echo("Error: No compatible stack presets available.", err=True)
+            raise typer.Exit(code=1)
 
-    if not example_dir.exists() or not (example_dir / "dazzle.toml").exists():
-        typer.echo(f"Error: Example directory not found or invalid: {example_dir}", err=True)
+        typer.echo("Available stacks:\n")
+        for i, stack_name in enumerate(stacks, 1):
+            desc = get_stack_description(stack_name)
+            first_line = desc.split('\n')[0] if desc else ""
+            typer.echo(f"  {i}. {stack_name:20s} - {first_line}")
+
+        typer.echo()
+        while True:
+            choice = typer.prompt("Select a stack (enter number or name)")
+
+            # Try as number first
+            try:
+                idx = int(choice) - 1
+                if 0 <= idx < len(stacks):
+                    stack = stacks[idx]
+                    break
+            except ValueError:
+                pass
+
+            # Try as stack name
+            if choice in stacks:
+                stack = choice
+                break
+
+            typer.echo(f"Invalid choice. Please enter a number (1-{len(stacks)}) or stack name.")
+
+        typer.echo(f"\n✓ Selected: {stack}\n")
+
+    # Validate stack
+    preset = get_stack_preset(stack)
+    if not preset:
+        typer.echo(f"Error: Stack '{stack}' not found.", err=True)
+        typer.echo("Use 'dazzle example --list-stacks' to see available stacks.", err=True)
         raise typer.Exit(code=1)
 
-    # Determine output directory
-    if out is None:
-        out = "./build"
+    # Determine target directory
+    if path is None:
+        path = f"./{name}"
 
-    output_dir = Path(out).resolve()
+    target_dir = Path(path).resolve()
+
+    # Check if directory exists
+    if target_dir.exists():
+        typer.echo(f"Error: Directory '{target_dir}' already exists.", err=True)
+        typer.echo("Please choose a different path or remove the existing directory.", err=True)
+        raise typer.Exit(code=1)
 
     try:
-        typer.echo(f"Building example: {name}")
-        typer.echo(f"Source: {example_dir}")
-        typer.echo(f"Output: {output_dir}\n")
+        # Create project from example
+        typer.echo(f"Creating project from example: {name}")
+        typer.echo(f"Stack: {stack}")
+        typer.echo(f"Location: {target_dir}\n")
 
-        # Prepare build command
-        build_cmd = [
-            "python3", "-m", "dazzle.cli", "build",
-            "--out", str(output_dir)
-        ]
+        # Initialize from example
+        from dazzle.core.init import init_project
 
-        if backend:
-            build_cmd.extend(["--backend", backend])
-
-        # Set PYTHONPATH if needed
-        env = os.environ.copy()
-        dazzle_src = Path(__file__).parent.parent
-        if 'PYTHONPATH' in env:
-            env['PYTHONPATH'] = f"{dazzle_src}:{env['PYTHONPATH']}"
-        else:
-            env['PYTHONPATH'] = str(dazzle_src)
-
-        # Run build from example directory
-        result = subprocess.run(
-            build_cmd,
-            cwd=example_dir,
-            env=env,
-            capture_output=False,  # Show output in real-time
+        init_project(
+            target_dir=target_dir,
+            project_name=name,
+            from_example=name,
         )
 
-        if result.returncode != 0:
-            typer.echo(f"\n✗ Build failed with exit code {result.returncode}", err=True)
-            raise typer.Exit(code=result.returncode)
+        # Update dazzle.toml with stack configuration
+        manifest_path = target_dir / "dazzle.toml"
+        if manifest_path.exists():
+            manifest_content = manifest_path.read_text()
+            # Add stack section if not present
+            if "[stack]" not in manifest_content:
+                stack_section = f"\n[stack]\nname = \"{stack}\"\n"
+                manifest_path.write_text(manifest_content + stack_section)
+            else:
+                # Update existing stack name
+                import re
+                manifest_content = re.sub(
+                    r'name = "[^"]*"',
+                    f'name = "{stack}"',
+                    manifest_content,
+                    count=1,
+                    flags=re.MULTILINE
+                )
+                manifest_path.write_text(manifest_content)
 
-        typer.echo(f"\n{'=' * 60}")
-        typer.echo(f"✓ Example '{name}' built successfully!")
-        typer.echo(f"{'=' * 60}\n")
+        typer.echo(f"✓ Project created: {target_dir}")
+        typer.echo("✓ Initialized git repository")
+        typer.echo("✓ Created LLM context files (LLM_CONTEXT.md, .llm/, .claude/, .copilot/)\n")
 
-        # Provide next steps based on backend
+        # Verify project setup
+        typer.echo("Verifying project setup...")
+        from dazzle.core.init import verify_project
+
+        if not verify_project(target_dir):
+            typer.echo("⚠ Verification failed - DSL validation errors detected", err=True)
+            typer.echo("Run 'dazzle validate' in the project directory for details\n", err=False)
+            raise typer.Exit(code=1)
+
+        typer.echo("✓ Verification passed\n")
+
+        # Optionally build the project
+        if not no_build:
+            typer.echo("Building project...")
+            import subprocess
+            result = subprocess.run(
+                ["python3", "-m", "dazzle.cli", "build"],
+                cwd=target_dir,
+                capture_output=True,
+                text=True,
+            )
+
+            if result.returncode == 0:
+                typer.echo("✓ Build complete\n")
+            else:
+                typer.echo("⚠ Build failed:\n", err=True)
+                if result.stderr:
+                    typer.echo(result.stderr, err=True)
+                if result.stdout:
+                    typer.echo(result.stdout, err=True)
+                typer.echo("\nYou can build manually with 'dazzle build'\n", err=False)
+
+        # Print next steps
+        typer.echo("=" * 60)
         typer.echo("Next steps:")
+        typer.echo(f"  cd {path}")
 
-        # Try to determine what was built
-        built_dirs = list(output_dir.glob("*/"))
-        if built_dirs:
-            app_dir = built_dirs[0]
-            typer.echo(f"  cd {app_dir}")
+        if no_build:
+            typer.echo("  dazzle build")
 
-            # Check if it's a Django project
-            if (app_dir / "manage.py").exists():
-                typer.echo("\nDjango application:")
-                if (app_dir / ".venv").exists():
-                    typer.echo("  source .venv/bin/activate  # Already set up by hooks!")
-                else:
-                    typer.echo("  pip install -r requirements.txt")
-                    typer.echo("  python manage.py migrate")
-                typer.echo("  python manage.py runserver")
-                typer.echo("\nAdmin credentials: See .admin_credentials file")
+        # Stack-specific instructions
+        if "django" in preset.backends or "django_micro_modular" in preset.backends:
+            typer.echo("\nDjango application:")
+            typer.echo("  cd build/<project-name>")
+            typer.echo("  source .venv/bin/activate  # Already set up!")
+            typer.echo("  python manage.py runserver")
+            typer.echo("\nAdmin credentials: See .admin_credentials file")
 
-            # Check if it's a Node.js project
-            elif (app_dir / "package.json").exists():
-                typer.echo("\nNode.js application:")
-                typer.echo("  npm install")
-                typer.echo("  npm start")
+        if "express_micro" in preset.backends:
+            typer.echo("\nExpress application:")
+            typer.echo("  cd build/<project-name>")
+            typer.echo("  npm install")
+            typer.echo("  npm start")
+
+        if "openapi" in preset.backends:
+            typer.echo("\nOpenAPI spec:")
+            typer.echo("  View: build/openapi/openapi.yaml")
+
+        if "docker" in preset.backends:
+            typer.echo("\nDocker:")
+            typer.echo("  cd build/docker")
+            typer.echo("  docker compose up -d")
+
+        typer.echo("\n" + "=" * 60)
+        typer.echo("🚀 Ready for LLM-driven development!")
+        typer.echo("=" * 60)
+
+    except Exception as e:
+        typer.echo(f"Error creating project: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        raise typer.Exit(code=1)
+
+
+# Vocabulary management commands
+vocab_app = typer.Typer(help="Manage app-local vocabulary (macros, aliases, patterns)")
+app.add_typer(vocab_app, name="vocab")
+
+
+@vocab_app.command("list")
+def vocab_list(
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Project directory (default: current)"),
+    scope: Optional[str] = typer.Option(None, "--scope", "-s", help="Filter by scope (ui, data, workflow, auth, misc)"),
+    kind: Optional[str] = typer.Option(None, "--kind", "-k", help="Filter by kind (macro, alias, pattern)"),
+    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+):
+    """List all vocabulary entries in the project."""
+    from dazzle.core.vocab import load_manifest
+    from pathlib import Path
+
+    project_path = Path(path or ".")
+    manifest_path = project_path / "dazzle" / "local_vocab" / "manifest.yml"
+
+    if not manifest_path.exists():
+        typer.echo("No vocabulary manifest found.", err=True)
+        typer.echo(f"Expected location: {manifest_path}", err=True)
+        typer.echo("\nTo create a manifest, use: dazzle vocab create", err=True)
+        return
+
+    # Load manifest
+    try:
+        manifest = load_manifest(manifest_path)
+    except Exception as e:
+        typer.echo(f"Error loading manifest: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Filter entries
+    entries = manifest.entries
+    if scope:
+        entries = [e for e in entries if e.scope == scope]
+    if kind:
+        entries = [e for e in entries if e.kind == kind]
+    if tag:
+        entries = [e for e in entries if tag in e.tags]
+
+    if not entries:
+        typer.echo("No vocabulary entries found matching criteria.")
+        return
+
+    # Display entries
+    typer.echo(f"Vocabulary Entries ({len(entries)} total):\n")
+    for entry in entries:
+        stability = entry.stability
+        usage = entry.usage_count
+
+        # Format entry line
+        typer.echo(f"  {entry.id:30s} [{entry.kind}] {entry.scope}")
+        typer.echo(f"    {entry.description}")
+
+        # Show metadata
+        meta_parts = []
+        if stability != 'experimental':
+            meta_parts.append(f"stability: {stability}")
+        if usage > 0:
+            meta_parts.append(f"used {usage}x")
+        if entry.tags:
+            meta_parts.append(f"tags: {', '.join(entry.tags)}")
+
+        if meta_parts:
+            typer.echo(f"    ({', '.join(meta_parts)})")
+
+        typer.echo()
+
+
+@vocab_app.command("show")
+def vocab_show(
+    entry_id: str = typer.Argument(..., help="Entry ID to display"),
+    path: Optional[str] = typer.Option(None, "--path", "-p", help="Project directory (default: current)"),
+    show_expansion: bool = typer.Option(True, "--expansion/--no-expansion", help="Show expansion body"),
+):
+    """Show details and expansion of a vocabulary entry."""
+    from dazzle.core.vocab import load_manifest
+    from pathlib import Path
+
+    project_path = Path(path or ".")
+    manifest_path = project_path / "dazzle" / "local_vocab" / "manifest.yml"
+
+    if not manifest_path.exists():
+        typer.echo(f"No vocabulary manifest found at: {manifest_path}", err=True)
+        raise typer.Exit(code=1)
+
+    # Load manifest
+    try:
+        manifest = load_manifest(manifest_path)
+    except Exception as e:
+        typer.echo(f"Error loading manifest: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Get entry
+    entry = manifest.get_entry(entry_id)
+    if not entry:
+        typer.echo(f"Entry '{entry_id}' not found.", err=True)
+        raise typer.Exit(code=1)
+
+    # Display entry details
+    typer.echo(f"Vocabulary Entry: {entry.id}\n")
+    typer.echo(f"  Kind: {entry.kind}")
+    typer.echo(f"  Scope: {entry.scope}")
+    typer.echo(f"  Description: {entry.description}")
+    typer.echo(f"  Core DSL Version: {entry.dsl_core_version}")
+
+    if entry.tags:
+        typer.echo(f"  Tags: {', '.join(entry.tags)}")
+
+    typer.echo(f"  Stability: {entry.stability}")
+    typer.echo(f"  Usage Count: {entry.usage_count}")
+
+    # Parameters
+    if entry.parameters:
+        typer.echo("\nParameters:")
+        for param in entry.parameters:
+            req = " (required)" if param.required else f" (optional, default: {param.default})"
+            typer.echo(f"  - {param.name}: {param.type}{req}")
+            if param.description:
+                typer.echo(f"      {param.description}")
+
+    # Expansion
+    if show_expansion:
+        typer.echo("\nExpansion to Core DSL:")
+        typer.echo("  " + "-" * 60)
+        for line in entry.expansion['body'].split('\n'):
+            typer.echo(f"  {line}")
+        typer.echo("  " + "-" * 60)
+
+
+@vocab_app.command("expand")
+def vocab_expand(
+    file_path: str = typer.Argument(..., help="DSL file to expand"),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
+    manifest: Optional[str] = typer.Option(None, "--manifest", "-m", help="Path to manifest.yml"),
+):
+    """Expand vocabulary references in a DSL file to core DSL."""
+    from dazzle.core.vocab import load_manifest
+    from dazzle.core.expander import VocabExpander, ExpansionError
+    from pathlib import Path
+
+    input_path = Path(file_path)
+
+    if not input_path.exists():
+        typer.echo(f"Input file not found: {input_path}", err=True)
+        raise typer.Exit(code=1)
+
+    # Find manifest
+    if manifest:
+        manifest_path = Path(manifest)
+    else:
+        # Look in standard location
+        manifest_path = input_path.parent / "dazzle" / "local_vocab" / "manifest.yml"
+        if not manifest_path.exists():
+            # Try current directory
+            manifest_path = Path(".") / "dazzle" / "local_vocab" / "manifest.yml"
+
+    if not manifest_path.exists():
+        typer.echo(f"No vocabulary manifest found.", err=True)
+        typer.echo(f"Looked in: {manifest_path}", err=True)
+        raise typer.Exit(code=1)
+
+    # Load manifest and expand
+    try:
+        vocab_manifest = load_manifest(manifest_path)
+        expander = VocabExpander(vocab_manifest)
+
+        output_path = Path(output) if output else None
+        expanded = expander.expand_file(input_path, output_path)
+
+        if output:
+            typer.echo(f"✓ Expanded file written to: {output}")
         else:
-            typer.echo(f"  Check {output_dir} for generated files")
+            typer.echo(expanded)
 
-    except subprocess.CalledProcessError as e:
-        typer.echo(f"Error during build: {e}", err=True)
+    except ExpansionError as e:
+        typer.echo(f"Expansion error: {e}", err=True)
         raise typer.Exit(code=1)
     except Exception as e:
-        typer.echo(f"Unexpected error: {e}", err=True)
+        typer.echo(f"Error: {e}", err=True)
+        import traceback
+        traceback.print_exc()
         raise typer.Exit(code=1)
 
 

@@ -6,6 +6,7 @@ from .linker_impl import (
     resolve_dependencies,
     build_symbol_table,
     validate_references,
+    validate_module_access,
     merge_fragments,
 )
 
@@ -63,16 +64,22 @@ def build_appspec(modules: List[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # 2. Build symbol table (detects duplicates)
     symbols = build_symbol_table(sorted_modules)
 
-    # 3. Validate all cross-references
+    # 3. Validate module access (enforce use declarations)
+    access_errors = validate_module_access(sorted_modules, symbols)
+    if access_errors:
+        error_msg = "Module access validation failed:\n" + "\n".join(f"  - {e}" for e in access_errors)
+        raise LinkError(error_msg)
+
+    # 4. Validate all cross-references
     errors = validate_references(symbols)
     if errors:
         error_msg = "Reference validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
         raise LinkError(error_msg)
 
-    # 4. Merge fragments into unified structure
+    # 5. Merge fragments into unified structure
     merged_fragment = merge_fragments(sorted_modules, symbols)
 
-    # 5. Build final AppSpec
+    # 6. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
         title=app_title,

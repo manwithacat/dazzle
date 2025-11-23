@@ -155,11 +155,11 @@ class Parser:
 
     def parse_module_name(self) -> str:
         """Parse dotted module name (e.g., foo.bar.baz)."""
-        parts = [self.expect(TokenType.IDENTIFIER).value]
+        parts = [self.expect_identifier_or_keyword().value]
 
         while self.match(TokenType.DOT):
             self.advance()
-            parts.append(self.expect(TokenType.IDENTIFIER).value)
+            parts.append(self.expect_identifier_or_keyword().value)
 
         return '.'.join(parts)
 
@@ -810,11 +810,9 @@ class Parser:
 
                 self.skip_newlines()
 
-            # field field_name: type [modifiers...]
-            elif self.match(TokenType.FIELD):
-                self.advance()
-
-                field_name = self.expect(TokenType.IDENTIFIER).value
+            # field_name: type [modifiers...]
+            else:
+                field_name = self.expect_identifier_or_keyword().value
                 self.expect(TokenType.COLON)
 
                 field_type = self.parse_type_spec()
@@ -878,8 +876,8 @@ class Parser:
 
                     self.skip_newlines()
 
-                # uses foreign_model ForeignName[,ForeignName]
-                elif self.match(TokenType.FOREIGN_MODEL):
+                # uses foreign ForeignName[,ForeignName]
+                elif self.match(TokenType.FOREIGN):
                     self.advance()
                     foreign_model_refs.append(self.expect(TokenType.IDENTIFIER).value)
 
@@ -891,8 +889,6 @@ class Parser:
 
             # action action_name:
             elif self.match(TokenType.ACTION):
-                # For Stage 2, we'll parse a simplified version
-                # Full implementation of mappings will be in Stage 2 completion
                 self.advance()
                 action_name = self.expect(TokenType.IDENTIFIER).value
 
@@ -900,34 +896,14 @@ class Parser:
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)
 
-                # Skip action body for now (simplified)
-                depth = 1
-                while depth > 0:
-                    if self.match(TokenType.INDENT):
-                        depth += 1
-                        self.advance()
-                    elif self.match(TokenType.DEDENT):
-                        depth -= 1
-                        if depth > 0:
-                            self.advance()
-                    elif self.match(TokenType.EOF):
-                        break
-                    else:
-                        self.advance()
+                # Parse action body
+                action = self._parse_action_body(action_name)
+                actions.append(action)
 
                 self.expect(TokenType.DEDENT)
 
-                # Create stub action for now
-                actions.append(ir.IntegrationAction(
-                    name=action_name,
-                    when_surface="stub",
-                    call_service="stub",
-                    call_operation="stub",
-                ))
-
             # sync sync_name:
             elif self.match(TokenType.SYNC):
-                # Simplified sync parsing for Stage 2
                 self.advance()
                 sync_name = self.expect(TokenType.IDENTIFIER).value
 
@@ -935,32 +911,11 @@ class Parser:
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)
 
-                # Skip sync body for now (simplified)
-                depth = 1
-                while depth > 0:
-                    if self.match(TokenType.INDENT):
-                        depth += 1
-                        self.advance()
-                    elif self.match(TokenType.DEDENT):
-                        depth -= 1
-                        if depth > 0:
-                            self.advance()
-                    elif self.match(TokenType.EOF):
-                        break
-                    else:
-                        self.advance()
+                # Parse sync body
+                sync = self._parse_sync_body(sync_name)
+                syncs.append(sync)
 
                 self.expect(TokenType.DEDENT)
-
-                # Create stub sync for now
-                syncs.append(ir.IntegrationSync(
-                    name=sync_name,
-                    mode=ir.SyncMode.SCHEDULED,
-                    from_service="stub",
-                    from_operation="stub",
-                    from_foreign_model="stub",
-                    into_entity="stub",
-                ))
 
             else:
                 break
@@ -975,6 +930,286 @@ class Parser:
             actions=actions,
             syncs=syncs,
         )
+
+    def _parse_action_body(self, action_name: str) -> ir.IntegrationAction:
+        """Parse the body of an action block."""
+        when_surface = None
+        call_service = None
+        call_operation = None
+        call_mapping = []
+        response_foreign_model = None
+        response_entity = None
+        response_mapping = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # when surface <name>
+            if self.match(TokenType.WHEN):
+                self.advance()
+                self.expect(TokenType.SURFACE)
+                when_surface = self.expect(TokenType.IDENTIFIER).value
+                self.skip_newlines()
+
+            # call service <name>
+            elif self.match(TokenType.CALL):
+                self.advance()
+                if self.match(TokenType.SERVICE):
+                    self.advance()
+                    call_service = self.expect(TokenType.IDENTIFIER).value
+                    self.skip_newlines()
+
+                # call operation <path>
+                elif self.match(TokenType.OPERATION):
+                    self.advance()
+                    call_operation = self._parse_operation_path()
+                    self.skip_newlines()
+
+                # call mapping:
+                elif self.match(TokenType.MAPPING):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    call_mapping = self._parse_mapping_rules()
+                    self.expect(TokenType.DEDENT)
+
+            # response foreign <name>
+            elif self.match(TokenType.RESPONSE):
+                self.advance()
+                if self.match(TokenType.FOREIGN):
+                    self.advance()
+                    response_foreign_model = self.expect(TokenType.IDENTIFIER).value
+                    self.skip_newlines()
+
+                # response entity <name>
+                elif self.match(TokenType.ENTITY):
+                    self.advance()
+                    response_entity = self.expect(TokenType.IDENTIFIER).value
+                    self.skip_newlines()
+
+                # response mapping:
+                elif self.match(TokenType.MAPPING):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    self.skip_newlines()
+                    self.expect(TokenType.INDENT)
+                    response_mapping = self._parse_mapping_rules()
+                    self.expect(TokenType.DEDENT)
+
+            else:
+                # Skip unknown tokens
+                self.advance()
+
+        return ir.IntegrationAction(
+            name=action_name,
+            when_surface=when_surface or "unknown",
+            call_service=call_service or "unknown",
+            call_operation=call_operation or "unknown",
+            call_mapping=call_mapping,
+            response_foreign_model=response_foreign_model,
+            response_entity=response_entity,
+            response_mapping=response_mapping,
+        )
+
+    def _parse_sync_body(self, sync_name: str) -> ir.IntegrationSync:
+        """Parse the body of a sync block."""
+        mode = ir.SyncMode.SCHEDULED
+        schedule = None
+        from_service = None
+        from_operation = None
+        from_foreign_model = None
+        into_entity = None
+        match_rules = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # mode: scheduled "<cron>"
+            if self.match(TokenType.MODE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.SCHEDULED):
+                    self.advance()
+                    mode = ir.SyncMode.SCHEDULED
+                    if self.match(TokenType.STRING):
+                        schedule = self.advance().value
+                elif self.match(TokenType.EVENT_DRIVEN):
+                    self.advance()
+                    mode = ir.SyncMode.EVENT_DRIVEN
+                self.skip_newlines()
+
+            # from service <name>
+            elif self.match(TokenType.FROM):
+                self.advance()
+                if self.match(TokenType.SERVICE):
+                    self.advance()
+                    from_service = self.expect(TokenType.IDENTIFIER).value
+                    self.skip_newlines()
+
+                # from operation <path>
+                elif self.match(TokenType.OPERATION):
+                    self.advance()
+                    from_operation = self._parse_operation_path()
+                    self.skip_newlines()
+
+                # from foreign <name>
+                elif self.match(TokenType.FOREIGN):
+                    self.advance()
+                    from_foreign_model = self.expect(TokenType.IDENTIFIER).value
+                    self.skip_newlines()
+
+            # into entity <name>
+            elif self.match(TokenType.INTO):
+                self.advance()
+                self.expect(TokenType.ENTITY)
+                into_entity = self.expect(TokenType.IDENTIFIER).value
+                self.skip_newlines()
+
+            # match rules:
+            elif self.match(TokenType.MATCH):
+                self.advance()
+                self.expect(TokenType.RULES)
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                match_rules = self._parse_match_rules()
+                self.expect(TokenType.DEDENT)
+
+            else:
+                # Skip unknown tokens
+                self.advance()
+
+        return ir.IntegrationSync(
+            name=sync_name,
+            mode=mode,
+            schedule=schedule,
+            from_service=from_service or "unknown",
+            from_operation=from_operation or "unknown",
+            from_foreign_model=from_foreign_model or "unknown",
+            into_entity=into_entity or "unknown",
+            match_rules=match_rules,
+        )
+
+    def _parse_operation_path(self) -> str:
+        """Parse an operation path like /agents/search."""
+        # Operation paths can be simple identifiers or slash-separated paths
+        path_parts = []
+
+        # Handle leading slash
+        if self.match(TokenType.SLASH):
+            self.advance()
+            path_parts.append("/")
+
+        # Parse path components (can be identifiers or keywords)
+        while True:
+            token = self.current_token()
+            if token.type == TokenType.IDENTIFIER or token.type.value in ["search", "filter", "create", "update", "delete", "get"]:
+                path_parts.append(self.advance().value)
+                if self.match(TokenType.SLASH):
+                    path_parts.append(self.advance().value)
+                else:
+                    break
+            else:
+                break
+
+        return "".join(path_parts) if path_parts else "unknown"
+
+    def _parse_mapping_rules(self) -> List[ir.MappingRule]:
+        """Parse mapping rules (target → source)."""
+        rules = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # Parse target field
+            target = self.expect(TokenType.IDENTIFIER).value
+
+            # Expect arrow (→)
+            self.expect(TokenType.ARROW)
+
+            # Parse source expression (path or literal)
+            source = self._parse_expression()
+
+            rules.append(ir.MappingRule(
+                target_field=target,
+                source=source,
+            ))
+
+            self.skip_newlines()
+
+        return rules
+
+    def _parse_match_rules(self) -> List[ir.MatchRule]:
+        """Parse match rules (foreign_field ↔ entity_field)."""
+        rules = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # Parse foreign field
+            foreign_field = self.expect(TokenType.IDENTIFIER).value
+
+            # Expect bidirectional arrow (↔)
+            self.expect(TokenType.BIARROW)
+
+            # Parse entity field
+            entity_field = self.expect(TokenType.IDENTIFIER).value
+
+            rules.append(ir.MatchRule(
+                foreign_field=foreign_field,
+                entity_field=entity_field,
+            ))
+
+            self.skip_newlines()
+
+        return rules
+
+    def _parse_expression(self) -> ir.Expression:
+        """Parse an expression (path or literal)."""
+        # Try to parse as a path first (e.g., form.vrn, entity.id)
+        # Need to check for keywords that can be used as path components
+        token = self.current_token()
+        if token.type == TokenType.IDENTIFIER or token.value in ["entity", "form", "foreign", "service"]:
+            parts = [self.advance().value]
+
+            while self.match(TokenType.DOT):
+                self.advance()
+                parts.append(self.expect_identifier_or_keyword().value)
+
+            return ir.Expression(path=".".join(parts))
+
+        # Try to parse as a literal
+        elif self.match(TokenType.STRING):
+            return ir.Expression(literal=self.advance().value)
+
+        elif self.match(TokenType.NUMBER):
+            value = self.advance().value
+            # Try to convert to int or float
+            try:
+                return ir.Expression(literal=int(value))
+            except ValueError:
+                return ir.Expression(literal=float(value))
+
+        elif self.match(TokenType.TRUE) or self.match(TokenType.FALSE):
+            return ir.Expression(literal=self.advance().value == "true")
+
+        else:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Expected expression, got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
 
     def parse_test(self) -> ir.TestSpec:
         """Parse test declaration."""

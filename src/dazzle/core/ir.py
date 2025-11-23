@@ -855,6 +855,66 @@ class AppSpec(BaseModel):
                 return integration
         return None
 
+    @property
+    def type_catalog(self) -> Dict[str, List[FieldType]]:
+        """
+        Extract catalog of all field types used in the application.
+
+        Returns a mapping of field names to the types they use across
+        all entities and foreign models. Useful for:
+        - Stack generators building type mappings
+        - Detecting type inconsistencies (same field name, different types)
+        - Schema evolution analysis
+
+        Returns:
+            Dict mapping field names to list of FieldType objects
+        """
+        catalog: Dict[str, List[FieldType]] = {}
+
+        # Collect from entities
+        for entity in self.domain.entities:
+            for field in entity.fields:
+                if field.name not in catalog:
+                    catalog[field.name] = []
+                # Only add if not already present (avoid duplicates)
+                if field.type not in catalog[field.name]:
+                    catalog[field.name].append(field.type)
+
+        # Collect from foreign models
+        for foreign_model in self.foreign_models:
+            for field in foreign_model.fields:
+                if field.name not in catalog:
+                    catalog[field.name] = []
+                if field.type not in catalog[field.name]:
+                    catalog[field.name].append(field.type)
+
+        return catalog
+
+    def get_field_type_conflicts(self) -> List[str]:
+        """
+        Detect fields with the same name but different types.
+
+        Returns:
+            List of warning messages about type conflicts
+        """
+        conflicts = []
+        for field_name, types in self.type_catalog.items():
+            if len(types) > 1:
+                type_descriptions = [
+                    f"{t.kind.value}" + (
+                        f"({t.max_length})" if t.max_length else
+                        f"({t.precision},{t.scale})" if t.precision else
+                        f"[{','.join(t.enum_values)}]" if t.enum_values else
+                        f" {t.ref_entity}" if t.ref_entity else ""
+                    )
+                    for t in types
+                ]
+                conflicts.append(
+                    f"Field '{field_name}' has inconsistent types: "
+                    f"{', '.join(type_descriptions)}"
+                )
+        return conflicts
+
 
 # =============================================================================
 # Module-Level IR (for parser output)

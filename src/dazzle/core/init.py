@@ -24,6 +24,26 @@ class InitError(DazzleError):
     pass
 
 
+# Reserved keywords that can't be used as project/module names
+RESERVED_KEYWORDS = {
+    # DSL keywords
+    'app', 'module', 'entity', 'surface', 'experience', 'service',
+    'foreign_model', 'integration', 'test', 'use', 'section',
+    'field', 'action', 'step', 'transition',
+    # Python keywords
+    'import', 'from', 'def', 'class', 'if', 'else', 'elif', 'for',
+    'while', 'break', 'continue', 'return', 'yield', 'try', 'except',
+    'finally', 'with', 'as', 'raise', 'assert', 'del', 'pass',
+    'lambda', 'global', 'nonlocal', 'and', 'or', 'not', 'in', 'is',
+    # Common problematic names
+    'true', 'false', 'null', 'none', 'type', 'list', 'dict', 'set',
+    'str', 'int', 'float', 'bool', 'tuple', 'range', 'object',
+    # Django/Python stdlib conflicts
+    'admin', 'auth', 'models', 'views', 'urls', 'settings', 'forms',
+    'serializers', 'tests', 'migrations', 'static', 'templates',
+}
+
+
 def list_examples(examples_dir: Optional[Path] = None) -> list[str]:
     """
     List available example projects.
@@ -49,15 +69,51 @@ def list_examples(examples_dir: Optional[Path] = None) -> list[str]:
     return sorted(examples)
 
 
-def sanitize_name(name: str) -> str:
+def validate_project_name(name: str) -> tuple[bool, Optional[str]]:
+    """
+    Validate a project name.
+
+    Args:
+        name: Project name to validate
+
+    Returns:
+        (is_valid, error_message)
+
+    Examples:
+        validate_project_name("test")  # -> (False, "...")
+        validate_project_name("my_app")  # -> (True, None)
+    """
+    if not name:
+        return (False, "Project name cannot be empty")
+
+    # Check if it starts with a digit
+    if name[0].isdigit():
+        return (False, f"Project name '{name}' cannot start with a digit. Try 'project_{name}' or '{name}_app'")
+
+    # Check reserved keywords
+    if name.lower() in RESERVED_KEYWORDS:
+        return (False, f"Project name '{name}' is a reserved keyword. Try '{name}_app', 'my_{name}', or '{name}_project' instead")
+
+    # Check if it's a valid Python identifier pattern
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name):
+        return (False, f"Project name '{name}' must contain only letters, numbers, and underscores, and cannot start with a number")
+
+    return (True, None)
+
+
+def sanitize_name(name: str, validate: bool = True) -> str:
     """
     Convert a project name to a valid Python module name.
 
     Args:
         name: Project name (can include spaces, hyphens)
+        validate: If True, raises InitError for reserved keywords
 
     Returns:
         Valid Python identifier (lowercase, underscores)
+
+    Raises:
+        InitError: If validate=True and name is reserved keyword
 
     Examples:
         "My Project" -> "my_project"
@@ -77,7 +133,15 @@ def sanitize_name(name: str) -> str:
     if name and name[0].isdigit():
         name = f"project_{name}"
 
-    return name or "my_project"
+    final_name = name or "my_project"
+
+    # Validate if requested
+    if validate:
+        is_valid, error_msg = validate_project_name(final_name)
+        if not is_valid:
+            raise InitError(error_msg)
+
+    return final_name
 
 
 def substitute_template_vars(content: str, variables: dict[str, str]) -> str:
@@ -106,19 +170,21 @@ def copy_template(
     template_dir: Path,
     target_dir: Path,
     variables: Optional[dict[str, str]] = None,
+    allow_existing: bool = False,
 ) -> None:
     """
     Copy a template directory to target, substituting variables.
 
     Args:
         template_dir: Source template directory
-        target_dir: Destination directory (must not exist)
+        target_dir: Destination directory
         variables: Optional dict for template variable substitution
+        allow_existing: If True, allow target_dir to exist (init in place)
 
     Raises:
-        InitError: If target exists or copy fails
+        InitError: If target exists (and allow_existing=False) or copy fails
     """
-    if target_dir.exists():
+    if target_dir.exists() and not allow_existing:
         raise InitError(f"Directory already exists: {target_dir}")
 
     if not template_dir.exists():
@@ -127,8 +193,8 @@ def copy_template(
     variables = variables or {}
 
     try:
-        # Create target directory
-        target_dir.mkdir(parents=True, exist_ok=False)
+        # Create target directory if needed
+        target_dir.mkdir(parents=True, exist_ok=allow_existing)
 
         # Copy all files, substituting variables
         for src_path in template_dir.rglob("*"):
@@ -136,6 +202,10 @@ def copy_template(
                 # Compute relative path
                 rel_path = src_path.relative_to(template_dir)
                 dst_path = target_dir / rel_path
+
+                # Skip if file already exists (when allow_existing=True)
+                if allow_existing and dst_path.exists():
+                    continue
 
                 # Create parent directories
                 dst_path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,8 +220,8 @@ def copy_template(
                     shutil.copy2(src_path, dst_path)
 
     except Exception as e:
-        # Clean up on failure
-        if target_dir.exists():
+        # Clean up on failure (only if we created the directory)
+        if target_dir.exists() and not allow_existing:
             shutil.rmtree(target_dir, ignore_errors=True)
         raise InitError(f"Failed to copy template: {e}") from e
 
@@ -522,18 +592,20 @@ def init_project(
     no_llm: bool = False,
     no_git: bool = False,
     stack_name: Optional[str] = None,
+    allow_existing: bool = False,
 ) -> None:
     """
     Initialize a new DAZZLE project.
 
     Args:
-        target_dir: Directory to create project in (must not exist)
+        target_dir: Directory to create project in
         project_name: Project name (defaults to directory name)
         from_example: Optional example to copy from (e.g., "simple_task")
         title: Optional human-readable title (defaults to project_name)
         no_llm: If True, skip LLM instrumentation (default: False)
         no_git: If True, skip git initialization (default: False)
         stack_name: Optional stack name to include in LLM context
+        allow_existing: If True, allow initializing in existing directory
 
     Raises:
         InitError: If initialization fails
@@ -577,7 +649,7 @@ def init_project(
             raise InitError(f"Blank template not found at {template_dir}")
 
     # Copy template
-    copy_template(template_dir, target_dir, variables)
+    copy_template(template_dir, target_dir, variables, allow_existing=allow_existing)
 
     # Create SPEC.md template (only for blank projects, not examples)
     if not from_example:

@@ -214,6 +214,119 @@ def build_symbol_table(modules: List[ir.ModuleIR]) -> SymbolTable:
     return symbols
 
 
+def validate_module_access(modules: List[ir.ModuleIR], symbols: SymbolTable) -> List[str]:
+    """
+    Validate that modules only reference symbols from modules they've explicitly imported.
+
+    Enforces that modules declare their dependencies via 'use' declarations,
+    preventing accidental coupling between modules.
+
+    Args:
+        modules: List of all modules
+        symbols: Symbol table with all definitions
+
+    Returns:
+        List of error messages (empty if valid)
+    """
+    errors = []
+
+    for module in modules:
+        # Build set of allowed modules (own module + used modules)
+        allowed_modules = {module.name} | set(module.uses)
+
+        # Check entity field references
+        for entity in module.fragment.entities:
+            for field in entity.fields:
+                if field.type.kind == ir.FieldTypeKind.REF:
+                    ref_entity = field.type.ref_entity
+                    owner_module = symbols.symbol_sources.get(ref_entity)
+                    if owner_module and owner_module not in allowed_modules:
+                        errors.append(
+                            f"Module '{module.name}' entity '{entity.name}' field '{field.name}' "
+                            f"references entity '{ref_entity}' from module '{owner_module}' "
+                            f"without importing it (add: use {owner_module})"
+                        )
+
+        # Check surface entity references
+        for surface in module.fragment.surfaces:
+            if surface.entity_ref:
+                owner_module = symbols.symbol_sources.get(surface.entity_ref)
+                if owner_module and owner_module not in allowed_modules:
+                    errors.append(
+                        f"Module '{module.name}' surface '{surface.name}' "
+                        f"references entity '{surface.entity_ref}' from module '{owner_module}' "
+                        f"without importing it (add: use {owner_module})"
+                    )
+
+            # Check surface action outcomes
+            for action in surface.actions:
+                outcome = action.outcome
+                target_module = None
+
+                if outcome.kind == ir.OutcomeKind.SURFACE:
+                    target_module = symbols.symbol_sources.get(outcome.target)
+                elif outcome.kind == ir.OutcomeKind.EXPERIENCE:
+                    target_module = symbols.symbol_sources.get(outcome.target)
+                elif outcome.kind == ir.OutcomeKind.INTEGRATION:
+                    target_module = symbols.symbol_sources.get(outcome.target)
+
+                if target_module and target_module not in allowed_modules:
+                    errors.append(
+                        f"Module '{module.name}' surface '{surface.name}' action '{action.name}' "
+                        f"references {outcome.kind.value} '{outcome.target}' from module '{target_module}' "
+                        f"without importing it (add: use {target_module})"
+                    )
+
+        # Check experience step references
+        for experience in module.fragment.experiences:
+            for step in experience.steps:
+                target_module = None
+
+                if step.kind == ir.StepKind.SURFACE and step.surface:
+                    target_module = symbols.symbol_sources.get(step.surface)
+                elif step.kind == ir.StepKind.INTEGRATION and step.integration:
+                    target_module = symbols.symbol_sources.get(step.integration)
+
+                if target_module and target_module not in allowed_modules:
+                    errors.append(
+                        f"Module '{module.name}' experience '{experience.name}' step '{step.name}' "
+                        f"references {step.kind.value} from module '{target_module}' "
+                        f"without importing it (add: use {target_module})"
+                    )
+
+        # Check foreign model service references
+        for foreign_model in module.fragment.foreign_models:
+            owner_module = symbols.symbol_sources.get(foreign_model.service_ref)
+            if owner_module and owner_module not in allowed_modules:
+                errors.append(
+                    f"Module '{module.name}' foreign model '{foreign_model.name}' "
+                    f"references service '{foreign_model.service_ref}' from module '{owner_module}' "
+                    f"without importing it (add: use {owner_module})"
+                )
+
+        # Check integration references
+        for integration in module.fragment.integrations:
+            for service_ref in integration.service_refs:
+                owner_module = symbols.symbol_sources.get(service_ref)
+                if owner_module and owner_module not in allowed_modules:
+                    errors.append(
+                        f"Module '{module.name}' integration '{integration.name}' "
+                        f"references service '{service_ref}' from module '{owner_module}' "
+                        f"without importing it (add: use {owner_module})"
+                    )
+
+            for fm_ref in integration.foreign_model_refs:
+                owner_module = symbols.symbol_sources.get(fm_ref)
+                if owner_module and owner_module not in allowed_modules:
+                    errors.append(
+                        f"Module '{module.name}' integration '{integration.name}' "
+                        f"references foreign model '{fm_ref}' from module '{owner_module}' "
+                        f"without importing it (add: use {owner_module})"
+                    )
+
+    return errors
+
+
 def validate_references(symbols: SymbolTable) -> List[str]:
     """
     Validate all cross-references in the symbol table.

@@ -62,6 +62,14 @@ class TokenType(Enum):
     INLINE = "inline"
     SUBMITTED = "submitted"
 
+    # Integration Keywords
+    OPERATION = "operation"
+    MAPPING = "mapping"
+    RULES = "rules"
+    SCHEDULED = "scheduled"
+    EVENT_DRIVEN = "event_driven"
+    FOREIGN = "foreign"
+
     # Test DSL Keywords
     TEST = "test"
     SETUP = "setup"
@@ -96,6 +104,7 @@ class TokenType(Enum):
     RBRACKET = "]"
     EQUALS = "="
     DOT = "."
+    SLASH = "/"
     QUESTION = "?"
 
     # Special
@@ -113,6 +122,8 @@ KEYWORDS = {
     "when", "call", "with", "map", "response", "into", "match", "sync",
     "schedule", "spec", "auth_profile", "owner", "key", "constraint",
     "unique", "index", "url", "inline", "submitted",
+    # Integration keywords
+    "operation", "mapping", "rules", "scheduled", "event_driven", "foreign",
     # Test DSL keywords
     "test", "setup", "data", "expect", "status", "created", "filter",
     "search", "order_by", "count", "error_message", "first", "last",
@@ -388,6 +399,10 @@ class Lexer:
             elif ch == '?':
                 self.advance()
                 self.tokens.append(Token(TokenType.QUESTION, "?", token_line, token_col))
+
+            elif ch == '/':
+                self.advance()
+                self.tokens.append(Token(TokenType.SLASH, "/", token_line, token_col))
 
             elif ch == '-':
                 if self.peek_char() == '>':
