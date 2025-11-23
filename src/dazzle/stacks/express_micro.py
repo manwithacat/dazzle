@@ -66,21 +66,21 @@ class ExpressMicroBackend(Backend):
             output_formats=["javascript", "html", "json"],
         )
 
-    def generate(self, spec: "ir.AppSpec", output_dir: Path, **options) -> None:
+    def generate(self, appspec: "ir.AppSpec", output_dir: Path, **options: Any) -> None:
         """
         Generate Express.js micro application.
 
         Args:
-            spec: Application specification
+            appspec: Application specification
             output_dir: Output directory
             **options: Backend options
         """
-        self.spec = spec
+        self.spec = appspec
         self.output_dir = output_dir
         self.options = options
 
         # Determine project name from spec
-        self.project_name = self._get_project_name(spec)
+        self.project_name = self._get_project_name(appspec)
         self.app_name = self.project_name.replace("_", "-")  # npm package name format
 
         # Create project structure
@@ -329,8 +329,8 @@ form {
             return
 
         # Generate models/index.js
-        models_index = self._build_models_index()
-        (self.output_dir / self.app_name / "models" / "index.js").write_text(models_index)
+        models_index_content = self._build_models_index()
+        (self.output_dir / self.app_name / "models" / "index.js").write_text(models_index_content)
 
         # Generate individual model files
         for entity in self.spec.domain.entities:
@@ -526,7 +526,7 @@ module.exports = db;
                 return True
         return False
 
-    def _generate_soft_delete_methods(self, entity: "ir.EntitySpec") -> list:
+    def _generate_soft_delete_methods(self, entity: "ir.EntitySpec") -> list[str]:
         """
         Generate soft delete and restore methods for Sequelize model.
 
@@ -590,7 +590,7 @@ module.exports = db;
 
     def _generate_status_workflow_methods_express(
         self, entity: "ir.EntitySpec", workflow_field: "ir.FieldSpec"
-    ) -> list:
+    ) -> list[str]:
         """
         Generate status workflow validation and transition tracking methods for Express/Sequelize.
 
@@ -679,7 +679,7 @@ module.exports = db;
 
     def _generate_multi_tenant_helpers_express(
         self, entity: "ir.EntitySpec", tenant_field: "ir.FieldSpec"
-    ) -> list:
+    ) -> list[str]:
         """
         Generate multi-tenant isolation helpers for Express/Sequelize.
 

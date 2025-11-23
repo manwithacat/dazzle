@@ -147,7 +147,7 @@ class HookManager:
     - Collect and display results
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._hooks: dict[HookPhase, list[Hook]] = {
             HookPhase.PRE_BUILD: [],
             HookPhase.POST_BUILD: [],

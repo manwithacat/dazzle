@@ -163,7 +163,7 @@ class AdminGenerator(Generator):
 
         return "\n".join(lines)
 
-    def _get_list_display_fields(self, entity: ir.EntitySpec) -> list:
+    def _get_list_display_fields(self, entity: ir.EntitySpec) -> list[str]:
         """Get fields to display in list view."""
         fields = []
 
@@ -185,7 +185,7 @@ class AdminGenerator(Generator):
 
         return fields
 
-    def _get_search_fields(self, entity: ir.EntitySpec) -> list:
+    def _get_search_fields(self, entity: ir.EntitySpec) -> list[str]:
         """Get text fields for searching."""
         search_fields = []
 
@@ -199,7 +199,7 @@ class AdminGenerator(Generator):
 
         return search_fields
 
-    def _get_list_filter_fields(self, entity: ir.EntitySpec) -> list:
+    def _get_list_filter_fields(self, entity: ir.EntitySpec) -> list[str]:
         """Get fields suitable for filtering."""
         filter_fields = []
 
@@ -215,7 +215,7 @@ class AdminGenerator(Generator):
 
         return filter_fields
 
-    def _get_readonly_fields(self, entity: ir.EntitySpec) -> list:
+    def _get_readonly_fields(self, entity: ir.EntitySpec) -> list[str]:
         """Get auto-generated fields that should be read-only."""
         readonly = []
 

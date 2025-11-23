@@ -9,6 +9,7 @@ Extends the base Backend class to add:
 """
 
 from pathlib import Path
+from typing import Any
 
 from ...core import ir
 from ...core.errors import BackendError
@@ -45,10 +46,10 @@ class ModularBackend(Backend):
                 ]
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize modular backend with hook manager."""
         self.hook_manager = HookManager()
-        self.artifacts = {}
+        self.artifacts: dict[str, Any] = {}
 
     def add_hook(self, hook: Hook) -> None:
         """Register a hook."""
@@ -64,7 +65,7 @@ class ModularBackend(Backend):
         hook.phase = HookPhase.POST_BUILD
         self.hook_manager.register(hook)
 
-    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> list[Generator]:
+    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options: Any) -> list[Generator]:
         """
         Get the list of generators to run.
 
@@ -80,7 +81,7 @@ class ModularBackend(Backend):
         """
         return []
 
-    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
+    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options: Any) -> None:
         """
         Generate artifacts with hook support.
 
@@ -143,7 +144,7 @@ class ModularBackend(Backend):
         return self.hook_manager.run_phase(HookPhase.POST_BUILD, context)
 
     def _run_generators(
-        self, spec: ir.AppSpec, output_dir: Path, context: HookContext, **options
+        self, spec: ir.AppSpec, output_dir: Path, context: HookContext, **options: Any
     ) -> list[GeneratorResult]:
         """Run all generators."""
         results = []
@@ -182,7 +183,7 @@ class ModularBackend(Backend):
         for result in display_results:
             print(f"  {result}")
 
-    def get_artifacts(self, output_dir: Path = None) -> dict:
+    def get_artifacts(self, output_dir: Path | None = None) -> dict[str, Any]:
         """
         Get artifacts from last generation.
 

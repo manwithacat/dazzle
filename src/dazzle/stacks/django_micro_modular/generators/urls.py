@@ -73,7 +73,7 @@ class UrlsGenerator(Generator):
         ]
 
         # Group surfaces by entity to determine which URLs to generate
-        entity_surfaces = {}
+        entity_surfaces: dict[str, set[ir.SurfaceMode]] = {}
         for surface in self.spec.surfaces:
             if surface.entity_ref:
                 entity_name = surface.entity_ref

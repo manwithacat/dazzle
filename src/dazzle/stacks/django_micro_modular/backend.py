@@ -14,6 +14,7 @@ and deployment configurations.
 """
 
 from pathlib import Path
+from typing import Any
 
 from ...core import ir
 from ..base import Generator, ModularBackend
@@ -49,13 +50,13 @@ class DjangoMicroModularBackend(ModularBackend):
     This is now the default backend for DAZZLE, replacing the monolithic version.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize backend and register hooks."""
         super().__init__()
         self.app_name = "app"
         self.register_hooks()
 
-    def register_hooks(self):
+    def register_hooks(self) -> None:
         """Register pre/post-build hooks."""
         # Post-build hooks (order matters!)
         self.add_post_build_hook(CreateSuperuserCredentialsHook())  # 1. Generate credentials
@@ -65,7 +66,7 @@ class DjangoMicroModularBackend(ModularBackend):
         self.add_post_build_hook(CreateSuperuserHook())  # 5. Create superuser
         self.add_post_build_hook(DisplayDjangoInstructionsHook())  # 6. Show instructions
 
-    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> list[Generator]:
+    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options: Any) -> list[Generator]:
         """
         Get list of generators to run.
 
@@ -91,7 +92,7 @@ class DjangoMicroModularBackend(ModularBackend):
             TestGenerator(spec, project_path, self.app_name),
         ]
 
-    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
+    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options: Any) -> None:
         """
         Generate Django application with modular architecture.
 
@@ -118,7 +119,7 @@ class DjangoMicroModularBackend(ModularBackend):
         # Run the full modular generate workflow
         super().generate(appspec, output_dir, **options)
 
-    def _create_project_structure(self, spec: ir.AppSpec, output_dir: Path):
+    def _create_project_structure(self, spec: ir.AppSpec, output_dir: Path) -> None:
         """
         Create basic Django project structure.
         """
@@ -164,7 +165,7 @@ class AppConfig(AppConfig):
         name = re.sub(r"[^\w]", "", name)
         return name or "app"
 
-    def get_capabilities(self):
+    def get_capabilities(self) -> Any:
         """Return backend capabilities."""
         from .. import BackendCapabilities
 

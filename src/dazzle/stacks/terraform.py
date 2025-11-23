@@ -6,6 +6,7 @@ Supports AWS initially, with extensibility for GCP and Azure.
 """
 
 from pathlib import Path
+from typing import Any
 
 from ..core import ir
 from ..core.errors import BackendError
@@ -31,8 +32,8 @@ class TerraformStack(Backend):
         self,
         appspec: ir.AppSpec,
         output_dir: Path,
-        terraform_config: TerraformConfig = None,
-        **options,
+        terraform_config: TerraformConfig | None = None,
+        **options: Any,
     ) -> None:
         """
         Generate Terraform infrastructure.

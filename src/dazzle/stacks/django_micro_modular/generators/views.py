@@ -131,6 +131,11 @@ class ViewsGenerator(Generator):
     def _generate_view_for_surface(self, surface: ir.SurfaceSpec) -> str:
         """Generate view class for a surface."""
         entity_name = surface.entity_ref
+        if entity_name is None:
+            # Default to TemplateView for custom surfaces without entity
+            view_class_name = self._get_view_class_name(surface, "")
+            return self._generate_template_view(surface, view_class_name)
+
         view_class_name = self._get_view_class_name(surface, entity_name)
 
         # Map surface mode to Django view type
@@ -337,7 +342,7 @@ class ViewsGenerator(Generator):
 
     def _get_missing_required_foreign_keys(
         self, entity: ir.EntitySpec, surface: ir.SurfaceSpec
-    ) -> list:
+    ) -> list[ir.FieldSpec]:
         """
         Find required foreign key fields that are missing from the form.
 
@@ -366,7 +371,7 @@ class ViewsGenerator(Generator):
 
         return missing_fks
 
-    def _get_default_values_for_entity(self, entity_name: str) -> dict:
+    def _get_default_values_for_entity(self, entity_name: str) -> dict[str, str]:
         """
         Generate sensible default values for creating a default entity instance.
 

@@ -12,6 +12,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from . import ir
 from .errors import DazzleError
@@ -35,14 +36,14 @@ class BuildState:
     backend: str
     output_dir: str
     dsl_file_hashes: dict[str, str]  # {relative_path: sha256_hash}
-    appspec_snapshot: dict | None = None  # Simplified AppSpec for diffing
+    appspec_snapshot: dict[str, Any] | None = None  # Simplified AppSpec for diffing
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
         return asdict(self)
 
     @staticmethod
-    def from_dict(data: dict) -> "BuildState":
+    def from_dict(data: dict[str, Any]) -> "BuildState":
         """Create BuildState from dict."""
         return BuildState(**data)
 
@@ -97,7 +98,7 @@ def compute_dsl_hashes(dsl_files: list[Path], root: Path) -> dict[str, str]:
     return hashes
 
 
-def simplify_appspec(appspec: ir.AppSpec) -> dict:
+def simplify_appspec(appspec: ir.AppSpec) -> dict[str, Any]:
     """
     Create a simplified JSON-serializable snapshot of AppSpec.
 
@@ -113,7 +114,7 @@ def simplify_appspec(appspec: ir.AppSpec) -> dict:
     Returns:
         Simplified dict suitable for JSON storage
     """
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "app": {
             "name": appspec.name,
             "title": appspec.title,
@@ -127,7 +128,7 @@ def simplify_appspec(appspec: ir.AppSpec) -> dict:
 
     # Entity signatures
     for entity in appspec.domain.entities:
-        fields = {}
+        fields: dict[str, Any] = {}
         for field in entity.fields:
             fields[field.name] = {
                 "type": str(field.type),

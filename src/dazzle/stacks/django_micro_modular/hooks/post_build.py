@@ -9,6 +9,7 @@ Runs after code generation to:
 - Display setup instructions
 """
 
+import os
 import secrets
 import subprocess
 import sys
@@ -187,7 +188,7 @@ class SetupUvEnvironmentHook(Hook):
                 subprocess.run(
                     ["uv", "pip", "install", "-r", "requirements.txt"],
                     cwd=app_path,
-                    env={**subprocess.os.environ, "VIRTUAL_ENV": str(venv_path)},
+                    env={**os.environ, "VIRTUAL_ENV": str(venv_path)},
                     check=True,
                     capture_output=True,
                     timeout=120,
@@ -413,7 +414,7 @@ class CreateSuperuserHook(Hook):
             )
 
         # Get credentials from previous hook
-        creds_hook_result = context.get_hook_artifact("create_superuser_credentials")
+        creds_hook_result = context.get_artifact("create_superuser_credentials")
         if not creds_hook_result:
             return HookResult(
                 success=False,

@@ -209,7 +209,7 @@ def sanitize_name(name: str, validate: bool = True) -> str:
     if validate:
         is_valid, error_msg = validate_project_name(final_name)
         if not is_valid:
-            raise InitError(error_msg)
+            raise InitError(error_msg or "Invalid project name")
 
     return final_name
 

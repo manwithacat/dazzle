@@ -295,8 +295,8 @@ def validate_foreign_models(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     Returns:
         Tuple of (errors, warnings)
     """
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
     for foreign_model in appspec.foreign_models:
         # Check key fields exist
@@ -331,8 +331,8 @@ def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     Returns:
         Tuple of (errors, warnings)
     """
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
     for integration in appspec.integrations:
         # Check that integration uses at least one service

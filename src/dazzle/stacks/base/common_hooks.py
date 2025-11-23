@@ -24,7 +24,7 @@ class CreateEnvFileHook(Hook):
     description = "Generate .env file with secure configuration"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, env_vars: dict[str, str] = None):
+    def __init__(self, env_vars: dict[str, str] | None = None):
         """
         Initialize hook.
 
@@ -90,7 +90,7 @@ class DisplaySetupInstructionsHook(Hook):
     description = "Display setup instructions"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, instructions: list[str] = None):
+    def __init__(self, instructions: list[str] | None = None):
         """
         Initialize hook.
 
@@ -196,7 +196,7 @@ class CreateGitignoreHook(Hook):
     description = "Generate .gitignore file"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, additional_patterns: list[str] = None):
+    def __init__(self, additional_patterns: list[str] | None = None):
         """
         Initialize hook.
 

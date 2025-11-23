@@ -2,10 +2,11 @@ import os
 import platform
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
-from dazzle.core.changes import detect_changes
+from dazzle.core.changes import ChangeSet, detect_changes
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.init import InitError, init_project, list_examples
@@ -13,6 +14,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.core.stacks import StackPreset
 from dazzle.core.state import compute_dsl_hashes, load_state, save_state
 
 
@@ -760,13 +762,13 @@ def build(
             prev_state = load_state(root)
             if prev_state:
                 current_hashes = compute_dsl_hashes(dsl_files, root)
-                changeset = detect_changes(prev_state, appspec, current_hashes)
+                diff_changeset = detect_changes(prev_state, appspec, current_hashes)
 
-                if changeset.is_empty():
+                if diff_changeset.is_empty():
                     typer.echo("No changes detected since last build.")
                 else:
                     typer.echo("Changes detected:")
-                    typer.echo(changeset.summary())
+                    typer.echo(diff_changeset.summary())
                     typer.echo("\nRun without --diff to apply changes.")
             else:
                 typer.echo("No previous build state found. This would be a full build.")
@@ -774,7 +776,7 @@ def build(
 
         # Build each backend in order
         base_output_dir = Path(out).resolve()
-        artifacts = {}  # Shared artifacts between backends
+        artifacts: dict[str, Any] = {}  # Shared artifacts between backends
 
         for backend_name in backend_list:
             typer.echo(f"\n{'=' * 60}")
@@ -796,7 +798,7 @@ def build(
 
             # Check for previous state and handle incremental builds
             prev_state = None if force else load_state(root)
-            changeset = None
+            changeset: ChangeSet | None = None
 
             if prev_state and incremental:
                 current_hashes = compute_dsl_hashes(dsl_files, root)
@@ -1092,7 +1094,7 @@ def demo(
         raise typer.Exit(code=1)
 
 
-def _create_demo_project(target_dir: Path, preset) -> None:
+def _create_demo_project(target_dir: Path, preset: StackPreset) -> None:
     """Create a demo project with example DSL and stack configuration."""
     import subprocess
 
@@ -2006,7 +2008,7 @@ def analyze_spec(
         raise typer.Exit(code=1)
 
 
-def _print_analysis_summary(analysis) -> None:
+def _print_analysis_summary(analysis: Any) -> None:
     """Print human-readable analysis summary."""
 
     typer.echo("\n" + "=" * 60)
@@ -2036,7 +2038,7 @@ def _print_analysis_summary(analysis) -> None:
     # Business rules
     if analysis.business_rules:
         typer.echo(f"📏 Business Rules: {len(analysis.business_rules)}")
-        rule_types = {}
+        rule_types: dict[str, int] = {}
         for rule in analysis.business_rules:
             rule_types[rule.type] = rule_types.get(rule.type, 0) + 1
         for rule_type, count in rule_types.items():
@@ -2063,9 +2065,9 @@ def _print_analysis_summary(analysis) -> None:
     typer.echo()
 
 
-def _run_interactive_qa(analysis) -> dict:
+def _run_interactive_qa(analysis: Any) -> dict[str, str]:
     """Run interactive Q&A session."""
-    answers = {}
+    answers: dict[str, str] = {}
 
     if analysis.get_question_count() == 0:
         typer.echo("✓ No clarifying questions needed.")
@@ -2105,7 +2107,7 @@ def _run_interactive_qa(analysis) -> dict:
     return answers
 
 
-def _generate_dsl(analysis, answers: dict, spec_file: Path) -> None:
+def _generate_dsl(analysis: Any, answers: dict[str, str], spec_file: Path) -> None:
     """Generate DSL from analysis and answers."""
     from dazzle.llm import DSLGenerator
 
@@ -2487,7 +2489,7 @@ def vocab_list(
         None, "--kind", "-k", help="Filter by kind (macro, alias, pattern)"
     ),
     tag: str | None = typer.Option(None, "--tag", "-t", help="Filter by tag"),
-):
+) -> None:
     """List all vocabulary entries in the project."""
     from pathlib import Path
 
@@ -2556,7 +2558,7 @@ def vocab_show(
     show_expansion: bool = typer.Option(
         True, "--expansion/--no-expansion", help="Show expansion body"
     ),
-):
+) -> None:
     """Show details and expansion of a vocabulary entry."""
     from pathlib import Path
 
@@ -2618,7 +2620,7 @@ def vocab_expand(
     file_path: str = typer.Argument(..., help="DSL file to expand"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output file (default: stdout)"),
     manifest: str | None = typer.Option(None, "--manifest", "-m", help="Path to manifest.yml"),
-):
+) -> None:
     """Expand vocabulary references in a DSL file to core DSL."""
     from pathlib import Path
 

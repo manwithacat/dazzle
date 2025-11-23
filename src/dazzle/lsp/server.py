@@ -6,6 +6,7 @@ Provides IDE features by analyzing DAZZLE DSL files and using the DAZZLE IR.
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from lsprotocol.types import (
     INITIALIZE,
@@ -40,6 +41,7 @@ from lsprotocol.types import (
 )
 from pygls.lsp.server import LanguageServer
 
+from dazzle.core import ir
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
@@ -49,16 +51,23 @@ from dazzle.core.parser import parse_modules
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create server instance
-server = LanguageServer("dazzle-lsp", "v0.3.0")
 
-# Store workspace state on server
-server.workspace_root: Path | None = None
-server.appspec = None
+# Custom LanguageServer subclass with workspace state
+class DazzleLanguageServer(LanguageServer):
+    """Language server with DAZZLE-specific state."""
+
+    def __init__(self, name: str, version: str):
+        super().__init__(name, version)
+        self.workspace_root: Path | None = None
+        self.appspec: ir.AppSpec | None = None
+
+
+# Create server instance
+server = DazzleLanguageServer("dazzle-lsp", "v0.3.0")
 
 
 @server.feature(INITIALIZE)
-def initialize(ls: LanguageServer, params: InitializeParams):
+def initialize(ls: DazzleLanguageServer, params: InitializeParams) -> Any:
     """Initialize the language server."""
     if params.root_uri:
         ls.workspace_root = Path(params.root_uri.replace("file://", ""))
@@ -71,7 +80,7 @@ def initialize(ls: LanguageServer, params: InitializeParams):
             logger.error(f"Failed to load project: {e}")
 
 
-def _load_project(ls: LanguageServer):
+def _load_project(ls: DazzleLanguageServer) -> None:
     """Load DAZZLE project and build AppSpec."""
     if not ls.workspace_root:
         return
@@ -93,13 +102,13 @@ def _load_project(ls: LanguageServer):
 
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
-def did_open(ls: LanguageServer, params: DidOpenTextDocumentParams):
+def did_open(ls: DazzleLanguageServer, params: DidOpenTextDocumentParams) -> None:
     """Handle document open."""
     logger.info(f"Opened: {params.text_document.uri}")
 
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def did_change(ls: LanguageServer, params: DidChangeTextDocumentParams):
+def did_change(ls: DazzleLanguageServer, params: DidChangeTextDocumentParams) -> None:
     """Handle document change."""
     # Reload project on change
     try:
@@ -109,7 +118,7 @@ def did_change(ls: LanguageServer, params: DidChangeTextDocumentParams):
 
 
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
-def did_save(ls: LanguageServer, params: DidSaveTextDocumentParams):
+def did_save(ls: DazzleLanguageServer, params: DidSaveTextDocumentParams) -> None:
     """Handle document save."""
     logger.info(f"Saved: {params.text_document.uri}")
     # Reload project on save
@@ -120,13 +129,13 @@ def did_save(ls: LanguageServer, params: DidSaveTextDocumentParams):
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(ls: LanguageServer, params: DidCloseTextDocumentParams):
+def did_close(ls: DazzleLanguageServer, params: DidCloseTextDocumentParams) -> None:
     """Handle document close."""
     logger.info(f"Closed: {params.text_document.uri}")
 
 
 @server.feature(TEXT_DOCUMENT_HOVER)
-def hover(ls: LanguageServer, params: HoverParams) -> Hover | None:
+def hover(ls: DazzleLanguageServer, params: HoverParams) -> Hover | None:
     """Provide hover information."""
     if not ls.appspec:
         return None
@@ -154,7 +163,7 @@ def hover(ls: LanguageServer, params: HoverParams) -> Hover | None:
 
 
 @server.feature(TEXT_DOCUMENT_DEFINITION)
-def definition(ls: LanguageServer, params: DefinitionParams) -> Location | None:
+def definition(ls: DazzleLanguageServer, params: DefinitionParams) -> Location | None:
     """Provide go-to-definition."""
     if not ls.appspec or not ls.workspace_root:
         return None
@@ -182,7 +191,7 @@ def definition(ls: LanguageServer, params: DefinitionParams) -> Location | None:
 
 
 @server.feature(TEXT_DOCUMENT_COMPLETION)
-def completion(ls: LanguageServer, params: CompletionParams) -> CompletionList | None:
+def completion(ls: DazzleLanguageServer, params: CompletionParams) -> CompletionList | None:
     """Provide completion suggestions."""
     if not ls.appspec:
         return None
@@ -250,7 +259,7 @@ def completion(ls: LanguageServer, params: CompletionParams) -> CompletionList |
 
 
 @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
-def document_symbol(ls: LanguageServer, params: DocumentSymbolParams) -> list[DocumentSymbol]:
+def document_symbol(ls: DazzleLanguageServer, params: DocumentSymbolParams) -> list[DocumentSymbol]:
     """Provide document symbols for outline view."""
     if not ls.appspec:
         return []
@@ -332,7 +341,7 @@ def _get_word_at_position(text: str, position: Position) -> str | None:
     return line[start:end] if start < end else None
 
 
-def _get_grammar_tips(entity) -> list[str]:
+def _get_grammar_tips(entity: Any) -> list[str]:
     """Provide DAZZLE DSL grammar-specific tips and examples."""
     tips = []
 
@@ -375,7 +384,7 @@ def _get_grammar_tips(entity) -> list[str]:
     return tips
 
 
-def _analyze_entity(entity) -> list[str]:
+def _analyze_entity(entity: Any) -> list[str]:
     """Analyze entity and provide recommendations."""
     recommendations = []
 
@@ -436,7 +445,7 @@ def _analyze_entity(entity) -> list[str]:
     return recommendations
 
 
-def _format_entity_hover(entity) -> str:
+def _format_entity_hover(entity: Any) -> str:
     """Format entity information for hover with rich, contextual details."""
     lines = []
 
@@ -535,7 +544,7 @@ def _format_entity_hover(entity) -> str:
     return "\n".join(lines)
 
 
-def _get_surface_grammar_tips(surface) -> list[str]:
+def _get_surface_grammar_tips(surface: Any) -> list[str]:
     """Provide DAZZLE DSL grammar tips for surfaces."""
     tips = []
 
@@ -592,7 +601,7 @@ def _get_surface_grammar_tips(surface) -> list[str]:
     return tips
 
 
-def _analyze_surface(surface) -> list[str]:
+def _analyze_surface(surface: Any) -> list[str]:
     """Analyze surface and provide recommendations."""
     recommendations = []
 
@@ -665,7 +674,7 @@ def _analyze_surface(surface) -> list[str]:
     return recommendations
 
 
-def _format_surface_hover(surface) -> str:
+def _format_surface_hover(surface: Any) -> str:
     """Format surface information for hover with rich, contextual details."""
     lines = []
 
@@ -779,7 +788,7 @@ def _find_definition_in_file(file_path: Path, word: str) -> Location | None:
     return None
 
 
-def start_server():
+def start_server() -> None:
     """Start the DAZZLE LSP server."""
     logger.info("Starting DAZZLE Language Server...")
     server.start_io()

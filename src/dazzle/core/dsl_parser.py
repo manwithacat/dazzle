@@ -6,6 +6,7 @@ Implements recursive descent parsing for all DSL constructs.
 """
 
 from pathlib import Path
+from typing import Any
 
 from . import ir
 from .errors import make_parse_error
@@ -279,7 +280,7 @@ class Parser:
                 token.column,
             )
 
-    def parse_field_modifiers(self) -> tuple[list[ir.FieldModifier], str | None]:
+    def parse_field_modifiers(self) -> tuple[list[ir.FieldModifier], str | int | float | bool | None]:
         """
         Parse field modifiers and default value.
 
@@ -287,7 +288,7 @@ class Parser:
             Tuple of (modifiers, default_value)
         """
         modifiers = []
-        default = None
+        default: str | int | float | bool | None = None
 
         while True:
             token = self.current_token()
@@ -1633,7 +1634,7 @@ class Parser:
             )
         return op_map[op_str]
 
-    def parse_value(self) -> any:
+    def parse_value(self) -> Any:
         """Parse a value (string, number, identifier, boolean)."""
         token = self.current_token()
 

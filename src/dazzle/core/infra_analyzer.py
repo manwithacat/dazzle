@@ -41,11 +41,11 @@ class InfraRequirements:
     surface_count: int = 0
 
     # Specific needs
-    entity_names: list[str] = None
-    webhook_service_names: list[str] = None
-    async_service_names: list[str] = None
+    entity_names: list[str] | None = None
+    webhook_service_names: list[str] | None = None
+    async_service_names: list[str] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize lists if None."""
         if self.entity_names is None:
             self.entity_names = []
@@ -111,13 +111,15 @@ def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
             # Webhook services need inbound routing
             if "webhook" in service_type:
                 requirements.needs_webhooks = True
-                requirements.webhook_service_names.append(service.name)
+                if requirements.webhook_service_names is not None:
+                    requirements.webhook_service_names.append(service.name)
 
             # Async/background services need queue + workers
             if any(keyword in service_type for keyword in ["async", "background", "queue", "job"]):
                 requirements.needs_queue = True
                 requirements.needs_workers = True
-                requirements.async_service_names.append(service.name)
+                if requirements.async_service_names is not None:
+                    requirements.async_service_names.append(service.name)
 
     # Analyze integrations
     requirements.integration_count = len(appspec.integrations)

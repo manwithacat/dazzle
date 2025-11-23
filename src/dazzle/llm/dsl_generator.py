@@ -351,7 +351,7 @@ class DSLGenerator:
 
         return lines
 
-    def _get_list_fields(self, entity_name: str) -> list[tuple]:
+    def _get_list_fields(self, entity_name: str) -> list[tuple[str, str]]:
         """Get fields to show in list view."""
         fields = []
 
@@ -370,7 +370,7 @@ class DSLGenerator:
 
         return fields
 
-    def _get_detail_fields(self, entity_name: str) -> list[tuple]:
+    def _get_detail_fields(self, entity_name: str) -> list[tuple[str, str]]:
         """Get fields to show in detail view."""
         fields = []
 
@@ -390,7 +390,7 @@ class DSLGenerator:
 
         return fields
 
-    def _get_create_fields(self, entity_name: str) -> list[tuple]:
+    def _get_create_fields(self, entity_name: str) -> list[tuple[str, str]]:
         """Get fields for create form."""
         fields = []
 
@@ -405,7 +405,7 @@ class DSLGenerator:
 
         return fields
 
-    def _get_edit_fields(self, entity_name: str) -> list[tuple]:
+    def _get_edit_fields(self, entity_name: str) -> list[tuple[str, str]]:
         """Get fields for edit form."""
         fields = []
 

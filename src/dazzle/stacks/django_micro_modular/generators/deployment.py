@@ -6,6 +6,7 @@ Generates deployment configuration files.
 
 from pathlib import Path
 
+from ....core import ir
 from ...base import Generator, GeneratorResult
 
 
@@ -21,7 +22,7 @@ class DeploymentGenerator(Generator):
     - .gitignore - Git ignore patterns
     """
 
-    def __init__(self, spec, output_dir: Path, project_name: str):
+    def __init__(self, spec: ir.AppSpec, output_dir: Path, project_name: str):
         """
         Initialize deployment generator.
 

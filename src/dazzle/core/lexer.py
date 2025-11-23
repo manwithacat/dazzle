@@ -275,8 +275,12 @@ class Lexer:
         self.advance()  # skip opening quote
 
         chars = []
-        while self.current_char() and self.current_char() != quote:
-            if self.current_char() == "\\":
+        while True:
+            current = self.current_char()
+            if not current or current == quote:
+                break
+
+            if current == "\\":
                 self.advance()
                 # Handle escape sequences
                 escape_char = self.current_char()
@@ -286,13 +290,13 @@ class Lexer:
                     chars.append("\t")
                 elif escape_char == "\\":
                     chars.append("\\")
-                elif escape_char == quote:
-                    chars.append(quote)
-                else:
-                    chars.append(escape_char or "")
+                elif escape_char and escape_char == quote:
+                    chars.append(quote if quote else "")
+                elif escape_char:
+                    chars.append(escape_char)
                 self.advance()
             else:
-                chars.append(self.current_char())
+                chars.append(current)
                 self.advance()
 
         if self.current_char() != quote:
@@ -309,17 +313,21 @@ class Lexer:
     def read_number(self) -> str:
         """Read a number (integer or decimal)."""
         chars = []
-        while self.current_char() and (self.current_char().isdigit() or self.current_char() == "."):
-            chars.append(self.current_char())
+        current = self.current_char()
+        while current and (current.isdigit() or current == "."):
+            chars.append(current)
             self.advance()
+            current = self.current_char()
         return "".join(chars)
 
     def read_identifier(self) -> str:
         """Read an identifier or keyword."""
         chars = []
-        while self.current_char() and (self.current_char().isalnum() or self.current_char() == "_"):
-            chars.append(self.current_char())
+        current = self.current_char()
+        while current and (current.isalnum() or current == "_"):
+            chars.append(current)
             self.advance()
+            current = self.current_char()
         return "".join(chars)
 
     def handle_indentation(self, indent_level: int) -> None:

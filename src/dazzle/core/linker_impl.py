@@ -237,6 +237,8 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
             for entity_field in entity.fields:
                 if entity_field.type.kind == ir.FieldTypeKind.REF:
                     ref_entity = entity_field.type.ref_entity
+                    if ref_entity is None:
+                        continue
                     owner_module = symbols.symbol_sources.get(ref_entity)
                     if owner_module and owner_module not in allowed_modules:
                         errors.append(

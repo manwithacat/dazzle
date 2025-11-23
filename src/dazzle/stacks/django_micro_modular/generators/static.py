@@ -6,6 +6,7 @@ Generates CSS and other static files.
 
 from pathlib import Path
 
+from ....core import ir
 from ...base import Generator, GeneratorResult
 
 
@@ -17,7 +18,7 @@ class StaticGenerator(Generator):
     - app/static/css/style.css - Main stylesheet
     """
 
-    def __init__(self, spec, output_dir: Path, app_name: str = "app"):
+    def __init__(self, spec: ir.AppSpec, output_dir: Path, app_name: str = "app"):
         """
         Initialize static generator.
 

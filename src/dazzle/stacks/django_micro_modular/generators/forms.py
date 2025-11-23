@@ -157,7 +157,7 @@ class FormsGenerator(Generator):
 
         return "\n".join(lines)
 
-    def _get_surface_fields(self, entity: ir.EntitySpec, surface: ir.SurfaceSpec) -> list:
+    def _get_surface_fields(self, entity: ir.EntitySpec, surface: ir.SurfaceSpec) -> list[str]:
         """Get list of fields to include in form based on surface definition."""
         included_fields = []
 
@@ -189,7 +189,7 @@ class FormsGenerator(Generator):
 
         return included_fields
 
-    def _get_form_widgets(self, entity: ir.EntitySpec, included_fields: list) -> dict:
+    def _get_form_widgets(self, entity: ir.EntitySpec, included_fields: list[str]) -> dict[str, str]:
         """Get custom widgets for form fields."""
         widgets = {}
 

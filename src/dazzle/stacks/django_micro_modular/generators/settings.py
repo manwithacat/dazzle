@@ -7,6 +7,7 @@ Generates Django settings.py and other Django configuration files.
 import secrets
 from pathlib import Path
 
+from ....core import ir
 from ...base import Generator, GeneratorResult
 
 
@@ -21,7 +22,7 @@ class SettingsGenerator(Generator):
     - manage.py - Django management script
     """
 
-    def __init__(self, spec, output_dir: Path, project_name: str, app_name: str = "app"):
+    def __init__(self, spec: ir.AppSpec, output_dir: Path, project_name: str, app_name: str = "app"):
         """
         Initialize settings generator.
 

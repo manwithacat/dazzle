@@ -5,6 +5,7 @@ Generates comprehensive Django test suites for models, views, forms, and admin.
 """
 
 from pathlib import Path
+from typing import Any
 
 from ....core import ir
 from ...base import Generator, GeneratorResult
@@ -597,7 +598,7 @@ class TestGenerator(Generator):
         return False
 
     def _get_minimal_create_params(
-        self, entity: ir.EntitySpec, use_self: bool = False, exclude: list[str] = None
+        self, entity: ir.EntitySpec, use_self: bool = False, exclude: list[str] | None = None
     ) -> dict[str, str]:
         """Get minimal parameters needed to create an instance."""
         params = {}
@@ -664,7 +665,7 @@ class TestGenerator(Generator):
         else:
             return '""'
 
-    def _format_default_value(self, value, field_type_kind: ir.FieldTypeKind) -> str:
+    def _format_default_value(self, value: Any, field_type_kind: ir.FieldTypeKind) -> str:
         """Format default value for Python code."""
         if isinstance(value, str):
             return f'"{value}"'
@@ -915,7 +916,7 @@ class TestGenerator(Generator):
 
         return lines
 
-    def _format_value(self, value) -> str:
+    def _format_value(self, value: Any) -> str:
         """Format a value for Python code generation."""
         if isinstance(value, str):
             # Already quoted strings are returned as-is

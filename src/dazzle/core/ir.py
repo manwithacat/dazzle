@@ -565,7 +565,7 @@ class Expression(BaseModel):
 
     @field_validator("path", "literal")
     @classmethod
-    def validate_one_set(cls, v, info):
+    def validate_one_set(cls, v: str | int | float | bool | None, info: Any) -> str | int | float | bool | None:
         """Ensure exactly one of path or literal is set."""
         # This is simplified; full validation would check both fields
         return v

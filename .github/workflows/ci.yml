@@ -86,7 +86,6 @@ jobs:
     - name: Run mypy
       run: |
         mypy src/dazzle --ignore-missing-imports
-      continue-on-error: true
 
   integration:
     runs-on: ubuntu-latest

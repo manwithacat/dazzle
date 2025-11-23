@@ -9,6 +9,7 @@ pipelines, and event flows. Useful for:
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 from . import ir
 
@@ -57,10 +58,10 @@ class IntegrationPattern:
     has_syncs: bool = False
     action_count: int = 0
     sync_count: int = 0
-    connected_entities: set[str] = None
-    connected_surfaces: set[str] = None
+    connected_entities: set[str] | None = None
+    connected_surfaces: set[str] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.connected_entities is None:
             self.connected_entities = set()
         if self.connected_surfaces is None:
@@ -76,9 +77,9 @@ class ExperiencePattern:
     surface_steps: list[str]
     integration_steps: list[str]
     has_cycles: bool = False
-    unreachable_steps: list[str] = None
+    unreachable_steps: list[str] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.unreachable_steps is None:
             self.unreachable_steps = []
 
@@ -158,13 +159,14 @@ def detect_integration_patterns(spec: ir.AppSpec) -> list[IntegrationPattern]:
 
         # Collect connected entities from actions and syncs
         for action in integration.actions:
-            if action.response_entity:
+            if action.response_entity and pattern.connected_entities is not None:
                 pattern.connected_entities.add(action.response_entity)
-            if action.when_surface:
+            if action.when_surface and pattern.connected_surfaces is not None:
                 pattern.connected_surfaces.add(action.when_surface)
 
         for sync in integration.syncs:
-            pattern.connected_entities.add(sync.into_entity)
+            if pattern.connected_entities is not None:
+                pattern.connected_entities.add(sync.into_entity)
 
         patterns.append(pattern)
 
@@ -292,7 +294,7 @@ def _detect_unreachable_steps(experience: ir.ExperienceSpec) -> list[str]:
     return sorted(unreachable)
 
 
-def analyze_patterns(spec: ir.AppSpec) -> dict[str, list]:
+def analyze_patterns(spec: ir.AppSpec) -> dict[str, list[Any]]:
     """
     Run all pattern detection analyses on an AppSpec.
 
@@ -312,7 +314,7 @@ def analyze_patterns(spec: ir.AppSpec) -> dict[str, list]:
     }
 
 
-def format_pattern_report(patterns: dict[str, list]) -> str:
+def format_pattern_report(patterns: dict[str, list[Any]]) -> str:
     """
     Format pattern analysis results as a human-readable report.
 

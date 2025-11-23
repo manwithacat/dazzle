@@ -7,6 +7,7 @@ Backends generate concrete artifacts (code, specs, configs) from validated AppSp
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ..core import ir
 from ..core.errors import BackendError
@@ -41,7 +42,7 @@ class Backend(ABC):
     """
 
     @abstractmethod
-    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
+    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options: Any) -> None:
         """
         Generate artifacts from AppSpec.
 
@@ -70,7 +71,7 @@ class Backend(ABC):
             output_formats=["unknown"],
         )
 
-    def validate_config(self, **options) -> None:
+    def validate_config(self, **options: Any) -> None:
         """
         Validate backend-specific configuration.
 
@@ -97,7 +98,7 @@ class BackendRegistry:
     - Lookup by name
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._backends: dict[str, type[Backend]] = {}
 
     def register(self, name: str, backend_class: type[Backend]) -> None:

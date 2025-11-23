@@ -30,7 +30,7 @@ class OpenAPIBackend(Backend):
     """
 
     def generate(
-        self, appspec: ir.AppSpec, output_dir: Path, format: str = "yaml", **options
+        self, appspec: ir.AppSpec, output_dir: Path, format: str = "yaml", **options: Any
     ) -> None:
         """
         Generate OpenAPI 3.0 specification.
@@ -72,7 +72,7 @@ class OpenAPIBackend(Backend):
         output_dir: Path,
         changeset: "ChangeSet",
         format: str = "yaml",
-        **options,
+        **options: Any,
     ) -> None:
         """
         Generate OpenAPI 3.0 specification incrementally.
@@ -121,14 +121,14 @@ class OpenAPIBackend(Backend):
             requires_config=False,
         )
 
-    def validate_config(self, format: str = "yaml", **options) -> None:
+    def validate_config(self, format: str = "yaml", **options: Any) -> None:
         """Validate backend configuration."""
         if format not in ("yaml", "json"):
             raise BackendError(f"Invalid format: {format}. Must be 'yaml' or 'json'.")
 
     def _build_openapi_document(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build complete OpenAPI 3.0 document."""
-        doc = {
+        doc: dict[str, Any] = {
             "openapi": "3.0.0",
             "info": self._build_info(appspec),
             "paths": self._build_paths(appspec),
@@ -164,7 +164,7 @@ class OpenAPIBackend(Backend):
 
     def _entity_to_schema(self, entity: ir.EntitySpec) -> dict[str, Any]:
         """Convert DAZZLE entity to OpenAPI schema."""
-        schema = {
+        schema: dict[str, Any] = {
             "type": "object",
             "properties": {},
         }
@@ -173,7 +173,7 @@ class OpenAPIBackend(Backend):
             schema["title"] = entity.title
 
         # Add fields as properties
-        required_fields = []
+        required_fields: list[str] = []
         for field in entity.fields:
             schema["properties"][field.name] = self._field_to_property(field)
 

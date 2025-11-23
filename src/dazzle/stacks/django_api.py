@@ -5,6 +5,7 @@ Generates a complete Django project with DRF from AppSpec.
 """
 
 from pathlib import Path
+from typing import Any
 
 from ..core import ir
 from ..core.errors import BackendError
@@ -32,7 +33,7 @@ class DjangoAPIBackend(Backend):
             requires_config=False,
         )
 
-    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
+    def generate(self, appspec: ir.AppSpec, output_dir: Path, **options: Any) -> None:
         """
         Generate Django project structure.
 

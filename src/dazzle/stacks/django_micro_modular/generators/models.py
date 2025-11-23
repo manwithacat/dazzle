@@ -280,7 +280,7 @@ class ModelsGenerator(Generator):
                 # Find and remove the default parameter if it exists
                 field_params = [p for p in field_params if not p.startswith("default=")]
                 # Convert default value to constant name
-                const_name = self._to_constant_case(field.default)
+                const_name = self._to_constant_case(str(field.default))
                 field_params.append(f"default={choices_class}.{const_name}")
 
         params_str = ", ".join(field_params)

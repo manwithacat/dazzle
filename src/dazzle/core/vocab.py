@@ -101,12 +101,14 @@ class VocabEntry(BaseModel):
     @property
     def stability(self) -> str:
         """Get stability level from metadata."""
-        return self.metadata.get("stability", "experimental")
+        result = self.metadata.get("stability", "experimental")
+        return str(result) if result else "experimental"
 
     @property
     def usage_count(self) -> int:
         """Get usage count from metadata."""
-        return self.metadata.get("usage_count", 0)
+        result = self.metadata.get("usage_count", 0)
+        return int(result) if isinstance(result, (int, float, str)) else 0
 
     def increment_usage(self) -> "VocabEntry":
         """
