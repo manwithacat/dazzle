@@ -103,6 +103,7 @@ class ExpressMicroBackend(Backend):
         # Generate deployment configs
         self._generate_package_json()
         self._generate_gitignore()
+        self._generate_env_example()
         self._generate_procfile()
         self._generate_vercel_config()
 
@@ -409,8 +410,27 @@ module.exports = db;
         lines.append("  }, {")
         lines.append("    tableName: '" + entity.name.lower() + "s',")
         lines.append("    timestamps: true, // createdAt, updatedAt")
+
+        # Add soft delete support if pattern detected
+        has_soft_delete = self._has_soft_delete_pattern(entity)
+        if has_soft_delete:
+            lines.append("    defaultScope: {")
+            lines.append("      where: { deleted_at: null }  // Exclude deleted by default")
+            lines.append("    },")
+            lines.append("    scopes: {")
+            lines.append("      withDeleted: {")
+            lines.append("        where: {}  // Include deleted")
+            lines.append("      }")
+            lines.append("    }")
+
         lines.append("  });")
         lines.append("")
+
+        # Add soft delete methods if pattern detected
+        if has_soft_delete:
+            lines.extend(self._generate_soft_delete_methods(entity))
+            lines.append("")
+
         lines.append(f"  return {entity.name};")
         lines.append("};")
         lines.append("")
@@ -486,6 +506,56 @@ module.exports = db;
         else:
             return str(value)
 
+    def _has_soft_delete_pattern(self, entity: "ir.EntitySpec") -> bool:
+        """
+        Detect if entity uses soft_delete_behavior pattern.
+
+        Pattern detected by presence of deletedAt field (datetime optional).
+        This field is created by vocabulary expansion of @use soft_delete_behavior().
+        """
+        for field in entity.fields:
+            if field.name == 'deleted_at' and field.type.kind == ir.FieldTypeKind.DATETIME:
+                return True
+        return False
+
+    def _generate_soft_delete_methods(self, entity: "ir.EntitySpec") -> list:
+        """
+        Generate soft delete and restore methods for Sequelize model.
+
+        Implements soft_delete_behavior pattern:
+        - softDelete() method marks record as deleted
+        - restore() method restores soft-deleted record
+        """
+        # Check if entity has deleted_by field
+        has_deleted_by = any(f.name == 'deleted_by' for f in entity.fields)
+
+        lines = [
+            f"  // Soft delete methods",
+            f"  {entity.name}.prototype.softDelete = async function() {{",
+            f"    this.deleted_at = new Date();",
+        ]
+
+        if has_deleted_by:
+            lines.append(f"    // Note: deleted_by should be set by the caller if user context available")
+
+        lines.extend([
+            f"    await this.save();",
+            f"  }};",
+            f"",
+            f"  {entity.name}.prototype.restore = async function() {{",
+            f"    this.deleted_at = null;",
+        ])
+
+        if has_deleted_by:
+            lines.append(f"    this.deleted_by = null;")
+
+        lines.extend([
+            f"    await this.save();",
+            f"  }};",
+        ])
+
+        return lines
+
     def _generate_routes(self) -> None:
         """Generate Express routes."""
         # Generate main routes index
@@ -518,6 +588,7 @@ module.exports = db;
         """Build routes for an entity."""
         entity_lower = entity.name.lower()
         entity_name = entity.name
+        entity_title = entity.title or entity.name
 
         lines = [
             "const express = require('express');",
@@ -531,9 +602,10 @@ module.exports = db;
             f"    const {entity_lower}s = await {entity_name}.findAll({{",
             "      order: [['createdAt', 'DESC']]",
             "    });",
-            f"    res.render('{entity_lower}/list', {{ {entity_lower}s }});",
+            f"    res.render('{entity_lower}/list', {{ title: '{entity_title}', {entity_lower}s }});",
             "  } catch (error) {",
-            "    res.status(500).send('Error loading data');",
+            f"    console.error('Error loading {entity_lower}s:', error);",
+            "    res.status(500).send('Error loading data. Please try again later.');",
             "  }",
             "});",
             "",
@@ -544,15 +616,16 @@ module.exports = db;
             f"    if (!{entity_lower}) {{",
             "      return res.status(404).send('Not found');",
             "    }",
-            f"    res.render('{entity_lower}/detail', {{ {entity_lower} }});",
+            f"    res.render('{entity_lower}/detail', {{ title: '{entity_title} Detail', {entity_lower} }});",
             "  } catch (error) {",
-            "    res.status(500).send('Error loading data');",
+            f"    console.error('Error loading {entity_lower} detail:', error);",
+            "    res.status(500).send('Error loading data. Please try again later.');",
             "  }",
             "});",
             "",
             "// Create form",
             "router.get('/new/form', (req, res) => {",
-            f"  res.render('{entity_lower}/form', {{ {entity_lower}: {{}}, errors: {{}} }});",
+            f"  res.render('{entity_lower}/form', {{ title: 'New {entity_title}', {entity_lower}: {{}}, errors: {{}} }});",
             "});",
             "",
             "// Create (POST)",
@@ -560,6 +633,7 @@ module.exports = db;
             "  const errors = validationResult(req);",
             "  if (!errors.isEmpty()) {",
             f"    return res.render('{entity_lower}/form', {{",
+            f"      title: 'New {entity_title}',",
             f"      {entity_lower}: req.body,",
             "      errors: errors.mapped()",
             "    });",
@@ -570,6 +644,7 @@ module.exports = db;
             f"    res.redirect('/{entity_lower}');",
             "  } catch (error) {",
             f"    res.render('{entity_lower}/form', {{",
+            f"      title: 'New {entity_title}',",
             f"      {entity_lower}: req.body,",
             "      errors: { _error: 'Failed to create' }",
             "    });",
@@ -583,9 +658,10 @@ module.exports = db;
             f"    if (!{entity_lower}) {{",
             "      return res.status(404).send('Not found');",
             "    }",
-            f"    res.render('{entity_lower}/form', {{ {entity_lower}, errors: {{}} }});",
+            f"    res.render('{entity_lower}/form', {{ title: 'Edit {entity_title}', {entity_lower}, errors: {{}} }});",
             "  } catch (error) {",
-            "    res.status(500).send('Error loading data');",
+            f"    console.error('Error loading {entity_lower} for edit:', error);",
+            "    res.status(500).send('Error loading data. Please try again later.');",
             "  }",
             "});",
             "",
@@ -594,6 +670,7 @@ module.exports = db;
             "  const errors = validationResult(req);",
             "  if (!errors.isEmpty()) {",
             f"    return res.render('{entity_lower}/form', {{",
+            f"      title: 'Edit {entity_title}',",
             f"      {entity_lower}: {{ ...req.body, id: req.params.id }},",
             "      errors: errors.mapped()",
             "    });",
@@ -608,6 +685,7 @@ module.exports = db;
             f"    res.redirect('/{entity_lower}/' + req.params.id);",
             "  } catch (error) {",
             f"    res.render('{entity_lower}/form', {{",
+            f"      title: 'Edit {entity_title}',",
             f"      {entity_lower}: {{ ...req.body, id: req.params.id }},",
             "      errors: { _error: 'Failed to update' }",
             "    });",
@@ -621,9 +699,10 @@ module.exports = db;
             f"    if (!{entity_lower}) {{",
             "      return res.status(404).send('Not found');",
             "    }",
-            f"    res.render('{entity_lower}/delete', {{ {entity_lower} }});",
+            f"    res.render('{entity_lower}/delete', {{ title: 'Delete {entity_title}', {entity_lower} }});",
             "  } catch (error) {",
-            "    res.status(500).send('Error loading data');",
+            f"    console.error('Error loading {entity_lower} for delete:', error);",
+            "    res.status(500).send('Error loading data. Please try again later.');",
             "  }",
             "});",
             "",
@@ -637,7 +716,8 @@ module.exports = db;
             f"    await {entity_lower}.destroy();",
             f"    res.redirect('/{entity_lower}');",
             "  } catch (error) {",
-            "    res.status(500).send('Error deleting');",
+            f"    console.error('Error deleting {entity_lower}:', error);",
+            "    res.status(500).send('Error deleting data. Please try again later.');",
             "  }",
             "});",
             "",
@@ -965,7 +1045,10 @@ module.exports = db;
             entity_lower = entity.name.lower()
             entity_use.append(f"app.use('/{entity_lower}', {entity_lower}Routes);")
 
-        return f'''const express = require('express');
+        return f'''// Load environment variables
+require('dotenv').config();
+
+const express = require('express');
 const path = require('path');
 const expressLayouts = require('express-ejs-layouts');
 const db = require('./models');
@@ -984,6 +1067,19 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
+// Admin interface (with graceful fallback for compatibility)
+let adminJs, adminRouter;
+try {{
+  const admin = require('./admin');
+  adminJs = admin.adminJs;
+  adminRouter = admin.adminRouter;
+  app.use(adminJs.options.rootPath, adminRouter);
+  console.log('Admin interface enabled at /admin');
+}} catch (err) {{
+  console.warn('Admin interface disabled (compatibility issue):', err.message);
+  console.warn('To enable admin, ensure Node.js version is compatible with AdminJS');
+}}
+
 // Routes
 const indexRoutes = require('./routes/index');
 {chr(10).join(entity_routes)}
@@ -996,7 +1092,9 @@ db.sequelize.sync().then(() => {{
   console.log('Database synced');
   app.listen(PORT, () => {{
     console.log(`Server running on http://localhost:${{PORT}}`);
-    console.log(`Admin interface: http://localhost:${{PORT}}/admin`);
+    if (adminJs) {{
+      console.log(`Admin interface: http://localhost:${{PORT}}/admin`);
+    }}
   }});
 }}).catch(err => {{
   console.error('Database sync failed:', err);
@@ -1103,13 +1201,14 @@ module.exports = {{ adminJs, adminRouter }};
     "express-validator": "^7.0.1",
     "adminjs": "^7.5.0",
     "@adminjs/express": "^6.1.0",
-    "@adminjs/sequelize": "^4.0.0"
+    "@adminjs/sequelize": "^4.0.0",
+    "dotenv": "^16.3.1"
   }},
   "devDependencies": {{
     "nodemon": "^3.0.2"
   }},
   "engines": {{
-    "node": ">=18.0.0"
+    "node": ">=18.0.0 <25.0.0"
   }}
 }}
 '''
@@ -1145,6 +1244,27 @@ npm-debug.log*
 Thumbs.db
 '''
         (self.output_dir / self.app_name / ".gitignore").write_text(gitignore)
+
+    def _generate_env_example(self) -> None:
+        """Generate .env.example file."""
+        env_example = f'''# Application
+NODE_ENV=development
+PORT=3000
+
+# Database
+DATABASE_URL=sqlite:./database.sqlite
+
+# Session (change in production!)
+SESSION_SECRET=change-this-secret-key-in-production
+
+# Admin Interface (optional authentication)
+# ADMIN_EMAIL=admin@example.com
+# ADMIN_PASSWORD=change-this-password
+
+# Logging
+LOG_LEVEL=info
+'''
+        (self.output_dir / self.app_name / ".env.example").write_text(env_example)
 
     def _generate_procfile(self) -> None:
         """Generate Procfile for Heroku."""
@@ -1317,13 +1437,7 @@ This is a standard Express.js application. You can customize:
 To regenerate this project from the DAZZLE DSL:
 
 ```bash
-dazzle build --backend express_micro --out ./build
-```
-
-Or use the express_micro stack:
-
-```bash
-dazzle build --stack express_micro --out ./build
+dazzle build --stack express_micro
 ```
 
 ## Support

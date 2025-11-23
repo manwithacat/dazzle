@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.1.0"
+version = "0.1.1"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -37,6 +37,8 @@ classifiers = [
 dependencies = [
     "pydantic>=2.0",
     "typer>=0.9",
+    "jinja2>=3.1",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -56,11 +58,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/dazzle"
-Documentation = "https://github.com/yourusername/dazzle/blob/main/docs"
-Repository = "https://github.com/yourusername/dazzle"
-Issues = "https://github.com/yourusername/dazzle/issues"
-Changelog = "https://github.com/yourusername/dazzle/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/manwithacat/dazzle"
+Documentation = "https://github.com/manwithacat/dazzle/blob/main/docs"
+Repository = "https://github.com/manwithacat/dazzle"
+Issues = "https://github.com/manwithacat/dazzle/issues"
+Changelog = "https://github.com/manwithacat/dazzle/blob/main/CHANGELOG.md"
 
 [project.scripts]
 dazzle = "dazzle.cli:main"
@@ -156,3 +158,7 @@ known-first-party = ["dazzle"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.bandit]
+exclude_dirs = ["tests", "build", "dist"]
+skips = ["B101", "B601"]  # Skip assert_used and shell injection (we use subprocess safely)

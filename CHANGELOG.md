@@ -1,15 +1,95 @@
 # Changelog
 
-## [v0.1.0] - 2025-11-22
+All notable changes to DAZZLE will be documented in this file.
 
-### Added
-- TODO: List new features
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Changed
-- TODO: List changes
+---
+
+## [0.1.1] - 2025-11-23
 
 ### Fixed
-- TODO: List bug fixes
+
+**express_micro stack**:
+- **CRITICAL**: Added graceful fallback for AdminJS on incompatible Node.js versions (v25+)
+- **CRITICAL**: Added Node.js version constraints to package.json (`>=18.0.0 <25.0.0`)
+- **HIGH**: Fixed missing `title` variable in all route handlers (detail, form, delete views)
+- **HIGH**: Fixed admin interface not being mounted in server.js
+- **HIGH**: Improved error handling with contextual logging in all routes
+- **MEDIUM**: Removed deprecated `--backend` flag from generated README.md
+
+### Added
+
+**express_micro stack**:
+- Environment variable support with dotenv
+- Generated `.env.example` file with all configuration options
+- Contextual error messages for better debugging
+- Error logging with `console.error()` in all catch blocks
+
+### Changed
+
+**express_micro stack**:
+- Server now loads `.env` file automatically on startup
+- Admin interface only shows URL in console if successfully loaded
+- Error messages now more user-friendly ("Please try again later")
+- README regeneration instructions simplified
+
+---
+
+## [0.1.0] - 2025-11-22
+
+### Added
+
+**Core Features**:
+- Complete DSL parser supporting entities, surfaces, experiences, services, integrations, tests
+- Internal Representation (IR) with full Pydantic type system (900+ lines)
+- Module system with dependency resolution, cycle detection, topological sorting
+- Linker with symbol table building and cross-reference validation
+- Comprehensive validation and linting system
+- Pattern detection (CRUD, integrations, experience flows)
+
+**Stacks** (6 production-ready):
+- `django_micro_modular`: Django apps with admin, forms, views, templates
+- `django_api`: Django REST Framework with OpenAPI integration
+- `express_micro`: Node.js/Express with Sequelize ORM and AdminJS
+- `openapi`: OpenAPI 3.0 specification generation
+- `docker`: Docker Compose multi-service orchestration
+- `terraform`: AWS infrastructure (ECS, RDS, VPC, ALB)
+
+**CLI Commands**:
+- `init`: Initialize new project
+- `validate`: Parse, link, and validate DSL
+- `lint`: Extended validation with naming conventions
+- `build`: Generate code from AppSpec
+- `inspect`: Show module interfaces and patterns
+- `analyze-spec`: Parse natural language specifications with LLM
+- `clone`: Clone example projects
+- `demo`: Create demo project
+- `example`: Build in-place examples
+
+**LLM Integration**:
+- Spec analysis (natural language → structured requirements)
+- DSL generation (requirements → .dsl files)
+- Interactive Q&A for clarifications
+- Cost estimation and safety checks
+- Support for Anthropic Claude and OpenAI GPT
+
+**IDE & Tooling**:
+- LSP server with real-time diagnostics, hover, completions, go-to-definition
+- VS Code extension with syntax highlighting and validation
+- Test suite with 59+ tests (unit, integration, LLM)
+
+**Examples**:
+- `simple_task`: Minimal starter project (1 entity, 4 surfaces)
+- `support_tickets`: Production-like complexity (3 entities, relationships, workflows)
+
+### Documentation
+- Complete DSL reference (`docs/DAZZLE_DSL_REFERENCE_0_1.md`)
+- EBNF grammar (`docs/DAZZLE_DSL_GRAMMAR_0_1.ebnf`)
+- IR documentation (`docs/DAZZLE_IR_0_1.md`)
+- VS Code extension user guide
+- Stack development guides
 
 ---
 
