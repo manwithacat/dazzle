@@ -2,9 +2,10 @@
 """Test linker implementation."""
 
 from pathlib import Path
+
 from dazzle.core import ir
-from dazzle.core.linker_impl import resolve_dependencies, build_symbol_table, validate_references
 from dazzle.core.errors import LinkError
+from dazzle.core.linker_impl import build_symbol_table, resolve_dependencies, validate_references
 
 
 def test_dependency_resolution():
@@ -16,48 +17,49 @@ def test_dependency_resolution():
         name="mod.a",
         file=Path("a.dsl"),
         uses=[],
-        fragment=ir.ModuleFragment(entities=[
-            ir.EntitySpec(
-                name="EntityA",
-                fields=[
-                    ir.FieldSpec(
-                        name="id",
-                        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                        modifiers=[ir.FieldModifier.PK],
-                    )
-                ]
-            )
-        ])
+        fragment=ir.ModuleFragment(
+            entities=[
+                ir.EntitySpec(
+                    name="EntityA",
+                    fields=[
+                        ir.FieldSpec(
+                            name="id",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                            modifiers=[ir.FieldModifier.PK],
+                        )
+                    ],
+                )
+            ]
+        ),
     )
 
     mod_b = ir.ModuleIR(
         name="mod.b",
         file=Path("b.dsl"),
         uses=["mod.a"],
-        fragment=ir.ModuleFragment(entities=[
-            ir.EntitySpec(
-                name="EntityB",
-                fields=[
-                    ir.FieldSpec(
-                        name="id",
-                        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                        modifiers=[ir.FieldModifier.PK],
-                    ),
-                    ir.FieldSpec(
-                        name="ref_a",
-                        type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="EntityA"),
-                        modifiers=[ir.FieldModifier.REQUIRED],
-                    )
-                ]
-            )
-        ])
+        fragment=ir.ModuleFragment(
+            entities=[
+                ir.EntitySpec(
+                    name="EntityB",
+                    fields=[
+                        ir.FieldSpec(
+                            name="id",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                            modifiers=[ir.FieldModifier.PK],
+                        ),
+                        ir.FieldSpec(
+                            name="ref_a",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="EntityA"),
+                            modifiers=[ir.FieldModifier.REQUIRED],
+                        ),
+                    ],
+                )
+            ]
+        ),
     )
 
     mod_c = ir.ModuleIR(
-        name="mod.c",
-        file=Path("c.dsl"),
-        uses=["mod.a", "mod.b"],
-        fragment=ir.ModuleFragment()
+        name="mod.c", file=Path("c.dsl"), uses=["mod.a", "mod.b"], fragment=ir.ModuleFragment()
     )
 
     # Resolve dependencies
@@ -77,22 +79,16 @@ def test_circular_dependency_detection():
 
     # Create circular dependency: A uses B, B uses A
     mod_a = ir.ModuleIR(
-        name="mod.a",
-        file=Path("a.dsl"),
-        uses=["mod.b"],
-        fragment=ir.ModuleFragment()
+        name="mod.a", file=Path("a.dsl"), uses=["mod.b"], fragment=ir.ModuleFragment()
     )
 
     mod_b = ir.ModuleIR(
-        name="mod.b",
-        file=Path("b.dsl"),
-        uses=["mod.a"],
-        fragment=ir.ModuleFragment()
+        name="mod.b", file=Path("b.dsl"), uses=["mod.a"], fragment=ir.ModuleFragment()
     )
 
     try:
         resolve_dependencies([mod_a, mod_b])
-        assert False, "Should have detected circular dependency"
+        raise AssertionError("Should have detected circular dependency")
     except LinkError as e:
         assert "Circular dependency" in str(e)
         print("  ✓ Circular dependency detected")
@@ -103,15 +99,12 @@ def test_missing_module_detection():
     print("Testing missing module detection...")
 
     mod_a = ir.ModuleIR(
-        name="mod.a",
-        file=Path("a.dsl"),
-        uses=["mod.nonexistent"],
-        fragment=ir.ModuleFragment()
+        name="mod.a", file=Path("a.dsl"), uses=["mod.nonexistent"], fragment=ir.ModuleFragment()
     )
 
     try:
         resolve_dependencies([mod_a])
-        assert False, "Should have detected missing module"
+        raise AssertionError("Should have detected missing module")
     except LinkError as e:
         assert "not defined" in str(e)
         print("  ✓ Missing module detected")
@@ -125,41 +118,45 @@ def test_duplicate_detection():
         name="mod.a",
         file=Path("a.dsl"),
         uses=[],
-        fragment=ir.ModuleFragment(entities=[
-            ir.EntitySpec(
-                name="User",
-                fields=[
-                    ir.FieldSpec(
-                        name="id",
-                        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                        modifiers=[ir.FieldModifier.PK],
-                    )
-                ]
-            )
-        ])
+        fragment=ir.ModuleFragment(
+            entities=[
+                ir.EntitySpec(
+                    name="User",
+                    fields=[
+                        ir.FieldSpec(
+                            name="id",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                            modifiers=[ir.FieldModifier.PK],
+                        )
+                    ],
+                )
+            ]
+        ),
     )
 
     mod_b = ir.ModuleIR(
         name="mod.b",
         file=Path("b.dsl"),
         uses=[],
-        fragment=ir.ModuleFragment(entities=[
-            ir.EntitySpec(
-                name="User",  # Duplicate!
-                fields=[
-                    ir.FieldSpec(
-                        name="id",
-                        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                        modifiers=[ir.FieldModifier.PK],
-                    )
-                ]
-            )
-        ])
+        fragment=ir.ModuleFragment(
+            entities=[
+                ir.EntitySpec(
+                    name="User",  # Duplicate!
+                    fields=[
+                        ir.FieldSpec(
+                            name="id",
+                            type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                            modifiers=[ir.FieldModifier.PK],
+                        )
+                    ],
+                )
+            ]
+        ),
     )
 
     try:
         build_symbol_table([mod_a, mod_b])
-        assert False, "Should have detected duplicate entity"
+        raise AssertionError("Should have detected duplicate entity")
     except LinkError as e:
         assert "Duplicate entity" in str(e)
         print("  ✓ Duplicate entity detected")
@@ -183,9 +180,9 @@ def test_reference_validation():
                     type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
                     modifiers=[ir.FieldModifier.PK],
                 )
-            ]
+            ],
         ),
-        "mod.a"
+        "mod.a",
     )
 
     symbols.add_entity(
@@ -201,10 +198,10 @@ def test_reference_validation():
                     name="author",
                     type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="NonExistent"),
                     modifiers=[ir.FieldModifier.REQUIRED],
-                )
-            ]
+                ),
+            ],
         ),
-        "mod.b"
+        "mod.b",
     )
 
     errors = validate_references(symbols)
@@ -239,6 +236,7 @@ def main():
         print("=" * 60)
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

@@ -6,7 +6,6 @@ Implements recursive descent parsing for all DSL constructs.
 """
 
 from pathlib import Path
-from typing import List, Optional
 
 from . import ir
 from .errors import make_parse_error
@@ -20,7 +19,7 @@ class Parser:
     Consumes tokens from lexer and builds IR structures.
     """
 
-    def __init__(self, tokens: List[Token], file: Path):
+    def __init__(self, tokens: list[Token], file: Path):
         """
         Initialize parser.
 
@@ -81,14 +80,31 @@ class Parser:
 
         # Allow keywords to be used as identifiers in certain contexts
         if token.type in (
-            TokenType.SURFACE, TokenType.ENTITY, TokenType.INTEGRATION,
-            TokenType.EXPERIENCE, TokenType.SERVICE, TokenType.FOREIGN_MODEL,
+            TokenType.SURFACE,
+            TokenType.ENTITY,
+            TokenType.INTEGRATION,
+            TokenType.EXPERIENCE,
+            TokenType.SERVICE,
+            TokenType.FOREIGN_MODEL,
             # Test DSL keywords (can be used as field names)
-            TokenType.TEST, TokenType.SETUP, TokenType.DATA, TokenType.EXPECT,
-            TokenType.STATUS, TokenType.CREATED, TokenType.FILTER, TokenType.SEARCH,
-            TokenType.ORDER_BY, TokenType.COUNT, TokenType.ERROR_MESSAGE,
-            TokenType.FIRST, TokenType.LAST, TokenType.QUERY,
-            TokenType.CREATE, TokenType.UPDATE, TokenType.DELETE, TokenType.GET,
+            TokenType.TEST,
+            TokenType.SETUP,
+            TokenType.DATA,
+            TokenType.EXPECT,
+            TokenType.STATUS,
+            TokenType.CREATED,
+            TokenType.FILTER,
+            TokenType.SEARCH,
+            TokenType.ORDER_BY,
+            TokenType.COUNT,
+            TokenType.ERROR_MESSAGE,
+            TokenType.FIRST,
+            TokenType.LAST,
+            TokenType.QUERY,
+            TokenType.CREATE,
+            TokenType.UPDATE,
+            TokenType.DELETE,
+            TokenType.GET,
         ):
             return self.advance()
 
@@ -108,7 +124,7 @@ class Parser:
         while self.match(TokenType.NEWLINE):
             self.advance()
 
-    def parse_module_header(self) -> tuple[Optional[str], Optional[str], Optional[str], List[str]]:
+    def parse_module_header(self) -> tuple[str | None, str | None, str | None, list[str]]:
         """
         Parse module header (module, app, use declarations).
 
@@ -161,7 +177,7 @@ class Parser:
             self.advance()
             parts.append(self.expect_identifier_or_keyword().value)
 
-        return '.'.join(parts)
+        return ".".join(parts)
 
     def parse_type_spec(self) -> ir.FieldType:
         """
@@ -257,7 +273,7 @@ class Parser:
                 token.column,
             )
 
-    def parse_field_modifiers(self) -> tuple[List[ir.FieldModifier], Optional[str]]:
+    def parse_field_modifiers(self) -> tuple[list[ir.FieldModifier], str | None]:
         """
         Parse field modifiers and default value.
 
@@ -299,7 +315,7 @@ class Parser:
                     default = self.advance().value
                 elif self.match(TokenType.NUMBER):
                     num_str = self.advance().value
-                    default = float(num_str) if '.' in num_str else int(num_str)
+                    default = float(num_str) if "." in num_str else int(num_str)
                 elif self.match(TokenType.IDENTIFIER):
                     # Could be enum value or boolean
                     val = self.advance().value
@@ -337,7 +353,11 @@ class Parser:
             # Check for constraints
             if self.match(TokenType.UNIQUE, TokenType.INDEX):
                 constraint_kind = self.advance().type
-                kind = ir.ConstraintKind.UNIQUE if constraint_kind == TokenType.UNIQUE else ir.ConstraintKind.INDEX
+                kind = (
+                    ir.ConstraintKind.UNIQUE
+                    if constraint_kind == TokenType.UNIQUE
+                    else ir.ConstraintKind.INDEX
+                )
 
                 # Parse field list
                 field_names = [self.expect(TokenType.IDENTIFIER).value]
@@ -356,12 +376,14 @@ class Parser:
             field_type = self.parse_type_spec()
             modifiers, default = self.parse_field_modifiers()
 
-            fields.append(ir.FieldSpec(
-                name=field_name,
-                type=field_type,
-                modifiers=modifiers,
-                default=default,
-            ))
+            fields.append(
+                ir.FieldSpec(
+                    name=field_name,
+                    type=field_type,
+                    modifiers=modifiers,
+                    default=default,
+                )
+            )
 
             self.skip_newlines()
 
@@ -467,10 +489,12 @@ class Parser:
                 if self.match(TokenType.STRING):
                     label = self.advance().value
 
-                elements.append(ir.SurfaceElement(
-                    field_name=field_name,
-                    label=label,
-                ))
+                elements.append(
+                    ir.SurfaceElement(
+                        field_name=field_name,
+                        label=label,
+                    )
+                )
 
                 self.skip_newlines()
 
@@ -727,10 +751,12 @@ class Parser:
             self.expect(TokenType.STEP)
             next_step = self.expect(TokenType.IDENTIFIER).value
 
-            transitions.append(ir.StepTransition(
-                event=event,
-                next_step=next_step,
-            ))
+            transitions.append(
+                ir.StepTransition(
+                    event=event,
+                    next_step=next_step,
+                )
+            )
 
             self.skip_newlines()
 
@@ -803,10 +829,12 @@ class Parser:
                     elif self.match(TokenType.IDENTIFIER):
                         options[key] = self.advance().value
 
-                constraints.append(ir.ForeignConstraint(
-                    kind=constraint_kind,
-                    options=options,
-                ))
+                constraints.append(
+                    ir.ForeignConstraint(
+                        kind=constraint_kind,
+                        options=options,
+                    )
+                )
 
                 self.skip_newlines()
 
@@ -818,12 +846,14 @@ class Parser:
                 field_type = self.parse_type_spec()
                 modifiers, default = self.parse_field_modifiers()
 
-                fields.append(ir.FieldSpec(
-                    name=field_name,
-                    type=field_type,
-                    modifiers=modifiers,
-                    default=default,
-                ))
+                fields.append(
+                    ir.FieldSpec(
+                        name=field_name,
+                        type=field_type,
+                        modifiers=modifiers,
+                        default=default,
+                    )
+                )
 
                 self.skip_newlines()
 
@@ -1108,7 +1138,14 @@ class Parser:
         # Parse path components (can be identifiers or keywords)
         while True:
             token = self.current_token()
-            if token.type == TokenType.IDENTIFIER or token.type.value in ["search", "filter", "create", "update", "delete", "get"]:
+            if token.type == TokenType.IDENTIFIER or token.type.value in [
+                "search",
+                "filter",
+                "create",
+                "update",
+                "delete",
+                "get",
+            ]:
                 path_parts.append(self.advance().value)
                 if self.match(TokenType.SLASH):
                     path_parts.append(self.advance().value)
@@ -1119,7 +1156,7 @@ class Parser:
 
         return "".join(path_parts) if path_parts else "unknown"
 
-    def _parse_mapping_rules(self) -> List[ir.MappingRule]:
+    def _parse_mapping_rules(self) -> list[ir.MappingRule]:
         """Parse mapping rules (target → source)."""
         rules = []
 
@@ -1137,16 +1174,18 @@ class Parser:
             # Parse source expression (path or literal)
             source = self._parse_expression()
 
-            rules.append(ir.MappingRule(
-                target_field=target,
-                source=source,
-            ))
+            rules.append(
+                ir.MappingRule(
+                    target_field=target,
+                    source=source,
+                )
+            )
 
             self.skip_newlines()
 
         return rules
 
-    def _parse_match_rules(self) -> List[ir.MatchRule]:
+    def _parse_match_rules(self) -> list[ir.MatchRule]:
         """Parse match rules (foreign_field ↔ entity_field)."""
         rules = []
 
@@ -1164,10 +1203,12 @@ class Parser:
             # Parse entity field
             entity_field = self.expect(TokenType.IDENTIFIER).value
 
-            rules.append(ir.MatchRule(
-                foreign_field=foreign_field,
-                entity_field=entity_field,
-            ))
+            rules.append(
+                ir.MatchRule(
+                    foreign_field=foreign_field,
+                    entity_field=entity_field,
+                )
+            )
 
             self.skip_newlines()
 
@@ -1178,7 +1219,12 @@ class Parser:
         # Try to parse as a path first (e.g., form.vrn, entity.id)
         # Need to check for keywords that can be used as path components
         token = self.current_token()
-        if token.type == TokenType.IDENTIFIER or token.value in ["entity", "form", "foreign", "service"]:
+        if token.type == TokenType.IDENTIFIER or token.value in [
+            "entity",
+            "form",
+            "foreign",
+            "service",
+        ]:
             parts = [self.advance().value]
 
             while self.match(TokenType.DOT):
@@ -1229,8 +1275,6 @@ class Parser:
         action = None
         data = {}
         filter_data = {}
-        search_query = None
-        order_by = None
         assertions = []
 
         while not self.match(TokenType.DEDENT):
@@ -1253,7 +1297,7 @@ class Parser:
                     # Parse: var: create Entity with field=value, field=value
                     var_name = self.expect_identifier_or_keyword().value
                     self.expect(TokenType.COLON)
-                    action_kind = self.expect(TokenType.CREATE).value
+                    self.expect(TokenType.CREATE)
                     entity_name = self.expect_identifier_or_keyword().value
                     self.expect(TokenType.WITH)
 
@@ -1271,12 +1315,14 @@ class Parser:
                         field_value = self.parse_value()
                         step_data[field_name] = field_value
 
-                    setup_steps.append(ir.TestSetupStep(
-                        variable_name=var_name,
-                        action=ir.TestActionKind.CREATE,
-                        entity_name=entity_name,
-                        data=step_data,
-                    ))
+                    setup_steps.append(
+                        ir.TestSetupStep(
+                            variable_name=var_name,
+                            action=ir.TestActionKind.CREATE,
+                            entity_name=entity_name,
+                            data=step_data,
+                        )
+                    )
 
                     self.skip_newlines()
 
@@ -1372,7 +1418,7 @@ class Parser:
 
                 self.expect(TokenType.QUERY)
                 self.expect(TokenType.COLON)
-                search_query = self.parse_value()
+                self.parse_value()
 
                 self.skip_newlines()
                 self.expect(TokenType.DEDENT)
@@ -1381,7 +1427,7 @@ class Parser:
             elif self.match(TokenType.ORDER_BY):
                 self.advance()
                 self.expect(TokenType.COLON)
-                order_by = self.parse_value()
+                self.parse_value()
                 self.skip_newlines()
 
             # Parse expect block
@@ -1401,10 +1447,12 @@ class Parser:
                         self.advance()
                         self.expect(TokenType.COLON)
                         status_value = self.expect(TokenType.IDENTIFIER).value
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.STATUS,
-                            expected_value=status_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.STATUS,
+                                expected_value=status_value,
+                            )
+                        )
 
                     elif self.match(TokenType.CREATED):
                         self.advance()
@@ -1422,10 +1470,12 @@ class Parser:
                                 self.current_token().line,
                                 self.current_token().column,
                             )
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.CREATED,
-                            expected_value=created_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.CREATED,
+                                expected_value=created_value,
+                            )
+                        )
 
                     elif self.match(TokenType.FIELD):
                         # field <name> <operator> <value>
@@ -1443,12 +1493,14 @@ class Parser:
                         else:
                             expected_value = self.parse_value()
 
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.FIELD,
-                            field_name=field_name,
-                            operator=operator,
-                            expected_value=expected_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.FIELD,
+                                field_name=field_name,
+                                operator=operator,
+                                expected_value=expected_value,
+                            )
+                        )
 
                     elif self.match(TokenType.ERROR_MESSAGE):
                         # error_message <operator> <value>
@@ -1457,11 +1509,13 @@ class Parser:
                         operator = self.parse_comparison_operator(operator_token.value)
                         expected_value = self.parse_value()
 
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.ERROR,
-                            operator=operator,
-                            expected_value=expected_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.ERROR,
+                                operator=operator,
+                                expected_value=expected_value,
+                            )
+                        )
 
                     elif self.match(TokenType.COUNT):
                         # count <operator> <value>
@@ -1470,11 +1524,13 @@ class Parser:
                         operator = self.parse_comparison_operator(operator_token.value)
                         expected_value = self.parse_value()
 
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.COUNT,
-                            operator=operator,
-                            expected_value=expected_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.COUNT,
+                                operator=operator,
+                                expected_value=expected_value,
+                            )
+                        )
 
                     elif self.match(TokenType.FIRST):
                         # first field <name> <operator> <value>
@@ -1485,12 +1541,14 @@ class Parser:
                         operator = self.parse_comparison_operator(operator_token.value)
                         expected_value = self.parse_value()
 
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.FIELD,
-                            field_name=f"first.{field_name}",
-                            operator=operator,
-                            expected_value=expected_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.FIELD,
+                                field_name=f"first.{field_name}",
+                                operator=operator,
+                                expected_value=expected_value,
+                            )
+                        )
 
                     elif self.match(TokenType.LAST):
                         # last field <name> <operator> <value>
@@ -1501,12 +1559,14 @@ class Parser:
                         operator = self.parse_comparison_operator(operator_token.value)
                         expected_value = self.parse_value()
 
-                        assertions.append(ir.TestAssertion(
-                            kind=ir.TestAssertionKind.FIELD,
-                            field_name=f"last.{field_name}",
-                            operator=operator,
-                            expected_value=expected_value,
-                        ))
+                        assertions.append(
+                            ir.TestAssertion(
+                                kind=ir.TestAssertionKind.FIELD,
+                                field_name=f"last.{field_name}",
+                                operator=operator,
+                                expected_value=expected_value,
+                            )
+                        )
 
                     self.skip_newlines()
 
@@ -1570,7 +1630,7 @@ class Parser:
 
         elif self.match(TokenType.NUMBER):
             value = self.advance().value
-            if '.' in value:
+            if "." in value:
                 return float(value)
             return int(value)
 
@@ -1702,7 +1762,9 @@ class Parser:
         return fragment
 
 
-def parse_dsl(text: str, file: Path) -> tuple[Optional[str], Optional[str], Optional[str], List[str], ir.ModuleFragment]:
+def parse_dsl(
+    text: str, file: Path
+) -> tuple[str | None, str | None, str | None, list[str], ir.ModuleFragment]:
     """
     Parse complete DSL file.
 

@@ -4,18 +4,18 @@ API client for LLM providers (Anthropic, OpenAI).
 Handles authentication, request formatting, and response parsing.
 """
 
-import os
 import json
 import logging
-from typing import Dict, Any, Optional
+import os
 from enum import Enum
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class LLMProvider(str, Enum):
     """Supported LLM providers."""
+
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
 
@@ -30,9 +30,9 @@ class LLMAPIClient:
     def __init__(
         self,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model: Optional[str] = None,
-        api_key: Optional[str] = None,
-        api_key_env: Optional[str] = None,
+        model: str | None = None,
+        api_key: str | None = None,
+        api_key_env: str | None = None,
         temperature: float = 0.0,
         max_tokens: int = 16000,
         use_prompt_caching: bool = True,
@@ -89,6 +89,7 @@ class LLMAPIClient:
         if self.provider == LLMProvider.ANTHROPIC:
             try:
                 from anthropic import Anthropic
+
                 self.client = Anthropic(api_key=self.api_key)
             except ImportError:
                 raise ImportError(
@@ -97,18 +98,14 @@ class LLMAPIClient:
         elif self.provider == LLMProvider.OPENAI:
             try:
                 from openai import OpenAI
+
                 self.client = OpenAI(api_key=self.api_key)
             except ImportError:
-                raise ImportError(
-                    "OpenAI SDK not installed. Install with: pip install openai"
-                )
+                raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
 
     def analyze_spec(
-        self,
-        spec_content: str,
-        spec_path: str,
-        system_prompt: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, spec_content: str, spec_path: str, system_prompt: str | None = None
+    ) -> dict[str, Any]:
         """
         Analyze a specification and return structured analysis.
 
@@ -284,9 +281,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
                 system=system_prompt,
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ]
+                messages=[{"role": "user", "content": user_prompt}],
             )
 
             # Extract text from response
@@ -308,8 +303,8 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 response_format={"type": "json_object"},  # Ensure JSON response
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
+                    {"role": "user", "content": user_prompt},
+                ],
             )
 
             return response.choices[0].message.content
@@ -341,23 +336,17 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             LLMProvider.ANTHROPIC: {
                 "claude-3-5-sonnet-20241022": {
                     "input": 3.00 / 1_000_000,
-                    "output": 15.00 / 1_000_000
+                    "output": 15.00 / 1_000_000,
                 },
                 "claude-3-sonnet-20240229": {
                     "input": 3.00 / 1_000_000,
-                    "output": 15.00 / 1_000_000
-                }
+                    "output": 15.00 / 1_000_000,
+                },
             },
             LLMProvider.OPENAI: {
-                "gpt-4-turbo": {
-                    "input": 10.00 / 1_000_000,
-                    "output": 30.00 / 1_000_000
-                },
-                "gpt-4": {
-                    "input": 30.00 / 1_000_000,
-                    "output": 60.00 / 1_000_000
-                }
-            }
+                "gpt-4-turbo": {"input": 10.00 / 1_000_000, "output": 30.00 / 1_000_000},
+                "gpt-4": {"input": 30.00 / 1_000_000, "output": 60.00 / 1_000_000},
+            },
         }
 
         # Get rates for current model
@@ -365,13 +354,12 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         model_pricing = provider_pricing.get(self.model)
 
         if not model_pricing:
-            logger.warning(f"No pricing info for {self.provider}/{self.model}, using default estimates")
+            logger.warning(
+                f"No pricing info for {self.provider}/{self.model}, using default estimates"
+            )
             # Default to Claude Sonnet pricing
             model_pricing = pricing[LLMProvider.ANTHROPIC]["claude-3-5-sonnet-20241022"]
 
-        cost = (
-            total_input * model_pricing["input"] +
-            total_output * model_pricing["output"]
-        )
+        cost = total_input * model_pricing["input"] + total_output * model_pricing["output"]
 
         return cost

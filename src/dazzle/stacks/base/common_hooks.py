@@ -9,10 +9,8 @@ These hooks provide generic functionality useful for multiple backends:
 """
 
 import secrets
-from pathlib import Path
-from typing import Dict, List
 
-from .hooks import Hook, HookContext, HookResult, HookPhase
+from .hooks import Hook, HookContext, HookPhase, HookResult
 
 
 class CreateEnvFileHook(Hook):
@@ -26,7 +24,7 @@ class CreateEnvFileHook(Hook):
     description = "Generate .env file with secure configuration"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, env_vars: Dict[str, str] = None):
+    def __init__(self, env_vars: dict[str, str] = None):
         """
         Initialize hook.
 
@@ -77,7 +75,7 @@ class CreateEnvFileHook(Hook):
                 "secret_key": app_secret,
                 "session_secret": session_secret,
             },
-            display_to_user=True
+            display_to_user=True,
         )
 
 
@@ -92,7 +90,7 @@ class DisplaySetupInstructionsHook(Hook):
     description = "Display setup instructions"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, instructions: List[str] = None):
+    def __init__(self, instructions: list[str] = None):
         """
         Initialize hook.
 
@@ -105,9 +103,7 @@ class DisplaySetupInstructionsHook(Hook):
         """Display instructions."""
         if not self.instructions:
             return HookResult(
-                success=True,
-                message="No setup instructions provided",
-                display_to_user=False
+                success=True, message="No setup instructions provided", display_to_user=False
             )
 
         # Build formatted output
@@ -137,7 +133,7 @@ class DisplaySetupInstructionsHook(Hook):
         return HookResult(
             success=True,
             message="Instructions displayed",
-            display_to_user=False  # Already printed
+            display_to_user=False,  # Already printed
         )
 
 
@@ -163,7 +159,7 @@ class ValidateOutputDirHook(Hook):
                     success=False,
                     message=f"Output path exists but is not a directory: {output_dir}",
                     display_to_user=True,
-                    stop_on_failure=True
+                    stop_on_failure=True,
                 )
 
         # Try to create output directory
@@ -174,20 +170,18 @@ class ValidateOutputDirHook(Hook):
                 success=False,
                 message=f"No permission to create output directory: {output_dir}",
                 display_to_user=True,
-                stop_on_failure=True
+                stop_on_failure=True,
             )
         except Exception as e:
             return HookResult(
                 success=False,
                 message=f"Failed to create output directory: {e}",
                 display_to_user=True,
-                stop_on_failure=True
+                stop_on_failure=True,
             )
 
         return HookResult(
-            success=True,
-            message=f"Output directory validated: {output_dir}",
-            display_to_user=False
+            success=True, message=f"Output directory validated: {output_dir}", display_to_user=False
         )
 
 
@@ -202,7 +196,7 @@ class CreateGitignoreHook(Hook):
     description = "Generate .gitignore file"
     phase = HookPhase.POST_BUILD
 
-    def __init__(self, additional_patterns: List[str] = None):
+    def __init__(self, additional_patterns: list[str] = None):
         """
         Initialize hook.
 
@@ -267,5 +261,5 @@ class CreateGitignoreHook(Hook):
             success=True,
             message=f".gitignore created with {len(patterns)} patterns",
             artifacts={"gitignore_file": str(gitignore_file)},
-            display_to_user=False
+            display_to_user=False,
         )

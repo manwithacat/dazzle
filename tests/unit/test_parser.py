@@ -2,6 +2,7 @@
 """Test parser implementation."""
 
 from pathlib import Path
+
 from dazzle.core.dsl_parser import parse_dsl
 
 # Test entity parsing
@@ -31,14 +32,12 @@ entity Post "Post":
   index author
 """
 
+
 def main():
     print("Testing lexer and parser...")
     print("=" * 60)
 
-    module_name, app_name, app_title, uses, fragment = parse_dsl(
-        test_dsl,
-        Path("test.dsl")
-    )
+    module_name, app_name, app_title, uses, fragment = parse_dsl(test_dsl, Path("test.dsl"))
 
     print(f"Module: {module_name}")
     print(f"App: {app_name} - {app_title}")
@@ -50,15 +49,18 @@ def main():
         print(f"\n  Entity: {entity.name} ({entity.title})")
         print(f"    Fields: {len(entity.fields)}")
         for field in entity.fields:
-            print(f"      - {field.name}: {field.type.kind.value} " +
-                  f"(modifiers: {[m.value for m in field.modifiers]}, " +
-                  f"default: {field.default})")
+            print(
+                f"      - {field.name}: {field.type.kind.value} "
+                + f"(modifiers: {[m.value for m in field.modifiers]}, "
+                + f"default: {field.default})"
+            )
         print(f"    Constraints: {len(entity.constraints)}")
         for constraint in entity.constraints:
             print(f"      - {constraint.kind.value}: {constraint.fields}")
 
     print("\n" + "=" * 60)
     print("✅ Parser test passed!")
+
 
 if __name__ == "__main__":
     main()

@@ -4,13 +4,13 @@ OpenAPI 3.0 backend for DAZZLE.
 Generates OpenAPI specifications from AppSpec.
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
 import json
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from . import Backend, BackendCapabilities
 from ..core import ir
 from ..core.errors import BackendError
+from . import Backend, BackendCapabilities
 
 if TYPE_CHECKING:
     from ..core.changes import ChangeSet
@@ -29,7 +29,9 @@ class OpenAPIBackend(Backend):
     - Experiences → Operation links (operationId references)
     """
 
-    def generate(self, appspec: ir.AppSpec, output_dir: Path, format: str = "yaml", **options) -> None:
+    def generate(
+        self, appspec: ir.AppSpec, output_dir: Path, format: str = "yaml", **options
+    ) -> None:
         """
         Generate OpenAPI 3.0 specification.
 
@@ -70,7 +72,7 @@ class OpenAPIBackend(Backend):
         output_dir: Path,
         changeset: "ChangeSet",
         format: str = "yaml",
-        **options
+        **options,
     ) -> None:
         """
         Generate OpenAPI 3.0 specification incrementally.
@@ -124,7 +126,7 @@ class OpenAPIBackend(Backend):
         if format not in ("yaml", "json"):
             raise BackendError(f"Invalid format: {format}. Must be 'yaml' or 'json'.")
 
-    def _build_openapi_document(self, appspec: ir.AppSpec) -> Dict[str, Any]:
+    def _build_openapi_document(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build complete OpenAPI 3.0 document."""
         doc = {
             "openapi": "3.0.0",
@@ -142,7 +144,7 @@ class OpenAPIBackend(Backend):
 
         return doc
 
-    def _build_info(self, appspec: ir.AppSpec) -> Dict[str, Any]:
+    def _build_info(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build OpenAPI info section."""
         info = {
             "title": appspec.title or appspec.name,
@@ -151,7 +153,7 @@ class OpenAPIBackend(Backend):
 
         return info
 
-    def _build_schemas(self, appspec: ir.AppSpec) -> Dict[str, Any]:
+    def _build_schemas(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build OpenAPI schemas from entities."""
         schemas = {}
 
@@ -160,7 +162,7 @@ class OpenAPIBackend(Backend):
 
         return schemas
 
-    def _entity_to_schema(self, entity: ir.EntitySpec) -> Dict[str, Any]:
+    def _entity_to_schema(self, entity: ir.EntitySpec) -> dict[str, Any]:
         """Convert DAZZLE entity to OpenAPI schema."""
         schema = {
             "type": "object",
@@ -184,9 +186,9 @@ class OpenAPIBackend(Backend):
 
         return schema
 
-    def _field_to_property(self, field: ir.FieldSpec) -> Dict[str, Any]:
+    def _field_to_property(self, field: ir.FieldSpec) -> dict[str, Any]:
         """Convert DAZZLE field to OpenAPI property."""
-        prop: Dict[str, Any] = {}
+        prop: dict[str, Any] = {}
 
         # Map field types to OpenAPI types
         if field.type.kind == ir.FieldTypeKind.STR:
@@ -244,9 +246,9 @@ class OpenAPIBackend(Backend):
 
         return prop
 
-    def _build_paths(self, appspec: ir.AppSpec) -> Dict[str, Any]:
+    def _build_paths(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build OpenAPI paths from surfaces."""
-        paths: Dict[str, Any] = {}
+        paths: dict[str, Any] = {}
 
         for surface in appspec.surfaces:
             if not surface.entity_ref:
@@ -289,7 +291,9 @@ class OpenAPIBackend(Backend):
 
         return paths
 
-    def _build_list_operation(self, surface: ir.SurfaceSpec, entity: ir.EntitySpec) -> Dict[str, Any]:
+    def _build_list_operation(
+        self, surface: ir.SurfaceSpec, entity: ir.EntitySpec
+    ) -> dict[str, Any]:
         """Build OpenAPI operation for list mode surface."""
         operation = {
             "summary": surface.title or f"List {entity.name} records",
@@ -302,17 +306,19 @@ class OpenAPIBackend(Backend):
                         "application/json": {
                             "schema": {
                                 "type": "array",
-                                "items": {"$ref": f"#/components/schemas/{entity.name}"}
+                                "items": {"$ref": f"#/components/schemas/{entity.name}"},
                             }
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
 
         return operation
 
-    def _build_view_operation(self, surface: ir.SurfaceSpec, entity: ir.EntitySpec) -> Dict[str, Any]:
+    def _build_view_operation(
+        self, surface: ir.SurfaceSpec, entity: ir.EntitySpec
+    ) -> dict[str, Any]:
         """Build OpenAPI operation for view mode surface."""
         operation = {
             "summary": surface.title or f"Get {entity.name} by ID",
@@ -324,7 +330,7 @@ class OpenAPIBackend(Backend):
                     "in": "path",
                     "required": True,
                     "schema": {"type": "string", "format": "uuid"},
-                    "description": f"{entity.name} ID"
+                    "description": f"{entity.name} ID",
                 }
             ],
             "responses": {
@@ -334,17 +340,17 @@ class OpenAPIBackend(Backend):
                         "application/json": {
                             "schema": {"$ref": f"#/components/schemas/{entity.name}"}
                         }
-                    }
+                    },
                 },
-                "404": {
-                    "description": f"{entity.name} not found"
-                }
-            }
+                "404": {"description": f"{entity.name} not found"},
+            },
         }
 
         return operation
 
-    def _build_create_operation(self, surface: ir.SurfaceSpec, entity: ir.EntitySpec) -> Dict[str, Any]:
+    def _build_create_operation(
+        self, surface: ir.SurfaceSpec, entity: ir.EntitySpec
+    ) -> dict[str, Any]:
         """Build OpenAPI operation for create mode surface."""
         operation = {
             "summary": surface.title or f"Create new {entity.name}",
@@ -353,10 +359,8 @@ class OpenAPIBackend(Backend):
             "requestBody": {
                 "required": True,
                 "content": {
-                    "application/json": {
-                        "schema": {"$ref": f"#/components/schemas/{entity.name}"}
-                    }
-                }
+                    "application/json": {"schema": {"$ref": f"#/components/schemas/{entity.name}"}}
+                },
             },
             "responses": {
                 "201": {
@@ -365,17 +369,17 @@ class OpenAPIBackend(Backend):
                         "application/json": {
                             "schema": {"$ref": f"#/components/schemas/{entity.name}"}
                         }
-                    }
+                    },
                 },
-                "400": {
-                    "description": "Invalid input"
-                }
-            }
+                "400": {"description": "Invalid input"},
+            },
         }
 
         return operation
 
-    def _build_edit_operation(self, surface: ir.SurfaceSpec, entity: ir.EntitySpec) -> Dict[str, Any]:
+    def _build_edit_operation(
+        self, surface: ir.SurfaceSpec, entity: ir.EntitySpec
+    ) -> dict[str, Any]:
         """Build OpenAPI operation for edit mode surface."""
         operation = {
             "summary": surface.title or f"Update {entity.name}",
@@ -387,16 +391,14 @@ class OpenAPIBackend(Backend):
                     "in": "path",
                     "required": True,
                     "schema": {"type": "string", "format": "uuid"},
-                    "description": f"{entity.name} ID"
+                    "description": f"{entity.name} ID",
                 }
             ],
             "requestBody": {
                 "required": True,
                 "content": {
-                    "application/json": {
-                        "schema": {"$ref": f"#/components/schemas/{entity.name}"}
-                    }
-                }
+                    "application/json": {"schema": {"$ref": f"#/components/schemas/{entity.name}"}}
+                },
             },
             "responses": {
                 "200": {
@@ -405,20 +407,16 @@ class OpenAPIBackend(Backend):
                         "application/json": {
                             "schema": {"$ref": f"#/components/schemas/{entity.name}"}
                         }
-                    }
+                    },
                 },
-                "404": {
-                    "description": f"{entity.name} not found"
-                },
-                "400": {
-                    "description": "Invalid input"
-                }
-            }
+                "404": {"description": f"{entity.name} not found"},
+                "400": {"description": "Invalid input"},
+            },
         }
 
         return operation
 
-    def _build_tags(self, appspec: ir.AppSpec) -> List[Dict[str, str]]:
+    def _build_tags(self, appspec: ir.AppSpec) -> list[dict[str, str]]:
         """Build OpenAPI tags from entities."""
         tags = []
         for entity in appspec.domain.entities:
@@ -428,38 +426,31 @@ class OpenAPIBackend(Backend):
             tags.append(tag)
         return tags
 
-    def _build_security_schemes(self, appspec: ir.AppSpec) -> Dict[str, Any]:
+    def _build_security_schemes(self, appspec: ir.AppSpec) -> dict[str, Any]:
         """Build OpenAPI security schemes (placeholder for now)."""
         # For v0.1, we'll use a simple bearer token scheme
-        return {
-            "bearerAuth": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT"
-            }
-        }
+        return {"bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}
 
     def _pluralize(self, name: str) -> str:
         """Simple pluralization (just add 's' for now)."""
-        if name.endswith('y'):
+        if name.endswith("y"):
             return name[:-1] + "ies"
-        elif name.endswith('s'):
+        elif name.endswith("s"):
             return name + "es"
         else:
             return name + "s"
 
-    def _write_yaml(self, doc: Dict[str, Any], output_file: Path) -> None:
+    def _write_yaml(self, doc: dict[str, Any], output_file: Path) -> None:
         """Write OpenAPI document as YAML."""
         try:
             import yaml
+
             with output_file.open("w") as f:
                 yaml.dump(doc, f, default_flow_style=False, sort_keys=False)
         except ImportError:
-            raise BackendError(
-                "PyYAML not installed. Install with: pip install pyyaml"
-            )
+            raise BackendError("PyYAML not installed. Install with: pip install pyyaml")
 
-    def _write_json(self, doc: Dict[str, Any], output_file: Path) -> None:
+    def _write_json(self, doc: dict[str, Any], output_file: Path) -> None:
         """Write OpenAPI document as JSON."""
         with output_file.open("w") as f:
             json.dump(doc, f, indent=2)

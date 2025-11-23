@@ -2,13 +2,14 @@
 """Test backend plugin system."""
 
 from pathlib import Path
+
+from dazzle.core import ir
 from dazzle.stacks import (
     Backend,
     BackendCapabilities,
-    BackendRegistry,
     BackendError,
+    BackendRegistry,
 )
-from dazzle.core import ir
 
 
 class MockBackend(Backend):
@@ -77,7 +78,7 @@ def test_duplicate_registration():
 
     try:
         registry.register("mock", MockBackend)
-        assert False, "Should have raised BackendError for duplicate"
+        raise AssertionError("Should have raised BackendError for duplicate")
     except BackendError as e:
         assert "already registered" in str(e)
         print("  ✓ Duplicate registration detected")
@@ -91,7 +92,7 @@ def test_missing_backend():
 
     try:
         registry.get("nonexistent")
-        assert False, "Should have raised BackendError for missing backend"
+        raise AssertionError("Should have raised BackendError for missing backend")
     except BackendError as e:
         assert "not found" in str(e)
         assert "Available backends" in str(e)
@@ -152,7 +153,7 @@ def test_backend_config_validation():
     # Test missing config
     try:
         backend.validate_config()
-        assert False, "Should have raised BackendError for missing config"
+        raise AssertionError("Should have raised BackendError for missing config")
     except BackendError as e:
         assert "api_key" in str(e)
         print("  ✓ Missing config detected")
@@ -199,7 +200,7 @@ def test_invalid_backend_class():
 
     try:
         registry.register("invalid", NotABackend)
-        assert False, "Should have raised BackendError for invalid class"
+        raise AssertionError("Should have raised BackendError for invalid class")
     except BackendError as e:
         assert "must extend Backend" in str(e)
         print("  ✓ Invalid backend class rejected")
@@ -272,6 +273,7 @@ def main():
         print("=" * 60)
         print(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

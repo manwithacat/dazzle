@@ -47,7 +47,7 @@ class StaticGenerator(Generator):
 
     def _generate_css(self) -> str:
         """Generate main CSS file."""
-        return '''/* DAZZLE Generated Styles */
+        return """/* DAZZLE Generated Styles */
 
 :root {
     --primary-color: #4a90e2;
@@ -338,4 +338,4 @@ form textarea:focus {
         padding: 0.5rem;
     }
 }
-'''
+"""

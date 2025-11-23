@@ -32,6 +32,7 @@ class ParseError(DazzleError):
     - Unexpected tokens
     - Indentation errors
     """
+
     pass
 
 
@@ -45,6 +46,7 @@ class LinkError(DazzleError):
     - Duplicate definitions across modules
     - Unresolved references between modules
     """
+
     pass
 
 
@@ -58,6 +60,7 @@ class ValidationError(DazzleError):
     - Experience with unreachable steps
     - Integration referencing missing service
     """
+
     pass
 
 
@@ -70,6 +73,7 @@ class BackendError(DazzleError):
     - Output directory issues
     - Template rendering errors
     """
+
     pass
 
 
@@ -85,11 +89,12 @@ class ErrorContext:
         snippet: Optional code snippet showing the error location
         module: Optional module name where error occurred
     """
+
     file: Path
     line: int
     column: int
-    snippet: Optional[str] = None
-    module: Optional[str] = None
+    snippet: str | None = None
+    module: str | None = None
 
     def format(self) -> str:
         """
@@ -136,7 +141,7 @@ def make_parse_error(
     file: Path,
     line: int,
     column: int,
-    snippet: Optional[str] = None,
+    snippet: str | None = None,
 ) -> ParseError:
     """
     Helper to create a ParseError with context.
@@ -157,10 +162,10 @@ def make_parse_error(
 
 def make_link_error(
     message: str,
-    file: Optional[Path] = None,
-    line: Optional[int] = None,
-    column: Optional[int] = None,
-    module: Optional[str] = None,
+    file: Path | None = None,
+    line: int | None = None,
+    column: int | None = None,
+    module: str | None = None,
 ) -> LinkError:
     """
     Helper to create a LinkError with optional context.
@@ -188,10 +193,10 @@ def make_link_error(
 
 def make_validation_error(
     message: str,
-    file: Optional[Path] = None,
-    line: Optional[int] = None,
-    column: Optional[int] = None,
-    module: Optional[str] = None,
+    file: Path | None = None,
+    line: int | None = None,
+    column: int | None = None,
+    module: str | None = None,
 ) -> ValidationError:
     """
     Helper to create a ValidationError with optional context.

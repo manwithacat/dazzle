@@ -1,35 +1,35 @@
 """Core DAZZLE functionality: IR, parser, linker, validator, project initialization, incremental builds, stacks."""
 
 from . import ir
+from .changes import ChangeSet, detect_changes
 from .errors import (
-    DazzleError,
-    ParseError,
-    LinkError,
-    ValidationError,
     BackendError,
+    DazzleError,
     ErrorContext,
+    LinkError,
+    ParseError,
+    ValidationError,
 )
-from .parser import parse_modules
+from .init import InitError, init_project, list_examples
 from .linker import build_appspec
 from .lint import lint_appspec
-from .init import init_project, list_examples, InitError
-from .state import (
-    BuildState,
-    StateError,
-    load_state,
-    save_state,
-    clear_state,
-    compute_dsl_hashes,
-)
-from .changes import ChangeSet, detect_changes
+from .parser import parse_modules
 from .stacks import (
     StackError,
     StackPreset,
+    get_stack_description,
     get_stack_preset,
     list_stack_presets,
     resolve_stack_backends,
     validate_stack_backends,
-    get_stack_description,
+)
+from .state import (
+    BuildState,
+    StateError,
+    clear_state,
+    compute_dsl_hashes,
+    load_state,
+    save_state,
 )
 
 __all__ = [

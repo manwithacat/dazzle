@@ -1,11 +1,9 @@
 """Test the 4 quick win implementations from gap analysis."""
 
-import pytest
 from pathlib import Path
 
-from dazzle.core import ir
-from dazzle.core import patterns
-from dazzle.core.linker_impl import validate_module_access, build_symbol_table
+from dazzle.core import ir, patterns
+from dazzle.core.linker_impl import build_symbol_table, validate_module_access
 
 
 def test_type_catalog():
@@ -17,16 +15,18 @@ def test_type_catalog():
             ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
             ir.FieldSpec(name="name", type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200)),
             ir.FieldSpec(name="created_at", type=ir.FieldType(kind=ir.FieldTypeKind.DATETIME)),
-        ]
+        ],
     )
 
     entity2 = ir.EntitySpec(
         name="Post",
         fields=[
             ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
-            ir.FieldSpec(name="title", type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200)),
+            ir.FieldSpec(
+                name="title", type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200)
+            ),
             ir.FieldSpec(name="created_at", type=ir.FieldType(kind=ir.FieldTypeKind.DATETIME)),
-        ]
+        ],
     )
 
     appspec = ir.AppSpec(
@@ -58,15 +58,20 @@ def test_type_catalog_detects_conflicts():
     entity1 = ir.EntitySpec(
         name="User",
         fields=[
-            ir.FieldSpec(name="status", type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=50)),
-        ]
+            ir.FieldSpec(
+                name="status", type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=50)
+            ),
+        ],
     )
 
     entity2 = ir.EntitySpec(
         name="Task",
         fields=[
-            ir.FieldSpec(name="status", type=ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=["todo", "done"])),
-        ]
+            ir.FieldSpec(
+                name="status",
+                type=ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=["todo", "done"]),
+            ),
+        ],
     )
 
     appspec = ir.AppSpec(
@@ -93,11 +98,7 @@ def test_module_access_validation():
     module1 = ir.ModuleIR(
         name="app.core",
         file=Path("app.dsl"),
-        fragment=ir.ModuleFragment(
-            entities=[
-                ir.EntitySpec(name="User", fields=[])
-            ]
-        )
+        fragment=ir.ModuleFragment(entities=[ir.EntitySpec(name="User", fields=[])]),
     )
 
     module2 = ir.ModuleIR(
@@ -111,12 +112,12 @@ def test_module_access_validation():
                     fields=[
                         ir.FieldSpec(
                             name="author",
-                            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User")
+                            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
                         )
-                    ]
+                    ],
                 )
             ]
-        )
+        ),
     )
 
     # Build symbol table
@@ -133,11 +134,7 @@ def test_module_access_validation_detects_missing_use():
     module1 = ir.ModuleIR(
         name="app.core",
         file=Path("app.dsl"),
-        fragment=ir.ModuleFragment(
-            entities=[
-                ir.EntitySpec(name="User", fields=[])
-            ]
-        )
+        fragment=ir.ModuleFragment(entities=[ir.EntitySpec(name="User", fields=[])]),
     )
 
     module2 = ir.ModuleIR(
@@ -151,12 +148,12 @@ def test_module_access_validation_detects_missing_use():
                     fields=[
                         ir.FieldSpec(
                             name="author",
-                            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User")
+                            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
                         )
-                    ]
+                    ],
                 )
             ]
-        )
+        ),
     )
 
     # Build symbol table
@@ -182,7 +179,7 @@ def test_pattern_detection_crud():
             ir.SurfaceSpec(name="task_create", entity_ref="Task", mode=ir.SurfaceMode.CREATE),
             ir.SurfaceSpec(name="task_detail", entity_ref="Task", mode=ir.SurfaceMode.VIEW),
             ir.SurfaceSpec(name="task_edit", entity_ref="Task", mode=ir.SurfaceMode.EDIT),
-        ]
+        ],
     )
 
     # Detect CRUD patterns
@@ -209,7 +206,7 @@ def test_pattern_detection_incomplete_crud():
             ir.SurfaceSpec(name="task_list", entity_ref="Task", mode=ir.SurfaceMode.LIST),
             ir.SurfaceSpec(name="task_detail", entity_ref="Task", mode=ir.SurfaceMode.VIEW),
             # Missing create and edit
-        ]
+        ],
     )
 
     crud_patterns = patterns.detect_crud_patterns(appspec)
@@ -233,7 +230,7 @@ def test_pattern_analysis():
             ir.SurfaceSpec(name="task_create", entity_ref="Task", mode=ir.SurfaceMode.CREATE),
             ir.SurfaceSpec(name="task_detail", entity_ref="Task", mode=ir.SurfaceMode.VIEW),
             ir.SurfaceSpec(name="task_edit", entity_ref="Task", mode=ir.SurfaceMode.EDIT),
-        ]
+        ],
     )
 
     # Analyze all patterns

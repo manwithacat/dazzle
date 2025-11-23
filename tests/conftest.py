@@ -1,10 +1,12 @@
 """Shared pytest fixtures for DAZZLE tests."""
 
 from pathlib import Path
+
 import pytest
+
 from dazzle.core import ir
-from dazzle.core.parser import parse_modules
 from dazzle.core.linker import build_appspec
+from dazzle.core.parser import parse_modules
 
 
 @pytest.fixture
@@ -39,8 +41,7 @@ def simple_entity() -> ir.EntitySpec:
             ir.FieldSpec(
                 name="status",
                 type=ir.FieldType(
-                    kind=ir.FieldTypeKind.ENUM,
-                    enum_values=["todo", "in_progress", "done"]
+                    kind=ir.FieldTypeKind.ENUM, enum_values=["todo", "in_progress", "done"]
                 ),
                 modifiers=[],
             ),

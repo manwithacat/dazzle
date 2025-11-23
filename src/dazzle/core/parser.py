@@ -1,13 +1,12 @@
 from pathlib import Path
-from typing import List, Optional
 
 from . import ir
 from .dsl_parser import parse_dsl
-from .vocab import load_manifest, VocabManifest
 from .expander import VocabExpander
+from .vocab import load_manifest
 
 
-def parse_modules(files: List[Path]) -> List[ir.ModuleIR]:
+def parse_modules(files: list[Path]) -> list[ir.ModuleIR]:
     """
     Parse DSL files into ModuleIR structures.
 
@@ -24,7 +23,7 @@ def parse_modules(files: List[Path]) -> List[ir.ModuleIR]:
     Returns:
         List of ModuleIR objects with complete parsed IR fragments
     """
-    modules: List[ir.ModuleIR] = []
+    modules: list[ir.ModuleIR] = []
 
     # Try to load vocabulary manifest (optional)
     expander = _load_vocabulary_expander(files)
@@ -39,6 +38,7 @@ def parse_modules(files: List[Path]) -> List[ir.ModuleIR]:
             except Exception as e:
                 # If expansion fails, include file context in error
                 from .errors import DazzleError
+
                 raise DazzleError(f"Vocabulary expansion failed in {f}: {e}")
 
         # Parse DSL file
@@ -62,7 +62,7 @@ def parse_modules(files: List[Path]) -> List[ir.ModuleIR]:
     return modules
 
 
-def _load_vocabulary_expander(files: List[Path]) -> Optional[VocabExpander]:
+def _load_vocabulary_expander(files: list[Path]) -> VocabExpander | None:
     """
     Try to load vocabulary manifest and create expander.
 
@@ -81,7 +81,9 @@ def _load_vocabulary_expander(files: List[Path]) -> Optional[VocabExpander]:
     # Look for manifest relative to first DSL file
     # Assume project structure: project_root/dsl/*.dsl and project_root/dazzle/local_vocab/manifest.yml
     first_file = files[0]
-    project_root = first_file.parent.parent if first_file.parent.name == "dsl" else first_file.parent
+    project_root = (
+        first_file.parent.parent if first_file.parent.name == "dsl" else first_file.parent
+    )
     manifest_path = project_root / "dazzle" / "local_vocab" / "manifest.yml"
 
     if not manifest_path.exists():

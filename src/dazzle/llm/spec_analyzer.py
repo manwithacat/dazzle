@@ -7,18 +7,17 @@ for DSL generation.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 from .api_client import LLMAPIClient, LLMProvider
 from .models import (
-    SpecAnalysis,
-    StateMachine,
-    CRUDAnalysis,
     BusinessRule,
+    CRUDAnalysis,
     MissingSpecification,
     QuestionCategory,
+    SpecAnalysis,
+    StateMachine,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +36,9 @@ class SpecAnalyzer:
     def __init__(
         self,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
-        model: Optional[str] = None,
-        api_key: Optional[str] = None,
-        **kwargs
+        model: str | None = None,
+        api_key: str | None = None,
+        **kwargs,
     ):
         """
         Initialize spec analyzer.
@@ -50,18 +49,9 @@ class SpecAnalyzer:
             api_key: API key (optional, reads from env)
             **kwargs: Additional arguments for LLMAPIClient
         """
-        self.client = LLMAPIClient(
-            provider=provider,
-            model=model,
-            api_key=api_key,
-            **kwargs
-        )
+        self.client = LLMAPIClient(provider=provider, model=model, api_key=api_key, **kwargs)
 
-    def analyze(
-        self,
-        spec_content: str,
-        spec_path: Optional[str] = None
-    ) -> SpecAnalysis:
+    def analyze(self, spec_content: str, spec_path: str | None = None) -> SpecAnalysis:
         """
         Analyze a specification and return structured analysis.
 
@@ -93,7 +83,7 @@ class SpecAnalyzer:
             logger.error(f"Failed to parse analysis: {e}")
             raise ValueError(f"Failed to parse LLM analysis: {e}")
 
-    def _parse_analysis(self, raw_data: Dict[str, Any]) -> SpecAnalysis:
+    def _parse_analysis(self, raw_data: dict[str, Any]) -> SpecAnalysis:
         """
         Parse raw LLM output into SpecAnalysis model.
 
@@ -108,30 +98,23 @@ class SpecAnalyzer:
         """
         try:
             # Parse state machines
-            state_machines = [
-                StateMachine(**sm) for sm in raw_data.get('state_machines', [])
-            ]
+            state_machines = [StateMachine(**sm) for sm in raw_data.get("state_machines", [])]
 
             # Parse CRUD analysis
-            crud_analysis = [
-                CRUDAnalysis(**crud) for crud in raw_data.get('crud_analysis', [])
-            ]
+            crud_analysis = [CRUDAnalysis(**crud) for crud in raw_data.get("crud_analysis", [])]
 
             # Parse business rules
-            business_rules = [
-                BusinessRule(**rule) for rule in raw_data.get('business_rules', [])
-            ]
+            business_rules = [BusinessRule(**rule) for rule in raw_data.get("business_rules", [])]
 
             # Parse missing specifications
             missing_specs = [
                 MissingSpecification(**missing)
-                for missing in raw_data.get('missing_specifications', [])
+                for missing in raw_data.get("missing_specifications", [])
             ]
 
             # Parse clarifying questions
             question_categories = [
-                QuestionCategory(**cat)
-                for cat in raw_data.get('clarifying_questions', [])
+                QuestionCategory(**cat) for cat in raw_data.get("clarifying_questions", [])
             ]
 
             # Create SpecAnalysis
@@ -179,9 +162,7 @@ class SpecAnalyzer:
 
 
 def analyze_spec_file(
-    spec_path: Path,
-    provider: LLMProvider = LLMProvider.ANTHROPIC,
-    **kwargs
+    spec_path: Path, provider: LLMProvider = LLMProvider.ANTHROPIC, **kwargs
 ) -> SpecAnalysis:
     """
     Convenience function to analyze a spec file.

@@ -41,10 +41,10 @@ Output Structure:
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 
-from . import Backend, BackendCapabilities
 from ..core import ir
+from . import Backend, BackendCapabilities
 
 
 class ExpressMicroBackend(Backend):
@@ -373,22 +373,18 @@ module.exports = db;
             "  sequelize,",
             "  Sequelize",
             "};",
-            ""
+            "",
         ]
 
         # Import and initialize models
         for entity in self.spec.domain.entities:
-            lines.append(f"db.{entity.name} = require('./{entity.name}')(sequelize, Sequelize.DataTypes);")
+            lines.append(
+                f"db.{entity.name} = require('./{entity.name}')(sequelize, Sequelize.DataTypes);"
+            )
 
-        lines.extend([
-            "",
-            "// Define associations here if needed",
-            "",
-            "module.exports = db;",
-            ""
-        ])
+        lines.extend(["", "// Define associations here if needed", "", "module.exports = db;", ""])
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _build_model_file(self, entity: "ir.EntitySpec") -> str:
         """Build individual Sequelize model file."""
@@ -447,7 +443,7 @@ module.exports = db;
         lines.append("};")
         lines.append("")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _generate_sequelize_field(self, field: "ir.FieldSpec") -> str:
         """Generate Sequelize field definition."""
@@ -486,10 +482,10 @@ module.exports = db;
             parts.append("      validate: { notEmpty: true },")
 
         # Remove trailing comma from last line
-        parts[-1] = parts[-1].rstrip(',')
+        parts[-1] = parts[-1].rstrip(",")
         parts.append("    }")
 
-        return '\n'.join(parts)
+        return "\n".join(parts)
 
     def _map_sequelize_type(self, field_type: "ir.FieldType") -> str:
         """Map DAZZLE field type to Sequelize type."""
@@ -514,7 +510,7 @@ module.exports = db;
         elif isinstance(value, bool):
             return str(value).lower()
         elif value is None:
-            return 'null'
+            return "null"
         else:
             return str(value)
 
@@ -526,7 +522,7 @@ module.exports = db;
         This field is created by vocabulary expansion of @use soft_delete_behavior().
         """
         for field in entity.fields:
-            if field.name == 'deleted_at' and field.type.kind == ir.FieldTypeKind.DATETIME:
+            if field.name == "deleted_at" and field.type.kind == ir.FieldTypeKind.DATETIME:
                 return True
         return False
 
@@ -539,32 +535,38 @@ module.exports = db;
         - restore() method restores soft-deleted record
         """
         # Check if entity has deleted_by field
-        has_deleted_by = any(f.name == 'deleted_by' for f in entity.fields)
+        has_deleted_by = any(f.name == "deleted_by" for f in entity.fields)
 
         lines = [
-            f"  // Soft delete methods",
+            "  // Soft delete methods",
             f"  {entity.name}.prototype.softDelete = async function() {{",
-            f"    this.deleted_at = new Date();",
+            "    this.deleted_at = new Date();",
         ]
 
         if has_deleted_by:
-            lines.append(f"    // Note: deleted_by should be set by the caller if user context available")
+            lines.append(
+                "    // Note: deleted_by should be set by the caller if user context available"
+            )
 
-        lines.extend([
-            f"    await this.save();",
-            f"  }};",
-            f"",
-            f"  {entity.name}.prototype.restore = async function() {{",
-            f"    this.deleted_at = null;",
-        ])
+        lines.extend(
+            [
+                "    await this.save();",
+                "  };",
+                "",
+                f"  {entity.name}.prototype.restore = async function() {{",
+                "    this.deleted_at = null;",
+            ]
+        )
 
         if has_deleted_by:
-            lines.append(f"    this.deleted_by = null;")
+            lines.append("    this.deleted_by = null;")
 
-        lines.extend([
-            f"    await this.save();",
-            f"  }};",
-        ])
+        lines.extend(
+            [
+                "    await this.save();",
+                "  };",
+            ]
+        )
 
         return lines
 
@@ -579,12 +581,16 @@ module.exports = db;
             if field.type.kind == ir.FieldTypeKind.ENUM:
                 # Check if there's a corresponding _changed_at field
                 changed_at_field = f"{field.name}_changed_at"
-                if any(f.name == changed_at_field and f.type.kind == ir.FieldTypeKind.DATETIME
-                       for f in entity.fields):
+                if any(
+                    f.name == changed_at_field and f.type.kind == ir.FieldTypeKind.DATETIME
+                    for f in entity.fields
+                ):
                     return field
         return None
 
-    def _generate_status_workflow_methods_express(self, entity: "ir.EntitySpec", workflow_field: "ir.FieldSpec") -> list:
+    def _generate_status_workflow_methods_express(
+        self, entity: "ir.EntitySpec", workflow_field: "ir.FieldSpec"
+    ) -> list:
         """
         Generate status workflow validation and transition tracking methods for Express/Sequelize.
 
@@ -604,46 +610,50 @@ module.exports = db;
         valid_statuses_str = ", ".join(f"'{s}'" for s in valid_statuses)
 
         lines = [
-            f"  // Status workflow methods",
+            "  // Status workflow methods",
             f"  {entity.name}.prototype.validateStatusTransition = function(newStatus) {{",
-            f"    // Validate that newStatus is a valid choice",
+            "    // Validate that newStatus is a valid choice",
             f"    const validStatuses = [{valid_statuses_str}];",
-            f"    if (!validStatuses.includes(newStatus)) {{",
-            f"      throw new Error(`Invalid status: ${{newStatus}}. Must be one of: ${{validStatuses}}`);",
-            f"    }}",
-            f"  }};",
-            f"",
+            "    if (!validStatuses.includes(newStatus)) {",
+            "      throw new Error(`Invalid status: ${newStatus}. Must be one of: ${validStatuses}`);",
+            "    }",
+            "  };",
+            "",
             f"  {entity.name}.prototype.changeStatus = async function(newStatus, user = null) {{",
-            f"    // Validate transition",
-            f"    this.validateStatusTransition(newStatus);",
-            f"    ",
-            f"    // Update status",
+            "    // Validate transition",
+            "    this.validateStatusTransition(newStatus);",
+            "    ",
+            "    // Update status",
             f"    const oldStatus = this.{field_name};",
             f"    this.{field_name} = newStatus;",
             f"    this.{changed_at_field} = new Date();",
         ]
 
         if has_changed_by:
-            lines.extend([
-                f"    if (user) {{",
-                f"      this.{changed_by_field} = user;",
-                f"    }}",
-            ])
+            lines.extend(
+                [
+                    "    if (user) {",
+                    f"      this.{changed_by_field} = user;",
+                    "    }",
+                ]
+            )
 
-        lines.extend([
-            f"    ",
-            f"    await this.save();",
-            f"    ",
-            f"    // Hook for post-transition actions",
-            f"    await this.onStatusChanged(oldStatus, newStatus, user);",
-            f"  }};",
-            f"",
-            f"  {entity.name}.prototype.onStatusChanged = async function(oldStatus, newStatus, user = null) {{",
-            f"    // Override this method to add custom logic like notifications,",
-            f"    // webhooks, or other side effects when status changes.",
-            f"    // Default: no action",
-            f"  }};",
-        ])
+        lines.extend(
+            [
+                "    ",
+                "    await this.save();",
+                "    ",
+                "    // Hook for post-transition actions",
+                "    await this.onStatusChanged(oldStatus, newStatus, user);",
+                "  };",
+                "",
+                f"  {entity.name}.prototype.onStatusChanged = async function(oldStatus, newStatus, user = null) {{",
+                "    // Override this method to add custom logic like notifications,",
+                "    // webhooks, or other side effects when status changes.",
+                "    // Default: no action",
+                "  };",
+            ]
+        )
 
         return lines
 
@@ -655,17 +665,21 @@ module.exports = db;
         or other tenant entity (commonly named organization_id).
         """
         # Common tenant field names
-        tenant_field_names = ['organization_id', 'tenant_id', 'account_id', 'company_id']
+        tenant_field_names = ["organization_id", "tenant_id", "account_id", "company_id"]
 
         for field in entity.fields:
-            if (field.type.kind == ir.FieldTypeKind.REF and
-                field.is_required and
-                field.name in tenant_field_names):
+            if (
+                field.type.kind == ir.FieldTypeKind.REF
+                and field.is_required
+                and field.name in tenant_field_names
+            ):
                 return field
 
         return None
 
-    def _generate_multi_tenant_helpers_express(self, entity: "ir.EntitySpec", tenant_field: "ir.FieldSpec") -> list:
+    def _generate_multi_tenant_helpers_express(
+        self, entity: "ir.EntitySpec", tenant_field: "ir.FieldSpec"
+    ) -> list:
         """
         Generate multi-tenant isolation helpers for Express/Sequelize.
 
@@ -677,22 +691,22 @@ module.exports = db;
         tenant_entity = tenant_field.type.ref_entity or "Organization"
 
         lines = [
-            f"  // Multi-tenant isolation helpers",
+            "  // Multi-tenant isolation helpers",
             f"  {entity.name}.forTenant = function({field_name}) {{",
-            f"    /**",
-            f"     * Get records scoped to specific tenant.",
-            f"     * ",
-            f"     * This model uses multi-tenant isolation. All queries should be",
+            "    /**",
+            "     * Get records scoped to specific tenant.",
+            "     * ",
+            "     * This model uses multi-tenant isolation. All queries should be",
             f"     * scoped to a tenant using this method or by filtering on {field_name}.",
-            f"     * ",
+            "     * ",
             f"     * @param {{{tenant_entity}}} {field_name} - The tenant to scope queries to",
-            f"     * @returns {{Promise}} Sequelize query scoped to tenant",
-            f"     * ",
-            f"     * @example",
+            "     * @returns {Promise} Sequelize query scoped to tenant",
+            "     * ",
+            "     * @example",
             f"     * const items = await {entity.name}.forTenant(tenant);",
-            f"     */",
+            "     */",
             f"    return this.findAll({{ where: {{ {field_name}: {field_name} }} }});",
-            f"  }};",
+            "  };",
         ]
 
         return lines
@@ -707,7 +721,9 @@ module.exports = db;
         for entity in self.spec.domain.entities:
             routes_code = self._build_entity_routes(entity)
             entity_lower = entity.name.lower()
-            (self.output_dir / self.app_name / "routes" / f"{entity_lower}.js").write_text(routes_code)
+            (self.output_dir / self.app_name / "routes" / f"{entity_lower}.js").write_text(
+                routes_code
+            )
 
     def _build_routes_index(self) -> str:
         """Build routes/index.js."""
@@ -717,13 +733,15 @@ module.exports = db;
             "",
             "// Home page",
             "router.get('/', (req, res) => {",
-            "  res.render('home', { title: '" + (self.spec.title or self.spec.name or "App") + "' });",
+            "  res.render('home', { title: '"
+            + (self.spec.title or self.spec.name or "App")
+            + "' });",
             "});",
             "",
             "module.exports = router;",
-            ""
+            "",
         ]
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _build_entity_routes(self, entity: "ir.EntitySpec") -> str:
         """Build routes for an entity."""
@@ -863,10 +881,10 @@ module.exports = db;
             "});",
             "",
             "module.exports = router;",
-            ""
+            "",
         ]
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _get_validation_middleware(self, entity: "ir.EntitySpec") -> str:
         """Generate express-validator middleware."""
@@ -924,11 +942,13 @@ module.exports = db;
 
         # Add admin link
         if nav_links:
-            nav_links.append('        <li style="border-left: 1px solid #ddd; margin-left: 10px; padding-left: 20px;"><a href="/admin">Admin</a></li>')
+            nav_links.append(
+                '        <li style="border-left: 1px solid #ddd; margin-left: 10px; padding-left: 20px;"><a href="/admin">Admin</a></li>'
+            )
         else:
             nav_links.append('        <li><a href="/admin">Admin</a></li>')
 
-        return f'''<!DOCTYPE html>
+        return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -954,7 +974,7 @@ module.exports = db;
         <p>Generated with DAZZLE</p>
     </footer>
 </body>
-</html>'''
+</html>"""
 
     def _get_home_template(self) -> str:
         """Generate home.ejs template."""
@@ -964,21 +984,21 @@ module.exports = db;
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             label = entity.title or entity.name
-            entity_cards.append(f'''    <div class="card">
+            entity_cards.append(f"""    <div class="card">
         <h2>{label}s</h2>
         <p>Manage {label.lower()}s in the system.</p>
         <a href="/{entity_lower}" class="btn">View {label}s</a>
         <a href="/{entity_lower}/new/form" class="btn btn-secondary">Create New</a>
-    </div>''')
+    </div>""")
 
         # Add admin card
-        admin_card = '''    <div class="card" style="border-left: 3px solid #4a90e2;">
+        admin_card = """    <div class="card" style="border-left: 3px solid #4a90e2;">
         <h2>Admin Dashboard</h2>
         <p>Access AdminJS to manage data, configure settings, and view system information.</p>
         <a href="/admin" class="btn">Open Admin</a>
-    </div>'''
+    </div>"""
 
-        return f'''<div>
+        return f"""<div>
     <h2>Welcome to {app_title}</h2>
 
     <div style="margin-top: 30px;">
@@ -990,7 +1010,7 @@ module.exports = db;
         <h3>System Tools</h3>
 {admin_card}
     </div>
-</div>'''
+</div>"""
 
     def _get_list_template(self, entity: "ir.EntitySpec") -> str:
         """Generate list.ejs template for entity."""
@@ -999,14 +1019,19 @@ module.exports = db;
 
         # Get displayable fields
         display_fields = [
-            f for f in entity.fields[:6]
+            f
+            for f in entity.fields[:6]
             if f.type.kind not in [ir.FieldTypeKind.TEXT] and not f.is_primary_key
         ]
 
-        header_cells = '\n'.join(f'            <th>{f.name.replace("_", " ").title()}</th>' for f in display_fields)
-        data_cells = '\n'.join(f'            <td><%- {entity_lower}.{f.name} %></td>' for f in display_fields)
+        header_cells = "\n".join(
+            f"            <th>{f.name.replace('_', ' ').title()}</th>" for f in display_fields
+        )
+        data_cells = "\n".join(
+            f"            <td><%- {entity_lower}.{f.name} %></td>" for f in display_fields
+        )
 
-        return f'''<div>
+        return f"""<div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h2>{label}s</h2>
         <a href="/{entity_lower}/new/form" class="btn">Create New {label}</a>
@@ -1036,7 +1061,7 @@ module.exports = db;
     <% }} else {{ %>
     <p>No {label.lower()}s found. <a href="/{entity_lower}/new/form">Create one now</a>.</p>
     <% }} %>
-</div>'''
+</div>"""
 
     def _get_detail_template(self, entity: "ir.EntitySpec") -> str:
         """Generate detail.ejs template for entity."""
@@ -1048,12 +1073,12 @@ module.exports = db;
             if field.is_primary_key:
                 continue
             field_label = field.name.replace("_", " ").title()
-            field_rows.append(f'''        <tr>
+            field_rows.append(f"""        <tr>
             <th>{field_label}</th>
             <td><%- {entity_lower}.{field.name} %></td>
-        </tr>''')
+        </tr>""")
 
-        return f'''<div>
+        return f"""<div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h2>{label} Detail</h2>
         <div>
@@ -1071,7 +1096,7 @@ module.exports = db;
     <div style="margin-top: 20px;">
         <a href="/{entity_lower}" class="btn btn-secondary">Back to List</a>
     </div>
-</div>'''
+</div>"""
 
     def _get_form_template(self, entity: "ir.EntitySpec") -> str:
         """Generate form.ejs template for entity."""
@@ -1104,7 +1129,7 @@ module.exports = db;
             <% }} %>
         </div>''')
 
-        return f'''<div>
+        return f"""<div>
     <h2><% if ({entity_lower}.id) {{ %>Edit<% }} else {{ %>Create<% }} %> {label}</h2>
 
     <form method="post" action="/<% if ({entity_lower}.id) {{ %>/{entity_lower}/<%- {entity_lower}.id %><% }} else {{ %>/{entity_lower}<% }} %>" class="card">
@@ -1119,14 +1144,14 @@ module.exports = db;
             <a href="/{entity_lower}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
-</div>'''
+</div>"""
 
     def _get_delete_template(self, entity: "ir.EntitySpec") -> str:
         """Generate delete.ejs template for entity."""
         entity_lower = entity.name.lower()
         label = entity.title or entity.name
 
-        return f'''<div>
+        return f"""<div>
     <h2>Delete {label}</h2>
 
     <div class="card" style="background: #fff3cd; border-color: #ffc107;">
@@ -1139,7 +1164,7 @@ module.exports = db;
             <a href="/{entity_lower}/<%- {entity_lower}.id %>" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
-</div>'''
+</div>"""
 
     def _get_html_input_type(self, field_type_kind: "ir.FieldTypeKind") -> str:
         """Map field type to HTML input type."""
@@ -1157,7 +1182,7 @@ module.exports = db;
     def _get_display_field(self, entity: "ir.EntitySpec") -> str:
         """Get best field for display."""
         # Prefer: name, title, email
-        priority_fields = ['name', 'title', 'email']
+        priority_fields = ["name", "title", "email"]
         for field_name in priority_fields:
             if any(f.name == field_name for f in entity.fields):
                 return field_name
@@ -1167,7 +1192,7 @@ module.exports = db;
             if not field.is_primary_key:
                 return field.name
 
-        return 'id'
+        return "id"
 
     def _generate_server(self) -> None:
         """Generate server.js main application file."""
@@ -1179,14 +1204,16 @@ module.exports = db;
         entity_routes = []
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
-            entity_routes.append(f"const {entity_lower}Routes = require('./routes/{entity_lower}');")
+            entity_routes.append(
+                f"const {entity_lower}Routes = require('./routes/{entity_lower}');"
+            )
 
         entity_use = []
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             entity_use.append(f"app.use('/{entity_lower}', {entity_lower}Routes);")
 
-        return f'''// Load environment variables
+        return f"""// Load environment variables
 require('dotenv').config();
 
 const express = require('express');
@@ -1242,7 +1269,7 @@ db.sequelize.sync().then(() => {{
 }});
 
 module.exports = app;
-'''
+"""
 
     def _generate_admin(self) -> None:
         """Generate admin.js AdminJS configuration."""
@@ -1268,7 +1295,7 @@ module.exports = app;
       }}
     }}""")
 
-        return f'''const AdminJS = require('adminjs');
+        return f"""const AdminJS = require('adminjs');
 const AdminJSExpress = require('@adminjs/express');
 const AdminJSSequelize = require('@adminjs/sequelize');
 const db = require('./models');
@@ -1281,7 +1308,7 @@ AdminJS.registerAdapter({{
 const adminOptions = {{
   rootPath: '/admin',
   resources: [
-{(',' + chr(10)).join(resource_configs)}
+{("," + chr(10)).join(resource_configs)}
   ],
   branding: {{
     companyName: '{self.spec.title or self.spec.name or "DAZZLE App"}',
@@ -1304,11 +1331,11 @@ const adminJs = new AdminJS(adminOptions);
 const adminRouter = AdminJSExpress.buildRouter(adminJs);
 
 module.exports = {{ adminJs, adminRouter }};
-'''
+"""
 
     def _generate_database_config(self) -> None:
         """Generate config/database.js."""
-        config_code = '''module.exports = {
+        config_code = """module.exports = {
   development: {
     dialect: 'sqlite',
     storage: './database.sqlite'
@@ -1318,7 +1345,7 @@ module.exports = {{ adminJs, adminRouter }};
     storage: './database.sqlite'
   }
 };
-'''
+"""
         (self.output_dir / self.app_name / "config" / "database.js").write_text(config_code)
 
     def _generate_package_json(self) -> None:
@@ -1357,7 +1384,7 @@ module.exports = {{ adminJs, adminRouter }};
 
     def _generate_gitignore(self) -> None:
         """Generate .gitignore."""
-        gitignore = '''# Dependencies
+        gitignore = """# Dependencies
 node_modules/
 
 # Database
@@ -1383,12 +1410,12 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
-'''
+"""
         (self.output_dir / self.app_name / ".gitignore").write_text(gitignore)
 
     def _generate_env_example(self) -> None:
         """Generate .env.example file."""
-        env_example = f'''# Application
+        env_example = """# Application
 NODE_ENV=development
 PORT=3000
 
@@ -1404,17 +1431,17 @@ SESSION_SECRET=change-this-secret-key-in-production
 
 # Logging
 LOG_LEVEL=info
-'''
+"""
         (self.output_dir / self.app_name / ".env.example").write_text(env_example)
 
     def _generate_procfile(self) -> None:
         """Generate Procfile for Heroku."""
-        procfile = 'web: node server.js\n'
+        procfile = "web: node server.js\n"
         (self.output_dir / self.app_name / "Procfile").write_text(procfile)
 
     def _generate_vercel_config(self) -> None:
         """Generate vercel.json for Vercel deployment."""
-        vercel_config = '''{
+        vercel_config = """{
   "version": 2,
   "builds": [
     {
@@ -1429,7 +1456,7 @@ LOG_LEVEL=info
     }
   ]
 }
-'''
+"""
         (self.output_dir / self.app_name / "vercel.json").write_text(vercel_config)
 
     def _generate_readme(self) -> None:
@@ -1438,11 +1465,13 @@ LOG_LEVEL=info
 
         entity_list = []
         for entity in self.spec.domain.entities:
-            entity_list.append(f"- **{entity.title or entity.name}**: Manage {(entity.title or entity.name).lower()}s")
+            entity_list.append(
+                f"- **{entity.title or entity.name}**: Manage {(entity.title or entity.name).lower()}s"
+            )
 
-        entities_section = '\n'.join(entity_list) if entity_list else '- No entities defined'
+        entities_section = "\n".join(entity_list) if entity_list else "- No entities defined"
 
-        readme = f'''# {app_title}
+        readme = f"""# {app_title}
 
 Generated with [DAZZLE](https://github.com/yourusername/dazzle) - Express Micro Backend
 
@@ -1591,5 +1620,5 @@ dazzle build --stack express_micro
 ---
 
 **Generated with DAZZLE** - Machine-first DSL for LLM-enabled apps
-'''
+"""
         (self.output_dir / self.app_name / "README.md").write_text(readme)

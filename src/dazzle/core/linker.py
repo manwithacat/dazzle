@@ -1,17 +1,15 @@
-from typing import List
-
 from . import ir
 from .errors import LinkError
 from .linker_impl import (
-    resolve_dependencies,
     build_symbol_table,
-    validate_references,
-    validate_module_access,
     merge_fragments,
+    resolve_dependencies,
+    validate_module_access,
+    validate_references,
 )
 
 
-def build_appspec(modules: List[ir.ModuleIR], root_module_name: str) -> ir.AppSpec:
+def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSpec:
     """
     Build a complete AppSpec by merging and linking all modules.
 
@@ -67,7 +65,9 @@ def build_appspec(modules: List[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # 3. Validate module access (enforce use declarations)
     access_errors = validate_module_access(sorted_modules, symbols)
     if access_errors:
-        error_msg = "Module access validation failed:\n" + "\n".join(f"  - {e}" for e in access_errors)
+        error_msg = "Module access validation failed:\n" + "\n".join(
+            f"  - {e}" for e in access_errors
+        )
         raise LinkError(error_msg)
 
     # 4. Validate all cross-references

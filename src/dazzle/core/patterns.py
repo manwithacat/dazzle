@@ -9,7 +9,6 @@ pipelines, and event flows. Useful for:
 """
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Set
 
 from . import ir
 
@@ -23,10 +22,10 @@ class CrudPattern:
     has_list: bool = False
     has_detail: bool = False
     has_edit: bool = False
-    create_surface: Optional[str] = None
-    list_surface: Optional[str] = None
-    detail_surface: Optional[str] = None
-    edit_surface: Optional[str] = None
+    create_surface: str | None = None
+    list_surface: str | None = None
+    detail_surface: str | None = None
+    edit_surface: str | None = None
 
     @property
     def is_complete(self) -> bool:
@@ -34,7 +33,7 @@ class CrudPattern:
         return self.has_create and self.has_list and self.has_detail and self.has_edit
 
     @property
-    def missing_operations(self) -> List[str]:
+    def missing_operations(self) -> list[str]:
         """Get list of missing CRUD operations."""
         missing = []
         if not self.has_create:
@@ -58,8 +57,8 @@ class IntegrationPattern:
     has_syncs: bool = False
     action_count: int = 0
     sync_count: int = 0
-    connected_entities: Set[str] = None
-    connected_surfaces: Set[str] = None
+    connected_entities: set[str] = None
+    connected_surfaces: set[str] = None
 
     def __post_init__(self):
         if self.connected_entities is None:
@@ -74,17 +73,17 @@ class ExperiencePattern:
 
     experience_name: str
     step_count: int
-    surface_steps: List[str]
-    integration_steps: List[str]
+    surface_steps: list[str]
+    integration_steps: list[str]
     has_cycles: bool = False
-    unreachable_steps: List[str] = None
+    unreachable_steps: list[str] = None
 
     def __post_init__(self):
         if self.unreachable_steps is None:
             self.unreachable_steps = []
 
 
-def detect_crud_patterns(spec: ir.AppSpec) -> List[CrudPattern]:
+def detect_crud_patterns(spec: ir.AppSpec) -> list[CrudPattern]:
     """
     Detect CRUD patterns for entities.
 
@@ -96,7 +95,7 @@ def detect_crud_patterns(spec: ir.AppSpec) -> List[CrudPattern]:
     Returns:
         List of detected CRUD patterns
     """
-    patterns: Dict[str, CrudPattern] = {}
+    patterns: dict[str, CrudPattern] = {}
 
     # Initialize pattern for each entity
     for entity in spec.domain.entities:
@@ -130,7 +129,7 @@ def detect_crud_patterns(spec: ir.AppSpec) -> List[CrudPattern]:
     return list(patterns.values())
 
 
-def detect_integration_patterns(spec: ir.AppSpec) -> List[IntegrationPattern]:
+def detect_integration_patterns(spec: ir.AppSpec) -> list[IntegrationPattern]:
     """
     Detect integration patterns.
 
@@ -142,7 +141,7 @@ def detect_integration_patterns(spec: ir.AppSpec) -> List[IntegrationPattern]:
     Returns:
         List of detected integration patterns
     """
-    patterns: List[IntegrationPattern] = []
+    patterns: list[IntegrationPattern] = []
 
     for integration in spec.integrations:
         # Get primary service (first in list, or None)
@@ -172,7 +171,7 @@ def detect_integration_patterns(spec: ir.AppSpec) -> List[IntegrationPattern]:
     return patterns
 
 
-def detect_experience_patterns(spec: ir.AppSpec) -> List[ExperiencePattern]:
+def detect_experience_patterns(spec: ir.AppSpec) -> list[ExperiencePattern]:
     """
     Detect experience/flow patterns.
 
@@ -184,7 +183,7 @@ def detect_experience_patterns(spec: ir.AppSpec) -> List[ExperiencePattern]:
     Returns:
         List of detected experience patterns
     """
-    patterns: List[ExperiencePattern] = []
+    patterns: list[ExperiencePattern] = []
 
     for experience in spec.experiences:
         surface_steps = []
@@ -228,13 +227,13 @@ def _detect_cycles_in_experience(experience: ir.ExperienceSpec) -> bool:
         True if cycles detected, False otherwise
     """
     # Build adjacency list
-    graph: Dict[str, List[str]] = {}
+    graph: dict[str, list[str]] = {}
     for step in experience.steps:
         graph[step.name] = [t.next_step for t in step.transitions]
 
     # DFS with visited and recursion stack
-    visited: Set[str] = set()
-    rec_stack: Set[str] = set()
+    visited: set[str] = set()
+    rec_stack: set[str] = set()
 
     def dfs(node: str) -> bool:
         visited.add(node)
@@ -257,7 +256,7 @@ def _detect_cycles_in_experience(experience: ir.ExperienceSpec) -> bool:
     return False
 
 
-def _detect_unreachable_steps(experience: ir.ExperienceSpec) -> List[str]:
+def _detect_unreachable_steps(experience: ir.ExperienceSpec) -> list[str]:
     """
     Detect unreachable steps in experience.
 
@@ -271,7 +270,7 @@ def _detect_unreachable_steps(experience: ir.ExperienceSpec) -> List[str]:
     all_steps = {step.name for step in experience.steps}
 
     # BFS from start step to find reachable steps
-    reachable: Set[str] = set()
+    reachable: set[str] = set()
     queue = [experience.start_step]
 
     while queue:
@@ -293,7 +292,7 @@ def _detect_unreachable_steps(experience: ir.ExperienceSpec) -> List[str]:
     return sorted(unreachable)
 
 
-def analyze_patterns(spec: ir.AppSpec) -> Dict[str, List]:
+def analyze_patterns(spec: ir.AppSpec) -> dict[str, list]:
     """
     Run all pattern detection analyses on an AppSpec.
 
@@ -313,7 +312,7 @@ def analyze_patterns(spec: ir.AppSpec) -> Dict[str, List]:
     }
 
 
-def format_pattern_report(patterns: Dict[str, List]) -> str:
+def format_pattern_report(patterns: dict[str, list]) -> str:
     """
     Format pattern analysis results as a human-readable report.
 
@@ -369,7 +368,9 @@ def format_pattern_report(patterns: Dict[str, List]) -> str:
 
     for pattern in experience_patterns:
         lines.append(f"• {pattern.experience_name}")
-        lines.append(f"  Steps: {pattern.step_count} (surfaces: {len(pattern.surface_steps)}, integrations: {len(pattern.integration_steps)})")
+        lines.append(
+            f"  Steps: {pattern.step_count} (surfaces: {len(pattern.surface_steps)}, integrations: {len(pattern.integration_steps)})"
+        )
         if pattern.has_cycles:
             lines.append("  ⚠ Contains cycles")
         if pattern.unreachable_steps:

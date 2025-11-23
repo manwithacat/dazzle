@@ -151,6 +151,9 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
+    "B904",  # raise from err - style preference, not critical
+    "B027",  # empty method in abstract class - intentional default implementations
+    "B011",  # assert False in tests - pytest uses -O mode differently
 ]
 
 [tool.ruff.lint.isort]

@@ -7,7 +7,6 @@ Backends generate concrete artifacts (code, specs, configs) from validated AppSp
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Type
 
 from ..core import ir
 from ..core.errors import BackendError
@@ -20,9 +19,10 @@ class BackendCapabilities:
 
     Used for introspection and CLI help text.
     """
+
     name: str
     description: str
-    output_formats: List[str]  # e.g., ["yaml", "json"]
+    output_formats: list[str]  # e.g., ["yaml", "json"]
     supports_incremental: bool = False  # Can generate incrementally (update existing files)
     requires_config: bool = False  # Requires additional config beyond AppSpec
 
@@ -98,9 +98,9 @@ class BackendRegistry:
     """
 
     def __init__(self):
-        self._backends: Dict[str, Type[Backend]] = {}
+        self._backends: dict[str, type[Backend]] = {}
 
-    def register(self, name: str, backend_class: Type[Backend]) -> None:
+    def register(self, name: str, backend_class: type[Backend]) -> None:
         """
         Register a backend class.
 
@@ -113,14 +113,11 @@ class BackendRegistry:
         """
         if name in self._backends:
             raise BackendError(
-                f"Backend '{name}' is already registered. "
-                f"Cannot register {backend_class.__name__}."
+                f"Backend '{name}' is already registered. Cannot register {backend_class.__name__}."
             )
 
         if not issubclass(backend_class, Backend):
-            raise BackendError(
-                f"Backend class {backend_class.__name__} must extend Backend"
-            )
+            raise BackendError(f"Backend class {backend_class.__name__} must extend Backend")
 
         self._backends[name] = backend_class
 
@@ -139,14 +136,12 @@ class BackendRegistry:
         """
         if name not in self._backends:
             available = list(self._backends.keys())
-            raise BackendError(
-                f"Backend '{name}' not found. Available backends: {available}"
-            )
+            raise BackendError(f"Backend '{name}' not found. Available backends: {available}")
 
         backend_class = self._backends[name]
         return backend_class()
 
-    def list_backends(self) -> List[str]:
+    def list_backends(self) -> list[str]:
         """
         List all registered backend names.
 
@@ -183,7 +178,7 @@ class BackendRegistry:
                 module = importlib.import_module(f"dazzle.stacks.{module_name}")
 
                 # Find Backend subclasses
-                for name, obj in inspect.getmembers(module, inspect.isclass):
+                for _name, obj in inspect.getmembers(module, inspect.isclass):
                     if issubclass(obj, Backend) and obj is not Backend:
                         # Register using module name (e.g., 'openapi' from openapi.py)
                         # Skip if already registered
@@ -196,7 +191,7 @@ class BackendRegistry:
 
 
 # Global registry instance
-_registry: Optional[BackendRegistry] = None
+_registry: BackendRegistry | None = None
 
 
 def get_registry() -> BackendRegistry:
@@ -215,7 +210,7 @@ def get_registry() -> BackendRegistry:
     return _registry
 
 
-def register_backend(name: str, backend_class: Type[Backend]) -> None:
+def register_backend(name: str, backend_class: type[Backend]) -> None:
     """
     Register a backend in the global registry.
 
@@ -242,7 +237,7 @@ def get_backend(name: str) -> Backend:
     return get_registry().get(name)
 
 
-def list_backends() -> List[str]:
+def list_backends() -> list[str]:
     """
     List all available backend names.
 

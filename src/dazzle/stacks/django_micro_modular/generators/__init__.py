@@ -13,16 +13,16 @@ Each generator creates specific artifacts:
 - TestGenerator: Test suite (tests/)
 """
 
-from .models import ModelsGenerator
 from .admin import AdminGenerator
-from .forms import FormsGenerator
-from .views import ViewsGenerator
-from .urls import UrlsGenerator
-from .templates import TemplatesGenerator
-from .static import StaticGenerator
-from .settings import SettingsGenerator
 from .deployment import DeploymentGenerator
+from .forms import FormsGenerator
+from .models import ModelsGenerator
+from .settings import SettingsGenerator
+from .static import StaticGenerator
+from .templates import TemplatesGenerator
 from .tests import TestGenerator
+from .urls import UrlsGenerator
+from .views import ViewsGenerator
 
 __all__ = [
     "ModelsGenerator",

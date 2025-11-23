@@ -9,7 +9,7 @@ __version__ = "0.1.0"
 
 # Re-export commonly used types for convenience
 from .core import ir
-from .core.errors import DazzleError, ParseError, LinkError, ValidationError, BackendError
+from .core.errors import BackendError, DazzleError, LinkError, ParseError, ValidationError
 
 __all__ = [
     "__version__",

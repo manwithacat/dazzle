@@ -5,13 +5,12 @@ Validates entities, surfaces, experiences, services, foreign models, and integra
 for semantic correctness beyond basic reference resolution.
 """
 
-from typing import List, Set, Tuple
 from urllib.parse import urlparse
 
 from . import ir
 
 
-def validate_entities(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all entities for semantic correctness.
 
@@ -34,17 +33,14 @@ def validate_entities(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
         # Check for primary key
         if not entity.primary_key:
             errors.append(
-                f"Entity '{entity.name}' has no primary key field. "
-                f"Add a field with 'pk' modifier."
+                f"Entity '{entity.name}' has no primary key field. Add a field with 'pk' modifier."
             )
 
         # Check for duplicate field names
         field_names = [f.name for f in entity.fields]
-        duplicates = set([name for name in field_names if field_names.count(name) > 1])
+        duplicates = {name for name in field_names if field_names.count(name) > 1}
         if duplicates:
-            errors.append(
-                f"Entity '{entity.name}' has duplicate field names: {duplicates}"
-            )
+            errors.append(f"Entity '{entity.name}' has duplicate field names: {duplicates}")
 
         # Validate each field
         for field in entity.fields:
@@ -52,8 +48,7 @@ def validate_entities(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
             if field.type.kind == ir.FieldTypeKind.ENUM:
                 if not field.type.enum_values or len(field.type.enum_values) == 0:
                     errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has enum type "
-                        f"but no values"
+                        f"Entity '{entity.name}' field '{field.name}' has enum type but no values"
                     )
 
             # Check decimal precision/scale
@@ -93,14 +88,20 @@ def validate_entities(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
                     )
 
             # Check for conflicting modifiers
-            if ir.FieldModifier.REQUIRED in field.modifiers and ir.FieldModifier.OPTIONAL in field.modifiers:
+            if (
+                ir.FieldModifier.REQUIRED in field.modifiers
+                and ir.FieldModifier.OPTIONAL in field.modifiers
+            ):
                 errors.append(
                     f"Entity '{entity.name}' field '{field.name}' has both "
                     f"'required' and 'optional' modifiers"
                 )
 
             # Check auto modifiers on appropriate types
-            if ir.FieldModifier.AUTO_ADD in field.modifiers or ir.FieldModifier.AUTO_UPDATE in field.modifiers:
+            if (
+                ir.FieldModifier.AUTO_ADD in field.modifiers
+                or ir.FieldModifier.AUTO_UPDATE in field.modifiers
+            ):
                 if field.type.kind != ir.FieldTypeKind.DATETIME:
                     warnings.append(
                         f"Entity '{entity.name}' field '{field.name}' has auto_add/auto_update "
@@ -119,7 +120,7 @@ def validate_entities(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
-def validate_surfaces(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all surfaces for semantic correctness.
 
@@ -152,9 +153,7 @@ def validate_surfaces(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
 
         # Warn if no sections
         if not surface.sections:
-            warnings.append(
-                f"Surface '{surface.name}' has no sections defined"
-            )
+            warnings.append(f"Surface '{surface.name}' has no sections defined")
 
         # Check mode consistency
         if surface.mode == ir.SurfaceMode.CREATE:
@@ -164,19 +163,15 @@ def validate_surfaces(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
                 )
         elif surface.mode == ir.SurfaceMode.EDIT:
             if not surface.entity_ref:
-                warnings.append(
-                    f"Surface '{surface.name}' has mode 'edit' but no entity reference"
-                )
+                warnings.append(f"Surface '{surface.name}' has mode 'edit' but no entity reference")
         elif surface.mode == ir.SurfaceMode.VIEW:
             if not surface.entity_ref:
-                warnings.append(
-                    f"Surface '{surface.name}' has mode 'view' but no entity reference"
-                )
+                warnings.append(f"Surface '{surface.name}' has mode 'view' but no entity reference")
 
     return errors, warnings
 
 
-def validate_experiences(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_experiences(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all experiences for semantic correctness.
 
@@ -195,9 +190,7 @@ def validate_experiences(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     for experience in appspec.experiences:
         # Check for empty experiences
         if not experience.steps:
-            errors.append(
-                f"Experience '{experience.name}' has no steps"
-            )
+            errors.append(f"Experience '{experience.name}' has no steps")
             continue
 
         # Build reachability graph
@@ -219,9 +212,7 @@ def validate_experiences(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
         all_steps = {step.name for step in experience.steps}
         unreachable = all_steps - reachable
         if unreachable:
-            warnings.append(
-                f"Experience '{experience.name}' has unreachable steps: {unreachable}"
-            )
+            warnings.append(f"Experience '{experience.name}' has unreachable steps: {unreachable}")
 
         # Check step consistency
         for step in experience.steps:
@@ -250,7 +241,7 @@ def validate_experiences(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
-def validate_services(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_services(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all services for semantic correctness.
 
@@ -268,9 +259,7 @@ def validate_services(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     for service in appspec.services:
         # Check spec is provided
         if not service.spec_url and not service.spec_inline:
-            errors.append(
-                f"Service '{service.name}' has no spec (url or inline)"
-            )
+            errors.append(f"Service '{service.name}' has no spec (url or inline)")
 
         # Validate URL format if provided
         if service.spec_url:
@@ -289,14 +278,12 @@ def validate_services(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
         if service.auth_profile.kind in (ir.AuthKind.OAUTH2_LEGACY, ir.AuthKind.OAUTH2_PKCE):
             # OAuth2 services should specify scopes
             if "scopes" not in service.auth_profile.options:
-                warnings.append(
-                    f"Service '{service.name}' uses OAuth2 but doesn't specify scopes"
-                )
+                warnings.append(f"Service '{service.name}' uses OAuth2 but doesn't specify scopes")
 
     return errors, warnings
 
 
-def validate_foreign_models(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_foreign_models(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all foreign models for semantic correctness.
 
@@ -314,9 +301,7 @@ def validate_foreign_models(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     for foreign_model in appspec.foreign_models:
         # Check key fields exist
         if not foreign_model.key_fields:
-            errors.append(
-                f"Foreign model '{foreign_model.name}' has no key fields"
-            )
+            errors.append(f"Foreign model '{foreign_model.name}' has no key fields")
 
         for key_field in foreign_model.key_fields:
             if not foreign_model.get_field(key_field):
@@ -335,7 +320,7 @@ def validate_foreign_models(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
-def validate_integrations(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
+def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all integrations for semantic correctness.
 
@@ -352,20 +337,16 @@ def validate_integrations(appspec: ir.AppSpec) -> Tuple[List[str], List[str]]:
     for integration in appspec.integrations:
         # Check that integration uses at least one service
         if not integration.service_refs:
-            warnings.append(
-                f"Integration '{integration.name}' doesn't use any services"
-            )
+            warnings.append(f"Integration '{integration.name}' doesn't use any services")
 
         # Check that integration has actions or syncs
         if not integration.actions and not integration.syncs:
-            warnings.append(
-                f"Integration '{integration.name}' has no actions or syncs"
-            )
+            warnings.append(f"Integration '{integration.name}' has no actions or syncs")
 
     return errors, warnings
 
 
-def extended_lint(appspec: ir.AppSpec) -> List[str]:
+def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """
     Extended lint rules for code quality.
 
@@ -382,9 +363,7 @@ def extended_lint(appspec: ir.AppSpec) -> List[str]:
     # Check entity naming (should be PascalCase)
     for entity in appspec.domain.entities:
         if not entity.name[0].isupper():
-            warnings.append(
-                f"Entity '{entity.name}' should use PascalCase naming"
-            )
+            warnings.append(f"Entity '{entity.name}' should use PascalCase naming")
 
         # Check field naming (should be snake_case)
         for field in entity.fields:
@@ -413,21 +392,15 @@ def extended_lint(appspec: ir.AppSpec) -> List[str]:
     all_entities = {entity.name for entity in appspec.domain.entities}
     unused_entities = all_entities - used_entities
     if unused_entities:
-        warnings.append(
-            f"Unused entities (not referenced anywhere): {unused_entities}"
-        )
+        warnings.append(f"Unused entities (not referenced anywhere): {unused_entities}")
 
     # Check for missing titles
     for entity in appspec.domain.entities:
         if not entity.title:
-            warnings.append(
-                f"Entity '{entity.name}' has no title"
-            )
+            warnings.append(f"Entity '{entity.name}' has no title")
 
     for surface in appspec.surfaces:
         if not surface.title:
-            warnings.append(
-                f"Surface '{surface.name}' has no title"
-            )
+            warnings.append(f"Surface '{surface.name}' has no title")
 
     return warnings

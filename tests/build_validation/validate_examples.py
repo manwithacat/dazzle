@@ -6,38 +6,37 @@ Tests all example projects to ensure they build successfully
 and meet quality standards.
 """
 
-import os
-import subprocess
 import json
-import time
+import subprocess
 import sys
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-from dataclasses import dataclass, asdict
 
 
 @dataclass
 class BuildResult:
     """Result of validating a single example"""
+
     example_name: str
     validation_passed: bool
     build_passed: bool
-    errors: List[str]
-    warnings: List[str]
+    errors: list[str]
+    warnings: list[str]
     build_time: float
-    appspec_path: Optional[str]
+    appspec_path: str | None
     entity_count: int = 0
     surface_count: int = 0
 
 
 class ExampleValidator:
     """Validates DAZZLE example projects"""
-    
+
     def __init__(self, examples_dir: Path):
         self.examples_dir = examples_dir
-        self.results: List[BuildResult] = []
+        self.results: list[BuildResult] = []
 
-    def discover_examples(self) -> List[Path]:
+    def discover_examples(self) -> list[Path]:
         """Find all directories with dazzle.toml"""
         examples = []
         for item in self.examples_dir.iterdir():
@@ -47,7 +46,7 @@ class ExampleValidator:
                     examples.append(item)
         return sorted(examples)
 
-    def validate_dsl(self, example_path: Path) -> Tuple[bool, List[str]]:
+    def validate_dsl(self, example_path: Path) -> tuple[bool, list[str]]:
         """Run dazzle validate on example"""
         try:
             result = subprocess.run(
@@ -55,7 +54,7 @@ class ExampleValidator:
                 cwd=example_path,
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=30,
             )
             errors = []
             if result.returncode != 0:
@@ -73,60 +72,59 @@ class ExampleValidator:
         except Exception as e:
             return False, [f"Validation error: {str(e)}"]
 
-    def build_appspec_python(self, example_path: Path) -> Tuple[bool, Optional[Path], List[str], int, int]:
+    def build_appspec_python(
+        self, example_path: Path
+    ) -> tuple[bool, Path | None, list[str], int, int]:
         """Build AppSpec using Python API
-        
+
         Returns: (success, appspec_path, errors, entity_count, surface_count)
         """
         try:
             # Import DAZZLE core modules
-            from dazzle.core.manifest import load_manifest
             from dazzle.core.fileset import discover_dsl_files
-            from dazzle.core.parser import parse_modules
             from dazzle.core.linker import build_appspec
-            
+            from dazzle.core.manifest import load_manifest
+            from dazzle.core.parser import parse_modules
+
             # Load manifest
             manifest_path = example_path / "dazzle.toml"
             mf = load_manifest(manifest_path)
-            
+
             # Discover and parse DSL files
             dsl_files = discover_dsl_files(example_path, mf)
             modules = parse_modules(dsl_files)
-            
+
             # Build AppSpec
             appspec = build_appspec(modules, mf.project_root)
-            
+
             # Create build directory
             build_dir = example_path / "build"
             build_dir.mkdir(exist_ok=True)
             appspec_path = build_dir / "appspec.json"
-            
+
             # Save AppSpec to JSON
             appspec_dict = appspec.model_dump(mode="json")
-            with open(appspec_path, 'w') as f:
+            with open(appspec_path, "w") as f:
                 json.dump(appspec_dict, f, indent=2)
-            
+
             # Count entities and surfaces
             entity_count = len(appspec.domain.entities)
             surface_count = len(appspec.surfaces)
-            
+
             return True, appspec_path, [], entity_count, surface_count
-            
+
         except Exception as e:
             error_msg = f"AppSpec build error: {str(e)}"
             # Include traceback for debugging
             import traceback
+
             error_detail = traceback.format_exc()
             return False, None, [error_msg, error_detail], 0, 0
 
-    def validate_appspec(
-        self, 
-        appspec_path: Path, 
-        example_name: str
-    ) -> Tuple[bool, List[str]]:
+    def validate_appspec(self, appspec_path: Path, example_name: str) -> tuple[bool, list[str]]:
         """Validate AppSpec structure and content"""
         errors = []
-        
+
         try:
             with open(appspec_path) as f:
                 appspec = json.load(f)
@@ -140,7 +138,7 @@ class ExampleValidator:
             # Validate domain structure
             if "domain" in appspec:
                 domain = appspec["domain"]
-                
+
                 # Check entities
                 if "entities" not in domain:
                     errors.append("Domain missing 'entities' field")
@@ -186,21 +184,21 @@ class ExampleValidator:
     def validate_example(self, example_path: Path) -> BuildResult:
         """Validate a single example"""
         start_time = time.time()
-        
+
         example_name = example_path.name
         all_errors = []
         all_warnings = []
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Validating: {example_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # Step 1: Validate DSL (using CLI for quick check)
         print("→ Validating DSL files...")
         dsl_valid, dsl_errors = self.validate_dsl(example_path)
         if not dsl_valid:
             all_errors.extend(dsl_errors)
-            print(f"  ✗ DSL validation failed")
+            print("  ✗ DSL validation failed")
             for error in dsl_errors[:3]:  # Limit error output
                 print(f"    ERROR: {error}")
             if len(dsl_errors) > 3:
@@ -212,21 +210,22 @@ class ExampleValidator:
                 errors=all_errors,
                 warnings=all_warnings,
                 build_time=time.time() - start_time,
-                appspec_path=None
+                appspec_path=None,
             )
-        print(f"  ✓ DSL validation passed")
+        print("  ✓ DSL validation passed")
 
         # Step 2: Build AppSpec (using Python API)
         print("→ Building AppSpec...")
-        build_success, appspec_path, build_errors, entity_count, surface_count = \
+        build_success, appspec_path, build_errors, entity_count, surface_count = (
             self.build_appspec_python(example_path)
-        
+        )
+
         if not build_success:
             all_errors.extend(build_errors)
-            print(f"  ✗ AppSpec build failed")
+            print("  ✗ AppSpec build failed")
             for error in build_errors[:3]:  # Limit error output
                 # Only print first line of each error
-                first_line = error.split('\n')[0]
+                first_line = error.split("\n")[0]
                 print(f"    ERROR: {first_line}")
             if len(build_errors) > 3:
                 print(f"    ... and {len(build_errors) - 3} more errors")
@@ -237,7 +236,7 @@ class ExampleValidator:
                 errors=all_errors,
                 warnings=all_warnings,
                 build_time=time.time() - start_time,
-                appspec_path=None
+                appspec_path=None,
             )
         print(f"  ✓ AppSpec built: {appspec_path.relative_to(example_path)}")
         print(f"    Entities: {entity_count}")
@@ -246,16 +245,16 @@ class ExampleValidator:
         # Step 3: Validate AppSpec structure
         print("→ Validating AppSpec structure...")
         appspec_valid, appspec_errors = self.validate_appspec(appspec_path, example_name)
-        
+
         if not appspec_valid:
             all_errors.extend(appspec_errors)
-            print(f"  ✗ AppSpec validation failed")
+            print("  ✗ AppSpec validation failed")
             for error in appspec_errors[:3]:
                 print(f"    ERROR: {error}")
             if len(appspec_errors) > 3:
                 print(f"    ... and {len(appspec_errors) - 3} more errors")
         else:
-            print(f"  ✓ AppSpec structure valid")
+            print("  ✓ AppSpec structure valid")
 
         build_time = time.time() - start_time
         success = dsl_valid and build_success and appspec_valid
@@ -271,17 +270,17 @@ class ExampleValidator:
             build_time=build_time,
             appspec_path=str(appspec_path) if appspec_path else None,
             entity_count=entity_count,
-            surface_count=surface_count
+            surface_count=surface_count,
         )
 
-    def run_all(self) -> List[BuildResult]:
+    def run_all(self) -> list[BuildResult]:
         """Validate all examples"""
         examples = self.discover_examples()
-        
+
         if not examples:
             print(f"No examples found in {self.examples_dir}")
             return []
-            
+
         print(f"Found {len(examples)} example(s) to validate")
 
         for example_path in examples:
@@ -300,9 +299,9 @@ class ExampleValidator:
     def _generate_text_report(self) -> str:
         """Generate human-readable text report"""
         report = []
-        report.append("\n" + "="*60)
+        report.append("\n" + "=" * 60)
         report.append("DAZZLE EXAMPLE BUILD VALIDATION REPORT")
-        report.append("="*60 + "\n")
+        report.append("=" * 60 + "\n")
 
         if not self.results:
             report.append("No examples were validated.")
@@ -315,12 +314,14 @@ class ExampleValidator:
         report.append(f"Total Examples: {total}")
         report.append(f"Passed: {passed}")
         report.append(f"Failed: {failed}")
-        report.append(f"Success Rate: {passed/total*100:.1f}%\n")
+        report.append(f"Success Rate: {passed / total * 100:.1f}%\n")
 
         # Summary table
-        report.append(f"{'Example':<30} {'Status':<10} {'Entities':<10} {'Surfaces':<10} {'Time':<10}")
+        report.append(
+            f"{'Example':<30} {'Status':<10} {'Entities':<10} {'Surfaces':<10} {'Time':<10}"
+        )
         report.append("-" * 70)
-        
+
         for result in self.results:
             status = "✓ PASS" if result.build_passed else "✗ FAIL"
             entities = str(result.entity_count) if result.build_passed else "-"
@@ -331,35 +332,35 @@ class ExampleValidator:
 
         # Detailed errors
         if failed > 0:
-            report.append("\n" + "="*60)
+            report.append("\n" + "=" * 60)
             report.append("DETAILED ERRORS")
-            report.append("="*60 + "\n")
-            
+            report.append("=" * 60 + "\n")
+
             for result in self.results:
                 if not result.build_passed:
                     report.append(f"❌ {result.example_name}:")
                     for error in result.errors[:3]:  # Limit to 3 errors
                         # Only show first line of each error
-                        first_line = error.split('\n')[0]
+                        first_line = error.split("\n")[0]
                         report.append(f"   {first_line}")
                     if len(result.errors) > 3:
                         report.append(f"   ... and {len(result.errors) - 3} more errors")
                     report.append("")
 
-        report.append("\n" + "="*60)
+        report.append("\n" + "=" * 60)
         return "\n".join(report)
 
     def _generate_json_report(self) -> str:
         """Generate machine-readable JSON report"""
         total = len(self.results)
         passed = sum(1 for r in self.results if r.build_passed)
-        
+
         report = {
             "total": total,
             "passed": passed,
             "failed": total - passed,
             "success_rate": (passed / total * 100) if total > 0 else 0,
-            "results": [asdict(r) for r in self.results]
+            "results": [asdict(r) for r in self.results],
         }
         return json.dumps(report, indent=2)
 
@@ -383,25 +384,21 @@ Examples:
 
   # Specify custom examples directory
   %(prog)s --examples-dir /path/to/examples
-        """
+        """,
     )
-    
+
     parser.add_argument(
         "--examples-dir",
         type=Path,
         default=None,
-        help="Path to examples directory (default: auto-detect from script location)"
+        help="Path to examples directory (default: auto-detect from script location)",
     )
-    parser.add_argument(
-        "--example",
-        type=str,
-        help="Validate specific example only"
-    )
+    parser.add_argument("--example", type=str, help="Validate specific example only")
     parser.add_argument(
         "--report-format",
         choices=["text", "json"],
         default="text",
-        help="Report output format (default: text)"
+        help="Report output format (default: text)",
     )
 
     args = parser.parse_args()

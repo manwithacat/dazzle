@@ -5,13 +5,13 @@ Pre-build and post-build hooks for Django-specific tasks.
 """
 
 from .post_build import (
-    CreateSuperuserCredentialsHook,
-    SetupUvEnvironmentHook,
     CreateMigrationsHook,
-    RunMigrationsHook,
+    CreateSuperuserCredentialsHook,
     CreateSuperuserHook,
     DisplayDjangoInstructionsHook,
+    RunMigrationsHook,
     RunTestsHook,
+    SetupUvEnvironmentHook,
     ValidateEndpointsHook,
 )
 

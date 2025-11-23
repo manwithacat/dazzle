@@ -9,7 +9,6 @@ Provides helper functions that are useful across multiple backends:
 
 import secrets
 from pathlib import Path
-from typing import List, Optional
 
 
 def ensure_dir(path: Path) -> None:
@@ -78,7 +77,7 @@ def indent(text: str, spaces: int = 4) -> str:
     return "\n".join(indent_str + line if line.strip() else line for line in lines)
 
 
-def join_lines(lines: List[str], separator: str = "\n") -> str:
+def join_lines(lines: list[str], separator: str = "\n") -> str:
     """
     Join lines, filtering out empty ones.
 
@@ -103,10 +102,11 @@ def camel_to_snake(name: str) -> str:
         snake_case string
     """
     import re
+
     # Insert underscore before uppercase letters
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     # Insert underscore before uppercase letters followed by lowercase
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def snake_to_camel(name: str, capitalize_first: bool = True) -> str:
@@ -120,11 +120,11 @@ def snake_to_camel(name: str, capitalize_first: bool = True) -> str:
     Returns:
         CamelCase string
     """
-    components = name.split('_')
+    components = name.split("_")
     if capitalize_first:
-        return ''.join(x.title() for x in components)
+        return "".join(x.title() for x in components)
     else:
-        return components[0] + ''.join(x.title() for x in components[1:])
+        return components[0] + "".join(x.title() for x in components[1:])
 
 
 def pluralize(word: str) -> str:
@@ -137,12 +137,12 @@ def pluralize(word: str) -> str:
     Returns:
         Plural form (simple heuristic)
     """
-    if word.endswith('s') or word.endswith('x') or word.endswith('z'):
-        return word + 'es'
-    elif word.endswith('y'):
-        return word[:-1] + 'ies'
+    if word.endswith("s") or word.endswith("x") or word.endswith("z"):
+        return word + "es"
+    elif word.endswith("y"):
+        return word[:-1] + "ies"
     else:
-        return word + 's'
+        return word + "s"
 
 
 def create_init_file(directory: Path, content: str = "") -> None:

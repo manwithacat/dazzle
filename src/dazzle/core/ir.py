@@ -10,10 +10,9 @@ a pure data structure that can be safely shared and analyzed.
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # =============================================================================
 # Core Field Types
@@ -22,6 +21,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class FieldTypeKind(str, Enum):
     """Enumeration of supported field types in DAZZLE."""
+
     STR = "str"
     TEXT = "text"
     INT = "int"
@@ -45,19 +45,20 @@ class FieldType(BaseModel):
         - enum[draft,issued]: FieldType(kind=ENUM, enum_values=["draft", "issued"])
         - ref Client: FieldType(kind=REF, ref_entity="Client")
     """
+
     kind: FieldTypeKind
-    max_length: Optional[int] = None  # for str
-    precision: Optional[int] = None   # for decimal
-    scale: Optional[int] = None       # for decimal
-    enum_values: Optional[List[str]] = None  # for enum
-    ref_entity: Optional[str] = None  # for ref
+    max_length: int | None = None  # for str
+    precision: int | None = None  # for decimal
+    scale: int | None = None  # for decimal
+    enum_values: list[str] | None = None  # for enum
+    ref_entity: str | None = None  # for ref
 
     class Config:
         frozen = True
 
     @field_validator("enum_values")
     @classmethod
-    def validate_enum_values(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+    def validate_enum_values(cls, v: list[str] | None) -> list[str] | None:
         """Ensure enum values are valid identifiers."""
         if v:
             for val in v:
@@ -68,6 +69,7 @@ class FieldType(BaseModel):
 
 class FieldModifier(str, Enum):
     """Modifiers that can be applied to fields."""
+
     REQUIRED = "required"
     OPTIONAL = "optional"
     PK = "pk"
@@ -87,10 +89,11 @@ class FieldSpec(BaseModel):
         modifiers: List of modifiers (required, pk, unique, etc.)
         default: Optional default value
     """
+
     name: str
     type: FieldType
-    modifiers: List[FieldModifier] = Field(default_factory=list)
-    default: Optional[Union[str, int, float, bool]] = None
+    modifiers: list[FieldModifier] = Field(default_factory=list)
+    default: str | int | float | bool | None = None
 
     class Config:
         frozen = True
@@ -121,6 +124,7 @@ class FieldSpec(BaseModel):
 
 class ConstraintKind(str, Enum):
     """Types of constraints that can be applied to entities."""
+
     UNIQUE = "unique"
     INDEX = "index"
 
@@ -133,8 +137,9 @@ class Constraint(BaseModel):
         kind: Type of constraint
         fields: List of field names involved in constraint
     """
+
     kind: ConstraintKind
-    fields: List[str]
+    fields: list[str]
 
     class Config:
         frozen = True
@@ -152,23 +157,24 @@ class EntitySpec(BaseModel):
         fields: List of field specifications
         constraints: Entity-level constraints (unique, index)
     """
+
     name: str
-    title: Optional[str] = None
-    fields: List[FieldSpec]
-    constraints: List[Constraint] = Field(default_factory=list)
+    title: str | None = None
+    fields: list[FieldSpec]
+    constraints: list[Constraint] = Field(default_factory=list)
 
     class Config:
         frozen = True
 
     @property
-    def primary_key(self) -> Optional[FieldSpec]:
+    def primary_key(self) -> FieldSpec | None:
         """Get the primary key field, if any."""
         for field in self.fields:
             if field.is_primary_key:
                 return field
         return None
 
-    def get_field(self, name: str) -> Optional[FieldSpec]:
+    def get_field(self, name: str) -> FieldSpec | None:
         """Get field by name."""
         for field in self.fields:
             if field.name == name:
@@ -183,12 +189,13 @@ class DomainSpec(BaseModel):
     Attributes:
         entities: List of entity specifications
     """
-    entities: List[EntitySpec] = Field(default_factory=list)
+
+    entities: list[EntitySpec] = Field(default_factory=list)
 
     class Config:
         frozen = True
 
-    def get_entity(self, name: str) -> Optional[EntitySpec]:
+    def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
         for entity in self.entities:
             if entity.name == name:
@@ -203,6 +210,7 @@ class DomainSpec(BaseModel):
 
 class SurfaceMode(str, Enum):
     """Modes that define surface behavior."""
+
     VIEW = "view"
     CREATE = "create"
     EDIT = "edit"
@@ -212,6 +220,7 @@ class SurfaceMode(str, Enum):
 
 class SurfaceTrigger(str, Enum):
     """Triggers for surface actions."""
+
     SUBMIT = "submit"
     CLICK = "click"
     AUTO = "auto"
@@ -219,6 +228,7 @@ class SurfaceTrigger(str, Enum):
 
 class OutcomeKind(str, Enum):
     """Types of outcomes for surface actions."""
+
     SURFACE = "surface"
     EXPERIENCE = "experience"
     INTEGRATION = "integration"
@@ -230,10 +240,11 @@ class Outcome(BaseModel):
 
     Defines what happens when a surface action is triggered.
     """
+
     kind: OutcomeKind
     target: str  # surface name, experience name, or integration name
-    step: Optional[str] = None  # for experience outcomes
-    action: Optional[str] = None  # for integration outcomes
+    step: str | None = None  # for experience outcomes
+    action: str | None = None  # for integration outcomes
 
     class Config:
         frozen = True
@@ -248,9 +259,10 @@ class SurfaceElement(BaseModel):
         label: Human-readable label
         options: Additional options for rendering
     """
+
     field_name: str
-    label: Optional[str] = None
-    options: Dict[str, Any] = Field(default_factory=dict)
+    label: str | None = None
+    options: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True
@@ -265,9 +277,10 @@ class SurfaceSection(BaseModel):
         title: Human-readable title
         elements: List of elements in this section
     """
+
     name: str
-    title: Optional[str] = None
-    elements: List[SurfaceElement] = Field(default_factory=list)
+    title: str | None = None
+    elements: list[SurfaceElement] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -283,8 +296,9 @@ class SurfaceAction(BaseModel):
         trigger: When the action is triggered
         outcome: What happens when action fires
     """
+
     name: str
-    label: Optional[str] = None
+    label: str | None = None
     trigger: SurfaceTrigger
     outcome: Outcome
 
@@ -306,12 +320,13 @@ class SurfaceSpec(BaseModel):
         sections: List of sections containing elements
         actions: List of actions available on this surface
     """
+
     name: str
-    title: Optional[str] = None
-    entity_ref: Optional[str] = None
+    title: str | None = None
+    entity_ref: str | None = None
     mode: SurfaceMode
-    sections: List[SurfaceSection] = Field(default_factory=list)
-    actions: List[SurfaceAction] = Field(default_factory=list)
+    sections: list[SurfaceSection] = Field(default_factory=list)
+    actions: list[SurfaceAction] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -324,6 +339,7 @@ class SurfaceSpec(BaseModel):
 
 class StepKind(str, Enum):
     """Types of steps in an experience."""
+
     SURFACE = "surface"
     PROCESS = "process"
     INTEGRATION = "integration"
@@ -331,6 +347,7 @@ class StepKind(str, Enum):
 
 class TransitionEvent(str, Enum):
     """Events that trigger step transitions."""
+
     SUCCESS = "success"
     FAILURE = "failure"
 
@@ -343,6 +360,7 @@ class StepTransition(BaseModel):
         event: Event that triggers transition
         next_step: Name of the next step
     """
+
     event: TransitionEvent
     next_step: str
 
@@ -362,12 +380,13 @@ class ExperienceStep(BaseModel):
         action: Action name (if kind=integration)
         transitions: List of transitions to other steps
     """
+
     name: str
     kind: StepKind
-    surface: Optional[str] = None
-    integration: Optional[str] = None
-    action: Optional[str] = None
-    transitions: List[StepTransition] = Field(default_factory=list)
+    surface: str | None = None
+    integration: str | None = None
+    action: str | None = None
+    transitions: list[StepTransition] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -385,15 +404,16 @@ class ExperienceSpec(BaseModel):
         start_step: Name of the starting step
         steps: List of steps in this experience
     """
+
     name: str
-    title: Optional[str] = None
+    title: str | None = None
     start_step: str
-    steps: List[ExperienceStep] = Field(default_factory=list)
+    steps: list[ExperienceStep] = Field(default_factory=list)
 
     class Config:
         frozen = True
 
-    def get_step(self, name: str) -> Optional[ExperienceStep]:
+    def get_step(self, name: str) -> ExperienceStep | None:
         """Get step by name."""
         for step in self.steps:
             if step.name == name:
@@ -408,6 +428,7 @@ class ExperienceSpec(BaseModel):
 
 class AuthKind(str, Enum):
     """Authentication profile types."""
+
     OAUTH2_LEGACY = "oauth2_legacy"
     OAUTH2_PKCE = "oauth2_pkce"
     JWT_STATIC = "jwt_static"
@@ -424,8 +445,9 @@ class AuthProfile(BaseModel):
         kind: Type of authentication
         options: Additional auth options (scopes, etc.)
     """
+
     kind: AuthKind
-    options: Dict[str, str] = Field(default_factory=dict)
+    options: dict[str, str] = Field(default_factory=dict)
 
     class Config:
         frozen = True
@@ -445,12 +467,13 @@ class ServiceSpec(BaseModel):
         auth_profile: Authentication configuration
         owner: Service owner/provider
     """
+
     name: str
-    title: Optional[str] = None
-    spec_url: Optional[str] = None
-    spec_inline: Optional[str] = None
+    title: str | None = None
+    spec_url: str | None = None
+    spec_inline: str | None = None
     auth_profile: AuthProfile
-    owner: Optional[str] = None
+    owner: str | None = None
 
     class Config:
         frozen = True
@@ -463,6 +486,7 @@ class ServiceSpec(BaseModel):
 
 class ForeignConstraintKind(str, Enum):
     """Constraint types for foreign models."""
+
     READ_ONLY = "read_only"
     EVENT_DRIVEN = "event_driven"
     BATCH_IMPORT = "batch_import"
@@ -476,8 +500,9 @@ class ForeignConstraint(BaseModel):
         kind: Type of constraint
         options: Additional constraint options
     """
+
     kind: ForeignConstraintKind
-    options: Dict[str, Any] = Field(default_factory=dict)
+    options: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True
@@ -497,17 +522,18 @@ class ForeignModelSpec(BaseModel):
         constraints: List of constraints
         fields: List of field specifications
     """
+
     name: str
-    title: Optional[str] = None
+    title: str | None = None
     service_ref: str
-    key_fields: List[str]
-    constraints: List[ForeignConstraint] = Field(default_factory=list)
-    fields: List[FieldSpec] = Field(default_factory=list)
+    key_fields: list[str]
+    constraints: list[ForeignConstraint] = Field(default_factory=list)
+    fields: list[FieldSpec] = Field(default_factory=list)
 
     class Config:
         frozen = True
 
-    def get_field(self, name: str) -> Optional[FieldSpec]:
+    def get_field(self, name: str) -> FieldSpec | None:
         """Get field by name."""
         for field in self.fields:
             if field.name == name:
@@ -530,8 +556,9 @@ class Expression(BaseModel):
         path: Dotted path (e.g., "form.vrn", "entity.client_id")
         literal: Literal value (string, number, boolean)
     """
-    path: Optional[str] = None
-    literal: Optional[Union[str, int, float, bool]] = None
+
+    path: str | None = None
+    literal: str | int | float | bool | None = None
 
     class Config:
         frozen = True
@@ -554,6 +581,7 @@ class MappingRule(BaseModel):
         target_field: Field to map to
         source: Expression providing the value
     """
+
     target_field: str
     source: Expression
 
@@ -575,14 +603,15 @@ class IntegrationAction(BaseModel):
         response_entity: Entity to map response to
         response_mapping: Mapping for response fields
     """
+
     name: str
     when_surface: str
     call_service: str
     call_operation: str
-    call_mapping: List[MappingRule] = Field(default_factory=list)
-    response_foreign_model: Optional[str] = None
-    response_entity: Optional[str] = None
-    response_mapping: List[MappingRule] = Field(default_factory=list)
+    call_mapping: list[MappingRule] = Field(default_factory=list)
+    response_foreign_model: str | None = None
+    response_entity: str | None = None
+    response_mapping: list[MappingRule] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -590,6 +619,7 @@ class IntegrationAction(BaseModel):
 
 class SyncMode(str, Enum):
     """Sync modes for integration syncs."""
+
     SCHEDULED = "scheduled"
     EVENT_DRIVEN = "event_driven"
 
@@ -602,6 +632,7 @@ class MatchRule(BaseModel):
         foreign_field: Field in foreign model
         entity_field: Field in entity
     """
+
     foreign_field: str
     entity_field: str
 
@@ -623,14 +654,15 @@ class IntegrationSync(BaseModel):
         into_entity: Entity to sync into
         match_rules: Rules for matching foreign records to entities
     """
+
     name: str
     mode: SyncMode
-    schedule: Optional[str] = None  # cron expression
+    schedule: str | None = None  # cron expression
     from_service: str
     from_operation: str
     from_foreign_model: str
     into_entity: str
-    match_rules: List[MatchRule] = Field(default_factory=list)
+    match_rules: list[MatchRule] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -651,12 +683,13 @@ class IntegrationSpec(BaseModel):
         actions: List of on-demand actions
         syncs: List of sync operations
     """
+
     name: str
-    title: Optional[str] = None
-    service_refs: List[str] = Field(default_factory=list)
-    foreign_model_refs: List[str] = Field(default_factory=list)
-    actions: List[IntegrationAction] = Field(default_factory=list)
-    syncs: List[IntegrationSync] = Field(default_factory=list)
+    title: str | None = None
+    service_refs: list[str] = Field(default_factory=list)
+    foreign_model_refs: list[str] = Field(default_factory=list)
+    actions: list[IntegrationAction] = Field(default_factory=list)
+    syncs: list[IntegrationSync] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -669,6 +702,7 @@ class IntegrationSpec(BaseModel):
 
 class TestActionKind(str, Enum):
     """Types of test actions."""
+
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
@@ -678,6 +712,7 @@ class TestActionKind(str, Enum):
 
 class TestAssertionKind(str, Enum):
     """Types of test assertions."""
+
     STATUS = "status"
     CREATED = "created"
     FIELD = "field"
@@ -687,6 +722,7 @@ class TestAssertionKind(str, Enum):
 
 class TestComparisonOperator(str, Enum):
     """Comparison operators for test assertions."""
+
     EQUALS = "equals"
     NOT_EQUALS = "not_equals"
     GREATER_THAN = "greater_than"
@@ -701,10 +737,11 @@ class TestSetupStep(BaseModel):
 
     Creates objects or sets up state before test action.
     """
+
     variable_name: str
     action: TestActionKind
     entity_name: str
-    data: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True
@@ -719,9 +756,10 @@ class TestAction(BaseModel):
         target: Entity or object being acted upon
         data: Data for the action
     """
+
     kind: TestActionKind
     target: str  # Entity name or variable reference
-    data: Dict[str, Any] = Field(default_factory=dict)
+    data: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True
@@ -737,11 +775,12 @@ class TestAssertion(BaseModel):
         operator: Comparison operator
         expected_value: Expected value
     """
+
     kind: TestAssertionKind
-    field_name: Optional[str] = None
-    operator: Optional[TestComparisonOperator] = None
-    expected_value: Optional[Any] = None
-    error_message: Optional[str] = None
+    field_name: str | None = None
+    operator: TestComparisonOperator | None = None
+    expected_value: Any | None = None
+    error_message: str | None = None
 
     class Config:
         frozen = True
@@ -760,11 +799,12 @@ class TestSpec(BaseModel):
         action: Main action to test
         assertions: List of expected outcomes
     """
+
     name: str
-    description: Optional[str] = None
-    setup_steps: List[TestSetupStep] = Field(default_factory=list)
+    description: str | None = None
+    setup_steps: list[TestSetupStep] = Field(default_factory=list)
     action: TestAction
-    assertions: List[TestAssertion] = Field(default_factory=list)
+    assertions: list[TestAssertion] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -794,61 +834,62 @@ class AppSpec(BaseModel):
         integrations: List of integration specifications
         metadata: Additional metadata
     """
+
     name: str
-    title: Optional[str] = None
+    title: str | None = None
     version: str = "0.1.0"
     domain: DomainSpec
-    surfaces: List[SurfaceSpec] = Field(default_factory=list)
-    experiences: List[ExperienceSpec] = Field(default_factory=list)
-    services: List[ServiceSpec] = Field(default_factory=list)
-    foreign_models: List[ForeignModelSpec] = Field(default_factory=list)
-    integrations: List[IntegrationSpec] = Field(default_factory=list)
-    tests: List[TestSpec] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    surfaces: list[SurfaceSpec] = Field(default_factory=list)
+    experiences: list[ExperienceSpec] = Field(default_factory=list)
+    services: list[ServiceSpec] = Field(default_factory=list)
+    foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
+    integrations: list[IntegrationSpec] = Field(default_factory=list)
+    tests: list[TestSpec] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     class Config:
         frozen = True
 
-    def get_entity(self, name: str) -> Optional[EntitySpec]:
+    def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
         return self.domain.get_entity(name)
 
-    def get_surface(self, name: str) -> Optional[SurfaceSpec]:
+    def get_surface(self, name: str) -> SurfaceSpec | None:
         """Get surface by name."""
         for surface in self.surfaces:
             if surface.name == name:
                 return surface
         return None
 
-    def get_experience(self, name: str) -> Optional[ExperienceSpec]:
+    def get_experience(self, name: str) -> ExperienceSpec | None:
         """Get experience by name."""
         for experience in self.experiences:
             if experience.name == name:
                 return experience
         return None
 
-    def get_service(self, name: str) -> Optional[ServiceSpec]:
+    def get_service(self, name: str) -> ServiceSpec | None:
         """Get service by name."""
         for service in self.services:
             if service.name == name:
                 return service
         return None
 
-    def get_test(self, name: str) -> Optional[TestSpec]:
+    def get_test(self, name: str) -> TestSpec | None:
         """Get test by name."""
         for test in self.tests:
             if test.name == name:
                 return test
         return None
 
-    def get_foreign_model(self, name: str) -> Optional[ForeignModelSpec]:
+    def get_foreign_model(self, name: str) -> ForeignModelSpec | None:
         """Get foreign model by name."""
         for fm in self.foreign_models:
             if fm.name == name:
                 return fm
         return None
 
-    def get_integration(self, name: str) -> Optional[IntegrationSpec]:
+    def get_integration(self, name: str) -> IntegrationSpec | None:
         """Get integration by name."""
         for integration in self.integrations:
             if integration.name == name:
@@ -856,7 +897,7 @@ class AppSpec(BaseModel):
         return None
 
     @property
-    def type_catalog(self) -> Dict[str, List[FieldType]]:
+    def type_catalog(self) -> dict[str, list[FieldType]]:
         """
         Extract catalog of all field types used in the application.
 
@@ -869,7 +910,7 @@ class AppSpec(BaseModel):
         Returns:
             Dict mapping field names to list of FieldType objects
         """
-        catalog: Dict[str, List[FieldType]] = {}
+        catalog: dict[str, list[FieldType]] = {}
 
         # Collect from entities
         for entity in self.domain.entities:
@@ -890,7 +931,7 @@ class AppSpec(BaseModel):
 
         return catalog
 
-    def get_field_type_conflicts(self) -> List[str]:
+    def get_field_type_conflicts(self) -> list[str]:
         """
         Detect fields with the same name but different types.
 
@@ -901,17 +942,22 @@ class AppSpec(BaseModel):
         for field_name, types in self.type_catalog.items():
             if len(types) > 1:
                 type_descriptions = [
-                    f"{t.kind.value}" + (
-                        f"({t.max_length})" if t.max_length else
-                        f"({t.precision},{t.scale})" if t.precision else
-                        f"[{','.join(t.enum_values)}]" if t.enum_values else
-                        f" {t.ref_entity}" if t.ref_entity else ""
+                    f"{t.kind.value}"
+                    + (
+                        f"({t.max_length})"
+                        if t.max_length
+                        else f"({t.precision},{t.scale})"
+                        if t.precision
+                        else f"[{','.join(t.enum_values)}]"
+                        if t.enum_values
+                        else f" {t.ref_entity}"
+                        if t.ref_entity
+                        else ""
                     )
                     for t in types
                 ]
                 conflicts.append(
-                    f"Field '{field_name}' has inconsistent types: "
-                    f"{', '.join(type_descriptions)}"
+                    f"Field '{field_name}' has inconsistent types: {', '.join(type_descriptions)}"
                 )
         return conflicts
 
@@ -936,13 +982,14 @@ class ModuleFragment(BaseModel):
         integrations: Integrations defined in this module
         tests: Tests defined in this module
     """
-    entities: List[EntitySpec] = Field(default_factory=list)
-    surfaces: List[SurfaceSpec] = Field(default_factory=list)
-    experiences: List[ExperienceSpec] = Field(default_factory=list)
-    services: List[ServiceSpec] = Field(default_factory=list)
-    foreign_models: List[ForeignModelSpec] = Field(default_factory=list)
-    integrations: List[IntegrationSpec] = Field(default_factory=list)
-    tests: List[TestSpec] = Field(default_factory=list)
+
+    entities: list[EntitySpec] = Field(default_factory=list)
+    surfaces: list[SurfaceSpec] = Field(default_factory=list)
+    experiences: list[ExperienceSpec] = Field(default_factory=list)
+    services: list[ServiceSpec] = Field(default_factory=list)
+    foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
+    integrations: list[IntegrationSpec] = Field(default_factory=list)
+    tests: list[TestSpec] = Field(default_factory=list)
 
     class Config:
         frozen = True
@@ -960,11 +1007,12 @@ class ModuleIR(BaseModel):
         uses: List of module names this module depends on
         fragment: Parsed DSL fragments
     """
+
     name: str
     file: Path
-    app_name: Optional[str] = None
-    app_title: Optional[str] = None
-    uses: List[str] = Field(default_factory=list)
+    app_name: str | None = None
+    app_title: str | None = None
+    uses: list[str] = Field(default_factory=list)
     fragment: ModuleFragment = Field(default_factory=ModuleFragment)
 
     class Config:

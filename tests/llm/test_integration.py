@@ -2,9 +2,9 @@
 Integration tests for LLM workflow.
 """
 
-import pytest
-from dazzle.llm.models import SpecAnalysis
 from dazzle.llm.dsl_generator import DSLGenerator
+from dazzle.llm.models import SpecAnalysis
+
 from .test_fixtures import MOCK_TASK_ANALYSIS_JSON, MOCK_TICKET_ANALYSIS_JSON
 
 
@@ -193,9 +193,7 @@ class TestCoverageMetrics:
                     "entity": "Task",
                     "field": "status",
                     "states": ["todo", "done"],
-                    "transitions_found": [
-                        {"from": "todo", "to": "done", "trigger": "complete"}
-                    ],
+                    "transitions_found": [{"from": "todo", "to": "done", "trigger": "complete"}],
                     "transitions_implied_but_missing": [],
                 }
             ],

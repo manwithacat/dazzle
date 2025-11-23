@@ -3,16 +3,17 @@ Tests for DSL generator.
 """
 
 import pytest
+
 from dazzle.llm.dsl_generator import DSLGenerator
 from dazzle.llm.models import (
+    BusinessRule,
+    BusinessRuleType,
+    CRUDAnalysis,
+    CRUDOperation,
+    ImpliedTransition,
     SpecAnalysis,
     StateMachine,
     StateTransition,
-    ImpliedTransition,
-    CRUDAnalysis,
-    CRUDOperation,
-    BusinessRule,
-    BusinessRuleType,
 )
 
 
@@ -309,9 +310,7 @@ class TestDSLGenerator:
                     assert ":" in line, f"Missing colon in: {line}"
 
                 # Field declarations should have colons
-                if not stripped.startswith(
-                    ("entity", "surface", "section", "mode:", "uses")
-                ):
+                if not stripped.startswith(("entity", "surface", "section", "mode:", "uses")):
                     # This is likely a field
                     if not line.strip().startswith("#"):
                         # Should be properly indented

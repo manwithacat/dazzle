@@ -4,12 +4,11 @@ Module linker implementation for DAZZLE.
 Handles dependency resolution, symbol table building, and reference validation.
 """
 
-from collections import defaultdict, deque
+from collections import deque
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional
 
 from . import ir
-from .errors import LinkError, make_link_error
+from .errors import LinkError
 
 
 @dataclass
@@ -20,16 +19,17 @@ class SymbolTable:
     Tracks entities, surfaces, experiences, services, foreign models, integrations, and tests
     to enable cross-module reference resolution.
     """
-    entities: Dict[str, ir.EntitySpec] = field(default_factory=dict)
-    surfaces: Dict[str, ir.SurfaceSpec] = field(default_factory=dict)
-    experiences: Dict[str, ir.ExperienceSpec] = field(default_factory=dict)
-    services: Dict[str, ir.ServiceSpec] = field(default_factory=dict)
-    foreign_models: Dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
-    integrations: Dict[str, ir.IntegrationSpec] = field(default_factory=dict)
-    tests: Dict[str, ir.TestSpec] = field(default_factory=dict)
+
+    entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
+    surfaces: dict[str, ir.SurfaceSpec] = field(default_factory=dict)
+    experiences: dict[str, ir.ExperienceSpec] = field(default_factory=dict)
+    services: dict[str, ir.ServiceSpec] = field(default_factory=dict)
+    foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
+    integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
+    tests: dict[str, ir.TestSpec] = field(default_factory=dict)
 
     # Track which module each symbol came from (for error reporting)
-    symbol_sources: Dict[str, str] = field(default_factory=dict)
+    symbol_sources: dict[str, str] = field(default_factory=dict)
 
     def add_entity(self, entity: ir.EntitySpec, module_name: str) -> None:
         """Add entity to symbol table, checking for duplicates."""
@@ -109,7 +109,7 @@ class SymbolTable:
         self.symbol_sources[test.name] = module_name
 
 
-def resolve_dependencies(modules: List[ir.ModuleIR]) -> List[ir.ModuleIR]:
+def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
     Resolve module dependencies and return modules in dependency order.
 
@@ -127,7 +127,7 @@ def resolve_dependencies(modules: List[ir.ModuleIR]) -> List[ir.ModuleIR]:
     """
     # Build dependency graph
     module_map = {m.name: m for m in modules}
-    dependencies: Dict[str, Set[str]] = {m.name: set(m.uses) for m in modules}
+    dependencies: dict[str, set[str]] = {m.name: set(m.uses) for m in modules}
 
     # Check for missing dependencies
     for module_name, deps in dependencies.items():
@@ -160,14 +160,12 @@ def resolve_dependencies(modules: List[ir.ModuleIR]) -> List[ir.ModuleIR]:
     # If we haven't processed all modules, there's a cycle
     if len(sorted_modules) != len(modules):
         unprocessed = set(module_map.keys()) - {m.name for m in sorted_modules}
-        raise LinkError(
-            f"Circular dependency detected involving modules: {unprocessed}"
-        )
+        raise LinkError(f"Circular dependency detected involving modules: {unprocessed}")
 
     return sorted_modules
 
 
-def build_symbol_table(modules: List[ir.ModuleIR]) -> SymbolTable:
+def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
     """
     Build unified symbol table from all modules.
 
@@ -214,7 +212,7 @@ def build_symbol_table(modules: List[ir.ModuleIR]) -> SymbolTable:
     return symbols
 
 
-def validate_module_access(modules: List[ir.ModuleIR], symbols: SymbolTable) -> List[str]:
+def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> list[str]:
     """
     Validate that modules only reference symbols from modules they've explicitly imported.
 
@@ -236,13 +234,13 @@ def validate_module_access(modules: List[ir.ModuleIR], symbols: SymbolTable) -> 
 
         # Check entity field references
         for entity in module.fragment.entities:
-            for field in entity.fields:
-                if field.type.kind == ir.FieldTypeKind.REF:
-                    ref_entity = field.type.ref_entity
+            for entity_field in entity.fields:
+                if entity_field.type.kind == ir.FieldTypeKind.REF:
+                    ref_entity = entity_field.type.ref_entity
                     owner_module = symbols.symbol_sources.get(ref_entity)
                     if owner_module and owner_module not in allowed_modules:
                         errors.append(
-                            f"Module '{module.name}' entity '{entity.name}' field '{field.name}' "
+                            f"Module '{module.name}' entity '{entity.name}' field '{entity_field.name}' "
                             f"references entity '{ref_entity}' from module '{owner_module}' "
                             f"without importing it (add: use {owner_module})"
                         )
@@ -327,7 +325,7 @@ def validate_module_access(modules: List[ir.ModuleIR], symbols: SymbolTable) -> 
     return errors
 
 
-def validate_references(symbols: SymbolTable) -> List[str]:
+def validate_references(symbols: SymbolTable) -> list[str]:
     """
     Validate all cross-references in the symbol table.
 
@@ -349,12 +347,12 @@ def validate_references(symbols: SymbolTable) -> List[str]:
 
     # Validate entity references in entity fields
     for entity_name, entity in symbols.entities.items():
-        for field in entity.fields:
-            if field.type.kind == ir.FieldTypeKind.REF:
-                ref_entity = field.type.ref_entity
+        for entity_field in entity.fields:
+            if entity_field.type.kind == ir.FieldTypeKind.REF:
+                ref_entity = entity_field.type.ref_entity
                 if ref_entity not in symbols.entities:
                     errors.append(
-                        f"Entity '{entity_name}' field '{field.name}' references "
+                        f"Entity '{entity_name}' field '{entity_field.name}' references "
                         f"unknown entity '{ref_entity}'"
                     )
 
@@ -363,8 +361,7 @@ def validate_references(symbols: SymbolTable) -> List[str]:
             for field_name in constraint.fields:
                 if not entity.get_field(field_name):
                     errors.append(
-                        f"Entity '{entity_name}' constraint references "
-                        f"unknown field '{field_name}'"
+                        f"Entity '{entity_name}' constraint references unknown field '{field_name}'"
                     )
 
     # Validate surface references
@@ -444,22 +441,20 @@ def validate_references(symbols: SymbolTable) -> List[str]:
         for service_ref in integration.service_refs:
             if service_ref not in symbols.services:
                 errors.append(
-                    f"Integration '{integration_name}' references unknown service "
-                    f"'{service_ref}'"
+                    f"Integration '{integration_name}' references unknown service '{service_ref}'"
                 )
 
         # Check foreign model refs
         for fm_ref in integration.foreign_model_refs:
             if fm_ref not in symbols.foreign_models:
                 errors.append(
-                    f"Integration '{integration_name}' references unknown foreign model "
-                    f"'{fm_ref}'"
+                    f"Integration '{integration_name}' references unknown foreign model '{fm_ref}'"
                 )
 
     return errors
 
 
-def merge_fragments(modules: List[ir.ModuleIR], symbols: SymbolTable) -> ir.ModuleFragment:
+def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.ModuleFragment:
     """
     Merge all module fragments into a single fragment.
 

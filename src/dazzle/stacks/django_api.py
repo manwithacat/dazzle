@@ -5,12 +5,10 @@ Generates a complete Django project with DRF from AppSpec.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
-import textwrap
 
-from . import Backend, BackendCapabilities
 from ..core import ir
 from ..core.errors import BackendError
+from . import Backend, BackendCapabilities
 
 
 class DjangoAPIBackend(Backend):
@@ -110,7 +108,7 @@ class DjangoAPIBackend(Backend):
 
         models_file.write_text("\n".join(lines), encoding="utf-8")
 
-    def _generate_entity_model(self, entity: ir.EntitySpec, appspec: ir.AppSpec) -> List[str]:
+    def _generate_entity_model(self, entity: ir.EntitySpec, appspec: ir.AppSpec) -> list[str]:
         """Generate Django model class for an entity."""
         lines = []
 
@@ -156,7 +154,7 @@ class DjangoAPIBackend(Backend):
                 break
 
         if str_field:
-            lines.append(f'        return str(self.{str_field})')
+            lines.append(f"        return str(self.{str_field})")
         else:
             lines.append(f'        return f"{class_name} {{self.pk}}"')
 
@@ -164,7 +162,7 @@ class DjangoAPIBackend(Backend):
 
     def _generate_model_field(
         self, field: ir.FieldSpec, entity: ir.EntitySpec, appspec: ir.AppSpec
-    ) -> Optional[str]:
+    ) -> str | None:
         """Generate Django field definition."""
         field_name = field.name
         field_type = field.type
@@ -172,11 +170,11 @@ class DjangoAPIBackend(Backend):
         # Handle primary key
         if field.is_primary_key:
             if field_type.kind == ir.FieldTypeKind.UUID:
-                return f'{field_name} = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)'
+                return f"{field_name} = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)"
             elif field_type.kind == ir.FieldTypeKind.INT:
-                return f'{field_name} = models.AutoField(primary_key=True)'
+                return f"{field_name} = models.AutoField(primary_key=True)"
             else:
-                return f'{field_name} = models.BigIntegerField(primary_key=True)'
+                return f"{field_name} = models.BigIntegerField(primary_key=True)"
 
         # Build field kwargs
         kwargs = []
@@ -201,7 +199,7 @@ class DjangoAPIBackend(Backend):
             if isinstance(field.default, str):
                 kwargs.append(f'default="{field.default}"')
             else:
-                kwargs.append(f'default={field.default}')
+                kwargs.append(f"default={field.default}")
 
         # Map field type to Django field
         django_field = self._map_field_type(field_type, kwargs)
@@ -209,7 +207,7 @@ class DjangoAPIBackend(Backend):
         kwargs_str = ", ".join(kwargs) if kwargs else ""
         return f"{field_name} = {django_field}({kwargs_str})"
 
-    def _map_field_type(self, field_type: ir.FieldType, kwargs: List[str]) -> str:
+    def _map_field_type(self, field_type: ir.FieldType, kwargs: list[str]) -> str:
         """Map DAZZLE field type to Django field type."""
         kind = field_type.kind
 
@@ -250,11 +248,15 @@ class DjangoAPIBackend(Backend):
         elif kind == ir.FieldTypeKind.ENUM:
             # Generate choices from enum values
             if field_type.enum_values:
-                choices = ", ".join([f'("{val}", "{val.replace("_", " ").title()}")'
-                                    for val in field_type.enum_values])
+                choices = ", ".join(
+                    [
+                        f'("{val}", "{val.replace("_", " ").title()}")'
+                        for val in field_type.enum_values
+                    ]
+                )
                 # Note: choices need to be defined at class level, this is simplified
                 kwargs.insert(0, f"choices=[{choices}]")
-                kwargs.insert(1, f'max_length={max(len(v) for v in field_type.enum_values) + 10}')
+                kwargs.insert(1, f"max_length={max(len(v) for v in field_type.enum_values) + 10}")
             return "models.CharField"
 
         elif kind == ir.FieldTypeKind.REF:
@@ -262,7 +264,7 @@ class DjangoAPIBackend(Backend):
             if field_type.ref_entity:
                 ref_class = self._to_class_name(field_type.ref_entity)
                 kwargs.insert(0, f'"{ref_class}"')
-                kwargs.insert(1, 'on_delete=models.CASCADE')
+                kwargs.insert(1, "on_delete=models.CASCADE")
                 return "models.ForeignKey"
             return "models.IntegerField"
 
@@ -282,7 +284,8 @@ class DjangoAPIBackend(Backend):
             '"""',
             "",
             "from rest_framework import serializers",
-            "from .models import " + ", ".join([self._to_class_name(e.name) for e in appspec.domain.entities]),
+            "from .models import "
+            + ", ".join([self._to_class_name(e.name) for e in appspec.domain.entities]),
             "",
             "",
         ]
@@ -294,7 +297,7 @@ class DjangoAPIBackend(Backend):
 
         serializers_file.write_text("\n".join(lines), encoding="utf-8")
 
-    def _generate_entity_serializer(self, entity: ir.EntitySpec) -> List[str]:
+    def _generate_entity_serializer(self, entity: ir.EntitySpec) -> list[str]:
         """Generate DRF serializer for an entity."""
         class_name = self._to_class_name(entity.name)
         lines = []
@@ -309,9 +312,11 @@ class DjangoAPIBackend(Backend):
         # Add read-only fields for auto fields
         read_only = []
         for field in entity.fields:
-            if (ir.FieldModifier.AUTO_ADD in field.modifiers or
-                ir.FieldModifier.AUTO_UPDATE in field.modifiers or
-                field.is_primary_key):
+            if (
+                ir.FieldModifier.AUTO_ADD in field.modifiers
+                or ir.FieldModifier.AUTO_UPDATE in field.modifiers
+                or field.is_primary_key
+            ):
                 read_only.append(f"'{field.name}'")
 
         if read_only:
@@ -334,15 +339,18 @@ class DjangoAPIBackend(Backend):
             "from rest_framework.response import Response",
             "from django_filters.rest_framework import DjangoFilterBackend",
             "",
-            "from .models import " + ", ".join([self._to_class_name(e.name) for e in appspec.domain.entities]),
-            "from .serializers import " + ", ".join([f"{self._to_class_name(e.name)}Serializer"
-                                                      for e in appspec.domain.entities]),
+            "from .models import "
+            + ", ".join([self._to_class_name(e.name) for e in appspec.domain.entities]),
+            "from .serializers import "
+            + ", ".join(
+                [f"{self._to_class_name(e.name)}Serializer" for e in appspec.domain.entities]
+            ),
             "",
             "",
         ]
 
         # Group surfaces by entity
-        entity_surfaces: Dict[str, List[ir.SurfaceSpec]] = {}
+        entity_surfaces: dict[str, list[ir.SurfaceSpec]] = {}
         for surface in appspec.surfaces:
             if surface.entity_ref:
                 if surface.entity_ref not in entity_surfaces:
@@ -359,8 +367,8 @@ class DjangoAPIBackend(Backend):
         views_file.write_text("\n".join(lines), encoding="utf-8")
 
     def _generate_entity_viewset(
-        self, entity: ir.EntitySpec, surfaces: List[ir.SurfaceSpec], appspec: ir.AppSpec
-    ) -> List[str]:
+        self, entity: ir.EntitySpec, surfaces: list[ir.SurfaceSpec], appspec: ir.AppSpec
+    ) -> list[str]:
         """Generate DRF viewset for an entity."""
         class_name = self._to_class_name(entity.name)
         lines = []
@@ -370,13 +378,19 @@ class DjangoAPIBackend(Backend):
         lines.append("")
         lines.append(f"    queryset = {class_name}.objects.all()")
         lines.append(f"    serializer_class = {class_name}Serializer")
-        lines.append("    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]")
+        lines.append(
+            "    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]"
+        )
 
         # Add filterable fields (all simple fields)
         filterable = []
         searchable = []
         for field in entity.fields:
-            if field.type.kind in [ir.FieldTypeKind.STR, ir.FieldTypeKind.TEXT, ir.FieldTypeKind.EMAIL]:
+            if field.type.kind in [
+                ir.FieldTypeKind.STR,
+                ir.FieldTypeKind.TEXT,
+                ir.FieldTypeKind.EMAIL,
+            ]:
                 searchable.append(field.name)
             if field.type.kind not in [ir.FieldTypeKind.TEXT]:
                 filterable.append(field.name)
@@ -385,7 +399,7 @@ class DjangoAPIBackend(Backend):
             lines.append(f"    filterset_fields = {filterable}")
         if searchable:
             lines.append(f"    search_fields = {searchable}")
-        lines.append(f"    ordering_fields = '__all__'")
+        lines.append("    ordering_fields = '__all__'")
 
         return lines
 
@@ -413,14 +427,18 @@ class DjangoAPIBackend(Backend):
         for entity in appspec.domain.entities:
             class_name = self._to_class_name(entity.name)
             url_prefix = self._to_url_prefix(entity.name)
-            lines.append(f'router.register(r"{url_prefix}", views.{class_name}ViewSet, basename="{entity.name}")')
+            lines.append(
+                f'router.register(r"{url_prefix}", views.{class_name}ViewSet, basename="{entity.name}")'
+            )
 
-        lines.extend([
-            "",
-            "urlpatterns = [",
-            "    path('', include(router.urls)),",
-            "]",
-        ])
+        lines.extend(
+            [
+                "",
+                "urlpatterns = [",
+                "    path('', include(router.urls)),",
+                "]",
+            ]
+        )
 
         urls_file.write_text("\n".join(lines), encoding="utf-8")
 
@@ -679,6 +697,7 @@ if __name__ == '__main__':
         # Make executable on Unix systems
         try:
             import stat
+
             manage_file.chmod(manage_file.stat().st_mode | stat.S_IEXEC)
         except Exception:
             pass  # Windows or permission error
@@ -689,7 +708,7 @@ if __name__ == '__main__':
 
         app_name = appspec.title or appspec.name
 
-        content = f'''# {app_name} - Django REST API
+        content = f"""# {app_name} - Django REST API
 
 Generated by DAZZLE.
 
@@ -750,16 +769,18 @@ The API will be available at: http://localhost:8000/api/
 
 The following resources are available:
 
-'''
+"""
 
         # List endpoints
         for entity in appspec.domain.entities:
             url_prefix = self._to_url_prefix(entity.name)
-            content += f"- `GET/POST /api/{url_prefix}/` - List/Create {entity.title or entity.name}\n"
+            content += (
+                f"- `GET/POST /api/{url_prefix}/` - List/Create {entity.title or entity.name}\n"
+            )
             content += f"- `GET/PUT/PATCH/DELETE /api/{url_prefix}/{{id}}/` - Retrieve/Update/Delete {entity.title or entity.name}\n"
             content += "\n"
 
-        content += '''
+        content += """
 ## Admin Interface
 
 Access the Django admin at: http://localhost:8000/admin/
@@ -826,7 +847,7 @@ This project was generated by DAZZLE and includes LLM context files to help AI a
 4. **Rebuild After Changes**: After modifying DSL files, run `dazzle build` to regenerate this code.
 
 For more information, see the `LLM_CONTEXT.md` file in the project root.
-'''
+"""
 
         readme_file.write_text(content, encoding="utf-8")
 
@@ -834,7 +855,7 @@ For more information, see the `LLM_CONTEXT.md` file in the project root.
         """Generate .gitignore file."""
         gitignore_file = output_dir / ".gitignore"
 
-        content = '''# Python
+        content = """# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -890,7 +911,7 @@ venv.bak/
 .pytest_cache/
 htmlcov/
 .tox/
-'''
+"""
 
         gitignore_file.write_text(content, encoding="utf-8")
 
@@ -904,7 +925,7 @@ htmlcov/
         admin_password = secrets.token_urlsafe(16)
         api_token = secrets.token_urlsafe(32)  # 256-bit token
 
-        content = f'''# API Credentials
+        content = f"""# API Credentials
 # IMPORTANT: DO NOT COMMIT THIS FILE TO VERSION CONTROL
 # This file is automatically added to .gitignore
 
@@ -986,7 +1007,7 @@ PRODUCTION NOTES:
 - Consider using OAuth2 or JWT for production authentication
 
 Generated by DAZZLE on {appspec.name}
-'''
+"""
 
         credentials_file.write_text(content, encoding="utf-8")
 
@@ -1003,7 +1024,7 @@ Generated by DAZZLE on {appspec.name}
         readme_content = readme_file.read_text()
 
         # Add API docs section after "The API will be available at:"
-        api_docs_section = '''
+        api_docs_section = """
 ## API Documentation
 
 **Interactive API Documentation** (Swagger UI):
@@ -1027,12 +1048,12 @@ curl -H "Authorization: Token <your-token>" http://localhost:8000/api/tasks/
 
 See `.api_credentials` for your generated token and setup instructions.
 
-'''
+"""
 
         # Insert after "The API will be available at:" line
         readme_content = readme_content.replace(
-            'The API will be available at: http://localhost:8000/api/',
-            'The API will be available at: http://localhost:8000/api/' + api_docs_section
+            "The API will be available at: http://localhost:8000/api/",
+            "The API will be available at: http://localhost:8000/api/" + api_docs_section,
         )
 
         readme_file.write_text(readme_content, encoding="utf-8")
@@ -1050,9 +1071,9 @@ See `.api_credentials` for your generated token and setup instructions.
     def _to_url_prefix(self, name: str) -> str:
         """Convert entity name to URL prefix."""
         # Convert to plural
-        if name.endswith('y'):
-            return name[:-1] + 'ies'
-        elif name.endswith('s'):
-            return name + 'es'
+        if name.endswith("y"):
+            return name[:-1] + "ies"
+        elif name.endswith("s"):
+            return name + "es"
         else:
-            return name + 's'
+            return name + "s"

@@ -6,48 +6,44 @@ Provides IDE features by analyzing DAZZLE DSL files and using the DAZZLE IR.
 
 import logging
 from pathlib import Path
-from typing import Optional, List
-
-from pygls.lsp.server import LanguageServer
 
 from lsprotocol.types import (
-    TEXT_DOCUMENT_DID_OPEN,
-    TEXT_DOCUMENT_DID_CHANGE,
-    TEXT_DOCUMENT_DID_SAVE,
-    TEXT_DOCUMENT_DID_CLOSE,
     INITIALIZE,
-    TEXT_DOCUMENT_HOVER,
-    TEXT_DOCUMENT_DEFINITION,
     TEXT_DOCUMENT_COMPLETION,
+    TEXT_DOCUMENT_DEFINITION,
+    TEXT_DOCUMENT_DID_CHANGE,
+    TEXT_DOCUMENT_DID_CLOSE,
+    TEXT_DOCUMENT_DID_OPEN,
+    TEXT_DOCUMENT_DID_SAVE,
     TEXT_DOCUMENT_DOCUMENT_SYMBOL,
-    DidOpenTextDocumentParams,
-    DidChangeTextDocumentParams,
-    DidSaveTextDocumentParams,
-    DidCloseTextDocumentParams,
-    InitializeParams,
-    HoverParams,
-    Hover,
-    DefinitionParams,
-    Location,
-    CompletionParams,
-    CompletionList,
+    TEXT_DOCUMENT_HOVER,
     CompletionItem,
     CompletionItemKind,
-    DocumentSymbolParams,
+    CompletionList,
+    CompletionParams,
+    DefinitionParams,
+    DidChangeTextDocumentParams,
+    DidCloseTextDocumentParams,
+    DidOpenTextDocumentParams,
+    DidSaveTextDocumentParams,
     DocumentSymbol,
-    SymbolKind,
-    Range,
-    Position,
+    DocumentSymbolParams,
+    Hover,
+    HoverParams,
+    InitializeParams,
+    Location,
     MarkupContent,
     MarkupKind,
+    Position,
+    Range,
+    SymbolKind,
 )
+from pygls.lsp.server import LanguageServer
 
-from dazzle.core.manifest import load_manifest
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.parser import parse_modules
 from dazzle.core.linker import build_appspec
-from dazzle.core.lint import lint_appspec
-from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -57,7 +53,7 @@ logger = logging.getLogger(__name__)
 server = LanguageServer("dazzle-lsp", "v0.3.0")
 
 # Store workspace state on server
-server.workspace_root: Optional[Path] = None
+server.workspace_root: Path | None = None
 server.appspec = None
 
 
@@ -130,7 +126,7 @@ def did_close(ls: LanguageServer, params: DidCloseTextDocumentParams):
 
 
 @server.feature(TEXT_DOCUMENT_HOVER)
-def hover(ls: LanguageServer, params: HoverParams) -> Optional[Hover]:
+def hover(ls: LanguageServer, params: HoverParams) -> Hover | None:
     """Provide hover information."""
     if not ls.appspec:
         return None
@@ -158,7 +154,7 @@ def hover(ls: LanguageServer, params: HoverParams) -> Optional[Hover]:
 
 
 @server.feature(TEXT_DOCUMENT_DEFINITION)
-def definition(ls: LanguageServer, params: DefinitionParams) -> Optional[Location]:
+def definition(ls: LanguageServer, params: DefinitionParams) -> Location | None:
     """Provide go-to-definition."""
     if not ls.appspec or not ls.workspace_root:
         return None
@@ -186,12 +182,12 @@ def definition(ls: LanguageServer, params: DefinitionParams) -> Optional[Locatio
 
 
 @server.feature(TEXT_DOCUMENT_COMPLETION)
-def completion(ls: LanguageServer, params: CompletionParams) -> Optional[CompletionList]:
+def completion(ls: LanguageServer, params: CompletionParams) -> CompletionList | None:
     """Provide completion suggestions."""
     if not ls.appspec:
         return None
 
-    items: List[CompletionItem] = []
+    items: list[CompletionItem] = []
 
     # Add entity names
     for entity in ls.appspec.domain.entities:
@@ -216,7 +212,20 @@ def completion(ls: LanguageServer, params: CompletionParams) -> Optional[Complet
         )
 
     # Add common field types
-    field_types = ["uuid", "str", "int", "float", "bool", "date", "datetime", "time", "text", "json", "ref", "enum"]
+    field_types = [
+        "uuid",
+        "str",
+        "int",
+        "float",
+        "bool",
+        "date",
+        "datetime",
+        "time",
+        "text",
+        "json",
+        "ref",
+        "enum",
+    ]
     for ft in field_types:
         items.append(
             CompletionItem(
@@ -241,12 +250,12 @@ def completion(ls: LanguageServer, params: CompletionParams) -> Optional[Complet
 
 
 @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
-def document_symbol(ls: LanguageServer, params: DocumentSymbolParams) -> List[DocumentSymbol]:
+def document_symbol(ls: LanguageServer, params: DocumentSymbolParams) -> list[DocumentSymbol]:
     """Provide document symbols for outline view."""
     if not ls.appspec:
         return []
 
-    symbols: List[DocumentSymbol] = []
+    symbols: list[DocumentSymbol] = []
 
     # Add entities
     for entity in ls.appspec.domain.entities:
@@ -264,7 +273,9 @@ def document_symbol(ls: LanguageServer, params: DocumentSymbolParams) -> List[Do
         # Add fields as children
         children = []
         for field in entity.fields:
-            field_range = Range(start=Position(line=0, character=0), end=Position(line=0, character=0))
+            field_range = Range(
+                start=Position(line=0, character=0), end=Position(line=0, character=0)
+            )
             field_symbol = DocumentSymbol(
                 name=field.name,
                 kind=SymbolKind.Field,
@@ -296,7 +307,7 @@ def document_symbol(ls: LanguageServer, params: DocumentSymbolParams) -> List[Do
 # Helper functions
 
 
-def _get_word_at_position(text: str, position: Position) -> Optional[str]:
+def _get_word_at_position(text: str, position: Position) -> str | None:
     """Extract word at cursor position."""
     lines = text.split("\n")
     if position.line >= len(lines):
@@ -328,7 +339,7 @@ def _get_grammar_tips(entity) -> list[str]:
     # Check what features are being used and suggest related ones
     has_enum = any(field.type.enum_values for field in entity.fields)
     has_ref = any(field.type.ref_entity for field in entity.fields)
-    has_index = hasattr(entity, 'indexes') and entity.indexes
+    has_index = hasattr(entity, "indexes") and entity.indexes
 
     # Enum syntax tips
     if has_enum:
@@ -344,15 +355,21 @@ def _get_grammar_tips(entity) -> list[str]:
 
     # Index syntax tips
     if not has_index and len(entity.fields) > 3:
-        tips.append("🔍 **Index syntax**: Add after fields: `index field_name` or `index field1,field2`")
+        tips.append(
+            "🔍 **Index syntax**: Add after fields: `index field_name` or `index field1,field2`"
+        )
         tips.append("   • Single field: `index email`")
         tips.append("   • Composite: `index created_by,status`")
 
     # Field type tips
-    tips.append("📊 **Field types**: `str(max_len)`, `int`, `float(precision,scale)`, `uuid`, `datetime`, `date`, `time`, `bool`, `text`, `json`, `email`")
+    tips.append(
+        "📊 **Field types**: `str(max_len)`, `int`, `float(precision,scale)`, `uuid`, `datetime`, `date`, `time`, `bool`, `text`, `json`, `email`"
+    )
 
     # Modifier tips
-    tips.append("🏷️ **Modifiers**: `required`, `unique`, `optional`, `pk`, `auto_add`, `auto_update`")
+    tips.append(
+        "🏷️ **Modifiers**: `required`, `unique`, `optional`, `pk`, `auto_add`, `auto_update`"
+    )
     tips.append("   • Example: `email: email unique required`")
 
     return tips
@@ -363,20 +380,24 @@ def _analyze_entity(entity) -> list[str]:
     recommendations = []
 
     # Check for missing timestamps
-    has_created_at = any(f.name == 'created_at' for f in entity.fields)
-    has_updated_at = any(f.name == 'updated_at' for f in entity.fields)
+    has_created_at = any(f.name == "created_at" for f in entity.fields)
+    has_updated_at = any(f.name == "updated_at" for f in entity.fields)
 
     if not has_created_at:
-        recommendations.append("⏰ Consider adding `created_at: datetime auto_add` to track record creation")
+        recommendations.append(
+            "⏰ Consider adding `created_at: datetime auto_add` to track record creation"
+        )
     if not has_updated_at:
-        recommendations.append("🔄 Consider adding `updated_at: datetime auto_update` to track modifications")
+        recommendations.append(
+            "🔄 Consider adding `updated_at: datetime auto_update` to track modifications"
+        )
 
     # Check for foreign key indexes
     ref_fields_without_index = []
     indexed_fields = set()
-    if hasattr(entity, 'indexes'):
+    if hasattr(entity, "indexes"):
         for idx in entity.indexes:
-            if hasattr(idx, 'fields'):
+            if hasattr(idx, "fields"):
                 indexed_fields.update(idx.fields)
 
     for field in entity.fields:
@@ -389,22 +410,28 @@ def _analyze_entity(entity) -> list[str]:
 
     # Check for too many fields
     if len(entity.fields) > 15:
-        recommendations.append(f"📊 Entity has {len(entity.fields)} fields - consider splitting into related entities")
+        recommendations.append(
+            f"📊 Entity has {len(entity.fields)} fields - consider splitting into related entities"
+        )
 
     # Check for proper naming
-    snake_case_issues = [f.name for f in entity.fields if '-' in f.name or ' ' in f.name]
+    snake_case_issues = [f.name for f in entity.fields if "-" in f.name or " " in f.name]
     if snake_case_issues:
         recommendations.append("🔤 Use snake_case for field names (avoid hyphens and spaces)")
 
     # Check for unique constraints
     unique_fields = [f.name for f in entity.fields if f.is_unique and not f.is_primary_key]
     if not unique_fields and len(entity.fields) > 3:
-        recommendations.append("⭐ Consider adding unique constraints on identifying fields (e.g., email, code)")
+        recommendations.append(
+            "⭐ Consider adding unique constraints on identifying fields (e.g., email, code)"
+        )
 
     # Check for soft delete pattern
-    has_deleted_at = any(f.name in ('deleted_at', 'archived_at') for f in entity.fields)
+    has_deleted_at = any(f.name in ("deleted_at", "archived_at") for f in entity.fields)
     if not has_deleted_at and len(entity.fields) > 5:
-        recommendations.append("🗑️ Consider soft delete pattern: add `deleted_at: datetime optional` for safer record archival")
+        recommendations.append(
+            "🗑️ Consider soft delete pattern: add `deleted_at: datetime optional` for safer record archival"
+        )
 
     return recommendations
 
@@ -465,9 +492,9 @@ def _format_entity_hover(entity) -> str:
             constraints.append("⭐ Unique")
 
         # Check for auto timestamps
-        if any('auto_add' in str(m) for m in field.modifiers):
+        if any("auto_add" in str(m) for m in field.modifiers):
             constraints.append("📅 Auto-add")
-        if any('auto_update' in str(m) for m in field.modifiers):
+        if any("auto_update" in str(m) for m in field.modifiers):
             constraints.append("🔄 Auto-update")
 
         constraint_str = "<br>".join(constraints) if constraints else "-"
@@ -512,12 +539,12 @@ def _get_surface_grammar_tips(surface) -> list[str]:
     """Provide DAZZLE DSL grammar tips for surfaces."""
     tips = []
 
-    mode = surface.mode.value if hasattr(surface.mode, 'value') else str(surface.mode)
+    mode = surface.mode.value if hasattr(surface.mode, "value") else str(surface.mode)
 
     # Basic surface syntax
     tips.append("📋 **Surface syntax**:")
     tips.append("```")
-    tips.append("surface my_surface \"Title\":")
+    tips.append('surface my_surface "Title":')
     tips.append("  uses entity MyEntity")
     tips.append("  mode: list")
     tips.append("```")
@@ -526,9 +553,9 @@ def _get_surface_grammar_tips(surface) -> list[str]:
     tips.append("")
     tips.append("📦 **Section syntax**:")
     tips.append("```")
-    tips.append("section main \"Main Fields\":")
-    tips.append("  field name \"Name\"")
-    tips.append("  field status \"Status\"")
+    tips.append('section main "Main Fields":')
+    tips.append('  field name "Name"')
+    tips.append('  field status "Status"')
     tips.append("```")
 
     # Action syntax based on mode
@@ -536,23 +563,23 @@ def _get_surface_grammar_tips(surface) -> list[str]:
     tips.append("⚡ **Action syntax**:")
     if mode == "list":
         tips.append("```")
-        tips.append("action create \"New\":")
+        tips.append('action create "New":')
         tips.append("  on click -> surface my_create")
         tips.append("")
-        tips.append("action view \"View\":")
+        tips.append('action view "View":')
         tips.append("  on click -> surface my_detail")
         tips.append("```")
     elif mode == "view":
         tips.append("```")
-        tips.append("action edit \"Edit\":")
+        tips.append('action edit "Edit":')
         tips.append("  on click -> surface my_edit")
         tips.append("")
-        tips.append("action delete \"Delete\":")
+        tips.append('action delete "Delete":')
         tips.append("  on submit -> experience my_flow step confirm")
         tips.append("```")
     else:
         tips.append("```")
-        tips.append("action submit \"Save\":")
+        tips.append('action submit "Save":')
         tips.append("  on submit -> experience my_flow step success")
         tips.append("```")
 
@@ -569,10 +596,10 @@ def _analyze_surface(surface) -> list[str]:
     """Analyze surface and provide recommendations."""
     recommendations = []
 
-    mode = surface.mode.value if hasattr(surface.mode, 'value') else str(surface.mode)
+    mode = surface.mode.value if hasattr(surface.mode, "value") else str(surface.mode)
 
     # Check for missing sections
-    num_sections = len(surface.sections) if hasattr(surface, 'sections') and surface.sections else 0
+    num_sections = len(surface.sections) if hasattr(surface, "sections") and surface.sections else 0
 
     if num_sections == 0:
         recommendations.append("📋 Add sections to organize fields and improve UX")
@@ -580,47 +607,60 @@ def _analyze_surface(surface) -> list[str]:
     # List surface specific advice
     if mode == "list":
         # Check if key identifying fields are present
-        if hasattr(surface, 'sections') and surface.sections:
+        if hasattr(surface, "sections") and surface.sections:
             all_fields = []
             for section in surface.sections:
-                if hasattr(section, 'fields'):
-                    all_fields.extend([f.name for f in section.fields if hasattr(f, 'name')])
+                if hasattr(section, "fields"):
+                    all_fields.extend([f.name for f in section.fields if hasattr(f, "name")])
 
-            if 'id' not in all_fields and len(all_fields) > 0:
-                recommendations.append("🔍 Include an ID or identifier field in list view for better navigation")
+            if "id" not in all_fields and len(all_fields) > 0:
+                recommendations.append(
+                    "🔍 Include an ID or identifier field in list view for better navigation"
+                )
 
-        recommendations.append("🔎 Consider adding filters section for user-friendly data exploration")
+        recommendations.append(
+            "🔎 Consider adding filters section for user-friendly data exploration"
+        )
         recommendations.append("📊 Add pagination for better performance with large datasets")
 
     # Create/Edit surface advice
     elif mode in ("create", "edit"):
-        if num_sections < 2 and hasattr(surface, 'sections'):
+        if num_sections < 2 and hasattr(surface, "sections"):
             # Count total fields
-            total_fields = sum(len(s.fields) if hasattr(s, 'fields') else 0
-                             for s in surface.sections)
+            total_fields = sum(
+                len(s.fields) if hasattr(s, "fields") else 0 for s in surface.sections
+            )
             if total_fields > 5:
-                recommendations.append("📦 Group related fields into multiple sections for better form organization")
+                recommendations.append(
+                    "📦 Group related fields into multiple sections for better form organization"
+                )
 
         recommendations.append("✅ Add validation rules to ensure data quality")
         recommendations.append("💾 Include clear submit/cancel actions")
 
     # View surface advice
     elif mode == "view":
-        has_actions = hasattr(surface, 'actions') and surface.actions and len(surface.actions) > 0
+        has_actions = hasattr(surface, "actions") and surface.actions and len(surface.actions) > 0
 
         if not has_actions:
-            recommendations.append("⚡ Add actions (edit, delete, etc.) to enable user interactions")
+            recommendations.append(
+                "⚡ Add actions (edit, delete, etc.) to enable user interactions"
+            )
 
-        recommendations.append("🔗 Consider adding related record sections (e.g., comments, history)")
+        recommendations.append(
+            "🔗 Consider adding related record sections (e.g., comments, history)"
+        )
 
     # Check for missing entity reference
     if not surface.entity_ref:
         recommendations.append("⚠️ Surface should reference an entity with `uses entity EntityName`")
 
     # Check for actions
-    has_actions = hasattr(surface, 'actions') and surface.actions and len(surface.actions) > 0
+    has_actions = hasattr(surface, "actions") and surface.actions and len(surface.actions) > 0
     if not has_actions and mode != "view":
-        recommendations.append("🎬 Add actions to define user interactions (buttons, forms, navigation)")
+        recommendations.append(
+            "🎬 Add actions to define user interactions (buttons, forms, navigation)"
+        )
 
     return recommendations
 
@@ -650,7 +690,7 @@ def _format_surface_hover(surface) -> str:
         "view": "👁️ Shows details of a single record (read-only)",
         "create": "➕ Form for creating new records",
         "edit": "✏️ Form for editing existing records",
-        "delete": "🗑️ Confirmation for deleting records"
+        "delete": "🗑️ Confirmation for deleting records",
     }
     mode_desc = mode_descriptions.get(mode, "📄 Custom surface mode")
 
@@ -665,12 +705,12 @@ def _format_surface_hover(surface) -> str:
         lines.append("")
 
     # Sections info if available
-    if hasattr(surface, 'sections') and surface.sections:
+    if hasattr(surface, "sections") and surface.sections:
         lines.append("## Sections")
         lines.append("")
         for section in surface.sections[:5]:  # Show first 5 sections
-            section_name = section.name if hasattr(section, 'name') else 'unnamed'
-            section_title = section.title if hasattr(section, 'title') else section_name
+            section_name = section.name if hasattr(section, "name") else "unnamed"
+            section_title = section.title if hasattr(section, "title") else section_name
             lines.append(f"- **{section_title}** (`{section_name}`)")
         if len(surface.sections) > 5:
             lines.append(f"- _(and {len(surface.sections) - 5} more sections)_")
@@ -718,7 +758,7 @@ def _format_surface_hover(surface) -> str:
     return "\n".join(lines)
 
 
-def _find_definition_in_file(file_path: Path, word: str) -> Optional[Location]:
+def _find_definition_in_file(file_path: Path, word: str) -> Location | None:
     """Find definition of word in a DSL file."""
     try:
         content = file_path.read_text()

@@ -5,10 +5,9 @@ Generates HTML templates for Django views.
 """
 
 from pathlib import Path
-from typing import List
 
-from ...base import Generator, GeneratorResult
 from ....core import ir
+from ...base import Generator, GeneratorResult
 
 
 class TemplatesGenerator(Generator):
@@ -69,7 +68,7 @@ class TemplatesGenerator(Generator):
         # Generate navigation links
         nav_links = self._generate_nav_links()
 
-        return f'''{{% load static %}}
+        return f"""{{% load static %}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -106,7 +105,7 @@ class TemplatesGenerator(Generator):
     </footer>
 </body>
 </html>
-'''
+"""
 
     def _generate_nav_links(self) -> str:
         """Generate navigation links for entities and system routes."""
@@ -116,21 +115,25 @@ class TemplatesGenerator(Generator):
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             label = entity.title or entity.name
-            lines.append(f'                <li><a href="{{% url \'{entity_lower}-list\' %}}">{label}s</a></li>')
+            lines.append(
+                f"                <li><a href=\"{{% url '{entity_lower}-list' %}}\">{label}s</a></li>"
+            )
 
         # Add system route: Admin interface
         if lines:  # Only add separator if we have entity links
-            lines.append('                <li style="border-left: 1px solid #ddd; margin-left: 10px; padding-left: 20px;"><a href="/admin/">Admin</a></li>')
+            lines.append(
+                '                <li style="border-left: 1px solid #ddd; margin-left: 10px; padding-left: 20px;"><a href="/admin/">Admin</a></li>'
+            )
         else:
             lines.append('                <li><a href="/admin/">Admin</a></li>')
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _generate_home_template(self) -> str:
         """Generate home.html template."""
         entity_cards = self._generate_entity_cards()
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 {{% load static %}}
 
 {{% block title %}}{self.spec.name} - Home{{% endblock %}}
@@ -155,7 +158,7 @@ class TemplatesGenerator(Generator):
     </div>
 </div>
 {{% endblock %}}
-'''
+"""
 
     def _generate_entity_cards(self) -> str:
         """Generate entity cards for home page."""
@@ -163,15 +166,15 @@ class TemplatesGenerator(Generator):
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             label = entity.title or entity.name
-            cards.append(f'''        <div class="card">
+            cards.append(f"""        <div class="card">
             <h2>{label}s</h2>
             <p>Manage {label.lower()}s in the system.</p>
             <a href="{{% url '{entity_lower}-list' %}}" class="btn">View {label}s</a>
             <a href="{{% url '{entity_lower}-create' %}}" class="btn btn-secondary">Create New</a>
-        </div>''')
-        return '\n'.join(cards)
+        </div>""")
+        return "\n".join(cards)
 
-    def _generate_entity_templates(self, entity: ir.EntitySpec, templates_dir: Path) -> List[Path]:
+    def _generate_entity_templates(self, entity: ir.EntitySpec, templates_dir: Path) -> list[Path]:
         """Generate all templates for an entity."""
         created_files = []
         entity_lower = entity.name.lower()
@@ -208,9 +211,13 @@ class TemplatesGenerator(Generator):
         label = entity.title or entity.name
 
         # Get display fields (first 5 fields)
-        display_fields = [f for f in entity.fields[:5]]
-        table_headers = '\n'.join(f'                <th>{f.name.replace("_", " ").title()}</th>' for f in display_fields)
-        table_cells = '\n'.join(f'                <td>{{{{ {entity_lower}.{f.name} }}}}</td>' for f in display_fields)
+        display_fields = list(entity.fields[:5])
+        table_headers = "\n".join(
+            f"                <th>{f.name.replace('_', ' ').title()}</th>" for f in display_fields
+        )
+        table_cells = "\n".join(
+            f"                <td>{{{{ {entity_lower}.{f.name} }}}}</td>" for f in display_fields
+        )
 
         return f'''{{% extends "base.html" %}}
 
@@ -271,12 +278,12 @@ class TemplatesGenerator(Generator):
         label = entity.title or entity.name
 
         # Generate field display
-        field_rows = '\n'.join(
-            f'        <tr>\n            <th>{f.name.replace("_", " ").title()}</th>\n            <td>{{{{ {entity_lower}.{f.name} }}}}</td>\n        </tr>'
+        field_rows = "\n".join(
+            f"        <tr>\n            <th>{f.name.replace('_', ' ').title()}</th>\n            <td>{{{{ {entity_lower}.{f.name} }}}}</td>\n        </tr>"
             for f in entity.fields
         )
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 
 {{% block title %}}{label} Details{{% endblock %}}
 
@@ -295,14 +302,14 @@ class TemplatesGenerator(Generator):
     </div>
 </div>
 {{% endblock %}}
-'''
+"""
 
     def _generate_form_template(self, entity: ir.EntitySpec) -> str:
         """Generate form template for create and edit."""
         entity_lower = entity.name.lower()
         label = entity.title or entity.name
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 
 {{% block title %}}{label} Form{{% endblock %}}
 
@@ -328,14 +335,14 @@ class TemplatesGenerator(Generator):
     </form>
 </div>
 {{% endblock %}}
-'''
+"""
 
     def _generate_delete_template(self, entity: ir.EntitySpec) -> str:
         """Generate delete confirmation template."""
         entity_lower = entity.name.lower()
         label = entity.title or entity.name
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 
 {{% block title %}}Delete {label}{{% endblock %}}
 
@@ -352,4 +359,4 @@ class TemplatesGenerator(Generator):
     </form>
 </div>
 {{% endblock %}}
-'''
+"""

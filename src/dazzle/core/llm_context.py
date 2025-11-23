@@ -5,10 +5,9 @@ Generates context files that help LLMs understand DAZZLE-generated projects.
 """
 
 from pathlib import Path
-from typing import Optional
 
 
-def generate_llm_context_md(project_name: str, stack_name: Optional[str] = None) -> str:
+def generate_llm_context_md(project_name: str, stack_name: str | None = None) -> str:
     """Generate root LLM_CONTEXT.md content."""
     stack_info = f"\nThis project uses the `{stack_name}` stack." if stack_name else ""
 
@@ -344,7 +343,7 @@ cat build/django_api/api/models.py
 """
 
 
-def generate_claude_project_context(project_name: str, stack_name: Optional[str] = None) -> str:
+def generate_claude_project_context(project_name: str, stack_name: str | None = None) -> str:
     """Generate .claude/PROJECT_CONTEXT.md content."""
     stack_info = f"**Stack**: `{stack_name}`\n\n" if stack_name else ""
 
@@ -588,7 +587,7 @@ class User(models.Model):
 def create_llm_instrumentation(
     project_dir: Path,
     project_name: str,
-    stack_name: Optional[str] = None,
+    stack_name: str | None = None,
 ) -> None:
     """
     Create all LLM context files in a project directory.
@@ -600,36 +599,27 @@ def create_llm_instrumentation(
     """
     # Create root LLM_CONTEXT.md
     (project_dir / "LLM_CONTEXT.md").write_text(
-        generate_llm_context_md(project_name, stack_name),
-        encoding="utf-8"
+        generate_llm_context_md(project_name, stack_name), encoding="utf-8"
     )
 
     # Create .llm/ directory and DAZZLE_PRIMER.md
     llm_dir = project_dir / ".llm"
     llm_dir.mkdir(exist_ok=True)
-    (llm_dir / "DAZZLE_PRIMER.md").write_text(
-        generate_dazzle_primer(),
-        encoding="utf-8"
-    )
+    (llm_dir / "DAZZLE_PRIMER.md").write_text(generate_dazzle_primer(), encoding="utf-8")
 
     # Create .claude/ directory and files
     claude_dir = project_dir / ".claude"
     claude_dir.mkdir(exist_ok=True)
     (claude_dir / "PROJECT_CONTEXT.md").write_text(
-        generate_claude_project_context(project_name, stack_name),
-        encoding="utf-8"
+        generate_claude_project_context(project_name, stack_name), encoding="utf-8"
     )
-    (claude_dir / "permissions.json").write_text(
-        generate_claude_permissions(),
-        encoding="utf-8"
-    )
+    (claude_dir / "permissions.json").write_text(generate_claude_permissions(), encoding="utf-8")
 
     # Create .copilot/ directory and CONTEXT.md
     copilot_dir = project_dir / ".copilot"
     copilot_dir.mkdir(exist_ok=True)
     (copilot_dir / "CONTEXT.md").write_text(
-        generate_copilot_context(project_name),
-        encoding="utf-8"
+        generate_copilot_context(project_name), encoding="utf-8"
     )
 
 

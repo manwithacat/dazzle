@@ -14,25 +14,28 @@ and deployment configurations.
 """
 
 from pathlib import Path
-from typing import List
 
-from ..base import ModularBackend, Generator
 from ...core import ir
-from ...core.errors import BackendError
-
+from ..base import Generator, ModularBackend
 from .generators import (
-    ModelsGenerator, AdminGenerator, FormsGenerator,
-    ViewsGenerator, UrlsGenerator, TemplatesGenerator,
-    StaticGenerator, SettingsGenerator, DeploymentGenerator,
-    TestGenerator
+    AdminGenerator,
+    DeploymentGenerator,
+    FormsGenerator,
+    ModelsGenerator,
+    SettingsGenerator,
+    StaticGenerator,
+    TemplatesGenerator,
+    TestGenerator,
+    UrlsGenerator,
+    ViewsGenerator,
 )
 from .hooks import (
-    CreateSuperuserCredentialsHook,
-    SetupUvEnvironmentHook,
     CreateMigrationsHook,
-    RunMigrationsHook,
+    CreateSuperuserCredentialsHook,
     CreateSuperuserHook,
     DisplayDjangoInstructionsHook,
+    RunMigrationsHook,
+    SetupUvEnvironmentHook,
 )
 
 
@@ -56,13 +59,13 @@ class DjangoMicroModularBackend(ModularBackend):
         """Register pre/post-build hooks."""
         # Post-build hooks (order matters!)
         self.add_post_build_hook(CreateSuperuserCredentialsHook())  # 1. Generate credentials
-        self.add_post_build_hook(SetupUvEnvironmentHook())          # 2. Create venv & install deps
-        self.add_post_build_hook(CreateMigrationsHook())            # 3. Generate migration files
-        self.add_post_build_hook(RunMigrationsHook())               # 4. Apply migrations
-        self.add_post_build_hook(CreateSuperuserHook())             # 5. Create superuser
-        self.add_post_build_hook(DisplayDjangoInstructionsHook())   # 6. Show instructions
+        self.add_post_build_hook(SetupUvEnvironmentHook())  # 2. Create venv & install deps
+        self.add_post_build_hook(CreateMigrationsHook())  # 3. Generate migration files
+        self.add_post_build_hook(RunMigrationsHook())  # 4. Apply migrations
+        self.add_post_build_hook(CreateSuperuserHook())  # 5. Create superuser
+        self.add_post_build_hook(DisplayDjangoInstructionsHook())  # 6. Show instructions
 
-    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> List[Generator]:
+    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> list[Generator]:
         """
         Get list of generators to run.
 
@@ -109,8 +112,8 @@ class DjangoMicroModularBackend(ModularBackend):
         # Add normalized project name/path to options for hooks to use
         project_name = self._get_project_name(appspec)
         project_path = output_dir / project_name
-        options['project_name'] = project_name
-        options['project_path'] = project_path
+        options["project_name"] = project_name
+        options["project_path"] = project_path
 
         # Run the full modular generate workflow
         super().generate(appspec, output_dir, **options)
@@ -157,12 +160,14 @@ class AppConfig(AppConfig):
         name = spec.name.lower().replace(" ", "_").replace("-", "_")
         # Remove any non-alphanumeric characters except underscore
         import re
-        name = re.sub(r'[^\w]', '', name)
+
+        name = re.sub(r"[^\w]", "", name)
         return name or "app"
 
     def get_capabilities(self):
         """Return backend capabilities."""
         from .. import BackendCapabilities
+
         return BackendCapabilities(
             name="django_micro_modular",
             description="Django Micro - Complete Django application with modular architecture (Production Ready)",

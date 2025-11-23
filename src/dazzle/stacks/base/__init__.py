@@ -7,9 +7,9 @@ Provides:
 - Common utilities
 """
 
-from .hooks import Hook, HookContext, HookResult, HookPhase
-from .generator import Generator, GeneratorResult
 from .backend import ModularBackend
+from .generator import Generator, GeneratorResult
+from .hooks import Hook, HookContext, HookPhase, HookResult
 
 __all__ = [
     "Hook",

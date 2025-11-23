@@ -9,10 +9,9 @@ Tracks:
 
 import hashlib
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict
 
 from . import ir
 from .errors import DazzleError
@@ -20,6 +19,7 @@ from .errors import DazzleError
 
 class StateError(DazzleError):
     """Raised when state operations fail."""
+
     pass
 
 
@@ -30,11 +30,12 @@ class BuildState:
 
     Used to detect changes and enable incremental updates.
     """
+
     timestamp: str  # ISO format datetime
     backend: str
     output_dir: str
-    dsl_file_hashes: Dict[str, str]  # {relative_path: sha256_hash}
-    appspec_snapshot: Optional[Dict] = None  # Simplified AppSpec for diffing
+    dsl_file_hashes: dict[str, str]  # {relative_path: sha256_hash}
+    appspec_snapshot: dict | None = None  # Simplified AppSpec for diffing
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dict."""
@@ -69,7 +70,7 @@ def compute_file_hash(file_path: Path) -> str:
         raise StateError(f"Failed to hash file {file_path}: {e}") from e
 
 
-def compute_dsl_hashes(dsl_files: list[Path], root: Path) -> Dict[str, str]:
+def compute_dsl_hashes(dsl_files: list[Path], root: Path) -> dict[str, str]:
     """
     Compute hashes for all DSL files.
 
@@ -175,7 +176,7 @@ def get_state_file_path(project_root: Path) -> Path:
     return project_root / ".dazzle" / "state.json"
 
 
-def load_state(project_root: Path) -> Optional[BuildState]:
+def load_state(project_root: Path) -> BuildState | None:
     """
     Load previous build state.
 
@@ -194,7 +195,7 @@ def load_state(project_root: Path) -> Optional[BuildState]:
         return None
 
     try:
-        with open(state_file, "r", encoding="utf-8") as f:
+        with open(state_file, encoding="utf-8") as f:
             data = json.load(f)
         return BuildState.from_dict(data)
     except Exception as e:

@@ -9,14 +9,12 @@ Extends the base Backend class to add:
 """
 
 from pathlib import Path
-from typing import List, Optional
 
-from .. import Backend
 from ...core import ir
 from ...core.errors import BackendError
-
-from .hooks import Hook, HookContext, HookManager, HookPhase, HookResult
+from .. import Backend
 from .generator import Generator, GeneratorResult
+from .hooks import Hook, HookContext, HookManager, HookPhase, HookResult
 
 
 class ModularBackend(Backend):
@@ -66,7 +64,7 @@ class ModularBackend(Backend):
         hook.phase = HookPhase.POST_BUILD
         self.hook_manager.register(hook)
 
-    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> List[Generator]:
+    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options) -> list[Generator]:
         """
         Get the list of generators to run.
 
@@ -107,7 +105,7 @@ class ModularBackend(Backend):
             output_dir=output_dir,
             backend_name=self.__class__.__name__,
             options=options,
-            artifacts={}
+            artifacts={},
         )
 
         # Phase 1: Pre-build hooks
@@ -136,21 +134,17 @@ class ModularBackend(Backend):
         # Store artifacts for inspection
         self.artifacts = context.artifacts
 
-    def _run_pre_build_hooks(self, context: HookContext) -> List[HookResult]:
+    def _run_pre_build_hooks(self, context: HookContext) -> list[HookResult]:
         """Run pre-build hooks."""
         return self.hook_manager.run_phase(HookPhase.PRE_BUILD, context)
 
-    def _run_post_build_hooks(self, context: HookContext) -> List[HookResult]:
+    def _run_post_build_hooks(self, context: HookContext) -> list[HookResult]:
         """Run post-build hooks."""
         return self.hook_manager.run_phase(HookPhase.POST_BUILD, context)
 
     def _run_generators(
-        self,
-        spec: ir.AppSpec,
-        output_dir: Path,
-        context: HookContext,
-        **options
-    ) -> List[GeneratorResult]:
+        self, spec: ir.AppSpec, output_dir: Path, context: HookContext, **options
+    ) -> list[GeneratorResult]:
         """Run all generators."""
         results = []
         generators = self.get_generators(spec, output_dir, **options)
@@ -166,16 +160,14 @@ class ModularBackend(Backend):
         return results
 
     def _collect_generator_artifacts(
-        self,
-        results: List[GeneratorResult],
-        context: HookContext
+        self, results: list[GeneratorResult], context: HookContext
     ) -> None:
         """Collect artifacts from generators into context."""
         for result in results:
             for key, value in result.artifacts.items():
                 context.add_artifact(key, value)
 
-    def _display_hook_results(self, phase: str, results: List[HookResult]) -> None:
+    def _display_hook_results(self, phase: str, results: list[HookResult]) -> None:
         """Display hook results to user."""
         if not results:
             return

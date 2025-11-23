@@ -1,18 +1,16 @@
-from typing import List, Tuple
-
 from . import ir
 from .validator import (
+    extended_lint,
     validate_entities,
-    validate_surfaces,
     validate_experiences,
-    validate_services,
     validate_foreign_models,
     validate_integrations,
-    extended_lint,
+    validate_services,
+    validate_surfaces,
 )
 
 
-def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> Tuple[List[str], List[str]]:
+def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str], list[str]]:
     """
     Validate AppSpec for semantic errors and warnings.
 
@@ -38,8 +36,8 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> Tuple[List[str]
         - errors: List of error messages that must be fixed
         - warnings: List of warnings that should be addressed
     """
-    all_errors: List[str] = []
-    all_warnings: List[str] = []
+    all_errors: list[str] = []
+    all_warnings: list[str] = []
 
     # Basic check
     if not appspec.domain.entities and not appspec.surfaces:

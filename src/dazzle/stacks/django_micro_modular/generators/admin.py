@@ -6,8 +6,8 @@ Generates Django admin.py configuration.
 
 from pathlib import Path
 
-from ...base import Generator, GeneratorResult
 from ....core import ir
+from ...base import Generator, GeneratorResult
 
 
 class AdminGenerator(Generator):
@@ -52,38 +52,38 @@ class AdminGenerator(Generator):
         """Build complete admin.py content."""
         lines = [
             '"""',
-            'Django admin configuration generated from DAZZLE DSL.',
+            "Django admin configuration generated from DAZZLE DSL.",
             '"""',
-            'from django.contrib import admin',
+            "from django.contrib import admin",
         ]
 
         # Handle no entities case
         if not self.spec.domain.entities:
-            lines.append('')
-            lines.append('# No entities defined')
-            lines.append('')
-            return '\n'.join(lines)
+            lines.append("")
+            lines.append("# No entities defined")
+            lines.append("")
+            return "\n".join(lines)
 
         # Import models
-        lines.append('from .models import (')
+        lines.append("from .models import (")
         for entity in self.spec.domain.entities:
-            lines.append(f'    {entity.name},')
-        lines.append(')')
-        lines.append('')
-        lines.append('')
+            lines.append(f"    {entity.name},")
+        lines.append(")")
+        lines.append("")
+        lines.append("")
 
         # Register models with customized admin
         for entity in self.spec.domain.entities:
             lines.append(self._generate_admin_class(entity))
-            lines.append('')
+            lines.append("")
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _generate_admin_class(self, entity: ir.EntitySpec) -> str:
         """Generate ModelAdmin class for entity."""
         lines = [
-            f'@admin.register({entity.name})',
-            f'class {entity.name}Admin(admin.ModelAdmin):',
+            f"@admin.register({entity.name})",
+            f"class {entity.name}Admin(admin.ModelAdmin):",
             f'    """{entity.title or entity.name} admin."""',
         ]
 
@@ -95,80 +95,80 @@ class AdminGenerator(Generator):
 
         # Add is_deleted indicator for soft delete pattern
         if has_soft_delete:
-            list_display_fields.append('is_deleted')
+            list_display_fields.append("is_deleted")
 
         if list_display_fields:
-            fields_str = ', '.join(f'"{f}"' for f in list_display_fields)
+            fields_str = ", ".join(f'"{f}"' for f in list_display_fields)
             # Add trailing comma for single-item tuples
             if len(list_display_fields) == 1:
-                lines.append(f'    list_display = ({fields_str},)')
+                lines.append(f"    list_display = ({fields_str},)")
             else:
-                lines.append(f'    list_display = ({fields_str})')
+                lines.append(f"    list_display = ({fields_str})")
 
         # Search fields (text fields only)
         search_fields = self._get_search_fields(entity)
         if search_fields:
-            fields_str = ', '.join(f'"{f}"' for f in search_fields)
+            fields_str = ", ".join(f'"{f}"' for f in search_fields)
             # Add trailing comma for single-item tuples
             if len(search_fields) == 1:
-                lines.append(f'    search_fields = ({fields_str},)')
+                lines.append(f"    search_fields = ({fields_str},)")
             else:
-                lines.append(f'    search_fields = ({fields_str})')
+                lines.append(f"    search_fields = ({fields_str})")
 
         # List filters (choice fields, booleans, dates)
         list_filter = self._get_list_filter_fields(entity)
         if list_filter:
-            fields_str = ', '.join(f'"{f}"' for f in list_filter)
+            fields_str = ", ".join(f'"{f}"' for f in list_filter)
             # Add trailing comma for single-item tuples
             if len(list_filter) == 1:
-                lines.append(f'    list_filter = ({fields_str},)')
+                lines.append(f"    list_filter = ({fields_str},)")
             else:
-                lines.append(f'    list_filter = ({fields_str})')
+                lines.append(f"    list_filter = ({fields_str})")
 
         # Read-only fields (auto-generated)
         readonly_fields = self._get_readonly_fields(entity)
         if readonly_fields:
-            fields_str = ', '.join(f'"{f}"' for f in readonly_fields)
+            fields_str = ", ".join(f'"{f}"' for f in readonly_fields)
             # Add trailing comma for single-item tuples
             if len(readonly_fields) == 1:
-                lines.append(f'    readonly_fields = ({fields_str},)')
+                lines.append(f"    readonly_fields = ({fields_str},)")
             else:
-                lines.append(f'    readonly_fields = ({fields_str})')
+                lines.append(f"    readonly_fields = ({fields_str})")
 
         # Add soft delete support if pattern detected
         if has_soft_delete:
-            lines.append(f'    actions = ["restore_deleted"]')
-            lines.append('')
-            lines.append('    def get_queryset(self, request):')
+            lines.append('    actions = ["restore_deleted"]')
+            lines.append("")
+            lines.append("    def get_queryset(self, request):")
             lines.append('        """Show all records including deleted in admin."""')
-            lines.append(f'        return {entity.name}.all_objects.all()')
-            lines.append('')
-            lines.append('    def is_deleted(self, obj):')
+            lines.append(f"        return {entity.name}.all_objects.all()")
+            lines.append("")
+            lines.append("    def is_deleted(self, obj):")
             lines.append('        """Display deleted status as boolean indicator."""')
-            lines.append('        return obj.deleted_at is not None')
-            lines.append('    is_deleted.boolean = True')
+            lines.append("        return obj.deleted_at is not None")
+            lines.append("    is_deleted.boolean = True")
             lines.append('    is_deleted.short_description = "Deleted"')
-            lines.append('')
-            lines.append('    def restore_deleted(self, request, queryset):')
+            lines.append("")
+            lines.append("    def restore_deleted(self, request, queryset):")
             lines.append('        """Restore soft-deleted records."""')
-            lines.append('        count = 0')
-            lines.append('        for obj in queryset:')
-            lines.append('            if obj.deleted_at is not None:')
-            lines.append('                obj.deleted_at = None')
-            lines.append('                obj.deleted_by = None')
-            lines.append('                obj.save()')
-            lines.append('                count += 1')
+            lines.append("        count = 0")
+            lines.append("        for obj in queryset:")
+            lines.append("            if obj.deleted_at is not None:")
+            lines.append("                obj.deleted_at = None")
+            lines.append("                obj.deleted_by = None")
+            lines.append("                obj.save()")
+            lines.append("                count += 1")
             lines.append('        self.message_user(request, f"{count} record(s) restored.")')
             lines.append('    restore_deleted.short_description = "Restore selected deleted items"')
 
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     def _get_list_display_fields(self, entity: ir.EntitySpec) -> list:
         """Get fields to display in list view."""
         fields = []
 
         # Add up to 5 most important fields
-        priority_fields = ['id', 'name', 'title', 'email', 'status', 'created_at']
+        priority_fields = ["id", "name", "title", "email", "status", "created_at"]
 
         for field_name in priority_fields:
             field = next((f for f in entity.fields if f.name == field_name), None)
@@ -190,7 +190,11 @@ class AdminGenerator(Generator):
         search_fields = []
 
         for field in entity.fields:
-            if field.type.kind in [ir.FieldTypeKind.STR, ir.FieldTypeKind.TEXT, ir.FieldTypeKind.EMAIL]:
+            if field.type.kind in [
+                ir.FieldTypeKind.STR,
+                ir.FieldTypeKind.TEXT,
+                ir.FieldTypeKind.EMAIL,
+            ]:
                 search_fields.append(field.name)
 
         return search_fields
@@ -201,7 +205,12 @@ class AdminGenerator(Generator):
 
         for field in entity.fields:
             # ENUMs, booleans, and dates make good filters
-            if field.type.kind in [ir.FieldTypeKind.ENUM, ir.FieldTypeKind.BOOL, ir.FieldTypeKind.DATE, ir.FieldTypeKind.DATETIME]:
+            if field.type.kind in [
+                ir.FieldTypeKind.ENUM,
+                ir.FieldTypeKind.BOOL,
+                ir.FieldTypeKind.DATE,
+                ir.FieldTypeKind.DATETIME,
+            ]:
                 filter_fields.append(field.name)
 
         return filter_fields
@@ -212,7 +221,10 @@ class AdminGenerator(Generator):
 
         for field in entity.fields:
             # Auto-generated fields should be read-only
-            if ir.FieldModifier.AUTO_ADD in field.modifiers or ir.FieldModifier.AUTO_UPDATE in field.modifiers:
+            if (
+                ir.FieldModifier.AUTO_ADD in field.modifiers
+                or ir.FieldModifier.AUTO_UPDATE in field.modifiers
+            ):
                 readonly.append(field.name)
             # UUID fields are typically auto-generated
             elif field.type.kind == ir.FieldTypeKind.UUID:
@@ -228,6 +240,6 @@ class AdminGenerator(Generator):
         This field is created by vocabulary expansion of @use soft_delete_behavior().
         """
         for field in entity.fields:
-            if field.name == 'deleted_at' and field.type.kind == ir.FieldTypeKind.DATETIME:
+            if field.name == "deleted_at" and field.type.kind == ir.FieldTypeKind.DATETIME:
                 return True
         return False

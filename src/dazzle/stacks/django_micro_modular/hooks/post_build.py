@@ -12,9 +12,9 @@ Runs after code generation to:
 import secrets
 import subprocess
 import sys
-from pathlib import Path
 
-from ...base import Hook, HookContext, HookResult, HookPhase
+from ....core import ir
+from ...base import Hook, HookContext, HookPhase, HookResult
 
 
 class CreateSuperuserCredentialsHook(Hook):
@@ -57,20 +57,20 @@ Or for automatic setup (development only):
 """
 
         # Write credentials file using normalized project path
-        project_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        project_path = context.options.get("project_path") or context.output_dir / context.spec.name
         creds_file = project_path / ".admin_credentials"
         creds_file.write_text(creds_content)
 
         return HookResult(
             success=True,
-            message=f"Admin credentials saved to .admin_credentials",
+            message="Admin credentials saved to .admin_credentials",
             artifacts={
                 "admin_username": username,
                 "admin_password": password,
                 "admin_email": email,
                 "credentials_file": str(creds_file),
             },
-            display_to_user=True
+            display_to_user=True,
         )
 
 
@@ -88,13 +88,13 @@ class DisplayDjangoInstructionsHook(Hook):
     def execute(self, context: HookContext) -> HookResult:
         """Display instructions."""
         # Use normalized project path
-        output_path = context.options.get('project_path') or context.output_dir / context.spec.name
-        app_name = context.options.get('project_name', context.spec.name)
+        output_path = context.options.get("project_path") or context.output_dir / context.spec.name
+        app_name = context.options.get("project_name", context.spec.name)
 
         instructions = f"""
-{'=' * 60}
+{"=" * 60}
 🎉 Django Micro Application Built Successfully!
-{'=' * 60}
+{"=" * 60}
 
 Application: {app_name}
 Location: {output_path}
@@ -135,7 +135,7 @@ This app includes configs for:
 - Railway: Works out of the box
 - PythonAnywhere: See README.md for setup
 
-{'=' * 60}
+{"=" * 60}
 """
 
         print(instructions)
@@ -143,7 +143,7 @@ This app includes configs for:
         return HookResult(
             success=True,
             message="Setup instructions displayed",
-            display_to_user=False  # Already printed
+            display_to_user=False,  # Already printed
         )
 
 
@@ -161,18 +161,13 @@ class SetupUvEnvironmentHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Setup virtual environment and install dependencies."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
-        requirements_path = app_path / "requirements.txt"
+        app_path / "requirements.txt"
 
         # Check if UV is available
         try:
-            subprocess.run(
-                ["uv", "--version"],
-                capture_output=True,
-                check=True,
-                timeout=5
-            )
+            subprocess.run(["uv", "--version"], capture_output=True, check=True, timeout=5)
             has_uv = True
         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
             has_uv = False
@@ -185,7 +180,7 @@ class SetupUvEnvironmentHook(Hook):
                     cwd=app_path,
                     check=True,
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
 
                 # Install dependencies with UV
@@ -195,7 +190,7 @@ class SetupUvEnvironmentHook(Hook):
                     env={**subprocess.os.environ, "VIRTUAL_ENV": str(venv_path)},
                     check=True,
                     capture_output=True,
-                    timeout=120
+                    timeout=120,
                 )
 
                 message = "✓ Virtual environment created with UV and dependencies installed"
@@ -206,7 +201,7 @@ class SetupUvEnvironmentHook(Hook):
                     cwd=app_path,
                     check=True,
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
 
                 # Determine pip path based on OS
@@ -220,35 +215,35 @@ class SetupUvEnvironmentHook(Hook):
                     cwd=app_path,
                     check=True,
                     capture_output=True,
-                    timeout=120
+                    timeout=120,
                 )
 
-                message = "✓ Virtual environment created with standard venv and dependencies installed"
+                message = (
+                    "✓ Virtual environment created with standard venv and dependencies installed"
+                )
 
             return HookResult(
                 success=True,
                 message=message,
                 artifacts={"venv_path": str(venv_path), "used_uv": has_uv},
-                display_to_user=True
+                display_to_user=True,
             )
 
         except subprocess.TimeoutExpired:
             return HookResult(
-                success=False,
-                message="⚠ Virtual environment setup timed out",
-                display_to_user=True
+                success=False, message="⚠ Virtual environment setup timed out", display_to_user=True
             )
         except subprocess.CalledProcessError as e:
             return HookResult(
                 success=False,
                 message=f"⚠ Failed to setup virtual environment: {e}",
-                display_to_user=True
+                display_to_user=True,
             )
         except Exception as e:
             return HookResult(
                 success=False,
                 message=f"⚠ Error during virtual environment setup: {e}",
-                display_to_user=True
+                display_to_user=True,
             )
 
 
@@ -266,7 +261,7 @@ class CreateMigrationsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Generate Django migration files."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -280,7 +275,7 @@ class CreateMigrationsHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Virtual environment not found, skipping migration creation",
-                display_to_user=True
+                display_to_user=True,
             )
 
         try:
@@ -291,7 +286,7 @@ class CreateMigrationsHook(Hook):
                 capture_output=True,
                 text=True,
                 timeout=30,
-                check=True
+                check=True,
             )
 
             # Check if migrations were created
@@ -300,33 +295,29 @@ class CreateMigrationsHook(Hook):
                     success=True,
                     message="✓ No new migrations needed",
                     artifacts={"makemigrations_output": result.stdout},
-                    display_to_user=True
+                    display_to_user=True,
                 )
             else:
                 return HookResult(
                     success=True,
                     message="✓ Migration files created successfully",
                     artifacts={"makemigrations_output": result.stdout},
-                    display_to_user=True
+                    display_to_user=True,
                 )
 
         except subprocess.TimeoutExpired:
             return HookResult(
-                success=False,
-                message="⚠ Migration creation timed out",
-                display_to_user=True
+                success=False, message="⚠ Migration creation timed out", display_to_user=True
             )
         except subprocess.CalledProcessError as e:
             return HookResult(
                 success=False,
                 message=f"⚠ Migration creation failed: {e.stderr}",
-                display_to_user=True
+                display_to_user=True,
             )
         except Exception as e:
             return HookResult(
-                success=False,
-                message=f"⚠ Error creating migrations: {e}",
-                display_to_user=True
+                success=False, message=f"⚠ Error creating migrations: {e}", display_to_user=True
             )
 
 
@@ -343,7 +334,7 @@ class RunMigrationsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Run Django migrations."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -357,7 +348,7 @@ class RunMigrationsHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Virtual environment not found, skipping migrations",
-                display_to_user=True
+                display_to_user=True,
             )
 
         try:
@@ -368,33 +359,25 @@ class RunMigrationsHook(Hook):
                 capture_output=True,
                 text=True,
                 timeout=60,
-                check=True
+                check=True,
             )
 
             return HookResult(
                 success=True,
                 message="✓ Database migrations completed successfully",
                 artifacts={"migrations_output": result.stdout},
-                display_to_user=True
+                display_to_user=True,
             )
 
         except subprocess.TimeoutExpired:
-            return HookResult(
-                success=False,
-                message="⚠ Migrations timed out",
-                display_to_user=True
-            )
+            return HookResult(success=False, message="⚠ Migrations timed out", display_to_user=True)
         except subprocess.CalledProcessError as e:
             return HookResult(
-                success=False,
-                message=f"⚠ Migrations failed: {e.stderr}",
-                display_to_user=True
+                success=False, message=f"⚠ Migrations failed: {e.stderr}", display_to_user=True
             )
         except Exception as e:
             return HookResult(
-                success=False,
-                message=f"⚠ Error running migrations: {e}",
-                display_to_user=True
+                success=False, message=f"⚠ Error running migrations: {e}", display_to_user=True
             )
 
 
@@ -412,7 +395,7 @@ class CreateSuperuserHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Create Django superuser."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -426,7 +409,7 @@ class CreateSuperuserHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Virtual environment not found, skipping superuser creation",
-                display_to_user=True
+                display_to_user=True,
             )
 
         # Get credentials from previous hook
@@ -435,7 +418,7 @@ class CreateSuperuserHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Admin credentials not found, skipping superuser creation",
-                display_to_user=True
+                display_to_user=True,
             )
 
         username = creds_hook_result.get("admin_username", "admin")
@@ -446,7 +429,7 @@ class CreateSuperuserHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Admin password not found, skipping superuser creation",
-                display_to_user=True
+                display_to_user=True,
             )
 
         try:
@@ -458,26 +441,24 @@ class CreateSuperuserHook(Hook):
                 f"User.objects.create_superuser('{username}', '{email}', '{password}')"
             )
 
-            result = subprocess.run(
+            subprocess.run(
                 [str(python_path), "manage.py", "shell", "-c", create_user_cmd],
                 cwd=app_path,
                 capture_output=True,
                 text=True,
                 timeout=30,
-                check=True
+                check=True,
             )
 
             return HookResult(
                 success=True,
                 message=f"✓ Admin superuser created: {username} (see .admin_credentials for password)",
-                display_to_user=True
+                display_to_user=True,
             )
 
         except subprocess.TimeoutExpired:
             return HookResult(
-                success=False,
-                message="⚠ Superuser creation timed out",
-                display_to_user=True
+                success=False, message="⚠ Superuser creation timed out", display_to_user=True
             )
         except subprocess.CalledProcessError as e:
             # Check if user already exists
@@ -485,18 +466,16 @@ class CreateSuperuserHook(Hook):
                 return HookResult(
                     success=True,
                     message=f"✓ Admin superuser already exists: {username}",
-                    display_to_user=True
+                    display_to_user=True,
                 )
             return HookResult(
                 success=False,
                 message=f"⚠ Failed to create superuser: {e.stderr}",
-                display_to_user=True
+                display_to_user=True,
             )
         except Exception as e:
             return HookResult(
-                success=False,
-                message=f"⚠ Error creating superuser: {e}",
-                display_to_user=True
+                success=False, message=f"⚠ Error creating superuser: {e}", display_to_user=True
             )
 
 
@@ -519,7 +498,7 @@ class RunTestsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Run Django tests."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -533,7 +512,7 @@ class RunTestsHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Virtual environment not found, skipping tests",
-                display_to_user=True
+                display_to_user=True,
             )
 
         try:
@@ -544,14 +523,14 @@ class RunTestsHook(Hook):
                 capture_output=True,
                 text=True,
                 timeout=300,  # 5 minute timeout
-                check=True
+                check=True,
             )
 
             # Count test results
             output = result.stdout + result.stderr
             tests_run = 0
-            for line in output.split('\n'):
-                if 'Ran ' in line and ' test' in line:
+            for line in output.split("\n"):
+                if "Ran " in line and " test" in line:
                     # Extract number of tests from "Ran 42 tests in 1.234s"
                     parts = line.split()
                     if len(parts) >= 2:
@@ -564,14 +543,14 @@ class RunTestsHook(Hook):
                 success=True,
                 message=f"✓ All tests passed ({tests_run} tests)",
                 artifacts={"test_output": output, "tests_run": tests_run},
-                display_to_user=True
+                display_to_user=True,
             )
 
         except subprocess.TimeoutExpired:
             return HookResult(
                 success=False,
                 message="⚠ Tests timed out (exceeded 5 minutes)",
-                display_to_user=True
+                display_to_user=True,
             )
         except subprocess.CalledProcessError as e:
             # Tests failed
@@ -579,13 +558,11 @@ class RunTestsHook(Hook):
                 success=False,
                 message=f"⚠ Tests failed\n{e.stdout}\n{e.stderr}",
                 artifacts={"test_output": e.stdout + e.stderr},
-                display_to_user=True
+                display_to_user=True,
             )
         except Exception as e:
             return HookResult(
-                success=False,
-                message=f"⚠ Error running tests: {e}",
-                display_to_user=True
+                success=False, message=f"⚠ Error running tests: {e}", display_to_user=True
             )
 
 
@@ -607,7 +584,7 @@ class ValidateEndpointsHook(Hook):
 
     def execute(self, context: HookContext) -> HookResult:
         """Validate all endpoints."""
-        app_path = context.options.get('project_path') or context.output_dir / context.spec.name
+        app_path = context.options.get("project_path") or context.output_dir / context.spec.name
         venv_path = app_path / ".venv"
 
         # Determine python path based on OS
@@ -621,7 +598,7 @@ class ValidateEndpointsHook(Hook):
             return HookResult(
                 success=False,
                 message="⚠ Virtual environment not found, skipping endpoint validation",
-                display_to_user=True
+                display_to_user=True,
             )
 
         # Build list of URLs to test
@@ -638,9 +615,7 @@ class ValidateEndpointsHook(Hook):
 
         if not urls_to_test:
             return HookResult(
-                success=True,
-                message="✓ No endpoints to validate",
-                display_to_user=True
+                success=True, message="✓ No endpoints to validate", display_to_user=True
             )
 
         try:
@@ -650,15 +625,17 @@ class ValidateEndpointsHook(Hook):
                 cwd=app_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             # Wait for server to start
             import time
+
             time.sleep(3)
 
             # Test each URL
             import urllib.request
+
             failed_urls = []
             for url_path, description in urls_to_test:
                 try:
@@ -677,16 +654,12 @@ class ValidateEndpointsHook(Hook):
                 failure_msg = "⚠ Some endpoints failed:\n"
                 for url, desc, error in failed_urls:
                     failure_msg += f"  - {url} ({desc}): {error}\n"
-                return HookResult(
-                    success=False,
-                    message=failure_msg,
-                    display_to_user=True
-                )
+                return HookResult(success=False, message=failure_msg, display_to_user=True)
 
             return HookResult(
                 success=True,
                 message=f"✓ All {len(urls_to_test)} endpoints validated successfully",
-                display_to_user=True
+                display_to_user=True,
             )
 
         except Exception as e:
@@ -694,11 +667,9 @@ class ValidateEndpointsHook(Hook):
             try:
                 server_process.terminate()
                 server_process.wait(timeout=5)
-            except:
+            except Exception:
                 pass
 
             return HookResult(
-                success=False,
-                message=f"⚠ Error validating endpoints: {e}",
-                display_to_user=True
+                success=False, message=f"⚠ Error validating endpoints: {e}", display_to_user=True
             )

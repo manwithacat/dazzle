@@ -8,13 +8,13 @@ Handles indentation-based blocks (Python-style) with INDENT/DEDENT tokens.
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
 
 from .errors import make_parse_error
 
 
 class TokenType(Enum):
     """Token types in the DAZZLE DSL."""
+
     # Literals
     IDENTIFIER = "IDENTIFIER"
     STRING = "STRING"
@@ -116,18 +116,74 @@ class TokenType(Enum):
 
 # Keywords mapping
 KEYWORDS = {
-    "module", "use", "as", "app", "entity", "surface", "experience",
-    "service", "foreign_model", "integration", "from", "uses", "mode",
-    "section", "field", "action", "step", "kind", "start", "at", "on",
-    "when", "call", "with", "map", "response", "into", "match", "sync",
-    "schedule", "spec", "auth_profile", "owner", "key", "constraint",
-    "unique", "index", "url", "inline", "submitted",
+    "module",
+    "use",
+    "as",
+    "app",
+    "entity",
+    "surface",
+    "experience",
+    "service",
+    "foreign_model",
+    "integration",
+    "from",
+    "uses",
+    "mode",
+    "section",
+    "field",
+    "action",
+    "step",
+    "kind",
+    "start",
+    "at",
+    "on",
+    "when",
+    "call",
+    "with",
+    "map",
+    "response",
+    "into",
+    "match",
+    "sync",
+    "schedule",
+    "spec",
+    "auth_profile",
+    "owner",
+    "key",
+    "constraint",
+    "unique",
+    "index",
+    "url",
+    "inline",
+    "submitted",
     # Integration keywords
-    "operation", "mapping", "rules", "scheduled", "event_driven", "foreign",
+    "operation",
+    "mapping",
+    "rules",
+    "scheduled",
+    "event_driven",
+    "foreign",
     # Test DSL keywords
-    "test", "setup", "data", "expect", "status", "created", "filter",
-    "search", "order_by", "count", "error_message", "first", "last",
-    "query", "create", "update", "delete", "get", "true", "false",
+    "test",
+    "setup",
+    "data",
+    "expect",
+    "status",
+    "created",
+    "filter",
+    "search",
+    "order_by",
+    "count",
+    "error_message",
+    "first",
+    "last",
+    "query",
+    "create",
+    "update",
+    "delete",
+    "get",
+    "true",
+    "false",
 }
 
 
@@ -142,6 +198,7 @@ class Token:
         line: Line number (1-indexed)
         column: Column number (1-indexed)
     """
+
     type: TokenType
     value: str
     line: int
@@ -171,16 +228,16 @@ class Lexer:
         self.pos = 0
         self.line = 1
         self.column = 1
-        self.tokens: List[Token] = []
+        self.tokens: list[Token] = []
         self.indent_stack = [0]  # Stack of indentation levels
 
-    def current_char(self) -> Optional[str]:
+    def current_char(self) -> str | None:
         """Get current character or None if at end."""
         if self.pos >= len(self.text):
             return None
         return self.text[self.pos]
 
-    def peek_char(self, offset: int = 1) -> Optional[str]:
+    def peek_char(self, offset: int = 1) -> str | None:
         """Peek ahead at character."""
         pos = self.pos + offset
         if pos >= len(self.text):
@@ -190,7 +247,7 @@ class Lexer:
     def advance(self) -> None:
         """Move to next character, updating line/column."""
         if self.pos < len(self.text):
-            if self.text[self.pos] == '\n':
+            if self.text[self.pos] == "\n":
                 self.line += 1
                 self.column = 1
             else:
@@ -199,13 +256,15 @@ class Lexer:
 
     def skip_whitespace(self, skip_newlines: bool = False) -> None:
         """Skip whitespace characters."""
-        while self.current_char() in (' ', '\t', '\r') or (skip_newlines and self.current_char() == '\n'):
+        while self.current_char() in (" ", "\t", "\r") or (
+            skip_newlines and self.current_char() == "\n"
+        ):
             self.advance()
 
     def skip_comment(self) -> None:
         """Skip comment (from # to end of line)."""
-        if self.current_char() == '#':
-            while self.current_char() and self.current_char() != '\n':
+        if self.current_char() == "#":
+            while self.current_char() and self.current_char() != "\n":
                 self.advance()
 
     def read_string(self) -> str:
@@ -217,20 +276,20 @@ class Lexer:
 
         chars = []
         while self.current_char() and self.current_char() != quote:
-            if self.current_char() == '\\':
+            if self.current_char() == "\\":
                 self.advance()
                 # Handle escape sequences
                 escape_char = self.current_char()
-                if escape_char == 'n':
-                    chars.append('\n')
-                elif escape_char == 't':
-                    chars.append('\t')
-                elif escape_char == '\\':
-                    chars.append('\\')
+                if escape_char == "n":
+                    chars.append("\n")
+                elif escape_char == "t":
+                    chars.append("\t")
+                elif escape_char == "\\":
+                    chars.append("\\")
                 elif escape_char == quote:
                     chars.append(quote)
                 else:
-                    chars.append(escape_char or '')
+                    chars.append(escape_char or "")
                 self.advance()
             else:
                 chars.append(self.current_char())
@@ -238,30 +297,30 @@ class Lexer:
 
         if self.current_char() != quote:
             raise make_parse_error(
-                f"Unterminated string literal",
+                "Unterminated string literal",
                 self.file,
                 start_line,
                 start_col,
             )
 
         self.advance()  # skip closing quote
-        return ''.join(chars)
+        return "".join(chars)
 
     def read_number(self) -> str:
         """Read a number (integer or decimal)."""
         chars = []
-        while self.current_char() and (self.current_char().isdigit() or self.current_char() == '.'):
+        while self.current_char() and (self.current_char().isdigit() or self.current_char() == "."):
             chars.append(self.current_char())
             self.advance()
-        return ''.join(chars)
+        return "".join(chars)
 
     def read_identifier(self) -> str:
         """Read an identifier or keyword."""
         chars = []
-        while self.current_char() and (self.current_char().isalnum() or self.current_char() == '_'):
+        while self.current_char() and (self.current_char().isalnum() or self.current_char() == "_"):
             chars.append(self.current_char())
             self.advance()
-        return ''.join(chars)
+        return "".join(chars)
 
     def handle_indentation(self, indent_level: int) -> None:
         """Generate INDENT/DEDENT tokens based on indentation level."""
@@ -284,7 +343,7 @@ class Lexer:
                     1,
                 )
 
-    def tokenize(self) -> List[Token]:
+    def tokenize(self) -> list[Token]:
         """
         Tokenize the entire source text.
 
@@ -300,18 +359,18 @@ class Lexer:
             # Handle line start (indentation)
             if at_line_start:
                 indent_level = 0
-                while self.current_char() in (' ', '\t'):
-                    if self.current_char() == ' ':
+                while self.current_char() in (" ", "\t"):
+                    if self.current_char() == " ":
                         indent_level += 1
-                    elif self.current_char() == '\t':
+                    elif self.current_char() == "\t":
                         indent_level += 4  # Treat tab as 4 spaces
                     self.advance()
 
                 # Skip blank lines and comments
-                if self.current_char() in ('\n', '#'):
-                    if self.current_char() == '#':
+                if self.current_char() in ("\n", "#"):
+                    if self.current_char() == "#":
                         self.skip_comment()
-                    if self.current_char() == '\n':
+                    if self.current_char() == "\n":
                         self.tokens.append(Token(TokenType.NEWLINE, "\\n", self.line, self.column))
                         self.advance()
                     continue
@@ -334,12 +393,12 @@ class Lexer:
             token_col = self.column
 
             # Comments
-            if ch == '#':
+            if ch == "#":
                 self.skip_comment()
                 continue
 
             # Newlines
-            elif ch == '\n':
+            elif ch == "\n":
                 self.tokens.append(Token(TokenType.NEWLINE, "\\n", token_line, token_col))
                 self.advance()
                 at_line_start = True
@@ -355,7 +414,7 @@ class Lexer:
                 self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
 
             # Identifiers and keywords
-            elif ch.isalpha() or ch == '_':
+            elif ch.isalpha() or ch == "_":
                 value = self.read_identifier()
                 if value in KEYWORDS:
                     token_type = TokenType(value)
@@ -364,48 +423,48 @@ class Lexer:
                 self.tokens.append(Token(token_type, value, token_line, token_col))
 
             # Operators
-            elif ch == ':':
+            elif ch == ":":
                 self.advance()
                 self.tokens.append(Token(TokenType.COLON, ":", token_line, token_col))
 
-            elif ch == ',':
+            elif ch == ",":
                 self.advance()
                 self.tokens.append(Token(TokenType.COMMA, ",", token_line, token_col))
 
-            elif ch == '(':
+            elif ch == "(":
                 self.advance()
                 self.tokens.append(Token(TokenType.LPAREN, "(", token_line, token_col))
 
-            elif ch == ')':
+            elif ch == ")":
                 self.advance()
                 self.tokens.append(Token(TokenType.RPAREN, ")", token_line, token_col))
 
-            elif ch == '[':
+            elif ch == "[":
                 self.advance()
                 self.tokens.append(Token(TokenType.LBRACKET, "[", token_line, token_col))
 
-            elif ch == ']':
+            elif ch == "]":
                 self.advance()
                 self.tokens.append(Token(TokenType.RBRACKET, "]", token_line, token_col))
 
-            elif ch == '=':
+            elif ch == "=":
                 self.advance()
                 self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
 
-            elif ch == '.':
+            elif ch == ".":
                 self.advance()
                 self.tokens.append(Token(TokenType.DOT, ".", token_line, token_col))
 
-            elif ch == '?':
+            elif ch == "?":
                 self.advance()
                 self.tokens.append(Token(TokenType.QUESTION, "?", token_line, token_col))
 
-            elif ch == '/':
+            elif ch == "/":
                 self.advance()
                 self.tokens.append(Token(TokenType.SLASH, "/", token_line, token_col))
 
-            elif ch == '-':
-                if self.peek_char() == '>':
+            elif ch == "-":
+                if self.peek_char() == ">":
                     self.advance()
                     self.advance()
                     self.tokens.append(Token(TokenType.ARROW, "->", token_line, token_col))
@@ -417,9 +476,9 @@ class Lexer:
                         token_col,
                     )
 
-            elif ch == '<':
-                if self.peek_char() == '-':
-                    if self.peek_char(2) == '>':
+            elif ch == "<":
+                if self.peek_char() == "-":
+                    if self.peek_char(2) == ">":
                         self.advance()
                         self.advance()
                         self.advance()
@@ -455,7 +514,7 @@ class Lexer:
         return self.tokens
 
 
-def tokenize(text: str, file: Path) -> List[Token]:
+def tokenize(text: str, file: Path) -> list[Token]:
     """
     Convenience function to tokenize DSL text.
 

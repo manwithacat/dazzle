@@ -2,19 +2,18 @@
 Tests for LLM models (Pydantic data structures).
 """
 
-import pytest
 from dazzle.llm.models import (
-    SpecAnalysis,
-    StateMachine,
-    StateTransition,
-    ImpliedTransition,
-    CRUDAnalysis,
-    CRUDOperation,
     BusinessRule,
     BusinessRuleType,
+    CRUDAnalysis,
+    CRUDOperation,
+    ImpliedTransition,
     Question,
     QuestionCategory,
     QuestionPriority,
+    SpecAnalysis,
+    StateMachine,
+    StateTransition,
 )
 
 

@@ -6,7 +6,6 @@ what needs to be regenerated.
 """
 
 from dataclasses import dataclass
-from typing import Optional, Set
 
 from . import ir
 from .state import BuildState, simplify_appspec
@@ -19,30 +18,31 @@ class ChangeSet:
 
     Used to determine what needs to be regenerated.
     """
+
     # Files changed
-    dsl_files_added: Set[str]
-    dsl_files_removed: Set[str]
-    dsl_files_modified: Set[str]
+    dsl_files_added: set[str]
+    dsl_files_removed: set[str]
+    dsl_files_modified: set[str]
 
     # Entities
-    entities_added: Set[str]
-    entities_removed: Set[str]
-    entities_modified: Set[str]  # Field changes
+    entities_added: set[str]
+    entities_removed: set[str]
+    entities_modified: set[str]  # Field changes
 
     # Surfaces
-    surfaces_added: Set[str]
-    surfaces_removed: Set[str]
-    surfaces_modified: Set[str]  # Mode or field changes
+    surfaces_added: set[str]
+    surfaces_removed: set[str]
+    surfaces_modified: set[str]  # Mode or field changes
 
     # Services
-    services_added: Set[str]
-    services_removed: Set[str]
-    services_modified: Set[str]
+    services_added: set[str]
+    services_removed: set[str]
+    services_modified: set[str]
 
     # Experiences
-    experiences_added: Set[str]
-    experiences_removed: Set[str]
-    experiences_modified: Set[str]
+    experiences_added: set[str]
+    experiences_removed: set[str]
+    experiences_modified: set[str]
 
     # App-level changes
     app_modified: bool  # Title or ID changed
@@ -77,11 +77,7 @@ class ChangeSet:
         - Entities removed (affects dependent surfaces)
         - Major structural changes
         """
-        return (
-            self.app_modified
-            or bool(self.entities_removed)
-            or bool(self.dsl_files_removed)
-        )
+        return self.app_modified or bool(self.entities_removed) or bool(self.dsl_files_removed)
 
     def summary(self) -> str:
         """Generate human-readable summary of changes."""
@@ -98,11 +94,17 @@ class ChangeSet:
             lines.append(f"  DSL Files: ~{len(self.dsl_files_modified)}")
 
         if self.entities_added:
-            lines.append(f"  Entities: +{len(self.entities_added)} ({', '.join(sorted(self.entities_added))})")
+            lines.append(
+                f"  Entities: +{len(self.entities_added)} ({', '.join(sorted(self.entities_added))})"
+            )
         if self.entities_removed:
-            lines.append(f"  Entities: -{len(self.entities_removed)} ({', '.join(sorted(self.entities_removed))})")
+            lines.append(
+                f"  Entities: -{len(self.entities_removed)} ({', '.join(sorted(self.entities_removed))})"
+            )
         if self.entities_modified:
-            lines.append(f"  Entities: ~{len(self.entities_modified)} ({', '.join(sorted(self.entities_modified))})")
+            lines.append(
+                f"  Entities: ~{len(self.entities_modified)} ({', '.join(sorted(self.entities_modified))})"
+            )
 
         if self.surfaces_added:
             lines.append(f"  Surfaces: +{len(self.surfaces_added)}")

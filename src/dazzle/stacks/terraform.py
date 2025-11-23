@@ -6,13 +6,12 @@ Supports AWS initially, with extensibility for GCP and Azure.
 """
 
 from pathlib import Path
-from typing import List
 
-from . import Backend, BackendCapabilities
 from ..core import ir
 from ..core.errors import BackendError
-from ..core.manifest import TerraformConfig
 from ..core.infra_analyzer import InfraRequirements, analyze_infra_requirements
+from ..core.manifest import TerraformConfig
+from . import Backend, BackendCapabilities
 
 
 class TerraformStack(Backend):
@@ -33,7 +32,7 @@ class TerraformStack(Backend):
         appspec: ir.AppSpec,
         output_dir: Path,
         terraform_config: TerraformConfig = None,
-        **options
+        **options,
     ) -> None:
         """
         Generate Terraform infrastructure.
@@ -120,7 +119,7 @@ class TerraformStack(Backend):
         network_dir.mkdir(parents=True, exist_ok=True)
 
         if config.cloud_provider == "aws":
-            main_tf = '''# Network module - VPC and subnets
+            main_tf = """# Network module - VPC and subnets
 
 variable "environment" {
   description = "Environment name"
@@ -213,7 +212,7 @@ output "public_subnet_ids" {
 output "private_subnet_ids" {
   value = aws_subnet.private[*].id
 }
-'''
+"""
             (network_dir / "main.tf").write_text(main_tf)
 
     def _generate_app_module(
@@ -397,7 +396,7 @@ output "service_name" {{
         db_dir.mkdir(parents=True, exist_ok=True)
 
         if config.cloud_provider == "aws":
-            main_tf = '''# Database module - RDS PostgreSQL
+            main_tf = """# Database module - RDS PostgreSQL
 
 variable "environment" {
   description = "Environment name"
@@ -494,7 +493,7 @@ output "endpoint" {
 output "database_name" {
   value = aws_db_instance.main.db_name
 }
-'''
+"""
             (db_dir / "main.tf").write_text(main_tf)
 
     def _generate_cache_module(self, modules_dir: Path, config: TerraformConfig) -> None:
@@ -503,7 +502,7 @@ output "database_name" {
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         if config.cloud_provider == "aws":
-            main_tf = '''# Cache module - ElastiCache Redis
+            main_tf = """# Cache module - ElastiCache Redis
 
 variable "environment" {
   description = "Environment name"
@@ -574,7 +573,7 @@ output "endpoint" {
 output "port" {
   value = aws_elasticache_cluster.redis.port
 }
-'''
+"""
             (cache_dir / "main.tf").write_text(main_tf)
 
     def _generate_environments(
@@ -634,49 +633,57 @@ module "app" {{
   environment_variables = {{'''
 
         if requirements.needs_database:
-            main_tf += '''
+            main_tf += """
     DATABASE_HOST = module.db.endpoint
-    DATABASE_NAME = module.db.database_name'''
+    DATABASE_NAME = module.db.database_name"""
 
         if requirements.needs_cache or requirements.needs_queue:
-            main_tf += '''
+            main_tf += """
     REDIS_HOST = module.cache.endpoint
-    REDIS_PORT = tostring(module.cache.port)'''
+    REDIS_PORT = tostring(module.cache.port)"""
 
-        main_tf += '''
+        main_tf += """
   }
 }
-'''
+"""
 
         if requirements.needs_database:
-            main_tf += '''
+            main_tf += (
+                '''
 # Database
 module "db" {
   source      = "../../modules/db"
-  environment = "''' + env_name + '''"
+  environment = "'''
+                + env_name
+                + """"
   vpc_id      = module.network.vpc_id
   subnet_ids  = module.network.private_subnet_ids
   db_name     = var.db_name
   db_username = var.db_username
   db_password = var.db_password
 }
-'''
+"""
+            )
 
         if requirements.needs_cache or requirements.needs_queue:
-            main_tf += '''
+            main_tf += (
+                '''
 # Cache
 module "cache" {
   source      = "../../modules/cache"
-  environment = "''' + env_name + '''"
+  environment = "'''
+                + env_name
+                + """"
   vpc_id      = module.network.vpc_id
   subnet_ids  = module.network.private_subnet_ids
 }
-'''
+"""
+            )
 
         (env_dir / "main.tf").write_text(main_tf)
 
         # variables.tf
-        variables_tf = '''variable "aws_region" {
+        variables_tf = """variable "aws_region" {
   description = "AWS region"
   type        = string
   default     = "us-east-1"
@@ -686,10 +693,10 @@ variable "container_image" {
   description = "Docker image for application"
   type        = string
 }
-'''
+"""
 
         if requirements.needs_database:
-            variables_tf += '''
+            variables_tf += """
 variable "db_name" {
   description = "Database name"
   type        = string
@@ -705,15 +712,15 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
-'''
+"""
 
         (env_dir / "variables.tf").write_text(variables_tf)
 
         # terraform.tfvars (example)
-        tfvars = f'''# Example terraform.tfvars for {env_name}
+        tfvars = f"""# Example terraform.tfvars for {env_name}
 aws_region      = "us-east-1"
 container_image = "your-registry/{appspec.name}:latest"
-'''
+"""
 
         if requirements.needs_database:
             tfvars += f'''db_name     = "{appspec.name}_{env_name}"
@@ -746,7 +753,7 @@ terraform {{
         requirements: InfraRequirements,
     ) -> None:
         """Generate README with Terraform usage instructions."""
-        readme_content = f'''# Terraform Infrastructure for {appspec.title or appspec.name}
+        readme_content = f"""# Terraform Infrastructure for {appspec.title or appspec.name}
 
 Generated by DAZZLE infrastructure backend for {config.cloud_provider.upper()}.
 
@@ -757,24 +764,24 @@ terraform/
 ├── modules/          # Reusable Terraform modules
 │   ├── network/      # VPC, subnets, security groups
 │   ├── app/          # ECS/compute resources
-'''
+"""
 
         if requirements.needs_database:
-            readme_content += '''│   ├── db/           # RDS PostgreSQL
-'''
+            readme_content += """│   ├── db/           # RDS PostgreSQL
+"""
 
         if requirements.needs_cache or requirements.needs_queue:
-            readme_content += '''│   ├── cache/        # ElastiCache Redis
-'''
+            readme_content += """│   ├── cache/        # ElastiCache Redis
+"""
 
-        readme_content += f'''└── envs/            # Per-environment configurations
-'''
+        readme_content += """└── envs/            # Per-environment configurations
+"""
 
         for env in config.environments:
-            readme_content += f'''    ├── {env}/
-'''
+            readme_content += f"""    ├── {env}/
+"""
 
-        readme_content += '''
+        readme_content += """
 ## Prerequisites
 
 1. Terraform >= 1.0
@@ -876,9 +883,9 @@ terraform destroy
 ---
 
 Generated by DAZZLE Terraform backend
-'''
+"""
 
         (output_dir / "README.md").write_text(readme_content)
 
 
-__all__ = ["TerraformBackend"]
+__all__ = ["TerraformStack"]

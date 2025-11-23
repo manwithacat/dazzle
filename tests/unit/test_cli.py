@@ -1,10 +1,9 @@
 """Tests for CLI commands."""
 
+from pathlib import Path
+
 import pytest
 from typer.testing import CliRunner
-from pathlib import Path
-import tempfile
-import shutil
 
 from dazzle.cli import app
 
@@ -21,7 +20,7 @@ def test_project(tmp_path: Path):
     # Create project structure
     dsl_dir = tmp_path / "dsl"
     dsl_dir.mkdir()
-    
+
     # Create a simple DSL file
     dsl_file = dsl_dir / "test.dsl"
     dsl_file.write_text("""
@@ -33,16 +32,16 @@ entity Task "Task":
   id: uuid pk
   title: str(200) required
   status: enum[todo,done]=todo
-  
+
 surface task_list "Tasks":
   uses entity Task
   mode: list
-  
+
   section main "Tasks":
     field title "Title"
     field status "Status"
 """)
-    
+
     # Create dazzle.toml
     manifest = tmp_path / "dazzle.toml"
     manifest.write_text("""
@@ -54,16 +53,13 @@ root = "testapp"
 [modules]
 paths = ["./dsl"]
 """)
-    
+
     return tmp_path
 
 
 def test_validate_command_success(cli_runner: CliRunner, test_project: Path):
     """Test validate command with valid DSL."""
-    result = cli_runner.invoke(
-        app,
-        ["validate", "--manifest", str(test_project / "dazzle.toml")]
-    )
+    result = cli_runner.invoke(app, ["validate", "--manifest", str(test_project / "dazzle.toml")])
     assert result.exit_code == 0
     assert "OK: spec is valid" in result.stdout
 
@@ -73,7 +69,7 @@ def test_validate_command_with_errors(cli_runner: CliRunner, tmp_path: Path):
     # Create project with invalid DSL (surface references non-existent field)
     dsl_dir = tmp_path / "dsl"
     dsl_dir.mkdir()
-    
+
     dsl_file = dsl_dir / "test.dsl"
     dsl_file.write_text("""
 module testapp
@@ -102,21 +98,15 @@ root = "testapp"
 [modules]
 paths = ["./dsl"]
 """)
-    
-    result = cli_runner.invoke(
-        app,
-        ["validate", "--manifest", str(manifest)]
-    )
+
+    result = cli_runner.invoke(app, ["validate", "--manifest", str(manifest)])
     assert result.exit_code == 1
     assert "ERROR" in result.stdout
 
 
 def test_lint_command(cli_runner: CliRunner, test_project: Path):
     """Test lint command."""
-    result = cli_runner.invoke(
-        app,
-        ["lint", "--manifest", str(test_project / "dazzle.toml")]
-    )
+    result = cli_runner.invoke(app, ["lint", "--manifest", str(test_project / "dazzle.toml")])
     # Should pass (may have warnings but no errors)
     assert result.exit_code == 0 or "WARNING" in result.stdout
 
@@ -131,20 +121,23 @@ def test_backends_command(cli_runner: CliRunner):
 def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path):
     """Test build command generates output."""
     output_dir = tmp_path / "output"
-    
+
     result = cli_runner.invoke(
         app,
         [
             "build",
-            "--manifest", str(test_project / "dazzle.toml"),
-            "--backend", "openapi",
-            "--out", str(output_dir),
-        ]
+            "--manifest",
+            str(test_project / "dazzle.toml"),
+            "--backend",
+            "openapi",
+            "--out",
+            str(output_dir),
+        ],
     )
-    
+
     assert result.exit_code == 0
     assert "Build complete" in result.stdout
-    
+
     # Check output file was created
     assert (output_dir / "openapi.yaml").exists()
 
@@ -155,10 +148,13 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
         app,
         [
             "build",
-            "--manifest", str(test_project / "dazzle.toml"),
-            "--backend", "nonexistent",
-            "--out", "/tmp/output",
-        ]
+            "--manifest",
+            str(test_project / "dazzle.toml"),
+            "--backend",
+            "nonexistent",
+            "--out",
+            "/tmp/output",
+        ],
     )
 
     assert result.exit_code == 1
@@ -167,10 +163,7 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
 
 def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
     """Test inspect command with default options (interfaces and patterns)."""
-    result = cli_runner.invoke(
-        app,
-        ["inspect", "--manifest", str(test_project / "dazzle.toml")]
-    )
+    result = cli_runner.invoke(app, ["inspect", "--manifest", str(test_project / "dazzle.toml")])
 
     assert result.exit_code == 0
     # Should show module interfaces
@@ -182,8 +175,7 @@ def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
 def test_inspect_command_interfaces_only(cli_runner: CliRunner, test_project: Path):
     """Test inspect command with --no-patterns flag."""
     result = cli_runner.invoke(
-        app,
-        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-patterns"]
+        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-patterns"]
     )
 
     assert result.exit_code == 0
@@ -193,8 +185,7 @@ def test_inspect_command_interfaces_only(cli_runner: CliRunner, test_project: Pa
 def test_inspect_command_patterns_only(cli_runner: CliRunner, test_project: Path):
     """Test inspect command with --no-interfaces flag."""
     result = cli_runner.invoke(
-        app,
-        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-interfaces"]
+        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-interfaces"]
     )
 
     assert result.exit_code == 0
@@ -204,8 +195,7 @@ def test_inspect_command_patterns_only(cli_runner: CliRunner, test_project: Path
 def test_inspect_command_type_catalog(cli_runner: CliRunner, test_project: Path):
     """Test inspect command with --types flag."""
     result = cli_runner.invoke(
-        app,
-        ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--types"]
+        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--types"]
     )
 
     assert result.exit_code == 0

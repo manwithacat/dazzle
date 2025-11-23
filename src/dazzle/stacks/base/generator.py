@@ -17,7 +17,7 @@ Each generator focuses on one aspect, making them easier to:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ...core import ir
 
@@ -33,10 +33,11 @@ class GeneratorResult:
         errors: Any non-fatal errors encountered
         warnings: Any warnings to display to user
     """
-    files_created: List[Path] = field(default_factory=list)
-    artifacts: Dict[str, Any] = field(default_factory=dict)
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+
+    files_created: list[Path] = field(default_factory=list)
+    artifacts: dict[str, Any] = field(default_factory=dict)
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def success(self) -> bool:
@@ -59,7 +60,7 @@ class GeneratorResult:
         """Record a warning."""
         self.warnings.append(warning)
 
-    def merge(self, other: 'GeneratorResult') -> None:
+    def merge(self, other: "GeneratorResult") -> None:
         """Merge another result into this one."""
         self.files_created.extend(other.files_created)
         self.artifacts.update(other.artifacts)
@@ -140,7 +141,7 @@ class CompositeGenerator(Generator):
     """
 
     @abstractmethod
-    def get_generators(self) -> List[Generator]:
+    def get_generators(self) -> list[Generator]:
         """
         Get the list of sub-generators to run.
 

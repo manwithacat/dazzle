@@ -1,15 +1,14 @@
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
-
-import tomllib
 
 
 @dataclass
 class DockerConfig:
     """Docker infrastructure configuration."""
+
     variant: str = "compose"  # "compose" or "dockerfile"
-    image_name: Optional[str] = None
+    image_name: str | None = None
     base_image: str = "python:3.11-slim"
     port: int = 8000
 
@@ -17,16 +16,18 @@ class DockerConfig:
 @dataclass
 class TerraformConfig:
     """Terraform infrastructure configuration."""
+
     root_module: str = "./infra/terraform"
     cloud_provider: str = "aws"  # "aws", "gcp", "azure"
-    environments: List[str] = field(default_factory=lambda: ["dev", "staging", "prod"])
-    region: Optional[str] = None
+    environments: list[str] = field(default_factory=lambda: ["dev", "staging", "prod"])
+    region: str | None = None
 
 
 @dataclass
 class InfraConfig:
     """Infrastructure configuration from manifest."""
-    backends: List[str] = field(default_factory=list)
+
+    backends: list[str] = field(default_factory=list)
     docker: DockerConfig = field(default_factory=DockerConfig)
     terraform: TerraformConfig = field(default_factory=TerraformConfig)
 
@@ -34,9 +35,10 @@ class InfraConfig:
 @dataclass
 class StackConfig:
     """Stack configuration - preset combination of backends."""
+
     name: str
-    backends: List[str] = field(default_factory=list)
-    description: Optional[str] = None
+    backends: list[str] = field(default_factory=list)
+    description: str | None = None
 
 
 @dataclass
@@ -44,9 +46,9 @@ class ProjectManifest:
     name: str
     version: str
     project_root: str
-    module_paths: List[str]
-    infra: Optional[InfraConfig] = None
-    stack: Optional[StackConfig] = None
+    module_paths: list[str]
+    infra: InfraConfig | None = None
+    stack: StackConfig | None = None
 
 
 def load_manifest(path: Path) -> ProjectManifest:

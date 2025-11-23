@@ -9,14 +9,14 @@ User-facing terminology: "stack"
 Internal implementation: Backend class
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 from .errors import DazzleError
 
 
 class StackError(DazzleError):
     """Raised when stack operations fail."""
+
     pass
 
 
@@ -28,10 +28,11 @@ class StackPreset:
     Stacks are ordered lists of backends that work together
     to generate a complete application.
     """
+
     name: str
     description: str
-    backends: List[str]
-    example_dsl: Optional[str] = None  # For demo command
+    backends: list[str]
+    example_dsl: str | None = None  # For demo command
 
 
 # Default stack for demo command
@@ -39,7 +40,7 @@ DEFAULT_DEMO_STACK = "micro"
 
 
 # Built-in stack presets
-BUILTIN_STACKS: Dict[str, StackPreset] = {
+BUILTIN_STACKS: dict[str, StackPreset] = {
     "micro": StackPreset(
         name="micro",
         description="Single Django app with SQLite (easiest to deploy on Heroku/Vercel)",
@@ -79,7 +80,7 @@ BUILTIN_STACKS: Dict[str, StackPreset] = {
 }
 
 
-def get_stack_preset(name: str) -> Optional[StackPreset]:
+def get_stack_preset(name: str) -> StackPreset | None:
     """
     Get a built-in stack preset by name.
 
@@ -92,7 +93,7 @@ def get_stack_preset(name: str) -> Optional[StackPreset]:
     return BUILTIN_STACKS.get(name)
 
 
-def list_stack_presets() -> List[str]:
+def list_stack_presets() -> list[str]:
     """
     List all available built-in stack presets.
 
@@ -103,9 +104,9 @@ def list_stack_presets() -> List[str]:
 
 
 def resolve_stack_backends(
-    stack_name: Optional[str],
-    explicit_backends: Optional[List[str]] = None,
-) -> List[str]:
+    stack_name: str | None,
+    explicit_backends: list[str] | None = None,
+) -> list[str]:
     """
     Resolve backend list from stack name or explicit list.
 
@@ -144,7 +145,7 @@ def resolve_stack_backends(
     return []
 
 
-def validate_stack_backends(backends: List[str]) -> None:
+def validate_stack_backends(backends: list[str]) -> None:
     """
     Validate that all backends in the list exist.
 

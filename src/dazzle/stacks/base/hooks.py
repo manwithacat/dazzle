@@ -10,13 +10,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from ...core import ir
 
 
 class HookPhase(Enum):
     """When a hook runs."""
+
     PRE_BUILD = "pre_build"
     POST_BUILD = "post_build"
 
@@ -33,11 +34,12 @@ class HookContext:
     - Generation options
     - Artifacts from generators and previous hooks
     """
+
     spec: ir.AppSpec
     output_dir: Path
     backend_name: str
-    options: Dict[str, Any] = field(default_factory=dict)
-    artifacts: Dict[str, Any] = field(default_factory=dict)
+    options: dict[str, Any] = field(default_factory=dict)
+    artifacts: dict[str, Any] = field(default_factory=dict)
 
     def add_artifact(self, key: str, value: Any) -> None:
         """Add an artifact to the context for later hooks to access."""
@@ -60,9 +62,10 @@ class HookResult:
         display_to_user: Whether to show this result to the user
         stop_on_failure: Whether to abort build if this hook fails
     """
+
     success: bool
     message: str
-    artifacts: Dict[str, Any] = field(default_factory=dict)
+    artifacts: dict[str, Any] = field(default_factory=dict)
     display_to_user: bool = False
     stop_on_failure: bool = True
 
@@ -145,7 +148,7 @@ class HookManager:
     """
 
     def __init__(self):
-        self._hooks: Dict[HookPhase, List[Hook]] = {
+        self._hooks: dict[HookPhase, list[Hook]] = {
             HookPhase.PRE_BUILD: [],
             HookPhase.POST_BUILD: [],
         }
@@ -154,12 +157,12 @@ class HookManager:
         """Register a hook for its phase."""
         self._hooks[hook.phase].append(hook)
 
-    def register_many(self, hooks: List[Hook]) -> None:
+    def register_many(self, hooks: list[Hook]) -> None:
         """Register multiple hooks."""
         for hook in hooks:
             self.register(hook)
 
-    def run_phase(self, phase: HookPhase, context: HookContext) -> List[HookResult]:
+    def run_phase(self, phase: HookPhase, context: HookContext) -> list[HookResult]:
         """
         Run all hooks for a specific phase.
 
@@ -195,14 +198,14 @@ class HookManager:
                     success=False,
                     message=f"Hook '{hook.name}' failed: {str(e)}",
                     display_to_user=True,
-                    stop_on_failure=True
+                    stop_on_failure=True,
                 )
                 results.append(result)
                 break
 
         return results
 
-    def get_hooks(self, phase: HookPhase) -> List[Hook]:
+    def get_hooks(self, phase: HookPhase) -> list[Hook]:
         """Get all hooks for a phase."""
         return self._hooks[phase]
 

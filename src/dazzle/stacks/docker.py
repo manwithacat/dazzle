@@ -5,13 +5,17 @@ Generates local development infrastructure using Docker Compose.
 """
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
-from . import Backend, BackendCapabilities
 from ..core import ir
 from ..core.errors import BackendError
+from ..core.infra_analyzer import (
+    InfraRequirements,
+    analyze_infra_requirements,
+    get_required_env_vars,
+)
 from ..core.manifest import DockerConfig
-from ..core.infra_analyzer import InfraRequirements, analyze_infra_requirements, get_required_env_vars
+from . import Backend, BackendCapabilities
 
 
 class DockerStack(Backend):
@@ -27,11 +31,7 @@ class DockerStack(Backend):
     """
 
     def generate(
-        self,
-        appspec: ir.AppSpec,
-        output_dir: Path,
-        docker_config: DockerConfig = None,
-        **options
+        self, appspec: ir.AppSpec, output_dir: Path, docker_config: DockerConfig = None, **options
     ) -> None:
         """
         Generate Docker infrastructure for local development.
@@ -121,7 +121,7 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{con
         requirements: InfraRequirements,
     ) -> None:
         """Generate docker-compose.yaml with all required services."""
-        services: Dict[str, Any] = {}
+        services: dict[str, Any] = {}
 
         # App service
         image_name = config.image_name or appspec.name.replace("_", "-")
@@ -165,13 +165,15 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{con
                 },
             }
             services["app"]["depends_on"].append("db")
-            services["app"]["environment"].update({
-                "DATABASE_HOST": "db",
-                "DATABASE_PORT": "5432",
-                "DATABASE_NAME": db_name,
-                "DATABASE_USER": "dazzle",
-                "DATABASE_PASSWORD": "dazzle_dev_password",
-            })
+            services["app"]["environment"].update(
+                {
+                    "DATABASE_HOST": "db",
+                    "DATABASE_PORT": "5432",
+                    "DATABASE_NAME": db_name,
+                    "DATABASE_USER": "dazzle",
+                    "DATABASE_PASSWORD": "dazzle_dev_password",
+                }
+            )
 
         # Redis service (for cache and/or queue)
         if requirements.needs_cache or requirements.needs_queue:
@@ -190,10 +192,12 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{con
                 },
             }
             services["app"]["depends_on"].append("redis")
-            services["app"]["environment"].update({
-                "REDIS_HOST": "redis",
-                "REDIS_PORT": "6379",
-            })
+            services["app"]["environment"].update(
+                {
+                    "REDIS_HOST": "redis",
+                    "REDIS_PORT": "6379",
+                }
+            )
 
         # Worker service (for async processing)
         if requirements.needs_workers:
@@ -222,14 +226,13 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{con
             volumes.append("redis_data")
 
         if volumes:
-            compose_content["volumes"] = {vol: None for vol in volumes}
+            compose_content["volumes"] = dict.fromkeys(volumes)
 
         # Write YAML
-        import json
         yaml_content = self._dict_to_yaml(compose_content)
         (output_dir / "compose.yaml").write_text(yaml_content)
 
-    def _dict_to_yaml(self, data: Dict[str, Any], indent: int = 0) -> str:
+    def _dict_to_yaml(self, data: dict[str, Any], indent: int = 0) -> str:
         """Convert dict to YAML format (simple implementation)."""
         lines = []
         indent_str = "  " * indent
@@ -268,7 +271,7 @@ CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{con
 
     def _generate_dockerignore(self, output_dir: Path) -> None:
         """Generate .dockerignore file."""
-        dockerignore_content = '''# Python
+        dockerignore_content = """# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -315,7 +318,7 @@ dazzle.toml
 .env
 .env.*
 !.env.example
-'''
+"""
 
         (output_dir / ".dockerignore").write_text(dockerignore_content)
 
@@ -325,7 +328,7 @@ dazzle.toml
         requirements: InfraRequirements,
     ) -> None:
         """Generate dev.env.example file."""
-        env_vars = get_required_env_vars(requirements)
+        get_required_env_vars(requirements)
 
         lines = [
             "# Development environment variables",
@@ -335,48 +338,58 @@ dazzle.toml
 
         # Group variables by category
         if requirements.needs_database:
-            lines.extend([
-                "# Database",
-                "DATABASE_HOST=db",
-                "DATABASE_PORT=5432",
-                "DATABASE_NAME=app_db",
-                "DATABASE_USER=dazzle",
-                "DATABASE_PASSWORD=dazzle_dev_password",
-                "",
-            ])
+            lines.extend(
+                [
+                    "# Database",
+                    "DATABASE_HOST=db",
+                    "DATABASE_PORT=5432",
+                    "DATABASE_NAME=app_db",
+                    "DATABASE_USER=dazzle",
+                    "DATABASE_PASSWORD=dazzle_dev_password",
+                    "",
+                ]
+            )
 
         if requirements.needs_cache or requirements.needs_queue:
-            lines.extend([
-                "# Redis",
-                "REDIS_HOST=redis",
-                "REDIS_PORT=6379",
-                "",
-            ])
+            lines.extend(
+                [
+                    "# Redis",
+                    "REDIS_HOST=redis",
+                    "REDIS_PORT=6379",
+                    "",
+                ]
+            )
 
         if requirements.needs_storage:
-            lines.extend([
-                "# Storage",
-                "STORAGE_BUCKET=dev-bucket",
-                "STORAGE_REGION=us-east-1",
-                "STORAGE_ACCESS_KEY=your-key",
-                "STORAGE_SECRET_KEY=your-secret",
-                "",
-            ])
+            lines.extend(
+                [
+                    "# Storage",
+                    "STORAGE_BUCKET=dev-bucket",
+                    "STORAGE_REGION=us-east-1",
+                    "STORAGE_ACCESS_KEY=your-key",
+                    "STORAGE_SECRET_KEY=your-secret",
+                    "",
+                ]
+            )
 
         if requirements.needs_webhooks:
-            lines.extend([
-                "# Webhooks",
-                "WEBHOOK_SECRET=your-webhook-secret",
-                "WEBHOOK_URL=http://localhost:8000/webhooks",
-                "",
-            ])
+            lines.extend(
+                [
+                    "# Webhooks",
+                    "WEBHOOK_SECRET=your-webhook-secret",
+                    "WEBHOOK_URL=http://localhost:8000/webhooks",
+                    "",
+                ]
+            )
 
-        lines.extend([
-            "# Application",
-            "APP_ENV=development",
-            "APP_DEBUG=false  # Set to 'true' for development",
-            "SECRET_KEY=dev-secret-key-change-in-production",
-        ])
+        lines.extend(
+            [
+                "# Application",
+                "APP_ENV=development",
+                "APP_DEBUG=false  # Set to 'true' for development",
+                "SECRET_KEY=dev-secret-key-change-in-production",
+            ]
+        )
 
         (output_dir / "dev.env.example").write_text("\n".join(lines) + "\n")
 
@@ -399,7 +412,7 @@ dazzle.toml
 
         services_list = "\n".join(f"- {s}" for s in services)
 
-        readme_content = f'''# Docker Infrastructure for {appspec.title or appspec.name}
+        readme_content = f"""# Docker Infrastructure for {appspec.title or appspec.name}
 
 Generated by DAZZLE infrastructure backend.
 
@@ -433,18 +446,18 @@ This Docker Compose setup includes:
 
 ## Service URLs
 
-- Application: http://localhost:{requirements.entity_count and '8000' or '8000'}
-'''
+- Application: http://localhost:{requirements.entity_count and "8000" or "8000"}
+"""
 
         if requirements.needs_database:
-            readme_content += '''- Database: postgresql://dazzle:dazzle_dev_password@localhost:5432/app_db
-'''
+            readme_content += """- Database: postgresql://dazzle:dazzle_dev_password@localhost:5432/app_db
+"""
 
         if requirements.needs_cache or requirements.needs_queue:
-            readme_content += '''- Redis: redis://localhost:6379
-'''
+            readme_content += """- Redis: redis://localhost:6379
+"""
 
-        readme_content += '''
+        readme_content += """
 ## Development Workflow
 
 ### Running migrations
@@ -493,9 +506,9 @@ docker compose up -d
 ---
 
 Generated by DAZZLE Docker backend
-'''
+"""
 
         (output_dir / "README.md").write_text(readme_content)
 
 
-__all__ = ["DockerBackend"]
+__all__ = ["DockerStack"]

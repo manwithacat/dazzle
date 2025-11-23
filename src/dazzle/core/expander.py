@@ -4,17 +4,19 @@ Vocabulary expander for DAZZLE.
 Expands vocabulary references to core DSL using template substitution.
 """
 
-from jinja2 import Environment, BaseLoader, TemplateError, StrictUndefined
-from typing import Dict, Any, Set, Optional, List, Tuple
-from pathlib import Path
 import re
+from pathlib import Path
+from typing import Any
 
-from .vocab import VocabManifest, VocabEntry, VocabParameter
+from jinja2 import BaseLoader, Environment, StrictUndefined, TemplateError
+
 from .errors import DazzleError
+from .vocab import VocabEntry, VocabManifest, VocabParameter
 
 
 class ExpansionError(DazzleError):
     """Raised when vocabulary expansion fails."""
+
     pass
 
 
@@ -41,10 +43,7 @@ class VocabExpander:
         )
 
     def expand_entry(
-        self,
-        entry_id: str,
-        params: Dict[str, Any],
-        visited: Optional[Set[str]] = None
+        self, entry_id: str, params: dict[str, Any], visited: set[str] | None = None
     ) -> str:
         """
         Expand a vocabulary entry with given parameters.
@@ -65,7 +64,7 @@ class VocabExpander:
 
         # Cycle detection
         if entry_id in visited:
-            cycle = ' -> '.join(visited) + f' -> {entry_id}'
+            cycle = " -> ".join(visited) + f" -> {entry_id}"
             raise ExpansionError(f"Circular dependency detected: {cycle}")
 
         visited.add(entry_id)
@@ -80,7 +79,7 @@ class VocabExpander:
 
         # Expand template
         try:
-            template = self.jinja_env.from_string(entry.expansion['body'])
+            template = self.jinja_env.from_string(entry.expansion["body"])
             expanded = template.render(**prepared_params)
         except TemplateError as e:
             raise ExpansionError(f"Template expansion failed for '{entry_id}': {e}")
@@ -111,7 +110,7 @@ class VocabExpander:
             ExpansionError: If expansion fails
         """
         # Find all @use directives
-        pattern = r'@use\s+([a-z0-9_]+)\((.*?)\)'
+        pattern = r"@use\s+([a-z0-9_]+)\((.*?)\)"
         matches = list(re.finditer(pattern, text, re.MULTILINE | re.DOTALL))
 
         if not matches:
@@ -131,15 +130,15 @@ class VocabExpander:
                 expanded = self.expand_entry(entry_id, params)
             except ExpansionError as e:
                 # Add context about where the error occurred
-                line_num = text[:match.start()].count('\n') + 1
+                line_num = text[: match.start()].count("\n") + 1
                 raise ExpansionError(f"At line {line_num}: {e}")
 
             # Replace reference with expansion
-            result = result[:match.start()] + expanded + result[match.end():]
+            result = result[: match.start()] + expanded + result[match.end() :]
 
         return result
 
-    def expand_file(self, input_path: Path, output_path: Optional[Path] = None) -> str:
+    def expand_file(self, input_path: Path, output_path: Path | None = None) -> str:
         """
         Expand vocabulary references in a file.
 
@@ -170,11 +169,7 @@ class VocabExpander:
 
         return expanded
 
-    def _prepare_parameters(
-        self,
-        entry: VocabEntry,
-        params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _prepare_parameters(self, entry: VocabEntry, params: dict[str, Any]) -> dict[str, Any]:
         """
         Validate and prepare parameters for expansion.
 
@@ -216,11 +211,7 @@ class VocabExpander:
 
         return prepared
 
-    def _validate_param_value(
-        self,
-        param_def: VocabParameter,
-        value: Any
-    ) -> Any:
+    def _validate_param_value(self, param_def: VocabParameter, value: Any) -> Any:
         """
         Validate parameter value against definition.
 
@@ -235,47 +226,39 @@ class VocabExpander:
             ExpansionError: If validation fails
         """
         # Type validation (basic - can be enhanced)
-        if param_def.type == 'string':
+        if param_def.type == "string":
             if not isinstance(value, str):
                 raise ExpansionError(
                     f"Parameter '{param_def.name}' must be a string, got {type(value).__name__}"
                 )
-        elif param_def.type == 'boolean':
+        elif param_def.type == "boolean":
             if not isinstance(value, bool):
                 # Try to coerce
                 if isinstance(value, str):
-                    if value.lower() in ('true', 'yes', '1'):
+                    if value.lower() in ("true", "yes", "1"):
                         value = True
-                    elif value.lower() in ('false', 'no', '0'):
+                    elif value.lower() in ("false", "no", "0"):
                         value = False
                     else:
-                        raise ExpansionError(
-                            f"Parameter '{param_def.name}' must be a boolean"
-                        )
-        elif param_def.type == 'number':
+                        raise ExpansionError(f"Parameter '{param_def.name}' must be a boolean")
+        elif param_def.type == "number":
             if not isinstance(value, (int, float)):
                 # Try to coerce
                 try:
-                    value = float(value) if '.' in str(value) else int(value)
+                    value = float(value) if "." in str(value) else int(value)
                 except (ValueError, TypeError):
-                    raise ExpansionError(
-                        f"Parameter '{param_def.name}' must be a number"
-                    )
-        elif param_def.type == 'list':
+                    raise ExpansionError(f"Parameter '{param_def.name}' must be a number")
+        elif param_def.type == "list":
             if not isinstance(value, list):
-                raise ExpansionError(
-                    f"Parameter '{param_def.name}' must be a list"
-                )
-        elif param_def.type == 'dict':
+                raise ExpansionError(f"Parameter '{param_def.name}' must be a list")
+        elif param_def.type == "dict":
             if not isinstance(value, dict):
-                raise ExpansionError(
-                    f"Parameter '{param_def.name}' must be a dict"
-                )
+                raise ExpansionError(f"Parameter '{param_def.name}' must be a dict")
         # model_ref is just a string - no special validation needed
 
         return value
 
-    def _parse_params(self, params_str: str) -> Dict[str, Any]:
+    def _parse_params(self, params_str: str) -> dict[str, Any]:
         """
         Parse parameter string from @use directive.
 
@@ -313,15 +296,15 @@ class VocabExpander:
                 continue
 
             # Split by = (but not inside quotes or brackets)
-            if '=' not in part:
+            if "=" not in part:
                 raise ExpansionError(f"Invalid parameter syntax: '{part}' (expected key=value)")
 
-            key, value = part.split('=', 1)
+            key, value = part.split("=", 1)
             key = key.strip()
             value = value.strip()
 
             # Validate key
-            if not re.match(r'^[a-z_][a-z0-9_]*$', key):
+            if not re.match(r"^[a-z_][a-z0-9_]*$", key):
                 raise ExpansionError(f"Invalid parameter name: '{key}'")
 
             # Parse value
@@ -329,7 +312,7 @@ class VocabExpander:
 
         return params
 
-    def _split_params(self, params_str: str) -> List[str]:
+    def _split_params(self, params_str: str) -> list[str]:
         """Split parameter string by commas (respecting quotes and brackets)."""
         parts = []
         current = []
@@ -346,20 +329,20 @@ class VocabExpander:
                 in_quotes = False
                 quote_char = None
                 current.append(char)
-            elif char in ('[', '(') and not in_quotes:
+            elif char in ("[", "(") and not in_quotes:
                 depth += 1
                 current.append(char)
-            elif char in (']', ')') and not in_quotes:
+            elif char in ("]", ")") and not in_quotes:
                 depth -= 1
                 current.append(char)
-            elif char == ',' and depth == 0 and not in_quotes:
-                parts.append(''.join(current))
+            elif char == "," and depth == 0 and not in_quotes:
+                parts.append("".join(current))
                 current = []
             else:
                 current.append(char)
 
         if current:
-            parts.append(''.join(current))
+            parts.append("".join(current))
 
         return parts
 
@@ -368,27 +351,28 @@ class VocabExpander:
         value = value.strip()
 
         # Boolean
-        if value.lower() in ('true', 'yes'):
+        if value.lower() in ("true", "yes"):
             return True
-        if value.lower() in ('false', 'no'):
+        if value.lower() in ("false", "no"):
             return False
 
         # Quoted string
-        if (value.startswith('"') and value.endswith('"')) or \
-           (value.startswith("'") and value.endswith("'")):
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
+        ):
             return value[1:-1]
 
         # List
-        if value.startswith('[') and value.endswith(']'):
+        if value.startswith("[") and value.endswith("]"):
             items_str = value[1:-1].strip()
             if not items_str:
                 return []
-            items = [self._parse_value(item.strip()) for item in items_str.split(',')]
+            items = [self._parse_value(item.strip()) for item in items_str.split(",")]
             return items
 
         # Number
         try:
-            if '.' in value:
+            if "." in value:
                 return float(value)
             return int(value)
         except ValueError:
@@ -399,9 +383,7 @@ class VocabExpander:
 
 
 def expand_vocab_in_file(
-    input_path: Path,
-    manifest_path: Path,
-    output_path: Optional[Path] = None
+    input_path: Path, manifest_path: Path, output_path: Path | None = None
 ) -> str:
     """
     Convenience function to expand vocabulary in a file.

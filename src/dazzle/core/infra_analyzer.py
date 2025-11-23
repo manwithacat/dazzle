@@ -6,7 +6,6 @@ explicit infrastructure declarations in the DSL.
 """
 
 from dataclasses import dataclass
-from typing import List
 
 from . import ir
 
@@ -19,6 +18,7 @@ class InfraRequirements:
     This represents what infrastructure components are needed based on
     the application's domain model, services, and integrations.
     """
+
     # Core infrastructure
     needs_database: bool = False
     needs_cache: bool = False
@@ -31,7 +31,7 @@ class InfraRequirements:
     database_type: str = "postgres"
     cache_type: str = "redis"
     queue_type: str = "redis"  # or "sqs", "pubsub"
-    storage_type: str = "s3"   # or "gcs", "blob"
+    storage_type: str = "s3"  # or "gcs", "blob"
 
     # Detailed requirements
     entity_count: int = 0
@@ -41,9 +41,9 @@ class InfraRequirements:
     surface_count: int = 0
 
     # Specific needs
-    entity_names: List[str] = None
-    webhook_service_names: List[str] = None
-    async_service_names: List[str] = None
+    entity_names: list[str] = None
+    webhook_service_names: list[str] = None
+    async_service_names: list[str] = None
 
     def __post_init__(self):
         """Initialize lists if None."""
@@ -96,7 +96,9 @@ def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
             for field in entity.fields:
                 # Check if field type suggests file storage
                 field_type_str = str(field.type).lower()
-                if any(keyword in field_type_str for keyword in ["file", "media", "image", "document"]):
+                if any(
+                    keyword in field_type_str for keyword in ["file", "media", "image", "document"]
+                ):
                     requirements.needs_storage = True
                     break
 
@@ -145,7 +147,7 @@ def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
     return requirements
 
 
-def get_required_env_vars(requirements: InfraRequirements) -> List[str]:
+def get_required_env_vars(requirements: InfraRequirements) -> list[str]:
     """
     Get list of environment variables needed based on requirements.
 
@@ -158,48 +160,60 @@ def get_required_env_vars(requirements: InfraRequirements) -> List[str]:
     env_vars = []
 
     if requirements.needs_database:
-        env_vars.extend([
-            "DATABASE_URL",
-            "DATABASE_HOST",
-            "DATABASE_PORT",
-            "DATABASE_NAME",
-            "DATABASE_USER",
-            "DATABASE_PASSWORD",
-        ])
+        env_vars.extend(
+            [
+                "DATABASE_URL",
+                "DATABASE_HOST",
+                "DATABASE_PORT",
+                "DATABASE_NAME",
+                "DATABASE_USER",
+                "DATABASE_PASSWORD",
+            ]
+        )
 
     if requirements.needs_cache:
-        env_vars.extend([
-            "REDIS_URL",
-            "REDIS_HOST",
-            "REDIS_PORT",
-        ])
+        env_vars.extend(
+            [
+                "REDIS_URL",
+                "REDIS_HOST",
+                "REDIS_PORT",
+            ]
+        )
 
     if requirements.needs_queue:
-        env_vars.extend([
-            "QUEUE_URL",
-            "WORKER_CONCURRENCY",
-        ])
+        env_vars.extend(
+            [
+                "QUEUE_URL",
+                "WORKER_CONCURRENCY",
+            ]
+        )
 
     if requirements.needs_storage:
-        env_vars.extend([
-            "STORAGE_BUCKET",
-            "STORAGE_REGION",
-            "STORAGE_ACCESS_KEY",
-            "STORAGE_SECRET_KEY",
-        ])
+        env_vars.extend(
+            [
+                "STORAGE_BUCKET",
+                "STORAGE_REGION",
+                "STORAGE_ACCESS_KEY",
+                "STORAGE_SECRET_KEY",
+            ]
+        )
 
     if requirements.needs_webhooks:
-        env_vars.extend([
-            "WEBHOOK_SECRET",
-            "WEBHOOK_URL",
-        ])
+        env_vars.extend(
+            [
+                "WEBHOOK_SECRET",
+                "WEBHOOK_URL",
+            ]
+        )
 
     # Always include common vars
-    env_vars.extend([
-        "APP_ENV",
-        "APP_DEBUG",
-        "SECRET_KEY",
-    ])
+    env_vars.extend(
+        [
+            "APP_ENV",
+            "APP_DEBUG",
+            "SECRET_KEY",
+        ]
+    )
 
     return env_vars
 

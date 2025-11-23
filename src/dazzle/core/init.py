@@ -13,7 +13,6 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from .errors import DazzleError
 from .llm_context import create_llm_instrumentation
@@ -21,30 +20,92 @@ from .llm_context import create_llm_instrumentation
 
 class InitError(DazzleError):
     """Raised when project initialization fails."""
+
     pass
 
 
 # Reserved keywords that can't be used as project/module names
 RESERVED_KEYWORDS = {
     # DSL keywords
-    'app', 'module', 'entity', 'surface', 'experience', 'service',
-    'foreign_model', 'integration', 'test', 'use', 'section',
-    'field', 'action', 'step', 'transition',
+    "app",
+    "module",
+    "entity",
+    "surface",
+    "experience",
+    "service",
+    "foreign_model",
+    "integration",
+    "test",
+    "use",
+    "section",
+    "field",
+    "action",
+    "step",
+    "transition",
     # Python keywords
-    'import', 'from', 'def', 'class', 'if', 'else', 'elif', 'for',
-    'while', 'break', 'continue', 'return', 'yield', 'try', 'except',
-    'finally', 'with', 'as', 'raise', 'assert', 'del', 'pass',
-    'lambda', 'global', 'nonlocal', 'and', 'or', 'not', 'in', 'is',
+    "import",
+    "from",
+    "def",
+    "class",
+    "if",
+    "else",
+    "elif",
+    "for",
+    "while",
+    "break",
+    "continue",
+    "return",
+    "yield",
+    "try",
+    "except",
+    "finally",
+    "with",
+    "as",
+    "raise",
+    "assert",
+    "del",
+    "pass",
+    "lambda",
+    "global",
+    "nonlocal",
+    "and",
+    "or",
+    "not",
+    "in",
+    "is",
     # Common problematic names
-    'true', 'false', 'null', 'none', 'type', 'list', 'dict', 'set',
-    'str', 'int', 'float', 'bool', 'tuple', 'range', 'object',
+    "true",
+    "false",
+    "null",
+    "none",
+    "type",
+    "list",
+    "dict",
+    "set",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "tuple",
+    "range",
+    "object",
     # Django/Python stdlib conflicts
-    'admin', 'auth', 'models', 'views', 'urls', 'settings', 'forms',
-    'serializers', 'tests', 'migrations', 'static', 'templates',
+    "admin",
+    "auth",
+    "models",
+    "views",
+    "urls",
+    "settings",
+    "forms",
+    "serializers",
+    "tests",
+    "migrations",
+    "static",
+    "templates",
 }
 
 
-def list_examples(examples_dir: Optional[Path] = None) -> list[str]:
+def list_examples(examples_dir: Path | None = None) -> list[str]:
     """
     List available example projects.
 
@@ -69,7 +130,7 @@ def list_examples(examples_dir: Optional[Path] = None) -> list[str]:
     return sorted(examples)
 
 
-def validate_project_name(name: str) -> tuple[bool, Optional[str]]:
+def validate_project_name(name: str) -> tuple[bool, str | None]:
     """
     Validate a project name.
 
@@ -88,15 +149,24 @@ def validate_project_name(name: str) -> tuple[bool, Optional[str]]:
 
     # Check if it starts with a digit
     if name[0].isdigit():
-        return (False, f"Project name '{name}' cannot start with a digit. Try 'project_{name}' or '{name}_app'")
+        return (
+            False,
+            f"Project name '{name}' cannot start with a digit. Try 'project_{name}' or '{name}_app'",
+        )
 
     # Check reserved keywords
     if name.lower() in RESERVED_KEYWORDS:
-        return (False, f"Project name '{name}' is a reserved keyword. Try '{name}_app', 'my_{name}', or '{name}_project' instead")
+        return (
+            False,
+            f"Project name '{name}' is a reserved keyword. Try '{name}_app', 'my_{name}', or '{name}_project' instead",
+        )
 
     # Check if it's a valid Python identifier pattern
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', name):
-        return (False, f"Project name '{name}' must contain only letters, numbers, and underscores, and cannot start with a number")
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
+        return (
+            False,
+            f"Project name '{name}' must contain only letters, numbers, and underscores, and cannot start with a number",
+        )
 
     return (True, None)
 
@@ -123,11 +193,11 @@ def sanitize_name(name: str, validate: bool = True) -> str:
     # Convert to lowercase
     name = name.lower()
     # Replace non-alphanumeric with underscores
-    name = re.sub(r'[^a-z0-9_]', '_', name)
+    name = re.sub(r"[^a-z0-9_]", "_", name)
     # Remove leading/trailing underscores
-    name = name.strip('_')
+    name = name.strip("_")
     # Collapse multiple underscores
-    name = re.sub(r'_+', '_', name)
+    name = re.sub(r"_+", "_", name)
 
     # Ensure doesn't start with digit
     if name and name[0].isdigit():
@@ -169,7 +239,7 @@ def substitute_template_vars(content: str, variables: dict[str, str]) -> str:
 def copy_template(
     template_dir: Path,
     target_dir: Path,
-    variables: Optional[dict[str, str]] = None,
+    variables: dict[str, str] | None = None,
     allow_existing: bool = False,
 ) -> None:
     """
@@ -280,7 +350,7 @@ def create_spec_template(target_dir: Path, project_name: str, title: str) -> Non
     """
     spec_path = target_dir / "SPEC.md"
 
-    spec_content = f'''# {title} - Product Specification
+    spec_content = f"""# {title} - Product Specification
 
 **Project Type**: _[e.g., Personal Tool, Team App, Customer Portal]_
 **Target Users**: _[Who will use this? Be specific!]_
@@ -579,19 +649,19 @@ _Tips for collaborating with LLM agents to turn this spec into DAZZLE DSL:_
 5. **Test and iterate** - update DSL based on what you see
 
 **Remember**: Start simple! You can always add more features later. Better to have a working v1 than a perfect plan that never ships. 🚀
-'''
+"""
 
     spec_path.write_text(spec_content)
 
 
 def init_project(
     target_dir: Path,
-    project_name: Optional[str] = None,
-    from_example: Optional[str] = None,
-    title: Optional[str] = None,
+    project_name: str | None = None,
+    from_example: str | None = None,
+    title: str | None = None,
     no_llm: bool = False,
     no_git: bool = False,
-    stack_name: Optional[str] = None,
+    stack_name: str | None = None,
     allow_existing: bool = False,
 ) -> None:
     """
@@ -667,7 +737,8 @@ def init_project(
             # Don't fail the entire init if LLM instrumentation fails
             # Just warn the user
             import warnings
-            warnings.warn(f"Failed to create LLM instrumentation: {e}")
+
+            warnings.warn(f"Failed to create LLM instrumentation: {e}", stacklevel=2)
 
     # Initialize git repository (unless disabled)
     if not no_git:
@@ -760,11 +831,13 @@ dev_docs/
             # Don't fail the entire init if git initialization fails
             # Just warn the user
             import warnings
-            warnings.warn(f"Failed to initialize git repository: {e}")
+
+            warnings.warn(f"Failed to initialize git repository: {e}", stacklevel=2)
         except FileNotFoundError:
             # git not installed
             import warnings
-            warnings.warn("git command not found - skipping git initialization")
+
+            warnings.warn("git command not found - skipping git initialization", stacklevel=2)
 
 
 __all__ = [
