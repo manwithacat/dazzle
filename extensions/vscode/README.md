@@ -40,7 +40,32 @@ Language support for DAZZLE DSL - the DSL-first application development framewor
 
 ## Installation
 
-### From Source
+### Prerequisites
+
+Install the DAZZLE CLI first:
+
+```bash
+# Using pip (recommended)
+pip install dazzle
+
+# Or for development
+git clone https://github.com/dazzle/dazzle
+cd dazzle
+pip install -e .
+```
+
+Verify installation:
+```bash
+dazzle --help
+```
+
+### Extension Installation
+
+#### Option 1: From Marketplace (Coming Soon)
+
+Install directly from the VS Code Marketplace.
+
+#### Option 2: From Source (Development)
 
 1. Clone the DAZZLE repository
 2. Navigate to `extensions/vscode/`
@@ -51,9 +76,18 @@ Language support for DAZZLE DSL - the DSL-first application development framewor
    ```
 4. Press F5 in VS Code to launch Extension Development Host
 
-### From Marketplace (Coming Soon)
+#### Option 3: Manual Installation
 
-Install directly from the VS Code Marketplace.
+1. Build the extension package:
+   ```bash
+   cd extensions/vscode
+   npm install
+   npm run package
+   ```
+2. Install the generated `.vsix` file:
+   ```bash
+   code --install-extension dazzle-dsl-0.4.0.vsix
+   ```
 
 ## Usage
 
@@ -96,8 +130,14 @@ Access settings via `Preferences: Open Settings (UI)` and search for "DAZZLE":
 
 ### General Settings
 - **`dazzle.cliPath`**: Path to DAZZLE CLI (default: `"dazzle"`)
+  - Use `"dazzle"` if installed via pip/homebrew
+  - Use absolute path for custom installation locations
+  - Examples: `"dazzle"`, `"/usr/local/bin/dazzle"`, `"python3 -m dazzle.cli"`
 - **`dazzle.manifest`**: Manifest filename (default: `"dazzle.toml"`)
 - **`dazzle.validateOnSave`**: Auto-validate on save (default: `true`)
+- **`dazzle.pythonPath`**: Python interpreter for LSP server (default: auto-detect)
+  - Leave empty to auto-detect from environment
+  - Set explicitly if LSP features don't work: `"/usr/bin/python3"`
 
 ### LLM Settings (v0.4+)
 - **`dazzle.llm.provider`**: LLM provider for spec analysis (default: `"anthropic"`)
@@ -148,8 +188,26 @@ All commands are now fully functional!
 ## Requirements
 
 - VS Code 1.80.0 or higher
-- DAZZLE CLI installed and accessible in PATH
-- Python 3.10+ (for DAZZLE runtime)
+- DAZZLE CLI installed and accessible in PATH (`pip install dazzle`)
+- Python 3.11+ (for DAZZLE runtime and LSP server)
+
+### Troubleshooting
+
+**Command 'dazzle' not found**:
+- Ensure DAZZLE is installed: `pip install dazzle`
+- Check PATH: `which dazzle` or `where dazzle` (Windows)
+- Configure `dazzle.cliPath` in settings with absolute path
+
+**LSP features not working** (no hover, completion, etc.):
+- Install DAZZLE in Python environment: `pip install dazzle`
+- Verify: `python3 -c "import dazzle.lsp.server"`
+- Configure `dazzle.pythonPath` if using custom Python installation
+- Check "DAZZLE LSP" output channel for errors
+
+**Validation not showing errors**:
+- Ensure `dazzle.toml` exists in workspace root
+- Check "DAZZLE" output channel for validation logs
+- Try running `dazzle validate` in terminal to verify CLI works
 
 ## Extension Development
 

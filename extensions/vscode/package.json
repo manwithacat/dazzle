@@ -2,7 +2,7 @@
   "name": "dazzle-dsl",
   "displayName": "DAZZLE DSL",
   "description": "Language support for DAZZLE DSL - DSL-first application development",
-  "version": "0.4.0",
+  "version": "0.4.2",
   "publisher": "dazzle",
   "repository": {
     "type": "git",
@@ -20,11 +20,6 @@
     "django",
     "api",
     "code-generation"
-  ],
-  "activationEvents": [
-    "onLanguage:dazzle-dsl",
-    "workspaceContains:**/*.dsl",
-    "workspaceContains:dazzle.toml"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -155,9 +150,14 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.80.0",
     "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^2.22.0",
+    "glob": "^10.3.10",
+    "mocha": "^10.2.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {

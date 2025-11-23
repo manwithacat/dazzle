@@ -253,8 +253,8 @@ async function runInteractiveQA(analysis: any): Promise<Map<string, string> | nu
 
         for (const question of category.questions) {
             // Create QuickPick items
-            const items = question.options.map(opt => ({
-                label: opt,
+            const items = (question.options || []).map((opt: any) => ({
+                label: typeof opt === 'string' ? opt : opt.label || String(opt),
                 detail: question.context,
                 description: question.impacts
             }));
@@ -278,7 +278,8 @@ async function runInteractiveQA(analysis: any): Promise<Map<string, string> | nu
                 break;
             }
 
-            answers.set(question.q, selected.label);
+            // selected is a QuickPickItem with label property
+            answers.set(question.q, (selected as any).label);
         }
     }
 

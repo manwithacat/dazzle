@@ -43,23 +43,9 @@ export class DazzleDiagnostics {
         return new Promise((resolve, reject) => {
             const args = ['validate', '--format', 'vscode', '--manifest', manifestName];
 
-            // Handle different CLI path formats
-            let command: string;
-            let commandArgs: string[];
+            this.outputChannel.appendLine(`Executing: ${cliPath} ${args.join(' ')}`);
 
-            if (cliPath.includes('python')) {
-                // Handle "python -m dazzle.cli" or "python3 -m dazzle.cli"
-                const parts = cliPath.split(/\s+/);
-                command = parts[0];
-                commandArgs = [...parts.slice(1), ...args];
-            } else {
-                command = cliPath;
-                commandArgs = args;
-            }
-
-            this.outputChannel.appendLine(`Executing: ${command} ${commandArgs.join(' ')}`);
-
-            const childProcess = child_process.spawn(command, commandArgs, {
+            const childProcess = child_process.spawn(cliPath, args, {
                 cwd,
                 shell: process.platform === 'win32'
             });

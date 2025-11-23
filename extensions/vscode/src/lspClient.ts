@@ -15,33 +15,64 @@ import {
 
 let client: LanguageClient | undefined;
 
+let outputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Get or create the LSP output channel.
+ */
+function getOutputChannel(): vscode.OutputChannel {
+    if (!outputChannel) {
+        outputChannel = vscode.window.createOutputChannel('DAZZLE LSP');
+    }
+    return outputChannel;
+}
+
 /**
  * Start the LSP client and connect to the Python LSP server.
  */
 export async function startLanguageClient(context: vscode.ExtensionContext): Promise<void> {
     const config = vscode.workspace.getConfiguration('dazzle');
     const pythonPath = getPythonPath();
+    const channel = getOutputChannel();
+
+    channel.appendLine('='.repeat(60));
+    channel.appendLine('DAZZLE Language Server Client Starting...');
+    channel.appendLine(`Python path: ${pythonPath}`);
+    channel.appendLine(`Timestamp: ${new Date().toISOString()}`);
+    channel.appendLine('='.repeat(60));
 
     // Check if LSP server is available before starting
+    channel.appendLine('Checking if DAZZLE LSP server is available...');
     const isAvailable = await checkLspServerAvailable();
+
     if (!isAvailable) {
+        channel.appendLine('❌ DAZZLE LSP server not found');
+        channel.appendLine(`Tried to import: python3 -c "import dazzle.lsp.server"`);
+        channel.appendLine('');
+        channel.appendLine('To enable LSP features:');
+        channel.appendLine('  1. Install dazzle: pip install dazzle');
+        channel.appendLine('  2. Or for development: pip install -e /path/to/dazzle');
+        channel.appendLine('  3. Verify: python3 -c "import dazzle.lsp.server"');
+        channel.show();
+
         const action = await vscode.window.showWarningMessage(
-            `DAZZLE LSP server not found. The Python package 'dazzle' is not installed in ${pythonPath}.\n\n` +
-            `To enable language features:\n` +
-            `1. Install dazzle: pip install -e /Volumes/SSD/Dazzle\n` +
-            `2. Or set DAZZLE_PYTHON environment variable to correct Python path\n` +
-            `3. Or install dazzle in current Python: ${pythonPath}`,
-            'Show Setup Guide',
-            'Disable LSP'
+            `DAZZLE LSP server not found. Check the DAZZLE LSP output panel for details.`,
+            'Show Output',
+            'Show Setup Guide'
         );
 
-        if (action === 'Show Setup Guide') {
-            vscode.env.openExternal(vscode.Uri.parse('https://github.com/dazzle/dazzle#development-setup'));
+        if (action === 'Show Output') {
+            channel.show();
+        } else if (action === 'Show Setup Guide') {
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/dazzle/dazzle#installation'));
         }
 
         // Don't start LSP, but don't throw error - extension can still work for basic features
         return;
     }
+
+    channel.appendLine('✅ DAZZLE LSP server is available');
+    channel.appendLine('');
 
     // Server options: spawn the Python LSP server
     const serverOptions: ServerOptions = {
@@ -51,11 +82,13 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         options: {
             env: {
                 ...process.env,
-                // Support development mode: add project root to PYTHONPATH
-                PYTHONPATH: `/Volumes/SSD/Dazzle/src${process.env.PYTHONPATH ? ':' + process.env.PYTHONPATH : ''}`
+                // Inherit existing PYTHONPATH without modification
+                // Development installations should set PYTHONPATH themselves
             }
         }
     };
+
+    channel.appendLine(`Starting LSP server: ${pythonPath} -m dazzle.lsp`);
 
     // Client options: configure which files to watch
     const clientOptions: LanguageClientOptions = {
@@ -68,7 +101,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
             // Notify the server about file changes to .dsl and .toml files
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{dsl,toml}'),
         },
-        outputChannel: vscode.window.createOutputChannel('DAZZLE LSP'),
+        outputChannel: channel,
     };
 
     // Create and start the client
@@ -80,10 +113,33 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
     );
 
     try {
+        channel.appendLine('Starting language client...');
         await client.start();
+        channel.appendLine('✅ DAZZLE Language Server started successfully');
+        channel.appendLine('');
+        channel.appendLine('LSP features enabled:');
+        channel.appendLine('  • Hover information (Ctrl/Cmd + hover)');
+        channel.appendLine('  • Go to definition (Ctrl/Cmd + click)');
+        channel.appendLine('  • Auto-completion');
+        channel.appendLine('  • Document symbols');
         console.log('DAZZLE Language Server started successfully');
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to start DAZZLE Language Server: ${error}`);
+        channel.appendLine(`❌ Failed to start DAZZLE Language Server: ${error}`);
+        channel.appendLine('');
+        channel.appendLine('Troubleshooting:');
+        channel.appendLine('  1. Check that dazzle is installed: pip list | grep dazzle');
+        channel.appendLine('  2. Try running manually: python3 -m dazzle.lsp');
+        channel.appendLine('  3. Check Python path in settings: dazzle.pythonPath');
+        channel.show();
+
+        vscode.window.showErrorMessage(
+            `Failed to start DAZZLE Language Server. Check the DAZZLE LSP output panel for details.`,
+            'Show Output'
+        ).then(action => {
+            if (action === 'Show Output') {
+                channel.show();
+            }
+        });
         // Don't throw - allow extension to work without LSP
     }
 
@@ -91,6 +147,9 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         dispose: () => {
             if (client) {
                 client.stop();
+            }
+            if (outputChannel) {
+                outputChannel.dispose();
             }
         }
     });

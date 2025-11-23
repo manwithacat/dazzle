@@ -3,6 +3,13 @@ import { DazzleDiagnostics } from './diagnostics';
 import { registerCommands } from './commands';
 import { registerLLMCommands } from './llmCommands';
 import { startLanguageClient, stopLanguageClient, checkLspServerAvailable } from './lspClient';
+import {
+    createSpecStatusBarItem,
+    updateSpecStatusBar,
+    registerGenerateFromSpecCommand,
+    autoDetectSpec,
+    watchForSpecChanges
+} from './claudeIntegration';
 
 /**
  * DAZZLE VS Code Extension
@@ -16,9 +23,31 @@ import { startLanguageClient, stopLanguageClient, checkLspServerAvailable } from
 let diagnostics: DazzleDiagnostics;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let lspClientActive = false;
+let specStatusBarItem: vscode.StatusBarItem | undefined;
+let lspStatusBarItem: vscode.StatusBarItem | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('DAZZLE DSL extension is now active');
+
+    // Create LSP status bar item (show loading initially)
+    lspStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    lspStatusBarItem.text = '$(loading~spin) DAZZLE LSP';
+    lspStatusBarItem.tooltip = 'DAZZLE Language Server initializing...';
+    lspStatusBarItem.command = 'dazzle.showLspOutput';
+    lspStatusBarItem.show();
+    context.subscriptions.push(lspStatusBarItem);
+
+    // Register command to show LSP output
+    context.subscriptions.push(
+        vscode.commands.registerCommand('dazzle.showLspOutput', () => {
+            const outputPanel = vscode.window.visibleTextEditors.find(editor =>
+                editor.document.uri.scheme === 'output'
+            );
+            vscode.commands.executeCommand('workbench.action.output.show');
+            // Select DAZZLE LSP in the output dropdown
+            vscode.commands.executeCommand('workbench.action.output.toggleOutput', 'DAZZLE LSP');
+        })
+    );
 
     // Initialize diagnostics provider
     diagnostics = new DazzleDiagnostics();
@@ -30,40 +59,68 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register LLM commands (analyze-spec, etc.)
     registerLLMCommands(context);
 
+    // Set up Claude integration for SPEC → App workflow
+    registerGenerateFromSpecCommand(context);
+    specStatusBarItem = createSpecStatusBarItem(context);
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    updateSpecStatusBar(specStatusBarItem, workspaceRoot);
+    watchForSpecChanges(context, specStatusBarItem);
+
+    // Auto-detect SPEC.md and show helpful notification
+    setTimeout(() => autoDetectSpec(context), 3000);
+
     // Set up file watchers for auto-validation
     setupFileWatchers(context);
 
     // Start LSP client if available
+    console.log('Checking for DAZZLE LSP server...');
     const lspAvailable = await checkLspServerAvailable();
     if (lspAvailable) {
         try {
+            console.log('LSP server available, starting client...');
             await startLanguageClient(context);
             lspClientActive = true;
+            lspStatusBarItem.text = '$(check) DAZZLE LSP';
+            lspStatusBarItem.tooltip = 'DAZZLE Language Server: Active\nClick to show output';
+            lspStatusBarItem.backgroundColor = undefined;
             console.log('DAZZLE LSP client started successfully');
         } catch (error) {
             console.error('Failed to start LSP client:', error);
+            lspStatusBarItem.text = '$(warning) DAZZLE LSP';
+            lspStatusBarItem.tooltip = `DAZZLE Language Server: Error\n${error}\nClick for details`;
+            lspStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+
             vscode.window.showWarningMessage(
-                'DAZZLE LSP features unavailable. Install DAZZLE with: pip install dazzle',
+                'DAZZLE LSP features unavailable. Check the DAZZLE LSP output for details.',
+                'Show Output',
                 'Learn More'
             ).then(selection => {
-                if (selection === 'Learn More') {
+                if (selection === 'Show Output') {
+                    vscode.commands.executeCommand('dazzle.showLspOutput');
+                } else if (selection === 'Learn More') {
                     vscode.env.openExternal(vscode.Uri.parse('https://github.com/dazzle/dazzle'));
                 }
             });
         }
     } else {
         console.log('DAZZLE LSP server not found, LSP features will be unavailable');
+        lspStatusBarItem.text = '$(x) DAZZLE LSP';
+        lspStatusBarItem.tooltip = 'DAZZLE Language Server: Not Available\nInstall: pip install dazzle\nClick for details';
+        lspStatusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
     }
 
     // Show welcome message on first activation
     const hasShownWelcome = context.globalState.get('dazzle.hasShownWelcome', false);
     if (!hasShownWelcome) {
-        const lspStatus = lspClientActive ? 'LSP features enabled' : 'LSP features unavailable';
+        const lspStatus = lspClientActive ? 'LSP features enabled ✓' : 'LSP features unavailable (install: pip install dazzle)';
         vscode.window.showInformationMessage(
-            `DAZZLE DSL extension activated! Syntax highlighting and validation are now available. ${lspStatus}.`,
+            `DAZZLE DSL extension activated! ${lspStatus}`,
+            'Show LSP Status',
             'Learn More'
         ).then(selection => {
-            if (selection === 'Learn More') {
+            if (selection === 'Show LSP Status') {
+                vscode.commands.executeCommand('dazzle.showLspOutput');
+            } else if (selection === 'Learn More') {
                 vscode.env.openExternal(vscode.Uri.parse('https://github.com/dazzle/dazzle'));
             }
         });
@@ -179,6 +236,12 @@ export async function deactivate() {
     console.log('DAZZLE DSL extension deactivated');
     if (fileWatcher) {
         fileWatcher.dispose();
+    }
+    if (specStatusBarItem) {
+        specStatusBarItem.dispose();
+    }
+    if (lspStatusBarItem) {
+        lspStatusBarItem.dispose();
     }
     if (lspClientActive) {
         await stopLanguageClient();
