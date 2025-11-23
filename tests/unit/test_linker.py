@@ -166,7 +166,7 @@ def test_reference_validation():
     """Test cross-reference validation."""
     print("Testing reference validation...")
 
-    from src.dazzle.core.linker_impl import SymbolTable
+    from dazzle.core.linker_impl import SymbolTable
 
     symbols = SymbolTable()
 
