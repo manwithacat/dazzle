@@ -5,7 +5,7 @@ Generates Django models.py from entity specifications.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from ...base import Generator, GeneratorResult
 from ....core import ir
@@ -61,6 +61,7 @@ class ModelsGenerator(Generator):
             'import uuid',
             'from django.db import models',
             'from django.utils import timezone',
+            'from django.core.exceptions import ValidationError',
             '',
             '',
         ]
@@ -198,6 +199,18 @@ class ModelsGenerator(Generator):
         if has_soft_delete:
             lines.append('')
             lines.append(self._generate_soft_delete_methods(entity))
+
+        # Add status workflow methods if pattern detected
+        workflow_field = self._get_workflow_field(entity)
+        if workflow_field:
+            lines.append('')
+            lines.append(self._generate_status_workflow_methods(entity, workflow_field))
+
+        # Add multi-tenant helper if pattern detected
+        tenant_field = self._get_tenant_field(entity)
+        if tenant_field:
+            lines.append('')
+            lines.append(self._generate_multi_tenant_helpers(entity, tenant_field))
 
         return '\n'.join(lines)
 
@@ -410,5 +423,152 @@ class ModelsGenerator(Generator):
             '        """Permanently delete record from database."""',
             '        super().delete()',
         ])
+
+        return '\n'.join(lines)
+
+    def _get_workflow_field(self, entity: ir.EntitySpec) -> Optional[ir.FieldSpec]:
+        """
+        Detect if entity uses status_workflow_pattern and return the workflow field.
+
+        Pattern detected by finding an enum field with a corresponding
+        {field_name}_changed_at datetime field (from vocabulary expansion).
+        """
+        for field in entity.fields:
+            if field.type.kind == ir.FieldTypeKind.ENUM:
+                # Check if there's a corresponding _changed_at field
+                changed_at_field = f"{field.name}_changed_at"
+                if any(f.name == changed_at_field and f.type.kind == ir.FieldTypeKind.DATETIME
+                       for f in entity.fields):
+                    return field
+        return None
+
+    def _generate_status_workflow_methods(self, entity: ir.EntitySpec, workflow_field: ir.FieldSpec) -> str:
+        """
+        Generate status workflow validation and transition tracking methods.
+
+        Implements status_workflow_pattern:
+        - validate_status_transition() validates state changes
+        - change_status() method updates status with tracking
+        """
+        field_name = workflow_field.name
+        changed_at_field = f"{field_name}_changed_at"
+        changed_by_field = f"{field_name}_changed_by"
+
+        # Check if entity has changed_by field
+        has_changed_by = any(f.name == changed_by_field for f in entity.fields)
+
+        # Get the TextChoices class name
+        choices_class = f'{entity.name}{self._to_pascal_case(field_name)}Choices'
+
+        lines = [
+            f'    def validate_{field_name}_transition(self, new_status):',
+            f'        """',
+            f'        Validate {field_name} transition.',
+            f'        ',
+            f'        Override this method to add custom transition validation logic.',
+            f'        Raise ValidationError if transition is not allowed.',
+            f'        """',
+            f'        # Basic validation: ensure new_status is a valid choice',
+            f'        valid_statuses = [choice[0] for choice in {choices_class}.choices]',
+            f'        if new_status not in valid_statuses:',
+            f'            raise ValidationError(',
+            f'                f"Invalid status: {{new_status}}. Must be one of: {{valid_statuses}}"',
+            f'            )',
+            f'',
+            f'    def change_{field_name}(self, new_status, user=None):',
+            f'        """',
+            f'        Change {field_name} with validation and tracking.',
+            f'        ',
+            f'        Args:',
+            f'            new_status: New status value',
+            f'            user: User making the change (optional)',
+            f'        ',
+            f'        Raises:',
+            f'            ValidationError: If transition is not valid',
+            f'        """',
+            f'        # Validate transition',
+            f'        self.validate_{field_name}_transition(new_status)',
+            f'        ',
+            f'        # Update status',
+            f'        old_status = self.{field_name}',
+            f'        self.{field_name} = new_status',
+            f'        self.{changed_at_field} = timezone.now()',
+        ]
+
+        if has_changed_by:
+            lines.extend([
+                f'        if user:',
+                f'            self.{changed_by_field} = user',
+            ])
+
+        lines.extend([
+            f'        ',
+            f'        self.save()',
+            f'        ',
+            f'        # Hook for post-transition actions (can be overridden)',
+            f'        self.on_{field_name}_changed(old_status, new_status, user)',
+            f'',
+            f'    def on_{field_name}_changed(self, old_status, new_status, user=None):',
+            f'        """',
+            f'        Hook called after {field_name} change.',
+            f'        ',
+            f'        Override this method to add custom logic like notifications,',
+            f'        webhooks, or other side effects when status changes.',
+            f'        """',
+            f'        pass  # Can be overridden in subclasses or customizations',
+        ])
+
+        return '\n'.join(lines)
+
+    def _get_tenant_field(self, entity: ir.EntitySpec) -> Optional[ir.FieldSpec]:
+        """
+        Detect if entity uses multi_tenant_isolation pattern and return the tenant field.
+
+        Pattern detected by finding a required reference field to an Organization
+        or other tenant entity (commonly named organization_id).
+        """
+        # Common tenant field names
+        tenant_field_names = ['organization_id', 'tenant_id', 'account_id', 'company_id']
+
+        for field in entity.fields:
+            if (field.type.kind == ir.FieldTypeKind.REF and
+                field.is_required and
+                field.name in tenant_field_names):
+                return field
+
+        return None
+
+    def _generate_multi_tenant_helpers(self, entity: ir.EntitySpec, tenant_field: ir.FieldSpec) -> str:
+        """
+        Generate multi-tenant isolation helpers.
+
+        Implements multi_tenant_isolation pattern:
+        - Class method for tenant-scoped queries
+        - Documentation about tenant isolation
+        """
+        field_name = tenant_field.name
+        tenant_entity = tenant_field.type.ref_entity or "Organization"
+
+        lines = [
+            f'    @classmethod',
+            f'    def for_tenant(cls, {field_name}):',
+            f'        """',
+            f'        Get queryset scoped to specific tenant.',
+            f'        ',
+            f'        This model uses multi-tenant isolation. All queries should be',
+            f'        scoped to a tenant using this method or by filtering on {field_name}.',
+            f'        ',
+            f'        Args:',
+            f'            {field_name}: The {tenant_entity} to scope queries to',
+            f'        ',
+            f'        Returns:',
+            f'            QuerySet filtered to the specified tenant',
+            f'        ',
+            f'        Example:',
+            f'            tenant = {tenant_entity}.objects.get(id=tenant_id)',
+            f'            items = {entity.name}.for_tenant(tenant)',
+            f'        """',
+            f'        return cls.objects.filter({field_name}={field_name})',
+        ]
 
         return '\n'.join(lines)

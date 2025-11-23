@@ -41,7 +41,7 @@ Output Structure:
 """
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from . import Backend, BackendCapabilities
 from ..core import ir
@@ -431,6 +431,18 @@ module.exports = db;
             lines.extend(self._generate_soft_delete_methods(entity))
             lines.append("")
 
+        # Add status workflow methods if pattern detected
+        workflow_field = self._get_workflow_field(entity)
+        if workflow_field:
+            lines.extend(self._generate_status_workflow_methods_express(entity, workflow_field))
+            lines.append("")
+
+        # Add multi-tenant helper if pattern detected
+        tenant_field = self._get_tenant_field(entity)
+        if tenant_field:
+            lines.extend(self._generate_multi_tenant_helpers_express(entity, tenant_field))
+            lines.append("")
+
         lines.append(f"  return {entity.name};")
         lines.append("};")
         lines.append("")
@@ -553,6 +565,135 @@ module.exports = db;
             f"    await this.save();",
             f"  }};",
         ])
+
+        return lines
+
+    def _get_workflow_field(self, entity: "ir.EntitySpec") -> Optional["ir.FieldSpec"]:
+        """
+        Detect if entity uses status_workflow_pattern and return the workflow field.
+
+        Pattern detected by finding an enum field with a corresponding
+        {field_name}_changed_at datetime field (from vocabulary expansion).
+        """
+        for field in entity.fields:
+            if field.type.kind == ir.FieldTypeKind.ENUM:
+                # Check if there's a corresponding _changed_at field
+                changed_at_field = f"{field.name}_changed_at"
+                if any(f.name == changed_at_field and f.type.kind == ir.FieldTypeKind.DATETIME
+                       for f in entity.fields):
+                    return field
+        return None
+
+    def _generate_status_workflow_methods_express(self, entity: "ir.EntitySpec", workflow_field: "ir.FieldSpec") -> list:
+        """
+        Generate status workflow validation and transition tracking methods for Express/Sequelize.
+
+        Implements status_workflow_pattern:
+        - validateStatusTransition() validates state changes
+        - changeStatus() method updates status with tracking
+        """
+        field_name = workflow_field.name
+        changed_at_field = f"{field_name}_changed_at"
+        changed_by_field = f"{field_name}_changed_by"
+
+        # Check if entity has changed_by field
+        has_changed_by = any(f.name == changed_by_field for f in entity.fields)
+
+        # Get valid status values from enum
+        valid_statuses = workflow_field.type.enum_values or []
+        valid_statuses_str = ", ".join(f"'{s}'" for s in valid_statuses)
+
+        lines = [
+            f"  // Status workflow methods",
+            f"  {entity.name}.prototype.validateStatusTransition = function(newStatus) {{",
+            f"    // Validate that newStatus is a valid choice",
+            f"    const validStatuses = [{valid_statuses_str}];",
+            f"    if (!validStatuses.includes(newStatus)) {{",
+            f"      throw new Error(`Invalid status: ${{newStatus}}. Must be one of: ${{validStatuses}}`);",
+            f"    }}",
+            f"  }};",
+            f"",
+            f"  {entity.name}.prototype.changeStatus = async function(newStatus, user = null) {{",
+            f"    // Validate transition",
+            f"    this.validateStatusTransition(newStatus);",
+            f"    ",
+            f"    // Update status",
+            f"    const oldStatus = this.{field_name};",
+            f"    this.{field_name} = newStatus;",
+            f"    this.{changed_at_field} = new Date();",
+        ]
+
+        if has_changed_by:
+            lines.extend([
+                f"    if (user) {{",
+                f"      this.{changed_by_field} = user;",
+                f"    }}",
+            ])
+
+        lines.extend([
+            f"    ",
+            f"    await this.save();",
+            f"    ",
+            f"    // Hook for post-transition actions",
+            f"    await this.onStatusChanged(oldStatus, newStatus, user);",
+            f"  }};",
+            f"",
+            f"  {entity.name}.prototype.onStatusChanged = async function(oldStatus, newStatus, user = null) {{",
+            f"    // Override this method to add custom logic like notifications,",
+            f"    // webhooks, or other side effects when status changes.",
+            f"    // Default: no action",
+            f"  }};",
+        ])
+
+        return lines
+
+    def _get_tenant_field(self, entity: "ir.EntitySpec") -> Optional["ir.FieldSpec"]:
+        """
+        Detect if entity uses multi_tenant_isolation pattern and return the tenant field.
+
+        Pattern detected by finding a required reference field to an Organization
+        or other tenant entity (commonly named organization_id).
+        """
+        # Common tenant field names
+        tenant_field_names = ['organization_id', 'tenant_id', 'account_id', 'company_id']
+
+        for field in entity.fields:
+            if (field.type.kind == ir.FieldTypeKind.REF and
+                field.is_required and
+                field.name in tenant_field_names):
+                return field
+
+        return None
+
+    def _generate_multi_tenant_helpers_express(self, entity: "ir.EntitySpec", tenant_field: "ir.FieldSpec") -> list:
+        """
+        Generate multi-tenant isolation helpers for Express/Sequelize.
+
+        Implements multi_tenant_isolation pattern:
+        - Static method for tenant-scoped queries
+        - Documentation about tenant isolation
+        """
+        field_name = tenant_field.name
+        tenant_entity = tenant_field.type.ref_entity or "Organization"
+
+        lines = [
+            f"  // Multi-tenant isolation helpers",
+            f"  {entity.name}.forTenant = function({field_name}) {{",
+            f"    /**",
+            f"     * Get records scoped to specific tenant.",
+            f"     * ",
+            f"     * This model uses multi-tenant isolation. All queries should be",
+            f"     * scoped to a tenant using this method or by filtering on {field_name}.",
+            f"     * ",
+            f"     * @param {{{tenant_entity}}} {field_name} - The tenant to scope queries to",
+            f"     * @returns {{Promise}} Sequelize query scoped to tenant",
+            f"     * ",
+            f"     * @example",
+            f"     * const items = await {entity.name}.forTenant(tenant);",
+            f"     */",
+            f"    return this.findAll({{ where: {{ {field_name}: {field_name} }} }});",
+            f"  }};",
+        ]
 
         return lines
 
