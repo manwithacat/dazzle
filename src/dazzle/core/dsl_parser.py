@@ -280,7 +280,9 @@ class Parser:
                 token.column,
             )
 
-    def parse_field_modifiers(self) -> tuple[list[ir.FieldModifier], str | int | float | bool | None]:
+    def parse_field_modifiers(
+        self,
+    ) -> tuple[list[ir.FieldModifier], str | int | float | bool | None]:
         """
         Parse field modifiers and default value.
 

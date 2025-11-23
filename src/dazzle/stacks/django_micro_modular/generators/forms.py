@@ -189,7 +189,9 @@ class FormsGenerator(Generator):
 
         return included_fields
 
-    def _get_form_widgets(self, entity: ir.EntitySpec, included_fields: list[str]) -> dict[str, str]:
+    def _get_form_widgets(
+        self, entity: ir.EntitySpec, included_fields: list[str]
+    ) -> dict[str, str]:
         """Get custom widgets for form fields."""
         widgets = {}
 

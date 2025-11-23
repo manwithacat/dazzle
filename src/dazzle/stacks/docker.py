@@ -31,7 +31,11 @@ class DockerStack(Backend):
     """
 
     def generate(
-        self, appspec: ir.AppSpec, output_dir: Path, docker_config: DockerConfig | None = None, **options: Any
+        self,
+        appspec: ir.AppSpec,
+        output_dir: Path,
+        docker_config: DockerConfig | None = None,
+        **options: Any,
     ) -> None:
         """
         Generate Docker infrastructure for local development.
