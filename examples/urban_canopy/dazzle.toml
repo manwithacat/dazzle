@@ -1,0 +1,7 @@
+[project]
+name = "urbancanopy"
+version = "0.1.0"
+root = "urbancanopy.core"
+
+[modules]
+paths = ["./dsl"]

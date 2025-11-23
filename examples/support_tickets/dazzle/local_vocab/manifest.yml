@@ -1,0 +1,498 @@
+version: 1.0.0
+app_id: support_tickets
+dsl_core_version: 1.0.0
+
+# Advanced vocabulary entries for support ticket systems
+# Demonstrates more complex patterns for multi-entity apps
+
+entries:
+  # ========================================================================
+  # DATA PATTERNS - Support ticket domain patterns
+  # ========================================================================
+
+  - id: audit_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard audit timestamp fields (created_at, updated_at)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - audit
+      - timestamp
+      - data
+      - common
+
+  - id: ticket_status_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Ticket lifecycle status field (new, open, pending, resolved, closed)
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+        description: Name of the status field
+      - name: default_value
+        type: string
+        required: false
+        default: new
+        description: Default status value
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[new,open,pending,resolved,closed]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - status
+      - ticket
+      - data
+
+  - id: priority_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard priority field (low, medium, high, urgent)
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: priority
+        description: Name of the priority field
+      - name: default_value
+        type: string
+        required: false
+        default: medium
+        description: Default priority value
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[low,medium,high,urgent]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - priority
+      - data
+      - common
+
+  - id: user_reference
+    kind: alias
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Reference to User entity with configurable requirement
+    parameters:
+      - name: field_name
+        type: string
+        required: true
+        description: Name of the user reference field
+      - name: required
+        type: boolean
+        required: false
+        default: false
+        description: Whether the field is required
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: ref User{% if required %} required{% endif %}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - reference
+      - user
+      - data
+      - common
+
+  - id: ticket_reference
+    kind: alias
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Reference to Ticket entity
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: ticket
+        description: Name of the ticket reference field
+      - name: required
+        type: boolean
+        required: false
+        default: true
+        description: Whether the field is required
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: ref Ticket{% if required %} required{% endif %}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - reference
+      - ticket
+      - data
+
+  - id: assignment_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard assignment tracking fields (assigned_to, assigned_at)
+    parameters:
+      - name: user_required
+        type: boolean
+        required: false
+        default: false
+        description: Whether assigned_to is required
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        assigned_to: ref User{% if user_required %} required{% endif %}
+        assigned_at: datetime optional
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - assignment
+      - tracking
+      - data
+
+  - id: resolution_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Resolution tracking fields (resolved_at, resolved_by, resolution_notes)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        resolved_at: datetime optional
+        resolved_by: ref User
+        resolution_notes: text
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - resolution
+      - tracking
+      - data
+
+  # ========================================================================
+  # ENTITY PATTERNS - Common entity templates
+  # ========================================================================
+
+  - id: comment_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Comment/note entity template with author, content, and timestamps
+    parameters:
+      - name: entity_name
+        type: string
+        required: false
+        default: Comment
+        description: Name of the comment entity
+      - name: parent_entity
+        type: string
+        required: true
+        description: Name of the parent entity (e.g., Ticket)
+      - name: parent_field
+        type: string
+        required: false
+        default: ticket
+        description: Field name for parent reference
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          {{ parent_field }}: ref {{ parent_entity }} required
+          author: ref User required
+          content: text required
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - entity
+      - comment
+      - discussion
+      - pattern
+
+  - id: ticket_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Full-featured ticket entity with status, priority, assignment, and resolution tracking
+    parameters:
+      - name: entity_name
+        type: string
+        required: false
+        default: Ticket
+        description: Name of the ticket entity
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          title: str(200) required
+          description: text required
+          status: enum[new,open,pending,resolved,closed]=new
+          priority: enum[low,medium,high,urgent]=medium
+          created_by: ref User required
+          assigned_to: ref User
+          assigned_at: datetime optional
+          resolved_at: datetime optional
+          resolved_by: ref User
+          resolution_notes: text
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - entity
+      - ticket
+      - template
+      - pattern
+
+  # ========================================================================
+  # UI PATTERNS - Support-specific surface patterns
+  # ========================================================================
+
+  - id: crud_surface_set
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Complete CRUD surface set (list, view, create, edit)
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: title_field
+        type: string
+        required: true
+        description: Primary display field
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - crud
+      - ui
+      - pattern
+      - common
+
+  - id: ticket_dashboard
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Ticket list/dashboard surface with status and priority
+    parameters:
+      - name: surface_name
+        type: string
+        required: false
+        default: ticket_dashboard
+        description: Name of the dashboard surface
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ surface_name }} "Ticket Dashboard":
+          uses entity Ticket
+          mode: list
+
+          section main "Support Tickets":
+            field title "Title"
+            field status "Status"
+            field priority "Priority"
+            field assigned_to "Assigned To"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - dashboard
+      - ticket
+      - ui
+
+  - id: ticket_detail_view
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Comprehensive ticket detail view with all fields
+    parameters:
+      - name: surface_name
+        type: string
+        required: false
+        default: ticket_detail
+        description: Name of the detail surface
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ surface_name }} "Ticket Details":
+          uses entity Ticket
+          mode: view
+
+          section info "Ticket Information":
+            field title "Title"
+            field description "Description"
+            field status "Status"
+            field priority "Priority"
+
+          section assignment "Assignment":
+            field assigned_to "Assigned To"
+            field assigned_at "Assigned At"
+
+          section resolution "Resolution":
+            field resolved_at "Resolved At"
+            field resolved_by "Resolved By"
+            field resolution_notes "Resolution Notes"
+
+          section audit "Audit":
+            field created_by "Created By"
+            field created_at "Created"
+            field updated_at "Updated"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - detail
+      - ticket
+      - ui
+
+  - id: comment_form
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Simple comment/reply form for adding comments to tickets
+    parameters:
+      - name: entity_name
+        type: string
+        required: false
+        default: Comment
+        description: Name of the comment entity
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_create "Add Comment":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New Comment":
+            field content "Comment"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - form
+      - comment
+      - ui
+
+  # ========================================================================
+  # WORKFLOW PATTERNS - Common workflow templates
+  # ========================================================================
+
+  - id: ticket_lifecycle
+    kind: pattern
+    scope: workflow
+    dsl_core_version: 1.0.0
+    description: Basic ticket lifecycle experience (create → assign → resolve → close)
+    parameters:
+      - name: experience_name
+        type: string
+        required: false
+        default: ticket_lifecycle
+        description: Name of the experience
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        experience {{ experience_name }} "Ticket Lifecycle":
+          step create_ticket "Create Ticket":
+            surface ticket_create
+
+          step assign_ticket "Assign Ticket":
+            surface ticket_edit
+
+          step resolve_ticket "Resolve Ticket":
+            surface ticket_edit
+
+          step close_ticket "Close Ticket":
+            surface ticket_detail
+
+          transitions:
+            create_ticket -> assign_ticket
+            assign_ticket -> resolve_ticket
+            resolve_ticket -> close_ticket
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - workflow
+      - ticket
+      - lifecycle
+      - experience

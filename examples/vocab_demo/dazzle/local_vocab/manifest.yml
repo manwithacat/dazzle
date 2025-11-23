@@ -1,0 +1,117 @@
+version: 1.0.0
+app_id: vocab_demo
+dsl_core_version: 1.0.0
+
+entries:
+  # UI Pattern: Timestamped entity
+  - id: timestamped_entity
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Entity with created_at and updated_at timestamp fields
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: additional_fields
+        type: string
+        required: false
+        default: ""
+        description: Additional field definitions
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }}
+          {{ additional_fields }}
+          created_at: datetime
+          updated_at: datetime
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - timestamp
+      - audit
+      - data
+
+  # UI Pattern: List/detail/create/edit surface set
+  - id: crud_surface_set
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Complete CRUD surface set (list, detail, create, edit) for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity (e.g., Task, User)
+      - name: title_field
+        type: string
+        required: true
+        description: Field to use as title/name
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - crud
+      - ui
+      - pattern
+
+  # Data Pattern: User reference field
+  - id: user_reference
+    kind: alias
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard user reference field with relationship
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: user
+        description: Name of the user reference field
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: ref User"
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - reference
+      - user
+      - data
