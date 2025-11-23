@@ -11,10 +11,11 @@ from .models import (
     BusinessRule,
     CRUDAnalysis,
     Question,
+    SpecAnalysis,
     StateMachine,
     StateTransition,
 )
-from .spec_analyzer import SpecAnalysis, SpecAnalyzer
+from .spec_analyzer import SpecAnalyzer
 
 __all__ = [
     "LLMAPIClient",

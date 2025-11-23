@@ -33,7 +33,7 @@ class SpecAnalyzer:
     - Clarifying questions
     """
 
-    def __init__(
+    def __init__(  # type: ignore[no-untyped-def]  # kwargs forwarded to LLMAPIClient with varying types
         self,
         provider: LLMProvider = LLMProvider.ANTHROPIC,
         model: str | None = None,
@@ -161,7 +161,7 @@ class SpecAnalyzer:
         return self.client.estimate_cost(spec_size_kb)
 
 
-def analyze_spec_file(
+def analyze_spec_file(  # type: ignore[no-untyped-def]  # kwargs forwarded to SpecAnalyzer with varying types
     spec_path: Path, provider: LLMProvider = LLMProvider.ANTHROPIC, **kwargs
 ) -> SpecAnalysis:
     """

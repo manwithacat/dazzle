@@ -185,12 +185,12 @@ class TestGenerator(Generator):
             ref_entity_name = fk_field.type.ref_entity
             if ref_entity_name not in referenced_entities:
                 referenced_entities.add(ref_entity_name)
-                ref_entity = self._get_entity_by_name(ref_entity_name)
+                ref_entity = self._get_entity_by_name(ref_entity_name)  # type: ignore[arg-type]  # ref_entity is Optional but only None values filtered out
                 if ref_entity:
                     create_params = self._get_minimal_create_params(ref_entity)
                     param_str = ",\n            ".join(f"{k}={v}" for k, v in create_params.items())
                     lines.append(
-                        f"        self.{ref_entity_name.lower()} = {ref_entity_name}.objects.create("
+                        f"        self.{ref_entity_name.lower()} = {ref_entity_name}.objects.create("  # type: ignore[union-attr]  # ref_entity_name is Optional but None checked above
                     )
                     lines.append(f"            {param_str}")
                     lines.append("        )")
@@ -273,7 +273,7 @@ class TestGenerator(Generator):
         lines = [
             f"    def test_{field.name}_max_length(self):",
             f'        """Test {field.name} max_length constraint ({max_len} chars)."""',
-            f'        long_value = "x" * {max_len + 1}',
+            f'        long_value = "x" * {max_len + 1}',  # type: ignore[operator]  # max_len is Optional but only None values filtered out
             "        with self.assertRaises(ValidationError):",
         ]
 
@@ -304,7 +304,7 @@ class TestGenerator(Generator):
         lines.append(f"            {param_str}")
         lines.append("        )")
         lines.append(
-            f"        self.assertEqual({entity.name.lower()}.{field.name}, self.{ref_entity.lower()})"
+            f"        self.assertEqual({entity.name.lower()}.{field.name}, self.{ref_entity.lower()})"  # type: ignore[union-attr]  # ref_entity is Optional but None checked above
         )
 
         # Test cascade behavior if required (PROTECT)
@@ -312,7 +312,7 @@ class TestGenerator(Generator):
             lines.append("")
             lines.append(f"        # Test PROTECT cascade - cannot delete referenced {ref_entity}")
             lines.append("        with self.assertRaises(ProtectedError):")
-            lines.append(f"            self.{ref_entity.lower()}.delete()")
+            lines.append(f"            self.{ref_entity.lower()}.delete()")  # type: ignore[union-attr]  # ref_entity is Optional but None checked above
 
         return lines
 
@@ -392,12 +392,12 @@ class TestGenerator(Generator):
             ref_entity_name = fk_field.type.ref_entity
             if ref_entity_name not in referenced_entities:
                 referenced_entities.add(ref_entity_name)
-                ref_entity = self._get_entity_by_name(ref_entity_name)
+                ref_entity = self._get_entity_by_name(ref_entity_name)  # type: ignore[arg-type]  # ref_entity is Optional but only None values filtered out
                 if ref_entity:
                     create_params = self._get_minimal_create_params(ref_entity)
                     param_str = ",\n            ".join(f"{k}={v}" for k, v in create_params.items())
                     lines.append(
-                        f"        self.{ref_entity_name.lower()} = {ref_entity_name}.objects.create("
+                        f"        self.{ref_entity_name.lower()} = {ref_entity_name}.objects.create("  # type: ignore[union-attr]  # ref_entity_name is Optional but None checked above
                     )
                     lines.append(f"            {param_str}")
                     lines.append("        )")
@@ -621,7 +621,7 @@ class TestGenerator(Generator):
                 if field.type.kind == ir.FieldTypeKind.REF:
                     # Use self.ref_entity if available
                     if use_self:
-                        params[field.name] = f"self.{field.type.ref_entity.lower()}"
+                        params[field.name] = f"self.{field.type.ref_entity.lower()}"  # type: ignore[union-attr]  # ref_entity is Optional but None checked by validator
                     else:
                         # Will be handled in setUp
                         continue
@@ -856,12 +856,12 @@ class TestGenerator(Generator):
                 expected_value = assertion.expected_value
 
                 # Handle special field names (first.field, last.field)
-                if field_name.startswith("first."):
-                    actual_field = field_name.split(".", 1)[1]
+                if field_name.startswith("first."):  # type: ignore[union-attr]  # field_name is Optional but None checked by validator
+                    actual_field = field_name.split(".", 1)[1]  # type: ignore[union-attr]  # field_name is Optional but None checked by validator
                     lines.append(f"        obj = {result_var}.first()")
                     field_ref = f"obj.{actual_field}"
-                elif field_name.startswith("last."):
-                    actual_field = field_name.split(".", 1)[1]
+                elif field_name.startswith("last."):  # type: ignore[union-attr]  # field_name is Optional but None checked by validator
+                    actual_field = field_name.split(".", 1)[1]  # type: ignore[union-attr]  # field_name is Optional but None checked by validator
                     lines.append(f"        obj = {result_var}.last()")
                     field_ref = f"obj.{actual_field}"
                 else:

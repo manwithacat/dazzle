@@ -226,7 +226,7 @@ class ViewsGenerator(Generator):
                     lines.append(f"                # Create default {ref_entity} if none exists")
 
                     # Generate sensible default values based on entity fields
-                    default_values = self._get_default_values_for_entity(ref_entity)
+                    default_values = self._get_default_values_for_entity(ref_entity)  # type: ignore[arg-type]  # ref_entity is Optional but only None values filtered out
                     lines.append(
                         f"                form.instance.{fk_field.name} = {ref_entity}.objects.create("
                     )

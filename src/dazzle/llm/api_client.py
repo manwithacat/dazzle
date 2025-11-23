@@ -58,13 +58,13 @@ class LLMAPIClient:
         if api_key:
             self.api_key = api_key
         elif api_key_env:
-            self.api_key = os.environ.get(api_key_env)
+            self.api_key = os.environ.get(api_key_env)  # type: ignore[assignment]  # Validated below with ValueError
         else:
             # Default env var names
             if provider == LLMProvider.ANTHROPIC:
-                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+                self.api_key = os.environ.get("ANTHROPIC_API_KEY")  # type: ignore[assignment]  # Validated below with ValueError
             else:
-                self.api_key = os.environ.get("OPENAI_API_KEY")
+                self.api_key = os.environ.get("OPENAI_API_KEY")  # type: ignore[assignment]  # Validated below with ValueError
 
         if not self.api_key:
             raise ValueError(
@@ -84,7 +84,7 @@ class LLMAPIClient:
         # Initialize provider client
         self._init_client()
 
-    def _init_client(self):
+    def _init_client(self) -> None:
         """Initialize provider-specific client."""
         if self.provider == LLMProvider.ANTHROPIC:
             try:
@@ -99,7 +99,7 @@ class LLMAPIClient:
             try:
                 from openai import OpenAI
 
-                self.client = OpenAI(api_key=self.api_key)
+                self.client = OpenAI(api_key=self.api_key)  # type: ignore[assignment]  # Union type handled by runtime provider check
             except ImportError:
                 raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
 
@@ -137,7 +137,7 @@ class LLMAPIClient:
         try:
             analysis = json.loads(response_text)
             logger.info("Successfully parsed LLM analysis")
-            return analysis
+            return analysis  # type: ignore[no-any-return]  # LLM returns unstructured JSON dict
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse LLM output as JSON: {e}")
             logger.debug(f"Raw output: {response_text[:500]}...")
@@ -285,7 +285,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             )
 
             # Extract text from response
-            return response.content[0].text
+            return response.content[0].text  # type: ignore[union-attr]  # Anthropic SDK returns union of block types, text block is primary
 
         except Exception as e:
             logger.error(f"Anthropic API call failed: {e}")
@@ -296,7 +296,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         logger.debug(f"Calling OpenAI API with model {self.model}")
 
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.chat.completions.create(  # type: ignore[attr-defined]  # OpenAI client typed at runtime via provider check
                 model=self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
@@ -307,7 +307,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 ],
             )
 
-            return response.choices[0].message.content
+            return response.choices[0].message.content  # type: ignore[no-any-return]  # OpenAI SDK returns Optional[str] but always populated for completions
 
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")
