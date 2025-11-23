@@ -402,8 +402,9 @@ def validate(
     - human: Human-readable output (default)
     - vscode: Machine-readable format for VS Code integration (file:line:col: severity: message)
     """
-    root = Path(".").resolve()
-    manifest_path = root / manifest
+    # Use manifest path to determine root directory
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
 
     try:
         mf = load_manifest(manifest_path)
@@ -450,8 +451,9 @@ def lint(
 
     ⚠ Operates in CURRENT directory (must contain dazzle.toml).
     """
-    root = Path(".").resolve()
-    manifest_path = root / manifest
+    # Use manifest path to determine root directory
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
 
     mf = load_manifest(manifest_path)
     dsl_files = discover_dsl_files(root, mf)
@@ -498,8 +500,9 @@ def inspect(
     from dazzle.core.linker_impl import build_symbol_table
     from dazzle.core.patterns import analyze_patterns, format_pattern_report
 
-    root = Path(".").resolve()
-    manifest_path = root / manifest
+    # Use manifest path to determine root directory
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
 
     try:
         mf = load_manifest(manifest_path)
@@ -692,8 +695,9 @@ def build(
     from dazzle.core.stacks import StackError, resolve_stack_backends, validate_stack_backends
     from dazzle.stacks import get_backend
 
-    root = Path(".").resolve()
-    manifest_path = root / manifest
+    # Use manifest path to determine root directory
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
 
     try:
         mf = load_manifest(manifest_path)

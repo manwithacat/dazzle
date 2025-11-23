@@ -48,10 +48,10 @@ surface task_list "Tasks":
 [project]
 name = "test_app"
 version = "0.1.0"
-root_module = "testapp"
+root = "testapp"
 
-[dazzle]
-dsl_paths = ["dsl/"]
+[modules]
+paths = ["dsl/"]
 """)
 
     return tmp_path
@@ -101,7 +101,8 @@ paths = ["./dsl"]
 
     result = cli_runner.invoke(app, ["validate", "--manifest", str(manifest)])
     assert result.exit_code == 1
-    assert "ERROR" in result.stdout
+    # Error messages go to stderr
+    assert "ERROR" in result.stderr or "Error" in result.stderr
 
 
 def test_lint_command(cli_runner: CliRunner, test_project: Path):
@@ -150,7 +151,7 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
             "build",
             "--manifest",
             str(test_project / "dazzle.toml"),
-            "--backend",
+            "--stack",
             "nonexistent",
             "--out",
             "/tmp/output",
@@ -158,7 +159,8 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
     )
 
     assert result.exit_code == 1
-    assert "Backend error" in result.stdout or "not found" in result.stdout
+    # Error messages go to stderr
+    assert "Error" in result.stderr or "not found" in result.stderr
 
 
 def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):

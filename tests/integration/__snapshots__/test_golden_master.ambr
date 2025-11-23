@@ -1,0 +1,233 @@
+# serializer version: 1
+# name: test_simple_dsl_to_ir_snapshot
+  dict({
+    'domain': dict({
+      'entities': list([
+        dict({
+          'constraints': list([
+          ]),
+          'fields': list([
+            dict({
+              'default': None,
+              'modifiers': list([
+                <FieldModifier.PK: 'pk'>,
+              ]),
+              'name': 'id',
+              'type': dict({
+                'enum_values': None,
+                'kind': <FieldTypeKind.UUID: 'uuid'>,
+                'max_length': None,
+                'precision': None,
+                'ref_entity': None,
+                'scale': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'title',
+              'type': dict({
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 200,
+                'precision': None,
+                'ref_entity': None,
+                'scale': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'modifiers': list([
+              ]),
+              'name': 'description',
+              'type': dict({
+                'enum_values': None,
+                'kind': <FieldTypeKind.TEXT: 'text'>,
+                'max_length': None,
+                'precision': None,
+                'ref_entity': None,
+                'scale': None,
+              }),
+            }),
+            dict({
+              'default': 'todo',
+              'modifiers': list([
+              ]),
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'todo',
+                  'in_progress',
+                  'done',
+                ]),
+                'kind': <FieldTypeKind.ENUM: 'enum'>,
+                'max_length': None,
+                'precision': None,
+                'ref_entity': None,
+                'scale': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'modifiers': list([
+                <FieldModifier.AUTO_ADD: 'auto_add'>,
+              ]),
+              'name': 'created_at',
+              'type': dict({
+                'enum_values': None,
+                'kind': <FieldTypeKind.DATETIME: 'datetime'>,
+                'max_length': None,
+                'precision': None,
+                'ref_entity': None,
+                'scale': None,
+              }),
+            }),
+          ]),
+          'name': 'Task',
+          'title': 'Task',
+        }),
+      ]),
+    }),
+    'experiences': list([
+    ]),
+    'foreign_models': list([
+    ]),
+    'integrations': list([
+    ]),
+    'name': 'simple_test',
+    'services': list([
+    ]),
+    'surfaces': list([
+      dict({
+        'actions': list([
+        ]),
+        'entity_ref': 'Task',
+        'mode': <SurfaceMode.LIST: 'list'>,
+        'name': 'task_list',
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'title',
+                'label': 'Title',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'status',
+                'label': 'Status',
+                'options': dict({
+                }),
+              }),
+            ]),
+            'name': 'main',
+            'title': 'Tasks',
+          }),
+        ]),
+        'title': 'Task List',
+      }),
+      dict({
+        'actions': list([
+        ]),
+        'entity_ref': 'Task',
+        'mode': <SurfaceMode.VIEW: 'view'>,
+        'name': 'task_detail',
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'title',
+                'label': 'Title',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'description',
+                'label': 'Description',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'status',
+                'label': 'Status',
+                'options': dict({
+                }),
+              }),
+            ]),
+            'name': 'main',
+            'title': 'Task',
+          }),
+        ]),
+        'title': 'Task Detail',
+      }),
+      dict({
+        'actions': list([
+        ]),
+        'entity_ref': 'Task',
+        'mode': <SurfaceMode.CREATE: 'create'>,
+        'name': 'task_create',
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'title',
+                'label': 'Title',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'description',
+                'label': 'Description',
+                'options': dict({
+                }),
+              }),
+            ]),
+            'name': 'main',
+            'title': 'New Task',
+          }),
+        ]),
+        'title': 'Create Task',
+      }),
+      dict({
+        'actions': list([
+        ]),
+        'entity_ref': 'Task',
+        'mode': <SurfaceMode.EDIT: 'edit'>,
+        'name': 'task_edit',
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'title',
+                'label': 'Title',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'description',
+                'label': 'Description',
+                'options': dict({
+                }),
+              }),
+              dict({
+                'field_name': 'status',
+                'label': 'Status',
+                'options': dict({
+                }),
+              }),
+            ]),
+            'name': 'main',
+            'title': 'Edit Task',
+          }),
+        ]),
+        'title': 'Edit Task',
+      }),
+    ]),
+    'tests': list([
+    ]),
+    'title': 'Simple Test App',
+    'version': '0.1.0',
+  })
+# ---
