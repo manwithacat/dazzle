@@ -20,7 +20,7 @@ We welcome all kinds of contributions:
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/yourusername/dazzle.git
+   git clone https://github.com/manwithacat/dazzle.git
    cd dazzle
    ```
 
@@ -36,13 +36,21 @@ We welcome all kinds of contributions:
    pip install -e ".[dev]"
    ```
 
-4. **Verify Installation**
+4. **Install Pre-commit Hooks** (recommended)
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+   This will automatically run linting, formatting, and type checking before each commit.
+
+5. **Verify Installation**
    ```bash
    dazzle --help
    pytest
    ```
 
-5. **Set Up VSCode Extension** (optional)
+6. **Set Up VSCode Extension** (optional)
    ```bash
    cd extensions/vscode
    npm install
@@ -54,7 +62,7 @@ We welcome all kinds of contributions:
 
 ### Making Your First Contribution
 
-1. **Pick an Issue**: Browse [open issues](https://github.com/yourusername/dazzle/issues) or create a new one
+1. **Pick an Issue**: Browse [open issues](https://github.com/manwithacat/dazzle/issues) or create a new one
 2. **Comment**: Let others know you're working on it
 3. **Branch**: Create a feature branch (`git checkout -b feature/amazing-feature`)
 4. **Code**: Make your changes
@@ -76,6 +84,9 @@ We welcome all kinds of contributions:
 We maintain high code quality standards:
 
 ```bash
+# Run all pre-commit hooks manually
+pre-commit run --all-files
+
 # Run tests
 pytest
 
@@ -91,6 +102,8 @@ ruff check src/ tests/
 # Format code
 ruff format src/ tests/
 ```
+
+**Note**: If you installed pre-commit hooks, these checks will run automatically on `git commit`.
 
 ### Testing
 
@@ -350,8 +363,8 @@ Be kind, respectful, and professional. We're all here to learn and build somethi
 
 ## 📞 Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/dazzle/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/dazzle/discussions)
+- **Issues**: [GitHub Issues](https://github.com/manwithacat/dazzle/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/manwithacat/dazzle/discussions)
 - **Security**: Report security issues privately (see SECURITY.md)
 
 ---

@@ -57,6 +57,45 @@ dazzle validate
 dazzle build --backend openapi --out ./build
 ```
 
+### 🌳 Urban Canopy - Tree Monitoring
+
+**Location**: [`urban_canopy/`](urban_canopy/)
+
+A real-world citizen science application for monitoring street tree health. Used as integration test for critical bug fixes.
+
+**Features**:
+- 4 entities with complex relationships (Tree, Observation, MaintenanceTask, Volunteer)
+- Multiple foreign keys per entity
+- Self-referential relationships
+- Partial CRUD patterns (create-only observations)
+- Multi-word entity names (MaintenanceTask)
+- Geolocation fields (lat/lng)
+- Rich enum usage (status, condition, types)
+- State machine patterns (task workflow)
+
+**Perfect for**:
+- Real-world application architecture
+- Complex entity relationships
+- Testing partial CRUD patterns
+- Multi-word entity naming
+- Integration testing
+- Understanding citizen science workflows
+
+**Quick Start**:
+```bash
+cd urban_canopy
+dazzle validate
+dazzle build --stack micro
+cd build/urbancanopy
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+**Special Note**: This example was instrumental in discovering and fixing two critical bugs in DAZZLE v0.1.1:
+- BUG-001: Partial CRUD support (URLs for missing views)
+- BUG-002: Multi-word entity view naming consistency
+
 ## Example Structure
 
 Each example follows this structure:
@@ -113,9 +152,9 @@ This ensures all examples stay working as DAZZLE evolves.
 Begin with **Simple Task Manager**:
 - Understand entities and fields
 - Learn surface modes
-- See how DSL becomes OpenAPI
+- See how DSL becomes artifacts
 
-### 2. Add Complexity
+### 2. Add Relationships
 
 Move to **Support Ticket System**:
 - Entity relationships with `ref`
@@ -123,7 +162,16 @@ Move to **Support Ticket System**:
 - Multiple surfaces per entity
 - Enum fields
 
-### 3. Experiment
+### 3. Real-World Complexity
+
+Study **Urban Canopy**:
+- Multiple entities with complex relationships
+- Partial CRUD patterns
+- Multi-word entity names
+- State machine workflows
+- See how a real application is structured
+
+### 4. Experiment
 
 Modify the examples:
 - Add new fields to entities
@@ -131,14 +179,15 @@ Modify the examples:
 - Add relationships between entities
 - Try different surface modes
 
-### 4. Build Your Own
+### 5. Build Your Own
 
 Create your own DAZZLE project:
 ```bash
-mkdir my_project
+dazzle init my_project
 cd my_project
-# Copy structure from simple_task
+# Edit dsl/app.dsl
 dazzle validate
+dazzle build --stack micro
 ```
 
 ## Example Patterns

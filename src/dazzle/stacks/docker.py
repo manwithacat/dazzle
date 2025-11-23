@@ -374,7 +374,7 @@ dazzle.toml
         lines.extend([
             "# Application",
             "APP_ENV=development",
-            "APP_DEBUG=true",
+            "APP_DEBUG=false  # Set to 'true' for development",
             "SECRET_KEY=dev-secret-key-change-in-production",
         ])
 

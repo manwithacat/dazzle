@@ -72,6 +72,21 @@ class Dazzle < Formula
     sha256 "786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199"
   end
 
+  resource "jinja2" do
+    url "https://files.pythonhosted.org/packages/source/j/jinja2/jinja2-3.1.6.tar.gz"
+    sha256 "d25f7e2e34fcb8e63f46c43a8c2d3fdbbb5dfdf38cc7e33ee7f8f66c17ba8053"
+  end
+
+  resource "markupsafe" do
+    url "https://files.pythonhosted.org/packages/source/m/markupsafe/markupsafe-3.0.3.tar.gz"
+    sha256 "85fcddbb7f5e3a77fa0dcb0b66e2b9a8b89e17d29f9d82a1e4dcee57b03b6c59"
+  end
+
+  resource "pyyaml" do
+    url "https://files.pythonhosted.org/packages/source/p/pyyaml/PyYAML-6.0.2.tar.gz"
+    sha256 "d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"
+  end
+
   def install
     virtualenv_install_with_resources
   end
@@ -81,9 +96,12 @@ class Dazzle < Formula
       DAZZLE has been installed!
 
       Quick start:
-        dazzle init my-project
-        cd my-project
+        mkdir my-project && cd my-project
+        dazzle init
         dazzle build
+
+      Check installation:
+        dazzle --version
 
       For LLM features, install optional dependencies:
         #{opt_libexec}/bin/pip install anthropic openai
@@ -96,12 +114,21 @@ class Dazzle < Formula
 
       Documentation:
         https://github.com/manwithacat/dazzle
+
+      Troubleshooting:
+        Run 'dazzle --version' to see your environment details
     EOS
   end
 
   test do
     # Test that the CLI works
     assert_match "dazzle", shell_output("#{bin}/dazzle --help").downcase
+
+    # Test version command
+    output = shell_output("#{bin}/dazzle --version")
+    assert_match "DAZZLE version", output
+    assert_match "Environment:", output
+    assert_match "Python:", output
 
     # Test basic functionality
     (testpath/"dazzle.toml").write <<~EOS

@@ -37,6 +37,6 @@ A DAZZLE project generated with `dazzle init`.
 
 ## Resources
 
-- [DAZZLE Documentation](https://github.com/yourusername/dazzle)
-- [DSL Reference](https://github.com/yourusername/dazzle/blob/main/docs)
-- [Examples](https://github.com/yourusername/dazzle/tree/main/examples)
+- [DAZZLE Documentation](https://github.com/manwithacat/dazzle)
+- [DSL Reference](https://github.com/manwithacat/dazzle/blob/main/docs)
+- [Examples](https://github.com/manwithacat/dazzle/tree/main/examples)

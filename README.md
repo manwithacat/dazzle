@@ -27,11 +27,16 @@ A DSL-first toolkit for designing and generating applications from high-level sp
 # Install from PyPI (when published)
 pip install dazzle
 
-# Or install in editable mode for development
+# Or install from source for development
 git clone https://github.com/manwithacat/dazzle.git
 cd dazzle
-pip install -e .
+pip install -e ".[dev]"
+
+# Verify installation
+dazzle --version
 ```
+
+For detailed installation instructions including Homebrew, Docker, and troubleshooting, see [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ### Your First DAZZLE Project
 
@@ -77,6 +82,57 @@ dazzle build --stack openapi --out ./build
 ```
 
 View the generated `build/openapi.yaml` in Swagger UI!
+
+## IDE Integration
+
+DAZZLE provides rich IDE support through a Language Server Protocol (LSP) implementation and dedicated editor extensions.
+
+### VS Code Extension
+
+Get real-time validation, hover documentation, and more with the DAZZLE VS Code extension:
+
+```bash
+# Install from VS Code Marketplace
+# Search for "DAZZLE" or install via CLI:
+code --install-extension dazzle.dazzle-vscode
+```
+
+**Features**:
+- 🔴 **Real-time error highlighting** - See errors as you type
+- 💡 **Hover documentation** - Hover over DSL constructs for details
+- ⚡ **Auto-completion** - Smart suggestions for entities, surfaces, fields
+- 🔍 **Go-to-definition** - Jump to entity/surface definitions
+- ✨ **Signature help** - Parameter hints as you type
+- 📊 **Pattern detection** - Warnings for incomplete CRUD patterns
+- 🎨 **Syntax highlighting** - Beautiful DSL syntax coloring
+
+See [VS Code Extension Guide](docs/vscode_extension_user_guide.md) for detailed setup and features.
+
+### Language Server Protocol (LSP)
+
+DAZZLE includes an LSP server that works with any LSP-compatible editor:
+
+```bash
+# LSP server is automatically installed with dazzle
+# Configure your editor to use: dazzle lsp
+```
+
+**Supported Editors**:
+- VS Code (via extension)
+- Neovim (via LSP config)
+- Emacs (via lsp-mode)
+- Sublime Text (via LSP package)
+- Any LSP-compatible editor
+
+**LSP Features**:
+- Diagnostics (errors and warnings)
+- Hover information
+- Go-to-definition
+- Find references
+- Document symbols
+- Auto-completion
+
+See [IDE Integration Guide](docs/IDE_INTEGRATION.md) for editor-specific setup instructions.
 
 ## Testing with AI Assistants
 
@@ -240,6 +296,9 @@ integration github_sync "GitHub Sync":
 ## CLI Commands
 
 ```bash
+# Check version and environment info
+dazzle --version
+
 # Validate DSL syntax and semantics
 dazzle validate
 
@@ -352,7 +411,7 @@ See the [`examples/`](examples/) directory for:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/dazzle.git
+git clone https://github.com/manwithacat/dazzle.git
 cd dazzle
 
 # Install development dependencies

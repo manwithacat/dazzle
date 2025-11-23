@@ -51,7 +51,7 @@ class CreateEnvFileHook(Hook):
             f"SESSION_SECRET={session_secret}",
             "",
             "# Environment",
-            "DEBUG=true",
+            "DEBUG=false  # Set to 'true' for development",
             "",
         ]
 
