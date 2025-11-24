@@ -3,395 +3,238 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * Claude Extension Integration for DAZZLE
+ * Claude Integration for DAZZLE
  *
- * Detects Claude's VS Code extension and provides seamless SPEC → App workflow.
- *
- * Safe integration patterns:
- * 1. Check if Claude extension is installed
- * 2. Detect SPEC.md presence
- * 3. Show helpful notifications/actions
- * 4. Copy prompts to clipboard (user pastes)
- * 5. Use VS Code Chat API (if available)
+ * Simple integration that detects Claude Code and provides prompt templates
+ * for common DAZZLE workflows. Uses clipboard-based handoff pattern.
  */
 
-export interface ClaudeIntegrationOptions {
-    autoDetect: boolean;
-    showNotifications: boolean;
-    preferClaudeForGeneration: boolean;
-}
-
 /**
- * Known Claude extension IDs (check marketplace for actual ID)
+ * Known Claude extension IDs
  */
 const CLAUDE_EXTENSION_IDS = [
     'anthropic.claude',
     'anthropic.claude-vscode',
     'anthropic.claude-code',
-    'saoudrizwan.claude-dev',  // Claude Dev (community)
+    'saoudrizwan.claude-dev',
 ];
+
+/**
+ * Pre-crafted prompts for common workflows
+ */
+const PROMPTS = {
+    analyzeSpec: (specPath: string) => `I have a SPEC.md file in this DAZZLE project.
+
+Please help me transform this specification into a working application:
+
+1. Read ${specPath}
+2. Run: dazzle analyze-spec ${specPath} --no-interactive --generate-dsl
+3. Run: dazzle validate
+4. Run: dazzle build --stack micro
+5. Show me how to run the generated application
+
+Proceed automatically and report any issues you encounter.`,
+
+    validateAndFix: `Please validate this DAZZLE project and fix any errors:
+
+1. Run: dazzle validate
+2. Fix any validation errors you find
+3. Run: dazzle validate again to confirm
+4. Summarize what was fixed`,
+
+    build: (stack: string = 'micro') => `Please build this DAZZLE project:
+
+1. Run: dazzle validate
+2. Run: dazzle build --stack ${stack}
+3. Show me the generated files
+4. Explain how to run the application`,
+
+    init: `Please help me initialize a new DAZZLE project:
+
+1. Run: dazzle init
+2. Show me the project structure
+3. Guide me on next steps to define my application`
+};
 
 /**
  * Check if Claude extension is installed
  */
-export function isClaudeInstalled(): { installed: boolean; extensionId?: string } {
+export function isClaudeInstalled(): boolean {
     for (const id of CLAUDE_EXTENSION_IDS) {
-        const extension = vscode.extensions.getExtension(id);
-        if (extension) {
-            return { installed: true, extensionId: id };
+        if (vscode.extensions.getExtension(id)) {
+            return true;
         }
     }
-    return { installed: false };
+    return false;
 }
 
 /**
  * Check if workspace has SPEC.md
  */
-export function hasSpecFile(workspaceRoot: string): { exists: boolean; path?: string } {
-    const specPatterns = ['SPEC.md', 'spec.md', 'SPECIFICATION.md', 'specification.md'];
-
+export function hasSpecFile(workspaceRoot: string): string | null {
+    const specPatterns = ['SPEC.md', 'spec.md', 'SPECIFICATION.md'];
     for (const pattern of specPatterns) {
         const specPath = path.join(workspaceRoot, pattern);
         if (fs.existsSync(specPath)) {
-            return { exists: true, path: specPath };
+            return specPath;
         }
     }
-
-    return { exists: false };
+    return null;
 }
 
 /**
- * Check if DSL directory is empty (or has only template)
+ * Copy prompt to clipboard and notify user
  */
-export function isDSLEmpty(workspaceRoot: string): boolean {
-    const dslDir = path.join(workspaceRoot, 'dsl');
-
-    if (!fs.existsSync(dslDir)) {
-        return true;
-    }
-
-    const files = fs.readdirSync(dslDir);
-
-    // Consider empty if no files or only template file
-    if (files.length === 0) {
-        return true;
-    }
-
-    // If only one file and it's the template
-    if (files.length === 1 && files[0] === 'app.dsl') {
-        const content = fs.readFileSync(path.join(dslDir, 'app.dsl'), 'utf-8');
-        // Check if it's just the template (contains only comments and module declaration)
-        const nonCommentLines = content
-            .split('\n')
-            .filter(line => line.trim() && !line.trim().startsWith('#'))
-            .filter(line => !line.includes('module') && !line.includes('app'))
-            .length;
-
-        return nonCommentLines === 0;
-    }
-
-    return false;
-}
-
-/**
- * Generate prompt for Claude to transform SPEC → App
- */
-export function generateClaudePrompt(specPath: string): string {
-    return `I have a SPEC.md file with my application requirements in this DAZZLE project.
-
-Please help me transform this specification into a working application by:
-
-1. Reading the SPEC.md file to understand the requirements
-2. Using DAZZLE's LLM integration to generate DSL:
-   \`\`\`bash
-   dazzle analyze-spec SPEC.md --no-interactive --generate-dsl
-   \`\`\`
-3. Validating the generated DSL:
-   \`\`\`bash
-   dazzle validate
-   \`\`\`
-4. Building the application:
-   \`\`\`bash
-   dazzle build --stack micro
-   \`\`\`
-5. Showing me how to run the generated application
-
-Please proceed with these steps automatically and report any issues you encounter.`;
-}
-
-/**
- * Show notification when SPEC.md is detected without DSL
- */
-export async function showSpecDetectedNotification(
-    context: vscode.ExtensionContext,
-    specPath: string
-): Promise<void> {
-    const claudeStatus = isClaudeInstalled();
-
-    if (claudeStatus.installed) {
-        // Claude is installed - offer to send prompt
-        const action = await vscode.window.showInformationMessage(
-            '💡 SPEC.md detected! Generate DAZZLE app with Claude?',
-            'Copy Prompt to Clipboard',
-            'Open Claude Chat',
-            'Not Now',
-            'Don\'t Show Again'
-        );
-
-        switch (action) {
-            case 'Copy Prompt to Clipboard':
-                await copyPromptToClipboard(specPath);
-                vscode.window.showInformationMessage(
-                    '✓ Prompt copied! Paste in Claude chat to generate your app.'
-                );
-                break;
-
-            case 'Open Claude Chat':
-                await openClaudeChat(context, specPath);
-                break;
-
-            case 'Don\'t Show Again':
-                await context.globalState.update('dazzle.spec.dontShowNotification', true);
-                break;
-        }
-    } else {
-        // Claude not installed - offer alternatives
-        const action = await vscode.window.showInformationMessage(
-            '💡 SPEC.md detected! Generate DSL from specification?',
-            'Run DAZZLE Analyze',
-            'Install Claude Extension',
-            'Not Now'
-        );
-
-        switch (action) {
-            case 'Run DAZZLE Analyze':
-                vscode.commands.executeCommand('dazzle.analyzeSpec');
-                break;
-
-            case 'Install Claude Extension':
-                vscode.env.openExternal(vscode.Uri.parse(
-                    'https://marketplace.visualstudio.com/items?itemName=anthropic.claude'
-                ));
-                break;
-        }
-    }
-}
-
-/**
- * Copy Claude prompt to clipboard
- */
-async function copyPromptToClipboard(specPath: string): Promise<void> {
-    const prompt = generateClaudePrompt(specPath);
+async function copyPromptAndNotify(prompt: string, action: string): Promise<void> {
     await vscode.env.clipboard.writeText(prompt);
+    vscode.window.showInformationMessage(
+        `✓ ${action} prompt copied to clipboard! Paste in Claude chat to proceed.`,
+        'Open Command Palette'
+    ).then(choice => {
+        if (choice === 'Open Command Palette') {
+            vscode.commands.executeCommand('workbench.action.quickOpen', '>');
+        }
+    });
 }
 
 /**
- * Open Claude chat (if extension provides API)
+ * Register all Claude integration commands
  */
-async function openClaudeChat(context: vscode.ExtensionContext, specPath: string): Promise<void> {
-    const claudeStatus = isClaudeInstalled();
-
-    if (!claudeStatus.installed || !claudeStatus.extensionId) {
-        vscode.window.showErrorMessage('Claude extension not found.');
-        return;
-    }
-
-    // Try different approaches to open Claude chat
-
-    // Approach 1: Check if Claude exposes a chat command
-    const chatCommands = [
-        'claude.openChat',
-        'claude.newChat',
-        'anthropic.openChat',
-        'claude-dev.openChat'
-    ];
-
-    let chatOpened = false;
-    for (const cmd of chatCommands) {
-        try {
-            const commands = await vscode.commands.getCommands();
-            if (commands.includes(cmd)) {
-                await vscode.commands.executeCommand(cmd);
-                chatOpened = true;
-
-                // Copy prompt to clipboard for user to paste
-                await copyPromptToClipboard(specPath);
-                vscode.window.showInformationMessage(
-                    '✓ Claude chat opened! Prompt copied to clipboard - just paste to start.'
-                );
-                break;
-            }
-        } catch (error) {
-            // Command doesn't exist or failed
-            continue;
-        }
-    }
-
-    // Approach 2: If no specific command, try VS Code's built-in chat API (if available)
-    if (!chatOpened) {
-        try {
-            // VS Code 1.85+ has built-in chat API
-            // @ts-ignore - May not be available in older versions
-            if (vscode.chat) {
-                await copyPromptToClipboard(specPath);
-                vscode.window.showInformationMessage(
-                    '✓ Open Claude chat panel and paste the prompt (copied to clipboard).'
-                );
+export function registerClaudeCommands(context: vscode.ExtensionContext): void {
+    // Command: Ask Claude to analyze SPEC
+    context.subscriptions.push(
+        vscode.commands.registerCommand('dazzle.askClaudeToAnalyze', async () => {
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (!workspaceRoot) {
+                vscode.window.showErrorMessage('No workspace folder opened.');
                 return;
             }
-        } catch {
-            // Fall through
-        }
-    }
 
-    // Approach 3: Fallback - copy to clipboard and show instructions
-    if (!chatOpened) {
-        await copyPromptToClipboard(specPath);
-        vscode.window.showInformationMessage(
-            '✓ Prompt copied to clipboard! Open Claude chat and paste to generate your app.',
-            'Open Command Palette'
-        ).then(action => {
-            if (action === 'Open Command Palette') {
-                vscode.commands.executeCommand('workbench.action.quickOpen', '>claude');
+            const specPath = hasSpecFile(workspaceRoot);
+            if (!specPath) {
+                vscode.window.showErrorMessage('No SPEC.md file found in workspace.');
+                return;
             }
-        });
-    }
+
+            const prompt = PROMPTS.analyzeSpec(path.basename(specPath));
+            await copyPromptAndNotify(prompt, 'Analyze SPEC');
+        })
+    );
+
+    // Command: Ask Claude to validate and fix
+    context.subscriptions.push(
+        vscode.commands.registerCommand('dazzle.askClaudeToFix', async () => {
+            await copyPromptAndNotify(PROMPTS.validateAndFix, 'Validate & Fix');
+        })
+    );
+
+    // Command: Ask Claude to build
+    context.subscriptions.push(
+        vscode.commands.registerCommand('dazzle.askClaudeToBuild', async () => {
+            const stack = await vscode.window.showQuickPick(
+                ['micro', 'django_api', 'express_micro', 'openapi', 'docker', 'terraform'],
+                { placeHolder: 'Select stack to build' }
+            );
+            if (stack) {
+                const prompt = PROMPTS.build(stack);
+                await copyPromptAndNotify(prompt, `Build (${stack})`);
+            }
+        })
+    );
+
+    // Command: Ask Claude to initialize project
+    context.subscriptions.push(
+        vscode.commands.registerCommand('dazzle.askClaudeToInit', async () => {
+            await copyPromptAndNotify(PROMPTS.init, 'Initialize Project');
+        })
+    );
 }
 
 /**
- * Register status bar item for SPEC → App workflow
+ * Create status bar item for SPEC → App workflow
  */
-export function createSpecStatusBarItem(context: vscode.ExtensionContext): vscode.StatusBarItem {
+export function createSpecStatusBar(context: vscode.ExtensionContext): vscode.StatusBarItem | null {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceRoot) {
+        return null;
+    }
+
+    const specPath = hasSpecFile(workspaceRoot);
+    if (!specPath) {
+        return null;
+    }
+
     const statusBarItem = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Right,
         100
     );
 
-    statusBarItem.text = '$(sparkle) Generate App';
-    statusBarItem.tooltip = 'Generate DAZZLE app from SPEC.md';
-    statusBarItem.command = 'dazzle.generateFromSpec';
+    const claudeInstalled = isClaudeInstalled();
+    if (claudeInstalled) {
+        statusBarItem.text = '$(sparkle) Ask Claude';
+        statusBarItem.tooltip = 'Ask Claude to generate DAZZLE app from SPEC.md';
+    } else {
+        statusBarItem.text = '$(beaker) Generate from SPEC';
+        statusBarItem.tooltip = 'Generate DAZZLE app from SPEC.md';
+    }
+
+    statusBarItem.command = 'dazzle.askClaudeToAnalyze';
+    statusBarItem.show();
 
     context.subscriptions.push(statusBarItem);
-
     return statusBarItem;
 }
 
 /**
- * Update status bar based on workspace state
+ * Auto-detect SPEC.md and show helpful notification (once)
  */
-export function updateSpecStatusBar(
-    statusBarItem: vscode.StatusBarItem,
-    workspaceRoot: string | undefined
-): void {
-    if (!workspaceRoot) {
-        statusBarItem.hide();
-        return;
-    }
-
-    const specFile = hasSpecFile(workspaceRoot);
-    const dslEmpty = isDSLEmpty(workspaceRoot);
-
-    if (specFile.exists && dslEmpty) {
-        // Show "Generate from SPEC" indicator
-        const claudeStatus = isClaudeInstalled();
-
-        if (claudeStatus.installed) {
-            statusBarItem.text = '$(sparkle) Ask Claude to Generate App';
-            statusBarItem.tooltip = 'Click to generate DAZZLE app from SPEC.md using Claude';
-        } else {
-            statusBarItem.text = '$(beaker) Generate DSL from SPEC';
-            statusBarItem.tooltip = 'Click to analyze SPEC.md and generate DSL';
-        }
-
-        statusBarItem.show();
-    } else {
-        statusBarItem.hide();
-    }
-}
-
-/**
- * Register the "Generate from SPEC" command
- */
-export function registerGenerateFromSpecCommand(context: vscode.ExtensionContext): void {
-    const command = vscode.commands.registerCommand('dazzle.generateFromSpec', async () => {
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
-        if (!workspaceRoot) {
-            vscode.window.showErrorMessage('No workspace folder opened.');
-            return;
-        }
-
-        const specFile = hasSpecFile(workspaceRoot);
-
-        if (!specFile.exists) {
-            vscode.window.showErrorMessage('No SPEC.md file found in workspace.');
-            return;
-        }
-
-        await showSpecDetectedNotification(context, specFile.path!);
-    });
-
-    context.subscriptions.push(command);
-}
-
-/**
- * Auto-detect SPEC.md and show notification on workspace open
- */
-export async function autoDetectSpec(context: vscode.ExtensionContext): Promise<void> {
-    // Check if user has disabled notifications
-    const dontShow = context.globalState.get('dazzle.spec.dontShowNotification', false);
-    if (dontShow) {
+export function autoDetectSpec(context: vscode.ExtensionContext): void {
+    // Check if we've already shown this notification
+    const hasShown = context.globalState.get('dazzle.spec.notificationShown', false);
+    if (hasShown) {
         return;
     }
 
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
     if (!workspaceRoot) {
         return;
     }
 
-    const specFile = hasSpecFile(workspaceRoot);
-    const dslEmpty = isDSLEmpty(workspaceRoot);
-
-    // Only show if SPEC exists and DSL is empty
-    if (specFile.exists && dslEmpty) {
-        // Wait a bit to let workspace settle
-        setTimeout(() => {
-            showSpecDetectedNotification(context, specFile.path!);
-        }, 2000);
-    }
-}
-
-/**
- * Watch for SPEC.md creation
- */
-export function watchForSpecChanges(
-    context: vscode.ExtensionContext,
-    statusBarItem: vscode.StatusBarItem
-): void {
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
-    if (!workspaceRoot) {
+    const specPath = hasSpecFile(workspaceRoot);
+    if (!specPath) {
         return;
     }
 
-    // Watch for file changes
-    const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(workspaceRoot, '**/{SPEC,spec}.md')
-    );
+    // Check if DSL directory exists and has files
+    const dslDir = path.join(workspaceRoot, 'dsl');
+    const hasDSL = fs.existsSync(dslDir) && fs.readdirSync(dslDir).length > 0;
 
-    watcher.onDidCreate(() => {
-        updateSpecStatusBar(statusBarItem, workspaceRoot);
-        autoDetectSpec(context);
+    if (hasDSL) {
+        // Already has DSL, don't bother user
+        return;
+    }
+
+    // Show notification
+    const claudeInstalled = isClaudeInstalled();
+    const message = claudeInstalled
+        ? '💡 SPEC.md detected! Ask Claude to generate your DAZZLE app?'
+        : '💡 SPEC.md detected! Would you like to generate DSL?';
+
+    const action = claudeInstalled ? 'Ask Claude' : 'Generate DSL';
+
+    vscode.window.showInformationMessage(
+        message,
+        action,
+        'Not Now',
+        "Don't Show Again"
+    ).then(choice => {
+        if (choice === action) {
+            vscode.commands.executeCommand('dazzle.askClaudeToAnalyze');
+        } else if (choice === "Don't Show Again") {
+            context.globalState.update('dazzle.spec.notificationShown', true);
+        }
     });
 
-    watcher.onDidChange(() => {
-        updateSpecStatusBar(statusBarItem, workspaceRoot);
-    });
-
-    watcher.onDidDelete(() => {
-        updateSpecStatusBar(statusBarItem, workspaceRoot);
-    });
-
-    context.subscriptions.push(watcher);
+    // Mark as shown (even if they clicked "Not Now")
+    context.globalState.update('dazzle.spec.notificationShown', true);
 }

@@ -1,14 +1,11 @@
 import * as vscode from 'vscode';
 import { DazzleDiagnostics } from './diagnostics';
 import { registerCommands } from './commands';
-import { registerLLMCommands } from './llmCommands';
 import { startLanguageClient, stopLanguageClient, checkLspServerAvailable } from './lspClient';
 import {
-    createSpecStatusBarItem,
-    updateSpecStatusBar,
-    registerGenerateFromSpecCommand,
-    autoDetectSpec,
-    watchForSpecChanges
+    registerClaudeCommands,
+    createSpecStatusBar,
+    autoDetectSpec
 } from './claudeIntegration';
 
 /**
@@ -23,7 +20,7 @@ import {
 let diagnostics: DazzleDiagnostics;
 let fileWatcher: vscode.FileSystemWatcher | undefined;
 let lspClientActive = false;
-let specStatusBarItem: vscode.StatusBarItem | undefined;
+let specStatusBarItem: vscode.StatusBarItem | null = null;
 let lspStatusBarItem: vscode.StatusBarItem | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -56,15 +53,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register commands (validate, build, lint)
     registerCommands(context, diagnostics);
 
-    // Register LLM commands (analyze-spec, etc.)
-    registerLLMCommands(context);
+    // Register Claude integration commands (simplified)
+    registerClaudeCommands(context);
 
-    // Set up Claude integration for SPEC → App workflow
-    registerGenerateFromSpecCommand(context);
-    specStatusBarItem = createSpecStatusBarItem(context);
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    updateSpecStatusBar(specStatusBarItem, workspaceRoot);
-    watchForSpecChanges(context, specStatusBarItem);
+    // Set up status bar for SPEC → App workflow
+    specStatusBarItem = createSpecStatusBar(context);
 
     // Auto-detect SPEC.md and show helpful notification
     setTimeout(() => autoDetectSpec(context), 3000);

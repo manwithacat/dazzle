@@ -104,8 +104,20 @@
         "title": "DAZZLE: Lint Project"
       },
       {
-        "command": "dazzle.analyzeSpec",
-        "title": "DAZZLE: Analyze Specification"
+        "command": "dazzle.askClaudeToAnalyze",
+        "title": "DAZZLE: Ask Claude to Analyze SPEC"
+      },
+      {
+        "command": "dazzle.askClaudeToFix",
+        "title": "DAZZLE: Ask Claude to Validate & Fix"
+      },
+      {
+        "command": "dazzle.askClaudeToBuild",
+        "title": "DAZZLE: Ask Claude to Build"
+      },
+      {
+        "command": "dazzle.askClaudeToInit",
+        "title": "DAZZLE: Ask Claude to Initialize Project"
       }
     ],
     "problemMatchers": [
