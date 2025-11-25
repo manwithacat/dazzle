@@ -46,6 +46,9 @@ llm = [
     "anthropic>=0.21.0",
     "openai>=1.0.0",
 ]
+mcp = [
+    "mcp>=1.0.0",
+]
 dev = [
     "pytest>=7.4",
     "pytest-cov>=4.1",
@@ -140,6 +143,11 @@ module = "dazzle.lsp.server"
 # pygls/lsprotocol don't have type stubs, so decorators and LanguageServer base are untyped
 disallow_untyped_decorators = false
 disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "dazzle.mcp.server"
+# MCP SDK decorators are untyped
+disallow_untyped_decorators = false
 
 [tool.ruff]
 line-length = 100

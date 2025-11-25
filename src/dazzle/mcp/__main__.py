@@ -1,26 +1,17 @@
 """
 MCP server entry point for DAZZLE.
 
-Run with: python -m dazzle.mcp.server
+Run with: python -m dazzle.mcp
 """
 
 import asyncio
-import logging
 import sys
 from pathlib import Path
 
-from dazzle.mcp.server import DazzleMCPServer
-
-# Log to stderr to avoid interfering with JSON-RPC on stdout
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
-    format="[%(asctime)s] %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+from dazzle.mcp.server import run_server
 
 
-async def main() -> None:
+def main() -> None:
     """Run the DAZZLE MCP server."""
     # Get project root from command line args or use cwd
     if len(sys.argv) > 1:
@@ -28,17 +19,8 @@ async def main() -> None:
     else:
         project_root = Path.cwd()
 
-    logger.info(f"Starting DAZZLE MCP server in {project_root}")
-
-    try:
-        server = DazzleMCPServer(project_root=project_root)
-        await server.run()
-    except KeyboardInterrupt:
-        logger.info("Server stopped by user")
-    except Exception as e:
-        logger.error(f"Server error: {e}", exc_info=True)
-        sys.exit(1)
+    asyncio.run(run_server(project_root))
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
