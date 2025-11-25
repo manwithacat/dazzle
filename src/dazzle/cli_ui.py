@@ -8,12 +8,12 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Generic, TypeVar
 
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
-from rich.style import Style
-from rich import box
 
 # Check if we're in a TTY for interactive features
 IS_TTY = sys.stdin.isatty() and sys.stdout.isatty()
@@ -249,7 +249,9 @@ def _select_simple(
                     return opt.value
 
             console.print(
-                Text(f"Invalid choice. Enter 1-{len(options)} or option name.", style=STYLES["error"])
+                Text(
+                    f"Invalid choice. Enter 1-{len(options)} or option name.", style=STYLES["error"]
+                )
             )
 
         except (KeyboardInterrupt, EOFError):
@@ -308,8 +310,7 @@ def confirm(message: str, default: bool = True) -> bool:
 def print_step(step_num: int, total: int, message: str) -> None:
     """Print a step indicator."""
     console.print(
-        Text(f"[{step_num}/{total}] ", style=STYLES["muted"]) +
-        Text(message, style=STYLES["info"])
+        Text(f"[{step_num}/{total}] ", style=STYLES["muted"]) + Text(message, style=STYLES["info"])
     )
 
 

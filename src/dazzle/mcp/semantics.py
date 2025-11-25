@@ -36,9 +36,8 @@ def get_semantic_index() -> dict[str, Any]:
   status: enum[todo,in_progress,done]=todo
   created_at: datetime auto_add""",
                 "related": ["surface", "field_types", "relationships"],
-                "v0_2_changes": "No changes from v0.1"
+                "v0_2_changes": "No changes from v0.1",
             },
-
             "surface": {
                 "category": "Core Construct",
                 "definition": "A UI or API interface definition for interacting with entities. Defines WHAT data to show and HOW users interact with it.",
@@ -66,9 +65,8 @@ def get_semantic_index() -> dict[str, Any]:
     sort: status asc
     filter: status, assigned_to""",
                 "related": ["entity", "ux_block", "surface_modes"],
-                "v0_2_changes": "Added optional ux: block for semantic layer"
+                "v0_2_changes": "Added optional ux: block for semantic layer",
             },
-
             "workspace": {
                 "category": "Core Construct (v0.2)",
                 "definition": "A composition of multiple data views into a cohesive dashboard or information hub. Workspaces aggregate related surfaces and data for specific user needs.",
@@ -104,9 +102,8 @@ def get_semantic_index() -> dict[str, Any]:
       total: count(Task)
       done: count(Task where status = done)""",
                 "related": ["persona", "regions", "aggregates", "display_modes"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             # ================================================================
             # UX Semantic Layer (v0.2)
             # ================================================================
@@ -154,9 +151,8 @@ def get_semantic_index() -> dict[str, Any]:
     scope: id = current_user.id
     read_only: true""",
                 "related": ["purpose", "information_needs", "attention_signals", "persona"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             "purpose": {
                 "category": "UX Semantic Layer (v0.2)",
                 "definition": "A single-line statement capturing the semantic intent of a surface or workspace - explaining WHY it exists.",
@@ -168,10 +164,9 @@ def get_semantic_index() -> dict[str, Any]:
                     "✅ Focus on user intent, not implementation",
                     "✅ Answer 'why does this exist?'",
                     "✅ Keep to one line",
-                    "❌ Avoid 'List of...' or 'CRUD for...'"
-                ]
+                    "❌ Avoid 'List of...' or 'CRUD for...'",
+                ],
             },
-
             "information_needs": {
                 "category": "UX Semantic Layer (v0.2)",
                 "definition": "Specifications for how data should be displayed, sorted, filtered, and searched - the 'what' without the 'how'.",
@@ -180,7 +175,7 @@ def get_semantic_index() -> dict[str, Any]:
                     "sort": "Default sort order",
                     "filter": "Fields available for filtering",
                     "search": "Fields to include in text search",
-                    "empty": "Message when no data available"
+                    "empty": "Message when no data available",
                 },
                 "syntax": """show: field1, field2, field3
 sort: field1 desc, field2 asc
@@ -188,9 +183,8 @@ filter: status, category, assigned_to
 search: title, description, tags
 empty: "No items found. Create your first item.\"""",
                 "related": ["ux_block"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             "attention_signals": {
                 "category": "UX Semantic Layer (v0.2)",
                 "definition": "Data-driven conditions that require user awareness or action. Signals have severity levels and can trigger actions.",
@@ -214,10 +208,9 @@ attention warning:
                     "✅ Use for data anomalies requiring action",
                     "✅ Use for time-sensitive conditions",
                     "❌ Don't use for purely visual styling",
-                    "❌ Don't overuse - reserve for truly important conditions"
-                ]
+                    "❌ Don't overuse - reserve for truly important conditions",
+                ],
             },
-
             "persona": {
                 "category": "UX Semantic Layer (v0.2)",
                 "definition": "A role-based variant that adapts surfaces or workspaces for different user types without code duplication. Controls scope, visibility, and capabilities.",
@@ -251,10 +244,9 @@ for member:
                     "✅ Use lowercase role names (admin, manager, member)",
                     "✅ Base on roles or responsibilities",
                     "❌ Avoid device-specific personas (mobile, desktop)",
-                    "❌ Avoid preference-based personas (dark-mode-user)"
-                ]
+                    "❌ Avoid preference-based personas (dark-mode-user)",
+                ],
             },
-
             "scope": {
                 "category": "UX Semantic Layer (v0.2)",
                 "definition": "Filter expression defining what data a persona can see.",
@@ -263,9 +255,8 @@ scope: owner = current_user
 scope: team = current_user.team
 scope: status = Active and owner = current_user""",
                 "related": ["persona", "conditions"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             # ================================================================
             # Workspace Components (v0.2)
             # ================================================================
@@ -280,12 +271,11 @@ scope: status = Active and owner = current_user""",
                     "display": "Visualization mode",
                     "action": "Primary action surface",
                     "empty": "Empty state message",
-                    "aggregate": "Computed metrics"
+                    "aggregate": "Computed metrics",
                 },
                 "related": ["workspace", "display_modes", "aggregates"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             "display_modes": {
                 "category": "Workspace Component (v0.2)",
                 "definition": "Visualization modes for workspace regions.",
@@ -293,13 +283,12 @@ scope: status = Active and owner = current_user""",
                     "list": "Traditional table/list (default)",
                     "grid": "Card grid layout",
                     "timeline": "Chronological timeline",
-                    "map": "Geographic visualization (requires lat/lng fields)"
+                    "map": "Geographic visualization (requires lat/lng fields)",
                 },
                 "syntax": "display: <list|grid|timeline|map>",
                 "related": ["regions", "workspace"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             "aggregates": {
                 "category": "Workspace Component (v0.2)",
                 "definition": "Computed metrics and aggregate functions for workspace regions.",
@@ -309,7 +298,7 @@ scope: status = Active and owner = current_user""",
                     "avg": "avg(Entity.field)",
                     "min": "min(Entity.field)",
                     "max": "max(Entity.field)",
-                    "round": "round(expression, decimals)"
+                    "round": "round(expression, decimals)",
                 },
                 "syntax": """aggregate:
   total: count(Task)
@@ -317,9 +306,8 @@ scope: status = Active and owner = current_user""",
   completion_rate: count(Task where status = done) * 100 / count(Task)
   avg_duration: avg(Task.duration_days)""",
                 "related": ["regions", "workspace"],
-                "v0_2_changes": "NEW in v0.2"
+                "v0_2_changes": "NEW in v0.2",
             },
-
             # ================================================================
             # Expression System
             # ================================================================
@@ -329,13 +317,13 @@ scope: status = Active and owner = current_user""",
                 "operators": {
                     "comparison": "=, !=, <, >, <=, >=",
                     "logical": "and, or, not",
-                    "membership": "in [value1, value2, ...]"
+                    "membership": "in [value1, value2, ...]",
                 },
                 "functions": {
                     "days_since": "days_since(datetime_field)",
                     "count": "count(related_field)",
                     "sum": "sum(numeric_field)",
-                    "avg": "avg(numeric_field)"
+                    "avg": "avg(numeric_field)",
                 },
                 "examples": [
                     "status = 'Failed'",
@@ -343,12 +331,11 @@ scope: status = Active and owner = current_user""",
                     "date < today",
                     "status in [Critical, Severe]",
                     "days_since(last_update) > 30",
-                    "count(items) = 0 and status != Archived"
+                    "count(items) = 0 and status != Archived",
                 ],
                 "related": ["attention_signals", "scope", "regions"],
-                "v0_2_changes": "Enhanced with new functions in v0.2"
+                "v0_2_changes": "Enhanced with new functions in v0.2",
             },
-
             # ================================================================
             # Field Types
             # ================================================================
@@ -364,12 +351,12 @@ scope: status = Active and owner = current_user""",
                     "date": "Date only",
                     "time": "Time only",
                     "datetime": "Date and time",
-                    "uuid": "UUID identifier"
+                    "uuid": "UUID identifier",
                 },
                 "special_types": {
                     "email": "Email address (with validation)",
                     "url": "URL (with validation)",
-                    "enum[V1,V2,V3]": "Enumeration of values"
+                    "enum[V1,V2,V3]": "Enumeration of values",
                 },
                 "modifiers": {
                     "required": "Field must have a value",
@@ -377,12 +364,11 @@ scope: status = Active and owner = current_user""",
                     "unique": "Value must be unique across records",
                     "pk": "Primary key",
                     "auto_add": "Auto-set on creation (datetime)",
-                    "auto_update": "Auto-update on save (datetime)"
+                    "auto_update": "Auto-update on save (datetime)",
                 },
                 "related": ["entity"],
-                "v0_2_changes": "No changes from v0.1"
+                "v0_2_changes": "No changes from v0.1",
             },
-
             "surface_modes": {
                 "category": "Surface System",
                 "definition": "Interaction modes for surfaces.",
@@ -390,22 +376,20 @@ scope: status = Active and owner = current_user""",
                     "list": "Display multiple records (table, grid, cards)",
                     "view": "Display single record details (read-only)",
                     "create": "Form for creating new records",
-                    "edit": "Form for modifying existing records"
+                    "edit": "Form for modifying existing records",
                 },
                 "related": ["surface"],
-                "v0_2_changes": "No changes from v0.1"
+                "v0_2_changes": "No changes from v0.1",
             },
-
             "relationships": {
                 "category": "Type System",
                 "definition": "References between entities.",
                 "syntax": "field_name: ref <EntityName> [required|optional]",
                 "example": "assigned_to: ref User optional",
                 "related": ["entity", "field_types"],
-                "v0_2_changes": "No changes from v0.1"
-            }
+                "v0_2_changes": "No changes from v0.1",
+            },
         },
-
         # ================================================================
         # Common Patterns
         # ================================================================
@@ -417,10 +401,10 @@ scope: status = Active and owner = current_user""",
                     "{entity}_list (list mode)",
                     "{entity}_detail (view mode)",
                     "{entity}_create (create mode)",
-                    "{entity}_edit (edit mode)"
+                    "{entity}_edit (edit mode)",
                 ],
                 "example_entity": "Task",
-                "example_surfaces": ["task_list", "task_detail", "task_create", "task_edit"]
+                "example_surfaces": ["task_list", "task_detail", "task_create", "task_edit"],
             },
             "dashboard": {
                 "name": "Dashboard Pattern",
@@ -429,9 +413,9 @@ scope: status = Active and owner = current_user""",
                     "Metrics/KPIs",
                     "Recent activity",
                     "Alerts/attention items",
-                    "Quick actions"
+                    "Quick actions",
                 ],
-                "v0_2_feature": True
+                "v0_2_feature": True,
             },
             "role_based_access": {
                 "name": "Role-Based Access Pattern",
@@ -439,12 +423,11 @@ scope: status = Active and owner = current_user""",
                 "personas": [
                     "Admin: full access, all records",
                     "Manager: department/team scope",
-                    "Member: own records only"
+                    "Member: own records only",
                 ],
-                "v0_2_feature": True
-            }
+                "v0_2_feature": True,
+            },
         },
-
         # ================================================================
         # Best Practices
         # ================================================================
@@ -455,13 +438,13 @@ scope: status = Active and owner = current_user""",
                 "workspaces": "Use {context}_dashboard or {role}_workspace",
                 "personas": "Use lowercase role names (admin, manager, member)",
                 "fields": "Use snake_case (first_name, not firstName)",
-                "enums": "Use lowercase with underscores (in_progress, not InProgress)"
+                "enums": "Use lowercase with underscores (in_progress, not InProgress)",
             },
             "purpose_statements": {
                 "do": "Explain WHY the surface exists, focus on user intent",
-                "dont": "Avoid 'List of...' or 'CRUD for...' or implementation details"
-            }
-        }
+                "dont": "Avoid 'List of...' or 'CRUD for...' or implementation details",
+            },
+        },
     }
 
 
@@ -482,31 +465,24 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
 
     # Direct lookup
     if term_normalized in index["concepts"]:
-        return {
-            "term": term,
-            "found": True,
-            **index["concepts"][term_normalized]
-        }
+        return {"term": term, "found": True, **index["concepts"][term_normalized]}
 
     # Search in all concepts for partial matches
     matches = []
     for concept_name, concept_data in index["concepts"].items():
-        if term_normalized in concept_name or term_normalized in concept_data.get("definition", "").lower():
-            matches.append({
-                "name": concept_name,
-                "category": concept_data.get("category"),
-                "definition": concept_data.get("definition")
-            })
+        if (
+            term_normalized in concept_name
+            or term_normalized in concept_data.get("definition", "").lower()
+        ):
+            matches.append(
+                {
+                    "name": concept_name,
+                    "category": concept_data.get("category"),
+                    "definition": concept_data.get("definition"),
+                }
+            )
 
     if matches:
-        return {
-            "term": term,
-            "found": False,
-            "suggestions": matches
-        }
+        return {"term": term, "found": False, "suggestions": matches}
 
-    return {
-        "term": term,
-        "found": False,
-        "error": f"Concept '{term}' not found in semantic index"
-    }
+    return {"term": term, "found": False, "error": f"Concept '{term}' not found in semantic index"}

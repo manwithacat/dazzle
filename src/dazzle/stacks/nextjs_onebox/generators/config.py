@@ -13,9 +13,7 @@ Generates:
 """
 
 import json
-from pathlib import Path
 
-from ....core import ir
 from ...base.generator import Generator, GeneratorResult
 
 
@@ -119,7 +117,7 @@ class ConfigGenerator(Generator):
 
     def _generate_next_config(self, result: GeneratorResult) -> None:
         """Generate next.config.mjs (Next.js 14 requires .mjs, not .ts)."""
-        content = '''/** @type {import('next').NextConfig} */
+        content = """/** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable React strict mode
   reactStrictMode: true,
@@ -139,14 +137,14 @@ const nextConfig = {
 };
 
 export default nextConfig;
-'''
+"""
         path = self.output_dir / "next.config.mjs"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_tailwind_config(self, result: GeneratorResult) -> None:
         """Generate tailwind.config.ts."""
-        content = '''import type { Config } from "tailwindcss";
+        content = """import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
@@ -222,27 +220,27 @@ const config: Config = {
 };
 
 export default config;
-'''
+"""
         path = self.output_dir / "tailwind.config.ts"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_postcss_config(self, result: GeneratorResult) -> None:
         """Generate postcss.config.js."""
-        content = '''module.exports = {
+        content = """module.exports = {
   plugins: {
     tailwindcss: {},
     autoprefixer: {},
   },
 };
-'''
+"""
         path = self.output_dir / "postcss.config.js"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_env_example(self, result: GeneratorResult) -> None:
         """Generate .env.example."""
-        content = '''# Database
+        content = """# Database
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app?schema=public"
 
 # Auth
@@ -251,7 +249,7 @@ SESSION_SECRET="your-session-secret-change-in-production"
 
 # App
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
-'''
+"""
         path = self.output_dir / ".env.example"
         self._write_file(path, content)
         result.add_file(path)
@@ -263,7 +261,7 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
     def _generate_gitignore(self, result: GeneratorResult) -> None:
         """Generate .gitignore."""
-        content = '''# Dependencies
+        content = """# Dependencies
 node_modules/
 .pnpm-store/
 
@@ -304,7 +302,7 @@ prisma/migrations/
 
 # Docker
 .docker/
-'''
+"""
         path = self.output_dir / ".gitignore"
         self._write_file(path, content)
         result.add_file(path)
@@ -316,7 +314,7 @@ prisma/migrations/
         surfaces = [s.name for s in self.spec.surfaces]
         workspaces = [w.name for w in self.spec.workspaces]
 
-        content = f'''# {app_title}
+        content = f"""# {app_title}
 
 Generated with DAZZLE - Next.js Onebox Stack
 
@@ -381,7 +379,7 @@ src/
 ---
 
 Generated with [DAZZLE](https://github.com/manwithacat/dazzle)
-'''
+"""
         path = self.output_dir / "README.md"
         self._write_file(path, content)
         result.add_file(path)

@@ -7,9 +7,6 @@ Generates:
 - scripts/start.sh
 """
 
-from pathlib import Path
-
-from ....core import ir
 from ...base.generator import Generator, GeneratorResult
 
 
@@ -29,7 +26,7 @@ class DockerGenerator(Generator):
 
     def _generate_dockerfile(self, result: GeneratorResult) -> None:
         """Generate Dockerfile for single container."""
-        content = '''# DAZZLE Next.js Onebox - Single Container
+        content = """# DAZZLE Next.js Onebox - Single Container
 # Contains both Next.js app and PostgreSQL
 
 FROM node:20-alpine
@@ -82,14 +79,14 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \\
 
 # Start services
 CMD ["/usr/local/bin/start.sh"]
-'''
+"""
         path = self.output_dir / "Dockerfile"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_init_script(self, result: GeneratorResult) -> None:
         """Generate database initialization script."""
-        content = '''#!/bin/sh
+        content = """#!/bin/sh
 set -e
 
 # Initialize PostgreSQL if needed
@@ -115,14 +112,14 @@ if [ ! -f /var/lib/postgresql/data/PG_VERSION ]; then
 else
     echo "Database already initialized."
 fi
-'''
+"""
         path = self.output_dir / "scripts" / "init-db.sh"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_start_script(self, result: GeneratorResult) -> None:
         """Generate startup script."""
-        content = '''#!/bin/sh
+        content = """#!/bin/sh
 set -e
 
 # Initialize database if needed
@@ -130,14 +127,14 @@ set -e
 
 # Start supervisor (manages both PostgreSQL and Next.js)
 exec /usr/bin/supervisord -c /etc/supervisord.conf
-'''
+"""
         path = self.output_dir / "scripts" / "start.sh"
         self._write_file(path, content)
         result.add_file(path)
 
     def _generate_supervisord_config(self, result: GeneratorResult) -> None:
         """Generate supervisord configuration."""
-        content = '''[supervisord]
+        content = """[supervisord]
 nodaemon=true
 logfile=/var/log/supervisord.log
 pidfile=/var/run/supervisord.pid
@@ -162,7 +159,7 @@ startretries=3
 stdout_logfile=/var/log/nextjs-stdout.log
 stderr_logfile=/var/log/nextjs-stderr.log
 environment=NODE_ENV="production",DATABASE_URL="postgresql://postgres:postgres@localhost:5432/app?schema=public"
-'''
+"""
         path = self.output_dir / "supervisord.conf"
         self._write_file(path, content)
         result.add_file(path)

@@ -29,20 +29,14 @@ def get_example_metadata() -> dict[str, Any]:
                 "ux_block",
                 "workspace",
                 "persona",
-                "attention_signals"
+                "attention_signals",
             ],
-            "v0_2_features": [
-                "ux_block",
-                "workspace",
-                "persona",
-                "purpose_statements"
-            ],
+            "v0_2_features": ["ux_block", "workspace", "persona", "purpose_statements"],
             "complexity": "beginner",
             "entities": ["Task"],
             "surfaces": ["task_list", "task_create", "task_edit", "task_detail"],
-            "workspaces": ["task_dashboard", "my_workspace"]
+            "workspaces": ["task_dashboard", "my_workspace"],
         },
-
         "support_tickets": {
             "name": "support_tickets",
             "path": "examples/support_tickets",
@@ -59,7 +53,7 @@ def get_example_metadata() -> dict[str, Any]:
                 "attention_signals",
                 "information_needs",
                 "scope_filtering",
-                "aggregates"
+                "aggregates",
             ],
             "v0_2_features": [
                 "ux_block",
@@ -69,7 +63,7 @@ def get_example_metadata() -> dict[str, Any]:
                 "purpose_statements",
                 "scope_filtering",
                 "persona_specific_workspaces",
-                "aggregates"
+                "aggregates",
             ],
             "complexity": "intermediate",
             "entities": ["Ticket", "Customer", "Agent", "Comment"],
@@ -80,10 +74,9 @@ def get_example_metadata() -> dict[str, Any]:
                 "Role-based dashboards",
                 "Multi-persona workflows",
                 "Attention signal usage",
-                "Workspace composition"
-            ]
+                "Workspace composition",
+            ],
         },
-
         "fieldtest_hub": {
             "name": "fieldtest_hub",
             "path": "examples/fieldtest_hub",
@@ -96,20 +89,19 @@ def get_example_metadata() -> dict[str, Any]:
                 "workspace",
                 "persona",
                 "complex_entities",
-                "status_tracking"
+                "status_tracking",
             ],
-            "v0_2_features": [
-                "workspace",
-                "persona"
-            ],
+            "v0_2_features": ["workspace", "persona"],
             "complexity": "intermediate",
             "entities": ["Equipment", "Test", "Tester", "TestResult"],
-            "workspaces": ["engineering_dashboard", "tester_dashboard"]
-        }
+            "workspaces": ["engineering_dashboard", "tester_dashboard"],
+        },
     }
 
 
-def search_examples(features: list[str] | None = None, complexity: str | None = None) -> list[dict[str, Any]]:
+def search_examples(
+    features: list[str] | None = None, complexity: str | None = None
+) -> list[dict[str, Any]]:
     """
     Search for example projects by features or complexity.
 
@@ -140,16 +132,18 @@ def search_examples(features: list[str] | None = None, complexity: str | None = 
             if not any(feature in all_features for feature in normalized_features):
                 continue
 
-        results.append({
-            "name": metadata["name"],
-            "title": metadata["title"],
-            "path": metadata["path"],
-            "description": metadata["description"],
-            "demonstrates": metadata.get("demonstrates", []),
-            "v0_2_features": metadata.get("v0_2_features", []),
-            "complexity": metadata.get("complexity"),
-            "uri": f"dazzle://examples/{metadata['name']}"
-        })
+        results.append(
+            {
+                "name": metadata["name"],
+                "title": metadata["title"],
+                "path": metadata["path"],
+                "description": metadata["description"],
+                "demonstrates": metadata.get("demonstrates", []),
+                "v0_2_features": metadata.get("v0_2_features", []),
+                "complexity": metadata.get("complexity"),
+                "uri": f"dazzle://examples/{metadata['name']}",
+            }
+        )
 
     return results
 
@@ -189,7 +183,7 @@ def get_v0_2_examples() -> list[dict[str, Any]]:
             "title": metadata["title"],
             "path": metadata["path"],
             "v0_2_features": metadata.get("v0_2_features", []),
-            "uri": f"dazzle://examples/{metadata['name']}"
+            "uri": f"dazzle://examples/{metadata['name']}",
         }
         for metadata in examples.values()
         if metadata.get("v0_2_features")

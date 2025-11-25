@@ -2167,8 +2167,10 @@ def example(
         None, "--path", "-p", help="Directory to create (default: ./<example-name>)"
     ),
     reset: bool = typer.Option(
-        False, "--reset", "-r",
-        help="Reset existing directory: overwrite source files, delete build artifacts, preserve user files"
+        False,
+        "--reset",
+        "-r",
+        help="Reset existing directory: overwrite source files, delete build artifacts, preserve user files",
     ),
     list_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
     list_stacks: bool = typer.Option(False, "--list-stacks", help="List available stack presets"),
@@ -2208,23 +2210,23 @@ def example(
         dazzle example simple_task --reset           # Reset existing project
         dazzle example --no-build                    # Skip automatic build
     """
-    from dazzle.core.init import list_examples
-    from dazzle.core.stacks import get_stack_description, get_stack_preset, list_stack_presets
+    from rich.text import Text
+
     from dazzle.cli_ui import (
         SelectOption,
         console,
-        print_header,
-        print_success,
+        display_options_table,
+        print_divider,
         print_error,
-        print_warning,
+        print_header,
         print_info,
         print_step,
-        print_divider,
+        print_success,
+        print_warning,
         select_interactive,
-        display_options_table,
-        create_panel,
     )
-    from rich.text import Text
+    from dazzle.core.init import list_examples
+    from dazzle.core.stacks import get_stack_preset
 
     # List stacks
     if list_stacks:
@@ -2245,16 +2247,21 @@ def example(
             elif stack_name == "micro":
                 badge = "RECOMMENDED"
 
-            stack_options.append(SelectOption(
-                value=stack_name,
-                label=stack_name,
-                description=desc,
-                badge=badge,
-            ))
+            stack_options.append(
+                SelectOption(
+                    value=stack_name,
+                    label=stack_name,
+                    description=desc,
+                    badge=badge,
+                )
+            )
 
         display_options_table(stack_options, show_numbers=True)
 
-        console.print(Text("Usage: ", style="bright_black") + Text("dazzle example <name> --stack <stack-name>", style="cyan"))
+        console.print(
+            Text("Usage: ", style="bright_black")
+            + Text("dazzle example <name> --stack <stack-name>", style="cyan")
+        )
         console.print()
         return
 
@@ -2296,12 +2303,14 @@ def example(
         if not description:
             description = description_map.get(example_name, "DAZZLE example project")
 
-        example_options.append(SelectOption(
-            value=example_name,
-            label=example_name,
-            description=description,
-            badge="STARTER" if example_name == "simple_task" else "",
-        ))
+        example_options.append(
+            SelectOption(
+                value=example_name,
+                label=example_name,
+                description=description,
+                badge="STARTER" if example_name == "simple_task" else "",
+            )
+        )
 
     # List examples mode
     if list_flag:
@@ -2309,9 +2318,18 @@ def example(
         display_options_table(example_options, show_numbers=True)
 
         console.print(Text("Usage:", style="bold"))
-        console.print(Text("  dazzle example                          ", style="cyan") + Text("# Interactive selection", style="bright_black"))
-        console.print(Text("  dazzle example <name>                   ", style="cyan") + Text("# Select stack for example", style="bright_black"))
-        console.print(Text("  dazzle example <name> --stack <stack>   ", style="cyan") + Text("# Direct creation", style="bright_black"))
+        console.print(
+            Text("  dazzle example                          ", style="cyan")
+            + Text("# Interactive selection", style="bright_black")
+        )
+        console.print(
+            Text("  dazzle example <name>                   ", style="cyan")
+            + Text("# Select stack for example", style="bright_black")
+        )
+        console.print(
+            Text("  dazzle example <name> --stack <stack>   ", style="cyan")
+            + Text("# Direct creation", style="bright_black")
+        )
         console.print()
         return
 
@@ -2356,12 +2374,14 @@ def example(
             elif stack_name == "micro":
                 badge = "RECOMMENDED"
 
-            stack_options.append(SelectOption(
-                value=stack_name,
-                label=stack_name,
-                description=desc,
-                badge=badge,
-            ))
+            stack_options.append(
+                SelectOption(
+                    value=stack_name,
+                    label=stack_name,
+                    description=desc,
+                    badge=badge,
+                )
+            )
 
         stack = select_interactive(
             stack_options,
@@ -2380,7 +2400,11 @@ def example(
     preset = get_stack_preset(stack)
     if not preset:
         print_error(f"Stack '{stack}' not found.")
-        console.print(Text("Use 'dazzle example --list-stacks' to see available stacks.", style="bright_black"))
+        console.print(
+            Text(
+                "Use 'dazzle example --list-stacks' to see available stacks.", style="bright_black"
+            )
+        )
         raise typer.Exit(code=1)
 
     # Determine target directory
@@ -2427,6 +2451,7 @@ def example(
                     manifest_path.write_text(manifest_content + stack_section)
                 else:
                     import re
+
                     manifest_content = re.sub(
                         r'name = "[^"]*"',
                         f'name = "{stack}"',
@@ -2438,7 +2463,12 @@ def example(
 
         else:
             print_error(f"Directory '{target_dir}' already exists.")
-            console.print(Text("Use --reset to overwrite source files and delete build artifacts.", style="bright_black"))
+            console.print(
+                Text(
+                    "Use --reset to overwrite source files and delete build artifacts.",
+                    style="bright_black",
+                )
+            )
             console.print(Text("Or choose a different path with --path.", style="bright_black"))
             raise typer.Exit(code=1)
     else:
@@ -2466,6 +2496,7 @@ def example(
                     manifest_path.write_text(manifest_content + stack_section)
                 else:
                     import re
+
                     manifest_content = re.sub(
                         r'name = "[^"]*"',
                         f'name = "{stack}"',
@@ -2483,6 +2514,7 @@ def example(
         except Exception as e:
             print_error(f"Error creating project: {e}")
             import traceback
+
             traceback.print_exc()
             raise typer.Exit(code=1)
 
@@ -2494,7 +2526,12 @@ def example(
 
         if not verify_project(target_dir):
             print_warning("DSL validation errors detected")
-            console.print(Text("Run 'dazzle validate' in the project directory for details", style="bright_black"))
+            console.print(
+                Text(
+                    "Run 'dazzle validate' in the project directory for details",
+                    style="bright_black",
+                )
+            )
             raise typer.Exit(code=1)
 
         print_success("Verification passed")
@@ -2518,7 +2555,9 @@ def example(
                 print_warning("Build failed")
                 if build_result.stderr:
                     console.print(Text(build_result.stderr, style="red"))
-                console.print(Text("You can build manually with 'dazzle build'", style="bright_black"))
+                console.print(
+                    Text("You can build manually with 'dazzle build'", style="bright_black")
+                )
         else:
             print_step(3, 4, "Skipping build (--no-build)")
 
@@ -2552,7 +2591,9 @@ def example(
             console.print(Text("  cd build/<project-name>", style="cyan"))
             console.print(Text("  source .venv/bin/activate", style="cyan"))
             console.print(Text("  python manage.py runserver", style="cyan"))
-            console.print(Text("\nAdmin credentials: See .admin_credentials file", style="bright_black"))
+            console.print(
+                Text("\nAdmin credentials: See .admin_credentials file", style="bright_black")
+            )
 
         if "express_micro" in preset.backends:
             console.print()
@@ -2581,6 +2622,7 @@ def example(
     except Exception as e:
         print_error(f"Error: {e}")
         import traceback
+
         traceback.print_exc()
         raise typer.Exit(code=1)
 

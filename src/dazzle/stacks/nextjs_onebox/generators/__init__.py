@@ -16,18 +16,18 @@ Each generator is responsible for a specific part of the generated application:
 - DockerGenerator: Dockerfile and scripts
 """
 
-from .config import ConfigGenerator
-from .prisma import PrismaGenerator
-from .types import TypesGenerator
-from .lib import LibGenerator
-from .components import ComponentsGenerator
 from .actions import ActionsGenerator
 from .auth import AuthGenerator
+from .components import ComponentsGenerator
+from .config import ConfigGenerator
+from .docker import DockerGenerator
 from .layout import LayoutGenerator
+from .lib import LibGenerator
 from .middleware import MiddlewareGenerator
 from .pages import PagesGenerator
+from .prisma import PrismaGenerator
 from .styles import StylesGenerator
-from .docker import DockerGenerator
+from .types import TypesGenerator
 
 __all__ = [
     "ConfigGenerator",

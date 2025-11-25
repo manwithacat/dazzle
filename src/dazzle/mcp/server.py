@@ -109,6 +109,7 @@ def _detect_dev_environment(root: Path) -> bool:
     if pyproject_path.exists():
         try:
             import tomllib
+
             data = tomllib.loads(pyproject_path.read_text())
             project_name = data.get("project", {}).get("name", "")
             has_pyproject = "dazzle" in project_name.lower()
@@ -296,7 +297,7 @@ def _get_project_tools() -> list[Tool]:
                     "complexity": {
                         "type": "string",
                         "description": "Complexity level: 'beginner', 'intermediate', or 'advanced'",
-                    }
+                    },
                 },
                 "required": [],
             },
@@ -340,21 +341,32 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = _find_examples(arguments)
 
     # Project tools - require active project in dev mode
-    elif name in ("validate_dsl", "list_modules", "inspect_entity", "inspect_surface",
-                  "build", "analyze_patterns", "lint_project"):
+    elif name in (
+        "validate_dsl",
+        "list_modules",
+        "inspect_entity",
+        "inspect_surface",
+        "build",
+        "analyze_patterns",
+        "lint_project",
+    ):
         project_path = get_active_project_path()
 
         if project_path is None:
             if is_dev_mode():
-                result = json.dumps({
-                    "error": "No project selected. Use 'list_projects' to see available projects and 'select_project' to choose one.",
-                    "available_projects": list(_available_projects.keys()),
-                })
+                result = json.dumps(
+                    {
+                        "error": "No project selected. Use 'list_projects' to see available projects and 'select_project' to choose one.",
+                        "available_projects": list(_available_projects.keys()),
+                    }
+                )
             else:
-                result = json.dumps({
-                    "error": "No dazzle.toml found in project root",
-                    "project_root": str(get_project_root()),
-                })
+                result = json.dumps(
+                    {
+                        "error": "No dazzle.toml found in project root",
+                        "project_root": str(get_project_root()),
+                    }
+                )
         else:
             if name == "validate_dsl":
                 result = _validate_dsl(project_path)
@@ -438,15 +450,17 @@ async def list_resources() -> list[Resource]:
     project_path = get_active_project_path()
     if project_path and (project_path / "dazzle.toml").exists():
         project_resources = create_resources(project_path)
-        resources.extend([
-            Resource(
-                uri=r["uri"],
-                name=r["name"],
-                description=r["description"],
-                mimeType=r.get("mimeType", "text/plain"),
-            )
-            for r in project_resources
-        ])
+        resources.extend(
+            [
+                Resource(
+                    uri=r["uri"],
+                    name=r["name"],
+                    description=r["description"],
+                    mimeType=r.get("mimeType", "text/plain"),
+                )
+                for r in project_resources
+            ]
+        )
 
     return resources
 
@@ -901,9 +915,11 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
 def _list_projects() -> str:
     """List all available example projects."""
     if not is_dev_mode():
-        return json.dumps({
-            "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
-        })
+        return json.dumps(
+            {
+                "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
+            }
+        )
 
     projects = []
     for name, path in sorted(_available_projects.items()):
@@ -929,12 +945,15 @@ def _list_projects() -> str:
 
         projects.append(project_info)
 
-    return json.dumps({
-        "mode": "dev",
-        "project_count": len(projects),
-        "active_project": _active_project,
-        "projects": projects,
-    }, indent=2)
+    return json.dumps(
+        {
+            "mode": "dev",
+            "project_count": len(projects),
+            "active_project": _active_project,
+            "projects": projects,
+        },
+        indent=2,
+    )
 
 
 def _select_project(args: dict[str, Any]) -> str:
@@ -942,19 +961,23 @@ def _select_project(args: dict[str, Any]) -> str:
     global _active_project
 
     if not is_dev_mode():
-        return json.dumps({
-            "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
-        })
+        return json.dumps(
+            {
+                "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
+            }
+        )
 
     project_name = args.get("project_name")
     if not project_name:
         return json.dumps({"error": "project_name required"})
 
     if project_name not in _available_projects:
-        return json.dumps({
-            "error": f"Project '{project_name}' not found",
-            "available_projects": list(_available_projects.keys()),
-        })
+        return json.dumps(
+            {
+                "error": f"Project '{project_name}' not found",
+                "available_projects": list(_available_projects.keys()),
+            }
+        )
 
     _active_project = project_name
     project_path = _available_projects[project_name]
@@ -962,20 +985,26 @@ def _select_project(args: dict[str, Any]) -> str:
     # Return info about the selected project
     try:
         manifest = load_manifest(project_path / "dazzle.toml")
-        return json.dumps({
-            "status": "selected",
-            "project": project_name,
-            "path": str(project_path),
-            "manifest_name": manifest.name,
-            "version": manifest.version,
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "selected",
+                "project": project_name,
+                "path": str(project_path),
+                "manifest_name": manifest.name,
+                "version": manifest.version,
+            },
+            indent=2,
+        )
     except Exception as e:
-        return json.dumps({
-            "status": "selected",
-            "project": project_name,
-            "path": str(project_path),
-            "warning": f"Could not load manifest: {e}",
-        }, indent=2)
+        return json.dumps(
+            {
+                "status": "selected",
+                "project": project_name,
+                "path": str(project_path),
+                "warning": f"Could not load manifest: {e}",
+            },
+            indent=2,
+        )
 
 
 def _get_active_project() -> str:
@@ -988,64 +1017,87 @@ def _get_active_project() -> str:
         if manifest_path.exists():
             try:
                 manifest = load_manifest(manifest_path)
-                return json.dumps({
-                    "mode": "normal",
-                    "project_root": str(project_root),
-                    "manifest_name": manifest.name,
-                    "version": manifest.version,
-                }, indent=2)
+                return json.dumps(
+                    {
+                        "mode": "normal",
+                        "project_root": str(project_root),
+                        "manifest_name": manifest.name,
+                        "version": manifest.version,
+                    },
+                    indent=2,
+                )
             except Exception as e:
-                return json.dumps({
+                return json.dumps(
+                    {
+                        "mode": "normal",
+                        "project_root": str(project_root),
+                        "error": f"Could not load manifest: {e}",
+                    },
+                    indent=2,
+                )
+        else:
+            return json.dumps(
+                {
                     "mode": "normal",
                     "project_root": str(project_root),
-                    "error": f"Could not load manifest: {e}",
-                }, indent=2)
-        else:
-            return json.dumps({
-                "mode": "normal",
-                "project_root": str(project_root),
-                "error": "No dazzle.toml found",
-            }, indent=2)
+                    "error": "No dazzle.toml found",
+                },
+                indent=2,
+            )
 
     if _active_project is None:
-        return json.dumps({
-            "mode": "dev",
-            "active_project": None,
-            "message": "No project selected. Use 'select_project' to choose one.",
-            "available_projects": list(_available_projects.keys()),
-        }, indent=2)
+        return json.dumps(
+            {
+                "mode": "dev",
+                "active_project": None,
+                "message": "No project selected. Use 'select_project' to choose one.",
+                "available_projects": list(_available_projects.keys()),
+            },
+            indent=2,
+        )
 
     project_path = _available_projects.get(_active_project)
     if project_path is None:
-        return json.dumps({
-            "mode": "dev",
-            "error": f"Active project '{_active_project}' not found",
-        }, indent=2)
+        return json.dumps(
+            {
+                "mode": "dev",
+                "error": f"Active project '{_active_project}' not found",
+            },
+            indent=2,
+        )
 
     try:
         manifest = load_manifest(project_path / "dazzle.toml")
-        return json.dumps({
-            "mode": "dev",
-            "active_project": _active_project,
-            "path": str(project_path),
-            "manifest_name": manifest.name,
-            "version": manifest.version,
-        }, indent=2)
+        return json.dumps(
+            {
+                "mode": "dev",
+                "active_project": _active_project,
+                "path": str(project_path),
+                "manifest_name": manifest.name,
+                "version": manifest.version,
+            },
+            indent=2,
+        )
     except Exception as e:
-        return json.dumps({
-            "mode": "dev",
-            "active_project": _active_project,
-            "path": str(project_path),
-            "error": f"Could not load manifest: {e}",
-        }, indent=2)
+        return json.dumps(
+            {
+                "mode": "dev",
+                "active_project": _active_project,
+                "path": str(project_path),
+                "error": f"Could not load manifest: {e}",
+            },
+            indent=2,
+        )
 
 
 def _validate_all_projects() -> str:
     """Validate all example projects."""
     if not is_dev_mode():
-        return json.dumps({
-            "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
-        })
+        return json.dumps(
+            {
+                "error": "Not in dev mode. This tool is only available in the Dazzle development environment."
+            }
+        )
 
     results = {}
 
@@ -1073,14 +1125,17 @@ def _validate_all_projects() -> str:
     valid_count = sum(1 for r in results.values() if r["status"] == "valid")
     error_count = sum(1 for r in results.values() if r["status"] == "error")
 
-    return json.dumps({
-        "summary": {
-            "total": len(results),
-            "valid": valid_count,
-            "errors": error_count,
+    return json.dumps(
+        {
+            "summary": {
+                "total": len(results),
+                "valid": valid_count,
+                "errors": error_count,
+            },
+            "projects": results,
         },
-        "projects": results,
-    }, indent=2)
+        indent=2,
+    )
 
 
 # ============================================================================

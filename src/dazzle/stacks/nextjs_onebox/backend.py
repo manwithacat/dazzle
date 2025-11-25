@@ -15,22 +15,22 @@ from pathlib import Path
 from typing import Any
 
 from ...core import ir
-from .. import Backend, BackendCapabilities
+from .. import BackendCapabilities
 from ..base.backend import ModularBackend
 from ..base.generator import Generator
 from .generators import (
-    ConfigGenerator,
-    PrismaGenerator,
-    TypesGenerator,
-    LibGenerator,
-    ComponentsGenerator,
     ActionsGenerator,
     AuthGenerator,
+    ComponentsGenerator,
+    ConfigGenerator,
+    DockerGenerator,
     LayoutGenerator,
+    LibGenerator,
     MiddlewareGenerator,
     PagesGenerator,
+    PrismaGenerator,
     StylesGenerator,
-    DockerGenerator,
+    TypesGenerator,
 )
 
 
@@ -61,9 +61,7 @@ class NextJSOneboxBackend(ModularBackend):
             requires_config=False,
         )
 
-    def get_generators(
-        self, spec: ir.AppSpec, output_dir: Path, **options: Any
-    ) -> list[Generator]:
+    def get_generators(self, spec: ir.AppSpec, output_dir: Path, **options: Any) -> list[Generator]:
         """
         Get the list of generators for Next.js Onebox.
 
@@ -81,19 +79,15 @@ class NextJSOneboxBackend(ModularBackend):
             # Phase 1: Foundation
             ConfigGenerator(spec, project_path),
             DockerGenerator(spec, project_path),
-
             # Phase 2: Data Layer
             PrismaGenerator(spec, project_path),
             TypesGenerator(spec, project_path),
             LibGenerator(spec, project_path),
-
             # Phase 3: Actions
             ActionsGenerator(spec, project_path),
-
             # Phase 4: Components & Styles
             ComponentsGenerator(spec, project_path),
             StylesGenerator(spec, project_path),
-
             # Phase 5: Pages & Layout
             AuthGenerator(spec, project_path),
             LayoutGenerator(spec, project_path),

@@ -950,6 +950,7 @@ def reset_project(
     # Check if a path matches preserve patterns
     def should_preserve(rel_path: str) -> bool:
         from fnmatch import fnmatch
+
         for pattern in all_preserve:
             if fnmatch(rel_path, pattern):
                 return True
@@ -957,7 +958,7 @@ def reset_project(
             parts = rel_path.split("/")
             for i in range(len(parts)):
                 partial = "/".join(parts[: i + 1])
-                if fnmatch(partial, pattern.rstrip("/**")):
+                if fnmatch(partial, pattern.removesuffix("/**")):
                     return True
         return False
 

@@ -94,7 +94,9 @@ class TestMCPServerIntegration:
             )
 
             # Send initialized notification
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+            proc.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
             proc.stdin.flush()
 
             # List tools
@@ -131,7 +133,9 @@ class TestMCPServerIntegration:
             )
 
             # Send initialized notification
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+            proc.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
             proc.stdin.flush()
 
             # Call tool
@@ -244,7 +248,7 @@ class TestMCPDevMode:
         assert len(projects) > 0
 
         # Each project should have a valid path
-        for name, path in projects.items():
+        for _name, path in projects.items():
             assert path.is_dir()
             assert (path / "dazzle.toml").exists()
 
@@ -268,6 +272,7 @@ class TestMCPDevMode:
     def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, list_tools
 
         # Ensure dev mode is initialized
@@ -289,6 +294,7 @@ class TestMCPDevMode:
     def test_list_projects_tool(self):
         """Test the list_projects tool."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, call_tool
 
         _init_dev_mode(PROJECT_ROOT)
@@ -306,6 +312,7 @@ class TestMCPDevMode:
     def test_select_project_tool(self):
         """Test the select_project tool."""
         import asyncio
+
         import dazzle.mcp.server as mcp_server
 
         mcp_server._init_dev_mode(PROJECT_ROOT)
@@ -316,7 +323,9 @@ class TestMCPDevMode:
 
         # Select a project
         target_project = project_names[-1]  # Pick last one (different from auto-selected first)
-        result = asyncio.run(mcp_server.call_tool("select_project", {"project_name": target_project}))
+        result = asyncio.run(
+            mcp_server.call_tool("select_project", {"project_name": target_project})
+        )
 
         data = json.loads(result[0].text)
         assert data["status"] == "selected"
@@ -325,6 +334,7 @@ class TestMCPDevMode:
     def test_select_project_invalid(self):
         """Test selecting an invalid project."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, call_tool
 
         _init_dev_mode(PROJECT_ROOT)
@@ -339,6 +349,7 @@ class TestMCPDevMode:
     def test_get_active_project_tool(self):
         """Test the get_active_project tool."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, call_tool
 
         _init_dev_mode(PROJECT_ROOT)
@@ -353,6 +364,7 @@ class TestMCPDevMode:
     def test_validate_all_projects_tool(self):
         """Test the validate_all_projects tool."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, call_tool
 
         _init_dev_mode(PROJECT_ROOT)
@@ -367,6 +379,7 @@ class TestMCPDevMode:
     def test_validate_dsl_in_dev_mode(self):
         """Test that validate_dsl works with active project in dev mode."""
         import asyncio
+
         from dazzle.mcp.server import _init_dev_mode, call_tool
 
         _init_dev_mode(PROJECT_ROOT)
@@ -408,7 +421,9 @@ class TestMCPDevModeIntegration:
                 },
             )
 
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+            proc.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
             proc.stdin.flush()
 
             # List tools
@@ -442,7 +457,9 @@ class TestMCPDevModeIntegration:
                 },
             )
 
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+            proc.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
             proc.stdin.flush()
 
             # Call list_projects
@@ -478,7 +495,9 @@ class TestMCPDevModeIntegration:
                 },
             )
 
-            proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
+            proc.stdin.write(
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+            )
             proc.stdin.flush()
 
             # 1. List projects
