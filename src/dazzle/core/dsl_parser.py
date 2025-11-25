@@ -291,11 +291,11 @@ class Parser:
             self.expect(TokenType.LBRACKET)
 
             values = []
-            values.append(self.expect(TokenType.IDENTIFIER).value)
+            values.append(self.expect_identifier_or_keyword().value)
 
             while self.match(TokenType.COMMA):
                 self.advance()
-                values.append(self.expect(TokenType.IDENTIFIER).value)
+                values.append(self.expect_identifier_or_keyword().value)
 
             self.expect(TokenType.RBRACKET)
             return ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=values)
@@ -409,10 +409,10 @@ class Parser:
                 )
 
                 # Parse field list
-                field_names = [self.expect(TokenType.IDENTIFIER).value]
+                field_names = [self.expect_identifier_or_keyword().value]
                 while self.match(TokenType.COMMA):
                     self.advance()
-                    field_names.append(self.expect(TokenType.IDENTIFIER).value)
+                    field_names.append(self.expect_identifier_or_keyword().value)
 
                 constraints.append(ir.Constraint(kind=kind, fields=field_names))
                 self.skip_newlines()
@@ -518,7 +518,7 @@ class Parser:
         """Parse surface section."""
         self.expect(TokenType.SECTION)
 
-        name = self.expect(TokenType.IDENTIFIER).value
+        name = self.expect_identifier_or_keyword().value
         title = None
 
         if self.match(TokenType.STRING):
@@ -565,7 +565,7 @@ class Parser:
         """Parse surface action."""
         self.expect(TokenType.ACTION)
 
-        name = self.expect(TokenType.IDENTIFIER).value
+        name = self.expect_identifier_or_keyword().value
         label = None
 
         if self.match(TokenType.STRING):
@@ -1984,6 +1984,8 @@ class Parser:
         show_aggregate: list[str] = []
         action_primary = None
         read_only = False
+        defaults: dict[str, Any] = {}
+        focus: list[str] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -2056,6 +2058,37 @@ class Parser:
                     )
                 self.skip_newlines()
 
+            # defaults:
+            elif self.match(TokenType.DEFAULTS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    # field_name: value
+                    field_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    # Parse value (could be identifier, string, etc.)
+                    if self.match(TokenType.STRING):
+                        defaults[field_name] = self.advance().value
+                    else:
+                        # For identifiers like current_user
+                        defaults[field_name] = self.expect_identifier_or_keyword().value
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
+            # focus: region1, region2
+            elif self.match(TokenType.FOCUS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                focus = self.parse_field_list()
+                self.skip_newlines()
+
             else:
                 break
 
@@ -2071,6 +2104,8 @@ class Parser:
             show_aggregate=show_aggregate,
             action_primary=action_primary,
             read_only=read_only,
+            defaults=defaults,
+            focus=focus,
         )
 
     def parse_condition_expr(self) -> ir.ConditionExpr:
@@ -2226,13 +2261,17 @@ class Parser:
         # List value: [a, b, c]
         if self.match(TokenType.LBRACKET):
             self.advance()
-            values = []
+            values: list[str | int | float | bool] = []
 
             if not self.match(TokenType.RBRACKET):
-                values.append(self._parse_literal_value())
+                val = self._parse_literal_value()
+                if val is not None:
+                    values.append(val)
                 while self.match(TokenType.COMMA):
                     self.advance()
-                    values.append(self._parse_literal_value())
+                    val = self._parse_literal_value()
+                    if val is not None:
+                        values.append(val)
 
             self.expect(TokenType.RBRACKET)
             return ir.ConditionValue(values=values)
@@ -2356,6 +2395,7 @@ class Parser:
         display = ir.DisplayMode.LIST
         action = None
         empty_message = None
+        group_by = None
         aggregates: dict[str, str] = {}
 
         while not self.match(TokenType.DEDENT):
@@ -2413,6 +2453,13 @@ class Parser:
                 empty_message = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # group_by: field_name
+            elif self.match(TokenType.GROUP_BY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                group_by = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # aggregate:
             elif self.match(TokenType.AGGREGATE):
                 self.advance()
@@ -2459,6 +2506,7 @@ class Parser:
             display=display,
             action=action,
             empty_message=empty_message,
+            group_by=group_by,
             aggregates=aggregates,
         )
 

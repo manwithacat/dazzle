@@ -473,6 +473,8 @@ class PersonaVariant(BaseModel):
         show_aggregate: Aggregate metrics to display (e.g., critical_count)
         action_primary: Primary action surface for this persona
         read_only: Whether mutations are disabled
+        defaults: Default field values for forms (e.g., {"assigned_to": "current_user"})
+        focus: Workspace regions to emphasize for this persona
     """
 
     persona: str
@@ -484,6 +486,8 @@ class PersonaVariant(BaseModel):
     show_aggregate: list[str] = Field(default_factory=list)
     action_primary: str | None = None  # Surface reference
     read_only: bool = False
+    defaults: dict[str, Any] = Field(default_factory=dict)  # Field default values
+    focus: list[str] = Field(default_factory=list)  # Workspace regions to emphasize
 
     class Config:
         frozen = True
@@ -541,9 +545,7 @@ class UXSpec(BaseModel):
     class Config:
         frozen = True
 
-    def get_persona_variant(
-        self, user_context: dict[str, Any]
-    ) -> PersonaVariant | None:
+    def get_persona_variant(self, user_context: dict[str, Any]) -> PersonaVariant | None:
         """Get applicable persona variant for user context."""
         for variant in self.persona_variants:
             if variant.applies_to_user(user_context):
@@ -614,6 +616,7 @@ class WorkspaceRegion(BaseModel):
         display: Display mode (list, grid, timeline, map)
         action: Surface for quick action on items
         empty_message: Message when no data
+        group_by: Field to group data by for aggregation
         aggregates: Named aggregate expressions
     """
 
@@ -625,6 +628,7 @@ class WorkspaceRegion(BaseModel):
     display: DisplayMode = DisplayMode.LIST
     action: str | None = None  # Surface reference
     empty_message: str | None = None
+    group_by: str | None = None  # Field to group by
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
 
     class Config:
