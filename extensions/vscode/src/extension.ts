@@ -24,15 +24,12 @@ let specStatusBarItem: vscode.StatusBarItem | null = null;
 let lspStatusBarItem: vscode.StatusBarItem | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('DAZZLE DSL extension is now active');
-
-    // Show a notification to confirm activation
-    vscode.window.showInformationMessage('DAZZLE extension activated!');
+    console.log('Dazzle DSL extension is now active');
 
     // Create LSP status bar item (show loading initially)
     lspStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    lspStatusBarItem.text = '$(loading~spin) DAZZLE LSP';
-    lspStatusBarItem.tooltip = 'DAZZLE Language Server initializing...';
+    lspStatusBarItem.text = '$(loading~spin) Dazzle LSP';
+    lspStatusBarItem.tooltip = 'Dazzle Language Server initializing...';
     lspStatusBarItem.command = 'dazzle.showLspOutput';
     lspStatusBarItem.show();
     context.subscriptions.push(lspStatusBarItem);
@@ -44,8 +41,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 editor.document.uri.scheme === 'output'
             );
             vscode.commands.executeCommand('workbench.action.output.show');
-            // Select DAZZLE LSP in the output dropdown
-            vscode.commands.executeCommand('workbench.action.output.toggleOutput', 'DAZZLE LSP');
+            // Select Dazzle Language Server in the output dropdown
+            vscode.commands.executeCommand('workbench.action.output.toggleOutput', 'Dazzle Language Server');
         })
     );
 
@@ -76,8 +73,8 @@ export async function activate(context: vscode.ExtensionContext) {
             console.log('LSP server available, starting client...');
             await startLanguageClient(context);
             lspClientActive = true;
-            lspStatusBarItem.text = '$(check) DAZZLE LSP';
-            lspStatusBarItem.tooltip = 'DAZZLE Language Server: Active\nClick to show output';
+            lspStatusBarItem.text = '$(check) Dazzle LSP';
+            lspStatusBarItem.tooltip = 'Dazzle Language Server: Active\nClick to show output';
             lspStatusBarItem.backgroundColor = undefined;
             console.log('DAZZLE LSP client started successfully');
         } catch (error) {

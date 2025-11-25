@@ -22,7 +22,7 @@ let outputChannel: vscode.OutputChannel | undefined;
  */
 function getOutputChannel(): vscode.OutputChannel {
     if (!outputChannel) {
-        outputChannel = vscode.window.createOutputChannel('DAZZLE LSP');
+        outputChannel = vscode.window.createOutputChannel('Dazzle Language Server');
         // Make sure the channel is visible in the output panel
         outputChannel.show(true);
     }
@@ -38,7 +38,8 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
     const channel = getOutputChannel();
 
     channel.appendLine('='.repeat(60));
-    channel.appendLine('DAZZLE Language Server Client Starting...');
+    channel.appendLine('Dazzle Language Server Starting...');
+    channel.appendLine('This channel shows LSP messages (hover, completions, diagnostics)');
     channel.appendLine(`Python path: ${pythonPath}`);
     channel.appendLine(`Timestamp: ${new Date().toISOString()}`);
     channel.appendLine('='.repeat(60));

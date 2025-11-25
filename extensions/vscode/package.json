@@ -23,7 +23,16 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "*"
+    "onLanguage:dazzle-dsl",
+    "workspaceContains:dazzle.toml",
+    "workspaceContains:**/*.dsl",
+    "onCommand:dazzle.validate",
+    "onCommand:dazzle.build",
+    "onCommand:dazzle.lint",
+    "onCommand:dazzle.askClaudeToAnalyze",
+    "onCommand:dazzle.askClaudeToFix",
+    "onCommand:dazzle.askClaudeToBuild",
+    "onCommand:dazzle.askClaudeToInit"
   ],
   "contributes": {
     "languages": [
