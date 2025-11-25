@@ -308,9 +308,7 @@ class ViewsGenerator(Generator):
 
         for workspace in self.spec.workspaces:
             workspace_lower = workspace.name.lower().replace(" ", "_")
-            class_name = "".join(
-                word.capitalize() for word in workspace.name.split("_")
-            )
+            class_name = "".join(word.capitalize() for word in workspace.name.split("_"))
             if not class_name.endswith("View"):
                 class_name += "DashboardView"
 
@@ -324,7 +322,9 @@ class ViewsGenerator(Generator):
             # Add context for each region
             for region in workspace.regions:
                 region_name = region.name or region.source.split(".")[-1]
-                source_entity = region.source.split(".")[0] if "." in region.source else region.source
+                source_entity = (
+                    region.source.split(".")[0] if "." in region.source else region.source
+                )
 
                 # Build queryset with filters and sorting
                 queryset_lines = []
@@ -335,7 +335,9 @@ class ViewsGenerator(Generator):
                 if region.filter:
                     filter_django = self._workspace_filter_to_django(region.filter)
                     if filter_django:
-                        queryset_lines.append(f"        {region_name}_qs = {region_name}_qs.filter({filter_django})")
+                        queryset_lines.append(
+                            f"        {region_name}_qs = {region_name}_qs.filter({filter_django})"
+                        )
 
                 # Apply sorting if defined
                 if region.sort:
@@ -349,7 +351,9 @@ class ViewsGenerator(Generator):
 
                 # Apply limit if defined
                 if region.limit:
-                    queryset_lines.append(f"        {region_name}_qs = {region_name}_qs[:{region.limit}]")
+                    queryset_lines.append(
+                        f"        {region_name}_qs = {region_name}_qs[:{region.limit}]"
+                    )
 
                 queryset_lines.append(f'        context["{region_name}_items"] = {region_name}_qs')
 
@@ -361,7 +365,9 @@ class ViewsGenerator(Generator):
                         if agg.endswith("_count"):
                             queryset_lines.append(f'            "{agg}": {region_name}_qs.count(),')
                         else:
-                            queryset_lines.append(f'            "{agg}": None,  # TODO: implement aggregate')
+                            queryset_lines.append(
+                                f'            "{agg}": None,  # TODO: implement aggregate'
+                            )
                     queryset_lines.append("        }")
 
                 lines.extend(queryset_lines)
@@ -420,8 +426,8 @@ class ViewsGenerator(Generator):
                     formatted_val = "True" if val else "False"
                 else:
                     formatted_val = str(val)
-            elif comparison.value.list_value:
-                formatted_val = str(comparison.value.list_value)
+            elif comparison.value.values:
+                formatted_val = str(comparison.value.values)
             else:
                 return None
         else:

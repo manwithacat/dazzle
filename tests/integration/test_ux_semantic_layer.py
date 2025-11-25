@@ -19,9 +19,8 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.stacks.django_micro_modular import DjangoMicroModularBackend
 
-
 # Sample DSL with UX Semantic Layer features
-UX_DSL = '''
+UX_DSL = """
 module urban_canopy.core
 
 app urban_canopy "Urban Canopy Maintenance Tracker"
@@ -157,7 +156,7 @@ workspace volunteer_dashboard "My Tasks":
         sort: scheduled_date asc
         limit: 20
         display: list
-'''
+"""
 
 
 class TestUXParsing:
@@ -165,9 +164,7 @@ class TestUXParsing:
 
     def test_parse_ux_block(self):
         """Test parsing UX block within surface."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(
-            UX_DSL, Path("test.dsl")
-        )
+        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         assert module_name == "urban_canopy.core"
         assert app_name == "urban_canopy"
@@ -179,7 +176,14 @@ class TestUXParsing:
 
         ux = task_list.ux
         assert ux.purpose == "View and prioritize pending maintenance tasks"
-        assert ux.show == ["tree_id", "location", "task_type", "priority", "status", "scheduled_date"]
+        assert ux.show == [
+            "tree_id",
+            "location",
+            "task_type",
+            "priority",
+            "status",
+            "scheduled_date",
+        ]
         assert len(ux.sort) == 2
         assert ux.sort[0].field == "priority"
         assert ux.sort[0].direction == "desc"
@@ -243,9 +247,7 @@ class TestUXLinking:
 
     def test_link_with_ux(self):
         """Test linking modules with UX specs."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(
-            UX_DSL, Path("test.dsl")
-        )
+        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         # Create ModuleIR from parsed data
         from dazzle.core import ir
@@ -276,9 +278,7 @@ class TestUXValidation:
 
     def test_lint_valid_ux(self):
         """Test linting valid UX specs."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(
-            UX_DSL, Path("test.dsl")
-        )
+        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         from dazzle.core import ir
 
@@ -299,7 +299,7 @@ class TestUXValidation:
 
     def test_lint_invalid_ux_field(self):
         """Test linting catches invalid UX field references."""
-        invalid_dsl = '''
+        invalid_dsl = """
 module test.core
 
 app test_app "Test"
@@ -317,10 +317,8 @@ surface task_list "Tasks":
 
     ux:
         show: title, nonexistent_field
-'''
-        module_name, app_name, app_title, uses, fragment = parse_dsl(
-            invalid_dsl, Path("test.dsl")
-        )
+"""
+        module_name, app_name, app_title, uses, fragment = parse_dsl(invalid_dsl, Path("test.dsl"))
 
         from dazzle.core import ir
 
@@ -345,9 +343,7 @@ class TestDjangoUXGeneration:
 
     def test_generate_with_ux(self):
         """Test Django generation includes UX features."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(
-            UX_DSL, Path("test.dsl")
-        )
+        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         from dazzle.core import ir
 
@@ -369,7 +365,9 @@ class TestDjangoUXGeneration:
 
             # Check generated files exist
             project_dir = output_dir / "urban_canopy"
-            assert (project_dir / "app" / "templates" / "app" / "maintenancetask_list.html").exists()
+            assert (
+                project_dir / "app" / "templates" / "app" / "maintenancetask_list.html"
+            ).exists()
 
             # Read list template and verify UX features
             list_template = (

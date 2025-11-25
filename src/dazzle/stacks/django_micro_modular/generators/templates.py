@@ -64,9 +64,7 @@ class TemplatesGenerator(Generator):
 
         # Generate workspace templates if any workspaces defined
         for workspace in self.spec.workspaces:
-            workspace_templates = self._generate_workspace_templates(
-                workspace, app_templates_dir
-            )
+            workspace_templates = self._generate_workspace_templates(workspace, app_templates_dir)
             result.files_created.extend(workspace_templates)
 
         return result
@@ -181,12 +179,14 @@ class TemplatesGenerator(Generator):
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             label = entity.title or entity.name
-            cards.append(f"""        <div class="card">
+            cards.append(
+                f"""        <div class="card">
             <h2>{label}s</h2>
             <p>Manage {label.lower()}s in the system.</p>
             <a href="{{% url '{entity_lower}-list' %}}" class="btn">View {label}s</a>
             <a href="{{% url '{entity_lower}-create' %}}" class="btn btn-secondary">Create New</a>
-        </div>""")
+        </div>"""
+            )
         return "\n".join(cards)
 
     def _generate_entity_templates(self, entity: ir.EntitySpec, templates_dir: Path) -> list[Path]:
@@ -243,8 +243,7 @@ class TemplatesGenerator(Generator):
 
         # Generate table headers
         table_headers = "\n".join(
-            f"                <th>{f.name.replace('_', ' ').title()}</th>"
-            for f in display_fields
+            f"                <th>{f.name.replace('_', ' ').title()}</th>" for f in display_fields
         )
 
         # Generate table cells with potential attention signal styling
@@ -265,7 +264,7 @@ class TemplatesGenerator(Generator):
         # Generate row class logic for attention signals
         row_class_logic = self._generate_attention_row_class(entity_lower, ux_spec)
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 
 {{% block title %}}{label}s{{% endblock %}}
 
@@ -316,7 +315,7 @@ class TemplatesGenerator(Generator):
     {{% endif %}}
 </div>
 {{% endblock %}}
-'''
+"""
 
     def _generate_table_cells(
         self,
@@ -334,9 +333,7 @@ class TemplatesGenerator(Generator):
 
         return "\n".join(cells)
 
-    def _generate_filter_controls(
-        self, entity: ir.EntitySpec, ux_spec: ir.UXSpec | None
-    ) -> str:
+    def _generate_filter_controls(self, entity: ir.EntitySpec, ux_spec: ir.UXSpec | None) -> str:
         """Generate filter and search controls from UX spec."""
         if not ux_spec:
             return ""
@@ -346,7 +343,8 @@ class TemplatesGenerator(Generator):
         # Search box if search fields defined
         if ux_spec.search:
             search_placeholder = f"Search {', '.join(ux_spec.search)}..."
-            controls.append(f'''
+            controls.append(
+                f"""
     <div class="search-box" style="margin-top: 15px;">
         <form method="get" style="display: inline-flex; gap: 10px;">
             <input type="text" name="q" placeholder="{search_placeholder}"
@@ -354,7 +352,8 @@ class TemplatesGenerator(Generator):
             <button type="submit" class="btn btn-secondary">Search</button>
             {{% if request.GET.q %}}<a href="?" class="btn btn-secondary">Clear</a>{{% endif %}}
         </form>
-    </div>''')
+    </div>"""
+            )
 
         # Filter dropdowns if filter fields defined
         if ux_spec.filter:
@@ -367,25 +366,27 @@ class TemplatesGenerator(Generator):
                         f'<option value="{v}" {{%% if request.GET.{field_name} == "{v}" %%}}selected{{%% endif %%}}>{v.replace("_", " ").title()}</option>'
                         for v in (field.type.enum_values or [])
                     )
-                    filter_fields.append(f'''
+                    filter_fields.append(
+                        f"""
             <select name="{field_name}" onchange="this.form.submit()" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                <option value="">All {field_name.replace('_', ' ').title()}s</option>
+                <option value="">All {field_name.replace("_", " ").title()}s</option>
                 {options}
-            </select>''')
+            </select>"""
+                    )
 
             if filter_fields:
-                controls.append(f'''
+                controls.append(
+                    f"""
     <div class="filter-controls" style="margin-top: 10px;">
         <form method="get" style="display: inline-flex; gap: 10px; align-items: center;">
             <span style="color: #666;">Filter:</span>{"".join(filter_fields)}
         </form>
-    </div>''')
+    </div>"""
+                )
 
         return "".join(controls)
 
-    def _generate_attention_row_class(
-        self, entity_lower: str, ux_spec: ir.UXSpec | None
-    ) -> str:
+    def _generate_attention_row_class(self, entity_lower: str, ux_spec: ir.UXSpec | None) -> str:
         """Generate Django template logic for attention signal row classes."""
         if not ux_spec or not ux_spec.attention_signals:
             return ""
@@ -414,9 +415,7 @@ class TemplatesGenerator(Generator):
         result_parts.append("{% endif %}")
         return " " + "".join(result_parts)
 
-    def _condition_to_django(
-        self, condition: ir.ConditionExpr, entity_lower: str
-    ) -> str | None:
+    def _condition_to_django(self, condition: ir.ConditionExpr, entity_lower: str) -> str | None:
         """Convert a condition expression to Django template syntax."""
         if condition.comparison:
             return self._comparison_to_django(condition.comparison, entity_lower)
@@ -428,9 +427,7 @@ class TemplatesGenerator(Generator):
                 return f"({left} {op} {right})"
         return None
 
-    def _comparison_to_django(
-        self, comparison: ir.Comparison, entity_lower: str
-    ) -> str | None:
+    def _comparison_to_django(self, comparison: ir.Comparison, entity_lower: str) -> str | None:
         """Convert a single comparison to Django template syntax."""
         # Handle field references
         if comparison.field:
@@ -460,10 +457,9 @@ class TemplatesGenerator(Generator):
 
         if comparison.operator == ir.ComparisonOperator.IN:
             # Handle "in" operator
-            if comparison.value and comparison.value.list_value:
+            if comparison.value and comparison.value.values:
                 values = ", ".join(
-                    f'"{v}"' if isinstance(v, str) else str(v)
-                    for v in comparison.value.list_value
+                    f'"{v}"' if isinstance(v, str) else str(v) for v in comparison.value.values
                 )
                 return f"{left_side} in [{values}]"
             return None
@@ -511,7 +507,6 @@ class TemplatesGenerator(Generator):
 
     def _generate_workspace_dashboard(self, workspace: ir.WorkspaceSpec) -> str:
         """Generate a workspace dashboard template."""
-        workspace_lower = workspace.name.lower().replace(" ", "_")
         title = workspace.title or workspace.name
 
         # Generate region cards
@@ -535,17 +530,18 @@ class TemplatesGenerator(Generator):
                     agg_items.append(
                         f'<span class="aggregate-item">{{{{ {region_name}_aggregates.{agg} }}}}</span>'
                     )
-                aggregates_html = f'''
+                aggregates_html = f"""
             <div class="region-aggregates">
                 {"".join(agg_items)}
-            </div>'''
+            </div>"""
 
             # Generate limit info
             limit_info = ""
             if region.limit:
                 limit_info = f' <span class="limit-info">(showing up to {region.limit})</span>'
 
-            region_cards.append(f'''
+            region_cards.append(
+                f"""
         <div class="workspace-region{display_class}">
             <h3>{region_title}{limit_info}</h3>{aggregates_html}
             <div class="region-content">
@@ -557,13 +553,14 @@ class TemplatesGenerator(Generator):
                 <p class="empty-state">No items</p>
                 {{%% endfor %%}}
             </div>
-        </div>''')
+        </div>"""
+            )
 
         purpose_html = ""
         if workspace.purpose:
             purpose_html = f'\n    <p class="purpose-text">{workspace.purpose}</p>'
 
-        return f'''{{% extends "base.html" %}}
+        return f"""{{% extends "base.html" %}}
 
 {{% block title %}}{title}{{% endblock %}}
 
@@ -576,7 +573,7 @@ class TemplatesGenerator(Generator):
     </div>
 </div>
 {{% endblock %}}
-'''
+"""
 
     def _generate_detail_template(self, entity: ir.EntitySpec) -> str:
         """Generate detail view template."""

@@ -136,9 +136,10 @@ class LLMAPIClient:
 
     def _init_client(self) -> None:
         """Initialize provider-specific client."""
+        # Type as Any since client can be Anthropic, OpenAI, or None
+        self.client: Any = None
         if self._use_cli_fallback:
             # No client needed for CLI fallback
-            self.client = None
             return
 
         if self.provider == LLMProvider.ANTHROPIC:
@@ -345,10 +346,11 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 messages=[{"role": "user", "content": user_prompt}],
             )
 
-            # Extract text from response
+            # Extract text from response (first block is always a TextBlock for completions)
             text_block = response.content[0]
-            result: str = text_block.text
-            return result
+            if hasattr(text_block, "text"):
+                return str(text_block.text)
+            raise ValueError(f"Unexpected response block type: {type(text_block)}")
 
         except Exception as e:
             logger.error(f"Anthropic API call failed: {e}")
