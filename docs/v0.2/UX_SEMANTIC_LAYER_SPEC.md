@@ -1,8 +1,8 @@
 # DAZZLE UX Semantic Layer Extension Specification
 
-**Version**: 0.2.0-alpha  
-**Target Implementation**: Claude Code (Opus 4.5)  
-**Created**: 2025-11-25  
+**Version**: 0.2.0-alpha
+**Target Implementation**: Claude Code (Opus 4.5)
+**Created**: 2025-11-25
 **Status**: DRAFT FOR IMPLEMENTATION
 
 ---
@@ -12,7 +12,7 @@
 This specification defines extensions to the DAZZLE DSL v0.1 to capture **User Experience (UX) semantics** without prescribing visual implementation. The extension introduces three core concepts:
 
 1. **Information Needs** - Why surfaces exist and what questions they answer
-2. **Attention Signals** - Data conditions requiring user awareness or action  
+2. **Attention Signals** - Data conditions requiring user awareness or action
 3. **Persona Variants** - Context-specific surface adaptations
 
 Additionally, a new **workspace** construct enables composition of related information needs without resorting to implementation-specific "dashboard" patterns.
@@ -173,7 +173,7 @@ ux:
     when: condition_status in [SevereStress, Dead]
     message: "Urgent attention required"
     action: task_create
-    
+
   attention warning:
     when: days_since(last_inspection_date) > 30
     message: "Overdue for inspection"
@@ -198,7 +198,7 @@ condition_expr ::= field_comparison
 field_comparison ::= FIELD_NAME operator value
                   | function_call operator value ;
 
-operator ::= "=" | "!=" | ">" | "<" | ">=" | "<=" 
+operator ::= "=" | "!=" | ">" | "<" | ">=" | "<="
           | "in" | "not in" | "is" | "is not" ;
 
 function_call ::= FUNCTION_NAME "(" FIELD_NAME ")" ;
@@ -206,7 +206,7 @@ function_call ::= FUNCTION_NAME "(" FIELD_NAME ")" ;
 
 **Supported Functions (Phase 1):**
 - `days_since(datetime_field)` → integer
-- `count(related_field)` → integer  
+- `count(related_field)` → integer
 - `sum(numeric_field)` → number
 - `avg(numeric_field)` → number
 
@@ -244,13 +244,13 @@ ux:
     purpose: "Monitor your adopted trees"
     show: species, condition_status, last_inspection_date
     action_primary: observation_create
-    
+
   for coordinator:
     scope: all
     purpose: "Oversee all trees in network"
     show_aggregate: critical_count, warning_count
     action_primary: task_create
-    
+
   for public:
     scope: all
     hide: steward
@@ -322,7 +322,7 @@ aggregate_name ::= IDENTIFIER ;
 ```dsl
 workspace volunteer_hub "My Trees":
   purpose: "Daily tree stewardship dashboard"
-  
+
   priority_trees:
     source: Tree
     filter: steward = current_user
@@ -330,14 +330,14 @@ workspace volunteer_hub "My Trees":
     limit: 10
     action: observation_create
     empty: "No trees assigned yet."
-  
+
   recent_observations:
     source: Observation
     filter: observer = current_user
     sort: submitted_at desc
     limit: 5
     display: timeline
-  
+
   network_health:
     aggregate:
       total_trees: count(Tree)
@@ -426,7 +426,7 @@ Add the following classes after existing IR definitions:
 class UXPurpose(BaseModel):
     """Semantic purpose of a surface or workspace."""
     text: str = Field(min_length=1, max_length=500)
-    
+
     class Config:
         frozen = True
 
@@ -437,16 +437,16 @@ class AttentionSignal(BaseModel):
     condition: str  # Condition expression (to be validated separately)
     message: str = Field(min_length=1, max_length=200)
     action: Optional[str] = None  # Surface reference
-    
+
     class Config:
         frozen = True
-    
+
     @property
     def css_class(self) -> str:
         """Map signal level to CSS class name."""
         return {
             "critical": "danger",
-            "warning": "warning", 
+            "warning": "warning",
             "notice": "info",
             "info": "secondary"
         }[self.level]
@@ -462,10 +462,10 @@ class PersonaVariant(BaseModel):
     show_aggregate: List[str] = Field(default_factory=list)
     action_primary: Optional[str] = None  # Surface reference
     read_only: bool = False
-    
+
     class Config:
         frozen = True
-    
+
     def applies_to_user(self, user_context: Dict[str, Any]) -> bool:
         """Check if persona applies to given user context."""
         # Implementation will check user_context["role"] or similar
@@ -482,17 +482,17 @@ class UXSpec(BaseModel):
     empty_message: Optional[str] = None
     attention_signals: List[AttentionSignal] = Field(default_factory=list)
     persona_variants: List[PersonaVariant] = Field(default_factory=list)
-    
+
     class Config:
         frozen = True
-    
+
     def get_persona_variant(self, user_context: Dict[str, Any]) -> Optional[PersonaVariant]:
         """Get applicable persona variant for user context."""
         for variant in self.persona_variants:
             if variant.applies_to_user(user_context):
                 return variant
         return None
-    
+
     @property
     def has_attention_signals(self) -> bool:
         return len(self.attention_signals) > 0
@@ -509,7 +509,7 @@ class WorkspaceRegion(BaseModel):
     action: Optional[str] = None  # Surface reference
     empty_message: Optional[str] = None
     aggregates: Dict[str, str] = Field(default_factory=dict)  # metric_name: expr
-    
+
     class Config:
         frozen = True
 
@@ -521,10 +521,10 @@ class WorkspaceSpec(BaseModel):
     purpose: Optional[str] = None
     regions: List[WorkspaceRegion] = Field(default_factory=list)
     ux: Optional[UXSpec] = None  # Workspace-level UX (e.g., responsive)
-    
+
     class Config:
         frozen = True
-    
+
     def get_region(self, name: str) -> Optional[WorkspaceRegion]:
         """Get region by name."""
         for region in self.regions:
@@ -726,7 +726,7 @@ Add transformer methods for new grammar rules:
 ```python
 class DazzleTransformer(Transformer):
     # ... existing methods ...
-    
+
     # UX Block Transformers
     def ux_block(self, items):
         """Transform ux block into UXSpec."""
@@ -738,7 +738,7 @@ class DazzleTransformer(Transformer):
         empty_message = None
         attention_signals = []
         persona_variants = []
-        
+
         for item in items:
             if isinstance(item, UXPurpose):
                 purpose = item
@@ -757,7 +757,7 @@ class DazzleTransformer(Transformer):
                 attention_signals.append(item)
             elif isinstance(item, PersonaVariant):
                 persona_variants.append(item)
-        
+
         return UXSpec(
             purpose=purpose,
             show=show,
@@ -768,51 +768,51 @@ class DazzleTransformer(Transformer):
             attention_signals=attention_signals,
             persona_variants=persona_variants
         )
-    
+
     def purpose_line(self, items):
         """Transform purpose line."""
         text = str(items[0]).strip('"')
         return UXPurpose(text=text)
-    
+
     def show_line(self, items):
         """Transform show line."""
         fields = [str(f) for f in items[0]]
         return {"show": fields}
-    
+
     def sort_line(self, items):
         """Transform sort line."""
         sort_exprs = [self._format_sort_expr(expr) for expr in items]
         return {"sort": sort_exprs}
-    
+
     def _format_sort_expr(self, expr):
         """Format sort expression as 'field asc/desc'."""
         if isinstance(expr, tuple):
             field, direction = expr
             return f"{field} {direction}"
         return f"{expr} asc"
-    
+
     def filter_line(self, items):
         """Transform filter line."""
         fields = [str(f) for f in items[0]]
         return {"filter": fields}
-    
+
     def search_line(self, items):
         """Transform search line."""
         fields = [str(f) for f in items[0]]
         return {"search": fields}
-    
+
     def empty_line(self, items):
         """Transform empty message line."""
         message = str(items[0]).strip('"')
         return {"empty": message}
-    
+
     def attention_block(self, items):
         """Transform attention block."""
         level = str(items[0])
         condition = None
         message = None
         action = None
-        
+
         for item in items[1:]:
             if isinstance(item, dict):
                 if "when" in item:
@@ -821,20 +821,20 @@ class DazzleTransformer(Transformer):
                     message = item["message"]
                 elif "action" in item:
                     action = item["action"]
-        
+
         return AttentionSignal(
             level=level,
             condition=condition,
             message=message,
             action=action
         )
-    
+
     def condition_expr(self, items):
         """Transform condition expression to string."""
         # For Phase 1, store as string for later evaluation
         # Future: parse into AST for validation
         return {"when": " ".join(str(i) for i in items)}
-    
+
     def persona_block(self, items):
         """Transform persona block."""
         persona_name = str(items[0])
@@ -845,7 +845,7 @@ class DazzleTransformer(Transformer):
         show_aggregate = []
         action_primary = None
         read_only = False
-        
+
         for item in items[1:]:
             if isinstance(item, dict):
                 if "scope" in item:
@@ -862,7 +862,7 @@ class DazzleTransformer(Transformer):
                     action_primary = item["action_primary"]
                 elif "read_only" in item:
                     read_only = item["read_only"]
-        
+
         return PersonaVariant(
             persona=persona_name,
             scope=scope,
@@ -873,16 +873,16 @@ class DazzleTransformer(Transformer):
             action_primary=action_primary,
             read_only=read_only
         )
-    
+
     def workspace_decl(self, items):
         """Transform workspace declaration."""
         name = str(items[0])
         title = str(items[1]).strip('"') if len(items) > 1 and isinstance(items[1], str) else None
-        
+
         purpose = None
         regions = []
         ux = None
-        
+
         for item in items[2:]:
             if isinstance(item, UXPurpose):
                 purpose = item.text
@@ -890,7 +890,7 @@ class DazzleTransformer(Transformer):
                 regions.append(item)
             elif isinstance(item, UXSpec):
                 ux = item
-        
+
         return WorkspaceSpec(
             name=name,
             title=title,
@@ -898,11 +898,11 @@ class DazzleTransformer(Transformer):
             regions=regions,
             ux=ux
         )
-    
+
     def workspace_region(self, items):
         """Transform workspace region."""
         name = str(items[0])
-        
+
         source = None
         filter_expr = None
         sort = None
@@ -911,7 +911,7 @@ class DazzleTransformer(Transformer):
         action = None
         empty_message = None
         aggregates = {}
-        
+
         for item in items[1:]:
             if isinstance(item, dict):
                 if "source" in item:
@@ -930,7 +930,7 @@ class DazzleTransformer(Transformer):
                     empty_message = item["empty"]
                 elif "aggregates" in item:
                     aggregates = item["aggregates"]
-        
+
         return WorkspaceRegion(
             name=name,
             source=source,
@@ -942,7 +942,7 @@ class DazzleTransformer(Transformer):
             empty_message=empty_message,
             aggregates=aggregates
         )
-    
+
     def aggregate_block(self, items):
         """Transform aggregate block."""
         aggregates = {}
@@ -951,7 +951,7 @@ class DazzleTransformer(Transformer):
                 metric_name, expr = item
                 aggregates[metric_name] = expr
         return {"aggregates": aggregates}
-    
+
     def metric_line(self, items):
         """Transform metric line."""
         name = str(items[0])
@@ -971,13 +971,13 @@ Add validation for UX extensions:
 def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage]:
     """Validate UX specification on surface."""
     messages = []
-    
+
     if not surface.ux:
         return messages
-    
+
     ux = surface.ux
     entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
-    
+
     # Validate purpose
     if not ux.purpose:
         messages.append(LintMessage(
@@ -985,11 +985,11 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
             message=f"Surface '{surface.name}' has UX block but no purpose",
             suggestion="Add purpose: line to explain why this surface exists"
         ))
-    
+
     # Validate field references
     if entity:
         all_fields = {f.name for f in entity.fields}
-        
+
         for field in ux.show:
             if field not in all_fields:
                 messages.append(LintMessage(
@@ -997,7 +997,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                     message=f"Unknown field '{field}' in show: directive",
                     suggestion=f"Valid fields: {', '.join(all_fields)}"
                 ))
-        
+
         for field in ux.filter:
             if field not in all_fields:
                 messages.append(LintMessage(
@@ -1005,7 +1005,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                     message=f"Unknown field '{field}' in filter: directive",
                     suggestion=f"Valid fields: {', '.join(all_fields)}"
                 ))
-        
+
         for field in ux.search:
             if field not in all_fields:
                 messages.append(LintMessage(
@@ -1013,7 +1013,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                     message=f"Unknown field '{field}' in search: directive",
                     suggestion=f"Valid fields: {', '.join(all_fields)}"
                 ))
-    
+
     # Validate attention signals
     for signal in ux.attention_signals:
         # Validate action reference
@@ -1024,10 +1024,10 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                     message=f"Unknown surface '{signal.action}' in attention action",
                     suggestion="Check surface name spelling"
                 ))
-        
+
         # TODO: Validate condition expression syntax
         # For Phase 1: store as string, validate in Phase 2
-    
+
     # Validate persona variants
     for variant in ux.persona_variants:
         # Validate field references
@@ -1039,7 +1039,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                         message=f"Unknown field '{field}' in persona show",
                         suggestion=f"Valid fields: {', '.join(all_fields)}"
                     ))
-            
+
             for field in variant.hide:
                 if field not in all_fields:
                     messages.append(LintMessage(
@@ -1047,7 +1047,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                         message=f"Unknown field '{field}' in persona hide",
                         suggestion=f"Valid fields: {', '.join(all_fields)}"
                     ))
-        
+
         # Validate action reference
         if variant.action_primary:
             if not appspec.get_surface(variant.action_primary):
@@ -1056,7 +1056,7 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                     message=f"Unknown surface '{variant.action_primary}' in persona action_primary",
                     suggestion="Check surface name spelling"
                 ))
-        
+
         # Check for show/hide conflicts
         conflicts = set(variant.show) & set(variant.hide)
         if conflicts:
@@ -1065,14 +1065,14 @@ def validate_ux_spec(surface: SurfaceSpec, appspec: AppSpec) -> List[LintMessage
                 message=f"Fields in both show and hide: {', '.join(conflicts)}",
                 suggestion="Remove from one list or the other"
             ))
-    
+
     return messages
 
 
 def validate_workspace(workspace: WorkspaceSpec, appspec: AppSpec) -> List[LintMessage]:
     """Validate workspace specification."""
     messages = []
-    
+
     # Check for duplicate region names
     region_names = [r.name for r in workspace.regions]
     duplicates = [name for name in region_names if region_names.count(name) > 1]
@@ -1082,20 +1082,20 @@ def validate_workspace(workspace: WorkspaceSpec, appspec: AppSpec) -> List[LintM
             message=f"Duplicate region names in workspace '{workspace.name}': {', '.join(set(duplicates))}",
             suggestion="Use unique names for each region"
         ))
-    
+
     # Validate each region
     for region in workspace.regions:
         # Validate source reference
         source_entity = appspec.get_entity(region.source)
         source_surface = appspec.get_surface(region.source)
-        
+
         if not source_entity and not source_surface:
             messages.append(LintMessage(
                 level="error",
                 message=f"Unknown source '{region.source}' in region '{region.name}'",
                 suggestion="Check entity or surface name spelling"
             ))
-        
+
         # Validate action reference
         if region.action:
             if not appspec.get_surface(region.action):
@@ -1104,20 +1104,20 @@ def validate_workspace(workspace: WorkspaceSpec, appspec: AppSpec) -> List[LintM
                     message=f"Unknown surface '{region.action}' in region action",
                     suggestion="Check surface name spelling"
                 ))
-        
+
         # Validate display mode
         if region.display == "map":
             if source_entity:
                 has_lat = any(f.name in ["latitude", "location_lat", "lat"] for f in source_entity.fields)
                 has_lng = any(f.name in ["longitude", "location_lng", "lng", "lon"] for f in source_entity.fields)
-                
+
                 if not (has_lat and has_lng):
                     messages.append(LintMessage(
                         level="warning",
                         message=f"Region '{region.name}' uses map display but entity lacks lat/lng fields",
                         suggestion="Add latitude and longitude fields to entity"
                     ))
-        
+
         # Validate limit range
         if region.limit and region.limit > 1000:
             messages.append(LintMessage(
@@ -1125,7 +1125,7 @@ def validate_workspace(workspace: WorkspaceSpec, appspec: AppSpec) -> List[LintM
                 message=f"Region '{region.name}' limit is very high ({region.limit})",
                 suggestion="Consider pagination for large datasets"
             ))
-    
+
     return messages
 ```
 
@@ -1148,13 +1148,13 @@ from typing import Dict, Any
 
 def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
     """Generate ListView with UX enhancements."""
-    
+
     if not surface.ux:
         # Fall back to basic template
         return generate_basic_list_view(surface, entity_name)
-    
+
     ux = surface.ux
-    
+
     template = f"""
 {{% extends "base.html" %}}
 {{% load static %}}
@@ -1166,7 +1166,7 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>{surface.title or surface.name}</h1>
 """
-    
+
     # Add primary action if persona has one
     if ux.persona_variants:
         template += """
@@ -1178,21 +1178,21 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
       {% endif %}
     {% endif %}
 """
-    
+
     template += "  </div>\n\n"
-    
+
     # Add search if specified
     if ux.search:
         search_fields = ", ".join(ux.search)
         template += f"""
   <div class="mb-3">
-    <input type="text" 
-           class="form-control" 
-           placeholder="Search {search_fields}..." 
+    <input type="text"
+           class="form-control"
+           placeholder="Search {search_fields}..."
            id="searchInput">
   </div>
 """
-    
+
     # Add filters if specified
     if ux.filter:
         template += """
@@ -1215,7 +1215,7 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
     </form>
   </div>
 """
-    
+
     # Empty state
     empty_msg = ux.empty_message or "No items yet."
     template += f"""
@@ -1224,12 +1224,12 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
       <thead>
         <tr>
 """
-    
+
     # Column headers
     fields_to_show = ux.show if ux.show else [f.name for s in surface.sections for f in s.elements]
     for field in fields_to_show:
         template += f"          <th>{field.replace('_', ' ').title()}</th>\n"
-    
+
     template += """
         </tr>
       </thead>
@@ -1237,7 +1237,7 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
         {% for obj in object_list %}
           <tr
 """
-    
+
     # Add attention signal classes
     if ux.attention_signals:
         for signal in ux.attention_signals:
@@ -1245,13 +1245,13 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
             template += f"""
             {{% if {condition_check} %}}class="table-{signal.css_class}"{{% endif %}}
 """
-    
+
     template += "          >\n"
-    
+
     # Table cells
     for field in fields_to_show:
         template += f"            <td>{{{{ obj.{field} }}}}</td>\n"
-    
+
     # Action column if signals have actions
     if any(s.action for s in ux.attention_signals):
         template += "            <td>\n"
@@ -1260,14 +1260,14 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
                 condition_check = _translate_condition_to_django(signal.condition)
                 template += f"""
               {{% if {condition_check} %}}
-                <a href="{{% url '{signal.action}' obj.pk %}}" 
+                <a href="{{% url '{signal.action}' obj.pk %}}"
                    class="btn btn-sm btn-{signal.css_class}">
                   {signal.message}
                 </a>
               {{% endif %}}
 """
         template += "            </td>\n"
-    
+
     template += """
           </tr>
         {% endfor %}
@@ -1275,7 +1275,7 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
     </table>
   {% else %}
 """
-    
+
     template += f"""
     <div class="alert alert-info">
       {empty_msg}
@@ -1284,7 +1284,7 @@ def generate_list_view_ux(surface: SurfaceSpec, entity_name: str) -> str:
 </div>
 {{% endblock %}}
 """
-    
+
     return template
 
 
@@ -1292,7 +1292,7 @@ def _translate_condition_to_django(condition: str) -> str:
     """Translate condition expression to Django template syntax."""
     # Phase 1: Simple string replacement
     # Phase 2: Parse and validate condition AST
-    
+
     replacements = {
         "days_since(": "obj.days_since_",
         " in [": " in ",
@@ -1301,11 +1301,11 @@ def _translate_condition_to_django(condition: str) -> str:
         "is null": "== None",
         "is not null": "!= None"
     }
-    
+
     result = condition
     for old, new in replacements.items():
         result = result.replace(old, new)
-    
+
     return result
 ```
 
@@ -1316,27 +1316,27 @@ def _translate_condition_to_django(condition: str) -> str:
 
 def generate_list_view_class(surface: SurfaceSpec, entity_name: str) -> str:
     """Generate ListView class with UX enhancements."""
-    
+
     base_class = f"""
 class {entity_name}ListView(ListView):
     model = {entity_name}
     template_name = '{entity_name.lower()}/list.html'
     context_object_name = 'object_list'
 """
-    
+
     if not surface.ux:
         return base_class
-    
+
     ux = surface.ux
-    
+
     # Add queryset filtering
     if ux.persona_variants:
         base_class += """
-    
+
     def get_queryset(self):
         qs = super().get_queryset()
         user_persona = getattr(self.request.user, 'persona', None)
-        
+
 """
         for variant in ux.persona_variants:
             if variant.scope and variant.scope != "all":
@@ -1345,11 +1345,11 @@ class {entity_name}ListView(ListView):
         if user_persona == '{variant.persona}':
             qs = qs.filter({scope_filter})
 """
-        
+
         base_class += """
         return qs
 """
-    
+
     # Add sorting
     if ux.sort:
         sort_fields = []
@@ -1358,20 +1358,20 @@ class {entity_name}ListView(ListView):
             field = parts[0]
             direction = parts[1] if len(parts) > 1 else "asc"
             sort_fields.append(f"'-{field}'" if direction == "desc" else f"'{field}'")
-        
+
         base_class += f"""
-    
+
     def get_ordering(self):
         return [{', '.join(sort_fields)}]
 """
-    
+
     # Add context for filters
     if ux.filter:
         base_class += """
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
         # Add filter choices
         context['filter_choices'] = {
 """
@@ -1381,10 +1381,10 @@ class {entity_name}ListView(ListView):
 """
         base_class += """
         }
-        
+
         return context
 """
-    
+
     return base_class
 
 
@@ -1392,17 +1392,17 @@ def _translate_scope_to_django(scope: str) -> str:
     """Translate scope expression to Django Q filter."""
     # Phase 1: Simple translation
     # Phase 2: Parse and build Q objects
-    
+
     replacements = {
         "current_user": "self.request.user",
         " = ": "__exact=",
         " and ": ", ",
     }
-    
+
     result = scope
     for old, new in replacements.items():
         result = result.replace(old, new)
-    
+
     return result
 ```
 
@@ -1423,10 +1423,10 @@ def test_parse_ux_purpose():
 surface tree_list "Trees":
   uses entity Tree
   mode: list
-  
+
   section main:
     field species
-  
+
   ux:
     purpose: "Monitor tree health"
 '''
@@ -1442,10 +1442,10 @@ def test_parse_attention_signals():
 surface tree_list "Trees":
   uses entity Tree
   mode: list
-  
+
   section main:
     field species
-  
+
   ux:
     attention critical:
       when: status = Dead
@@ -1467,10 +1467,10 @@ def test_parse_persona_variants():
 surface tree_list "Trees":
   uses entity Tree
   mode: list
-  
+
   section main:
     field species
-  
+
   ux:
     for volunteer:
       scope: steward = current_user
@@ -1491,12 +1491,12 @@ def test_parse_workspace():
     dsl = '''
 workspace hub "My Hub":
   purpose: "Daily overview"
-  
+
   priority:
     source: Tree
     filter: steward = current_user
     limit: 10
-  
+
   metrics:
     aggregate:
       total: count(Tree)
@@ -1536,10 +1536,10 @@ def test_generate_list_view_with_attention():
             ]
         )
     )
-    
+
     # Generate Django code
     template = generate_list_view_ux(surface, "Tree")
-    
+
     # Verify attention signal in template
     assert "table-danger" in template
     assert "Urgent" in template
@@ -1559,9 +1559,9 @@ def test_generate_workspace_view():
             )
         ]
     )
-    
+
     view_code = generate_workspace_view(workspace)
-    
+
     assert "class HubView" in view_code
     assert "steward = current_user" in view_code or "request.user" in view_code
 ```
@@ -1724,49 +1724,49 @@ entity MaintenanceTask "Maintenance Task":
 surface tree_list "Trees":
   uses entity Tree
   mode: list
-  
+
   section main "All Trees":
     field species "Species"
     field street_address "Location"
     field condition_status "Condition"
     field steward "Steward"
     field last_inspection_date "Last Checked"
-  
+
   ux:
     purpose: "Monitor tree health and coordinate stewardship across the network"
-    
+
     sort: condition_status desc, last_inspection_date asc
     filter: condition_status, steward
     search: species, street_address
     empty: "No trees registered yet. Add your first tree to begin community stewardship."
-    
+
     attention critical:
       when: condition_status in [SevereStress, Dead]
       message: "Urgent attention required"
       action: task_create
-    
+
     attention warning:
       when: days_since(last_inspection_date) > 30
       message: "Overdue for inspection"
       action: observation_create
-    
+
     attention notice:
       when: steward is null
       message: "Needs steward assignment"
       action: tree_edit
-    
+
     for volunteer:
       scope: steward = current_user
       purpose: "Monitor your adopted trees"
       show: species, street_address, condition_status, last_inspection_date
       action_primary: observation_create
-      
+
     for coordinator:
       scope: all
       purpose: "Oversee all trees in network"
       show_aggregate: critical_count, warning_count, unassigned_count
       action_primary: task_create
-      
+
     for public:
       scope: all
       purpose: "Browse neighbourhood trees"
@@ -1778,7 +1778,7 @@ surface tree_list "Trees":
 # Volunteer workspace
 workspace volunteer_hub "My Trees":
   purpose: "Your daily tree stewardship dashboard"
-  
+
   priority_trees:
     source: Tree
     filter: steward = current_user
@@ -1787,7 +1787,7 @@ workspace volunteer_hub "My Trees":
     display: list
     action: observation_create
     empty: "No trees assigned yet. Contact a coordinator to adopt trees in your area."
-  
+
   recent_observations:
     source: Observation
     filter: observer = current_user
@@ -1795,14 +1795,14 @@ workspace volunteer_hub "My Trees":
     limit: 5
     display: timeline
     empty: "No observations yet. Check on a tree to get started!"
-  
+
   my_tasks:
     source: MaintenanceTask
     filter: assigned_to = current_user, status in [Open, InProgress]
     sort: created_at asc
     action: task_edit
     empty: "No open tasks. Great work!"
-  
+
   ux:
     for volunteer:
       purpose: "Your personalized tree care hub"
@@ -1810,7 +1810,7 @@ workspace volunteer_hub "My Trees":
 # Coordinator workspace
 workspace coordinator_hub "Network Overview":
   purpose: "Monitor and manage the volunteer tree care network"
-  
+
   needs_attention:
     source: Tree
     filter: condition_status in [ModerateStress, SevereStress, Dead]
@@ -1819,27 +1819,27 @@ workspace coordinator_hub "Network Overview":
     display: list
     action: task_create
     empty: "All trees are healthy! 🌳"
-  
+
   network_health:
     aggregate:
       total_trees: count(Tree)
       healthy_pct: round(count(Tree where condition_status = Healthy) * 100 / count(Tree))
       inspections_this_week: count(Observation where submitted_at > 7_days_ago)
       active_volunteers: count(distinct Observation.observer where submitted_at > 30_days_ago)
-  
+
   unassigned_work:
     source: MaintenanceTask
     filter: assigned_to is null, status = Open
     sort: created_at asc
     action: task_edit
     empty: "No unassigned tasks."
-  
+
   recent_activity:
     source: Observation
     sort: submitted_at desc
     limit: 10
     display: timeline
-  
+
   ux:
     for coordinator:
       purpose: "Comprehensive network oversight and task coordination"
