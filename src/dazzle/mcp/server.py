@@ -18,6 +18,18 @@ from typing import Any
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
+from pydantic import AnyUrl
+
+from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
+from dazzle.core.lint import lint_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
+from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
+from dazzle.mcp.examples import get_example_metadata, search_examples
+from dazzle.mcp.prompts import create_prompts
+from dazzle.mcp.resources import create_resources
+from dazzle.mcp.semantics import get_semantic_index, lookup_concept
 
 # Configure logging to stderr only (stdout is reserved for JSON-RPC protocol)
 logging.basicConfig(
@@ -26,17 +38,6 @@ logging.basicConfig(
     stream=sys.stderr,
 )
 logger = logging.getLogger("dazzle.mcp")
-
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.lint import lint_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
-from dazzle.mcp.resources import create_resources
-from dazzle.mcp.prompts import create_prompts
-from dazzle.mcp.semantics import get_semantic_index, lookup_concept
-from dazzle.mcp.examples import search_examples, get_example_metadata, get_v0_2_examples
 
 # Create the MCP server instance
 server = Server("dazzle")
@@ -119,7 +120,7 @@ def _detect_dev_environment(root: Path) -> bool:
 
 def _discover_example_projects(root: Path) -> dict[str, Path]:
     """Discover all example projects in the examples/ directory."""
-    projects = {}
+    projects: dict[str, Path] = {}
     examples_dir = root / "examples"
 
     if not examples_dir.is_dir():
@@ -303,7 +304,7 @@ def _get_project_tools() -> list[Tool]:
     ]
 
 
-@server.list_tools()
+@server.list_tools()  # type: ignore[no-untyped-call]
 async def list_tools() -> list[Tool]:
     """List available DAZZLE tools."""
     tools = []
@@ -382,7 +383,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 # ============================================================================
 
 
-@server.list_resources()
+@server.list_resources()  # type: ignore[no-untyped-call]
 async def list_resources() -> list[Resource]:
     """List available DAZZLE resources."""
     resources = []
@@ -390,7 +391,7 @@ async def list_resources() -> list[Resource]:
     # Add documentation resources (always available)
     resources.append(
         Resource(
-            uri="dazzle://docs/glossary",
+            uri=AnyUrl("dazzle://docs/glossary"),
             name="DAZZLE Glossary (v0.2)",
             description="Definitions of DAZZLE v0.2 terms (surface, persona, workspace, attention signals, etc.)",
             mimeType="text/markdown",
@@ -399,7 +400,7 @@ async def list_resources() -> list[Resource]:
 
     resources.append(
         Resource(
-            uri="dazzle://docs/quick-reference",
+            uri=AnyUrl("dazzle://docs/quick-reference"),
             name="DAZZLE Quick Reference",
             description="DSL syntax quick reference with examples",
             mimeType="text/markdown",
@@ -408,7 +409,7 @@ async def list_resources() -> list[Resource]:
 
     resources.append(
         Resource(
-            uri="dazzle://docs/dsl-reference",
+            uri=AnyUrl("dazzle://docs/dsl-reference"),
             name="DAZZLE DSL Reference (v0.2)",
             description="Complete DSL v0.2 reference documentation with UX semantic layer",
             mimeType="text/markdown",
@@ -417,7 +418,7 @@ async def list_resources() -> list[Resource]:
 
     resources.append(
         Resource(
-            uri="dazzle://semantics/index",
+            uri=AnyUrl("dazzle://semantics/index"),
             name="DAZZLE Semantic Concept Index (v0.2)",
             description="Structured index of all DSL v0.2 concepts with definitions, syntax, and examples",
             mimeType="application/json",
@@ -426,7 +427,7 @@ async def list_resources() -> list[Resource]:
 
     resources.append(
         Resource(
-            uri="dazzle://examples/catalog",
+            uri=AnyUrl("dazzle://examples/catalog"),
             name="Example Projects Catalog",
             description="Catalog of example projects with metadata about features they demonstrate",
             mimeType="application/json",
@@ -450,7 +451,7 @@ async def list_resources() -> list[Resource]:
     return resources
 
 
-@server.read_resource()
+@server.read_resource()  # type: ignore[no-untyped-call]
 async def read_resource(uri: str) -> str:
     """Read a DAZZLE resource by URI."""
 
@@ -767,17 +768,17 @@ def _get_entities(project_path: Path) -> str:
         app_spec = build_appspec(modules, manifest.project_root)
 
         entities = {}
-        for entity_name, entity in app_spec.entities.items():
-            entities[entity_name] = {
+        for entity in app_spec.domain.entities:
+            entities[entity.name] = {
                 "name": entity.name,
-                "display_name": entity.display_name,
+                "title": entity.title,
                 "fields": [
                     {
                         "name": f.name,
-                        "type": str(f.field_type),
-                        "required": f.required,
-                        "unique": f.unique,
-                        "is_pk": f.is_pk,
+                        "type": str(f.type),
+                        "required": f.is_required,
+                        "unique": f.is_unique,
+                        "is_pk": f.is_primary_key,
                     }
                     for f in entity.fields
                 ],
@@ -797,13 +798,13 @@ def _get_surfaces(project_path: Path) -> str:
         app_spec = build_appspec(modules, manifest.project_root)
 
         surfaces = {}
-        for surface_name, surface in app_spec.surfaces.items():
-            surfaces[surface_name] = {
+        for surface in app_spec.surfaces:
+            surfaces[surface.name] = {
                 "name": surface.name,
-                "display_name": surface.display_name,
+                "title": surface.title,
                 "mode": surface.mode,
                 "entity": surface.entity_ref,
-                "has_ux_block": surface.ux_block is not None,
+                "has_ux": surface.ux is not None,
             }
 
         return json.dumps(surfaces, indent=2)
@@ -816,13 +817,13 @@ def _get_surfaces(project_path: Path) -> str:
 # ============================================================================
 
 
-@server.list_prompts()
+@server.list_prompts()  # type: ignore[no-untyped-call]
 async def list_prompts() -> list[dict[str, Any]]:
     """List available DAZZLE prompts."""
     return create_prompts()
 
 
-@server.get_prompt()
+@server.get_prompt()  # type: ignore[no-untyped-call]
 async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
     """Get a DAZZLE prompt by name."""
     args = arguments or {}

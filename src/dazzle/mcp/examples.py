@@ -123,7 +123,7 @@ def search_examples(features: list[str] | None = None, complexity: str | None = 
     examples = get_example_metadata()
     results = []
 
-    for example_name, metadata in examples.items():
+    for _example_name, metadata in examples.items():
         # Filter by complexity if specified
         if complexity and metadata.get("complexity") != complexity:
             continue
