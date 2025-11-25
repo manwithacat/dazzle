@@ -26,6 +26,7 @@ class LayoutGenerator(Generator):
         self._generate_nav(result)
         self._generate_sidebar(result)
         self._generate_health_api(result)
+        self._copy_branding_assets(result)
 
         return result
 
@@ -45,6 +46,9 @@ const inter = Inter({{ subsets: ["latin"] }});
 export const metadata: Metadata = {{
   title: "{app_title}",
   description: "Generated with DAZZLE",
+  icons: {{
+    icon: "/dazzle-favicon.svg",
+  }},
 }};
 
 export default function RootLayout({{
@@ -129,9 +133,13 @@ export function Nav({{ user }}: NavProps) {{
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {{/* Logo */}}
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-gray-900">
-              {app_title}
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
+              <img
+                src="/dazzle-logo.svg"
+                alt="DAZZLE Logo"
+                className="h-8"
+              />
             </Link>
           </div>
 
@@ -353,3 +361,70 @@ export async function GET() {
         path = self.output_dir / "src" / "app" / "api" / "health" / "route.ts"
         self._write_file(path, content)
         result.add_file(path)
+
+    def _copy_branding_assets(self, result: GeneratorResult) -> None:
+        """Copy DAZZLE branding assets to public directory."""
+        import shutil
+        from pathlib import Path
+
+        # Path to assets in the DAZZLE repo
+        assets_dir = Path(__file__).parent.parent.parent.parent.parent / "assets"
+
+        if not assets_dir.exists():
+            # Assets don't exist, generate them inline
+            self._generate_inline_assets(result)
+            return
+
+        # Copy logo
+        logo_src = assets_dir / "dazzle-logo.svg"
+        if logo_src.exists():
+            logo_dest = self.output_dir / "public" / "dazzle-logo.svg"
+            logo_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(logo_src, logo_dest)
+            result.add_file(logo_dest)
+
+        # Copy favicon
+        favicon_src = assets_dir / "dazzle-favicon.svg"
+        if favicon_src.exists():
+            favicon_dest = self.output_dir / "public" / "dazzle-favicon.svg"
+            favicon_dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(favicon_src, favicon_dest)
+            result.add_file(favicon_dest)
+
+    def _generate_inline_assets(self, result: GeneratorResult) -> None:
+        """Generate branding assets inline if assets directory doesn't exist."""
+        # Generate logo
+        logo_content = '''<svg width="300" height="80" viewBox="0 0 300 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spark Icon -->
+  <g transform="translate(10,10)">
+    <circle cx="30" cy="30" r="6" fill="#7B2FF7"/>
+    <line x1="30" y1="10" x2="30" y2="0" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="30" y1="60" x2="30" y2="70" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="10" y1="30" x2="0" y2="30" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="60" y1="30" x2="70" y2="30" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="12" y1="12" x2="3" y2="3" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="48" y1="12" x2="57" y2="3" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="12" y1="48" x2="3" y2="57" stroke="#7B2FF7" stroke-width="2"/>
+    <line x1="48" y1="48" x2="57" y2="57" stroke="#7B2FF7" stroke-width="2"/>
+  </g>
+
+  <!-- DAZZLE Wordmark -->
+  <text x="100" y="50" font-family="Inter, sans-serif" font-size="42" fill="#0A0A0C" letter-spacing="4">
+    DAZZLE
+  </text>
+</svg>'''
+        logo_path = self.output_dir / "public" / "dazzle-logo.svg"
+        self._write_file(logo_path, logo_content)
+        result.add_file(logo_path)
+
+        # Generate favicon
+        favicon_content = '''<svg width="32" height="32" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="30" cy="30" r="6" fill="#7B2FF7"/>
+  <line x1="30" y1="8" x2="30" y2="0" stroke="#7B2FF7" stroke-width="3"/>
+  <line x1="30" y1="52" x2="30" y2="60" stroke="#7B2FF7" stroke-width="3"/>
+  <line x1="8" y1="30" x2="0" y2="30" stroke="#7B2FF7" stroke-width="3"/>
+  <line x1="52" y1="30" x2="60" y2="30" stroke="#7B2FF7" stroke-width="3"/>
+</svg>'''
+        favicon_path = self.output_dir / "public" / "dazzle-favicon.svg"
+        self._write_file(favicon_path, favicon_content)
+        result.add_file(favicon_path)
