@@ -77,7 +77,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
     // Server options: spawn the Python LSP server
     const serverOptions: ServerOptions = {
         command: pythonPath,
-        args: ['-m', 'dazzle.lsp'],
+        args: ['-m', 'dazzle.lsp.server'],
         transport: TransportKind.stdio,
         options: {
             env: {
@@ -88,7 +88,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         }
     };
 
-    channel.appendLine(`Starting LSP server: ${pythonPath} -m dazzle.lsp`);
+    channel.appendLine(`Starting LSP server: ${pythonPath} -m dazzle.lsp.server`);
 
     // Client options: configure which files to watch
     const clientOptions: LanguageClientOptions = {
