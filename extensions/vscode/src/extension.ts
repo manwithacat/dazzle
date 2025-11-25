@@ -26,6 +26,9 @@ let lspStatusBarItem: vscode.StatusBarItem | undefined;
 export async function activate(context: vscode.ExtensionContext) {
     console.log('DAZZLE DSL extension is now active');
 
+    // Show a notification to confirm activation
+    vscode.window.showInformationMessage('DAZZLE extension activated!');
+
     // Create LSP status bar item (show loading initially)
     lspStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     lspStatusBarItem.text = '$(loading~spin) DAZZLE LSP';
