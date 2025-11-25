@@ -18,7 +18,7 @@ def create_prompts() -> list[dict[str, Any]]:
         {
             "name": "validate",
             "description": "Validate the DAZZLE project DSL and report any errors",
-            "arguments": []
+            "arguments": [],
         },
         {
             "name": "review_dsl",
@@ -27,9 +27,9 @@ def create_prompts() -> list[dict[str, Any]]:
                 {
                     "name": "aspect",
                     "description": "Aspect to review: design, performance, security, or all",
-                    "required": False
+                    "required": False,
                 }
-            ]
+            ],
         },
         {
             "name": "code_review",
@@ -38,9 +38,9 @@ def create_prompts() -> list[dict[str, Any]]:
                 {
                     "name": "stack",
                     "description": "Stack to review (django_micro_modular, openapi, etc.)",
-                    "required": True
+                    "required": True,
                 }
-            ]
+            ],
         },
         {
             "name": "suggest_surfaces",
@@ -49,13 +49,13 @@ def create_prompts() -> list[dict[str, Any]]:
                 {
                     "name": "entity_name",
                     "description": "Name of the entity to suggest surfaces for",
-                    "required": True
+                    "required": True,
                 }
-            ]
+            ],
         },
         {
             "name": "optimize_dsl",
             "description": "Suggest optimizations for DSL based on patterns and best practices",
-            "arguments": []
+            "arguments": [],
         },
     ]

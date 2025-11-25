@@ -23,25 +23,25 @@ def create_resources(project_root: Path) -> list[dict[str, Any]]:
             "uri": "dazzle://project/manifest",
             "name": "Project Manifest",
             "description": "dazzle.toml project configuration",
-            "mimeType": "text/plain"
+            "mimeType": "text/plain",
         },
         {
             "uri": "dazzle://modules",
             "name": "Project Modules",
             "description": "List of all modules and their dependencies",
-            "mimeType": "application/json"
+            "mimeType": "application/json",
         },
         {
             "uri": "dazzle://entities",
             "name": "Project Entities",
             "description": "All entity definitions in the project",
-            "mimeType": "application/json"
+            "mimeType": "application/json",
         },
         {
             "uri": "dazzle://surfaces",
             "name": "Project Surfaces",
             "description": "All surface definitions in the project",
-            "mimeType": "application/json"
+            "mimeType": "application/json",
         },
     ]
 
@@ -50,11 +50,13 @@ def create_resources(project_root: Path) -> list[dict[str, Any]]:
     if dsl_dir.exists():
         for dsl_file in dsl_dir.glob("**/*.dsl"):
             relative_path = dsl_file.relative_to(project_root)
-            resources.append({
-                "uri": f"dazzle://dsl/{relative_path}",
-                "name": f"DSL: {dsl_file.stem}",
-                "description": f"DSL file: {relative_path}",
-                "mimeType": "text/plain"
-            })
+            resources.append(
+                {
+                    "uri": f"dazzle://dsl/{relative_path}",
+                    "name": f"DSL: {dsl_file.stem}",
+                    "description": f"DSL file: {relative_path}",
+                    "mimeType": "text/plain",
+                }
+            )
 
     return resources

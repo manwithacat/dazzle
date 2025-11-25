@@ -351,7 +351,7 @@ def create_mcp_config(project_dir: Path) -> None:
             "dazzle": {
                 "command": "python",
                 "args": ["-m", "dazzle.mcp.server"],
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}",
             }
         }
     }

@@ -18,20 +18,12 @@ def create_tools() -> list[dict[str, Any]]:
         {
             "name": "validate_dsl",
             "description": "Validate DAZZLE DSL files in the current project. Checks syntax, links modules, and reports errors.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+            "inputSchema": {"type": "object", "properties": {}, "required": []},
         },
         {
             "name": "list_modules",
             "description": "List all modules in the DAZZLE project with their dependencies and file locations.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+            "inputSchema": {"type": "object", "properties": {}, "required": []},
         },
         {
             "name": "inspect_entity",
@@ -41,11 +33,11 @@ def create_tools() -> list[dict[str, Any]]:
                 "properties": {
                     "entity_name": {
                         "type": "string",
-                        "description": "Name of the entity to inspect (e.g., 'User', 'Task')"
+                        "description": "Name of the entity to inspect (e.g., 'User', 'Task')",
                     }
                 },
-                "required": ["entity_name"]
-            }
+                "required": ["entity_name"],
+            },
         },
         {
             "name": "inspect_surface",
@@ -55,11 +47,11 @@ def create_tools() -> list[dict[str, Any]]:
                 "properties": {
                     "surface_name": {
                         "type": "string",
-                        "description": "Name of the surface to inspect"
+                        "description": "Name of the surface to inspect",
                     }
                 },
-                "required": ["surface_name"]
-            }
+                "required": ["surface_name"],
+            },
         },
         {
             "name": "build",
@@ -70,20 +62,16 @@ def create_tools() -> list[dict[str, Any]]:
                     "stacks": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "List of stacks to build. Options: django_micro_modular, django_api, express_micro, openapi, docker, terraform"
+                        "description": "List of stacks to build. Options: django_micro_modular, django_api, express_micro, openapi, docker, terraform",
                     }
                 },
-                "required": []
-            }
+                "required": [],
+            },
         },
         {
             "name": "analyze_patterns",
             "description": "Analyze the project for CRUD patterns, integrations, and experiences.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            }
+            "inputSchema": {"type": "object", "properties": {}, "required": []},
         },
         {
             "name": "lint_project",
@@ -94,10 +82,10 @@ def create_tools() -> list[dict[str, Any]]:
                     "strict": {
                         "type": "boolean",
                         "description": "Treat warnings as errors",
-                        "default": False
+                        "default": False,
                     }
                 },
-                "required": []
-            }
+                "required": [],
+            },
         },
     ]
