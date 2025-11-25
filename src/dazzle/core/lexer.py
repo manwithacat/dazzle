@@ -120,6 +120,12 @@ class TokenType(Enum):
     GRID = "grid"
     TIMELINE = "timeline"
 
+    # Additional v0.2 keywords
+    DEFAULTS = "defaults"
+    FOCUS = "focus"
+    GROUP_BY = "group_by"
+    WHERE = "where"
+
     # Comparison operators (for condition expressions)
     NOT_EQUALS = "!="
     GREATER_THAN = ">"
@@ -150,6 +156,12 @@ class TokenType(Enum):
     DOT = "."
     SLASH = "/"
     QUESTION = "?"
+
+    # Arithmetic operators (for aggregate expressions)
+    PLUS = "+"
+    MINUS = "-"
+    STAR = "*"
+    PERCENT = "%"
 
     # Special
     NEWLINE = "NEWLINE"
@@ -255,6 +267,11 @@ KEYWORDS = {
     "list",
     "grid",
     "timeline",
+    # Additional v0.2 keywords
+    "defaults",
+    "focus",
+    "group_by",
+    "where",
     # Comparison/logical keywords
     "in",
     "not",
@@ -579,12 +596,9 @@ class Lexer:
                     self.advance()
                     self.tokens.append(Token(TokenType.ARROW, "->", token_line, token_col))
                 else:
-                    raise make_parse_error(
-                        f"Unexpected character: {ch!r}",
-                        self.file,
-                        token_line,
-                        token_col,
-                    )
+                    # Standalone minus operator (for arithmetic)
+                    self.advance()
+                    self.tokens.append(Token(TokenType.MINUS, "-", token_line, token_col))
 
             elif ch == "<":
                 if self.peek_char() == "-":
@@ -604,6 +618,18 @@ class Lexer:
                 else:
                     self.advance()
                     self.tokens.append(Token(TokenType.LESS_THAN, "<", token_line, token_col))
+
+            elif ch == "+":
+                self.advance()
+                self.tokens.append(Token(TokenType.PLUS, "+", token_line, token_col))
+
+            elif ch == "*":
+                self.advance()
+                self.tokens.append(Token(TokenType.STAR, "*", token_line, token_col))
+
+            elif ch == "%":
+                self.advance()
+                self.tokens.append(Token(TokenType.PERCENT, "%", token_line, token_col))
 
             else:
                 raise make_parse_error(
