@@ -1,4 +1,3 @@
-# type: ignore
 """
 Next.js Onebox Backend.
 
@@ -80,7 +79,7 @@ class NextJSOneboxBackend(ModularBackend):
             ConfigGenerator(spec, project_path),
             DockerGenerator(spec, project_path),
             # Phase 2: Data Layer
-            PrismaGenerator(spec, project_path),
+            PrismaGenerator(spec, project_path),  # type: ignore[no-untyped-call]
             TypesGenerator(spec, project_path),
             LibGenerator(spec, project_path),
             # Phase 3: Actions

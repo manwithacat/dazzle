@@ -1,4 +1,3 @@
-# type: ignore
 """
 Server Actions generator for Next.js Onebox.
 

@@ -1,4 +1,3 @@
-# type: ignore
 """
 Pages generator for Next.js Onebox.
 
@@ -9,6 +8,8 @@ Generates src/app/ pages from surfaces:
 - Edit surfaces → [id]/edit/page.tsx
 - Dashboard surfaces → page.tsx with regions
 """
+
+from typing import Any
 
 from ....core import ir
 from ...base.generator import Generator, GeneratorResult
@@ -182,7 +183,7 @@ export default async function {pascal_entity}ListPage({{ searchParams }}: PagePr
         self,
         entity: ir.EntitySpec,
         surface: ir.SurfaceSpec,
-        columns: list[dict],
+        columns: list[dict[str, Any]],
         result: GeneratorResult,
     ) -> None:
         """Generate table component for list page."""
@@ -767,7 +768,9 @@ export default async function {self._pascal_case(surface.name)}Page() {{
                 return entity
         return None
 
-    def _build_table_columns(self, entity: ir.EntitySpec, surface: ir.SurfaceSpec) -> list[dict]:
+    def _build_table_columns(
+        self, entity: ir.EntitySpec, surface: ir.SurfaceSpec
+    ) -> list[dict[str, Any]]:
         """Build column definitions for DataTable."""
         columns = []
         for field in entity.fields:

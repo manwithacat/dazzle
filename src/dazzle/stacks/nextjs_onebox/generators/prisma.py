@@ -1,4 +1,3 @@
-# type: ignore
 """
 Prisma schema generator for Next.js Onebox.
 
@@ -27,7 +26,7 @@ class PrismaGenerator(Generator):
         ir.FieldTypeKind.REF: "String",  # Will be converted to relation
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         """Initialize generator."""
         super().__init__(*args, **kwargs)
         # Relations cache: target_entity -> [(source_entity, field_name)]
@@ -102,9 +101,11 @@ datasource db {
 
         return "\n".join(lines)
 
-    def _collect_relations(self) -> dict:
+    def _collect_relations(self) -> dict[str, list[tuple[str, str]]]:
         """Collect all relations for inverse relation generation."""
-        relations = {}  # target_entity -> [(source_entity, field_name)]
+        relations: dict[
+            str, list[tuple[str, str]]
+        ] = {}  # target_entity -> [(source_entity, field_name)]
 
         for entity in self.spec.domain.entities:
             for field in entity.fields:
@@ -262,8 +263,10 @@ model Session {
                 # Transform field names for relations (add Id suffix)
                 transformed_fields = []
                 for field_name in constraint.fields:
-                    field = next((f for f in entity.fields if f.name == field_name), None)
-                    if field and field.type.kind == ir.FieldTypeKind.REF:
+                    constraint_field: ir.FieldSpec | None = next(
+                        (f for f in entity.fields if f.name == field_name), None
+                    )
+                    if constraint_field and constraint_field.type.kind == ir.FieldTypeKind.REF:
                         transformed_fields.append(f"{self._camel_case(field_name)}Id")
                     else:
                         transformed_fields.append(self._camel_case(field_name))
