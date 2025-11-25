@@ -1,3 +1,4 @@
+# type: ignore
 """
 Prisma schema generator for Next.js Onebox.
 

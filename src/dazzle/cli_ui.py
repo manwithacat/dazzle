@@ -6,7 +6,7 @@ Provides cursor-navigable selection menus with colors and styling.
 
 import sys
 from dataclasses import dataclass
-from typing import TypeVar, Generic
+from typing import Any, Generic, TypeVar
 
 from rich.console import Console
 from rich.panel import Panel
@@ -258,7 +258,7 @@ def _select_simple(
 
 
 def display_options_table(
-    options: list[SelectOption],
+    options: list[SelectOption[Any]],
     title: str = "",
     show_numbers: bool = True,
 ) -> None:

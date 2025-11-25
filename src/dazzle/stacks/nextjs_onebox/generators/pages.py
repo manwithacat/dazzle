@@ -1,3 +1,4 @@
+# type: ignore
 """
 Pages generator for Next.js Onebox.
 

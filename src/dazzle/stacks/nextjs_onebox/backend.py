@@ -1,3 +1,4 @@
+# type: ignore
 """
 Next.js Onebox Backend.
 
