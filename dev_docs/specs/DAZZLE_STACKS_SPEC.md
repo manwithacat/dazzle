@@ -1,7 +1,7 @@
-# DAZZLE Stacks & Full-Stack Generation Strategy  
+# DAZZLE Stacks & Full-Stack Generation Strategy
 ## (LLM-Facing Implementation Brief)
 
-This document gives explicit, imperative instructions for an LLM acting as an expert Python developer.  
+This document gives explicit, imperative instructions for an LLM acting as an expert Python developer.
 Your task is to implement DAZZLE “stacks” that allow users to generate contemporary full‑stack environments (e.g., **Next.js + Django**) without polluting the DSL or IR with infrastructure details.
 
 You must follow the principles and design described below.
@@ -18,12 +18,12 @@ You must follow the principles and design described below.
    - any other runtime technology
 
 2. AppSpec must continue to define only:
-   - entities  
-   - surfaces  
-   - experiences  
-   - services  
-   - foreign models  
-   - integrations  
+   - entities
+   - surfaces
+   - experiences
+   - services
+   - foreign models
+   - integrations
 
 3. All decisions about runtime, framework, or infrastructure must be expressed only through:
    - backends,
@@ -36,19 +36,19 @@ You must follow the principles and design described below.
 
 Create or maintain the following DAZZLE backends as separate, independently runnable codegen targets:
 
-- `django_api`  
+- `django_api`
   Generates Django + DRF (or Django-only) backend from IR.
 
-- `nextjs_frontend`  
+- `nextjs_frontend`
   Generates Next.js frontend from IR + (optionally) the generated OpenAPI spec.
 
-- `infra_docker`  
+- `infra_docker`
   Generates Dockerfile, compose.yaml, and local dev runtime.
 
-- `infra_terraform`  
+- `infra_terraform`
   Generates cloud infrastructure modules.
 
-These modules must **not** depend on each other internally.  
+These modules must **not** depend on each other internally.
 Composition happens at the **stack** level, not inside any backend.
 
 ---

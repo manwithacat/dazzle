@@ -1,8 +1,8 @@
-# DAZZLE LLM Instrumentation Specification  
+# DAZZLE LLM Instrumentation Specification
 ## (LLM-Facing Implementation Brief for Expert Python Developer)
 
-This document provides explicit, imperative instructions for implementing LLM‑aware project scaffolding inside `dazzle init`.  
-Your task is to generate files and directory structures that make a DAZZLE-generated repository maximally understandable to frontier models such as Claude, ChatGPT, and Copilot.  
+This document provides explicit, imperative instructions for implementing LLM‑aware project scaffolding inside `dazzle init`.
+Your task is to generate files and directory structures that make a DAZZLE-generated repository maximally understandable to frontier models such as Claude, ChatGPT, and Copilot.
 Follow these instructions exactly when implementing DAZZLE’s LLM instrumentation subsystem.
 
 ---
@@ -30,7 +30,7 @@ All files must be populated with the templates defined in this specification.
 
 # 2. Create Root File: `LLM_CONTEXT.md`
 
-Implement generation of a root-level file named `LLM_CONTEXT.md`.  
+Implement generation of a root-level file named `LLM_CONTEXT.md`.
 This file must introduce the project to any LLM and describe:
 
 1. What DAZZLE is and how it drives all generated code.

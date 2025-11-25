@@ -984,12 +984,14 @@ module.exports = db;
         for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             label = entity.title or entity.name
-            entity_cards.append(f"""    <div class="card">
+            entity_cards.append(
+                f"""    <div class="card">
         <h2>{label}s</h2>
         <p>Manage {label.lower()}s in the system.</p>
         <a href="/{entity_lower}" class="btn">View {label}s</a>
         <a href="/{entity_lower}/new/form" class="btn btn-secondary">Create New</a>
-    </div>""")
+    </div>"""
+            )
 
         # Add admin card
         admin_card = """    <div class="card" style="border-left: 3px solid #4a90e2;">
@@ -1073,10 +1075,12 @@ module.exports = db;
             if field.is_primary_key:
                 continue
             field_label = field.name.replace("_", " ").title()
-            field_rows.append(f"""        <tr>
+            field_rows.append(
+                f"""        <tr>
             <th>{field_label}</th>
             <td><%- {entity_lower}.{field.name} %></td>
-        </tr>""")
+        </tr>"""
+            )
 
         return f"""<div>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -1113,21 +1117,25 @@ module.exports = db;
             input_type = self._get_html_input_type(field.type.kind)
 
             if field.type.kind == ir.FieldTypeKind.TEXT:
-                form_fields.append(f'''        <div class="form-group">
+                form_fields.append(
+                    f"""        <div class="form-group">
             <label for="{field.name}">{field_label}</label>
             <textarea id="{field.name}" name="{field.name}" rows="4"><%- {entity_lower}.{field.name} || '' %></textarea>
             <% if (errors.{field.name}) {{ %>
             <div class="error"><%- errors.{field.name}.msg %></div>
             <% }} %>
-        </div>''')
+        </div>"""
+                )
             else:
-                form_fields.append(f'''        <div class="form-group">
+                form_fields.append(
+                    f"""        <div class="form-group">
             <label for="{field.name}">{field_label}</label>
             <input type="{input_type}" id="{field.name}" name="{field.name}" value="<%- {entity_lower}.{field.name} || '' %>">
             <% if (errors.{field.name}) {{ %>
             <div class="error"><%- errors.{field.name}.msg %></div>
             <% }} %>
-        </div>''')
+        </div>"""
+                )
 
         return f"""<div>
     <h2><% if ({entity_lower}.id) {{ %>Edit<% }} else {{ %>Create<% }} %> {label}</h2>
@@ -1284,7 +1292,8 @@ module.exports = app;
             list_props = [f.name for f in entity.fields[:5] if not f.is_primary_key]
             list_props_str = "', '".join(list_props)
 
-            resource_configs.append(f"""    {{
+            resource_configs.append(
+                f"""    {{
       resource: db.{entity.name},
       options: {{
         listProperties: ['{list_props_str}'],
@@ -1293,7 +1302,8 @@ module.exports = app;
           icon: 'Document'
         }}
       }}
-    }}""")
+    }}"""
+            )
 
         return f"""const AdminJS = require('adminjs');
 const AdminJSExpress = require('@adminjs/express');
@@ -1350,7 +1360,7 @@ module.exports = {{ adminJs, adminRouter }};
 
     def _generate_package_json(self) -> None:
         """Generate package.json."""
-        package_json = f'''{{
+        package_json = f"""{{
   "name": "{self.app_name}",
   "version": "1.0.0",
   "description": "Generated with DAZZLE - Express Micro Backend",
@@ -1379,7 +1389,7 @@ module.exports = {{ adminJs, adminRouter }};
     "node": ">=18.0.0 <25.0.0"
   }}
 }}
-'''
+"""
         (self.output_dir / self.app_name / "package.json").write_text(package_json)
 
     def _generate_gitignore(self) -> None:

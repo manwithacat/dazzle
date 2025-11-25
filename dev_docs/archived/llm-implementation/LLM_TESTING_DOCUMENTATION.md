@@ -226,7 +226,7 @@ dazzle test-llm --suite comprehensive
 ### LLM Leaderboard
 Track which AI assistants perform best:
 - Claude Code
-- ChatGPT Code Interpreter  
+- ChatGPT Code Interpreter
 - GitHub Copilot
 - Cursor AI
 - Etc.

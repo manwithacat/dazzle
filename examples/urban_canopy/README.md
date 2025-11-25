@@ -1,8 +1,8 @@
 # Urban Canopy - Tree Monitoring Application
 
-**Example Type**: Real-world integration test  
-**Complexity**: Intermediate  
-**Stack**: Django Micro Modular  
+**Example Type**: Real-world integration test
+**Complexity**: Intermediate
+**Stack**: Django Micro Modular
 **Key Features**: Multi-entity relationships, enums, foreign keys, auto-timestamps
 
 ---
@@ -303,7 +303,7 @@ If you enhance this example (add features, improve DSL patterns, etc.), please:
 
 ---
 
-**Created**: 2025-11-23  
-**Last Updated**: 2025-11-23  
-**DAZZLE Version**: 0.1.1  
+**Created**: 2025-11-23
+**Last Updated**: 2025-11-23
+**DAZZLE Version**: 0.1.1
 **Status**: Production-ready example

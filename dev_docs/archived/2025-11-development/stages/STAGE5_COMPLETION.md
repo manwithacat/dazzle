@@ -28,11 +28,11 @@ class Backend(ABC):
     def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
         """Generate artifacts from AppSpec."""
         pass
-    
+
     def get_capabilities(self) -> BackendCapabilities:
         """Get backend capabilities for introspection."""
         pass
-    
+
     def validate_config(self, **options) -> None:
         """Validate backend-specific configuration."""
         pass
@@ -86,13 +86,13 @@ Singleton pattern for easy access:
 ```python
 def get_registry() -> BackendRegistry:
     """Get global registry, auto-discovering on first call."""
-    
+
 def register_backend(name: str, backend_class: Type[Backend]) -> None:
     """Register a backend globally."""
-    
+
 def get_backend(name: str) -> Backend:
     """Get a backend instance by name."""
-    
+
 def list_backends() -> List[str]:
     """List all available backends."""
 ```
@@ -291,7 +291,7 @@ class MyBackend(Backend):
         # Generate your artifacts here
         output_file = output_dir / "output.txt"
         output_file.write_text(f"Generated from {appspec.name}")
-    
+
     def get_capabilities(self) -> BackendCapabilities:
         return BackendCapabilities(
             name="mybackend",
@@ -358,12 +358,12 @@ Generating artifacts using backend 'openapi'...
 def generate(self, appspec: ir.AppSpec, output_dir: Path, **options) -> None:
     """
     Generate artifacts from AppSpec.
-    
+
     Args:
         appspec: Validated application specification
         output_dir: Directory to write generated files
         **options: Backend-specific options from CLI
-    
+
     Raises:
         BackendError: If generation fails
     """

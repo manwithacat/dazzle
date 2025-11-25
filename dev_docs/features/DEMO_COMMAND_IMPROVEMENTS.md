@@ -49,7 +49,7 @@ Available demo stacks:
     Django REST API + Next.js frontend + Docker
     Backends: django_api, nextjs_frontend, infra_docker
     Example: support_tickets
-    
+
   [...]
 
 Use: dazzle demo [stack]

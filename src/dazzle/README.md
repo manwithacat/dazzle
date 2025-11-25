@@ -129,16 +129,16 @@ from dazzle.backends.base import Backend, BackendContext
 
 class MyBackend(Backend):
     """Custom backend implementation."""
-    
+
     @property
     def name(self) -> str:
         return "mybackend"
-    
+
     def generate(self, ctx: BackendContext) -> None:
         """Generate artifacts from AppSpec."""
         appspec = ctx.appspec
         output_dir = ctx.output_dir
-        
+
         # Generate files
         for entity in appspec.domain.entities:
             self._generate_entity(entity, output_dir)
@@ -258,16 +258,16 @@ def build(format):
    ```python
    # src/dazzle/backends/mybackend/__init__.py
    from dazzle.backends.base import Backend, register_backend
-   
+
    class MyBackend(Backend):
        @property
        def name(self) -> str:
            return "mybackend"
-       
+
        def generate(self, ctx: BackendContext) -> None:
            # Generate code
            pass
-   
+
    # Register on import
    register_backend(MyBackend())
    ```

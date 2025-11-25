@@ -165,41 +165,25 @@ jobs:
               'commit_trailer': 'AI co-authorship found in commit messages.',
             }[reason] || 'AI co-authorship verified.';
 
-            body = `### ${emoji} AI Co-Authorship Check
-
-${reasonText}
-
-Thank you for following our [AI co-authorship policy](../blob/main/CONTRIBUTING.md#-ai-co-authorship-requirement)!`;
+            body = `### ${emoji} AI Co-Authorship Check\n\n${reasonText}\n\nThank you for following our [AI co-authorship policy](../blob/main/CONTRIBUTING.md#-ai-co-authorship-requirement)!`;
           } else {
-            body = `### ❌ AI Co-Authorship Check
-
-**This PR is missing AI co-authorship attribution.**
-
-DAZZLE requires all contributions to be co-authored with an AI agent.
-
-#### Quick Fix Options
-
-**Option 1: Assign to Copilot**
-Close this PR and [assign the issue to \`@copilot\`](../blob/main/CONTRIBUTING.md#copilot-coding-agent) instead.
-
-**Option 2: Add commit trailer**
-\`\`\`
-Co-Authored-By: Claude <noreply@anthropic.com>
-\`\`\`
-
-**Option 3: Update PR description**
-Add an "AI Assistance" section describing how AI helped.
-
-#### Recognized AI Agents
-| Agent | Trailer |
-|-------|---------|
-| Claude | \`Co-Authored-By: Claude <noreply@anthropic.com>\` |
-| GitHub Copilot | \`Co-Authored-By: Copilot <copilot@github.com>\` |
-| ChatGPT | \`Co-Authored-By: ChatGPT <noreply@openai.com>\` |
-| Gemini | \`Co-Authored-By: Gemini <noreply@google.com>\` |
-| Cursor | \`Co-Authored-By: Cursor <noreply@cursor.com>\` |
-
-See our [contribution guidelines](../blob/main/CONTRIBUTING.md#-ai-co-authorship-requirement) for details.`;
+            body = '### ❌ AI Co-Authorship Check\n\n' +
+              '**This PR is missing AI co-authorship attribution.**\n\n' +
+              'DAZZLE requires all contributions to be co-authored with an AI agent.\n\n' +
+              '#### Quick Fix Options\n\n' +
+              '**Option 1: Assign to Copilot**\n' +
+              'Close this PR and [assign the issue to `@copilot`](../blob/main/CONTRIBUTING.md#copilot-coding-agent) instead.\n\n' +
+              '**Option 2: Add commit trailer**\n```\nCo-Authored-By: Claude <noreply@anthropic.com>\n```\n\n' +
+              '**Option 3: Update PR description**\n' +
+              'Add an "AI Assistance" section describing how AI helped.\n\n' +
+              '#### Recognized AI Agents\n' +
+              '| Agent | Trailer |\n|-------|---------|' +
+              '\n| Claude | `Co-Authored-By: Claude <noreply@anthropic.com>` |' +
+              '\n| GitHub Copilot | `Co-Authored-By: Copilot <copilot@github.com>` |' +
+              '\n| ChatGPT | `Co-Authored-By: ChatGPT <noreply@openai.com>` |' +
+              '\n| Gemini | `Co-Authored-By: Gemini <noreply@google.com>` |' +
+              '\n| Cursor | `Co-Authored-By: Cursor <noreply@cursor.com>` |\n\n' +
+              'See our [contribution guidelines](../blob/main/CONTRIBUTING.md#-ai-co-authorship-requirement) for details.';
           }
 
           // Find and update or create comment

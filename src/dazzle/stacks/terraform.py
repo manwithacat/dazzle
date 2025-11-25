@@ -228,7 +228,7 @@ output "private_subnet_ids" {
         app_dir.mkdir(parents=True, exist_ok=True)
 
         if config.cloud_provider == "aws":
-            main_tf = f'''# App module - ECS Fargate service
+            main_tf = f"""# App module - ECS Fargate service
 
 variable "environment" {{
   description = "Environment name"
@@ -388,7 +388,7 @@ output "cluster_name" {{
 output "service_name" {{
   value = aws_ecs_service.app.name
 }}
-'''
+"""
             (app_dir / "main.tf").write_text(main_tf)
 
     def _generate_db_module(self, modules_dir: Path, config: TerraformConfig) -> None:
@@ -601,7 +601,7 @@ output "port" {
         env_dir.mkdir(parents=True, exist_ok=True)
 
         # main.tf
-        main_tf = f'''# {env_name.capitalize()} environment for {appspec.name}
+        main_tf = f"""# {env_name.capitalize()} environment for {appspec.name}
 
 terraform {{
   required_version = ">= 1.0"
@@ -631,7 +631,7 @@ module "app" {{
   subnet_ids      = module.network.public_subnet_ids
   container_image = var.container_image
 
-  environment_variables = {{'''
+  environment_variables = {{"""
 
         if requirements.needs_database:
             main_tf += """
@@ -724,15 +724,15 @@ container_image = "your-registry/{appspec.name}:latest"
 """
 
         if requirements.needs_database:
-            tfvars += f'''db_name     = "{appspec.name}_{env_name}"
+            tfvars += f"""db_name     = "{appspec.name}_{env_name}"
 db_username = "dazzle_admin"
 # db_password should be set via environment variable or secrets manager
-'''
+"""
 
         (env_dir / "terraform.tfvars.example").write_text(tfvars)
 
         # backend.tf
-        backend_tf = f'''# Remote state configuration for {env_name}
+        backend_tf = f"""# Remote state configuration for {env_name}
 terraform {{
   backend "s3" {{
     bucket = "your-terraform-state-bucket"
@@ -742,7 +742,7 @@ terraform {{
     # encrypt        = true
   }}
 }}
-'''
+"""
 
         (env_dir / "backend.tf.example").write_text(backend_tf)
 

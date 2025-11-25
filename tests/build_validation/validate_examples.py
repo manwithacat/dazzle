@@ -216,9 +216,13 @@ class ExampleValidator:
 
         # Step 2: Build AppSpec (using Python API)
         print("→ Building AppSpec...")
-        build_success, appspec_path, build_errors, entity_count, surface_count = (
-            self.build_appspec_python(example_path)
-        )
+        (
+            build_success,
+            appspec_path,
+            build_errors,
+            entity_count,
+            surface_count,
+        ) = self.build_appspec_python(example_path)
 
         if not build_success:
             all_errors.extend(build_errors)

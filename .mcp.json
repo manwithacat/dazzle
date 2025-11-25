@@ -1,9 +1,15 @@
 {
   "mcpServers": {
     "dazzle": {
-      "command": "python",
-      "args": ["-m", "dazzle.mcp"],
-      "cwd": "${workspaceFolder}"
+      "type": "stdio",
+      "command": "/Users/james/.pyenv/versions/dazzle-dev/bin/python",
+      "args": [
+        "-m",
+        "dazzle.mcp",
+        "--working-dir",
+        "/Volumes/SSD/Dazzle"
+      ],
+      "env": {}
     }
   }
 }

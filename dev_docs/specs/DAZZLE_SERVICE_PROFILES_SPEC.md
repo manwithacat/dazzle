@@ -1,4 +1,4 @@
-# DAZZLE Service Profiles & Common Integrations  
+# DAZZLE Service Profiles & Common Integrations
 ## (LLM-Facing Implementation Brief for Expert Developer)
 
 This document provides explicit, imperative instructions for implementing **service profiles** and **common integration patterns** in DAZZLE without bloating the the DSL or forcing domain-specific services (e.g., HMRC APIs) into the core.

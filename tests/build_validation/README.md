@@ -46,7 +46,7 @@ Passed: 2
 Failed: 0
 Success Rate: 100.0%
 
-Example                        Status     Entities   Surfaces   Time      
+Example                        Status     Entities   Surfaces   Time
 ----------------------------------------------------------------------
 simple_task                    ✓ PASS     1          4          0.25s
 support_tickets                ✓ PASS     3          4          0.15s

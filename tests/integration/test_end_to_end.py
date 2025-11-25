@@ -15,7 +15,8 @@ def test_full_pipeline_dsl_to_openapi(tmp_path: Path):
 
     # Step 1: Create DSL file
     dsl_file = tmp_path / "app.dsl"
-    dsl_file.write_text("""
+    dsl_file.write_text(
+        """
 module myapp.core
 
 app myapp "My Application"
@@ -54,7 +55,8 @@ surface post_create "Create Post":
     field title "Title"
     field content "Content"
     field author "Author"
-""")
+"""
+    )
 
     # Step 2: Parse DSL
     modules = parse_modules([dsl_file])
@@ -114,18 +116,21 @@ def test_multi_module_project(tmp_path: Path):
 
     # Create module 1: auth
     auth_dsl = tmp_path / "auth.dsl"
-    auth_dsl.write_text("""
+    auth_dsl.write_text(
+        """
 module myapp.auth
 
 entity AuthToken "Auth Token":
   id: uuid pk
   token: str(500) required unique
   expires_at: datetime required
-""")
+"""
+    )
 
     # Create module 2: core (uses auth)
     core_dsl = tmp_path / "core.dsl"
-    core_dsl.write_text("""
+    core_dsl.write_text(
+        """
 module myapp.core
 
 use myapp.auth
@@ -143,7 +148,8 @@ surface user_list "Users":
 
   section main:
     field email
-""")
+"""
+    )
 
     # Parse both modules
     modules = parse_modules([auth_dsl, core_dsl])
@@ -172,7 +178,8 @@ def test_error_handling_invalid_reference(tmp_path: Path):
     """Test that invalid references are caught during linking."""
 
     dsl_file = tmp_path / "app.dsl"
-    dsl_file.write_text("""
+    dsl_file.write_text(
+        """
 module test.app
 
 app test "Test"
@@ -180,7 +187,8 @@ app test "Test"
 entity Post:
   id: uuid pk
   author: ref NonExistentUser required
-""")
+"""
+    )
 
     modules = parse_modules([dsl_file])
 
@@ -197,7 +205,8 @@ def test_validation_catches_semantic_errors(tmp_path: Path):
     """Test that validator catches semantic errors."""
 
     dsl_file = tmp_path / "app.dsl"
-    dsl_file.write_text("""
+    dsl_file.write_text(
+        """
 module test.app
 
 app test "Test"
@@ -212,7 +221,8 @@ surface task_detail:
 
   section main:
     field nonexistent_field
-""")
+"""
+    )
 
     modules = parse_modules([dsl_file])
     appspec = build_appspec(modules, "test.app")

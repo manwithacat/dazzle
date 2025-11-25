@@ -2158,13 +2158,17 @@ def _generate_dsl(analysis: Any, answers: dict[str, str], spec_file: Path) -> No
 @app.command()
 def example(
     name: str | None = typer.Argument(
-        None, help="Example name (e.g., 'simple_task', 'urban_canopy')"
+        None, help="Example name (e.g., 'simple_task', 'support_tickets')"
     ),
     stack: str | None = typer.Option(
-        None, "--stack", "-s", help="Stack preset to use (e.g., 'micro', 'api_only')"
+        None, "--stack", "-s", help="Stack preset to use (e.g., 'micro', 'nextjs_onebox')"
     ),
     path: str | None = typer.Option(
         None, "--path", "-p", help="Directory to create (default: ./<example-name>)"
+    ),
+    reset: bool = typer.Option(
+        False, "--reset", "-r",
+        help="Reset existing directory: overwrite source files, delete build artifacts, preserve user files"
     ),
     list_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
     list_stacks: bool = typer.Option(False, "--list-stacks", help="List available stack presets"),
@@ -2180,177 +2184,203 @@ def example(
     development.
 
     Interactive modes:
-        dazzle example                        # List examples, select example and stack
+        dazzle example                        # Interactive selection with arrow keys
         dazzle example simple_task            # Select stack for simple_task
-        dazzle example simple_task --stack micro  # Direct creation with stack
+        dazzle example simple_task --stack nextjs_onebox  # Direct creation
 
     List options:
         dazzle example --list                 # List available examples
         dazzle example --list-stacks          # List available stack presets
 
+    Reset mode (--reset):
+        Resets an existing directory to match the example template:
+        • Overwrites DSL source files with example versions
+        • Deletes build/ directory (generated artifacts)
+        • Deletes .dazzle/ directory (build state)
+        • Preserves user-created files not in the example
+        • Preserves .git/, .vscode/, .env files
+
     Examples:
         dazzle example                               # Interactive mode
-        dazzle example urban_canopy                  # Select stack for example
+        dazzle example simple_task                   # Select stack for example
         dazzle example simple_task --stack micro     # Create with specific stack
         dazzle example simple_task --path ./my-app   # Create in custom directory
+        dazzle example simple_task --reset           # Reset existing project
         dazzle example --no-build                    # Skip automatic build
     """
     from dazzle.core.init import list_examples
     from dazzle.core.stacks import get_stack_description, get_stack_preset, list_stack_presets
+    from dazzle.cli_ui import (
+        SelectOption,
+        console,
+        print_header,
+        print_success,
+        print_error,
+        print_warning,
+        print_info,
+        print_step,
+        print_divider,
+        select_interactive,
+        display_options_table,
+        create_panel,
+    )
+    from rich.text import Text
 
     # List stacks
     if list_stacks:
-        stacks = list_stack_presets()
+        stacks = _get_available_stacks()
         if not stacks:
-            typer.echo("No stack presets available.")
+            print_error("No stack presets available.")
             return
 
-        typer.echo("Available stack presets:\n")
-        for stack_name in stacks:
-            desc = get_stack_description(stack_name)
-            typer.echo(f"  {stack_name}")
-            for line in desc.split("\n"):
-                typer.echo(f"    {line}")
-            typer.echo()
+        print_header("Available Stack Presets", "Choose a technology stack for your project")
 
-        typer.echo("Use: dazzle example <name> --stack <stack-name>")
+        stack_options = []
+        for stack_name in stacks:
+            preset = get_stack_preset(stack_name)
+            desc = preset.description if preset else ""
+            badge = ""
+            if stack_name == "nextjs_onebox":
+                badge = "NEW"
+            elif stack_name == "micro":
+                badge = "RECOMMENDED"
+
+            stack_options.append(SelectOption(
+                value=stack_name,
+                label=stack_name,
+                description=desc,
+                badge=badge,
+            ))
+
+        display_options_table(stack_options, show_numbers=True)
+
+        console.print(Text("Usage: ", style="bright_black") + Text("dazzle example <name> --stack <stack-name>", style="cyan"))
+        console.print()
         return
 
     # Get available examples
     examples_list = list_examples()
     if not examples_list:
-        typer.echo("No examples found.", err=True)
+        print_error("No examples found.")
         return
 
-    # List examples or interactive selection
-    if list_flag or name is None:
-        # Get examples directory to read descriptions
-        examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+    # Build example options with descriptions
+    examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
+    example_options = []
 
-        typer.echo("Available DAZZLE Examples:\n")
+    description_map = {
+        "simple_task": "Basic CRUD app - perfect for learning DAZZLE",
+        "support_tickets": "Multi-entity system with relationships and workflows",
+    }
 
-        example_descriptions = []
-        for example_name in examples_list:
-            example_dir = examples_dir / example_name
-            readme_file = example_dir / "README.md"
+    for example_name in examples_list:
+        example_dir = examples_dir / example_name
+        readme_file = example_dir / "README.md"
 
-            # Try to get description from README.md
-            description = ""
-            if readme_file.exists():
-                with open(readme_file) as f:
-                    lines = f.readlines()
-                    # Look for overview or first descriptive paragraph
-                    in_overview = False
-                    for line in lines:
-                        if "## Overview" in line or "## What This Example Demonstrates" in line:
-                            in_overview = True
-                            continue
-                        if in_overview and line.strip() and not line.startswith("#"):
-                            # Get first sentence
-                            description = line.strip().split(".")[0] + "."
-                            if len(description) > 100:
-                                description = description[:97] + "..."
-                            break
+        # Try to get description from README.md
+        description = ""
+        if readme_file.exists():
+            with open(readme_file) as f:
+                lines = f.readlines()
+                in_overview = False
+                for line in lines:
+                    if "## Overview" in line or "## What This Example Demonstrates" in line:
+                        in_overview = True
+                        continue
+                    if in_overview and line.strip() and not line.startswith("#"):
+                        description = line.strip().split(".")[0] + "."
+                        if len(description) > 80:
+                            description = description[:77] + "..."
+                        break
 
-            if not description:
-                # Fallback to default descriptions
-                description_map = {
-                    "simple_task": "Basic CRUD app - learn DAZZLE fundamentals",
-                    "support_tickets": "Multi-entity system with relationships",
-                    "urban_canopy": "Real-world citizen science application",
-                }
-                description = description_map.get(example_name, "DAZZLE example project")
+        if not description:
+            description = description_map.get(example_name, "DAZZLE example project")
 
-            example_descriptions.append((example_name, description))
+        example_options.append(SelectOption(
+            value=example_name,
+            label=example_name,
+            description=description,
+            badge="STARTER" if example_name == "simple_task" else "",
+        ))
 
-        # Display examples with numbering
-        for i, (example_name, description) in enumerate(example_descriptions, 1):
-            typer.echo(f"  {i}. {example_name:20s} - {description}")
+    # List examples mode
+    if list_flag:
+        print_header("Available DAZZLE Examples", "Ready-to-use project templates")
+        display_options_table(example_options, show_numbers=True)
 
-        typer.echo()
+        console.print(Text("Usage:", style="bold"))
+        console.print(Text("  dazzle example                          ", style="cyan") + Text("# Interactive selection", style="bright_black"))
+        console.print(Text("  dazzle example <name>                   ", style="cyan") + Text("# Select stack for example", style="bright_black"))
+        console.print(Text("  dazzle example <name> --stack <stack>   ", style="cyan") + Text("# Direct creation", style="bright_black"))
+        console.print()
+        return
 
-        # If just listing, show usage and return
-        if list_flag:
-            typer.echo("Usage:")
-            typer.echo("  dazzle example                          # Interactive selection")
-            typer.echo("  dazzle example <name>                   # Select stack for example")
-            typer.echo("  dazzle example <name> --stack <stack>   # Direct creation")
+    # Interactive example selection
+    if name is None:
+        print_header("DAZZLE Project Creator", "Create a new project from an example template")
+
+        name = select_interactive(
+            example_options,
+            title="Select an Example",
+            subtitle="Use ↑/↓ arrows to navigate, Enter to select",
+        )
+
+        if name is None:
+            print_info("Selection cancelled.")
             return
 
-        # Interactive selection
-        typer.echo("Select an example to create a new project:\n")
-        while True:
-            choice = typer.prompt("Enter number or name")
-
-            # Try as number first
-            try:
-                idx = int(choice) - 1
-                if 0 <= idx < len(examples_list):
-                    name = examples_list[idx]
-                    break
-            except ValueError:
-                pass
-
-            # Try as example name
-            if choice in examples_list:
-                name = choice
-                break
-
-            typer.echo(
-                f"Invalid choice. Please enter a number (1-{len(examples_list)}) or example name."
-            )
-
-        typer.echo(f"\n✓ Selected: {name}\n")
+        print_success(f"Selected example: {name}")
+        console.print()
 
     # Validate example exists
     if name not in examples_list:
-        typer.echo(f"Error: Example '{name}' not found.", err=True)
-        typer.echo(f"Available examples: {', '.join(examples_list)}", err=True)
-        typer.echo("Use 'dazzle example --list' to see details.", err=True)
+        print_error(f"Example '{name}' not found.")
+        console.print(Text(f"Available: {', '.join(examples_list)}", style="bright_black"))
         raise typer.Exit(code=1)
 
-    # Prompt for stack if not provided
+    # Interactive stack selection
     if stack is None:
-        # Only show stacks with available implementations
         stacks = _get_available_stacks()
         if not stacks:
-            typer.echo("Error: No compatible stack presets available.", err=True)
+            print_error("No compatible stack presets available.")
             raise typer.Exit(code=1)
 
-        typer.echo("Available stacks:\n")
-        for i, stack_name in enumerate(stacks, 1):
-            desc = get_stack_description(stack_name)
-            first_line = desc.split("\n")[0] if desc else ""
-            typer.echo(f"  {i}. {stack_name:20s} - {first_line}")
+        stack_options = []
+        for stack_name in stacks:
+            preset = get_stack_preset(stack_name)
+            desc = preset.description if preset else ""
 
-        typer.echo()
-        while True:
-            choice = typer.prompt("Select a stack (enter number or name)")
+            badge = ""
+            if stack_name == "nextjs_onebox":
+                badge = "NEW"
+            elif stack_name == "micro":
+                badge = "RECOMMENDED"
 
-            # Try as number first
-            try:
-                idx = int(choice) - 1
-                if 0 <= idx < len(stacks):
-                    stack = stacks[idx]
-                    break
-            except ValueError:
-                pass
+            stack_options.append(SelectOption(
+                value=stack_name,
+                label=stack_name,
+                description=desc,
+                badge=badge,
+            ))
 
-            # Try as stack name
-            if choice in stacks:
-                stack = choice
-                break
+        stack = select_interactive(
+            stack_options,
+            title="Select a Stack",
+            subtitle="Choose the technology stack for your project",
+        )
 
-            typer.echo(f"Invalid choice. Please enter a number (1-{len(stacks)}) or stack name.")
+        if stack is None:
+            print_info("Selection cancelled.")
+            return
 
-        typer.echo(f"\n✓ Selected: {stack}\n")
+        print_success(f"Selected stack: {stack}")
+        console.print()
 
-    # Validate stack (stack guaranteed set by loop above or function parameter)
-    assert stack is not None
+    # Validate stack
     preset = get_stack_preset(stack)
     if not preset:
-        typer.echo(f"Error: Stack '{stack}' not found.", err=True)
-        typer.echo("Use 'dazzle example --list-stacks' to see available stacks.", err=True)
+        print_error(f"Stack '{stack}' not found.")
+        console.print(Text("Use 'dazzle example --list-stacks' to see available stacks.", style="bright_black"))
         raise typer.Exit(code=1)
 
     # Determine target directory
@@ -2361,122 +2391,196 @@ def example(
 
     # Check if directory exists
     if target_dir.exists():
-        typer.echo(f"Error: Directory '{target_dir}' already exists.", err=True)
-        typer.echo("Please choose a different path or remove the existing directory.", err=True)
-        raise typer.Exit(code=1)
+        if reset:
+            # Reset mode: smart overwrite
+            print_divider()
+            console.print()
+            print_step(1, 4, "Resetting project...")
 
+            from dazzle.core.init import reset_project
+
+            try:
+                result = reset_project(target_dir, from_example=name)
+
+                # Report what happened
+                if result["deleted"]:
+                    print_success(f"Deleted {len(result['deleted'])} generated files")
+                if result["overwritten"]:
+                    print_success(f"Overwrote {len(result['overwritten'])} source files")
+                if result["added"]:
+                    print_success(f"Added {len(result['added'])} new files")
+                if result["preserved"]:
+                    print_info(f"Preserved {len(result['preserved'])} user files")
+
+                console.print()
+
+            except Exception as e:
+                print_error(f"Reset failed: {e}")
+                raise typer.Exit(code=1)
+
+            # Update dazzle.toml with stack configuration
+            manifest_path = target_dir / "dazzle.toml"
+            if manifest_path.exists():
+                manifest_content = manifest_path.read_text()
+                if "[stack]" not in manifest_content:
+                    stack_section = f'\n[stack]\nname = "{stack}"\n'
+                    manifest_path.write_text(manifest_content + stack_section)
+                else:
+                    import re
+                    manifest_content = re.sub(
+                        r'name = "[^"]*"',
+                        f'name = "{stack}"',
+                        manifest_content,
+                        count=1,
+                        flags=re.MULTILINE,
+                    )
+                    manifest_path.write_text(manifest_content)
+
+        else:
+            print_error(f"Directory '{target_dir}' already exists.")
+            console.print(Text("Use --reset to overwrite source files and delete build artifacts.", style="bright_black"))
+            console.print(Text("Or choose a different path with --path.", style="bright_black"))
+            raise typer.Exit(code=1)
+    else:
+        # Normal creation mode
+        try:
+            # Create project
+            print_divider()
+            console.print()
+            print_step(1, 4, "Creating project structure...")
+
+            from dazzle.core.init import init_project
+
+            init_project(
+                target_dir=target_dir,
+                project_name=name,
+                from_example=name,
+            )
+
+            # Update dazzle.toml with stack configuration
+            manifest_path = target_dir / "dazzle.toml"
+            if manifest_path.exists():
+                manifest_content = manifest_path.read_text()
+                if "[stack]" not in manifest_content:
+                    stack_section = f'\n[stack]\nname = "{stack}"\n'
+                    manifest_path.write_text(manifest_content + stack_section)
+                else:
+                    import re
+                    manifest_content = re.sub(
+                        r'name = "[^"]*"',
+                        f'name = "{stack}"',
+                        manifest_content,
+                        count=1,
+                        flags=re.MULTILINE,
+                    )
+                    manifest_path.write_text(manifest_content)
+
+            print_success(f"Project created: {target_dir}")
+            print_success("Initialized git repository")
+            print_success("Created LLM context files")
+            console.print()
+
+        except Exception as e:
+            print_error(f"Error creating project: {e}")
+            import traceback
+            traceback.print_exc()
+            raise typer.Exit(code=1)
+
+    # Common post-processing for both reset and create modes
     try:
-        # Create project from example
-        typer.echo(f"Creating project from example: {name}")
-        typer.echo(f"Stack: {stack}")
-        typer.echo(f"Location: {target_dir}\n")
-
-        # Initialize from example
-        from dazzle.core.init import init_project
-
-        init_project(
-            target_dir=target_dir,
-            project_name=name,
-            from_example=name,
-        )
-
-        # Update dazzle.toml with stack configuration
-        manifest_path = target_dir / "dazzle.toml"
-        if manifest_path.exists():
-            manifest_content = manifest_path.read_text()
-            # Add stack section if not present
-            if "[stack]" not in manifest_content:
-                stack_section = f'\n[stack]\nname = "{stack}"\n'
-                manifest_path.write_text(manifest_content + stack_section)
-            else:
-                # Update existing stack name
-                import re
-
-                manifest_content = re.sub(
-                    r'name = "[^"]*"',
-                    f'name = "{stack}"',
-                    manifest_content,
-                    count=1,
-                    flags=re.MULTILINE,
-                )
-                manifest_path.write_text(manifest_content)
-
-        typer.echo(f"✓ Project created: {target_dir}")
-        typer.echo("✓ Initialized git repository")
-        typer.echo("✓ Created LLM context files (LLM_CONTEXT.md, .llm/, .claude/, .copilot/)\n")
-
         # Verify project setup
-        typer.echo("Verifying project setup...")
+        print_step(2, 4, "Verifying project setup...")
         from dazzle.core.init import verify_project
 
         if not verify_project(target_dir):
-            typer.echo("⚠ Verification failed - DSL validation errors detected", err=True)
-            typer.echo("Run 'dazzle validate' in the project directory for details\n", err=False)
+            print_warning("DSL validation errors detected")
+            console.print(Text("Run 'dazzle validate' in the project directory for details", style="bright_black"))
             raise typer.Exit(code=1)
 
-        typer.echo("✓ Verification passed\n")
+        print_success("Verification passed")
+        console.print()
 
-        # Optionally build the project
+        # Build the project
         if not no_build:
-            typer.echo("Building project...")
+            print_step(3, 4, "Building project...")
             import subprocess
 
-            result = subprocess.run(
+            build_result = subprocess.run(
                 ["python3", "-m", "dazzle.cli", "build"],
                 cwd=target_dir,
                 capture_output=True,
                 text=True,
             )
 
-            if result.returncode == 0:
-                typer.echo("✓ Build complete\n")
+            if build_result.returncode == 0:
+                print_success("Build complete")
             else:
-                typer.echo("⚠ Build failed:\n", err=True)
-                if result.stderr:
-                    typer.echo(result.stderr, err=True)
-                if result.stdout:
-                    typer.echo(result.stdout, err=True)
-                typer.echo("\nYou can build manually with 'dazzle build'\n", err=False)
+                print_warning("Build failed")
+                if build_result.stderr:
+                    console.print(Text(build_result.stderr, style="red"))
+                console.print(Text("You can build manually with 'dazzle build'", style="bright_black"))
+        else:
+            print_step(3, 4, "Skipping build (--no-build)")
+
+        console.print()
 
         # Print next steps
-        typer.echo("=" * 60)
-        typer.echo("Next steps:")
-        typer.echo(f"  cd {path}")
+        print_step(4, 4, "Ready!")
+        console.print()
+
+        print_divider("═")
+        print_header("Next Steps")
+
+        console.print(Text(f"  cd {path}", style="cyan bold"))
 
         if no_build:
-            typer.echo("  dazzle build")
+            console.print(Text("  dazzle build", style="cyan"))
 
         # Stack-specific instructions
-        if "django" in preset.backends or "django_micro_modular" in preset.backends:
-            typer.echo("\nDjango application:")
-            typer.echo("  cd build/<project-name>")
-            typer.echo("  source .venv/bin/activate  # Already set up!")
-            typer.echo("  python manage.py runserver")
-            typer.echo("\nAdmin credentials: See .admin_credentials file")
+        if "nextjs_onebox" in preset.backends:
+            console.print()
+            console.print(Text("Next.js Application:", style="bold green"))
+            console.print(Text("  cd build/<project-name>", style="cyan"))
+            console.print(Text("  npm install", style="cyan"))
+            console.print(Text("  npm run db:generate", style="cyan"))
+            console.print(Text("  npm run db:push", style="cyan"))
+            console.print(Text("  npm run dev", style="cyan"))
+
+        if "django_micro_modular" in preset.backends:
+            console.print()
+            console.print(Text("Django Application:", style="bold green"))
+            console.print(Text("  cd build/<project-name>", style="cyan"))
+            console.print(Text("  source .venv/bin/activate", style="cyan"))
+            console.print(Text("  python manage.py runserver", style="cyan"))
+            console.print(Text("\nAdmin credentials: See .admin_credentials file", style="bright_black"))
 
         if "express_micro" in preset.backends:
-            typer.echo("\nExpress application:")
-            typer.echo("  cd build/<project-name>")
-            typer.echo("  npm install")
-            typer.echo("  npm start")
+            console.print()
+            console.print(Text("Express Application:", style="bold green"))
+            console.print(Text("  cd build/<project-name>", style="cyan"))
+            console.print(Text("  npm install", style="cyan"))
+            console.print(Text("  npm start", style="cyan"))
 
         if "openapi" in preset.backends:
-            typer.echo("\nOpenAPI spec:")
-            typer.echo("  View: build/openapi/openapi.yaml")
+            console.print()
+            console.print(Text("OpenAPI spec:", style="bold"))
+            console.print(Text("  View: build/openapi/openapi.yaml", style="cyan"))
 
         if "docker" in preset.backends:
-            typer.echo("\nDocker:")
-            typer.echo("  cd build/docker")
-            typer.echo("  docker compose up -d")
+            console.print()
+            console.print(Text("Docker:", style="bold"))
+            console.print(Text("  cd build/docker", style="cyan"))
+            console.print(Text("  docker compose up -d", style="cyan"))
 
-        typer.echo("\n" + "=" * 60)
-        typer.echo("🚀 Ready for LLM-driven development!")
-        typer.echo("=" * 60)
+        console.print()
+        print_divider("═")
+        console.print(Text("🚀 Ready for LLM-driven development!", style="bold bright_cyan"))
+        print_divider("═")
+        console.print()
 
     except Exception as e:
-        typer.echo(f"Error creating project: {e}", err=True)
+        print_error(f"Error: {e}")
         import traceback
-
         traceback.print_exc()
         raise typer.Exit(code=1)
 

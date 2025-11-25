@@ -209,10 +209,10 @@ entity Task "Task":
 entity Ticket "Support Ticket":
   id: uuid pk
   title: str(200) required
-  
+
   # Required relationship - every ticket has a creator
   created_by: ref User required
-  
+
   # Optional relationship - tickets can be unassigned
   assigned_to: ref User
 ```
@@ -232,7 +232,7 @@ entity Ticket:
 surface task_list "Task List":
   uses entity Task
   mode: list
-  
+
   section main "Tasks":
     field title "Title"
     field completed "Done"
@@ -245,7 +245,7 @@ surface task_list "Task List":
 surface task_create "Create Task":
   uses entity Task
   mode: create
-  
+
   section main "New Task":
     field title "Title"
     field description "Description"

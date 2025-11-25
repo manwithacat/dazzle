@@ -1,9 +1,9 @@
 {
-  "timestamp": "2025-11-21T22:09:36.047196Z",
-  "backend": "django_micro_modular",
-  "output_dir": "/private/tmp/modular_django",
+  "timestamp": "2025-11-25T19:53:00.172884Z",
+  "backend": "nextjs_onebox",
+  "output_dir": "build",
   "dsl_file_hashes": {
-    "dsl/app.dsl": "ce656700cee27c58c519e828116a1ebf2ed6a593c6bd43e1ee48edc841ef9407"
+    "dsl/app.dsl": "6dc0ccb4f30909cc739b7e832a258f75b3971465f57b19409e7f0d7acc4d25d1"
   },
   "appspec_snapshot": {
     "app": {
@@ -41,6 +41,16 @@
           },
           "priority": {
             "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['low', 'medium', 'high'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "due_date": {
+            "type": "kind=<FieldTypeKind.DATE: 'date'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "assigned_to": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=100 precision=None scale=None enum_values=None ref_entity=None",
             "required": false,
             "modifiers": []
           },

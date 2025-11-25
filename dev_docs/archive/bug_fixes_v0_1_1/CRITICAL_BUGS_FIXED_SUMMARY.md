@@ -59,16 +59,16 @@ for surface in self.spec.surfaces:
 for entity in self.spec.domain.entities:
     if entity_name not in entity_surfaces:
         continue  # Skip entities with no surfaces
-    
+
     modes = entity_surfaces[entity_name]
-    
+
     # Only generate URLs for modes that exist
     if ir.SurfaceMode.LIST in modes:
         urls.append(list_url(entity))
-    
+
     if ir.SurfaceMode.CREATE in modes:
         urls.append(create_url(entity))
-    
+
     if ir.SurfaceMode.EDIT in modes:  # ✓ Only if defined!
         urls.append(update_url(entity))
 ```
@@ -119,7 +119,7 @@ Modified `src/dazzle/stacks/django_micro_modular/generators/views.py`:
 def _get_view_class_name(self, surface: ir.SurfaceSpec, entity_name: str) -> str:
     """
     Get Django view class name for a surface.
-    
+
     Uses entity name + mode to ensure consistent naming.
     Example: MaintenanceTask + list -> MaintenanceTaskListView
     """
@@ -130,9 +130,9 @@ def _get_view_class_name(self, surface: ir.SurfaceSpec, entity_name: str) -> str
         ir.SurfaceMode.CREATE: 'Create',
         ir.SurfaceMode.EDIT: 'Update',
     }
-    
+
     suffix = mode_suffix_map.get(surface.mode, '')
-    
+
     # Build class name: EntityName + Suffix + View
     if suffix:
         class_name = f'{entity_name}{suffix}View'
@@ -142,7 +142,7 @@ def _get_view_class_name(self, surface: ir.SurfaceSpec, entity_name: str) -> str
         class_name = ''.join(word.capitalize() for word in parts)
         if not class_name.endswith('View'):
             class_name += 'View'
-    
+
     return class_name
 ```
 

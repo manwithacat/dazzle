@@ -23,7 +23,8 @@ def test_project(tmp_path: Path):
 
     # Create a simple DSL file
     dsl_file = dsl_dir / "test.dsl"
-    dsl_file.write_text("""
+    dsl_file.write_text(
+        """
 module testapp
 
 app test_app "Test App"
@@ -40,11 +41,13 @@ surface task_list "Tasks":
   section main "Tasks":
     field title "Title"
     field status "Status"
-""")
+"""
+    )
 
     # Create dazzle.toml
     manifest = tmp_path / "dazzle.toml"
-    manifest.write_text("""
+    manifest.write_text(
+        """
 [project]
 name = "test_app"
 version = "0.1.0"
@@ -52,7 +55,8 @@ root = "testapp"
 
 [modules]
 paths = ["dsl/"]
-""")
+"""
+    )
 
     return tmp_path
 
@@ -71,7 +75,8 @@ def test_validate_command_with_errors(cli_runner: CliRunner, tmp_path: Path):
     dsl_dir.mkdir()
 
     dsl_file = dsl_dir / "test.dsl"
-    dsl_file.write_text("""
+    dsl_file.write_text(
+        """
 module testapp
 
 app test_app "Test App"
@@ -86,10 +91,12 @@ surface task_list:
 
   section main:
     field nonexistent "Nonexistent Field"
-""")
+"""
+    )
 
     manifest = tmp_path / "dazzle.toml"
-    manifest.write_text("""
+    manifest.write_text(
+        """
 [project]
 name = "test_app"
 version = "0.1.0"
@@ -97,7 +104,8 @@ root = "testapp"
 
 [modules]
 paths = ["./dsl"]
-""")
+"""
+    )
 
     result = cli_runner.invoke(app, ["validate", "--manifest", str(manifest)])
     assert result.exit_code == 1

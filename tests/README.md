@@ -106,13 +106,13 @@ def test_entity_with_required_fields():
     """Test that required field modifier is parsed correctly."""
     dsl = '''
     module test
-    
+
     entity User:
       email: str required
     '''
-    
+
     module = parse_module(dsl, "test.dsl")
-    
+
     assert len(module.entities) == 1
     entity = module.entities[0]
     assert entity.name == "User"
@@ -137,7 +137,7 @@ Create reusable test data:
 def simple_entity_dsl():
     return '''
     module test
-    
+
     entity Task:
       id: uuid pk
       title: str(200)

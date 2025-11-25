@@ -1,6 +1,6 @@
 # DAZZLE Core – Test Infrastructure Specification
 
-This document outlines the recommended test architecture for the DAZZLE Core project.  
+This document outlines the recommended test architecture for the DAZZLE Core project.
 It assumes the reader is a Python developer familiar with pytest, mypy, hypothesis, and modern tooling.
 
 ---
@@ -102,8 +102,8 @@ support_tickets.ir.json
 
 The test:
 
-1. Parse DSL → produce IR  
-2. Normalise IR (sorting lists, stripping timestamps/metadata)  
+1. Parse DSL → produce IR
+2. Normalise IR (sorting lists, stripping timestamps/metadata)
 3. Compare to the stored `support_tickets.ir.json`
 
 You can use:
@@ -126,17 +126,17 @@ Recommended strategies:
 
 Generate small random `EntitySpec`, `SurfaceSpec`, `ExperienceSpec`, and check:
 
-- `validate_ir()` accepts valid structures  
-- invalid structures yield predictable, safe errors  
+- `validate_ir()` accepts valid structures
+- invalid structures yield predictable, safe errors
 - validation never raises raw exceptions
 
 ### 2. Round-Trip Tests
 
 Once DAZZLE supports IR → DSL pretty-printing:
 
-- Generate random IRs  
-- Render to DSL  
-- Parse DSL back to IR  
+- Generate random IRs
+- Render to DSL
+- Parse DSL back to IR
 - Assert structural equivalence (“equivalent enough”)
 
 Even if limited to entities/fields initially, it greatly increases confidence.
@@ -147,9 +147,9 @@ Even if limited to entities/fields initially, it greatly increases confidence.
 
 Since DAZZLE now supports:
 
-- `module <name>`  
-- `use <module_name>`  
-- `dazzle.toml` manifests  
+- `module <name>`
+- `use <module_name>`
+- `dazzle.toml` manifests
 
 We need explicit tests of module composition and linking.
 
@@ -166,12 +166,12 @@ tests/fixtures/projects/support/
 Test cases:
 
 - Successful merge:
-  - load all modules  
-  - resolve `use` dependencies  
-  - verify cross-module entity/surface/service references  
+  - load all modules
+  - resolve `use` dependencies
+  - verify cross-module entity/surface/service references
 - Negative cases:
-  - missing module referenced in `use`  
-  - duplicate entity names across modules  
+  - missing module referenced in `use`
+  - duplicate entity names across modules
   - unresolved symbols in surfaces/experiences/integrations
 
 ---
@@ -180,15 +180,15 @@ Test cases:
 
 Even if early backends are stubbed, you can test the **backend interface**:
 
-1. Define a small fake backend that implements `generate(appspec, out_dir)`  
-2. Run it with:  
-   - Parsed IR from a known DSL example  
+1. Define a small fake backend that implements `generate(appspec, out_dir)`
+2. Run it with:
+   - Parsed IR from a known DSL example
    - Assert expected output structure (snapshot)
 
 Once real backends (Django/FastAPI/OpenAPI) arrive:
 
-- Validate generated Python via `compileall`  
-- Validate generated OpenAPI via a schema validator  
+- Validate generated Python via `compileall`
+- Validate generated OpenAPI via a schema validator
 
 ---
 
@@ -196,16 +196,16 @@ Once real backends (Django/FastAPI/OpenAPI) arrive:
 
 Use pytest with `capsys` or Click’s `CliRunner`:
 
-- `dazzle validate`  
-- `dazzle lint`  
-- `dazzle build`  
+- `dazzle validate`
+- `dazzle lint`
+- `dazzle build`
 
 Tests should assert:
 
-- Exit codes  
-- Friendly errors for invalid DSL  
-- Correct output paths for builds  
-- Stable output text for summaries  
+- Exit codes
+- Friendly errors for invalid DSL
+- Correct output paths for builds
+- Stable output text for summaries
 
 ---
 
@@ -240,10 +240,10 @@ This ensures every PR preserves DSL consistency and IR validity.
 
 The DAZZLE test infrastructure should emphasise:
 
-- **Separation of concerns**: parser vs IR vs linker vs backend  
-- **Predictability**: snapshot tests for DSL → IR  
-- **Robustness**: property-based tests for IR and parser  
-- **Extensibility**: module-aware linting + backend contract tests  
+- **Separation of concerns**: parser vs IR vs linker vs backend
+- **Predictability**: snapshot tests for DSL → IR
+- **Robustness**: property-based tests for IR and parser
+- **Extensibility**: module-aware linting + backend contract tests
 - **Tooling discipline**: mypy, ruff, pre-commit, CI
 
 This provides a durable foundation for DAZZLE’s evolution into a real, multi-module DSL ecosystem.

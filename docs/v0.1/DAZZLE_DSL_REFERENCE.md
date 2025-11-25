@@ -438,9 +438,9 @@ Backends and modules can interpret `meta` keys as needed without affecting core 
 
 The DAZZLE DSL 0.1:
 
-- Provides a small, regular set of constructs: `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`.  
-- Treats 3rd‑party APIs via abstract `service` + `foreign_model` + `integration` blocks, not low‑level HTTP.  
-- Keeps flows (experiences) and interactions (surfaces) straightforward, with explicit steps and outcomes.  
+- Provides a small, regular set of constructs: `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`.
+- Treats 3rd‑party APIs via abstract `service` + `foreign_model` + `integration` blocks, not low‑level HTTP.
+- Keeps flows (experiences) and interactions (surfaces) straightforward, with explicit steps and outcomes.
 - Is deliberately limited to stay token‑efficient and leave complex detail to the IR, backends, and LLM assistants.
 
-Further revisions may add richer expression support, more surface element types, and reusable “pattern” modules, but 0.1 aims to prove the viability of this core. 
+Further revisions may add richer expression support, more surface element types, and reusable “pattern” modules, but 0.1 aims to prove the viability of this core.

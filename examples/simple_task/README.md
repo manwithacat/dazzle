@@ -1,16 +1,23 @@
-# Simple Task Manager Example
+# Simple Task Manager Example (v0.2)
 
-**A beginner-friendly DAZZLE example showing how to build a personal task tracking application.**
+**A beginner-friendly DAZZLE example showing how to build a personal task tracking application with the UX Semantic Layer.**
 
 ---
 
-## 📋 What This Example Demonstrates
+## What This Example Demonstrates
 
 This example shows the complete journey from **human specification to working application**:
 
 1. **SPEC.md** - What a founder/builder writes (in plain English)
-2. **dsl/app.dsl** - The DAZZLE DSL translation
-3. **Generated Code** - A fully functional Django or Express.js application
+2. **dsl/app.dsl** - The DAZZLE v0.2 DSL with UX features
+3. **Generated Code** - A fully functional Django, Express.js, or Next.js application
+
+### v0.2 UX Features Demonstrated
+
+- **Attention Signals** - Visual alerts for overdue and high-priority tasks
+- **Persona Variants** - Different views for team members, managers, and viewers
+- **Workspaces** - Dashboard views with multiple data regions
+- **Information Needs** - Declarative sort, filter, search, and empty states
 
 ---
 
@@ -91,9 +98,9 @@ entity Task "Task":
   updated_at: datetime auto_update
 ```
 
-**User Stories → Surfaces:**
+**User Stories → Surfaces with UX:**
 ```dsl
-# "I want to view all my tasks"
+# "I want to view all my tasks" - with attention signals and personas
 surface task_list "Task List":
   uses entity Task
   mode: list
@@ -101,15 +108,53 @@ surface task_list "Task List":
     field title "Title"
     field status "Status"
     field priority "Priority"
+    field due_date "Due Date"
 
-# "I want to create new tasks"
-surface task_create "Create Task":
-  uses entity Task
-  mode: create
-  section main "New Task":
-    field title "Title"
-    field description "Description"
-    field priority "Priority"
+  ux:
+    purpose: "Track and manage team tasks efficiently"
+    sort: status asc, priority desc
+    filter: status, priority, assigned_to
+    search: title, description
+    empty: "No tasks yet. Create your first task!"
+
+    # Visual alerts based on data conditions
+    attention critical:
+      when: due_date < today and status != done
+      message: "Overdue task"
+
+    attention warning:
+      when: priority = high and status = todo
+      message: "High priority - start soon"
+
+    # Role-specific views
+    for team_member:
+      scope: assigned_to = current_user
+      purpose: "Your personal task list"
+
+    for manager:
+      scope: all
+      purpose: "Team task oversight"
+```
+
+**Dashboards → Workspaces:**
+```dsl
+# Multi-region dashboard
+workspace task_dashboard "Task Dashboard":
+  purpose: "Comprehensive task management overview"
+
+  my_tasks:
+    source: Task
+    filter: assigned_to = current_user and status != done
+    sort: priority desc
+    limit: 10
+    display: list
+
+  overdue:
+    source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc
+    display: list
+    empty: "No overdue tasks!"
 ```
 
 ### Step 3: Generate Your Application

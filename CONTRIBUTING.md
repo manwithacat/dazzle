@@ -55,7 +55,7 @@ We welcome all kinds of contributions:
    cd extensions/vscode
    npm install
    npm run compile
-   
+
    # Create symlink for local development
    ln -s $(pwd) ~/.vscode/extensions/dazzle-dsl-0.3.0
    ```

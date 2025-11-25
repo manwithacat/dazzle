@@ -1,7 +1,7 @@
-# DAZZLE VS Code Integration Specification  
+# DAZZLE VS Code Integration Specification
 ## (LLM-Facing Implementation Brief)
 
-This document gives explicit, imperative instructions for an LLM operating as an expert TypeScript/Python developer.  
+This document gives explicit, imperative instructions for an LLM operating as an expert TypeScript/Python developer.
 Your task is to implement a DAZZLE-aware VS Code extension that provides syntax highlighting, linting, CLI integration, and optional LSP features, while delegating all actual logic to DAZZLE Core in Python.
 
 Follow these instructions exactly.
@@ -161,7 +161,7 @@ Avoid re-implementing any DAZZLE parsing/linting logic in TypeScript.
 
 Create a lightweight LSP server in Python using `pygls`:
 
-1. Implement LSP entrypoint:  
+1. Implement LSP entrypoint:
    `python -m dazzle.lsp`
 
 2. Provide LSP features using the DAZZLE IR:
@@ -216,7 +216,7 @@ Do not include any hard-coded framework assumptions.
 
 # 7. Key Principles You Must Follow
 
-1. **Do not reimplement DAZZLE logic in TypeScript.**  
+1. **Do not reimplement DAZZLE logic in TypeScript.**
    All parsing, linting, module-resolution, and IR generation must be done by the Python core.
 
 2. **Extension provides UI/UX only**:

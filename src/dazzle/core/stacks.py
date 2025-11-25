@@ -53,6 +53,12 @@ BUILTIN_STACKS: dict[str, StackPreset] = {
         backends=["express_micro"],
         example_dsl="simple_task",
     ),
+    "nextjs_onebox": StackPreset(
+        name="nextjs_onebox",
+        description="Next.js 14 + Prisma + PostgreSQL in single Docker container (modern full-stack)",
+        backends=["nextjs_onebox"],
+        example_dsl="simple_task",
+    ),
     "django_next": StackPreset(
         name="django_next",
         description="Django REST API + Next.js frontend + Docker",

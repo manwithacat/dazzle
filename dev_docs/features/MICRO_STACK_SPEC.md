@@ -155,7 +155,7 @@ DAZZLE surfaces → Django views:
 surface task_list "Task List":
   uses entity Task
   mode: list
-  
+
   section main:
     field title "Title"
     field completed "Done"
@@ -193,11 +193,11 @@ Bootstrap-based templates (no build step required):
 {% block content %}
 <div class="container mt-4">
   <h1>Task List</h1>
-  
+
   <a href="{% url 'task_create' %}" class="btn btn-primary mb-3">
     Add Task
   </a>
-  
+
   <div class="list-group">
     {% for task in tasks %}
     <a href="{% url 'task_detail' task.pk %}" class="list-group-item">
@@ -367,7 +367,7 @@ dazzle demo micro
    ```bash
    dazzle demo
    ```
-   
+
    Output shows:
    - "Using default: 'micro'"
    - What micro stack includes

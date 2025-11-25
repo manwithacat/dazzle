@@ -193,7 +193,7 @@ def test_simple_dsl_to_ir_snapshot(simple_test_dsl_path, snapshot):
     modules = parse_modules([simple_test_dsl_path])
     appspec = build_appspec(modules, "test.simple")
     appspec_dict = appspec.model_dump(mode="python")
-    
+
     # Compare against stored snapshot
     assert appspec_dict == snapshot
 ```
@@ -242,10 +242,10 @@ Comprehensive OpenAPI backend testing:
 ```python
 def test_openapi_output_has_correct_structure(simple_appspec, tmp_path):
     backend.generate(simple_appspec, output_dir, format="json")
-    
+
     with (output_dir / "openapi.json").open() as f:
         doc = json.load(f)
-    
+
     # Verify OpenAPI structure
     assert doc["openapi"] == "3.0.0"
     assert "/tasks" in doc["paths"]
@@ -270,7 +270,7 @@ Comprehensive pipeline testing:
 ```python
 def test_full_pipeline_dsl_to_openapi(tmp_path):
     """Test complete pipeline: DSL → Parse → Link → Validate → Generate."""
-    
+
     # Create DSL → Parse → Link → Validate → Generate OpenAPI
     # Verify each step
 ```

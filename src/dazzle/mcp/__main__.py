@@ -1,11 +1,11 @@
 """
 MCP server entry point for DAZZLE.
 
-Run with: python -m dazzle.mcp
+Run with: python -m dazzle.mcp [--working-dir PATH]
 """
 
+import argparse
 import asyncio
-import sys
 from pathlib import Path
 
 from dazzle.mcp.server import run_server
@@ -13,12 +13,16 @@ from dazzle.mcp.server import run_server
 
 def main() -> None:
     """Run the DAZZLE MCP server."""
-    # Get project root from command line args or use cwd
-    if len(sys.argv) > 1:
-        project_root = Path(sys.argv[1]).resolve()
-    else:
-        project_root = Path.cwd()
+    parser = argparse.ArgumentParser(description="DAZZLE MCP Server")
+    parser.add_argument(
+        "--working-dir",
+        type=Path,
+        default=Path.cwd(),
+        help="Project root directory (default: current working directory)",
+    )
+    args = parser.parse_args()
 
+    project_root = args.working_dir.resolve()
     asyncio.run(run_server(project_root))
 
 

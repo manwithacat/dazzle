@@ -1,6 +1,6 @@
 # DAZZLE Infra Backends Specification (LLM-Facing Implementation Brief)
 
-This document provides clear, imperative instructions for an LLM operating as an expert Python developer responsible for implementing **Docker** and **Terraform** infra backends for the DAZZLE system.  
+This document provides clear, imperative instructions for an LLM operating as an expert Python developer responsible for implementing **Docker** and **Terraform** infra backends for the DAZZLE system.
 These backends must be driven by the **project-level TOML manifest** and the **DAZZLE IR**, not by DSL syntax.
 
 Your job is to implement these backends exactly as described.
@@ -9,12 +9,12 @@ Your job is to implement these backends exactly as described.
 
 # 1. Core Objectives
 
-1. Consume DAZZLE’s **AppSpec IR** and **dazzle.toml** manifest.  
-2. Infer infrastructure needs (db/cache/queue/worker) from IR semantics.  
-3. Generate local development infrastructure using **Docker**.  
-4. Generate cloud-ready infrastructure using **Terraform**.  
-5. Produce conventional, boring, easy-to-maintain artefacts.  
-6. Keep the DSL clean—do **not** introduce new DSL grammar for infrastructure.  
+1. Consume DAZZLE’s **AppSpec IR** and **dazzle.toml** manifest.
+2. Infer infrastructure needs (db/cache/queue/worker) from IR semantics.
+3. Generate local development infrastructure using **Docker**.
+4. Generate cloud-ready infrastructure using **Terraform**.
+5. Produce conventional, boring, easy-to-maintain artefacts.
+6. Keep the DSL clean—do **not** introduce new DSL grammar for infrastructure.
 7. Allow infra backends to be optional and modular.
 
 ---
@@ -170,19 +170,19 @@ Each command must:
 
 # 6. Key Principles You Must Follow
 
-1. **No infra syntax in the DSL.**  
+1. **No infra syntax in the DSL.**
    All infra configuration lives in TOML + IR inference.
 
-2. **Backends must be independent.**  
+2. **Backends must be independent.**
    Docker is local-only. Terraform is cloud-only. Neither must rely on the other.
 
-3. **Generated artefacts must be editable.**  
+3. **Generated artefacts must be editable.**
    Developers should feel free to modify anything produced by backends.
 
-4. **DAZZLE IR drives infrastructure choices.**  
+4. **DAZZLE IR drives infrastructure choices.**
    Do not require humans to micromanage infra details.
 
-5. **Minimize cognitive load.**  
+5. **Minimize cognitive load.**
    Always choose conventional defaults.
 
 ---
