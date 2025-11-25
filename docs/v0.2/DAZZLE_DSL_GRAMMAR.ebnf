@@ -1,0 +1,412 @@
+(*
+  DAZZLE DSL 0.2 – Informal EBNF Grammar with UX Semantic Layer
+  ---------------------------------------------------------------
+  This grammar extends DAZZLE 0.1 with UX semantic layer constructs
+  for capturing user experience semantics without prescribing visual implementation.
+
+  Changes from v0.1:
+  - Added optional ux_block to surface declarations
+  - Added workspace construct for composing related information needs
+  - Added attention signals for data-driven priority indicators
+  - Added persona variants for role-specific adaptations
+*)
+
+dazzle_spec   ::= module_decl? app_decl statement* EOF ;
+
+statement     ::= entity_decl
+                | surface_decl
+                | workspace_decl      (* NEW in v0.2 *)
+                | experience_decl
+                | service_decl
+                | foreign_model_decl
+                | integration_decl
+                | use_decl
+                | comment ;
+
+comment       ::= "#" /[^\n]*/ "\n" ;
+
+(* Identifiers and literals *)
+
+IDENT         ::= /[A-Za-z_][A-Za-z0-9_]*/ ;
+STRING        ::= '"' (/[^\"]*/)? '"' ;
+NUMBER        ::= /[0-9]+(\.[0-9]+)?/ ;
+BOOLEAN       ::= "true" | "false" ;
+
+APP_NAME      ::= IDENT ;
+ENTITY_NAME   ::= IDENT ;
+SURFACE_NAME  ::= IDENT ;
+WORKSPACE_NAME ::= IDENT ;           (* NEW in v0.2 *)
+EXPERIENCE_NAME ::= IDENT ;
+SERVICE_NAME  ::= IDENT ;
+FOREIGN_NAME  ::= IDENT ;
+INTEGRATION_NAME ::= IDENT ;
+FIELD_NAME    ::= IDENT ;
+SECTION_NAME  ::= IDENT ;
+STEP_NAME     ::= IDENT ;
+PERSONA_NAME  ::= IDENT ;            (* NEW in v0.2 *)
+
+MODULE_NAME   ::= IDENT ("." IDENT)* ;
+
+(* Top-level declarations *)
+
+module_decl   ::= "module" MODULE_NAME NEWLINE ;
+
+app_decl      ::= "app" APP_NAME STRING? NEWLINE ;
+
+use_decl      ::= "use" MODULE_NAME ("as" IDENT)? NEWLINE ;
+
+NEWLINE       ::= /[\r\n]+/ ;
+INDENT        ::= /* implementation-dependent indentation token */ ;
+DEDENT        ::= /* implementation-dependent indentation token */ ;
+
+(* Entity definitions *)
+
+entity_decl   ::= "entity" ENTITY_NAME STRING? ":" NEWLINE
+                  INDENT
+                    field_line+
+                    constraint_line*
+                  DEDENT ;
+
+field_line    ::= FIELD_NAME ":" type_spec field_modifier* NEWLINE ;
+
+type_spec     ::= "str" "(" NUMBER ")"
+                | "text"
+                | "int"
+                | "decimal" "(" NUMBER "," NUMBER ")"
+                | "bool"
+                | "date"
+                | "datetime"
+                | "uuid"
+                | "enum" "[" IDENT ("," IDENT)* "]"
+                | "ref" ENTITY_NAME
+                | "email" ;
+
+field_modifier ::= "required"
+                 | "optional"
+                 | "pk"
+                 | "unique"
+                 | "unique?"
+                 | "auto_add"
+                 | "auto_update"
+                 | "default" "=" literal ;
+
+literal       ::= STRING | NUMBER | BOOLEAN ;
+
+constraint_line ::= ("unique" | "index") FIELD_NAME ("," FIELD_NAME)* NEWLINE ;
+
+(* Surfaces - Extended with UX block in v0.2 *)
+
+surface_decl  ::= "surface" SURFACE_NAME STRING? ":" NEWLINE
+                  INDENT
+                    surface_body_line+
+                    ux_block?         (* NEW in v0.2: optional UX block *)
+                  DEDENT ;
+
+surface_body_line
+              ::= uses_entity_line
+                | mode_line
+                | section_decl
+                | surface_action_decl ;
+
+uses_entity_line
+              ::= "uses" "entity" ENTITY_NAME NEWLINE ;
+
+mode_line     ::= "mode" ":" ("view" | "create" | "edit" | "list" | "custom") NEWLINE ;
+
+section_decl  ::= "section" SECTION_NAME STRING? ":" NEWLINE
+                  INDENT
+                    surface_element_line+
+                  DEDENT ;
+
+surface_element_line
+              ::= "field" FIELD_NAME STRING? surface_element_option* NEWLINE ;
+
+surface_element_option
+              ::= IDENT "=" literal ;
+
+surface_action_decl
+              ::= "action" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    "on" surface_trigger "->" outcome NEWLINE
+                  DEDENT ;
+
+surface_trigger
+              ::= "submit" | "click" | "auto" ;
+
+outcome       ::= "surface" SURFACE_NAME
+                | "experience" EXPERIENCE_NAME ("step" STEP_NAME)?
+                | "integration" INTEGRATION_NAME "action" IDENT ;
+
+(* NEW in v0.2: UX Semantic Layer *)
+
+ux_block      ::= "ux" ":" NEWLINE
+                  INDENT
+                    ux_directive+
+                  DEDENT ;
+
+ux_directive  ::= purpose_line
+                | show_line
+                | sort_line
+                | filter_line
+                | search_line
+                | empty_line
+                | attention_block
+                | persona_block ;
+
+purpose_line  ::= "purpose" ":" STRING NEWLINE ;
+
+show_line     ::= "show" ":" field_list NEWLINE ;
+
+sort_line     ::= "sort" ":" sort_expr ("," sort_expr)* NEWLINE ;
+
+filter_line   ::= "filter" ":" field_list NEWLINE ;
+
+search_line   ::= "search" ":" field_list NEWLINE ;
+
+empty_line    ::= "empty" ":" STRING NEWLINE ;
+
+field_list    ::= FIELD_NAME ("," FIELD_NAME)* ;
+
+sort_expr     ::= FIELD_NAME ("asc" | "desc")? ;
+
+(* Attention Signals *)
+
+attention_block ::= "attention" signal_level ":" NEWLINE
+                    INDENT
+                      "when" ":" condition_expr NEWLINE
+                      "message" ":" STRING NEWLINE
+                      ("action" ":" SURFACE_NAME NEWLINE)?
+                    DEDENT ;
+
+signal_level  ::= "critical" | "warning" | "notice" | "info" ;
+
+condition_expr ::= comparison
+                 | comparison ("and" | "or") condition_expr
+                 | "(" condition_expr ")" ;
+
+comparison    ::= FIELD_NAME operator value
+                | function_call operator value ;
+
+operator      ::= "=" | "!=" | ">" | "<" | ">=" | "<="
+                | "in" | "not" "in" | "is" | "is" "not" ;
+
+function_call ::= IDENT "(" FIELD_NAME ")" ;
+
+value         ::= STRING | NUMBER | IDENT | value_list ;
+
+value_list    ::= "[" value ("," value)* "]" ;
+
+(* Persona Variants *)
+
+persona_block ::= "for" PERSONA_NAME ":" NEWLINE
+                  INDENT
+                    persona_directive+
+                  DEDENT ;
+
+persona_directive ::= "scope" ":" scope_expr NEWLINE
+                    | "purpose" ":" STRING NEWLINE
+                    | "show" ":" field_list NEWLINE
+                    | "hide" ":" field_list NEWLINE
+                    | "show_aggregate" ":" IDENT ("," IDENT)* NEWLINE
+                    | "action_primary" ":" SURFACE_NAME NEWLINE
+                    | "read_only" ":" BOOLEAN NEWLINE ;
+
+scope_expr    ::= "all"
+                | comparison
+                | comparison ("and" | "or") scope_expr ;
+
+(* NEW in v0.2: Workspace Construct *)
+
+workspace_decl ::= "workspace" WORKSPACE_NAME STRING? ":" NEWLINE
+                   INDENT
+                     purpose_line?
+                     workspace_region+
+                     ux_block?
+                   DEDENT ;
+
+workspace_region ::= IDENT ":" NEWLINE
+                     INDENT
+                       region_directive+
+                     DEDENT ;
+
+region_directive ::= "source" ":" (ENTITY_NAME | SURFACE_NAME) NEWLINE
+                   | "filter" ":" filter_expr NEWLINE
+                   | "sort" ":" sort_expr ("," sort_expr)* NEWLINE
+                   | "limit" ":" NUMBER NEWLINE
+                   | "display" ":" display_mode NEWLINE
+                   | "action" ":" SURFACE_NAME NEWLINE
+                   | "empty" ":" STRING NEWLINE
+                   | "aggregate" ":" aggregate_block ;
+
+display_mode  ::= "list" | "grid" | "timeline" | "map" ;
+
+aggregate_block ::= NEWLINE INDENT metric_line+ DEDENT ;
+
+metric_line   ::= IDENT ":" aggregate_expr NEWLINE ;
+
+aggregate_expr ::= function_call
+                 | arithmetic_expr
+                 | NUMBER ;
+
+arithmetic_expr ::= aggregate_expr ("+" | "-" | "*" | "/") aggregate_expr
+                  | "(" aggregate_expr ")" ;
+
+filter_expr   ::= "all"
+                | comparison
+                | comparison ("and" | "or") filter_expr ;
+
+(* Experiences - Unchanged from v0.1 *)
+
+experience_decl
+              ::= "experience" EXPERIENCE_NAME STRING? ":" NEWLINE
+                  INDENT
+                    "start" "at" "step" STEP_NAME NEWLINE
+                    experience_step_decl+
+                  DEDENT ;
+
+experience_step_decl
+              ::= "step" STEP_NAME ":" NEWLINE
+                  INDENT
+                    "kind" ":" ("surface" | "process" | "integration") NEWLINE
+                    step_kind_body
+                    step_transition_line*
+                  DEDENT ;
+
+step_kind_body
+              ::= "surface" SURFACE_NAME NEWLINE
+                | "integration" INTEGRATION_NAME "action" IDENT NEWLINE
+                | /* process variant reserved for future */ ;
+
+step_transition_line
+              ::= "on" ("success" | "failure") "->" "step" STEP_NAME NEWLINE ;
+
+(* Services - Unchanged from v0.1 *)
+
+service_decl  ::= "service" SERVICE_NAME STRING? ":" NEWLINE
+                  INDENT
+                    service_body_line+
+                  DEDENT ;
+
+service_body_line
+              ::= spec_line
+                | auth_profile_line
+                | owner_line ;
+
+spec_line     ::= "spec" ":" ("url" STRING | "inline" STRING) NEWLINE ;
+
+auth_profile_line
+              ::= "auth_profile" ":" AUTH_KIND auth_option* NEWLINE ;
+
+AUTH_KIND     ::= "oauth2_legacy" | "oauth2_pkce" | "jwt_static"
+                | "api_key_header" | "api_key_query" | "none" ;
+
+auth_option   ::= IDENT "=" literal ;
+
+owner_line    ::= "owner" ":" STRING NEWLINE ;
+
+(* Foreign models - Unchanged from v0.1 *)
+
+foreign_model_decl
+              ::= "foreign_model" FOREIGN_NAME "from" SERVICE_NAME STRING? ":" NEWLINE
+                  INDENT
+                    foreign_model_line+
+                  DEDENT ;
+
+foreign_model_line
+              ::= key_line
+                | foreign_constraint_line
+                | foreign_field_line ;
+
+key_line      ::= "key" ":" FIELD_NAME ("," FIELD_NAME)* NEWLINE ;
+
+foreign_constraint_line
+              ::= "constraint" FOREIGN_CONSTRAINT foreign_constraint_option* NEWLINE ;
+
+FOREIGN_CONSTRAINT
+              ::= "read_only" | "event_driven" | "batch_import" ;
+
+foreign_constraint_option
+              ::= IDENT "=" literal ;
+
+foreign_field_line
+              ::= "field" FIELD_NAME ":" type_spec field_modifier* NEWLINE ;
+
+(* Integrations - Unchanged from v0.1 *)
+
+integration_decl
+              ::= "integration" INTEGRATION_NAME STRING? ":" NEWLINE
+                  INDENT
+                    integration_body_line+
+                  DEDENT ;
+
+integration_body_line
+              ::= uses_service_line
+                | uses_foreign_model_line
+                | integration_action_decl
+                | sync_decl ;
+
+uses_service_line
+              ::= "uses" "service" SERVICE_NAME ("," SERVICE_NAME)* NEWLINE ;
+
+uses_foreign_model_line
+              ::= "uses" "foreign_model" FOREIGN_NAME ("," FOREIGN_NAME)* NEWLINE ;
+
+integration_action_decl
+              ::= "action" IDENT ":" NEWLINE
+                  INDENT
+                    action_when_line
+                    action_call_line
+                    action_map_line?
+                  DEDENT ;
+
+action_when_line
+              ::= "when" "surface" SURFACE_NAME "submitted" NEWLINE ;
+
+action_call_line
+              ::= "call" SERVICE_NAME "." IDENT "with" ":" NEWLINE
+                  INDENT
+                    mapping_rule_line+
+                  DEDENT ;
+
+action_map_line
+              ::= "map" "response" FOREIGN_NAME "->" "entity" ENTITY_NAME ":" NEWLINE
+                  INDENT
+                    mapping_rule_line+
+                  DEDENT ;
+
+mapping_rule_line
+              ::= FIELD_NAME "<-" expression NEWLINE ;
+
+expression    ::= PATH | literal ;
+
+PATH          ::= /[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*/ ;
+
+sync_decl     ::= "sync" IDENT ":" NEWLINE
+                  INDENT
+                    sync_mode_line
+                    sync_schedule_line?
+                    sync_from_line
+                    sync_into_line
+                    sync_match_line?
+                  DEDENT ;
+
+sync_mode_line
+              ::= "mode" ":" ("scheduled" | "event_driven") NEWLINE ;
+
+sync_schedule_line
+              ::= "schedule" ":" STRING NEWLINE ;
+
+sync_from_line
+              ::= "from" SERVICE_NAME "." IDENT "as" FOREIGN_NAME NEWLINE ;
+
+sync_into_line
+              ::= "into" "entity" ENTITY_NAME NEWLINE ;
+
+sync_match_line
+              ::= "match" "on" ":" NEWLINE
+                  INDENT
+                    sync_match_rule_line+
+                  DEDENT ;
+
+sync_match_rule_line
+              ::= FIELD_NAME "<->" FIELD_NAME NEWLINE ;

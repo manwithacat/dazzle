@@ -46,15 +46,14 @@ Email: {email}
 
 IMPORTANT: Change these credentials in production!
 
-To create the admin user:
+The admin user will be created automatically during build.
+If automatic creation fails, you can create it manually:
+
 1. Run: python manage.py migrate
 2. Run: python manage.py createsuperuser
 3. Use the credentials above
-4. Access admin at: http://localhost:8000/admin/
 
-Or for automatic setup (development only):
-1. python manage.py migrate
-2. python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('{username}', '{email}', '{password}')"
+Access admin at: http://localhost:8000/admin/
 """
 
         # Write credentials file using normalized project path
@@ -92,6 +91,14 @@ class DisplayDjangoInstructionsHook(Hook):
         output_path = context.options.get("project_path") or context.output_dir / context.spec.name
         app_name = context.options.get("project_name", context.spec.name)
 
+        # Check if superuser was actually created
+        superuser_created = context.get_artifact("superuser_created", False)
+        superuser_line = (
+            "✓ Admin superuser created"
+            if superuser_created
+            else "⚠ Admin superuser not created (run manually)"
+        )
+
         instructions = f"""
 {"=" * 60}
 🎉 Django Micro Application Built Successfully!
@@ -105,7 +112,7 @@ Location: {output_path}
 ✓ Virtual environment created (.venv)
 ✓ Dependencies installed
 ✓ Database migrations applied
-✓ Admin superuser created
+{superuser_line}
 
 Ready to Run:
 -------------
@@ -126,8 +133,8 @@ Ready to Run:
 
 Admin Login:
 ------------
-Credentials saved in: .admin_credentials
-⚠️  Change these in production!
+{"Credentials saved in: .admin_credentials" if superuser_created else "Run: python manage.py createsuperuser"}
+{"⚠️  Change these in production!" if superuser_created else "Then use credentials from .admin_credentials (if needed)"}
 
 Deployment:
 -----------
@@ -413,18 +420,10 @@ class CreateSuperuserHook(Hook):
                 display_to_user=True,
             )
 
-        # Get credentials from previous hook
-        creds_hook_result = context.get_artifact("create_superuser_credentials")
-        if not creds_hook_result:
-            return HookResult(
-                success=False,
-                message="⚠ Admin credentials not found, skipping superuser creation",
-                display_to_user=True,
-            )
-
-        username = creds_hook_result.get("admin_username", "admin")
-        password = creds_hook_result.get("admin_password")
-        email = creds_hook_result.get("admin_email", "admin@example.com")
+        # Get credentials from previous hook (stored as individual artifacts)
+        username = context.get_artifact("admin_username", "admin")
+        password = context.get_artifact("admin_password")
+        email = context.get_artifact("admin_email", "admin@example.com")
 
         if not password:
             return HookResult(
@@ -454,6 +453,7 @@ class CreateSuperuserHook(Hook):
             return HookResult(
                 success=True,
                 message=f"✓ Admin superuser created: {username} (see .admin_credentials for password)",
+                artifacts={"superuser_created": True, "superuser_username": username},
                 display_to_user=True,
             )
 
@@ -467,6 +467,7 @@ class CreateSuperuserHook(Hook):
                 return HookResult(
                     success=True,
                     message=f"✓ Admin superuser already exists: {username}",
+                    artifacts={"superuser_created": True, "superuser_username": username},
                     display_to_user=True,
                 )
             return HookResult(
