@@ -1,92 +1,84 @@
-# Simple Task Manager Example (v0.2)
+# Simple Task Manager
 
-**A beginner-friendly DAZZLE example showing how to build a personal task tracking application with the UX Semantic Layer.**
-
----
+A minimal DAZZLE example demonstrating core DSL concepts and CRUD patterns.
 
 ## What This Example Demonstrates
 
-This example shows the complete journey from **human specification to working application**:
+### Entity Basics
+- **Primary keys**: `uuid pk` for unique identifiers
+- **Field types**: `str`, `text`, `enum`, `date`, `datetime`
+- **Constraints**: `required`, field length limits (e.g., `str(200)`)
+- **Defaults**: `=todo`, `=medium` for enum fields
+- **Auto-fields**: `auto_add`, `auto_update` for timestamps
 
-1. **SPEC.md** - What a founder/builder writes (in plain English)
-2. **dsl/app.dsl** - The DAZZLE v0.2 DSL with UX features
-3. **Generated Code** - A fully functional Django, Express.js, or Next.js application
+### Surface Patterns
+- **List surface**: Overview table with filtering/sorting
+- **Detail surface**: Individual record view
+- **Create surface**: New record form
+- **Edit surface**: Update existing record form
 
-### v0.2 UX Features Demonstrated
+### DSL Best Practices Demonstrated
 
-- **Attention Signals** - Visual alerts for overdue and high-priority tasks
-- **Persona Variants** - Different views for team members, managers, and viewers
-- **Workspaces** - Dashboard views with multiple data regions
-- **Information Needs** - Declarative sort, filter, search, and empty states
+1. **Consistent enum casing**: Use lowercase with underscores
+   ```dsl
+   status: enum[todo,in_progress,done]=todo
+   ```
 
----
+2. **Required vs optional fields**:
+   - Required: `title: str(200) required`
+   - Optional: `description: text` (no required keyword)
+   - Optional with default: `status: enum[todo,in_progress,done]=todo`
 
-## 🚀 Quick Start
+3. **Auto-generated fields**:
+   ```dsl
+   created_at: datetime auto_add    # Set once on creation
+   updated_at: datetime auto_update  # Updated on every change
+   ```
 
-### Option 1: Use the Example Directly
+4. **Complete CRUD**: Always include all four surfaces (list, detail, create, edit) for each entity
 
+## Quick Start
+
+### With Next.js (recommended)
 ```bash
-# Clone this example to your workspace
-dazzle clone simple_task
-
-# Navigate to the directory
-cd simple_task
-
-# Validate the DSL
-dazzle validate
-
-# Build the application (Django + SQLite)
-dazzle build --stack micro
-
-# Run the generated app
+cd /path/to/dazzle/examples/simple_task
+dazzle build --stack nextjs_onebox
 cd build/simple_task
+npm install
+npm run db:generate
+npm run db:push
+npm run dev
+```
+
+Open http://localhost:3000
+
+### With Django
+```bash
+cd /path/to/dazzle/examples/simple_task
+dazzle build --stack django_micro
+cd build/simple_task
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
-
-# Visit http://localhost:8000
 ```
 
-### Option 2: Learn by Exploring
+Open http://localhost:8000
 
-```bash
-# Read the human specification first
-cat SPEC.md
+## Project Structure
 
-# Then see how it maps to DSL
-cat dsl/app.dsl
-
-# Build and explore the generated code
-dazzle build --stack micro
+```
+simple_task/
+├── dazzle.toml          # Project configuration
+└── dsl/
+    └── app.dsl          # Application specification
 ```
 
----
+## The DSL
 
-## 📖 The Three-Step Process
-
-### Step 1: Write Your Specification (SPEC.md)
-
-Start by describing your application in plain English:
-- What problem does it solve?
-- What data do you need to track?
-- What actions can users take?
-- What pages/screens do you need?
-
-**Example from SPEC.md:**
-```
-I need a simple task management application where I can keep track
-of my to-do items. For each task, I want to store:
-- Title (required)
-- Description (optional)
-- Status (To Do, In Progress, Done)
-- Priority (Low, Medium, High)
-```
-
-### Step 2: Translate to DAZZLE DSL (app.dsl)
-
-Convert your specification into structured DSL:
-
-**Data Model → Entity:**
+### Entity Definition
 ```dsl
 entity Task "Task":
   id: uuid pk
@@ -94,252 +86,158 @@ entity Task "Task":
   description: text
   status: enum[todo,in_progress,done]=todo
   priority: enum[low,medium,high]=medium
+  due_date: date
+  assigned_to: str(100)
   created_at: datetime auto_add
   updated_at: datetime auto_update
 ```
 
-**User Stories → Surfaces with UX:**
+### Surface Definitions
 ```dsl
-# "I want to view all my tasks" - with attention signals and personas
+# List all tasks
 surface task_list "Task List":
   uses entity Task
   mode: list
   section main "Tasks":
     field title "Title"
+    field description "Description"
     field status "Status"
     field priority "Priority"
     field due_date "Due Date"
+    field assigned_to "Assigned To"
 
-  ux:
-    purpose: "Track and manage team tasks efficiently"
-    sort: status asc, priority desc
-    filter: status, priority, assigned_to
-    search: title, description
-    empty: "No tasks yet. Create your first task!"
+# View one task
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+  # ... fields ...
 
-    # Visual alerts based on data conditions
-    attention critical:
-      when: due_date < today and status != done
-      message: "Overdue task"
+# Create new task
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  # ... fields ...
 
-    attention warning:
-      when: priority = high and status = todo
-      message: "High priority - start soon"
-
-    # Role-specific views
-    for team_member:
-      scope: assigned_to = current_user
-      purpose: "Your personal task list"
-
-    for manager:
-      scope: all
-      purpose: "Team task oversight"
+# Edit existing task
+surface task_edit "Edit Task":
+  uses entity Task
+  mode: edit
+  # ... fields ...
 ```
 
-**Dashboards → Workspaces:**
-```dsl
-# Multi-region dashboard
-workspace task_dashboard "Task Dashboard":
-  purpose: "Comprehensive task management overview"
+## Common Patterns
 
-  my_tasks:
-    source: Task
-    filter: assigned_to = current_user and status != done
-    sort: priority desc
-    limit: 10
-    display: list
+### Field Types Reference
+- `str(N)` - String with max length N
+- `text` - Unlimited text
+- `int` - Integer number
+- `bool` - True/false
+- `date` - Date only (YYYY-MM-DD)
+- `datetime` - Date and time
+- `uuid` - Unique identifier (auto-generated)
+- `enum[a,b,c]` - Enumerated values (dropdown)
 
-  overdue:
-    source: Task
-    filter: due_date < today and status != done
-    sort: due_date asc
-    display: list
-    empty: "No overdue tasks!"
-```
+### Field Modifiers
+- `required` - Field must have a value
+- `pk` - Primary key (unique identifier)
+- `unique` - Value must be unique across all records
+- `auto_add` - Set automatically when created
+- `auto_update` - Updated automatically when saved
+- `=value` - Default value
 
-### Step 3: Generate Your Application
+### Surface Modes
+- `list` - Table/grid view of multiple records
+- `view` - Read-only detail view of one record
+- `create` - Form to create new record
+- `edit` - Form to update existing record
 
-```bash
-# Django (Python)
-dazzle build --stack micro
+## Try Modifying
 
-# Express.js (Node.js)
-dazzle build --stack express_micro
+### Add a New Field
 
-# Just the API spec
-dazzle build --stack openapi_only
-```
-
----
-
-## 🎯 What You Get
-
-### Generated Files (Django Micro Stack)
-
-```
-build/simple_task/
-├── manage.py                  # Django CLI
-├── requirements.txt           # Python dependencies
-├── Procfile                   # Heroku deployment
-├── simple_task/
-│   ├── settings.py           # Configuration
-│   ├── urls.py               # URL routing
-│   └── wsgi.py               # Web server interface
-├── app/
-│   ├── models.py             # Task model (from entity)
-│   ├── forms.py              # Task forms (from surfaces)
-│   ├── views.py              # CRUD views (from surfaces)
-│   ├── admin.py              # Admin interface
-│   └── templates/            # HTML templates (from surfaces)
-│       ├── base.html
-│       └── app/
-│           ├── home.html
-│           ├── task_list.html
-│           ├── task_detail.html
-│           ├── task_form.html
-│           └── task_confirm_delete.html
-└── static/
-    └── css/
-        └── style.css
-```
-
-### Features Included
-
-✅ **Database Schema** - SQLite with Task model
-✅ **CRUD Operations** - Create, Read, Update, Delete tasks
-✅ **List View** - See all tasks with filtering
-✅ **Detail View** - View individual task
-✅ **Forms** - Create and edit with validation
-✅ **Admin Interface** - Django Admin for data management
-✅ **Responsive UI** - Works on desktop and mobile
-✅ **Deployment Ready** - Heroku, Railway, PythonAnywhere
-
----
-
-## 🔄 The DSL-to-Code Mapping
-
-| DSL Concept | Becomes in Django | Becomes in Express.js |
-|-------------|-------------------|----------------------|
-| `entity Task` | `models.Task` class | `models/Task.js` Sequelize model |
-| `title: str(200)` | `CharField(max_length=200)` | `DataTypes.STRING(200)` |
-| `status: enum[...]` | `CharField` with choices | `DataTypes.STRING` |
-| `surface task_list` | `TaskListView` class | `GET /task` route |
-| `mode: create` | `TaskCreateView` + form | `POST /task` route |
-| `mode: edit` | `TaskUpdateView` + form | `PUT /task/:id` route |
-| `field title` in surface | Included in form.fields | Form field in template |
-
----
-
-## 🧪 Try Modifying the Example
-
-### Add a "Due Date" Field
-
-**1. Update SPEC.md:**
-```markdown
-- **Due Date** (optional) - When the task should be completed
-```
-
-**2. Update app.dsl:**
+1. **Add to entity**:
 ```dsl
 entity Task "Task":
   # ... existing fields ...
-  due_date: date  # Add this line
+  tags: str(200)  # Add this
 ```
 
-**3. Add to surfaces:**
+2. **Add to surfaces** (in create and edit forms):
 ```dsl
 surface task_create "Create Task":
   section main "New Task":
     # ... existing fields ...
-    field due_date "Due Date"  # Add this line
+    field tags "Tags"  # Add this
 ```
 
-**4. Rebuild:**
+3. **Rebuild**:
 ```bash
-dazzle build --stack micro
+dazzle build --stack nextjs_onebox
 ```
 
-The new field automatically appears in:
-- Database schema (migrations)
-- Forms (with date picker)
-- Views (display logic)
-- Admin interface
+### Change Enum Values
 
----
+```dsl
+# Before
+status: enum[todo,in_progress,done]=todo
 
-## 📚 Key Concepts
-
-### Entities
-Define your data model. Think: "What nouns/objects does my app track?"
-- Products, Orders, Customers (e-commerce)
-- Posts, Comments, Users (blog)
-- Tasks, Projects (project management)
-
-### Surfaces
-Define user interfaces. Think: "What can users do?"
-- `list` - Browse multiple records (table view)
-- `view` - See details of one record (detail page)
-- `create` - Add new records (form)
-- `edit` - Update existing records (form)
-
-### Field Types
-Map to database columns and form inputs:
-- `str(N)` - Short text (VARCHAR)
-- `text` - Long text (TEXT)
-- `int`, `decimal` - Numbers
-- `bool` - True/False
-- `date`, `datetime` - Dates and times
-- `uuid` - Unique identifiers
-- `enum[a,b,c]` - Fixed choices (dropdown)
-
-### Modifiers
-Add special behavior:
-- `required` - Field cannot be empty
-- `pk` - Primary key
-- `auto_add` - Set automatically on creation
-- `auto_update` - Update automatically on save
-
----
-
-## 🎓 Learning Path
-
-1. **Read SPEC.md** - Understand the problem
-2. **Study app.dsl** - See how specs map to DSL
-3. **Build and explore** - See the generated code
-4. **Make changes** - Add fields, modify surfaces
-5. **Create your own** - Start with `dazzle init`
-
----
-
-## 🔗 Related Examples
-
-- **support_tickets** - Multi-entity relationships, more complex surfaces
-- **api_only** - Generate just the API without UI
-- **django_next** - Full-stack with React frontend
-
----
-
-## ✨ Next Steps
-
-**Want to build your own app?**
-
-```bash
-# Start a new project
-dazzle init my-app
-
-# Write your SPEC.md (describe what you want)
-# Then translate to DSL in dsl/app.dsl
-
-# Validate and build
-dazzle validate
-dazzle build --stack micro
-
-# Deploy to production
-git init
-git add .
-git commit -m "Initial commit"
-heroku create
-git push heroku main
+# After - add more statuses
+status: enum[backlog,todo,in_progress,blocked,done]=backlog
 ```
 
-Happy building! 🚀
+Remember to update the default value if needed!
+
+## Learning Path
+
+1. **Start here** - Understand the basic entity and surface definitions
+2. **Modify fields** - Add new fields or change existing ones
+3. **Try different stacks** - Build with Django, Express, Next.js
+4. **Move to support_tickets** - See multi-entity relationships
+
+## Key Files in Generated Code
+
+### Next.js Stack
+```
+build/simple_task/
+├── package.json                       # Dependencies
+├── prisma/
+│   └── schema.prisma                  # Database schema (from entities)
+├── src/
+│   ├── app/
+│   │   ├── task_list/page.tsx        # List view (from task_list surface)
+│   │   ├── tasks/
+│   │   │   ├── [id]/page.tsx         # Detail view (from task_detail)
+│   │   │   ├── [id]/edit/page.tsx    # Edit form (from task_edit)
+│   │   │   └── new/page.tsx          # Create form (from task_create)
+│   ├── actions/
+│   │   └── task.ts                    # Server actions (CRUD operations)
+│   ├── types/
+│   │   └── entities.ts                # TypeScript types (from entities)
+│   └── components/                    # UI components
+```
+
+### Django Stack
+```
+build/simple_task/
+├── manage.py
+├── requirements.txt
+├── app/
+│   ├── models.py                      # Task model (from entity)
+│   ├── forms.py                       # Task forms (from surfaces)
+│   ├── views.py                       # CRUD views (from surfaces)
+│   └── templates/                     # HTML templates
+└── static/                            # CSS, images
+```
+
+## Next Steps
+
+After mastering this example:
+- **support_tickets** - Multi-entity relationships with foreign keys
+- **Create your own** - `dazzle init my-app`
+- **Explore other stacks** - Try Django API, Express, OpenAPI
+
+## Getting Help
+
+- Documentation: `docs/` in the DAZZLE repository
+- Issues: https://github.com/manwithacat/dazzle/issues
+- DSL Reference: `docs/DAZZLE_DSL_REFERENCE_0_1.md`
