@@ -23,6 +23,8 @@ let outputChannel: vscode.OutputChannel | undefined;
 function getOutputChannel(): vscode.OutputChannel {
     if (!outputChannel) {
         outputChannel = vscode.window.createOutputChannel('DAZZLE LSP');
+        // Make sure the channel is visible in the output panel
+        outputChannel.show(true);
     }
     return outputChannel;
 }

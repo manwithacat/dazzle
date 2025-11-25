@@ -15,6 +15,9 @@ export class DazzleDiagnostics {
     constructor() {
         this.diagnosticCollection = vscode.languages.createDiagnosticCollection('dazzle');
         this.outputChannel = vscode.window.createOutputChannel('DAZZLE');
+        // Show the output channel to ensure it's visible
+        this.outputChannel.show(true);
+        this.outputChannel.appendLine('DAZZLE extension initialized');
     }
 
     /**
