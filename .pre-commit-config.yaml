@@ -2,7 +2,7 @@
 # See https://pre-commit.com for more information
 
 default_language_version:
-  python: python3.11
+  python: python3
 
 repos:
   # General file cleanup
@@ -23,7 +23,7 @@ repos:
 
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.15
+    rev: v0.8.2
     hooks:
       # Run the linter
       - id: ruff
@@ -33,12 +33,13 @@ repos:
 
   # Type checking with mypy
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.13.0
     hooks:
       - id: mypy
         additional_dependencies:
           - pydantic>=2.0
           - typer>=0.9
+          - types-PyYAML
         args: ['--config-file=pyproject.toml']
         files: ^src/
 

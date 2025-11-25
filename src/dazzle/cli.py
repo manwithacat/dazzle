@@ -1701,7 +1701,8 @@ def _clone_example(
 
             typer.echo(f"Invalid choice. Please enter a number (1-{len(stacks)}) or stack name.")
 
-    # Validate stack
+    # Validate stack (stack_name guaranteed set by loop above or function parameter)
+    assert stack_name is not None
     preset = get_stack_preset(stack_name)
     if not preset:
         typer.echo(f"Error: Stack '{stack_name}' not found.", err=True)
@@ -2344,7 +2345,8 @@ def example(
 
         typer.echo(f"\n✓ Selected: {stack}\n")
 
-    # Validate stack
+    # Validate stack (stack guaranteed set by loop above or function parameter)
+    assert stack is not None
     preset = get_stack_preset(stack)
     if not preset:
         typer.echo(f"Error: Stack '{stack}' not found.", err=True)

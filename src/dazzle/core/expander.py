@@ -35,11 +35,13 @@ class VocabExpander:
             manifest: VocabManifest containing vocabulary entries
         """
         self.manifest = manifest
-        self.jinja_env = Environment(
+        # autoescape=False is safe here: we generate DSL code, not HTML
+        self.jinja_env = Environment(  # nosec B701
             loader=BaseLoader(),
             undefined=StrictUndefined,  # Raise error on undefined variables
             trim_blocks=True,
             lstrip_blocks=True,
+            autoescape=False,  # Explicit: generating code, not HTML
         )
 
     def expand_entry(
@@ -80,7 +82,7 @@ class VocabExpander:
         # Expand template
         try:
             template = self.jinja_env.from_string(entry.expansion["body"])
-            expanded = template.render(**prepared_params)
+            expanded: str = template.render(**prepared_params)
         except TemplateError as e:
             raise ExpansionError(f"Template expansion failed for '{entry_id}': {e}")
         except Exception as e:
@@ -242,7 +244,7 @@ class VocabExpander:
                     else:
                         raise ExpansionError(f"Parameter '{param_def.name}' must be a boolean")
         elif param_def.type == "number":
-            if not isinstance(value, (int, float)):
+            if not isinstance(value, int | float):
                 # Try to coerce
                 try:
                     value = float(value) if "." in str(value) else int(value)

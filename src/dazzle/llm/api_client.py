@@ -138,7 +138,7 @@ class LLMAPIClient:
         """Initialize provider-specific client."""
         if self._use_cli_fallback:
             # No client needed for CLI fallback
-            self.client = None  # type: ignore[assignment]
+            self.client = None
             return
 
         if self.provider == LLMProvider.ANTHROPIC:
@@ -154,7 +154,7 @@ class LLMAPIClient:
             try:
                 from openai import OpenAI
 
-                self.client = OpenAI(api_key=self.api_key)  # type: ignore[assignment]  # Union type handled by runtime provider check
+                self.client = OpenAI(api_key=self.api_key)
             except ImportError:
                 raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
 
@@ -334,6 +334,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
     def _call_anthropic(self, system_prompt: str, user_prompt: str) -> str:
         """Call Anthropic Claude API."""
         logger.debug(f"Calling Anthropic API with model {self.model}")
+        assert self.client is not None, "Client not initialized"
 
         try:
             response = self.client.messages.create(
@@ -345,7 +346,9 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             )
 
             # Extract text from response
-            return response.content[0].text  # type: ignore[union-attr]  # Anthropic SDK returns union of block types, text block is primary
+            text_block = response.content[0]
+            result: str = text_block.text
+            return result
 
         except Exception as e:
             logger.error(f"Anthropic API call failed: {e}")
@@ -354,9 +357,10 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
     def _call_openai(self, system_prompt: str, user_prompt: str) -> str:
         """Call OpenAI GPT API."""
         logger.debug(f"Calling OpenAI API with model {self.model}")
+        assert self.client is not None, "Client not initialized"
 
         try:
-            response = self.client.chat.completions.create(  # type: ignore[attr-defined]  # OpenAI client typed at runtime via provider check
+            response = self.client.chat.completions.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
@@ -367,7 +371,10 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
                 ],
             )
 
-            return response.choices[0].message.content  # type: ignore[no-any-return]  # OpenAI SDK returns Optional[str] but always populated for completions
+            content = response.choices[0].message.content
+            assert content is not None, "OpenAI returned empty response"
+            result: str = content
+            return result
 
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")

@@ -135,6 +135,12 @@ ignore_missing_imports = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = "dazzle.lsp.server"
+# pygls/lsprotocol don't have type stubs, so decorators and LanguageServer base are untyped
+disallow_untyped_decorators = false
+disallow_subclassing_any = false
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
@@ -164,5 +170,13 @@ known-first-party = ["dazzle"]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 
 [tool.bandit]
-exclude_dirs = ["tests", "build", "dist"]
-skips = ["B101", "B601"]  # Skip assert_used and shell injection (we use subprocess safely)
+exclude_dirs = ["tests", "build", "dist", "scripts"]
+skips = [
+    "B101",  # assert_used - we use asserts for type narrowing
+    "B110",  # try_except_pass - intentional for discovery patterns
+    "B404",  # import_subprocess - we need subprocess for git, CLI tools
+    "B601",  # shell injection - we use subprocess safely with list args
+    "B603",  # subprocess_without_shell - we intentionally avoid shell=True
+    "B607",  # start_process_with_partial_path - we use git/python which are in PATH
+    "B608",  # hardcoded SQL - false positives on template strings
+]

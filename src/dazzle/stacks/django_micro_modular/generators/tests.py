@@ -928,7 +928,7 @@ class TestGenerator(Generator):
             return f'"{value}"'
         elif isinstance(value, bool):
             return "True" if value else "False"
-        elif isinstance(value, (int, float)):
+        elif isinstance(value, int | float):
             return str(value)
         elif value is None:
             return "None"

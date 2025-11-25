@@ -10,15 +10,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.manifest import load_manifest
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.parser import parse_modules
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
+from dazzle.core.manifest import load_manifest
+from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
-from dazzle.mcp.tools import create_tools
-from dazzle.mcp.resources import create_resources
 from dazzle.mcp.prompts import create_prompts
+from dazzle.mcp.resources import create_resources
+from dazzle.mcp.tools import create_tools
 
 
 class DazzleMCPServer:
@@ -36,10 +36,7 @@ class DazzleMCPServer:
             project_root: Root directory of DAZZLE project (defaults to cwd)
         """
         self.project_root = project_root or Path.cwd()
-        self.server_info = {
-            "name": "dazzle",
-            "version": "0.1.0"
-        }
+        self.server_info = {"name": "dazzle", "version": "0.1.0"}
 
     async def run(self) -> None:
         """Run the MCP server, reading JSON-RPC from stdin and writing to stdout."""
@@ -48,9 +45,7 @@ class DazzleMCPServer:
         while True:
             try:
                 # Read JSON-RPC request from stdin
-                line = await asyncio.get_event_loop().run_in_executor(
-                    None, sys.stdin.readline
-                )
+                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
 
                 if not line:
                     break
@@ -98,32 +93,21 @@ class DazzleMCPServer:
             else:
                 raise ValueError(f"Unknown method: {method}")
 
-            return {
-                "jsonrpc": "2.0",
-                "id": request_id,
-                "result": result
-            }
+            return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
         except Exception as e:
             return {
                 "jsonrpc": "2.0",
                 "id": request_id,
-                "error": {
-                    "code": -32603,
-                    "message": str(e)
-                }
+                "error": {"code": -32603, "message": str(e)},
             }
 
     def _initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         """Handle initialize request."""
         return {
             "protocolVersion": "0.1.0",
-            "capabilities": {
-                "tools": {},
-                "resources": {},
-                "prompts": {}
-            },
-            "serverInfo": self.server_info
+            "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
+            "serverInfo": self.server_info,
         }
 
     async def _call_tool(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -156,14 +140,7 @@ class DazzleMCPServer:
         else:
             raise ValueError(f"Unknown tool: {name}")
 
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": result
-                }
-            ]
-        }
+        return {"content": [{"type": "text", "text": result}]}
 
     def _validate_dsl(self) -> str:
         """Validate DSL files in the project."""
@@ -175,21 +152,21 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec by linking modules
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
-            return json.dumps({
-                "status": "valid",
-                "modules": len(modules),
-                "entities": len(app_spec.domain.entities),
-                "surfaces": len(app_spec.surfaces),
-                "services": len(app_spec.services)
-            }, indent=2)
+            return json.dumps(
+                {
+                    "status": "valid",
+                    "modules": len(modules),
+                    "entities": len(app_spec.domain.entities),
+                    "surfaces": len(app_spec.surfaces),
+                    "services": len(app_spec.services),
+                },
+                indent=2,
+            )
 
         except Exception as e:
-            return json.dumps({
-                "status": "error",
-                "error": str(e)
-            }, indent=2)
+            return json.dumps({"status": "error", "error": str(e)}, indent=2)
 
     def _list_modules(self) -> str:
         """List all modules in the project."""
@@ -204,7 +181,7 @@ class DazzleMCPServer:
             for idx, module in enumerate(parsed_modules):
                 modules[module.name] = {
                     "file": str(dsl_files[idx].relative_to(self.project_root)),
-                    "dependencies": module.uses
+                    "dependencies": module.uses,
                 }
 
             return json.dumps(modules, indent=2)
@@ -226,26 +203,32 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             # Find entity
             entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
             if not entity:
                 return json.dumps({"error": f"Entity '{entity_name}' not found"})
 
-            return json.dumps({
-                "name": entity.name,
-                "description": entity.description,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type.kind),
-                        "required": not f.optional,
-                        "modifiers": [str(m) for m in f.modifiers]
-                    } for f in entity.fields
-                ],
-                "constraints": [str(c) for c in entity.constraints] if entity.constraints else []
-            }, indent=2)
+            return json.dumps(
+                {
+                    "name": entity.name,
+                    "description": entity.title,
+                    "fields": [
+                        {
+                            "name": f.name,
+                            "type": str(f.type.kind),
+                            "required": f.is_required,
+                            "modifiers": [str(m) for m in f.modifiers],
+                        }
+                        for f in entity.fields
+                    ],
+                    "constraints": [str(c) for c in entity.constraints]
+                    if entity.constraints
+                    else [],
+                },
+                indent=2,
+            )
 
         except Exception as e:
             return json.dumps({"error": str(e)}, indent=2)
@@ -264,20 +247,23 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             # Find surface
             surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
             if not surface:
                 return json.dumps({"error": f"Surface '{surface_name}' not found"})
 
-            return json.dumps({
-                "name": surface.name,
-                "entity": surface.entity_ref,
-                "mode": str(surface.mode),
-                "description": surface.description,
-                "sections": len(surface.sections) if surface.sections else 0
-            }, indent=2)
+            return json.dumps(
+                {
+                    "name": surface.name,
+                    "entity": surface.entity_ref,
+                    "mode": str(surface.mode),
+                    "description": surface.title,
+                    "sections": len(surface.sections) if surface.sections else 0,
+                },
+                indent=2,
+            )
 
         except Exception as e:
             return json.dumps({"error": str(e)}, indent=2)
@@ -287,7 +273,7 @@ class DazzleMCPServer:
         stacks = args.get("stacks", ["django_micro_modular"])
 
         try:
-            from dazzle.stacks import get_stack
+            from dazzle.stacks import get_backend
 
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
@@ -296,7 +282,7 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             # Build each stack
             results = {}
@@ -305,7 +291,7 @@ class DazzleMCPServer:
 
             for stack_name in stacks:
                 try:
-                    stack = get_stack(stack_name)
+                    stack = get_backend(stack_name)
                     stack_output = output_dir / stack_name
                     stack.generate(app_spec, stack_output)
                     results[stack_name] = f"Built successfully in {stack_output}"
@@ -327,44 +313,49 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             # Analyze patterns
             crud_patterns = detect_crud_patterns(app_spec)
             integration_patterns = detect_integration_patterns(app_spec)
 
-            return json.dumps({
-                "crud_patterns": [
-                    {
-                        "entity": p.entity_name,
-                        "has_create": p.has_create,
-                        "has_list": p.has_list,
-                        "has_detail": p.has_detail,
-                        "has_edit": p.has_edit,
-                        "is_complete": p.is_complete,
-                        "missing_operations": p.missing_operations
-                    } for p in crud_patterns
-                ],
-                "integration_patterns": [
-                    {
-                        "name": p.integration_name,
-                        "service": p.service_name,
-                        "has_actions": p.has_actions,
-                        "has_syncs": p.has_syncs,
-                        "action_count": p.action_count,
-                        "sync_count": p.sync_count,
-                        "connected_entities": list(p.connected_entities),
-                        "connected_surfaces": list(p.connected_surfaces)
-                    } for p in integration_patterns
-                ]
-            }, indent=2)
+            return json.dumps(
+                {
+                    "crud_patterns": [
+                        {
+                            "entity": p.entity_name,
+                            "has_create": p.has_create,
+                            "has_list": p.has_list,
+                            "has_detail": p.has_detail,
+                            "has_edit": p.has_edit,
+                            "is_complete": p.is_complete,
+                            "missing_operations": p.missing_operations,
+                        }
+                        for p in crud_patterns
+                    ],
+                    "integration_patterns": [
+                        {
+                            "name": p.integration_name,
+                            "service": p.service_name,
+                            "has_actions": p.has_actions,
+                            "has_syncs": p.has_syncs,
+                            "action_count": p.action_count,
+                            "sync_count": p.sync_count,
+                            "connected_entities": list(p.connected_entities or []),
+                            "connected_surfaces": list(p.connected_surfaces or []),
+                        }
+                        for p in integration_patterns
+                    ],
+                },
+                indent=2,
+            )
 
         except Exception as e:
             return json.dumps({"error": str(e)}, indent=2)
 
     def _lint_project(self, args: dict[str, Any]) -> str:
         """Run linting on the project."""
-        strict = args.get("strict", False)
+        extended = args.get("extended", False)
 
         try:
             manifest = load_manifest(self.project_root)
@@ -374,15 +365,14 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             # Run lint
-            warnings = lint_appspec(app_spec, strict=strict)
+            warnings, _ = lint_appspec(app_spec, extended=extended)
 
-            return json.dumps({
-                "warnings": len(warnings),
-                "issues": [str(w) for w in warnings]
-            }, indent=2)
+            return json.dumps(
+                {"warnings": len(warnings), "issues": [str(w) for w in warnings]}, indent=2
+            )
 
         except Exception as e:
             return json.dumps({"error": str(e)}, indent=2)
@@ -390,6 +380,10 @@ class DazzleMCPServer:
     def _read_resource(self, params: dict[str, Any]) -> dict[str, Any]:
         """Read resource content by URI."""
         uri = params.get("uri")
+        content = ""
+
+        if not uri:
+            return {"content": "No URI provided"}
 
         if uri == "dazzle://project/manifest":
             manifest_path = self.project_root / "dazzle.toml"
@@ -419,15 +413,7 @@ class DazzleMCPServer:
         else:
             content = f"Unknown resource: {uri}"
 
-        return {
-            "contents": [
-                {
-                    "uri": uri,
-                    "mimeType": "text/plain",
-                    "text": content
-                }
-            ]
-        }
+        return {"contents": [{"uri": uri, "mimeType": "text/plain", "text": content}]}
 
     def _list_entities(self) -> str:
         """List all entities in the project."""
@@ -439,13 +425,10 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             entities = {
-                e.name: {
-                    "fields": len(e.fields),
-                    "description": e.description or ""
-                }
+                e.name: {"fields": len(e.fields), "description": e.title or ""}
                 for e in app_spec.domain.entities
             }
 
@@ -464,13 +447,13 @@ class DazzleMCPServer:
             modules = parse_modules(dsl_files)
 
             # Build appspec
-            app_spec = build_appspec(modules, manifest.root)
+            app_spec = build_appspec(modules, manifest.project_root)
 
             surfaces = {
                 s.name: {
                     "entity": s.entity_ref,
                     "mode": str(s.mode),
-                    "description": s.description or ""
+                    "description": s.title or "",
                 }
                 for s in app_spec.surfaces
             }
@@ -504,15 +487,7 @@ class DazzleMCPServer:
 
         return {
             "description": f"Prompt: {name}",
-            "messages": [
-                {
-                    "role": "user",
-                    "content": {
-                        "type": "text",
-                        "text": content
-                    }
-                }
-            ]
+            "messages": [{"role": "user", "content": {"type": "text", "text": content}}],
         }
 
     def _log_error(self, message: str) -> None:

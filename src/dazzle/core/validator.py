@@ -507,7 +507,7 @@ def _validate_condition_fields(
     Returns:
         List of error messages
     """
-    errors = []
+    errors: list[str] = []
 
     if not entity:
         return errors

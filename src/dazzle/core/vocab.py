@@ -108,7 +108,7 @@ class VocabEntry(BaseModel):
     def usage_count(self) -> int:
         """Get usage count from metadata."""
         result = self.metadata.get("usage_count", 0)
-        return int(result) if isinstance(result, (int, float, str)) else 0
+        return int(result) if isinstance(result, int | float | str) else 0
 
     def increment_usage(self) -> "VocabEntry":
         """

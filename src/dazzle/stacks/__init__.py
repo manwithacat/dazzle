@@ -158,6 +158,9 @@ class BackendRegistry:
         Looks for classes that extend Backend and registers them
         using their module name (e.g., 'openapi' from openapi.py).
 
+        Supports both single-file backends (openapi.py) and package
+        backends (django_micro_modular/__init__.py).
+
         This is called automatically by get_registry().
         """
         import importlib
@@ -167,28 +170,46 @@ class BackendRegistry:
         # Get backends directory
         backends_dir = Path(__file__).parent
 
-        # Scan for .py files
+        # Scan for .py files (single-file backends)
         for py_file in backends_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue  # Skip __init__.py, __pycache__, etc.
 
             module_name = py_file.stem
+            self._try_register_module(module_name)
 
-            try:
-                # Import module
-                module = importlib.import_module(f"dazzle.stacks.{module_name}")
+        # Scan for package backends (directories with __init__.py)
+        for subdir in backends_dir.iterdir():
+            if not subdir.is_dir():
+                continue
+            if subdir.name.startswith("_") or subdir.name.startswith("."):
+                continue  # Skip __pycache__, .git, etc.
+            if not (subdir / "__init__.py").exists():
+                continue  # Not a package
 
-                # Find Backend subclasses
-                for _name, obj in inspect.getmembers(module, inspect.isclass):
-                    if issubclass(obj, Backend) and obj is not Backend:
-                        # Register using module name (e.g., 'openapi' from openapi.py)
-                        # Skip if already registered
-                        if module_name not in self._backends:
-                            self.register(module_name, obj)
-            except Exception:
-                # Silently skip modules that fail to import
-                # This allows partial installations
-                pass
+            module_name = subdir.name
+            self._try_register_module(module_name)
+
+    def _try_register_module(self, module_name: str) -> None:
+        """Try to import and register a backend module."""
+        import importlib
+        import inspect
+
+        if module_name in self._backends:
+            return  # Already registered
+
+        try:
+            module = importlib.import_module(f"dazzle.stacks.{module_name}")
+
+            # Find Backend subclasses
+            for _name, obj in inspect.getmembers(module, inspect.isclass):
+                if issubclass(obj, Backend) and obj is not Backend:
+                    if module_name not in self._backends:
+                        self.register(module_name, obj)
+        except Exception:
+            # Silently skip modules that fail to import
+            # This allows partial installations
+            pass
 
 
 # Global registry instance
