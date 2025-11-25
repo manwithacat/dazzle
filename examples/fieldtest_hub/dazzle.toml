@@ -1,0 +1,7 @@
+[project]
+name = "fieldtest_hub"
+version = "0.1.0"
+root = "fieldtest_hub.core"
+
+[modules]
+paths = ["./dsl"]
