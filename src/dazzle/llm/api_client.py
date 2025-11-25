@@ -2,15 +2,50 @@
 API client for LLM providers (Anthropic, OpenAI).
 
 Handles authentication, request formatting, and response parsing.
+Supports fallback to Claude CLI for users with Claude subscriptions.
 """
 
 import json
 import logging
 import os
+import shutil
+import subprocess
 from enum import Enum
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _claude_cli_available() -> bool:
+    """Check if Claude CLI is available."""
+    return shutil.which("claude") is not None
+
+
+def _call_claude_cli(prompt: str, system_prompt: str | None = None) -> str:
+    """
+    Call Claude via CLI (uses subscription, no API key needed).
+
+    Args:
+        prompt: The user prompt
+        system_prompt: Optional system prompt
+
+    Returns:
+        Claude's response text
+    """
+    cmd = ["claude", "--print"]
+
+    if system_prompt:
+        cmd.extend(["--system", system_prompt])
+
+    cmd.append(prompt)
+
+    logger.info("Calling Claude via CLI (using subscription)")
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Claude CLI failed: {result.stderr}")
+
+    return result.stdout
 
 
 class LLMProvider(str, Enum):
@@ -18,6 +53,7 @@ class LLMProvider(str, Enum):
 
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    CLAUDE_CLI = "claude_cli"  # Fallback using Claude CLI (subscription)
 
 
 class LLMAPIClient:
@@ -55,22 +91,36 @@ class LLMAPIClient:
         self.use_prompt_caching = use_prompt_caching
 
         # Get API key
+        self.api_key: str | None = None
+        self._use_cli_fallback = False
+
         if api_key:
             self.api_key = api_key
         elif api_key_env:
-            self.api_key = os.environ.get(api_key_env)  # type: ignore[assignment]  # Validated below with ValueError
+            self.api_key = os.environ.get(api_key_env)
         else:
             # Default env var names
             if provider == LLMProvider.ANTHROPIC:
-                self.api_key = os.environ.get("ANTHROPIC_API_KEY")  # type: ignore[assignment]  # Validated below with ValueError
-            else:
-                self.api_key = os.environ.get("OPENAI_API_KEY")  # type: ignore[assignment]  # Validated below with ValueError
+                self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+            elif provider == LLMProvider.OPENAI:
+                self.api_key = os.environ.get("OPENAI_API_KEY")
+            elif provider == LLMProvider.CLAUDE_CLI:
+                self._use_cli_fallback = True
 
-        if not self.api_key:
-            raise ValueError(
-                f"API key not found for {provider}. "
-                f"Set {api_key_env or 'ANTHROPIC_API_KEY/OPENAI_API_KEY'} environment variable."
-            )
+        # If no API key found, try Claude CLI fallback
+        if not self.api_key and not self._use_cli_fallback:
+            if _claude_cli_available():
+                logger.info("No API key found, using Claude CLI fallback (subscription-based)")
+                self._use_cli_fallback = True
+                self.provider = LLMProvider.CLAUDE_CLI
+            else:
+                raise ValueError(
+                    f"API key not found for {provider}.\n"
+                    f"Options:\n"
+                    f"  1. Set {api_key_env or 'ANTHROPIC_API_KEY'} environment variable\n"
+                    f"  2. Install Claude CLI: https://claude.ai/download\n"
+                    f"     (Uses your Claude subscription, no API key needed)"
+                )
 
         # Set default model
         if model:
@@ -86,6 +136,11 @@ class LLMAPIClient:
 
     def _init_client(self) -> None:
         """Initialize provider-specific client."""
+        if self._use_cli_fallback:
+            # No client needed for CLI fallback
+            self.client = None  # type: ignore[assignment]
+            return
+
         if self.provider == LLMProvider.ANTHROPIC:
             try:
                 from anthropic import Anthropic
@@ -125,10 +180,15 @@ class LLMAPIClient:
             system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(spec_content, spec_path)
 
-        logger.info(f"Analyzing spec via {self.provider} ({self.model})")
+        logger.info(
+            f"Analyzing spec via {self.provider}"
+            + (f" ({self.model})" if not self._use_cli_fallback else " (CLI)")
+        )
 
         # Call LLM
-        if self.provider == LLMProvider.ANTHROPIC:
+        if self._use_cli_fallback:
+            response_text = _call_claude_cli(user_prompt, system_prompt)
+        elif self.provider == LLMProvider.ANTHROPIC:
             response_text = self._call_anthropic(system_prompt, user_prompt)
         else:
             response_text = self._call_openai(system_prompt, user_prompt)

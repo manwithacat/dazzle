@@ -1938,13 +1938,20 @@ def analyze_spec(
         typer.echo(f"Error: Invalid provider '{provider}'. Use 'anthropic' or 'openai'.", err=True)
         raise typer.Exit(code=1)
 
-    # Check for API key
+    # Check for API key (or Claude CLI fallback)
+    import shutil
+
+    claude_cli_available = shutil.which("claude") is not None
+
     if provider_enum == LLMProvider.ANTHROPIC:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            typer.echo("Error: ANTHROPIC_API_KEY environment variable not set.", err=True)
-            typer.echo("Set it with: export ANTHROPIC_API_KEY=your-key-here", err=True)
+        if not os.environ.get("ANTHROPIC_API_KEY") and not claude_cli_available:
+            typer.echo("Error: No authentication method available.", err=True)
+            typer.echo("Options:", err=True)
+            typer.echo("  1. Set ANTHROPIC_API_KEY: export ANTHROPIC_API_KEY=your-key", err=True)
+            typer.echo("  2. Install Claude CLI: https://claude.ai/download", err=True)
+            typer.echo("     (Uses your Claude subscription, no API key needed)", err=True)
             raise typer.Exit(code=1)
-    else:
+    elif provider_enum == LLMProvider.OPENAI:
         if not os.environ.get("OPENAI_API_KEY"):
             typer.echo("Error: OPENAI_API_KEY environment variable not set.", err=True)
             typer.echo("Set it with: export OPENAI_API_KEY=your-key-here", err=True)
