@@ -1,0 +1,345 @@
+# Dazzle Project CLI Rules for Claude
+# This file pre-approves common Dazzle operations to reduce friction
+
+# Core Dazzle commands - always allowed
+dazzle validate
+dazzle build
+dazzle build --stack *
+dazzle lint
+dazzle lint --strict
+dazzle inspect
+dazzle inspect --*
+dazzle analyze-spec *
+dazzle stacks
+dazzle example *
+dazzle demo
+dazzle --version
+dazzle --help
+dazzle * --help
+
+# Python/pip commands for development
+python3 -c *
+python -c *
+pip list
+pip show dazzle
+pip install dazzle
+pip install -e *
+pip install --upgrade dazzle
+
+# File operations on DSL files and project files
+cat dsl/*.dsl
+cat *.dsl
+cat dazzle.toml
+cat SPEC.md
+cat README.md
+cat .mcp.json
+ls dsl/
+ls -la dsl/
+ls build/
+ls -la build/
+
+# Git operations for version control
+git status
+git diff
+git diff --stat
+git log --oneline *
+git add *.dsl
+git add dsl/*
+git add dazzle.toml
+git add SPEC.md
+git commit -m *
+git push
+git pull
+
+# Development server operations
+cd build/django_micro_modular && python manage.py runserver
+cd build/express_micro && npm start
+cd build/* && docker-compose up
+
+# Testing commands
+pytest
+pytest tests/
+python manage.py test
+npm test
+
+# Directory navigation
+cd dsl
+cd build
+cd build/*
+cd ..
+pwd
+ls -la
+
+# Environment and dependency checks
+which dazzle
+which python3
+python3 --version
+node --version
+npm --version
+
+# Build artifact inspection
+find build -name "*.py" -type f
+find build -name "*.js" -type f
+tree build/ -L 2
+
+# Docker operations for containerized stacks
+docker ps
+docker-compose ps
+docker-compose logs
+docker-compose down
+
+# Package management
+npm install
+npm run *
+yarn install
+yarn *
+
+# Database operations (read-only)
+sqlite3 *.db ".tables"
+sqlite3 *.db ".schema"
+
+# Process management
+ps aux | grep python
+ps aux | grep node
+lsof -i :8000
+lsof -i :3000
+
+# File watching and monitoring
+tail -f *.log
+tail -f build/*/logs/*.log
+
+# MCP server testing
+python -m dazzle.mcp.server --help
+
+# VS Code operations
+code .
+code dsl/
+code build/
+
+# Environment variables (read-only)
+env | grep DAZZLE
+env | grep PYTHON
+echo $PATH
+
+# Make operations if Makefile exists
+make
+make *
+
+# Terraform operations for infrastructure stacks
+terraform init
+terraform plan
+terraform validate
+terraform fmt
+
+# AWS CLI for cloud stacks (read-only)
+aws s3 ls
+aws ecs list-services
+aws rds describe-db-instances
+
+# Cleanup operations
+rm -rf build/
+rm -rf node_modules/
+rm -rf __pycache__/
+rm -rf .pytest_cache/
+rm *.pyc
+rm .DS_Store
+
+# Documentation generation
+sphinx-build *
+mkdocs serve
+mkdocs build
+
+# Code formatting and linting
+black dsl/
+ruff check
+ruff format
+prettier --write "**/*.{js,jsx,ts,tsx,json,md}"
+eslint . --fix
+
+# Virtual environment operations
+python3 -m venv venv
+source venv/bin/activate
+deactivate
+pip freeze
+
+# HTTP testing
+curl http://localhost:8000
+curl http://localhost:3000
+curl -X POST http://localhost:*/api/*
+
+# File creation for examples and tests
+echo * > test.dsl
+touch dsl/test.dsl
+mkdir -p dsl/modules
+
+# Permission to read any file in project directory
+cat **/*.py
+cat **/*.js
+cat **/*.json
+cat **/*.yaml
+cat **/*.yml
+cat **/*.toml
+cat **/*.md
+cat **/*.txt
+
+# Stack-specific build commands
+python manage.py migrate
+python manage.py createsuperuser --noinput
+python manage.py collectstatic --noinput
+npm run build
+npm run dev
+yarn build
+yarn dev
+
+# Searching and analysis
+grep -r "TODO" .
+grep -r "FIXME" .
+find . -name "*.dsl"
+ag pattern dsl/
+rg pattern dsl/
+
+# System information for debugging
+uname -a
+df -h .
+du -sh build/
+
+# Allows reading generated code
+head -50 build/**/*.py
+head -50 build/**/*.js
+tail -50 build/**/*.py
+tail -50 build/**/*.js
+
+# Database migrations and management
+python manage.py makemigrations
+python manage.py migrate
+python manage.py showmigrations
+alembic upgrade head
+alembic revision --autogenerate
+
+# Testing with coverage
+pytest --cov=.
+coverage run -m pytest
+coverage report
+coverage html
+
+# API testing
+http GET localhost:8000/api/
+http POST localhost:8000/api/
+httpie localhost:*
+
+# Log viewing
+journalctl -u dazzle
+tail -f /var/log/dazzle/*.log
+
+# Performance monitoring
+top -n 1
+htop -t
+iostat
+vmstat
+
+# Network diagnostics
+netstat -an | grep LISTEN
+ss -tuln
+nmap localhost
+
+# Container management
+docker build -t dazzle-app .
+docker run -p 8000:8000 dazzle-app
+docker exec -it * /bin/bash
+docker logs -f *
+
+# Kubernetes operations (if using k8s stack)
+kubectl get pods
+kubectl describe pod *
+kubectl logs *
+kubectl apply -f *.yaml
+
+# CI/CD operations
+github-actions-cli check
+circleci validate
+travis lint
+
+# Security scanning
+bandit -r .
+safety check
+npm audit
+pip-audit
+
+# Documentation viewing
+man dazzle
+info dazzle
+dazzle help
+
+# File compression for backups
+tar -czf backup.tar.gz dsl/
+zip -r backup.zip dsl/
+
+# Checksum verification
+sha256sum *.dsl
+md5sum *.dsl
+
+# Time tracking for performance
+time dazzle build
+time python manage.py test
+
+# Background job management
+nohup python manage.py runserver &
+jobs
+fg
+bg
+
+# Port forwarding for remote development
+ssh -L 8000:localhost:8000 *
+
+# Environment setup
+export DAZZLE_*=*
+export PYTHONPATH=*
+export NODE_ENV=*
+
+# Package publishing preparation
+python setup.py sdist
+python setup.py bdist_wheel
+twine check dist/*
+
+# Benchmarking
+ab -n 100 -c 10 http://localhost:8000/
+wrk http://localhost:8000/
+
+# Schema inspection
+python manage.py inspectdb
+python manage.py sqlmigrate * *
+
+# Cache clearing
+python manage.py clear_cache
+redis-cli FLUSHALL
+memcached-tool localhost:11211 flush_all
+
+# SSL certificate checking (for production stacks)
+openssl s_client -connect localhost:443
+curl -I https://localhost
+
+# Dependency tree analysis
+pipdeptree
+npm ls
+yarn list --depth=0
+
+# Code complexity analysis
+radon cc dsl/ -s
+radon mi dsl/
+complexity dsl/
+
+# Memory profiling
+python -m memory_profiler manage.py runserver
+node --inspect server.js
+
+# API documentation generation
+python manage.py generateschema
+swagger-cli validate openapi.yaml
+
+# Hot reload for development
+nodemon server.js
+watchmedo auto-restart --patterns="*.py" python manage.py runserver
+
+# END OF RULES
+# These rules provide Claude with appropriate permissions for Dazzle development
+# while maintaining security boundaries (no sudo, no system modifications)
