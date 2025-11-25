@@ -2,45 +2,30 @@
 
 **Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps**
 
-A DSL-first toolkit for designing and generating applications from high-level specifications. DAZZLE enables you to define your application's domain model, UI surfaces, and integrations in a concise, machine-first language, then generate concrete artifacts like OpenAPI specs, database schemas, and application code.
-
 [![CI](https://github.com/manwithacat/dazzle/workflows/CI/badge.svg)](https://github.com/manwithacat/dazzle/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+DAZZLE is a DSL-first toolkit for designing applications from high-level specifications. Define your domain model once, generate concrete artifacts for any stack.
 
-- **🎯 Machine-First DSL**: Optimized for LLM consumption and generation
-- **🔗 Multi-Module Support**: Organize large projects across multiple files
-- **✨ Semantic Validation**: Catch errors early with comprehensive validation
-- **🔌 Plugin System**: Extensible stack architecture for multiple technologies
-- **📊 OpenAPI Generation**: Built-in OpenAPI 3.0 stack
-- **💡 IDE Support**: Full Language Server Protocol (LSP) with VSCode extension
-- **🔍 Real-time Diagnostics**: Live validation and error reporting in your editor
-- **🧪 Production-Ready**: Full test suite with CI/CD and build validation
-
-## Quick Start
-
-### Installation
+## Install
 
 ```bash
-# Install from PyPI (when published)
+# Homebrew (macOS/Linux)
+brew install manwithacat/tap/dazzle
+
+# PyPI
 pip install dazzle
 
-# Or install from source for development
-git clone https://github.com/manwithacat/dazzle.git
-cd dazzle
-pip install -e ".[dev]"
-
-# Verify installation
-dazzle --version
+# VS Code Extension
+code --install-extension manwithacat.dazzle-vscode
 ```
 
-For detailed installation instructions including Homebrew, Docker, and troubleshooting, see [docs/INSTALLATION.md](docs/INSTALLATION.md).
+**Downloads**: [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode) · [Homebrew Formula](https://github.com/manwithacat/homebrew-tap)
 
-### Your First DAZZLE Project
+## The DSL
 
-Create `my_app.dsl`:
+DAZZLE uses a machine-first DSL optimized for LLM consumption and generation.
 
 ```dsl
 module my_app
@@ -56,448 +41,129 @@ entity Task "Task":
 surface task_list "Tasks":
   uses entity Task
   mode: list
-  
+
   section main:
     field title "Title"
     field completed "Done"
 ```
 
-Create `dazzle.toml`:
+## Workflow
 
-```toml
-[project]
-name = "todo"
-version = "0.1.0"
-root = "my_app"
-
-[modules]
-paths = ["./"]
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  DSL Files  │ ──▶ │   Parser    │ ──▶ │  IR/AppSpec │ ──▶ │  Artifacts  │
+│  (.dsl)     │     │   + Linker  │     │  (Semantic) │     │  (Code)     │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-Generate OpenAPI spec:
+1. **Parse**: DSL files are parsed into an AST
+2. **Link**: Multi-module references are resolved
+3. **AppSpec**: A semantic intermediate representation (IR) captures the full application model
+4. **Generate**: Stack backends transform the AppSpec into concrete artifacts
 
 ```bash
-dazzle validate                        # Validate DSL
-dazzle build --stack openapi --out ./build
+dazzle validate              # Parse + link + validate
+dazzle build --stack openapi # Generate artifacts
 ```
 
-View the generated `build/openapi.yaml` in Swagger UI!
-
-## IDE Integration
-
-DAZZLE provides rich IDE support through a Language Server Protocol (LSP) implementation and dedicated editor extensions.
-
-### VS Code Extension
-
-Get real-time validation, hover documentation, and more with the DAZZLE VS Code extension:
-
-```bash
-# Install from VS Code Marketplace
-# Search for "DAZZLE" or install via CLI:
-code --install-extension dazzle.dazzle-vscode
-```
-
-**Features**:
-- 🔴 **Real-time error highlighting** - See errors as you type
-- 💡 **Hover documentation** - Hover over DSL constructs for details
-- ⚡ **Auto-completion** - Smart suggestions for entities, surfaces, fields
-- 🔍 **Go-to-definition** - Jump to entity/surface definitions
-- ✨ **Signature help** - Parameter hints as you type
-- 📊 **Pattern detection** - Warnings for incomplete CRUD patterns
-- 🎨 **Syntax highlighting** - Beautiful DSL syntax coloring
-
-See [VS Code Extension Guide](docs/vscode_extension_user_guide.md) for detailed setup and features.
-
-### Language Server Protocol (LSP)
-
-DAZZLE includes an LSP server that works with any LSP-compatible editor:
-
-```bash
-# LSP server is automatically installed with dazzle
-# Configure your editor to use: dazzle lsp
-```
-
-**Supported Editors**:
-- VS Code (via extension)
-- Neovim (via LSP config)
-- Emacs (via lsp-mode)
-- Sublime Text (via LSP package)
-- Any LSP-compatible editor
-
-**LSP Features**:
-- Diagnostics (errors and warnings)
-- Hover information
-- Go-to-definition
-- Find references
-- Document symbols
-- Auto-completion
-
-See [IDE Integration Guide](docs/IDE_INTEGRATION.md) for editor-specific setup instructions.
-
-## Testing with AI Assistants
-
-DAZZLE is designed to be **LLM-friendly** - AI assistants should be able to understand and build DAZZLE projects with minimal guidance. Test this yourself!
-
-### Recommended Test Prompt
-
-Try this with a fresh AI assistant (ChatGPT, Claude, etc.):
-
-```
-You're exploring a new codebase. This folder contains a DSL-based application project.
-
-Your task:
-  1. Investigate: Figure out what framework/tool this uses and what it does
-  2. Validate: Ensure the configuration is correct
-  3. Build: Generate the application artifacts
-  4. Verify: Confirm the build was successful
-
-Work step-by-step. Explain your reasoning as you go. If you encounter issues,
-troubleshoot and document your fixes.
-
-Success criteria:
-  - You understand what the project does
-  - All validation passes
-  - Artifacts are generated
-  - You can explain what was built
-```
-
-### Evaluating Success
-
-A successful LLM interaction should:
-
-✅ **Discover the manifest** - Find and read `dazzle.toml`
-✅ **Identify DAZZLE** - Recognize this as a DAZZLE DSL project
-✅ **Locate DSL files** - Find files in the configured module paths
-✅ **Run validation** - Execute `dazzle validate` before building
-✅ **Choose appropriate command** - Use `dazzle build` or `dazzle demo`
-✅ **Handle errors gracefully** - Diagnose and fix issues (like template variables)
-✅ **Generate artifacts** - Successfully create output in `build/` directory
-✅ **Explain output** - Describe what was generated and why
-
-### Hints for Making Progress
-
-If the LLM gets stuck, try these progressive hints:
-
-**Hint 1 - Tool Discovery**:
-```
-"Look for configuration files that might indicate what tool this uses."
-```
-
-**Hint 2 - Command Help**:
-```
-"Try running 'dazzle --help' to see available commands."
-```
-
-**Hint 3 - Common Pattern**:
-```
-"Most DSL tools follow a validate → build workflow."
-```
-
-**Hint 4 - Direct Guidance**:
-```
-"Run: dazzle validate && dazzle build"
-```
-
-### Why This Matters
-
-DAZZLE's **machine-first design** means:
-- **Token-efficient syntax** - Minimal tokens for maximum meaning
-- **Clear semantics** - Unambiguous constructs that LLMs can reason about
-- **Discoverable structure** - Standard patterns (manifest → modules → entities)
-- **Rich context** - Projects include `LLM_CONTEXT.md` and `.llm/` directories
-- **Helpful errors** - Clear validation messages with actionable fixes
-
-This makes DAZZLE ideal for **LLM-assisted development** where AI helps you design, build, and iterate on applications.
-
-### Quick Start for Testing
-
-Generate a demo project to test with:
-
-```bash
-dazzle demo                    # Creates micro-demo/ with simple_task example
-cd micro-demo
-# Now test the prompt above with your AI assistant
-```
-
-The demo includes:
-- Valid DAZZLE DSL
-- Configuration files
-- LLM context documentation
-- Example entities and surfaces
-
-Perfect for testing LLM comprehension!
-
-## Core Concepts
+## Semantic Concepts
 
 ### Entities
-
-Define your domain models:
+Domain models with typed fields, constraints, and relationships.
 
 ```dsl
 entity User "User":
   id: uuid pk
   email: email unique required
-  name: str(200) required
   role: enum[admin,user]=user
-  created_at: datetime auto_add
-  
-  index email
+  profile: ref Profile optional
 ```
 
 ### Surfaces
-
-Define UI entry points:
+UI entry points that present entity data in specific modes.
 
 ```dsl
 surface user_list "Users":
   uses entity User
-  mode: list                    # list, view, create, edit
-  
-  section main "User List":
+  mode: list              # list | view | create | edit
+
+  section main:
     field email "Email"
-    field name "Name"
     field role "Role"
 ```
 
 ### Experiences
-
-Define multi-step workflows:
+Multi-step workflows connecting surfaces into user journeys.
 
 ```dsl
-experience user_onboarding "User Onboarding":
+experience onboarding "User Onboarding":
   start at step signup
-  
+
   step signup:
     kind: surface
     surface user_create
     on success -> step welcome
-  
-  step welcome:
-    kind: surface
-    surface welcome_screen
 ```
 
 ### Services & Integrations
-
-Integrate external APIs:
+External API connections with auth profiles.
 
 ```dsl
 service github "GitHub API":
   spec: url "https://api.github.com/openapi.yaml"
   auth_profile: oauth2_pkce scopes="read:user"
-
-integration github_sync "GitHub Sync":
-  uses service github
-  
-  action fetch_repos:
-    call github.list_repos
 ```
 
-## CLI Commands
+## Stacks
+
+Stacks transform the AppSpec into technology-specific artifacts.
+
+| Stack | Status | Output |
+|-------|--------|--------|
+| `openapi` | ✅ Stable | OpenAPI 3.0 spec |
+| `micro` | ✅ Stable | Django micro app |
+| `django_next` | 🚧 In Progress | Django + Next.js + Docker |
+| `fastapi` | 📋 Planned | FastAPI + SQLAlchemy |
+| `prisma` | 📋 Planned | Prisma schema |
+| `graphql` | 📋 Planned | GraphQL schema + resolvers |
 
 ```bash
-# Check version and environment info
-dazzle --version
-
-# Validate DSL syntax and semantics
-dazzle validate
-
-# Run linter with extended checks
-dazzle lint --strict
-
-# Generate artifacts
-dazzle build --stack openapi --out ./build
-
-# List available stacks
-dazzle stacks
+dazzle stacks               # List available stacks
+dazzle build --stack micro  # Generate Django app
 ```
-
-## Available Stacks
-
-- **micro**: Django micro-modular stack (single app, SQLite)
-- **openapi**: OpenAPI 3.0 specification generation
-- **django_next**: Django REST API + Next.js + Docker
-- **docker**: Docker Compose for local development
-- **terraform**: Terraform infrastructure for AWS
-- More stacks coming: FastAPI, additional combinations...
 
 ## IDE Support
 
-### VSCode Extension
+Full Language Server Protocol (LSP) implementation with:
+- Real-time validation and diagnostics
+- Hover documentation
+- Go-to-definition
+- Auto-completion
+- Document symbols
 
-DAZZLE includes a full-featured VSCode extension with:
-
-- **Syntax Highlighting**: TextMate grammar for `.dsl` files
-- **Language Server Protocol (LSP)**: Powered by Python-based LSP server
-- **Go-to-Definition**: Navigate to entity and surface declarations
-- **Hover Documentation**: View detailed entity/surface information
-- **Autocomplete**: Smart suggestions for field types and modifiers
-- **Real-time Validation**: Live error detection and diagnostics
-- **Document Symbols**: Hierarchical outline view
-
-**Installation**:
-```bash
-# Development installation (symlink)
-ln -s /path/to/dazzle/extensions/vscode ~/.vscode/extensions/dazzle-dsl-0.3.0
-
-# Or package and install
-cd extensions/vscode
-npm install
-npm run compile
-```
-
-See [extensions/vscode/README.md](extensions/vscode/README.md) for details.
+Works with VS Code, Neovim, Emacs, and any LSP-compatible editor.
 
 ## Project Structure
 
 ```
 my_project/
-  dazzle.toml          # Project manifest
-  dsl/
-    core.dsl           # Core domain models
-    ui.dsl             # UI surfaces
-    integrations.dsl   # External integrations
-  build/               # Generated artifacts
-    openapi.yaml
+├── dazzle.toml        # Project manifest
+├── core.dsl           # Domain models
+├── ui.dsl             # Surfaces
+└── build/             # Generated artifacts
 ```
-
-## Multi-Module Projects
-
-Organize large projects across multiple modules:
-
-```dsl
-# auth.dsl
-module my_app.auth
-
-entity AuthToken:
-  id: uuid pk
-  token: str(500) unique
-```
-
-```dsl
-# core.dsl
-module my_app.core
-
-use my_app.auth
-
-entity User:
-  id: uuid pk
-  current_token: ref AuthToken optional
-```
-
-DAZZLE automatically resolves dependencies and validates cross-module references.
-
-## Examples
-
-See the [`examples/`](examples/) directory for:
-- **Simple Task Manager**: Basic CRUD application
-- **Support Ticket System**: Multi-module project with integrations
 
 ## Documentation
 
-### User Documentation
-- [DSL Reference](docs/DSL_REFERENCE.md) - Complete language reference
-- [CLI Commands](docs/CLI_REFERENCE.md) - Command-line interface guide
-- [VSCode Extension](extensions/vscode/README.md) - IDE setup and features
-
-### Developer Documentation
-- [Developer Docs Index](devdocs/README.md) - Development documentation hub
-- [Stack Development](docs/STACK_GUIDE.md) - Creating custom stack implementations
-- [Architecture](docs/ARCHITECTURE.md) - System design
-- [Build Validation](tests/build_validation/README.md) - Testing infrastructure
-- [Contributing](CONTRIBUTING.md) - How to contribute
-
-## Development
-
-```bash
-# Clone repository
-git clone https://github.com/manwithacat/dazzle.git
-cd dazzle
-
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Run linter
-ruff check src/ tests/
-
-# Type check
-mypy src/dazzle
-```
-
-## Testing
-
-DAZZLE has comprehensive test coverage:
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src/dazzle --cov-report=html
-
-# Run specific test suite
-pytest tests/unit/
-pytest tests/integration/
-```
-
-## Philosophy
-
-DAZZLE is designed for **machine-first** specification:
-
-- **Token Efficiency**: Minimal syntax, maximum meaning
-- **Semantic Clarity**: Clear separation of concerns (domain, UI, integration)
-- **LLM-Friendly**: Optimized for LLM understanding and generation
-- **Progressive Enhancement**: Start simple, add complexity as needed
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
+- [DSL Reference](docs/DSL_REFERENCE.md) - Language specification
+- [CLI Reference](docs/CLI_REFERENCE.md) - Command-line interface
+- [Stack Guide](docs/STACK_GUIDE.md) - Creating custom stacks
+- [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ## Contributing
 
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+All contributions require AI co-authorship. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Roadmap
+## License
 
-### Completed ✓
-- [x] DSL Parser with comprehensive error handling
-- [x] Multi-module support with dependency resolution
-- [x] Semantic validation and linting
-- [x] OpenAPI 3.0 stack
-- [x] Multiple technology stacks (Django, Express, Docker, Terraform)
-- [x] Language Server Protocol (LSP) implementation
-- [x] VSCode extension with full IDE features
-- [x] Build validation and testing infrastructure
-
-### In Progress 🚧
-- [ ] Enhanced Django stacks with more features
-- [ ] Service integration profiles
-- [ ] Additional Next.js frontend stacks
-
-### Planned 📋
-- [ ] FastAPI stack
-- [ ] Prisma stack
-- [ ] React UI generation
-- [ ] GraphQL stack
-- [ ] Additional IDE support (JetBrains, Emacs, Vim)
-- [ ] Web-based playground/IDE
-
-## Citation
-
-If you use DAZZLE in research, please cite:
-
-```bibtex
-@software{dazzle2025,
-  author = {Your Name},
-  title = {DAZZLE: Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps},
-  year = {2025},
-  url = {https://github.com/manwithacat/dazzle}
-}
-```
-
----
-
-Built with ❤️ for LLM-driven development
+MIT - see [LICENSE](LICENSE)
