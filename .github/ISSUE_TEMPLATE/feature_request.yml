@@ -1,0 +1,175 @@
+name: Feature Request
+description: Propose a new feature with AI-assisted design
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## AI-Assisted Feature Request
+
+        This project requires AI-assisted design for feature requests.
+        Please use an AI agent (Claude, ChatGPT, Copilot, Gemini, etc.) to help
+        design and document the feature thoroughly.
+
+  - type: input
+    id: ai-agent
+    attributes:
+      label: AI Agent Used
+      description: Which AI agent helped design this feature?
+      placeholder: "e.g., Claude Code, ChatGPT-4, GitHub Copilot"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A clear and concise description of the proposed feature
+      placeholder: "What capability do you want to add to DAZZLE?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation & Use Cases
+      description: |
+        Why is this feature needed? What problems does it solve?
+        Include concrete use cases.
+      placeholder: |
+        ## Problem Statement
+
+        Currently, users cannot...
+
+        ## Use Cases
+
+        1. **As a developer**, I want to... so that...
+        2. **As a team lead**, I want to... so that...
+
+        ## Impact
+
+        This would benefit users who...
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: AI-Assisted Design
+      description: |
+        Describe the proposed design, developed with AI assistance:
+        - How should the feature work?
+        - What's the proposed API/syntax?
+        - How does it fit with existing architecture?
+      placeholder: |
+        ## Proposed Design
+
+        Working with [AI Agent], we designed this feature as follows:
+
+        ### DSL Syntax (if applicable)
+
+        ```dsl
+        # Example of proposed syntax
+        ```
+
+        ### Architecture
+
+        - New module: `src/dazzle/feature/...`
+        - Modifications to: `src/dazzle/core/...`
+
+        ### API Changes
+
+        ```python
+        # Proposed function signatures
+        ```
+
+        ## Design Rationale
+
+        This approach was chosen because...
+
+        ## Alternatives Considered
+
+        1. **Alternative A**: [description] - Rejected because...
+        2. **Alternative B**: [description] - Rejected because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Plan
+      description: High-level implementation steps
+      placeholder: |
+        1. [ ] Add grammar rules for new syntax
+        2. [ ] Implement IR types in `ir.py`
+        3. [ ] Add parser support
+        4. [ ] Implement validation rules
+        5. [ ] Add backend support for Django
+        6. [ ] Write tests
+        7. [ ] Update documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-cases
+    attributes:
+      label: Test Scenarios
+      description: How should this feature be tested?
+      placeholder: |
+        ## Unit Tests
+
+        1. Test that [basic usage] works correctly
+        2. Test that [edge case] is handled
+
+        ## Integration Tests
+
+        1. Test with Django backend
+        2. Test with OpenAPI backend
+
+        ## Example DSL
+
+        ```dsl
+        # Example that should work after implementation
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: breaking-changes
+    attributes:
+      label: Breaking Changes & Migration
+      description: Will this break existing functionality? How to migrate?
+      placeholder: |
+        ## Breaking Changes
+
+        - [ ] This feature has no breaking changes
+        - [ ] This feature changes existing behavior (describe below)
+
+        ## Migration Path
+
+        Users will need to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Mockups, diagrams, references to similar features in other tools
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I used an AI agent to help design this feature
+          required: true
+        - label: I have searched existing issues/discussions to avoid duplicates
+          required: true
+        - label: I have considered how this fits with DAZZLE's architecture
+          required: true
+        - label: I have included test scenarios
+          required: true

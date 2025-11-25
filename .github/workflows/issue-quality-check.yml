@@ -1,0 +1,104 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+# Prevent concurrent runs on same issue
+concurrency:
+  group: issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage-issue:
+    name: Triage New Issue
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Add Triage Label
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const issueNumber = context.payload.issue.number;
+          const issueLabels = context.payload.issue.labels.map(l => l.name);
+
+          // Add needs-triage if not already labeled with a type
+          const typeLabels = ['bug', 'enhancement', 'documentation', 'question'];
+          const hasTypeLabel = typeLabels.some(label => issueLabels.includes(label));
+
+          if (!hasTypeLabel) {
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              labels: ['needs-triage'],
+            });
+          }
+
+    - name: Welcome and Guide
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const issueNumber = context.payload.issue.number;
+          const issueBody = context.payload.issue.body || '';
+          const issueLabels = context.payload.issue.labels.map(l => l.name);
+          const author = context.payload.issue.user.login;
+
+          // Check for AI assistance indicators
+          const aiPatterns = [
+            /AI Agent Used/i,
+            /Claude/i,
+            /ChatGPT/i,
+            /Copilot/i,
+            /Gemini/i,
+            /investigated with/i,
+            /analysis by/i,
+          ];
+
+          const hasAiIndication = aiPatterns.some(pattern => pattern.test(issueBody));
+
+          // Build welcome message
+          let body = `Thanks for opening this issue, @${author}!\n\n`;
+
+          if (issueLabels.includes('bug') || issueLabels.includes('enhancement')) {
+            body += `### Next Steps\n\n`;
+
+            if (!hasAiIndication) {
+              body += `This issue would benefit from AI-assisted investigation. You can:\n\n`;
+              body += `1. **Assign to Copilot**: Click "Assignees" and select \`@copilot\` to have GitHub Copilot investigate and create a PR\n`;
+              body += `2. **Investigate with AI**: Use Claude, ChatGPT, or another AI to help analyze the issue and update your description\n\n`;
+            } else {
+              body += `We detected AI assistance in your issue - great job following our contribution guidelines!\n\n`;
+              body += `**To move forward**: A maintainer will review, or you can assign \`@copilot\` to start implementation.\n\n`;
+            }
+
+            body += `### Copilot Assignment\n\n`;
+            body += `When you assign this issue to Copilot, it will:\n`;
+            body += `- Explore the codebase to understand the context\n`;
+            body += `- Create a draft PR with proposed changes\n`;
+            body += `- Run tests and linting automatically\n\n`;
+            body += `See our [contribution guidelines](../blob/main/CONTRIBUTING.md) for more details.\n`;
+          } else {
+            body += `A maintainer will review this shortly. `;
+            body += `If this is a bug or feature request, please use our [issue templates](../issues/new/choose) for faster processing.\n`;
+          }
+
+          // Post comment
+          await github.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body: body,
+          });
+
+          // Add label if no AI indication found
+          if (!hasAiIndication && (issueLabels.includes('bug') || issueLabels.includes('enhancement'))) {
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              labels: ['needs-ai-assistance'],
+            });
+          }

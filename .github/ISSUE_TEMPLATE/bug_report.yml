@@ -1,0 +1,153 @@
+name: Bug Report
+description: Report a bug with AI-assisted investigation
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## AI-Assisted Bug Report
+
+        This project requires AI-assisted investigation for bug reports.
+        Please use an AI agent (Claude, ChatGPT, Copilot, Gemini, etc.) to help
+        investigate and document the issue thoroughly.
+
+        See [pandoc#11281](https://github.com/jgm/pandoc/issues/11281) for an example
+        of excellent AI-assisted bug documentation.
+
+  - type: input
+    id: ai-agent
+    attributes:
+      label: AI Agent Used
+      description: Which AI agent helped investigate this bug?
+      placeholder: "e.g., Claude Code, ChatGPT-4, GitHub Copilot"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Bug Summary
+      description: A clear and concise description of the bug
+      placeholder: "What happened? What did you expect to happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: investigation
+    attributes:
+      label: AI-Assisted Investigation
+      description: |
+        Describe the investigation performed with AI assistance:
+        - What scenarios were tested?
+        - What patterns were discovered?
+        - What was the root cause analysis?
+      placeholder: |
+        ## Investigation Summary
+
+        Working with [AI Agent], I investigated this issue by:
+
+        1. Testing scenario A: [result]
+        2. Testing scenario B: [result]
+        3. ...
+
+        ## Root Cause Analysis
+
+        The issue appears to be caused by...
+
+        ## Evidence
+
+        - File X, line Y shows...
+        - Commit ABC introduced...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Create a DSL file with...
+        2. Run `dazzle validate`
+        3. Observe error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: |
+        Based on the investigation, what's the recommended fix?
+        Include specific code changes if possible.
+      placeholder: |
+        ## Proposed Fix
+
+        Modify `src/dazzle/core/parser.py` to...
+
+        ## Rationale
+
+        This approach was chosen because...
+
+        ## Alternative Approaches Considered
+
+        1. Option A: [why rejected]
+        2. Option B: [why rejected]
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-cases
+    attributes:
+      label: Test Cases
+      description: Proposed test scenarios to verify the fix
+      placeholder: |
+        1. Test that [scenario] produces [expected result]
+        2. Test that [edge case] is handled correctly
+        3. Regression test for [related functionality]
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Your environment details
+      placeholder: |
+        - DAZZLE version: X.Y.Z
+        - Python version: 3.11
+        - OS: macOS 14.0 / Ubuntu 22.04 / Windows 11
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or files
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I used an AI agent to help investigate this bug
+          required: true
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have included steps to reproduce
+          required: true
+        - label: I have proposed a solution with rationale
+          required: true

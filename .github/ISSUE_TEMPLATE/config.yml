@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/manwithacat/dazzle/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Documentation
+    url: https://github.com/manwithacat/dazzle/tree/main/docs
+    about: Check the documentation before opening an issue
+  - name: AI Co-Authorship Policy
+    url: https://github.com/manwithacat/dazzle/blob/main/CONTRIBUTING.md#-ai-co-authorship-requirement
+    about: Review our AI co-authorship requirements before contributing
