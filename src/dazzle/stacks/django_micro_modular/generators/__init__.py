@@ -11,11 +11,13 @@ Each generator creates specific artifacts:
 - AdminGenerator: Admin configuration
 - DeploymentGenerator: Deployment configs
 - TestGenerator: Test suite (tests/)
+- MiddlewareGenerator: UX persona middleware
 """
 
 from .admin import AdminGenerator
 from .deployment import DeploymentGenerator
 from .forms import FormsGenerator
+from .middleware import MiddlewareGenerator
 from .models import ModelsGenerator
 from .settings import SettingsGenerator
 from .static import StaticGenerator
@@ -35,4 +37,5 @@ __all__ = [
     "SettingsGenerator",
     "DeploymentGenerator",
     "TestGenerator",
+    "MiddlewareGenerator",
 ]

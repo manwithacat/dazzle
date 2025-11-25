@@ -306,6 +306,256 @@ class SurfaceAction(BaseModel):
         frozen = True
 
 
+# =============================================================================
+# UX Semantic Layer - Attention Signals, Personas, and Display Controls
+# =============================================================================
+
+
+class SignalLevel(str, Enum):
+    """Levels for attention signals indicating urgency."""
+
+    CRITICAL = "critical"
+    WARNING = "warning"
+    NOTICE = "notice"
+    INFO = "info"
+
+
+class ComparisonOperator(str, Enum):
+    """Operators for condition expressions."""
+
+    EQUALS = "="
+    NOT_EQUALS = "!="
+    GREATER_THAN = ">"
+    LESS_THAN = "<"
+    GREATER_EQUAL = ">="
+    LESS_EQUAL = "<="
+    IN = "in"
+    NOT_IN = "not in"
+    IS = "is"
+    IS_NOT = "is not"
+
+
+class LogicalOperator(str, Enum):
+    """Logical operators for combining conditions."""
+
+    AND = "and"
+    OR = "or"
+
+
+class ConditionValue(BaseModel):
+    """
+    A value in a condition expression.
+
+    Can be a literal (string, number, boolean, null) or a list of values.
+    """
+
+    literal: str | int | float | bool | None = None
+    values: list[str | int | float | bool] | None = None  # For 'in' operator
+
+    class Config:
+        frozen = True
+
+    @property
+    def is_list(self) -> bool:
+        """Check if this is a list value."""
+        return self.values is not None
+
+
+class FunctionCall(BaseModel):
+    """
+    A function call in a condition expression.
+
+    Examples:
+        - days_since(last_inspection_date)
+        - count(observations)
+    """
+
+    name: str
+    argument: str  # Field name
+
+    class Config:
+        frozen = True
+
+
+class Comparison(BaseModel):
+    """
+    A single comparison in a condition expression.
+
+    Examples:
+        - condition_status in [SevereStress, Dead]
+        - days_since(last_inspection_date) > 30
+        - steward is null
+    """
+
+    field: str | None = None  # Direct field reference
+    function: FunctionCall | None = None  # Function call
+    operator: ComparisonOperator
+    value: ConditionValue
+
+    class Config:
+        frozen = True
+
+    @property
+    def left_operand(self) -> str:
+        """Get the left side of the comparison as a string."""
+        if self.function:
+            return f"{self.function.name}({self.function.argument})"
+        return self.field or ""
+
+
+class ConditionExpr(BaseModel):
+    """
+    A condition expression that can be simple or compound.
+
+    Examples:
+        - condition_status in [SevereStress, Dead]
+        - days_since(last_inspection_date) > 30 and steward is null
+    """
+
+    comparison: Comparison | None = None  # Simple condition
+    left: "ConditionExpr | None" = None  # For compound conditions
+    operator: LogicalOperator | None = None  # AND/OR
+    right: "ConditionExpr | None" = None  # For compound conditions
+
+    class Config:
+        frozen = True
+
+    @property
+    def is_compound(self) -> bool:
+        """Check if this is a compound (AND/OR) condition."""
+        return self.operator is not None
+
+
+class AttentionSignal(BaseModel):
+    """
+    Data-driven attention signal for prioritization.
+
+    Defines conditions that should draw user attention and optional actions.
+
+    Attributes:
+        level: Severity level (critical, warning, notice, info)
+        condition: Condition expression that triggers this signal
+        message: Human-readable message to display
+        action: Optional surface reference for quick action
+    """
+
+    level: SignalLevel
+    condition: ConditionExpr
+    message: str
+    action: str | None = None  # Surface reference
+
+    class Config:
+        frozen = True
+
+    @property
+    def css_class(self) -> str:
+        """Map signal level to CSS class name."""
+        return {
+            SignalLevel.CRITICAL: "danger",
+            SignalLevel.WARNING: "warning",
+            SignalLevel.NOTICE: "info",
+            SignalLevel.INFO: "secondary",
+        }[self.level]
+
+
+class PersonaVariant(BaseModel):
+    """
+    Role-specific surface adaptation.
+
+    Defines how a surface should be customized for different user personas.
+
+    Attributes:
+        persona: Persona identifier (e.g., "volunteer", "coordinator")
+        scope: Filter expression limiting data visibility, or "all"
+        purpose: Persona-specific purpose description
+        show: Fields to explicitly show (overrides base)
+        hide: Fields to hide from base
+        show_aggregate: Aggregate metrics to display (e.g., critical_count)
+        action_primary: Primary action surface for this persona
+        read_only: Whether mutations are disabled
+    """
+
+    persona: str
+    scope: ConditionExpr | None = None  # None means "all"
+    scope_all: bool = False  # True if "scope: all" was specified
+    purpose: str | None = None
+    show: list[str] = Field(default_factory=list)
+    hide: list[str] = Field(default_factory=list)
+    show_aggregate: list[str] = Field(default_factory=list)
+    action_primary: str | None = None  # Surface reference
+    read_only: bool = False
+
+    class Config:
+        frozen = True
+
+    def applies_to_user(self, user_context: dict[str, Any]) -> bool:
+        """Check if persona applies to given user context."""
+        return user_context.get("persona") == self.persona
+
+
+class SortSpec(BaseModel):
+    """
+    Sort specification for a field.
+
+    Attributes:
+        field: Field name to sort by
+        direction: Sort direction (asc or desc)
+    """
+
+    field: str
+    direction: str = "asc"  # "asc" or "desc"
+
+    class Config:
+        frozen = True
+
+    def __str__(self) -> str:
+        return f"{self.field} {self.direction}"
+
+
+class UXSpec(BaseModel):
+    """
+    Complete UX specification for a surface.
+
+    Captures semantic intent about how users interact with data.
+
+    Attributes:
+        purpose: Why this surface exists
+        show: Fields to display (overrides section fields if present)
+        sort: Default sort order
+        filter: Fields available for filtering
+        search: Fields available for full-text search
+        empty_message: Message shown when no data
+        attention_signals: Data-driven priority indicators
+        persona_variants: Role-specific adaptations
+    """
+
+    purpose: str | None = None
+    show: list[str] = Field(default_factory=list)
+    sort: list[SortSpec] = Field(default_factory=list)
+    filter: list[str] = Field(default_factory=list)
+    search: list[str] = Field(default_factory=list)
+    empty_message: str | None = None
+    attention_signals: list[AttentionSignal] = Field(default_factory=list)
+    persona_variants: list[PersonaVariant] = Field(default_factory=list)
+
+    class Config:
+        frozen = True
+
+    def get_persona_variant(
+        self, user_context: dict[str, Any]
+    ) -> PersonaVariant | None:
+        """Get applicable persona variant for user context."""
+        for variant in self.persona_variants:
+            if variant.applies_to_user(user_context):
+                return variant
+        return None
+
+    @property
+    def has_attention_signals(self) -> bool:
+        """Check if any attention signals are defined."""
+        return len(self.attention_signals) > 0
+
+
 class SurfaceSpec(BaseModel):
     """
     Specification for a user-facing surface (screen/form/view).
@@ -319,6 +569,7 @@ class SurfaceSpec(BaseModel):
         mode: Surface mode (view, create, edit, list, custom)
         sections: List of sections containing elements
         actions: List of actions available on this surface
+        ux: Optional UX semantic layer specification
     """
 
     name: str
@@ -327,9 +578,89 @@ class SurfaceSpec(BaseModel):
     mode: SurfaceMode
     sections: list[SurfaceSection] = Field(default_factory=list)
     actions: list[SurfaceAction] = Field(default_factory=list)
+    ux: UXSpec | None = None  # UX Semantic Layer extension
 
     class Config:
         frozen = True
+
+
+# =============================================================================
+# Workspaces - Composition of Related Information Needs
+# =============================================================================
+
+
+class DisplayMode(str, Enum):
+    """Display modes for workspace regions."""
+
+    LIST = "list"
+    GRID = "grid"
+    TIMELINE = "timeline"
+    MAP = "map"
+
+
+class WorkspaceRegion(BaseModel):
+    """
+    Named region within a workspace.
+
+    A region displays data from a source entity or surface with optional
+    filtering, sorting, and display customization.
+
+    Attributes:
+        name: Region identifier
+        source: Entity or surface name to source data from
+        filter: Optional filter expression
+        sort: Optional sort specification
+        limit: Maximum records to display
+        display: Display mode (list, grid, timeline, map)
+        action: Surface for quick action on items
+        empty_message: Message when no data
+        aggregates: Named aggregate expressions
+    """
+
+    name: str
+    source: str  # Entity or surface name
+    filter: ConditionExpr | None = None
+    sort: list[SortSpec] = Field(default_factory=list)
+    limit: int | None = Field(None, ge=1, le=1000)
+    display: DisplayMode = DisplayMode.LIST
+    action: str | None = None  # Surface reference
+    empty_message: str | None = None
+    aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
+
+    class Config:
+        frozen = True
+
+
+class WorkspaceSpec(BaseModel):
+    """
+    Composition of related information needs.
+
+    A workspace brings together multiple data views into a cohesive
+    user experience, typically representing a role-specific dashboard.
+
+    Attributes:
+        name: Workspace identifier
+        title: Human-readable title
+        purpose: Why this workspace exists
+        regions: List of data regions in the workspace
+        ux: Optional workspace-level UX customization
+    """
+
+    name: str
+    title: str | None = None
+    purpose: str | None = None
+    regions: list[WorkspaceRegion] = Field(default_factory=list)
+    ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
+
+    class Config:
+        frozen = True
+
+    def get_region(self, name: str) -> WorkspaceRegion | None:
+        """Get region by name."""
+        for region in self.regions:
+            if region.name == name:
+                return region
+        return None
 
 
 # =============================================================================
@@ -830,6 +1161,7 @@ class AppSpec(BaseModel):
         version: Version string
         domain: Domain specification (entities)
         surfaces: List of surface specifications
+        workspaces: List of workspace specifications
         experiences: List of experience specifications
         services: List of service specifications
         foreign_models: List of foreign model specifications
@@ -842,6 +1174,7 @@ class AppSpec(BaseModel):
     version: str = "0.1.0"
     domain: DomainSpec
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
+    workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     services: list[ServiceSpec] = Field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
@@ -861,6 +1194,13 @@ class AppSpec(BaseModel):
         for surface in self.surfaces:
             if surface.name == name:
                 return surface
+        return None
+
+    def get_workspace(self, name: str) -> WorkspaceSpec | None:
+        """Get workspace by name."""
+        for workspace in self.workspaces:
+            if workspace.name == name:
+                return workspace
         return None
 
     def get_experience(self, name: str) -> ExperienceSpec | None:
@@ -978,6 +1318,7 @@ class ModuleFragment(BaseModel):
     Attributes:
         entities: Entities defined in this module
         surfaces: Surfaces defined in this module
+        workspaces: Workspaces defined in this module
         experiences: Experiences defined in this module
         services: Services defined in this module
         foreign_models: Foreign models defined in this module
@@ -987,6 +1328,7 @@ class ModuleFragment(BaseModel):
 
     entities: list[EntitySpec] = Field(default_factory=list)
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
+    workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     services: list[ServiceSpec] = Field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)

@@ -315,6 +315,174 @@ form textarea:focus {
     color: #666;
 }
 
+/* UX Semantic Layer - Attention Signals */
+.attention-critical {
+    background: #fee2e2 !important;
+    border-left: 4px solid #dc2626;
+}
+
+.attention-critical:hover {
+    background: #fecaca !important;
+}
+
+.attention-warning {
+    background: #fef3c7 !important;
+    border-left: 4px solid #f59e0b;
+}
+
+.attention-warning:hover {
+    background: #fde68a !important;
+}
+
+.attention-notice {
+    background: #dbeafe !important;
+    border-left: 4px solid #3b82f6;
+}
+
+.attention-notice:hover {
+    background: #bfdbfe !important;
+}
+
+.attention-info {
+    background: #f3f4f6 !important;
+    border-left: 4px solid #6b7280;
+}
+
+.attention-info:hover {
+    background: #e5e7eb !important;
+}
+
+/* UX Semantic Layer - Purpose Text */
+.purpose-text {
+    color: #6b7280;
+    font-size: 0.95rem;
+    margin: 0.5rem 0 1.5rem 0;
+    padding-left: 0.5rem;
+    border-left: 3px solid var(--primary-color);
+}
+
+/* UX Semantic Layer - Empty State */
+.empty-state {
+    text-align: center;
+    color: #9ca3af;
+    padding: 2rem !important;
+    font-style: italic;
+}
+
+/* UX Semantic Layer - Filter Controls */
+.search-box,
+.filter-controls {
+    margin-bottom: 1rem;
+}
+
+.filter-controls select {
+    min-width: 150px;
+}
+
+/* UX Semantic Layer - Workspace Dashboard */
+.workspace-dashboard {
+    max-width: 100%;
+}
+
+.workspace-regions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.workspace-region {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.workspace-region h3 {
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--primary-color);
+}
+
+.workspace-region .limit-info {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    font-weight: normal;
+}
+
+.region-aggregates {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: var(--bg-gray);
+    border-radius: 4px;
+}
+
+.aggregate-item {
+    font-weight: 600;
+    color: #374151;
+}
+
+.region-content {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.region-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.region-item:last-child {
+    border-bottom: none;
+}
+
+/* Workspace display modes */
+.workspace-region.grid-display .region-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.workspace-region.grid-display .region-item {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.workspace-region.timeline-display .region-item {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.workspace-region.timeline-display .region-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5rem;
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+}
+
+.workspace-region.timeline-display .region-item::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 1.25rem;
+    width: 2px;
+    height: calc(100% - 0.5rem);
+    background: var(--border-color);
+}
+
+.workspace-region.timeline-display .region-item:last-child::after {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .container {
@@ -337,6 +505,10 @@ form textarea:focus {
     table th,
     table td {
         padding: 0.5rem;
+    }
+
+    .workspace-regions {
+        grid-template-columns: 1fr;
     }
 }
 """

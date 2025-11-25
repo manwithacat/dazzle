@@ -127,6 +127,7 @@
           }),
         ]),
         'title': 'Task List',
+        'ux': None,
       }),
       dict({
         'actions': list([
@@ -161,6 +162,7 @@
           }),
         ]),
         'title': 'Task Detail',
+        'ux': None,
       }),
       dict({
         'actions': list([
@@ -189,6 +191,7 @@
           }),
         ]),
         'title': 'Create Task',
+        'ux': None,
       }),
       dict({
         'actions': list([
@@ -223,11 +226,14 @@
           }),
         ]),
         'title': 'Edit Task',
+        'ux': None,
       }),
     ]),
     'tests': list([
     ]),
     'title': 'Simple Test App',
     'version': '0.1.0',
+    'workspaces': list([
+    ]),
   })
 # ---

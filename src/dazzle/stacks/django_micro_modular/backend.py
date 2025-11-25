@@ -22,6 +22,7 @@ from .generators import (
     AdminGenerator,
     DeploymentGenerator,
     FormsGenerator,
+    MiddlewareGenerator,
     ModelsGenerator,
     SettingsGenerator,
     StaticGenerator,
@@ -70,11 +71,11 @@ class DjangoMicroModularBackend(ModularBackend):
         """
         Get list of generators to run.
 
-        All 10 generators implemented:
+        All 11 generators implemented:
         - ModelsGenerator, AdminGenerator, FormsGenerator
         - ViewsGenerator, UrlsGenerator, TemplatesGenerator
         - StaticGenerator, SettingsGenerator, DeploymentGenerator
-        - TestGenerator
+        - TestGenerator, MiddlewareGenerator (for UX persona support)
         """
         project_name = self._get_project_name(spec)
         project_path = output_dir / project_name
@@ -90,6 +91,7 @@ class DjangoMicroModularBackend(ModularBackend):
             SettingsGenerator(spec, project_path, project_name, self.app_name),
             DeploymentGenerator(spec, project_path, project_name),
             TestGenerator(spec, project_path, self.app_name),
+            MiddlewareGenerator(spec, project_path, self.app_name),
         ]
 
     def generate(self, appspec: ir.AppSpec, output_dir: Path, **options: Any) -> None:

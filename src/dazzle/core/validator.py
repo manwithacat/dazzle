@@ -346,6 +346,199 @@ def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate UX semantic layer specifications.
+
+    Checks:
+    - UX show fields exist in referenced entity
+    - UX sort fields exist in referenced entity
+    - UX filter fields exist in referenced entity
+    - UX search fields exist in referenced entity
+    - Attention signal conditions reference valid fields
+    - Persona variants have valid configurations
+    - Workspace regions reference valid sources
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors = []
+    warnings = []
+
+    for surface in appspec.surfaces:
+        if not surface.ux:
+            continue
+
+        entity = None
+        if surface.entity_ref:
+            entity = appspec.get_entity(surface.entity_ref)
+
+        ux = surface.ux
+
+        # Validate show fields
+        if ux.show and entity:
+            entity_field_names = {f.name for f in entity.fields}
+            for field_name in ux.show:
+                if field_name not in entity_field_names:
+                    errors.append(
+                        f"Surface '{surface.name}' UX show references non-existent "
+                        f"field '{field_name}' from entity '{entity.name}'"
+                    )
+
+        # Validate sort fields
+        if ux.sort and entity:
+            entity_field_names = {f.name for f in entity.fields}
+            for sort_spec in ux.sort:
+                if sort_spec.field not in entity_field_names:
+                    errors.append(
+                        f"Surface '{surface.name}' UX sort references non-existent "
+                        f"field '{sort_spec.field}' from entity '{entity.name}'"
+                    )
+
+        # Validate filter fields
+        if ux.filter and entity:
+            entity_field_names = {f.name for f in entity.fields}
+            for field_name in ux.filter:
+                if field_name not in entity_field_names:
+                    errors.append(
+                        f"Surface '{surface.name}' UX filter references non-existent "
+                        f"field '{field_name}' from entity '{entity.name}'"
+                    )
+
+        # Validate search fields
+        if ux.search and entity:
+            entity_field_names = {f.name for f in entity.fields}
+            for field_name in ux.search:
+                if field_name not in entity_field_names:
+                    errors.append(
+                        f"Surface '{surface.name}' UX search references non-existent "
+                        f"field '{field_name}' from entity '{entity.name}'"
+                    )
+
+        # Validate attention signals
+        for signal in ux.attention_signals:
+            field_errors = _validate_condition_fields(
+                signal.condition, entity, f"Surface '{surface.name}' attention signal"
+            )
+            errors.extend(field_errors)
+
+            # Warn if attention signal has no message
+            if not signal.message:
+                warnings.append(
+                    f"Surface '{surface.name}' attention signal at level "
+                    f"'{signal.level.value}' has no message"
+                )
+
+        # Validate persona variants
+        for variant in ux.persona_variants:
+            # Validate scope condition fields
+            if variant.scope:
+                field_errors = _validate_condition_fields(
+                    variant.scope,
+                    entity,
+                    f"Surface '{surface.name}' persona '{variant.persona}' scope",
+                )
+                errors.extend(field_errors)
+
+            # Validate show/hide fields
+            if entity:
+                entity_field_names = {f.name for f in entity.fields}
+                for field_name in variant.show:
+                    if field_name not in entity_field_names:
+                        errors.append(
+                            f"Surface '{surface.name}' persona '{variant.persona}' "
+                            f"show references non-existent field '{field_name}'"
+                        )
+                for field_name in variant.hide:
+                    if field_name not in entity_field_names:
+                        errors.append(
+                            f"Surface '{surface.name}' persona '{variant.persona}' "
+                            f"hide references non-existent field '{field_name}'"
+                        )
+
+    # Validate workspaces
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            # Check that source references a valid entity
+            source_entity_name = (
+                region.source.split(".")[0] if "." in region.source else region.source
+            )
+            entity = appspec.get_entity(source_entity_name)
+            if not entity:
+                errors.append(
+                    f"Workspace '{workspace.name}' region '{region.name or region.source}' "
+                    f"references non-existent entity '{source_entity_name}'"
+                )
+            else:
+                # Validate filter conditions
+                if region.filter:
+                    field_errors = _validate_condition_fields(
+                        region.filter,
+                        entity,
+                        f"Workspace '{workspace.name}' region '{region.name or region.source}' filter",
+                    )
+                    errors.extend(field_errors)
+
+                # Validate sort fields
+                if region.sort:
+                    entity_field_names = {f.name for f in entity.fields}
+                    for sort_spec in region.sort:
+                        if sort_spec.field not in entity_field_names:
+                            errors.append(
+                                f"Workspace '{workspace.name}' region "
+                                f"'{region.name or region.source}' sort references "
+                                f"non-existent field '{sort_spec.field}'"
+                            )
+
+    return errors, warnings
+
+
+def _validate_condition_fields(
+    condition: ir.ConditionExpr, entity: ir.EntitySpec | None, context: str
+) -> list[str]:
+    """
+    Validate that condition expression references valid entity fields.
+
+    Args:
+        condition: The condition expression to validate
+        entity: The entity to validate fields against (may be None)
+        context: Context string for error messages
+
+    Returns:
+        List of error messages
+    """
+    errors = []
+
+    if not entity:
+        return errors
+
+    entity_field_names = {f.name for f in entity.fields}
+
+    def check_comparison(comparison: ir.Comparison) -> None:
+        if comparison.field and comparison.field not in entity_field_names:
+            errors.append(
+                f"{context} references non-existent field '{comparison.field}' "
+                f"from entity '{entity.name}'"
+            )
+        if comparison.function and comparison.function.argument not in entity_field_names:
+            errors.append(
+                f"{context} function '{comparison.function.name}' references "
+                f"non-existent field '{comparison.function.argument}' from entity '{entity.name}'"
+            )
+
+    def check_condition(cond: ir.ConditionExpr) -> None:
+        if cond.comparison:
+            check_comparison(cond.comparison)
+        elif cond.is_compound:
+            if cond.left:
+                check_condition(cond.left)
+            if cond.right:
+                check_condition(cond.right)
+
+    check_condition(condition)
+    return errors
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """
     Extended lint rules for code quality.

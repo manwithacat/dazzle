@@ -92,6 +92,50 @@ class TokenType(Enum):
     TRUE = "true"
     FALSE = "false"
 
+    # UX Semantic Layer Keywords
+    UX = "ux"
+    PURPOSE = "purpose"
+    SHOW = "show"
+    SORT = "sort"
+    EMPTY = "empty"
+    ATTENTION = "attention"
+    CRITICAL = "critical"
+    WARNING = "warning"
+    NOTICE = "notice"
+    INFO = "info"
+    MESSAGE = "message"
+    FOR = "for"
+    SCOPE = "scope"
+    HIDE = "hide"
+    SHOW_AGGREGATE = "show_aggregate"
+    ACTION_PRIMARY = "action_primary"
+    READ_ONLY = "read_only"
+    ALL = "all"
+    WORKSPACE = "workspace"
+    SOURCE = "source"
+    LIMIT = "limit"
+    DISPLAY = "display"
+    AGGREGATE = "aggregate"
+    LIST = "list"
+    GRID = "grid"
+    TIMELINE = "timeline"
+
+    # Comparison operators (for condition expressions)
+    NOT_EQUALS = "!="
+    GREATER_THAN = ">"
+    LESS_THAN = "<"
+    GREATER_EQUAL = ">="
+    LESS_EQUAL = "<="
+    IN = "in"
+    NOT = "not"
+    IS = "is"
+    AND = "and"
+    OR = "or"
+
+    # Additional tokens for expressions
+    ASC = "asc"
+    DESC = "desc"
+
     # Operators
     COLON = ":"
     ARROW = "->"
@@ -184,6 +228,41 @@ KEYWORDS = {
     "get",
     "true",
     "false",
+    # UX Semantic Layer keywords
+    "ux",
+    "purpose",
+    "show",
+    "sort",
+    "empty",
+    "attention",
+    "critical",
+    "warning",
+    "notice",
+    "info",
+    "message",
+    "for",
+    "scope",
+    "hide",
+    "show_aggregate",
+    "action_primary",
+    "read_only",
+    "all",
+    "workspace",
+    "source",
+    "limit",
+    "display",
+    "aggregate",
+    "list",
+    "grid",
+    "timeline",
+    # Comparison/logical keywords
+    "in",
+    "not",
+    "is",
+    "and",
+    "or",
+    "asc",
+    "desc",
 }
 
 
@@ -457,7 +536,30 @@ class Lexer:
 
             elif ch == "=":
                 self.advance()
+                # Note: == would be handled here if needed, but DSL uses single =
                 self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
+
+            elif ch == "!":
+                if self.peek_char() == "=":
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.NOT_EQUALS, "!=", token_line, token_col))
+                else:
+                    raise make_parse_error(
+                        f"Unexpected character: {ch!r}",
+                        self.file,
+                        token_line,
+                        token_col,
+                    )
+
+            elif ch == ">":
+                if self.peek_char() == "=":
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.GREATER_EQUAL, ">=", token_line, token_col))
+                else:
+                    self.advance()
+                    self.tokens.append(Token(TokenType.GREATER_THAN, ">", token_line, token_col))
 
             elif ch == ".":
                 self.advance()
@@ -495,13 +597,13 @@ class Lexer:
                         self.advance()
                         self.advance()
                         self.tokens.append(Token(TokenType.LARROW, "<-", token_line, token_col))
+                elif self.peek_char() == "=":
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.LESS_EQUAL, "<=", token_line, token_col))
                 else:
-                    raise make_parse_error(
-                        f"Unexpected character: {ch!r}",
-                        self.file,
-                        token_line,
-                        token_col,
-                    )
+                    self.advance()
+                    self.tokens.append(Token(TokenType.LESS_THAN, "<", token_line, token_col))
 
             else:
                 raise make_parse_error(

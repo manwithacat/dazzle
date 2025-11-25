@@ -339,6 +339,31 @@ def verify_project(project_dir: Path, show_diff: bool = False) -> bool:
         return False
 
 
+def create_mcp_config(project_dir: Path) -> None:
+    """
+    Create .mcp.json configuration file for Claude Code integration.
+
+    Args:
+        project_dir: Directory to create the file in
+    """
+    mcp_config = {
+        "mcpServers": {
+            "dazzle": {
+                "command": "python",
+                "args": ["-m", "dazzle.mcp.server"],
+                "cwd": "${workspaceFolder}"
+            }
+        }
+    }
+
+    mcp_path = project_dir / ".mcp.json"
+    import json
+
+    with open(mcp_path, "w") as f:
+        json.dump(mcp_config, f, indent=2)
+        f.write("\n")
+
+
 def create_spec_template(target_dir: Path, project_name: str, title: str) -> None:
     """
     Create a SPEC.md template file to guide founders in defining their project.
@@ -724,6 +749,11 @@ def init_project(
     # Create SPEC.md template (only for blank projects, not examples)
     if not from_example:
         create_spec_template(target_dir, project_name, title)
+
+    # Create .mcp.json if it doesn't exist
+    mcp_path = target_dir / ".mcp.json"
+    if not mcp_path.exists():
+        create_mcp_config(target_dir)
 
     # Create LLM instrumentation (unless disabled)
     if not no_llm:

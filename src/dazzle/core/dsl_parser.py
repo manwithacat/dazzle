@@ -112,6 +112,40 @@ class Parser:
             TokenType.UPDATE,
             TokenType.DELETE,
             TokenType.GET,
+            # UX Semantic Layer keywords (can be used as identifiers)
+            TokenType.UX,
+            TokenType.PURPOSE,
+            TokenType.SHOW,
+            TokenType.SORT,
+            TokenType.EMPTY,
+            TokenType.ATTENTION,
+            TokenType.CRITICAL,
+            TokenType.WARNING,
+            TokenType.NOTICE,
+            TokenType.INFO,
+            TokenType.MESSAGE,
+            TokenType.FOR,
+            TokenType.SCOPE,
+            TokenType.HIDE,
+            TokenType.SHOW_AGGREGATE,
+            TokenType.ACTION_PRIMARY,
+            TokenType.READ_ONLY,
+            TokenType.ALL,
+            TokenType.WORKSPACE,
+            TokenType.SOURCE,
+            TokenType.LIMIT,
+            TokenType.DISPLAY,
+            TokenType.AGGREGATE,
+            TokenType.LIST,
+            TokenType.GRID,
+            TokenType.TIMELINE,
+            TokenType.ASC,
+            TokenType.DESC,
+            TokenType.IN,
+            TokenType.NOT,
+            TokenType.IS,
+            TokenType.AND,
+            TokenType.OR,
         ):
             return self.advance()
 
@@ -429,6 +463,7 @@ class Parser:
         mode = ir.SurfaceMode.CUSTOM
         sections = []
         actions = []
+        ux_spec = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -460,6 +495,10 @@ class Parser:
                 action = self.parse_surface_action()
                 actions.append(action)
 
+            # ux: (UX Semantic Layer block)
+            elif self.match(TokenType.UX):
+                ux_spec = self.parse_ux_block()
+
             else:
                 break
 
@@ -472,6 +511,7 @@ class Parser:
             mode=mode,
             sections=sections,
             actions=actions,
+            ux=ux_spec,
         )
 
     def parse_surface_section(self) -> ir.SurfaceSection:
@@ -1669,6 +1709,759 @@ class Parser:
                 token.column,
             )
 
+    # =========================================================================
+    # UX Semantic Layer Parsing
+    # =========================================================================
+
+    def parse_ux_block(self) -> ir.UXSpec:
+        """
+        Parse UX block within a surface.
+
+        Syntax:
+            ux:
+              purpose: "..."
+              show: field1, field2
+              sort: field1 desc, field2 asc
+              filter: field1, field2
+              search: field1, field2
+              empty: "..."
+              attention critical:
+                when: condition
+                message: "..."
+                action: surface_name
+              for persona_name:
+                scope: ...
+                ...
+        """
+        self.expect(TokenType.UX)
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        purpose = None
+        show: list[str] = []
+        sort: list[ir.SortSpec] = []
+        filter_fields: list[str] = []
+        search_fields: list[str] = []
+        empty_message = None
+        attention_signals: list[ir.AttentionSignal] = []
+        persona_variants: list[ir.PersonaVariant] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # purpose: "..."
+            if self.match(TokenType.PURPOSE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                purpose = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # show: field1, field2
+            elif self.match(TokenType.SHOW):
+                self.advance()
+                self.expect(TokenType.COLON)
+                show = self.parse_field_list()
+                self.skip_newlines()
+
+            # sort: field1 desc, field2 asc
+            elif self.match(TokenType.SORT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                sort = self.parse_sort_list()
+                self.skip_newlines()
+
+            # filter: field1, field2
+            elif self.match(TokenType.FILTER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                filter_fields = self.parse_field_list()
+                self.skip_newlines()
+
+            # search: field1, field2
+            elif self.match(TokenType.SEARCH):
+                self.advance()
+                self.expect(TokenType.COLON)
+                search_fields = self.parse_field_list()
+                self.skip_newlines()
+
+            # empty: "..."
+            elif self.match(TokenType.EMPTY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                empty_message = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # attention critical/warning/notice/info:
+            elif self.match(TokenType.ATTENTION):
+                signal = self.parse_attention_signal()
+                attention_signals.append(signal)
+
+            # for persona_name:
+            elif self.match(TokenType.FOR):
+                variant = self.parse_persona_variant()
+                persona_variants.append(variant)
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.UXSpec(
+            purpose=purpose,
+            show=show,
+            sort=sort,
+            filter=filter_fields,
+            search=search_fields,
+            empty_message=empty_message,
+            attention_signals=attention_signals,
+            persona_variants=persona_variants,
+        )
+
+    def parse_field_list(self) -> list[str]:
+        """Parse comma-separated list of field names."""
+        fields = [self.expect_identifier_or_keyword().value]
+
+        while self.match(TokenType.COMMA):
+            self.advance()
+            fields.append(self.expect_identifier_or_keyword().value)
+
+        return fields
+
+    def parse_sort_list(self) -> list[ir.SortSpec]:
+        """Parse comma-separated list of sort expressions (field [asc|desc])."""
+        sorts = []
+
+        field = self.expect_identifier_or_keyword().value
+        direction = "asc"
+        if self.match(TokenType.ASC):
+            self.advance()
+            direction = "asc"
+        elif self.match(TokenType.DESC):
+            self.advance()
+            direction = "desc"
+        sorts.append(ir.SortSpec(field=field, direction=direction))
+
+        while self.match(TokenType.COMMA):
+            self.advance()
+            field = self.expect_identifier_or_keyword().value
+            direction = "asc"
+            if self.match(TokenType.ASC):
+                self.advance()
+                direction = "asc"
+            elif self.match(TokenType.DESC):
+                self.advance()
+                direction = "desc"
+            sorts.append(ir.SortSpec(field=field, direction=direction))
+
+        return sorts
+
+    def parse_attention_signal(self) -> ir.AttentionSignal:
+        """
+        Parse attention signal block.
+
+        Syntax:
+            attention critical:
+              when: condition_expr
+              message: "..."
+              action: surface_name
+        """
+        self.expect(TokenType.ATTENTION)
+
+        # Parse signal level
+        if self.match(TokenType.CRITICAL):
+            level = ir.SignalLevel.CRITICAL
+            self.advance()
+        elif self.match(TokenType.WARNING):
+            level = ir.SignalLevel.WARNING
+            self.advance()
+        elif self.match(TokenType.NOTICE):
+            level = ir.SignalLevel.NOTICE
+            self.advance()
+        elif self.match(TokenType.INFO):
+            level = ir.SignalLevel.INFO
+            self.advance()
+        else:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Expected signal level (critical/warning/notice/info), got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        condition = None
+        message = None
+        action = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # when: condition_expr
+            if self.match(TokenType.WHEN):
+                self.advance()
+                self.expect(TokenType.COLON)
+                condition = self.parse_condition_expr()
+                self.skip_newlines()
+
+            # message: "..."
+            elif self.match(TokenType.MESSAGE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                message = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # action: surface_name
+            elif self.match(TokenType.ACTION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                action = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        if condition is None:
+            token = self.current_token()
+            raise make_parse_error(
+                "Attention signal requires 'when:' condition",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        if message is None:
+            token = self.current_token()
+            raise make_parse_error(
+                "Attention signal requires 'message:'",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        return ir.AttentionSignal(
+            level=level,
+            condition=condition,
+            message=message,
+            action=action,
+        )
+
+    def parse_persona_variant(self) -> ir.PersonaVariant:
+        """
+        Parse persona variant block.
+
+        Syntax:
+            for persona_name:
+              scope: all | condition_expr
+              purpose: "..."
+              show: field1, field2
+              hide: field1, field2
+              show_aggregate: metric1, metric2
+              action_primary: surface_name
+              read_only: true|false
+        """
+        self.expect(TokenType.FOR)
+        persona = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        scope = None
+        scope_all = False
+        purpose = None
+        show: list[str] = []
+        hide: list[str] = []
+        show_aggregate: list[str] = []
+        action_primary = None
+        read_only = False
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # scope: all | condition_expr
+            if self.match(TokenType.SCOPE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.ALL):
+                    self.advance()
+                    scope_all = True
+                else:
+                    scope = self.parse_condition_expr()
+                self.skip_newlines()
+
+            # purpose: "..."
+            elif self.match(TokenType.PURPOSE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                purpose = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # show: field1, field2
+            elif self.match(TokenType.SHOW):
+                self.advance()
+                self.expect(TokenType.COLON)
+                show = self.parse_field_list()
+                self.skip_newlines()
+
+            # hide: field1, field2
+            elif self.match(TokenType.HIDE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                hide = self.parse_field_list()
+                self.skip_newlines()
+
+            # show_aggregate: metric1, metric2
+            elif self.match(TokenType.SHOW_AGGREGATE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                show_aggregate = self.parse_field_list()
+                self.skip_newlines()
+
+            # action_primary: surface_name
+            elif self.match(TokenType.ACTION_PRIMARY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                action_primary = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # read_only: true|false
+            elif self.match(TokenType.READ_ONLY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    read_only = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    read_only = False
+                else:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Expected true or false, got {token.type.value}",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.PersonaVariant(
+            persona=persona,
+            scope=scope,
+            scope_all=scope_all,
+            purpose=purpose,
+            show=show,
+            hide=hide,
+            show_aggregate=show_aggregate,
+            action_primary=action_primary,
+            read_only=read_only,
+        )
+
+    def parse_condition_expr(self) -> ir.ConditionExpr:
+        """
+        Parse condition expression with full AST.
+
+        Supports:
+            - Simple comparisons: field = value, field in [a, b]
+            - Function calls: days_since(field) > 30
+            - Compound conditions: cond1 and cond2, cond1 or cond2
+            - Parenthesized expressions: (cond1 and cond2) or cond3
+        """
+        return self._parse_or_expr()
+
+    def _parse_or_expr(self) -> ir.ConditionExpr:
+        """Parse OR expression (lowest precedence)."""
+        left = self._parse_and_expr()
+
+        while self.match(TokenType.OR):
+            self.advance()
+            right = self._parse_and_expr()
+            left = ir.ConditionExpr(
+                left=left,
+                operator=ir.LogicalOperator.OR,
+                right=right,
+            )
+
+        return left
+
+    def _parse_and_expr(self) -> ir.ConditionExpr:
+        """Parse AND expression."""
+        left = self._parse_primary_condition()
+
+        while self.match(TokenType.AND):
+            self.advance()
+            right = self._parse_primary_condition()
+            left = ir.ConditionExpr(
+                left=left,
+                operator=ir.LogicalOperator.AND,
+                right=right,
+            )
+
+        return left
+
+    def _parse_primary_condition(self) -> ir.ConditionExpr:
+        """Parse primary condition (comparison or parenthesized expr)."""
+        # Handle parentheses
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            expr = self._parse_or_expr()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        # Parse comparison
+        comparison = self._parse_comparison()
+        return ir.ConditionExpr(comparison=comparison)
+
+    def _parse_comparison(self) -> ir.Comparison:
+        """
+        Parse a single comparison.
+
+        Examples:
+            field = value
+            field in [a, b, c]
+            field is null
+            days_since(field) > 30
+        """
+        # Check for function call
+        function = None
+        field = None
+
+        token = self.current_token()
+        if token.type == TokenType.IDENTIFIER:
+            name = self.advance().value
+            if self.match(TokenType.LPAREN):
+                # Function call
+                self.advance()
+                arg = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.RPAREN)
+                function = ir.FunctionCall(name=name, argument=arg)
+            else:
+                field = name
+        else:
+            # Allow keywords as field names
+            field = self.expect_identifier_or_keyword().value
+
+        # Parse operator
+        operator = self._parse_comparison_operator()
+
+        # Parse value
+        value = self._parse_condition_value()
+
+        return ir.Comparison(
+            field=field,
+            function=function,
+            operator=operator,
+            value=value,
+        )
+
+    def _parse_comparison_operator(self) -> ir.ComparisonOperator:
+        """Parse comparison operator."""
+        token = self.current_token()
+
+        if self.match(TokenType.EQUALS):
+            self.advance()
+            return ir.ComparisonOperator.EQUALS
+        elif self.match(TokenType.NOT_EQUALS):
+            self.advance()
+            return ir.ComparisonOperator.NOT_EQUALS
+        elif self.match(TokenType.GREATER_THAN):
+            self.advance()
+            return ir.ComparisonOperator.GREATER_THAN
+        elif self.match(TokenType.LESS_THAN):
+            self.advance()
+            return ir.ComparisonOperator.LESS_THAN
+        elif self.match(TokenType.GREATER_EQUAL):
+            self.advance()
+            return ir.ComparisonOperator.GREATER_EQUAL
+        elif self.match(TokenType.LESS_EQUAL):
+            self.advance()
+            return ir.ComparisonOperator.LESS_EQUAL
+        elif self.match(TokenType.IN):
+            self.advance()
+            return ir.ComparisonOperator.IN
+        elif self.match(TokenType.NOT):
+            self.advance()
+            if self.match(TokenType.IN):
+                self.advance()
+                return ir.ComparisonOperator.NOT_IN
+            else:
+                raise make_parse_error(
+                    "Expected 'in' after 'not'",
+                    self.file,
+                    token.line,
+                    token.column,
+                )
+        elif self.match(TokenType.IS):
+            self.advance()
+            if self.match(TokenType.NOT):
+                self.advance()
+                return ir.ComparisonOperator.IS_NOT
+            return ir.ComparisonOperator.IS
+        else:
+            raise make_parse_error(
+                f"Expected comparison operator, got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+    def _parse_condition_value(self) -> ir.ConditionValue:
+        """Parse value in a condition (literal, identifier, or list)."""
+        # List value: [a, b, c]
+        if self.match(TokenType.LBRACKET):
+            self.advance()
+            values = []
+
+            if not self.match(TokenType.RBRACKET):
+                values.append(self._parse_literal_value())
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    values.append(self._parse_literal_value())
+
+            self.expect(TokenType.RBRACKET)
+            return ir.ConditionValue(values=values)
+
+        # Single value
+        value = self._parse_literal_value()
+        return ir.ConditionValue(literal=value)
+
+    def _parse_literal_value(self) -> str | int | float | bool | None:
+        """Parse a literal value (string, number, bool, null, or identifier)."""
+        token = self.current_token()
+
+        if self.match(TokenType.STRING):
+            return self.advance().value
+        elif self.match(TokenType.NUMBER):
+            val = self.advance().value
+            if "." in val:
+                return float(val)
+            return int(val)
+        elif self.match(TokenType.TRUE):
+            self.advance()
+            return True
+        elif self.match(TokenType.FALSE):
+            self.advance()
+            return False
+        elif token.value == "null":
+            self.advance()
+            return None
+        elif self.match(TokenType.IDENTIFIER):
+            # Enum value or variable reference
+            return self.advance().value
+        else:
+            # Try to accept keywords as values (like enum values)
+            return self.expect_identifier_or_keyword().value
+
+    # =========================================================================
+    # Workspace Parsing
+    # =========================================================================
+
+    def parse_workspace(self) -> ir.WorkspaceSpec:
+        """
+        Parse workspace declaration.
+
+        Syntax:
+            workspace name "Title":
+              purpose: "..."
+              region_name:
+                source: EntityName
+                filter: condition_expr
+                sort: field desc
+                limit: 10
+                display: list|grid|timeline|map
+                action: surface_name
+                empty: "..."
+                aggregate:
+                  metric_name: expr
+              ux:
+                ...
+        """
+        self.expect(TokenType.WORKSPACE)
+
+        name = self.expect_identifier_or_keyword().value
+        title = None
+
+        if self.match(TokenType.STRING):
+            title = self.advance().value
+
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        purpose = None
+        regions: list[ir.WorkspaceRegion] = []
+        ux_spec = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # purpose: "..."
+            if self.match(TokenType.PURPOSE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                purpose = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # ux: (optional workspace-level UX)
+            elif self.match(TokenType.UX):
+                ux_spec = self.parse_ux_block()
+
+            # region_name: (workspace region)
+            elif self.match(TokenType.IDENTIFIER):
+                region = self.parse_workspace_region()
+                regions.append(region)
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.WorkspaceSpec(
+            name=name,
+            title=title,
+            purpose=purpose,
+            regions=regions,
+            ux=ux_spec,
+        )
+
+    def parse_workspace_region(self) -> ir.WorkspaceRegion:
+        """Parse workspace region."""
+        name = self.expect(TokenType.IDENTIFIER).value
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        source = None
+        filter_expr = None
+        sort: list[ir.SortSpec] = []
+        limit = None
+        display = ir.DisplayMode.LIST
+        action = None
+        empty_message = None
+        aggregates: dict[str, str] = {}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # source: EntityName
+            if self.match(TokenType.SOURCE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                source = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # filter: condition_expr
+            elif self.match(TokenType.FILTER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                filter_expr = self.parse_condition_expr()
+                self.skip_newlines()
+
+            # sort: field desc
+            elif self.match(TokenType.SORT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                sort = self.parse_sort_list()
+                self.skip_newlines()
+
+            # limit: 10
+            elif self.match(TokenType.LIMIT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                limit = int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
+
+            # display: list|grid|timeline|map
+            elif self.match(TokenType.DISPLAY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                display_token = self.expect_identifier_or_keyword()
+                display = ir.DisplayMode(display_token.value)
+                self.skip_newlines()
+
+            # action: surface_name
+            elif self.match(TokenType.ACTION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                action = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # empty: "..."
+            elif self.match(TokenType.EMPTY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                empty_message = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # aggregate:
+            elif self.match(TokenType.AGGREGATE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    # metric_name: expr
+                    metric_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    # For now, capture aggregate expression as string until newline
+                    expr_parts = []
+                    while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                        expr_parts.append(self.advance().value)
+                    aggregates[metric_name] = " ".join(expr_parts)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        if source is None:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Workspace region '{name}' requires 'source:'",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        return ir.WorkspaceRegion(
+            name=name,
+            source=source,
+            filter=filter_expr,
+            sort=sort,
+            limit=limit,
+            display=display,
+            action=action,
+            empty_message=empty_message,
+            aggregates=aggregates,
+        )
+
     def parse(self) -> ir.ModuleFragment:
         """
         Parse entire module and return IR fragment.
@@ -1688,6 +2481,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities + [entity],
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services,
                     foreign_models=fragment.foreign_models,
@@ -1700,6 +2494,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces + [surface],
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services,
                     foreign_models=fragment.foreign_models,
@@ -1712,6 +2507,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences + [experience],
                     services=fragment.services,
                     foreign_models=fragment.foreign_models,
@@ -1724,6 +2520,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services + [service],
                     foreign_models=fragment.foreign_models,
@@ -1736,6 +2533,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services,
                     foreign_models=fragment.foreign_models + [foreign_model],
@@ -1748,6 +2546,7 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services,
                     foreign_models=fragment.foreign_models,
@@ -1760,11 +2559,25 @@ class Parser:
                 fragment = ir.ModuleFragment(
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     services=fragment.services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests + [test],
+                )
+
+            elif self.match(TokenType.WORKSPACE):
+                workspace = self.parse_workspace()
+                fragment = ir.ModuleFragment(
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces + [workspace],
+                    experiences=fragment.experiences,
+                    services=fragment.services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
                 )
 
             else:

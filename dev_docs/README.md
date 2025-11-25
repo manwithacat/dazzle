@@ -1,16 +1,8 @@
 # DAZZLE Developer Documentation
 
-This directory contains internal development documentation, implementation plans, completion reports, and release notes for the DAZZLE project.
+This directory contains internal development documentation for the DAZZLE project.
 
-**Last Updated**: November 23, 2025
-
----
-
-## 📑 Complete Documentation Index
-
-**For comprehensive documentation navigation, see**: [`../docs/DOCUMENTATION_INDEX.md`](../docs/DOCUMENTATION_INDEX.md)
-
-This index catalogs all DAZZLE documentation (user docs, development docs, specs, examples) with categorization by audience, purpose, and use case.
+**Last Updated**: November 25, 2025
 
 ---
 
@@ -19,356 +11,132 @@ This index catalogs all DAZZLE documentation (user docs, development docs, specs
 ```
 dev_docs/
 ├── releases/          # Release summaries and announcements
-├── homebrew/          # Homebrew distribution documentation
-├── development/       # Development phases, stages, and plans
-│   ├── phases/       # Major development phases
-│   ├── stages/       # Implementation stages
-│   └── plans/        # Implementation roadmaps
+├── homebrew/          # Homebrew quick start and checklist
+├── development/       # Implementation plans
+│   └── plans/        # Active roadmaps
 ├── llm/              # LLM integration documentation
 ├── specs/            # Feature specifications
 ├── features/         # Feature implementation docs
-├── architecture/     # Architecture docs and evaluations
-└── archive/          # Archived documentation
-    └── bug_fixes_v0_1_1/  # Detailed bug fix reports (v0.1.1)
+├── architecture/     # Architecture and design docs
+└── archived/         # Historical documentation
+    ├── 2025-11-development/   # Stage/phase completion reports
+    ├── 2025-11-sessions/      # Development session summaries
+    ├── implementation-summaries/
+    ├── vscode-extension-history/
+    ├── homebrew-history/
+    └── llm-implementation/
 ```
 
 ---
 
-## 📦 Releases
+## 📦 Current Release (v0.1.1)
 
-### v0.1.1 (November 23, 2025)
+- [**v0.1.1 Release Summary**](release_v0_1_1_summary.md)
+- [**Bug Fixes Summary**](BUG_FIXES_CONSOLIDATED_SUMMARY.md)
+- [**v0.2.0 Roadmap**](roadmap_v0_2_0.md)
 
-**Current Release - Patch Release**:
-- [**v0.1.1 Release Summary**](release_v0_1_1_summary.md) - Complete release summary
-- [**Bug Fixes Consolidated Summary**](BUG_FIXES_CONSOLIDATED_SUMMARY.md) - All 10 bug fixes documented
-- [**v0.2.0 Roadmap**](roadmap_v0_2_0.md) - Next release planning
+### v0.1.0 (Initial Release)
 
-**Critical Fixes**:
-- ✅ AdminJS Node.js v25 compatibility
-- ✅ Environment variable support
-- ✅ Decimal field parameters (Django)
-- ✅ Partial CRUD patterns (Django)
-- ✅ Multi-word entity names (Django)
-
-**Detailed Bug Reports**: See [`archive/bug_fixes_v0_1_1/`](archive/bug_fixes_v0_1_1/)
-
-### v0.1.0 (November 22, 2025)
-
-**Initial Release**:
-- [**v0.1.0 Release Summary**](releases/2025-11-22-v0.1.0-release-summary.md) - Complete session summary of v0.1.0 release
-- [**Release Announcement**](releases/2025-11-22-release-announcement.md) - Public release announcement
-
-**Installation**:
-```bash
-# Homebrew
-brew tap manwithacat/tap
-brew install dazzle
-
-# Fast alternatives
-pipx install dazzle  # 30 seconds
-uv tool install dazzle  # 10 seconds
-```
-
-**Links**:
-- GitHub Release: https://github.com/manwithacat/dazzle/releases/tag/v0.1.0
-- Homebrew Tap: https://github.com/manwithacat/homebrew-tap
+- [**Release Announcement**](releases/2025-11-22-release-announcement.md)
+- [**Release Summary**](releases/2025-11-22-v0.1.0-release-summary.md)
 
 ---
 
-## 🍺 Homebrew Distribution
+## 🚀 Quick Links
 
-Complete documentation for Homebrew packaging and distribution.
+### For New Contributors
 
-### Setup & Testing
-- [**HOMEBREW_QUICKSTART.md**](homebrew/HOMEBREW_QUICKSTART.md) - Quick start guide
-- [**HOMEBREW_RELEASE_CHECKLIST.md**](homebrew/HOMEBREW_RELEASE_CHECKLIST.md) - Release checklist
-- [**HOMEBREW_TESTING_GUIDE.md**](homebrew/HOMEBREW_TESTING_GUIDE.md) - Testing procedures
-- [**HOMEBREW_TESTING_STATUS.md**](homebrew/HOMEBREW_TESTING_STATUS.md) - Test results
+| Topic | Document |
+|-------|----------|
+| Development history | [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md) |
+| Project roadmap | [development/plans/IMPLEMENTATION_PLAN.md](development/plans/IMPLEMENTATION_PLAN.md) |
+| Gap analysis | [gap_analysis_2025_11_23.md](gap_analysis_2025_11_23.md) |
 
-### Distribution Complete
-- [**HOMEBREW_DISTRIBUTION_COMPLETE.md**](homebrew/HOMEBREW_DISTRIBUTION_COMPLETE.md) - Distribution completion report
+### Active Documentation
 
-### Optimization Analysis (v0.1.0)
-- [**2025-11-22-optimization-analysis.md**](homebrew/2025-11-22-optimization-analysis.md) - Installation time optimization research
-- [**2025-11-22-formula-comparison.md**](homebrew/2025-11-22-formula-comparison.md) - Formula optimization options
+| Topic | Document |
+|-------|----------|
+| VS Code Extension | [VSCODE_EXTENSION.md](VSCODE_EXTENSION.md) |
+| LLM Quick Start | [llm/LLM_QUICK_START.md](llm/LLM_QUICK_START.md) |
+| LLM Integration | [llm/LLM_INTEGRATION.md](llm/LLM_INTEGRATION.md) |
+| Homebrew Setup | [homebrew/HOMEBREW_QUICKSTART.md](homebrew/HOMEBREW_QUICKSTART.md) |
+| Release Checklist | [homebrew/HOMEBREW_RELEASE_CHECKLIST.md](homebrew/HOMEBREW_RELEASE_CHECKLIST.md) |
+| Dev Environment | [dual_version_workflow.md](dual_version_workflow.md) |
 
-**Key Findings**:
-- Current install: ~15 minutes (builds from source with Rust)
-- With bottles (v0.1.1+): ~30 seconds
-- Fast alternatives: pipx (30s), uv (10s)
+### Design & Architecture
 
----
+| Topic | Document |
+|-------|----------|
+| Vocabulary Design | [vocabulary_design_summary.md](vocabulary_design_summary.md) |
+| Domain Patterns | [architecture/domain_patterns_catalog.md](architecture/domain_patterns_catalog.md) |
+| Stack Guide | [architecture/stack_interpretation_guide.md](architecture/stack_interpretation_guide.md) |
+| Vocabulary Spec | [architecture/dazzle_app_local_vocab_spec_v1.md](architecture/dazzle_app_local_vocab_spec_v1.md) |
+| Design Philosophy | [architecture/vocabulary_design_philosophy.md](architecture/vocabulary_design_philosophy.md) |
 
-## 🚀 Development History
+### LLM Design Philosophy
 
-### Latest Phases (2025)
+| Topic | Document |
+|-------|----------|
+| DSL as Choke Point | [llm/LLM_INTERACTIONS/LLM_DSL_AS_CHOKE_POINT.md](llm/LLM_INTERACTIONS/LLM_DSL_AS_CHOKE_POINT.md) |
+| Spec Paradox | [llm/LLM_INTERACTIONS/LLM_DSL_SPEC_PARADOX.md](llm/LLM_INTERACTIONS/LLM_DSL_SPEC_PARADOX.md) |
+| File-Based IPC | [llm/LLM_INTERACTIONS/LLM_FILE_BASED_IPC_PATTERN.md](llm/LLM_INTERACTIONS/LLM_FILE_BASED_IPC_PATTERN.md) |
+| Analysis Workflow | [llm/LLM_INTERACTIONS/LLM_SPEC_ANALYSIS_WORKFLOW.md](llm/LLM_INTERACTIONS/LLM_SPEC_ANALYSIS_WORKFLOW.md) |
 
-#### Phase 7: Advanced Visualization
-- [**PHASE_7_ADVANCED_VISUALIZATION.md**](development/phases/PHASE_7_ADVANCED_VISUALIZATION.md)
+### Feature Specifications
 
-#### Phase 6: Testing Complete
-- [**PHASE_6_TESTING_COMPLETE.md**](development/phases/PHASE_6_TESTING_COMPLETE.md)
+| Topic | Document |
+|-------|----------|
+| Infrastructure Backend | [specs/DAZZLE_INFRA_BACKEND_SPEC.md](specs/DAZZLE_INFRA_BACKEND_SPEC.md) |
+| VS Code Spec | [specs/DAZZLE_VSCODE_SPEC.md](specs/DAZZLE_VSCODE_SPEC.md) |
+| LLM Instrumentation | [specs/DAZZLE_LLM_INSTRUMENTATION_SPEC.md](specs/DAZZLE_LLM_INSTRUMENTATION_SPEC.md) |
+| Service Profiles | [specs/DAZZLE_SERVICE_PROFILES_SPEC.md](specs/DAZZLE_SERVICE_PROFILES_SPEC.md) |
+| Stacks Spec | [specs/DAZZLE_STACKS_SPEC.md](specs/DAZZLE_STACKS_SPEC.md) |
+| Test Infrastructure | [specs/TEST_INFRASTRUCTURE_SPEC.md](specs/TEST_INFRASTRUCTURE_SPEC.md) |
 
-#### Phase 3: IDE Support (Complete)
-- [**PHASE3_COMPLETE.md**](development/phases/PHASE3_COMPLETE.md) - LSP server and VSCode extension
-  - Language Server Protocol implementation
-  - Syntax highlighting, hover, autocomplete
-  - Real-time diagnostics
+### Features
 
-#### Phase 2: CLI Integration (Complete)
-- [**PHASE2_COMPLETE.md**](development/phases/PHASE2_COMPLETE.md)
-  - Command-line interface
-  - Real-time validation
-  - Error reporting
-
-### Implementation Stages (2024)
-
-Chronological development stages:
-
-1. [**STAGE1_COMPLETION.md**](development/stages/STAGE1_COMPLETION.md) - Parser implementation
-2. [**STAGE2_COMPLETION.md**](development/stages/STAGE2_COMPLETION.md) - CLI foundation
-3. [**STAGE3_COMPLETION.md**](development/stages/STAGE3_COMPLETION.md) - Multi-module support
-4. [**STAGE4_COMPLETION.md**](development/stages/STAGE4_COMPLETION.md) - Semantic validation
-5. [**STAGE5_COMPLETION.md**](development/stages/STAGE5_COMPLETION.md) - OpenAPI backend
-6. [**STAGE6_COMPLETION.md**](development/stages/STAGE6_COMPLETION.md) - Backend enhancements
-7. [**STAGE7_COMPLETION.md**](development/stages/STAGE7_COMPLETION.md) - Stack system
-
-### Implementation Plans
-
-Active roadmaps and architecture plans:
-
-- [**IMPLEMENTATION_PLAN.md**](development/plans/IMPLEMENTATION_PLAN.md) - Overall project roadmap
-- [**STACKS_IMPLEMENTATION_PLAN.md**](development/plans/STACKS_IMPLEMENTATION_PLAN.md) - Stack system architecture
+| Topic | Document |
+|-------|----------|
+| Quick Wins (v0.1.0) | [features/quick_wins_v0_1_implemented.md](features/quick_wins_v0_1_implemented.md) |
+| AppSpec Normalization | [features/appspec_normalisation_v1.md](features/appspec_normalisation_v1.md) |
+| Micro Stack | [features/MICRO_STACK_SPEC.md](features/MICRO_STACK_SPEC.md) |
+| Build Evaluation | [features/BUILD_EVALUATION.md](features/BUILD_EVALUATION.md) |
 
 ---
 
-## 🤖 LLM Integration
+## 📋 Planning Documents
 
-Documentation for LLM-powered features and workflows.
-
-### Core Documentation
-- [**LLM_INTEGRATION_COMPLETE.md**](llm/LLM_INTEGRATION_COMPLETE.md) - Complete integration report
-- [**LLM_INTEGRATION_SUMMARY.md**](llm/LLM_INTEGRATION_SUMMARY.md) - Summary and overview
-- [**LLM_QUICK_START.md**](llm/LLM_QUICK_START.md) - Quick start guide
-
-### LLM Interaction Patterns
-
-In-depth analysis of LLM usage patterns:
-
-- [**LLM_DSL_AS_CHOKE_POINT.md**](llm/LLM_INTERACTIONS/LLM_DSL_AS_CHOKE_POINT.md) - DSL as constraint mechanism
-- [**LLM_DSL_SPEC_PARADOX.md**](llm/LLM_INTERACTIONS/LLM_DSL_SPEC_PARADOX.md) - Specification paradox analysis
-- [**LLM_FILE_BASED_IPC_PATTERN.md**](llm/LLM_INTERACTIONS/LLM_FILE_BASED_IPC_PATTERN.md) - File-based IPC pattern
-- [**LLM_INTEGRATION_IMPLEMENTATION.md**](llm/LLM_INTERACTIONS/LLM_INTEGRATION_IMPLEMENTATION.md) - Implementation details
-- [**LLM_SPEC_ANALYSIS_WORKFLOW.md**](llm/LLM_INTERACTIONS/LLM_SPEC_ANALYSIS_WORKFLOW.md) - Spec analysis workflow
-- [**LLM_TESTING_DOCUMENTATION.md**](llm/LLM_INTERACTIONS/LLM_TESTING_DOCUMENTATION.md) - Testing approaches
+| Document | Purpose |
+|----------|---------|
+| [NEXT_STAGES_SPEC.md](NEXT_STAGES_SPEC.md) | Detailed specs for upcoming work |
+| [roadmap_v0_2_0.md](roadmap_v0_2_0.md) | v0.2.0 release planning |
+| [gap_analysis_2025_11_23.md](gap_analysis_2025_11_23.md) | Current gaps and improvements |
+| [test_dsl_specification.md](test_dsl_specification.md) | Test DSL design |
+| [roadmap_consolidation_summary.md](roadmap_consolidation_summary.md) | Roadmap consolidation |
 
 ---
 
-## 📋 Feature Specifications
+## 📚 Historical Documentation
 
-Detailed specifications for planned and implemented features.
+Historical completion reports and session summaries from the November 2025 development sprint are preserved in `archived/`:
 
-### Infrastructure & Tooling
-- [**DAZZLE_INFRA_BACKEND_SPEC.md**](specs/DAZZLE_INFRA_BACKEND_SPEC.md) - Infrastructure backend (Docker, Terraform)
-- [**TEST_INFRASTRUCTURE_SPEC.md**](specs/TEST_INFRASTRUCTURE_SPEC.md) - Testing framework
+- **Stage Completion Reports**: `archived/2025-11-development/stages/`
+- **Phase Completion Reports**: `archived/2025-11-development/phases/`
+- **Session Summaries**: `archived/2025-11-sessions/`
+- **Implementation Docs**: `archived/implementation-summaries/`
 
-### Developer Experience
-- [**DAZZLE_VSCODE_SPEC.md**](specs/DAZZLE_VSCODE_SPEC.md) - VSCode extension (✓ Complete)
-- [**DAZZLE_LLM_INSTRUMENTATION_SPEC.md**](specs/DAZZLE_LLM_INSTRUMENTATION_SPEC.md) - LLM analytics
-
-### Integration & Services
-- [**DAZZLE_SERVICE_PROFILES_SPEC.md**](specs/DAZZLE_SERVICE_PROFILES_SPEC.md) - Service integration profiles
-- [**DAZZLE_STACKS_SPEC.md**](specs/DAZZLE_STACKS_SPEC.md) - Stack presets
+For a consolidated summary, see [DEVELOPMENT_HISTORY.md](DEVELOPMENT_HISTORY.md).
 
 ---
 
-## 🔧 Feature Implementation
+## 📊 Statistics
 
-Documentation for specific feature implementations.
-
-### Build & Testing
-- [**BUILD_EVALUATION.md**](features/BUILD_EVALUATION.md) - Build validation infrastructure
-- [**AUTOMATED_SETUP_FEEDBACK.md**](features/AUTOMATED_SETUP_FEEDBACK.md) - Setup automation
-
-### Stack System
-- [**MICRO_STACK_SPEC.md**](features/MICRO_STACK_SPEC.md) - Micro-stack specification
-- [**MICRO_STACK_IMPLEMENTATION.md**](features/MICRO_STACK_IMPLEMENTATION.md) - Implementation details
-- [**MICRO_STACK_STATUS.md**](features/MICRO_STACK_STATUS.md) - Status and progress
-
-### Improvements & Refinements
-- [**DEMO_COMMAND_IMPROVEMENTS.md**](features/DEMO_COMMAND_IMPROVEMENTS.md) - CLI improvements
-- [**appspec_normalisation_v1.md**](features/appspec_normalisation_v1.md) - AppSpec normalization
-
----
-
-## 📖 Reading Guide
-
-### 🆕 For New Contributors
-
-Start here to understand the project:
-
-1. **[releases/2025-11-22-v0.1.0-release-summary.md](releases/2025-11-22-v0.1.0-release-summary.md)** - Latest release overview
-2. **[development/plans/IMPLEMENTATION_PLAN.md](development/plans/IMPLEMENTATION_PLAN.md)** - Overall project structure
-3. **[development/stages/STAGE1_COMPLETION.md](development/stages/STAGE1_COMPLETION.md)** - How the parser works
-4. **[development/phases/PHASE3_COMPLETE.md](development/phases/PHASE3_COMPLETE.md)** - Latest IDE work
-5. **[features/BUILD_EVALUATION.md](features/BUILD_EVALUATION.md)** - How to validate changes
-
-### 🔨 For Backend Developers
-
-Building a new backend:
-
-1. **[development/stages/STAGE5_COMPLETION.md](development/stages/STAGE5_COMPLETION.md)** - OpenAPI backend reference
-2. **[development/plans/STACKS_IMPLEMENTATION_PLAN.md](development/plans/STACKS_IMPLEMENTATION_PLAN.md)** - Stack architecture
-3. **[specs/DAZZLE_INFRA_BACKEND_SPEC.md](specs/DAZZLE_INFRA_BACKEND_SPEC.md)** - Infrastructure example
-
-### 💻 For IDE/Tool Developers
-
-Working on developer tools:
-
-1. **[specs/DAZZLE_VSCODE_SPEC.md](specs/DAZZLE_VSCODE_SPEC.md)** - VSCode architecture
-2. **[development/phases/PHASE3_COMPLETE.md](development/phases/PHASE3_COMPLETE.md)** - LSP implementation
-3. **[specs/TEST_INFRASTRUCTURE_SPEC.md](specs/TEST_INFRASTRUCTURE_SPEC.md)** - Testing approaches
-
-### 🔗 For Integration Work
-
-Adding service integrations:
-
-1. **[specs/DAZZLE_SERVICE_PROFILES_SPEC.md](specs/DAZZLE_SERVICE_PROFILES_SPEC.md)** - Integration patterns
-2. **[specs/DAZZLE_STACKS_SPEC.md](specs/DAZZLE_STACKS_SPEC.md)** - Stack coordination
-
-### 📦 For Distribution/Release Work
-
-Managing releases and distribution:
-
-1. **[homebrew/HOMEBREW_QUICKSTART.md](homebrew/HOMEBREW_QUICKSTART.md)** - Quick setup
-2. **[homebrew/HOMEBREW_RELEASE_CHECKLIST.md](homebrew/HOMEBREW_RELEASE_CHECKLIST.md)** - Release process
-3. **[homebrew/HOMEBREW_TESTING_GUIDE.md](homebrew/HOMEBREW_TESTING_GUIDE.md)** - Testing procedures
-4. **[homebrew/2025-11-22-optimization-analysis.md](homebrew/2025-11-22-optimization-analysis.md)** - Optimization strategies
-
----
-
-## 🗺️ Documentation by Topic
-
-### Core Language & Parser
-- Implementation: [STAGE1_COMPLETION.md](development/stages/STAGE1_COMPLETION.md)
-- Multi-module: [STAGE3_COMPLETION.md](development/stages/STAGE3_COMPLETION.md)
-- Validation: [STAGE4_COMPLETION.md](development/stages/STAGE4_COMPLETION.md)
-- Normalization: [appspec_normalisation_v1.md](features/appspec_normalisation_v1.md)
-
-### Backend System
-- OpenAPI: [STAGE5_COMPLETION.md](development/stages/STAGE5_COMPLETION.md)
-- Architecture: [STAGE6_COMPLETION.md](development/stages/STAGE6_COMPLETION.md)
-- Stacks: [STAGE7_COMPLETION.md](development/stages/STAGE7_COMPLETION.md), [STACKS_IMPLEMENTATION_PLAN.md](development/plans/STACKS_IMPLEMENTATION_PLAN.md)
-- Infrastructure: [DAZZLE_INFRA_BACKEND_SPEC.md](specs/DAZZLE_INFRA_BACKEND_SPEC.md)
-- Micro-stacks: [MICRO_STACK_SPEC.md](features/MICRO_STACK_SPEC.md)
-
-### IDE & Developer Tools
-- VSCode: [DAZZLE_VSCODE_SPEC.md](specs/DAZZLE_VSCODE_SPEC.md), [PHASE3_COMPLETE.md](development/phases/PHASE3_COMPLETE.md)
-- CLI: [STAGE2_COMPLETION.md](development/stages/STAGE2_COMPLETION.md), [PHASE2_COMPLETE.md](development/phases/PHASE2_COMPLETE.md)
-- Testing: [TEST_INFRASTRUCTURE_SPEC.md](specs/TEST_INFRASTRUCTURE_SPEC.md), [BUILD_EVALUATION.md](features/BUILD_EVALUATION.md)
-- Setup: [AUTOMATED_SETUP_FEEDBACK.md](features/AUTOMATED_SETUP_FEEDBACK.md)
-
-### Distribution & Packaging
-- Homebrew: [homebrew/](homebrew/) directory
-- Release Process: [releases/](releases/) directory
-
-### LLM Features
-- Integration: [llm/LLM_INTEGRATION_COMPLETE.md](llm/LLM_INTEGRATION_COMPLETE.md)
-- Instrumentation: [specs/DAZZLE_LLM_INSTRUMENTATION_SPEC.md](specs/DAZZLE_LLM_INSTRUMENTATION_SPEC.md)
-- Patterns: [llm/LLM_INTERACTIONS/](llm/LLM_INTERACTIONS/) directory
-
-### Services & Integration
-- Service Profiles: [DAZZLE_SERVICE_PROFILES_SPEC.md](specs/DAZZLE_SERVICE_PROFILES_SPEC.md)
-- Stack Coordination: [DAZZLE_STACKS_SPEC.md](specs/DAZZLE_STACKS_SPEC.md)
-
----
-
-## 🔄 Development Workflow
-
-### Making Changes
-
-1. **Plan**: Create or update a spec in `specs/`
-2. **Implement**: Write code in `src/dazzle/`
-3. **Test**: Add tests in `tests/` and validate with `tests/build_validation/`
-4. **Document**: Update completion reports and user-facing docs in `docs/`
-
-### Documentation Standards
-
-**Spec Documents** (`*_SPEC.md` in `specs/`):
-- Describe planned features before implementation
-- Include API designs, examples, and considerations
-- Updated as implementation evolves
-
-**Completion Reports** (`*_COMPLETION.md` in `development/stages/` or `development/phases/`):
-- Written after feature completion
-- Document what was built, how it works, design decisions
-- Include examples and testing results
-
-**Implementation Plans** (`*_PLAN.md` in `development/plans/`):
-- Break down large features into phases
-- Track progress and dependencies
-- Updated as work progresses
-
-**Release Documentation** (in `releases/`):
-- Release summaries and announcements
-- Session summaries for major releases
-- Links to GitHub releases
-
-**Distribution Documentation** (in `homebrew/`):
-- Packaging and distribution guides
-- Testing procedures and results
-- Optimization analysis
-
----
-
-## 🎯 Current Status
-
-### ✅ Completed (as of v0.1.0 - November 2025)
-
-**Core Features**:
-- ✅ Full LSP implementation with IDE features
-- ✅ VSCode extension with syntax highlighting
-- ✅ Build validation infrastructure
-- ✅ Stack system for coordinated builds
-- ✅ Django backend (micro-modular)
-- ✅ OpenAPI backend
-
-**Distribution**:
-- ✅ Homebrew tap published
-- ✅ PyPI distribution (pip, pipx, uv)
-- ✅ GitHub releases
-- ✅ Installation testing complete
-
-### 🚧 In Progress
-
-- 🚧 Homebrew bottles for fast installation (v0.1.1)
-- 🚧 Additional backend improvements
-
-### 📋 Planned
-
-**v0.1.1**:
-- Pre-built Homebrew bottles (30-second install)
-- `--version` flag
-- Improved error messages
-
-**v0.2.0**:
-- FastAPI backend
-- React UI generation
-- Enhanced LLM features
-
----
-
-## 📝 Contributing to Documentation
-
-When adding features:
-
-1. **Before coding**: Create a `*_SPEC.md` in `specs/` or update a plan in `development/plans/`
-2. **During development**: Keep spec updated with changes
-3. **After completion**: Write completion report in appropriate `development/` subdirectory
-4. **For releases**: Update release documentation in `releases/`
-5. **Always**: Update user-facing docs in `docs/`
-
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines.
+| Metric | Value |
+|--------|-------|
+| Active documentation files | ~35 |
+| Archived files | ~40 |
+| Feature specifications | 6 |
+| Current release | v0.1.1 |
 
 ---
 
@@ -376,21 +144,9 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed guidelines.
 
 - [Main README](../README.md) - Project overview
 - [User Documentation](../docs/README.md) - End-user guides
-- [Test Documentation](../tests/build_validation/README.md) - Testing infrastructure
-- [VSCode Extension](../extensions/vscode/README.md) - IDE setup
-- [Distribution Strategy](../DISTRIBUTION.md) - Distribution methods
-- [Testing Guide](../TESTING_GUIDE.md) - Homebrew testing procedures
+- [DSL Reference](../docs/DAZZLE_DSL_REFERENCE_0_1.md) - DSL syntax
+- [VS Code Extension](../extensions/vscode/README.md) - IDE setup
 
 ---
 
-## 📊 Quick Statistics
-
-**Documentation Files**: 45+ documents
-**Development Stages**: 7 completed
-**Development Phases**: 4+ completed
-**Specifications**: 6 feature specs
-**Releases**: v0.1.0 (current)
-
----
-
-**For questions about these docs, open an issue or check the contributing guide.**
+**For questions about these docs, open an issue on GitHub.**

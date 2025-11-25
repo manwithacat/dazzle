@@ -7,6 +7,7 @@ from .validator import (
     validate_integrations,
     validate_services,
     validate_surfaces,
+    validate_ux_specs,
 )
 
 
@@ -65,6 +66,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
     all_warnings.extend(warnings)
 
     errors, warnings = validate_integrations(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # UX Semantic Layer validation
+    errors, warnings = validate_ux_specs(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

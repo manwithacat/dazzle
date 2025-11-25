@@ -12,10 +12,10 @@ from typing import Any
 
 from dazzle.core.manifest import load_manifest
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.dsl_parser import parse_dsl_file
-from dazzle.core.linker import link_modules
-from dazzle.core.patterns import analyze_crud_patterns, analyze_integration_patterns
+from dazzle.core.parser import parse_modules
+from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
+from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 from dazzle.mcp.tools import create_tools
 from dazzle.mcp.resources import create_resources
 from dazzle.mcp.prompts import create_prompts
@@ -172,17 +172,14 @@ class DazzleMCPServer:
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
             # Parse all files
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            modules = parse_modules(dsl_files)
 
-            # Link modules
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec by linking modules
+            app_spec = build_appspec(modules, manifest.root)
 
             return json.dumps({
                 "status": "valid",
-                "modules": len(specs),
+                "modules": len(modules),
                 "entities": len(app_spec.domain.entities),
                 "surfaces": len(app_spec.surfaces),
                 "services": len(app_spec.services)
@@ -200,14 +197,15 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
+            # Parse all modules
+            parsed_modules = parse_modules(dsl_files)
+
             modules = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                if spec.module:
-                    modules[spec.module.name] = {
-                        "file": str(dsl_file.relative_to(self.project_root)),
-                        "dependencies": [use.module_name for use in spec.uses]
-                    }
+            for idx, module in enumerate(parsed_modules):
+                modules[module.name] = {
+                    "file": str(dsl_files[idx].relative_to(self.project_root)),
+                    "dependencies": module.uses
+                }
 
             return json.dumps(modules, indent=2)
 
@@ -224,12 +222,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             # Find entity
             entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
@@ -263,12 +260,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             # Find surface
             surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
@@ -296,12 +292,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             # Build each stack
             results = {}
@@ -328,29 +323,38 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             # Analyze patterns
-            crud_patterns = analyze_crud_patterns(app_spec)
-            integration_patterns = analyze_integration_patterns(app_spec)
+            crud_patterns = detect_crud_patterns(app_spec)
+            integration_patterns = detect_integration_patterns(app_spec)
 
             return json.dumps({
                 "crud_patterns": [
                     {
                         "entity": p.entity_name,
-                        "surfaces": list(p.surface_modes)
+                        "has_create": p.has_create,
+                        "has_list": p.has_list,
+                        "has_detail": p.has_detail,
+                        "has_edit": p.has_edit,
+                        "is_complete": p.is_complete,
+                        "missing_operations": p.missing_operations
                     } for p in crud_patterns
                 ],
                 "integration_patterns": [
                     {
-                        "entity": p.entity_name,
+                        "name": p.integration_name,
                         "service": p.service_name,
-                        "foreign_model": p.foreign_model_name
+                        "has_actions": p.has_actions,
+                        "has_syncs": p.has_syncs,
+                        "action_count": p.action_count,
+                        "sync_count": p.sync_count,
+                        "connected_entities": list(p.connected_entities),
+                        "connected_surfaces": list(p.connected_surfaces)
                     } for p in integration_patterns
                 ]
             }, indent=2)
@@ -366,12 +370,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             # Run lint
             warnings = lint_appspec(app_spec, strict=strict)
@@ -432,12 +435,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             entities = {
                 e.name: {
@@ -458,12 +460,11 @@ class DazzleMCPServer:
             manifest = load_manifest(self.project_root)
             dsl_files = discover_dsl_files(self.project_root, manifest)
 
-            specs = {}
-            for dsl_file in dsl_files:
-                spec = parse_dsl_file(dsl_file)
-                specs[dsl_file.name] = spec
+            # Parse all modules
+            modules = parse_modules(dsl_files)
 
-            app_spec = link_modules(specs, manifest.root)
+            # Build appspec
+            app_spec = build_appspec(modules, manifest.root)
 
             surfaces = {
                 s.name: {

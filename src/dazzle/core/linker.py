@@ -86,6 +86,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         version="0.1.0",
         domain=ir.DomainSpec(entities=merged_fragment.entities),
         surfaces=merged_fragment.surfaces,
+        workspaces=merged_fragment.workspaces,
         experiences=merged_fragment.experiences,
         services=merged_fragment.services,
         foreign_models=merged_fragment.foreign_models,

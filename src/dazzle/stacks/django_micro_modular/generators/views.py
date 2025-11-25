@@ -109,6 +109,12 @@ class ViewsGenerator(Generator):
                 lines.append("")
                 lines.append("")
 
+        # Generate workspace dashboard views
+        workspace_views = self._generate_workspace_views()
+        if workspace_views:
+            lines.append("# Workspace Dashboard Views")
+            lines.append(workspace_views)
+
         return "\n".join(lines)
 
     def _generate_home_view(self) -> str:
@@ -292,6 +298,136 @@ class ViewsGenerator(Generator):
             f'    success_url = reverse_lazy("{entity_lower}-list")',
         ]
         return "\n".join(lines)
+
+    def _generate_workspace_views(self) -> str:
+        """Generate views for workspace dashboards."""
+        if not self.spec.workspaces:
+            return ""
+
+        lines = []
+
+        for workspace in self.spec.workspaces:
+            workspace_lower = workspace.name.lower().replace(" ", "_")
+            class_name = "".join(
+                word.capitalize() for word in workspace.name.split("_")
+            )
+            if not class_name.endswith("View"):
+                class_name += "DashboardView"
+
+            lines.append(f"class {class_name}(TemplateView):")
+            lines.append(f'    """{workspace.title or workspace.name} dashboard view."""')
+            lines.append(f'    template_name = "app/{workspace_lower}_dashboard.html"')
+            lines.append("")
+            lines.append("    def get_context_data(self, **kwargs):")
+            lines.append("        context = super().get_context_data(**kwargs)")
+
+            # Add context for each region
+            for region in workspace.regions:
+                region_name = region.name or region.source.split(".")[-1]
+                source_entity = region.source.split(".")[0] if "." in region.source else region.source
+
+                # Build queryset with filters and sorting
+                queryset_lines = []
+                queryset_lines.append(f"        # {region_name} region")
+                queryset_lines.append(f"        {region_name}_qs = {source_entity}.objects.all()")
+
+                # Apply filter if defined
+                if region.filter:
+                    filter_django = self._workspace_filter_to_django(region.filter)
+                    if filter_django:
+                        queryset_lines.append(f"        {region_name}_qs = {region_name}_qs.filter({filter_django})")
+
+                # Apply sorting if defined
+                if region.sort:
+                    sort_fields = []
+                    for sort_spec in region.sort:
+                        prefix = "-" if sort_spec.direction == "desc" else ""
+                        sort_fields.append(f'"{prefix}{sort_spec.field}"')
+                    queryset_lines.append(
+                        f"        {region_name}_qs = {region_name}_qs.order_by({', '.join(sort_fields)})"
+                    )
+
+                # Apply limit if defined
+                if region.limit:
+                    queryset_lines.append(f"        {region_name}_qs = {region_name}_qs[:{region.limit}]")
+
+                queryset_lines.append(f'        context["{region_name}_items"] = {region_name}_qs')
+
+                # Add aggregates if defined
+                if region.aggregates:
+                    queryset_lines.append(f'        context["{region_name}_aggregates"] = {{')
+                    for agg in region.aggregates:
+                        # Parse aggregate like "critical_count" -> Count with filter
+                        if agg.endswith("_count"):
+                            queryset_lines.append(f'            "{agg}": {region_name}_qs.count(),')
+                        else:
+                            queryset_lines.append(f'            "{agg}": None,  # TODO: implement aggregate')
+                    queryset_lines.append("        }")
+
+                lines.extend(queryset_lines)
+                lines.append("")
+
+            lines.append("        return context")
+            lines.append("")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def _workspace_filter_to_django(self, condition: ir.ConditionExpr) -> str | None:
+        """Convert workspace filter condition to Django ORM syntax."""
+        if condition.comparison:
+            return self._workspace_comparison_to_django(condition.comparison)
+        elif condition.is_compound and condition.left and condition.right:
+            left = self._workspace_filter_to_django(condition.left)
+            right = self._workspace_filter_to_django(condition.right)
+            if left and right:
+                if condition.operator == ir.LogicalOperator.AND:
+                    return f"{left}, {right}"  # Django filter chains ANDs
+                else:
+                    # OR requires Q objects
+                    return f"Q({left}) | Q({right})"
+        return None
+
+    def _workspace_comparison_to_django(self, comparison: ir.Comparison) -> str | None:
+        """Convert a comparison to Django ORM filter syntax."""
+        if not comparison.field:
+            return None
+
+        field = comparison.field
+
+        # Map operators to Django lookups
+        lookup_map = {
+            ir.ComparisonOperator.EQUALS: "",
+            ir.ComparisonOperator.NOT_EQUALS: "__ne",  # Note: needs exclude()
+            ir.ComparisonOperator.GREATER_THAN: "__gt",
+            ir.ComparisonOperator.LESS_THAN: "__lt",
+            ir.ComparisonOperator.GREATER_EQUAL: "__gte",
+            ir.ComparisonOperator.LESS_EQUAL: "__lte",
+            ir.ComparisonOperator.IN: "__in",
+        }
+
+        lookup = lookup_map.get(comparison.operator)
+        if lookup is None:
+            return None
+
+        # Format value
+        if comparison.value:
+            if comparison.value.literal is not None:
+                val = comparison.value.literal
+                if isinstance(val, str):
+                    formatted_val = f'"{val}"'
+                elif isinstance(val, bool):
+                    formatted_val = "True" if val else "False"
+                else:
+                    formatted_val = str(val)
+            elif comparison.value.list_value:
+                formatted_val = str(comparison.value.list_value)
+            else:
+                return None
+        else:
+            return None
+
+        return f"{field}{lookup}={formatted_val}"
 
     def _get_view_class_name(self, surface: ir.SurfaceSpec, entity_name: str) -> str:
         """

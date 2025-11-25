@@ -16,12 +16,13 @@ class SymbolTable:
     """
     Symbol table for tracking all named definitions across modules.
 
-    Tracks entities, surfaces, experiences, services, foreign models, integrations, and tests
-    to enable cross-module reference resolution.
+    Tracks entities, surfaces, workspaces, experiences, services, foreign models,
+    integrations, and tests to enable cross-module reference resolution.
     """
 
     entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
     surfaces: dict[str, ir.SurfaceSpec] = field(default_factory=dict)
+    workspaces: dict[str, ir.WorkspaceSpec] = field(default_factory=dict)
     experiences: dict[str, ir.ExperienceSpec] = field(default_factory=dict)
     services: dict[str, ir.ServiceSpec] = field(default_factory=dict)
     foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
@@ -52,6 +53,17 @@ class SymbolTable:
             )
         self.surfaces[surface.name] = surface
         self.symbol_sources[surface.name] = module_name
+
+    def add_workspace(self, workspace: ir.WorkspaceSpec, module_name: str) -> None:
+        """Add workspace to symbol table, checking for duplicates."""
+        if workspace.name in self.workspaces:
+            existing_module = self.symbol_sources.get(workspace.name, "unknown")
+            raise LinkError(
+                f"Duplicate workspace '{workspace.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.workspaces[workspace.name] = workspace
+        self.symbol_sources[workspace.name] = module_name
 
     def add_experience(self, experience: ir.ExperienceSpec, module_name: str) -> None:
         """Add experience to symbol table, checking for duplicates."""
@@ -188,6 +200,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add surfaces
         for surface in module.fragment.surfaces:
             symbols.add_surface(surface, module.name)
+
+        # Add workspaces
+        for workspace in module.fragment.workspaces:
+            symbols.add_workspace(workspace, module.name)
 
         # Add experiences
         for experience in module.fragment.experiences:
@@ -470,6 +486,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
     return ir.ModuleFragment(
         entities=list(symbols.entities.values()),
         surfaces=list(symbols.surfaces.values()),
+        workspaces=list(symbols.workspaces.values()),
         experiences=list(symbols.experiences.values()),
         services=list(symbols.services.values()),
         foreign_models=list(symbols.foreign_models.values()),
