@@ -1,0 +1,10 @@
+[project]
+name = "email_client"
+version = "0.1.0"
+root = "email_client.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "nextjs_semantic"
