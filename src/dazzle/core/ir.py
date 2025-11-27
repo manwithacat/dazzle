@@ -598,6 +598,7 @@ class DisplayMode(str, Enum):
     GRID = "grid"
     TIMELINE = "timeline"
     MAP = "map"
+    DETAIL = "detail"  # v0.3.1: Single item detail view
 
 
 class WorkspaceRegion(BaseModel):

@@ -139,6 +139,7 @@ class Parser:
             TokenType.LIST,
             TokenType.GRID,
             TokenType.TIMELINE,
+            TokenType.DETAIL,  # v0.3.1
             TokenType.ASC,
             TokenType.DESC,
             TokenType.IN,

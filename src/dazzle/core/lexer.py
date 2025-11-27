@@ -119,6 +119,7 @@ class TokenType(Enum):
     LIST = "list"
     GRID = "grid"
     TIMELINE = "timeline"
+    DETAIL = "detail"  # v0.3.1
 
     # Additional v0.2 keywords
     DEFAULTS = "defaults"
@@ -270,6 +271,7 @@ KEYWORDS = {
     "list",
     "grid",
     "timeline",
+    "detail",
     # Additional v0.2 keywords
     "defaults",
     "focus",

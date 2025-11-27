@@ -133,7 +133,10 @@ def _infer_signal_kind_from_region(region) -> AttentionSignalKind:
     # Check region display mode for specialized views
     if hasattr(region, "display"):
         display_str = str(region.display).lower()
-        # Only treat timeline/map as special - list/grid are just presentation
+        # v0.3.1: detail display mode → DETAIL_VIEW signal
+        if "detail" in display_str:
+            return AttentionSignalKind.DETAIL_VIEW
+        # Timeline/map are chart visualizations
         if "timeline" in display_str or "map" in display_str:
             return AttentionSignalKind.CHART
 
@@ -158,6 +161,12 @@ def _calculate_attention_weight(region) -> float:
         Attention weight between 0.0 and 1.0
     """
     weight = 0.5  # Base weight
+
+    # Boost for detail views (v0.3.1: focus on single item)
+    if hasattr(region, "display"):
+        display_str = str(region.display).lower()
+        if "detail" in display_str:
+            weight += 0.2  # Detail views need concentrated attention
 
     # Boost for filtered views
     if hasattr(region, "filter") and region.filter is not None:
