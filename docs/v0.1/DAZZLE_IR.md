@@ -1095,6 +1095,201 @@ updated_appspec = ir.AppSpec(
 
 ---
 
+## UI Semantic Layout Types (v0.3.0)
+
+**Status**: Implementation in progress (Phase 1, Week 1)
+**Module**: `src/dazzle/core/ir.py` (lines 1371+)
+
+Version 0.3.0 introduces layout-specific IR types for the **UI Semantic Layout Engine**. These types extend the base IR with layout planning capabilities.
+
+### AttentionSignal
+
+Semantic UI element requiring user attention.
+
+```python
+class AttentionSignal(BaseModel):
+    id: str
+    kind: AttentionSignalKind  # KPI, TABLE, ALERT_FEED, etc.
+    label: str
+    source: str  # Entity or surface name
+    attention_weight: float = 0.5  # 0.0-1.0
+    urgency: str = "medium"  # low, medium, high
+    interaction_frequency: str = "occasional"  # rare, occasional, frequent
+    density_preference: str = "comfortable"  # compact, comfortable, spacious
+    mode: str = "read"  # read, act, configure
+    constraints: dict[str, Any] = {}
+```
+
+**AttentionSignalKind** enum:
+- `KPI` - Key metric/number requiring visual prominence
+- `ALERT_FEED` - Stream of notifications/alerts
+- `TABLE` - Tabular data grid
+- `ITEM_LIST` - Vertical list of items
+- `DETAIL_VIEW` - Full details of single item
+- `TASK_LIST` - Actionable task items
+- `FORM` - Input form for data entry
+- `CHART` - Data visualization
+- `SEARCH` - Search interface
+- `FILTER` - Filter controls
+
+**Example**:
+```python
+signal = AttentionSignal(
+    id="active_tasks_count",
+    kind=AttentionSignalKind.KPI,
+    label="Active Tasks",
+    source="Task",
+    attention_weight=0.8,
+    urgency="high",
+    interaction_frequency="frequent"
+)
+```
+
+### WorkspaceLayout
+
+Layout-enriched workspace definition.
+
+```python
+class WorkspaceLayout(BaseModel):
+    id: str
+    label: str
+    persona_targets: list[str] = []  # Persona IDs
+    attention_budget: float = 1.0  # 0.0-1.5
+    time_horizon: str = "daily"  # realtime, daily, archival
+    engine_hint: str | None = None  # Optional archetype hint
+    attention_signals: list[AttentionSignal] = []
+```
+
+**Example**:
+```python
+workspace = WorkspaceLayout(
+    id="operations_dashboard",
+    label="Operations Dashboard",
+    persona_targets=["ops_manager", "analyst"],
+    attention_budget=1.2,  # Higher capacity
+    time_horizon="realtime",
+    attention_signals=[signal1, signal2, signal3]
+)
+```
+
+### PersonaLayout
+
+Layout-enriched persona definition.
+
+```python
+class PersonaLayout(BaseModel):
+    id: str
+    label: str
+    goals: list[str] = []
+    proficiency_level: str = "intermediate"  # novice, intermediate, expert
+    session_style: str = "deep_work"  # glance, deep_work
+    attention_biases: dict[str, float] = {}  # Signal kind → weight multiplier
+```
+
+**Example**:
+```python
+persona = PersonaLayout(
+    id="power_user",
+    label="Power User",
+    goals=["monitor_metrics", "quick_actions"],
+    proficiency_level="expert",
+    session_style="glance",
+    attention_biases={
+        "kpi": 1.5,  # Boost KPI importance
+        "table": 0.8  # Reduce table importance
+    }
+)
+```
+
+### LayoutArchetype
+
+Named layout patterns (enum).
+
+```python
+class LayoutArchetype(str, Enum):
+    FOCUS_METRIC = "focus_metric"  # Single dominant KPI
+    SCANNER_TABLE = "scanner_table"  # Table-centric with filters
+    DUAL_PANE_FLOW = "dual_pane_flow"  # List + detail master-detail
+    MONITOR_WALL = "monitor_wall"  # Multiple moderate signals
+    COMMAND_CENTER = "command_center"  # Dense expert dashboard
+```
+
+Each archetype defines a specific compositional pattern for organizing attention signals.
+
+### LayoutSurface
+
+Named region within a layout.
+
+```python
+class LayoutSurface(BaseModel):
+    id: str  # e.g., "primary", "sidebar", "toolbar"
+    archetype: LayoutArchetype
+    capacity: float = 1.0  # Max attention weight
+    priority: int = 1  # Allocation priority (1 = highest)
+    assigned_signals: list[str] = []  # Signal IDs
+    constraints: dict[str, Any] = {}
+```
+
+**Example**:
+```python
+surface = LayoutSurface(
+    id="primary",
+    archetype=LayoutArchetype.MONITOR_WALL,
+    capacity=0.8,
+    priority=1,
+    assigned_signals=["signal1", "signal2"],
+    constraints={"max_columns": 3}
+)
+```
+
+### LayoutPlan
+
+Deterministic output of the layout engine.
+
+```python
+class LayoutPlan(BaseModel):
+    workspace_id: str
+    persona_id: str | None = None
+    archetype: LayoutArchetype
+    surfaces: list[LayoutSurface] = []
+    over_budget_signals: list[str] = []  # Signals that didn't fit
+    warnings: list[str] = []
+    metadata: dict[str, Any] = {}
+```
+
+**Example**:
+```python
+plan = LayoutPlan(
+    workspace_id="dashboard",
+    persona_id="admin",
+    archetype=LayoutArchetype.MONITOR_WALL,
+    surfaces=[primary_surface, sidebar_surface],
+    over_budget_signals=["low_priority_signal"],
+    warnings=["Attention budget exceeded by 0.2"]
+)
+```
+
+### Layout IR Workflow
+
+```
+Workspace (DSL)
+  + Signals
+  ↓
+WorkspaceLayout (IR)
+  ↓
+Layout Engine
+  ↓
+LayoutPlan (IR)
+  ↓
+Next.js Renderer
+  ↓
+React Components
+```
+
+The layout types enable **deterministic, compiler-based UI generation** from semantic specifications, without runtime layout decisions or AI involvement.
+
+---
+
 ## Summary
 
 The DAZZLE IR is:
@@ -1114,5 +1309,5 @@ The DAZZLE IR is:
 
 ---
 
-**Last Updated**: 2025-11-23
-**DAZZLE Version**: 0.1.0
+**Last Updated**: 2025-11-27
+**DAZZLE Version**: 0.1.1 (with v0.3.0 layout types)
