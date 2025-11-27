@@ -87,8 +87,9 @@ surface task_list "Tasks":
 4. **Generate**: Stack backends transform the AppSpec into concrete artifacts
 
 ```bash
-dazzle validate              # Parse + link + validate
-dazzle build --stack openapi # Generate artifacts
+dazzle validate                  # Parse + link + validate
+dazzle layout-plan               # Visualize workspace layouts
+dazzle build --stack nextjs      # Generate artifacts
 ```
 
 ## Semantic Concepts
@@ -116,6 +117,34 @@ surface user_list "Users":
     field email "Email"
     field role "Role"
 ```
+
+### Workspaces
+Composition of related data views for user-centric interfaces. Workspaces automatically convert to semantic layouts with intelligent signal inference and attention budget management.
+
+```dsl
+workspace dashboard "Dashboard":
+  purpose: "Overview of key metrics"
+
+  # Aggregate regions become KPI signals
+  task_count:
+    source: Task
+    aggregate:
+      total: count(Task)
+
+  # Limited regions become curated lists
+  urgent_tasks:
+    source: Task
+    limit: 5
+
+  # Unlimited regions become browsable tables
+  all_tasks:
+    source: Task
+```
+
+Visualize layouts with `dazzle layout-plan`:
+- Automatic archetype selection (FOCUS_METRIC, MONITOR_WALL, etc.)
+- Surface allocation and signal assignment
+- Attention budget analysis
 
 ### Experiences
 Multi-step workflows connecting surfaces into user journeys.

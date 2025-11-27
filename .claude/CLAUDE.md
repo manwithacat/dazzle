@@ -4,26 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**DAZZLE v0.1.0** - Complete DSL-to-Code Generation System
+**DAZZLE v0.3.0** - DSL-to-Code Generation with Semantic Layout Engine
 
 DAZZLE (Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps) is a production-ready toolkit where:
 - Humans describe business intent in natural language or directly in DSL
 - LLMs can translate requirements into compact DSL (optional)
 - Tooling parses DSL into an internal representation (IR)
+- Layout engine intelligently plans UI from workspace specifications
 - Stacks generate concrete artifacts (APIs, UIs, infrastructure, databases)
 
 **Status**: Released November 2025, actively maintained, production-ready
-**Stacks**: 6 implemented (Django Micro, Django API, Express Micro, OpenAPI, Docker, Terraform)
+**Version**: 0.3.0 (with Semantic Layout Engine)
+**Stacks**: 7 implemented (Django Micro, Django API, Express Micro, Next.js Semantic, OpenAPI, Docker, Terraform)
 **Distribution**: Homebrew, PyPI-ready, multiple installation methods
 
 ---
 
-## Current Implementation Status (v0.1.0)
+## Current Implementation Status (v0.3.0)
 
 ### ✅ Fully Complete
 
 **Core Engine**:
-- **DSL Parser**: 800+ lines, handles all DSL constructs (entities, surfaces, experiences, services, foreign models, integrations, tests)
+- **DSL Parser**: 800+ lines, handles all DSL constructs (entities, surfaces, workspaces, experiences, services, foreign models, integrations, tests)
 - **Internal Representation (IR)**: 900+ lines, complete Pydantic models with full type safety
 - **Module System**: Dependency resolution, cycle detection, topological sorting, reference validation
 - **Linker**: Merges modules, resolves dependencies, validates cross-references
@@ -31,10 +33,20 @@ DAZZLE (Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps) is a production-
 - **Pattern Detection**: CRUD patterns, integration patterns, experience flow analysis
 - **Error Handling**: Rich error types with file/line/column context
 
-**Stack Generation** (6 Production Stacks):
+**Semantic Layout Engine** (NEW in v0.3.0):
+- **DSL to Layout IR Converter**: Automatic WorkspaceSpec → WorkspaceLayout transformation
+- **Attention Signal Inference**: Intelligent signal kind detection (KPI, TABLE, ITEM_LIST, CHART)
+- **Attention Weight Calculation**: Based on filters, limits, aggregates
+- **Archetype Selection**: Deterministic selection from FOCUS_METRIC, MONITOR_WALL, SCANNER_TABLE, etc.
+- **Surface Allocation**: Optimal signal assignment to layout surfaces
+- **Persona Support**: Variant adjustments for different user types
+- **CLI Visualization**: `dazzle layout-plan` command for inspecting plans
+
+**Stack Generation** (7 Production Stacks):
 - **django_micro_modular**: Complete Django apps with admin, forms, views, templates, tests
 - **django_api**: Django REST Framework APIs with serializers, viewsets, OpenAPI integration
 - **express_micro**: Node.js/Express equivalent with Sequelize ORM, EJS templates, AdminJS
+- **nextjs_semantic**: Next.js with semantic layout archetypes (NEW - uses layout engine)
 - **openapi**: OpenAPI 3.0 spec generation with schemas, paths, components
 - **docker**: Docker Compose setups with multi-service orchestration
 - **terraform**: AWS infrastructure as code (ECS, RDS, VPC, ALB)
@@ -49,8 +61,8 @@ DAZZLE (Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps) is a production-
 **IDE & Tooling**:
 - **LSP Server**: Real-time diagnostics, hover info, completions, go-to-definition
 - **VS Code Extension**: Full IDE integration with syntax highlighting and validation
-- **CLI**: init, validate, lint, build, inspect, analyze-spec, clone, demo
-- **Test Suite**: 59+ tests (unit, integration, LLM), pytest-based, CI/CD with GitHub Actions
+- **CLI**: init, validate, lint, build, inspect, layout-plan, analyze-spec, clone, demo
+- **Test Suite**: 67+ tests (unit, integration, LLM), pytest-based, CI/CD with GitHub Actions
 - **Distribution**: Homebrew formula, PyPI packaging, multiple install methods
 
 **Documentation**:
@@ -251,6 +263,7 @@ The DSL vocabulary is intentionally compact for token efficiency:
 - **use**: Import dependencies from other modules
 - **entity**: Internal domain models (with fields, constraints, indexes)
 - **surface**: User-facing screens/forms (with sections, fields, actions)
+- **workspace**: Composition of data regions for user-centric interfaces (with automatic layout planning)
 - **experience**: Orchestrated flows with steps and transitions
 - **service**: External third-party systems (with auth profiles)
 - **foreign_model**: External data shapes from services
@@ -284,13 +297,18 @@ dazzle build --stack openapi             # Single stack
 dazzle build --stack django_api,docker   # Multiple stacks
 ```
 
-### New Commands in v0.1.0
+### New Commands in v0.1.0+
 
 ```bash
 # Inspect module structure and patterns
 dazzle inspect                           # All information
 dazzle inspect --patterns --types        # With type catalog
 dazzle inspect --no-interfaces           # Just patterns
+
+# Visualize workspace layouts (v0.3.0)
+dazzle layout-plan                       # Show all workspace layouts
+dazzle layout-plan -w dashboard          # Specific workspace
+dazzle layout-plan --json                # JSON output
 
 # Analyze natural language specifications
 dazzle analyze-spec SPEC.md              # Interactive Q&A
