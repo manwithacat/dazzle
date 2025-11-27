@@ -943,9 +943,252 @@ workspace dashboard "Dashboard":
 
 ---
 
-**Status**: Ready for Approval
+## Phase 4: Enhancements & Polish (v0.3.1+)
+
+**Status**: Future Work
+**Timeline**: Post-v0.3.0 release
+**Based on**: Learnings from archetype examples implementation (2025-11-27)
+
+### Week 8: DSL Enhancements
+
+**Goal**: Address limitations discovered during example creation
+
+**Tasks**:
+- [ ] Document reserved keywords comprehensively
+  - Add section to `docs/DAZZLE_DSL_REFERENCE.md`
+  - List: `url`, `source`, `error`, `warning`, etc.
+  - Suggest alternatives for each
+- [ ] Add `engine_hint` to workspace DSL syntax
+  ```dsl
+  workspace operations "Operations":
+    engine_hint: "dual_pane_flow"  # Force specific archetype
+    purpose: "Browse and edit items"
+  ```
+- [ ] Add `DETAIL_VIEW` signal inference
+  - New region type or display mode
+  - Enable DUAL_PANE_FLOW archetype from DSL alone
+  - Example: `display: detail` → DETAIL_VIEW signal
+- [ ] Improve error messages for reserved keywords
+  - Suggest alternatives when keyword collision detected
+  - Example: "Field name 'url' is reserved. Try 'endpoint', 'uri', or 'address'"
+
+**Deliverables**:
+- Updated DSL reference with reserved keywords section
+- Parser support for `engine_hint` in workspaces
+- Improved parser error messages
+- Tests for new DSL features
+
+**Estimate**: 3-4 days
+
+---
+
+### Week 9: Component Enhancements
+
+**Goal**: Improve generated UI quality and accessibility
+
+**Tasks**:
+- [ ] Add ARIA labels and roles to all components
+  - Semantic HTML (nav, main, aside, etc.)
+  - ARIA attributes (aria-label, aria-describedby, etc.)
+  - Keyboard navigation (tab order, focus management)
+- [ ] Enhance responsive layouts
+  - Mobile-first breakpoints
+  - Touch-friendly controls
+  - Responsive grid adjustments
+- [ ] Add loading states and skeletons
+  - Suspense boundaries for signal data
+  - Skeleton screens for tables and lists
+  - Loading indicators for KPIs
+- [ ] Add error boundaries
+  - Graceful degradation for failed signals
+  - Error state UI components
+  - Retry mechanisms
+- [ ] Improve visual design
+  - Better spacing and typography
+  - Consistent color scheme
+  - Dark mode support
+
+**Deliverables**:
+- Accessible component library
+- Responsive layouts for mobile/tablet
+- Loading and error states
+- Enhanced visual design
+
+**Estimate**: 5-6 days
+
+---
+
+### Week 10: Testing & Quality
+
+**Goal**: Comprehensive test coverage and quality assurance
+
+**Tasks**:
+- [ ] Implement golden master tests
+  ```python
+  # tests/golden/test_archetype_examples.py
+  def test_uptime_monitor_layout_plan():
+      # Generate layout plan
+      plan = generate_layout_plan("examples/uptime_monitor")
+
+      # Compare to golden master
+      assert_matches_snapshot(plan, "uptime_monitor_layout.json")
+
+  def test_nextjs_semantic_generation():
+      # Generate Next.js project
+      artifacts = build_project("examples/uptime_monitor")
+
+      # Compare key files to snapshots
+      assert_matches_snapshot(artifacts["page.tsx"], "uptime_monitor_page.tsx")
+  ```
+- [ ] Add component unit tests
+  - Test each archetype component renders correctly
+  - Test signal components with various data
+  - Test surface allocation logic
+- [ ] Add integration tests
+  - End-to-end: DSL → layout plan → Next.js → rendered UI
+  - Test all archetype examples
+  - Test persona variants
+- [ ] Add accessibility tests
+  - axe-core integration
+  - Keyboard navigation testing
+  - Screen reader compatibility
+- [ ] Performance testing
+  - Measure build times
+  - Measure generated bundle sizes
+  - Optimize if needed
+
+**Deliverables**:
+- Golden master test suite
+- Component unit tests
+- Integration tests
+- Accessibility tests
+- Performance benchmarks
+
+**Estimate**: 5-6 days
+
+---
+
+### Week 11: Documentation & Examples
+
+**Goal**: Comprehensive documentation for all features
+
+**Tasks**:
+- [ ] Create reserved keywords reference
+  ```markdown
+  # docs/DSL_RESERVED_KEYWORDS.md
+
+  ## Reserved Field Names
+  - `url` → Use: `endpoint`, `uri`, `address`
+  - `source` → Use: `data_source`, `event_source`, `origin`
+  - `error` → Use: `err`, `failure`, `fault`
+
+  ## Reserved Enum Values
+  - `error` → Use: `err`, `failed`, `fault`
+  - `warning` → Use: `warn`, `alert`, `caution`
+  ```
+- [ ] Create archetype selection guide
+  ```markdown
+  # docs/ARCHETYPE_SELECTION.md
+
+  ## How Archetypes Are Selected
+
+  ### Selection Priority
+  1. Dominant KPI (weight > 0.7) → FOCUS_METRIC
+  2. Strong table presence (table_weight > 0.6) → SCANNER_TABLE
+  3. List + detail combination → DUAL_PANE_FLOW
+  4. 3-8 moderate signals → MONITOR_WALL
+  5. 5+ signals for experts → COMMAND_CENTER
+
+  ### Signal Weight Calculation
+  - Base: 0.5
+  - +0.2 for filters
+  - +0.1 for limits
+  - +0.2 for aggregates
+  ```
+- [ ] Add DUAL_PANE_FLOW example
+  - Create example with explicit UX attention signals
+  - Demonstrate list + detail pattern
+  - Document manual signal definition
+- [ ] Create troubleshooting guide
+  - Common errors and fixes
+  - Reserved keyword conflicts
+  - Archetype selection debugging
+  - Attention budget management
+- [ ] Add video tutorials (optional)
+  - Creating workspace layouts
+  - Using layout-plan command
+  - Understanding archetype selection
+
+**Deliverables**:
+- Reserved keywords reference
+- Archetype selection guide
+- DUAL_PANE_FLOW example
+- Troubleshooting guide
+- Video tutorials (optional)
+
+**Estimate**: 4-5 days
+
+---
+
+### Week 12: Performance & Optimization
+
+**Goal**: Production-ready performance and bundle optimization
+
+**Tasks**:
+- [ ] Optimize generated bundle sizes
+  - Code splitting by archetype
+  - Lazy loading for signal components
+  - Tree-shaking unused components
+- [ ] Add layout plan caching
+  - Cache computed layout plans
+  - Invalidate on DSL changes
+  - Speed up incremental builds
+- [ ] Optimize React components
+  - Memoization for expensive computations
+  - Virtual scrolling for large tables
+  - Debouncing for filters
+- [ ] Add build-time optimizations
+  - Parallel workspace processing
+  - Incremental builds
+  - Faster TypeScript generation
+- [ ] Add runtime optimizations
+  - Service worker for offline support
+  - Prefetching signal data
+  - Optimistic UI updates
+
+**Deliverables**:
+- Optimized bundle sizes
+- Layout plan caching
+- Performance improvements
+- Build time reduction
+
+**Estimate**: 4-5 days
+
+---
+
+## Phase 4 Summary
+
+**Total Duration**: ~4-5 weeks
+**Key Outcomes**:
+- ✅ DSL enhancements (engine hints, DETAIL_VIEW)
+- ✅ Accessible, responsive components
+- ✅ Comprehensive test coverage
+- ✅ Complete documentation
+- ✅ Production-ready performance
+
+**Success Criteria**:
+- All examples include accessibility features
+- Test coverage > 90%
+- Build time < 10 seconds for typical project
+- Bundle size < 200KB (gzipped)
+- Documentation covers all features
+- Zero known bugs
+
+---
+
+**Status**: Roadmap Updated with Phase 4
 **Next Steps**:
-1. Review specification
-2. Approve roadmap
-3. Begin Phase 1 implementation
-4. Create feature branch for UI layout engine
+1. ✅ Complete Phase 1-3 (v0.3.0 core) - DONE
+2. ✅ Create archetype examples - DONE
+3. → Begin Phase 4 Week 8 (DSL enhancements)
+4. Continue iterative development
