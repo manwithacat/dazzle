@@ -126,6 +126,9 @@ class TokenType(Enum):
     GROUP_BY = "group_by"
     WHERE = "where"
 
+    # v0.3.1 keywords
+    ENGINE_HINT = "engine_hint"
+
     # Comparison operators (for condition expressions)
     NOT_EQUALS = "!="
     GREATER_THAN = ">"
@@ -272,6 +275,8 @@ KEYWORDS = {
     "focus",
     "group_by",
     "where",
+    # v0.3.1 keywords
+    "engine_hint",
     # Comparison/logical keywords
     "in",
     "not",

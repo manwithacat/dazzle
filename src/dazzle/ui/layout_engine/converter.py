@@ -50,9 +50,9 @@ def convert_workspace_to_layout(workspace: WorkspaceSpec) -> WorkspaceLayout:
     # Extract attention signals from regions
     attention_signals = _extract_attention_signals_from_regions(workspace)
 
-    # Extract layout hints from UX spec if present
+    # Extract layout hints from workspace (v0.3.1: engine_hint support)
     attention_budget = 1.0
-    engine_hint = None
+    engine_hint = workspace.engine_hint  # Direct from DSL
 
     if workspace.ux:
         # Check for attention signals in UX spec

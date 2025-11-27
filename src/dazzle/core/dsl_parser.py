@@ -2344,6 +2344,7 @@ class Parser:
         self.expect(TokenType.INDENT)
 
         purpose = None
+        engine_hint = None
         regions: list[ir.WorkspaceRegion] = []
         ux_spec = None
 
@@ -2357,6 +2358,13 @@ class Parser:
                 self.advance()
                 self.expect(TokenType.COLON)
                 purpose = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
+            # engine_hint: "archetype_name" (v0.3.1)
+            elif self.match(TokenType.ENGINE_HINT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                engine_hint = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
             # ux: (optional workspace-level UX)
@@ -2377,6 +2385,7 @@ class Parser:
             name=name,
             title=title,
             purpose=purpose,
+            engine_hint=engine_hint,
             regions=regions,
             ux=ux_spec,
         )

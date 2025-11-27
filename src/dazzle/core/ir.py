@@ -646,6 +646,7 @@ class WorkspaceSpec(BaseModel):
         name: Workspace identifier
         title: Human-readable title
         purpose: Why this workspace exists
+        engine_hint: Optional layout archetype hint (e.g., "focus_metric", "scanner_table")
         regions: List of data regions in the workspace
         ux: Optional workspace-level UX customization
     """
@@ -653,6 +654,7 @@ class WorkspaceSpec(BaseModel):
     name: str
     title: str | None = None
     purpose: str | None = None
+    engine_hint: str | None = None  # v0.3.1: Force specific archetype
     regions: list[WorkspaceRegion] = Field(default_factory=list)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
 
