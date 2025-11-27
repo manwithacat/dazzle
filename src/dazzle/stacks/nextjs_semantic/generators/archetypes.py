@@ -193,6 +193,7 @@ export function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
  * Best for: Email clients, file browsers, content management
  */
 
+import { memo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -202,7 +203,7 @@ interface DualPaneFlowProps {
   signalData: Record<string, unknown>;
 }
 
-export function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
+export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
   // Find list and detail surfaces
   const listSurface = plan.surfaces.find(s => s.id === 'list');
   const detailSurface = plan.surfaces.find(s => s.id === 'detail');
@@ -265,6 +266,7 @@ export function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
  * Best for: Operations dashboards, analytics, system monitoring
  */
 
+import { memo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -274,7 +276,7 @@ interface MonitorWallProps {
   signalData: Record<string, unknown>;
 }
 
-export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
+export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
   // Find all surfaces
   const primarySurfaces = plan.surfaces.filter(s => s.id.startsWith('primary'));
   const secondarySurfaces = plan.surfaces.filter(s => s.id.startsWith('secondary'));
@@ -351,6 +353,7 @@ export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
  * Best for: Power users, complex workflows, multi-tasking
  */
 
+import { memo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -360,7 +363,7 @@ interface CommandCenterProps {
   signalData: Record<string, unknown>;
 }
 
-export function CommandCenter({ plan, signals, signalData }: CommandCenterProps) {
+export const CommandCenter = memo(function CommandCenter({ plan, signals, signalData }: CommandCenterProps) {
   // Find all surfaces
   const mainSurface = plan.surfaces.find(s => s.id === 'main');
   const sidebarSurface = plan.surfaces.find(s => s.id === 'sidebar');
