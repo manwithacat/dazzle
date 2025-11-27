@@ -1,0 +1,7 @@
+[project]
+name = "contact_manager"
+version = "0.1.0"
+root = "contact_manager.core"
+
+[fileset]
+dsl_paths = ["dsl"]
