@@ -873,7 +873,9 @@ def build(
         typer.echo(f"Backend error: {e}", err=True)
         raise typer.Exit(code=1)
     except Exception as e:
+        import traceback
         typer.echo(f"Unexpected error during build: {e}", err=True)
+        traceback.print_exc()
         raise typer.Exit(code=1)
 
 

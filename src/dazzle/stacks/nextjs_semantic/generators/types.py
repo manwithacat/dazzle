@@ -116,8 +116,8 @@ export interface WorkspaceLayout {
 
             if entity.fields:
                 for field in entity.fields:
-                    ts_type = self._map_field_type(field.type)
-                    optional = "?" if not field.required else ""
+                    ts_type = self._map_field_type(field.type.kind)
+                    optional = "?" if not field.is_required else ""
                     fields.append(f"  {field.name}{optional}: {ts_type};")
 
             type_def = f'''export interface {entity.name} {{
@@ -174,21 +174,24 @@ export type SignalData = {{
         output_path = types_dir / "signals.ts"
         output_path.write_text(content)
 
-    def _map_field_type(self, dazzle_type: str) -> str:
+    def _map_field_type(self, field_type_kind) -> str:
         """Map DAZZLE field type to TypeScript type."""
+        from dazzle.core.ir import FieldTypeKind
+
         type_mapping = {
-            "str": "string",
-            "int": "number",
-            "float": "number",
-            "bool": "boolean",
-            "date": "string",  # ISO date string
-            "datetime": "string",  # ISO datetime string
-            "text": "string",
-            "email": "string",
-            "url": "string",
-            "json": "Record<string, unknown>",
+            FieldTypeKind.STR: "string",
+            FieldTypeKind.TEXT: "string",
+            FieldTypeKind.INT: "number",
+            FieldTypeKind.DECIMAL: "number",
+            FieldTypeKind.BOOL: "boolean",
+            FieldTypeKind.DATE: "string",  # ISO date string
+            FieldTypeKind.DATETIME: "string",  # ISO datetime string
+            FieldTypeKind.UUID: "string",
+            FieldTypeKind.ENUM: "string",  # TODO: Could generate union type
+            FieldTypeKind.REF: "string",  # TODO: Could reference entity type
+            FieldTypeKind.EMAIL: "string",
         }
-        return type_mapping.get(dazzle_type, "unknown")
+        return type_mapping.get(field_type_kind, "unknown")
 
 
 __all__ = ["LayoutTypesGenerator"]
