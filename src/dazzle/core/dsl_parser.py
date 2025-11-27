@@ -150,8 +150,36 @@ class Parser:
         ):
             return self.advance()
 
+        # v0.3.1: Provide helpful alternatives for common reserved keywords
+        keyword_alternatives = {
+            "url": "endpoint, uri, address, link",
+            "source": "data_source, origin, provider, event_source",
+            "error": "err, failure, fault",
+            "warning": "warn, alert, caution",
+            "mode": "display_mode, type, view_mode",
+            "filter": "filter_by, where_clause, filters",
+            "data": "record_data, content, payload",
+            "status": "state, current_status, record_status",
+            "created": "created_at, was_created",
+            "key": "composite_key, key_field",
+            "spec": "specification, api_spec",
+            "from": "from_source, source_entity",
+            "into": "into_target, target_entity",
+        }
+
+        keyword = token.type.value
+        if keyword in keyword_alternatives:
+            alternatives = keyword_alternatives[keyword]
+            error_msg = (
+                f"Field name '{keyword}' is a reserved keyword.\n"
+                f"  Suggested alternatives: {alternatives}\n"
+                f"  See docs/DSL_RESERVED_KEYWORDS.md for full list"
+            )
+        else:
+            error_msg = f"Expected identifier or keyword, got {keyword}"
+
         raise make_parse_error(
-            f"Expected identifier or keyword, got {token.type.value}",
+            error_msg,
             self.file,
             token.line,
             token.column,
