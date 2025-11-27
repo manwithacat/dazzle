@@ -14,6 +14,11 @@ from dazzle.ui.layout_engine.archetypes import (
     ARCHETYPE_DEFINITIONS,
     ArchetypeDefinition,
 )
+from dazzle.ui.layout_engine.converter import (
+    convert_workspace_to_layout,
+    convert_workspaces_to_layouts,
+    enrich_app_spec_with_layouts,
+)
 from dazzle.ui.layout_engine.plan import build_layout_plan
 from dazzle.ui.layout_engine.select_archetype import select_archetype
 from dazzle.ui.layout_engine.types import (
@@ -30,6 +35,10 @@ __all__ = [
     # Core functions
     "build_layout_plan",
     "select_archetype",
+    # DSL conversion
+    "convert_workspace_to_layout",
+    "convert_workspaces_to_layouts",
+    "enrich_app_spec_with_layouts",
     # Archetype definitions
     "ARCHETYPE_DEFINITIONS",
     "ArchetypeDefinition",

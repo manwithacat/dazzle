@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from ...core import ir
-from ...ui.layout_engine import build_layout_plan
+from ...ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
 from .. import Backend, BackendCapabilities
 from .generators import (
     ArchetypeComponentsGenerator,
@@ -103,14 +103,21 @@ class NextjsSemanticBackend(Backend):
         """Generate layout plans for all workspaces in the spec."""
         self.layout_plans = {}
 
-        # Get workspaces from UX section
+        # Auto-convert WorkspaceSpec to WorkspaceLayout if needed
         if not self.spec.ux or not self.spec.ux.workspaces:
-            return
+            # Try to convert from WorkspaceSpec
+            if self.spec.workspaces:
+                self.spec = enrich_app_spec_with_layouts(self.spec)
+            else:
+                # No workspaces at all
+                return
 
-        for workspace in self.spec.ux.workspaces:
-            # Build plan without persona first (can add persona support later)
-            plan = build_layout_plan(workspace)
-            self.layout_plans[workspace.id] = plan
+        # Generate plans for each workspace
+        if self.spec.ux and self.spec.ux.workspaces:
+            for workspace in self.spec.ux.workspaces:
+                # Build plan without persona first (can add persona support later)
+                plan = build_layout_plan(workspace)
+                self.layout_plans[workspace.id] = plan
 
 
 __all__ = ["NextjsSemanticBackend"]
