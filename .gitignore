@@ -45,6 +45,9 @@ build/
 htmlcov/
 .pytest_cache/
 
+# DAZZLE cache
+.dazzle/cache/
+
 # Development Docs (legacy)
 /devdocs
 # Example build outputs

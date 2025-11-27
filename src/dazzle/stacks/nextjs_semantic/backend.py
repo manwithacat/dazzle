@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from ...core import ir
-from ...ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
+from ...ui.layout_engine import (
+    build_layout_plan,
+    enrich_app_spec_with_layouts,
+    get_layout_cache,
+)
 from .. import Backend, BackendCapabilities
 from .generators import (
     ArchetypeComponentsGenerator,
@@ -100,7 +104,7 @@ class NextjsSemanticBackend(Backend):
         (self.project_path / "public").mkdir(exist_ok=True)
 
     def _generate_layout_plans(self) -> None:
-        """Generate layout plans for all workspaces in the spec."""
+        """Generate layout plans for all workspaces in the spec (with caching)."""
         self.layout_plans = {}
 
         # Auto-convert WorkspaceSpec to WorkspaceLayout if needed
@@ -112,12 +116,25 @@ class NextjsSemanticBackend(Backend):
                 # No workspaces at all
                 return
 
-        # Generate plans for each workspace
+        # Get cache instance (stores in output_dir/.dazzle/cache/layout_plans)
+        cache = get_layout_cache(self.output_dir)
+
+        # Generate plans for each workspace (use cache when available)
         if self.spec.ux and self.spec.ux.workspaces:
             for workspace in self.spec.ux.workspaces:
-                # Build plan without persona first (can add persona support later)
-                plan = build_layout_plan(workspace)
-                self.layout_plans[workspace.id] = plan
+                # Try cache first
+                cached_plan = cache.get(workspace)
+
+                if cached_plan is not None:
+                    # Use cached plan
+                    self.layout_plans[workspace.id] = cached_plan
+                else:
+                    # Build plan from scratch
+                    plan = build_layout_plan(workspace)
+                    self.layout_plans[workspace.id] = plan
+
+                    # Cache for next time
+                    cache.set(workspace, plan)
 
 
 __all__ = ["NextjsSemanticBackend"]

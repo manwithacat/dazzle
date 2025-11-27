@@ -14,6 +14,7 @@ from dazzle.ui.layout_engine.archetypes import (
     ARCHETYPE_DEFINITIONS,
     ArchetypeDefinition,
 )
+from dazzle.ui.layout_engine.cache import LayoutPlanCache, get_layout_cache
 from dazzle.ui.layout_engine.converter import (
     convert_workspace_to_layout,
     convert_workspaces_to_layouts,
@@ -39,6 +40,9 @@ __all__ = [
     "convert_workspace_to_layout",
     "convert_workspaces_to_layouts",
     "enrich_app_spec_with_layouts",
+    # Caching
+    "LayoutPlanCache",
+    "get_layout_cache",
     # Archetype definitions
     "ARCHETYPE_DEFINITIONS",
     "ArchetypeDefinition",
