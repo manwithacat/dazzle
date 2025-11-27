@@ -1,0 +1,90 @@
+{
+  "timestamp": "2025-11-27T22:24:43.080032Z",
+  "backend": "nextjs_semantic",
+  "output_dir": "build",
+  "dsl_file_hashes": {
+    "dsl/app.dsl": "3cc3f92e747794448dfa9e96fa746ae2f4b5b327fccde0600bbf197806d5c21f"
+  },
+  "appspec_snapshot": {
+    "app": {
+      "name": "inventory_scanner",
+      "title": "Inventory Scanner",
+      "version": "0.1.0"
+    },
+    "entities": {
+      "Product": {
+        "title": "Product",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "sku": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=50 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.UNIQUE",
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "name": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "category": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['electronics', 'clothing', 'home', 'food', 'other'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "quantity": {
+            "type": "kind=<FieldTypeKind.INT: 'int'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "price": {
+            "type": "kind=<FieldTypeKind.DECIMAL: 'decimal'> max_length=None precision=10 scale=2 enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "reorder_level": {
+            "type": "kind=<FieldTypeKind.INT: 'int'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "supplier": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "last_restocked": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_UPDATE"
+            ]
+          },
+          "created_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          }
+        }
+      }
+    },
+    "surfaces": {},
+    "services": {},
+    "experiences": {}
+  }
+}

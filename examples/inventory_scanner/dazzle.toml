@@ -1,0 +1,10 @@
+[project]
+name = "inventory_scanner"
+version = "0.1.0"
+root = "inventory_scanner.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "nextjs_semantic"
