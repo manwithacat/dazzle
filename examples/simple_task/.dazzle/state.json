@@ -1,9 +1,9 @@
 {
-  "timestamp": "2025-11-25T23:45:03.211119Z",
-  "backend": "nextjs_onebox",
+  "timestamp": "2025-11-27T22:06:11.260810Z",
+  "backend": "nextjs_semantic",
   "output_dir": "build",
   "dsl_file_hashes": {
-    "dsl/app.dsl": "0468655844b2d4d925a0fc1b5024d63f3ce2710f84fdb208c2560ae5c20cf08e"
+    "dsl/app.dsl": "71dedbb139262fe94d56369efc87b00b2e516afdc837ac2599c8bf3d5f0904c6"
   },
   "appspec_snapshot": {
     "app": {
