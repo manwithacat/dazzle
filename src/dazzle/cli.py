@@ -614,6 +614,148 @@ def inspect(
         raise typer.Exit(code=1)
 
 
+@app.command(name="layout-plan")
+def layout_plan(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Specific workspace to show (shows all if not specified)"),
+    persona: str | None = typer.Option(None, "--persona", "-p", help="Persona to generate plan for"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """
+    Generate and visualize layout plans from workspace definitions.
+
+    ⚠ Operates in CURRENT directory (must contain dazzle.toml).
+
+    Shows:
+    - Selected layout archetype
+    - Surface allocation
+    - Attention signal assignments
+    - Attention budget analysis
+    - Warnings for over-budget signals
+
+    Useful for understanding how workspaces map to UI layouts.
+    """
+    import json as json_lib
+    from dazzle.ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
+
+    # Use manifest path to determine root directory
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        # Convert workspaces to layouts if needed
+        if not appspec.ux or not appspec.ux.workspaces:
+            if appspec.workspaces:
+                appspec = enrich_app_spec_with_layouts(appspec)
+            else:
+                typer.echo("No workspaces defined in DSL.", err=True)
+                raise typer.Exit(code=1)
+
+        # Filter to specific workspace if requested
+        workspaces_to_show = appspec.ux.workspaces
+        if workspace:
+            workspaces_to_show = [ws for ws in workspaces_to_show if ws.id == workspace]
+            if not workspaces_to_show:
+                typer.echo(f"Workspace '{workspace}' not found.", err=True)
+                raise typer.Exit(code=1)
+
+        # Find persona if specified
+        persona_obj = None
+        if persona and appspec.ux and appspec.ux.personas:
+            persona_objs = [p for p in appspec.ux.personas if p.id == persona]
+            if persona_objs:
+                persona_obj = persona_objs[0]
+            else:
+                typer.echo(f"Warning: Persona '{persona}' not found, using default plan.", err=True)
+
+        # Generate and display plans
+        plans = {}
+        for ws in workspaces_to_show:
+            plan = build_layout_plan(ws, persona=persona_obj)
+            plans[ws.id] = plan
+
+            if not json_output:
+                # Human-readable output
+                typer.echo(f"\nWorkspace: {ws.id}")
+                typer.echo("=" * 60)
+                typer.echo(f"Label: {ws.label}")
+                if persona:
+                    typer.echo(f"Persona: {persona}")
+                typer.echo(f"Archetype: {plan.archetype.value}")
+                typer.echo(f"Attention Budget: {ws.attention_budget}")
+                typer.echo()
+
+                # Show signals
+                typer.echo("Attention Signals:")
+                for signal in ws.attention_signals:
+                    typer.echo(f"  - {signal.id} ({signal.kind.value})")
+                    typer.echo(f"    Weight: {signal.attention_weight}")
+                    typer.echo(f"    Source: {signal.source}")
+                typer.echo()
+
+                # Show surface allocation
+                typer.echo("Surface Allocation:")
+                for surface in plan.surfaces:
+                    typer.echo(f"  - {surface.id} (priority: {surface.priority})")
+                    typer.echo(f"    Capacity: {surface.capacity}")
+                    if surface.assigned_signals:
+                        typer.echo(f"    Signals: {', '.join(surface.assigned_signals)}")
+                    else:
+                        typer.echo("    Signals: (none)")
+                typer.echo()
+
+                # Show warnings
+                if plan.warnings:
+                    typer.echo("⚠ Warnings:")
+                    for warning in plan.warnings:
+                        typer.echo(f"  - {warning}")
+                    typer.echo()
+
+                # Show over-budget signals
+                if plan.over_budget_signals:
+                    typer.echo("⚠ Over-Budget Signals:")
+                    for signal_id in plan.over_budget_signals:
+                        typer.echo(f"  - {signal_id}")
+                    typer.echo()
+
+        if json_output:
+            # JSON output
+            output = {}
+            for ws_id, plan in plans.items():
+                output[ws_id] = {
+                    "workspace_id": plan.workspace_id,
+                    "persona_id": plan.persona_id,
+                    "archetype": plan.archetype.value,
+                    "surfaces": [
+                        {
+                            "id": s.id,
+                            "archetype": s.archetype.value,
+                            "capacity": s.capacity,
+                            "priority": s.priority,
+                            "assigned_signals": s.assigned_signals,
+                            "constraints": s.constraints,
+                        }
+                        for s in plan.surfaces
+                    ],
+                    "over_budget_signals": plan.over_budget_signals,
+                    "warnings": plan.warnings,
+                    "metadata": plan.metadata,
+                }
+            typer.echo(json_lib.dumps(output, indent=2))
+
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        import traceback
+        traceback.print_exc()
+        raise typer.Exit(code=1)
+
+
 @app.command()
 def stacks() -> None:
     """
