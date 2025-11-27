@@ -1,0 +1,10 @@
+[project]
+name = "ops_dashboard"
+version = "0.1.0"
+root = "ops_dashboard.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "nextjs_semantic"

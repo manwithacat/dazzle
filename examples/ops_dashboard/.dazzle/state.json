@@ -1,0 +1,176 @@
+{
+  "timestamp": "2025-11-27T22:28:33.686597Z",
+  "backend": "nextjs_semantic",
+  "output_dir": "build",
+  "dsl_file_hashes": {
+    "dsl/app.dsl": "91df2d771c5ea22c5caf1ebb89136cc349f05368d2de58e1d082e0010b6f372a"
+  },
+  "appspec_snapshot": {
+    "app": {
+      "name": "ops_dashboard",
+      "title": "Operations Dashboard",
+      "version": "0.1.0"
+    },
+    "entities": {
+      "Server": {
+        "title": "Server",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "hostname": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED",
+              "FieldModifier.UNIQUE"
+            ]
+          },
+          "ip_address": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=50 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "status": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['online', 'offline', 'degraded'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "cpu_usage": {
+            "type": "kind=<FieldTypeKind.DECIMAL: 'decimal'> max_length=None precision=5 scale=2 enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "memory_usage": {
+            "type": "kind=<FieldTypeKind.DECIMAL: 'decimal'> max_length=None precision=5 scale=2 enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "last_seen": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_UPDATE"
+            ]
+          },
+          "created_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          }
+        }
+      },
+      "Deployment": {
+        "title": "Deployment",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "app_name": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "version": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=50 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "environment": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['dev', 'staging', 'prod'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "status": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['pending', 'running', 'failed', 'success'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "started_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          },
+          "finished_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.OPTIONAL"
+            ]
+          }
+        }
+      },
+      "Alert": {
+        "title": "Alert",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "severity": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['info', 'warn', 'err', 'critical'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "message": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=500 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "alert_source": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "status": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['new', 'acknowledged', 'resolved'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "created_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          },
+          "resolved_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.OPTIONAL"
+            ]
+          }
+        }
+      }
+    },
+    "surfaces": {},
+    "services": {},
+    "experiences": {}
+  }
+}
