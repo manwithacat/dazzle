@@ -26,6 +26,7 @@ class PagesGenerator:
         self._generate_root_layout()
         self._generate_home_page()
         self._generate_signal_renderer()
+        self._generate_loading_skeletons()
         self._generate_workspace_pages()
 
     def _generate_root_layout(self) -> None:
@@ -283,6 +284,276 @@ export function SignalRenderer({ signal, data, variant = 'card' }: SignalRendere
         signals_dir.mkdir(parents=True, exist_ok=True)
         output_path = signals_dir / "SignalRenderer.tsx"
         output_path.write_text(content)
+
+    def _generate_loading_skeletons(self) -> None:
+        """Generate loading skeleton components."""
+        # Base skeleton primitives
+        skeleton_base = '''/**
+ * Skeleton Loading Components
+ *
+ * Reusable skeleton primitives for loading states.
+ */
+
+export function SkeletonBox({ className = '' }: { className?: string }) {
+  return (
+    <div className={`animate-pulse bg-gray-200 rounded ${className}`}></div>
+  );
+}
+
+export function SkeletonText({ lines = 1, className = '' }: { lines?: number; className?: string }) {
+  return (
+    <div className={`space-y-2 ${className}`}>
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className={`h-4 bg-gray-200 rounded animate-pulse ${
+            i === lines - 1 && lines > 1 ? 'w-3/4' : 'w-full'
+          }`}
+        ></div>
+      ))}
+    </div>
+  );
+}
+
+export function SkeletonCard({ className = '' }: { className?: string }) {
+  return (
+    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
+      <div className="animate-pulse space-y-4">
+        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+        <div className="space-y-2">
+          <div className="h-3 bg-gray-200 rounded"></div>
+          <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonTable({ rows = 5, className = '' }: { rows?: number; className?: string }) {
+  return (
+    <div className={`border border-gray-200 rounded overflow-hidden ${className}`}>
+      <div className="bg-gray-50 p-4">
+        <div className="flex gap-4">
+          <div className="h-4 bg-gray-300 rounded w-1/4 animate-pulse"></div>
+          <div className="h-4 bg-gray-300 rounded w-1/4 animate-pulse"></div>
+          <div className="h-4 bg-gray-300 rounded w-1/4 animate-pulse"></div>
+        </div>
+      </div>
+      <div className="divide-y divide-gray-200">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i} className="p-4">
+            <div className="flex gap-4">
+              <div className="h-4 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonKPI({ className = '' }: { className?: string }) {
+  return (
+    <div className={className}>
+      <div className="animate-pulse space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+        <div className="h-12 bg-gray-300 rounded w-2/3"></div>
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonList({ items = 5, className = '' }: { items?: number; className?: string }) {
+  return (
+    <div className={`space-y-3 ${className}`}>
+      {Array.from({ length: items }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded">
+          <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+          <div className="flex-1 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+'''
+
+        # Archetype-specific loading states
+        archetype_loading = '''/**
+ * Archetype Loading States
+ *
+ * Loading skeletons for each archetype pattern.
+ */
+
+import {
+  SkeletonBox,
+  SkeletonText,
+  SkeletonCard,
+  SkeletonTable,
+  SkeletonKPI,
+  SkeletonList,
+} from './SkeletonPrimitives';
+
+export function FocusMetricLoading() {
+  return (
+    <main className="focus-metric min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Loading...">
+      <section className="hero-section mb-6 sm:mb-8" aria-label="Loading primary metric">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 border border-gray-100">
+          <SkeletonKPI className="text-center" />
+        </div>
+      </section>
+
+      <section className="context-section" aria-label="Loading supporting metrics">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonKPI key={i} />
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function ScannerTableLoading() {
+  return (
+    <main className="scanner-table min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Loading...">
+      <nav className="toolbar-section mb-3 sm:mb-4" aria-label="Loading controls">
+        <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 border border-gray-200">
+          <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4 items-center">
+            <SkeletonBox className="w-32 h-10" />
+            <SkeletonBox className="w-40 h-10" />
+          </div>
+        </div>
+      </nav>
+
+      <section className="table-section" aria-label="Loading table">
+        <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
+          <SkeletonTable rows={8} />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function DualPaneFlowLoading() {
+  return (
+    <div className="dual-pane-flow min-h-screen flex flex-col md:flex-row bg-gray-50" role="main" aria-label="Loading...">
+      <nav className="list-pane w-full md:w-2/5 lg:w-1/3 xl:w-1/4 md:border-r border-b md:border-b-0 border-gray-200 bg-white overflow-y-auto max-h-64 md:max-h-none" aria-label="Loading list">
+        <SkeletonList items={6} className="p-2" />
+      </nav>
+
+      <main className="detail-pane flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto" aria-label="Loading detail">
+        <article className="max-w-4xl mx-auto">
+          <div className="animate-pulse space-y-6">
+            <SkeletonText lines={1} className="h-8" />
+            <SkeletonText lines={4} />
+            <SkeletonBox className="h-64" />
+            <SkeletonText lines={3} />
+          </div>
+        </article>
+      </main>
+    </div>
+  );
+}
+
+export function MonitorWallLoading() {
+  return (
+    <main className="monitor-wall min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Loading...">
+      <div className="space-y-4 sm:space-y-6">
+        <section className="primary-section" aria-label="Loading primary metrics">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </section>
+
+        <section className="secondary-section" aria-label="Loading secondary metrics">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <SkeletonCard key={i} className="p-3" />
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export function CommandCenterLoading() {
+  return (
+    <div className="command-center h-screen flex flex-col bg-gray-900 text-gray-100" role="main" aria-label="Loading...">
+      <header className="toolbelt-section bg-gray-800 border-b border-gray-700 p-2 sm:p-3" aria-label="Loading actions">
+        <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+          <SkeletonBox className="w-20 h-8 bg-gray-700" />
+          <SkeletonBox className="w-24 h-8 bg-gray-700" />
+        </div>
+      </header>
+
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <aside className="sidebar-section w-full md:w-56 lg:w-64 bg-gray-800 md:border-r border-b md:border-b-0 border-gray-700 overflow-y-auto p-3 sm:p-4" aria-label="Loading navigation">
+          <nav className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonBox key={i} className="h-10 bg-gray-700" />
+            ))}
+          </nav>
+        </aside>
+
+        <section className="main-section flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto" aria-label="Loading workspace">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <article key={i} className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6">
+                <div className="animate-pulse space-y-4">
+                  <SkeletonBox className="h-4 w-1/3 bg-gray-700" />
+                  <SkeletonBox className="h-32 bg-gray-700" />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <footer className="status-section bg-gray-800 border-t border-gray-700 p-2" aria-label="Loading status">
+        <div className="flex gap-4 items-center">
+          <SkeletonBox className="w-16 h-4 bg-gray-700" />
+          <SkeletonBox className="w-20 h-4 bg-gray-700" />
+        </div>
+      </footer>
+    </div>
+  );
+}
+'''
+
+        # Write skeleton primitives
+        loading_dir = self.project_path / "src" / "components" / "loading"
+        loading_dir.mkdir(parents=True, exist_ok=True)
+
+        primitives_path = loading_dir / "SkeletonPrimitives.tsx"
+        primitives_path.write_text(skeleton_base)
+
+        # Write archetype loading states
+        archetypes_path = loading_dir / "ArchetypeLoading.tsx"
+        archetypes_path.write_text(archetype_loading)
+
+        # Write index file
+        index_content = '''/**
+ * Loading Components Index
+ *
+ * Exports all loading skeleton components.
+ */
+
+export * from './SkeletonPrimitives';
+export * from './ArchetypeLoading';
+'''
+        index_path = loading_dir / "index.ts"
+        index_path.write_text(index_content)
 
     def _generate_workspace_pages(self) -> None:
         """Generate a page for each workspace."""
