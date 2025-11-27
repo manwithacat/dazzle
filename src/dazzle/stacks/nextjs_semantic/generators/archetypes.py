@@ -54,11 +54,11 @@ export function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
   const contextSurface = plan.surfaces.find(s => s.id === 'context');
 
   return (
-    <main className="focus-metric min-h-screen p-6 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Focus metric dashboard">
+    <main className="focus-metric min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Focus metric dashboard">
       {/* Hero Section - Large, Prominent */}
       {heroSurface && (
-        <section className="hero-section mb-8" aria-label="Primary metric">
-          <div className="bg-white rounded-2xl shadow-xl p-12 border border-gray-100">
+        <section className="hero-section mb-6 sm:mb-8" aria-label="Primary metric">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 border border-gray-100">
             {heroSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
@@ -79,8 +79,8 @@ export function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
       {/* Context Section - Supporting Information */}
       {contextSurface && contextSurface.assigned_signals.length > 0 && (
         <section className="context-section" aria-label="Supporting metrics">
-          <div className="bg-white rounded-lg shadow-md p-6 border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="list" aria-label="Context metrics">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" role="list" aria-label="Context metrics">
               {contextSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -132,12 +132,12 @@ export function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
   const toolbarSurface = plan.surfaces.find(s => s.id === 'toolbar');
 
   return (
-    <main className="scanner-table min-h-screen p-6 bg-gray-50" role="main" aria-label="Data table browser">
+    <main className="scanner-table min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Data table browser">
       {/* Toolbar - Actions and Filters */}
       {toolbarSurface && toolbarSurface.assigned_signals.length > 0 && (
-        <nav className="toolbar-section mb-4" aria-label="Table controls and filters">
-          <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <div className="flex flex-wrap gap-4 items-center" role="toolbar">
+        <nav className="toolbar-section mb-3 sm:mb-4" aria-label="Table controls and filters">
+          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 border border-gray-200">
+            <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4 items-center" role="toolbar">
               {toolbarSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -156,10 +156,10 @@ export function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
         </nav>
       )}
 
-      {/* Table - Dense, Scannable */}
+      {/* Table - Dense, Scannable - Horizontally scrollable on mobile */}
       {tableSurface && (
         <section className="table-section" aria-label="Data table">
-          <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+          <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
             {tableSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
@@ -208,10 +208,10 @@ export function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
   const detailSurface = plan.surfaces.find(s => s.id === 'detail');
 
   return (
-    <div className="dual-pane-flow min-h-screen flex bg-gray-50" role="main">
-      {/* List Pane - Navigation */}
+    <div className="dual-pane-flow min-h-screen flex flex-col md:flex-row bg-gray-50" role="main">
+      {/* List Pane - Navigation - Stacks on mobile, side-by-side on desktop */}
       {listSurface && (
-        <nav className="list-pane w-full md:w-1/3 lg:w-1/4 border-r border-gray-200 bg-white overflow-y-auto" aria-label="Item list navigation">
+        <nav className="list-pane w-full md:w-2/5 lg:w-1/3 xl:w-1/4 md:border-r border-b md:border-b-0 border-gray-200 bg-white overflow-y-auto max-h-64 md:max-h-none" aria-label="Item list navigation">
           {listSurface.assigned_signals.map(signalId => {
             const signal = signals[signalId];
             if (!signal) return null;
@@ -230,7 +230,7 @@ export function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
 
       {/* Detail Pane - Content */}
       {detailSurface && (
-        <main className="detail-pane flex-1 p-6 overflow-y-auto" aria-label="Item detail view">
+        <main className="detail-pane flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto" aria-label="Item detail view">
           <article className="max-w-4xl mx-auto">
             {detailSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
@@ -280,12 +280,12 @@ export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
   const secondarySurfaces = plan.surfaces.filter(s => s.id.startsWith('secondary'));
 
   return (
-    <main className="monitor-wall min-h-screen p-6 bg-gray-50" role="main" aria-label="Monitor wall dashboard">
-      <div className="space-y-6">
+    <main className="monitor-wall min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Monitor wall dashboard">
+      <div className="space-y-4 sm:space-y-6">
         {/* Primary Signals - Larger Cards */}
         {primarySurfaces.length > 0 && (
           <section className="primary-section" aria-label="Primary metrics">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="list">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" role="list">
               {primarySurfaces.map(surface => (
                 <div key={surface.id} role="listitem">
                   {surface.assigned_signals.map(signalId => {
@@ -293,7 +293,7 @@ export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
                     if (!signal) return null;
 
                     return (
-                      <article key={signalId} className="bg-white rounded-lg shadow-md p-6 border border-gray-200 h-full">
+                      <article key={signalId} className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 h-full">
                         <SignalRenderer
                           signal={signal}
                           data={signalData[signalId]}
@@ -308,10 +308,10 @@ export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
           </section>
         )}
 
-        {/* Secondary Signals - Smaller Cards */}
+        {/* Secondary Signals - Smaller Cards - 2 cols on mobile, 4 cols on desktop */}
         {secondarySurfaces.length > 0 && (
           <section className="secondary-section" aria-label="Secondary metrics">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" role="list">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4" role="list">
               {secondarySurfaces.map(surface => (
                 <div key={surface.id} role="listitem">
                   {surface.assigned_signals.map(signalId => {
@@ -319,7 +319,7 @@ export function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
                     if (!signal) return null;
 
                     return (
-                      <article key={signalId} className="bg-white rounded-md shadow-sm p-4 border border-gray-100">
+                      <article key={signalId} className="bg-white rounded-md shadow-sm p-3 sm:p-4 border border-gray-100">
                         <SignalRenderer
                           signal={signal}
                           data={signalData[signalId]}
@@ -371,8 +371,8 @@ export function CommandCenter({ plan, signals, signalData }: CommandCenterProps)
     <div className="command-center h-screen flex flex-col bg-gray-900 text-gray-100" role="main" aria-label="Command center dashboard">
       {/* Toolbelt - Top Actions */}
       {toolbeltSurface && toolbeltSurface.assigned_signals.length > 0 && (
-        <header className="toolbelt-section bg-gray-800 border-b border-gray-700 p-3" aria-label="Quick actions">
-          <div className="flex flex-wrap gap-3 items-center" role="toolbar">
+        <header className="toolbelt-section bg-gray-800 border-b border-gray-700 p-2 sm:p-3" aria-label="Quick actions">
+          <div className="flex flex-wrap gap-2 sm:gap-3 items-center text-sm sm:text-base" role="toolbar">
             {toolbeltSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
@@ -390,12 +390,12 @@ export function CommandCenter({ plan, signals, signalData }: CommandCenterProps)
         </header>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Navigation/Tools */}
+      {/* Main Content Area - Stacks sidebar on mobile, side-by-side on desktop */}
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        {/* Sidebar - Navigation/Tools - Collapsible on mobile */}
         {sidebarSurface && sidebarSurface.assigned_signals.length > 0 && (
-          <aside className="sidebar-section w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto p-4" aria-label="Navigation and tools">
-            <nav className="space-y-4">
+          <aside className="sidebar-section w-full md:w-56 lg:w-64 bg-gray-800 md:border-r border-b md:border-b-0 border-gray-700 overflow-y-auto p-3 sm:p-4" aria-label="Navigation and tools">
+            <nav className="space-y-3 sm:space-y-4">
               {sidebarSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -413,16 +413,16 @@ export function CommandCenter({ plan, signals, signalData }: CommandCenterProps)
           </aside>
         )}
 
-        {/* Main Work Area */}
+        {/* Main Work Area - Single column on mobile, 2 cols on desktop */}
         {mainSurface && (
-          <section className="main-section flex-1 p-6 overflow-y-auto" aria-label="Main workspace">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" role="list">
+          <section className="main-section flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto" aria-label="Main workspace">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6" role="list">
               {mainSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
 
                 return (
-                  <article key={signalId} className="bg-gray-800 rounded-lg border border-gray-700 p-6" role="listitem">
+                  <article key={signalId} className="bg-gray-800 rounded-lg border border-gray-700 p-4 sm:p-6" role="listitem">
                     <SignalRenderer
                       signal={signal}
                       data={signalData[signalId]}
@@ -436,10 +436,10 @@ export function CommandCenter({ plan, signals, signalData }: CommandCenterProps)
         )}
       </div>
 
-      {/* Status Bar - Bottom */}
+      {/* Status Bar - Bottom - Compact on mobile */}
       {statusSurface && statusSurface.assigned_signals.length > 0 && (
         <footer className="status-section bg-gray-800 border-t border-gray-700 p-2" role="status" aria-label="Status information" aria-live="polite">
-          <div className="flex gap-4 items-center text-sm">
+          <div className="flex flex-wrap gap-2 sm:gap-4 items-center text-xs sm:text-sm overflow-x-auto">
             {statusSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
