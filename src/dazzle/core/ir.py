@@ -1152,6 +1152,23 @@ class TestSpec(BaseModel):
 # =============================================================================
 
 
+class UXLayouts(BaseModel):
+    """
+    Container for UX semantic layout specifications.
+
+    Holds workspace layouts and persona definitions for the layout engine.
+
+    Attributes:
+        workspaces: List of workspace layout specifications
+        personas: List of persona layout specifications
+    """
+
+    model_config = {"frozen": True}
+
+    workspaces: list["WorkspaceLayout"] = Field(default_factory=list)
+    personas: list["PersonaLayout"] = Field(default_factory=list)
+
+
 class AppSpec(BaseModel):
     """
     Complete application specification.
@@ -1178,13 +1195,14 @@ class AppSpec(BaseModel):
     version: str = "0.1.0"
     domain: DomainSpec
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
-    workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension
+    workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension (old)
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     services: list[ServiceSpec] = Field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
 
     class Config:
         frozen = True
