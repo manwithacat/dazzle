@@ -267,6 +267,86 @@ See: `support_tickets/`
 - Foreign key relationships
 - Optional vs required links
 
+### Semantic Layout Archetypes (v0.3.0+)
+
+The following examples demonstrate different layout archetypes from the Semantic Layout Engine:
+
+#### 📊 Uptime Monitor - FOCUS_METRIC
+**Location**: [`uptime_monitor/`](uptime_monitor/)
+
+Single dominant KPI dashboard pattern.
+
+**Features**:
+- 1 KPI signal with aggregates
+- FOCUS_METRIC archetype (hero + context)
+- Attention weight: 0.7
+- Under budget
+
+**Perfect for**: Executive dashboards, SLA monitoring, single-metric tracking
+
+```bash
+cd uptime_monitor
+dazzle layout-plan  # Visualize layout
+dazzle build --stack nextjs_semantic
+```
+
+#### 📋 Inventory Scanner - SCANNER_TABLE
+**Location**: [`inventory_scanner/`](inventory_scanner/)
+
+Data-heavy browsing and filtering pattern.
+
+**Features**:
+- 1 TABLE signal for all products
+- SCANNER_TABLE archetype
+- Table-focused interface
+- Under budget
+
+**Perfect for**: Admin panels, data exploration, catalog browsing
+
+```bash
+cd inventory_scanner
+dazzle layout-plan
+dazzle build --stack nextjs_semantic
+```
+
+#### 📧 Email Client - MONITOR_WALL
+**Location**: [`email_client/`](email_client/)
+
+Multiple moderate signals in balanced dashboard.
+
+**Features**:
+- 4 signals (1 KPI + 2 ITEM_LIST + 1 TABLE)
+- MONITOR_WALL archetype
+- Grid-based multi-signal layout
+- Demonstrates attention budget warnings
+
+**Perfect for**: Operations dashboards, multi-metric monitoring
+
+```bash
+cd email_client
+dazzle layout-plan
+dazzle build --stack nextjs_semantic
+```
+
+#### 🔧 Operations Dashboard - High Signal Count
+**Location**: [`ops_dashboard/`](ops_dashboard/)
+
+Complex monitoring with signal composition effects.
+
+**Features**:
+- 8 signals across 3 entities
+- SCANNER_TABLE archetype (selected by table_weight)
+- Severe attention budget overflow (4.8/1.0)
+- Demonstrates signal prioritization
+
+**Perfect for**: DevOps monitoring, understanding archetype selection
+
+```bash
+cd ops_dashboard
+dazzle layout-plan
+dazzle build --stack nextjs_semantic
+```
+
 ### Coming Soon
 
 We're planning more examples:
@@ -275,7 +355,6 @@ We're planning more examples:
 - **Blog Platform** - Posts, comments, categories, tags
 - **Project Manager** - Projects, tasks, milestones, team members
 - **CRM System** - Contacts, companies, deals, activities
-- **Inventory System** - Items, warehouses, stock movements
 
 ## Testing Your Changes
 
