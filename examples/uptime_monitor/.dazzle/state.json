@@ -1,0 +1,70 @@
+{
+  "timestamp": "2025-11-27T22:23:39.185291Z",
+  "backend": "nextjs_semantic",
+  "output_dir": "build",
+  "dsl_file_hashes": {
+    "dsl/app.dsl": "0f30026b08fed6d6820796ed76cc083a81f259addafdb71cc62981d9066e80f6"
+  },
+  "appspec_snapshot": {
+    "app": {
+      "name": "uptime_monitor",
+      "title": "Uptime Monitor",
+      "version": "0.1.0"
+    },
+    "entities": {
+      "Service": {
+        "title": "Service",
+        "fields": {
+          "id": {
+            "type": "kind=<FieldTypeKind.UUID: 'uuid'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.PK"
+            ]
+          },
+          "name": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=200 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "endpoint": {
+            "type": "kind=<FieldTypeKind.STR: 'str'> max_length=500 precision=None scale=None enum_values=None ref_entity=None",
+            "required": true,
+            "modifiers": [
+              "FieldModifier.REQUIRED"
+            ]
+          },
+          "status": {
+            "type": "kind=<FieldTypeKind.ENUM: 'enum'> max_length=None precision=None scale=None enum_values=['up', 'down', 'degraded'] ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "uptime_percentage": {
+            "type": "kind=<FieldTypeKind.DECIMAL: 'decimal'> max_length=None precision=5 scale=2 enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": []
+          },
+          "last_check": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_UPDATE"
+            ]
+          },
+          "created_at": {
+            "type": "kind=<FieldTypeKind.DATETIME: 'datetime'> max_length=None precision=None scale=None enum_values=None ref_entity=None",
+            "required": false,
+            "modifiers": [
+              "FieldModifier.AUTO_ADD"
+            ]
+          }
+        }
+      }
+    },
+    "surfaces": {},
+    "services": {},
+    "experiences": {}
+  }
+}

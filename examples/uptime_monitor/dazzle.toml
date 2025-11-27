@@ -1,0 +1,10 @@
+[project]
+name = "uptime_monitor"
+version = "0.1.0"
+root = "uptime_monitor.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "nextjs_semantic"
