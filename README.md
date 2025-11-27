@@ -11,7 +11,7 @@ DAZZLE is a DSL-first toolkit for designing applications from high-level specifi
 ## Install
 
 ```bash
-# Homebrew (macOS/Linux)
+# Homebrew (macOS/Linux) - MCP server auto-registered
 brew install manwithacat/tap/dazzle
 
 # PyPI
@@ -22,6 +22,31 @@ code --install-extension manwithacat.dazzle-vscode
 ```
 
 **Downloads**: [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode) · [Homebrew Formula](https://github.com/manwithacat/homebrew-tap)
+
+### Claude Code Integration (MCP Server)
+
+DAZZLE includes MCP server support for enhanced tooling in Claude Code.
+
+**Homebrew**: MCP server is automatically registered during installation.
+
+**PyPI/pip**: Register the MCP server manually after installation:
+```bash
+dazzle mcp-setup
+```
+
+Verify registration:
+```bash
+dazzle mcp-check
+```
+
+When using Claude Code with a DAZZLE project, you'll have access to tools like:
+- `validate_dsl` - Validate all DSL files
+- `build` - Generate code from DSL specifications
+- `inspect_entity` - Inspect entity definitions
+- `analyze_patterns` - Detect CRUD and integration patterns
+- And more! Ask Claude: "What DAZZLE tools do you have access to?"
+
+See [MCP Integration](docs/MCP_INTEGRATION.md) for details.
 
 ## The DSL
 

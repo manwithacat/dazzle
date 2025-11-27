@@ -383,6 +383,19 @@ def init(
         typer.echo("  dazzle validate")
         typer.echo("  dazzle build  # Uses 'micro' stack by default")
 
+        # Check if MCP server is registered and suggest setup if not
+        try:
+            from dazzle.mcp.setup import check_mcp_server
+
+            status = check_mcp_server()
+            if not status.get("registered"):
+                typer.echo("\n💡 Tip: Enable DAZZLE MCP server for Claude Code:")
+                typer.echo("  dazzle mcp-setup")
+                typer.echo("  Then restart Claude Code to access DAZZLE tools")
+        except Exception:
+            # Don't fail if MCP check fails
+            pass
+
     except InitError as e:
         typer.echo(f"Initialization failed: {e}", err=True)
         raise typer.Exit(code=1)
