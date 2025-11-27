@@ -91,6 +91,40 @@ class Dazzle < Formula
     virtualenv_install_with_resources
   end
 
+  def post_install
+    # Register MCP server with Claude Code
+    system opt_libexec/"bin/python", "-m", "dazzle.cli", "mcp-setup"
+  rescue StandardError => e
+    # Don't fail installation if MCP registration fails
+    opoo "Could not register MCP server: #{e.message}"
+    opoo "You can manually register later with: dazzle mcp-setup"
+  end
+
+  def post_uninstall
+    # Remove DAZZLE MCP server from Claude Code config
+    config_paths = [
+      "#{Dir.home}/.config/claude-code/mcp_servers.json",
+      "#{Dir.home}/.claude/mcp_servers.json",
+      "#{Dir.home}/Library/Application Support/Claude Code/mcp_servers.json"
+    ]
+
+    config_paths.each do |config_path|
+      next unless File.exist?(config_path)
+
+      begin
+        require "json"
+        config = JSON.parse(File.read(config_path))
+        if config.dig("mcpServers", "dazzle")
+          config["mcpServers"].delete("dazzle")
+          File.write(config_path, JSON.pretty_generate(config))
+          ohai "Removed DAZZLE MCP server from #{config_path}"
+        end
+      rescue StandardError => e
+        opoo "Could not clean up MCP config at #{config_path}: #{e.message}"
+      end
+    end
+  end
+
   def caveats
     <<~EOS
       DAZZLE has been installed!
@@ -102,6 +136,22 @@ class Dazzle < Formula
 
       Check installation:
         dazzle --version
+
+      MCP Server Integration (Claude Code):
+        The DAZZLE MCP server has been automatically registered.
+
+        Check status:
+          dazzle mcp-check
+
+        Manual registration (if needed):
+          dazzle mcp-setup
+
+        When using Claude Code with a DAZZLE project, you'll have access to:
+          • validate_dsl - Validate all DSL files
+          • build - Generate code from DSL
+          • inspect_entity - Inspect entity definitions
+          • analyze_patterns - Detect CRUD and integration patterns
+          • And more! Ask Claude: "What DAZZLE tools do you have access to?"
 
       For LLM features, install optional dependencies:
         #{opt_libexec}/bin/pip install anthropic openai
@@ -117,6 +167,7 @@ class Dazzle < Formula
 
       Troubleshooting:
         Run 'dazzle --version' to see your environment details
+        Run 'dazzle mcp-check' to verify MCP server status
     EOS
   end
 
