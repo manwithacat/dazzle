@@ -2,6 +2,47 @@
 
 This is a Dazzle project for generating full-stack applications from DSL specifications.
 
+## MCP Server Integration
+
+This project includes DAZZLE MCP server integration for enhanced tooling.
+
+### Automatic Setup
+If DAZZLE was installed via Homebrew or pip, the MCP server should be automatically available.
+
+### Manual Setup
+If the MCP tools are not available, you can register the server:
+
+```bash
+dazzle mcp-setup
+```
+
+Or add this configuration manually to your Claude Code config (`~/.claude/mcp_servers.json`):
+
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "dazzle",
+      "args": ["mcp", "--working-dir", "${projectDir}"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+You should have access to:
+- `validate_dsl` - Validate all DSL files
+- `build` - Generate code from DSL
+- `inspect_entity <name>` - Inspect entity definitions
+- `inspect_surface <name>` - Inspect surface definitions
+- `analyze_patterns` - Detect CRUD and integration patterns
+- `lint_project` - Run extended validation
+- `list_modules` - List all modules
+- `lookup_concept <term>` - Look up DSL concepts
+- `find_examples` - Find example projects
+
+Try asking: "What DAZZLE tools do you have access to?"
+
 ## Important Notes
 
 ### API Keys are OPTIONAL

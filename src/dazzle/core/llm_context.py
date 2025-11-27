@@ -615,6 +615,21 @@ def create_llm_instrumentation(
     )
     (claude_dir / "permissions.json").write_text(generate_claude_permissions(), encoding="utf-8")
 
+    # Create MCP server configuration
+    import json
+
+    mcp_config = {
+        "mcpServers": {
+            "dazzle": {
+                "command": "dazzle",
+                "args": ["mcp", "--working-dir", "${projectDir}"],
+                "env": {},
+                "autoStart": True,
+            }
+        }
+    }
+    (claude_dir / "mcp.json").write_text(json.dumps(mcp_config, indent=2), encoding="utf-8")
+
     # Create .copilot/ directory and CONTEXT.md
     copilot_dir = project_dir / ".copilot"
     copilot_dir.mkdir(exist_ok=True)

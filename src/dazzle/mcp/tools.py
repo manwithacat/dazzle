@@ -6,6 +6,12 @@ Tools are functions that Claude Code can call to interact with DAZZLE projects.
 
 from typing import Any
 
+try:
+    from mcp.types import Tool
+except ImportError:
+    # MCP SDK not available, use dict fallback
+    Tool = None  # type: ignore
+
 
 def create_tools() -> list[dict[str, Any]]:
     """
@@ -89,3 +95,14 @@ def create_tools() -> list[dict[str, Any]]:
             },
         },
     ]
+
+
+def get_project_tools() -> list[Any]:
+    """
+    Get list of project-level MCP tools for setup and status checking.
+
+    Returns:
+        List of tool names as strings
+    """
+    tools = create_tools()
+    return [tool["name"] for tool in tools]

@@ -10,10 +10,632 @@
 
 ## Overview
 
-This document provides detailed specifications for the next development phases based on the comprehensive gap analysis. Work is organized into 4 phases with clear priorities and deliverables.
+This document provides detailed specifications for the next development phases based on the comprehensive gap analysis. Work is organized into 5 phases with clear priorities and deliverables.
 
-**Total Estimated Effort**: 21-27 hours
-**Critical Path** (Phases 1-2): 10-13 hours
+**Total Estimated Effort**: 31-41 hours
+**Critical Path** (Phases 0-2): 20-27 hours
+
+---
+
+## Phase 0: MCP Server Distribution 🔴🔴
+
+**Priority**: CRITICAL - Top Priority
+**Estimated Time**: 10-14 hours
+**Impact**: CRITICAL - Makes MCP server discoverable and usable by all users
+**Reference**: See `dev_docs/mcp_distribution_strategy.md` for complete details
+
+### Problem
+
+When users create a new DAZZLE project using `dazzle init` or `dazzle clone`, and then open Claude Code in that directory, the DAZZLE MCP server is not automatically available. This creates a poor user experience where the powerful MCP integration is effectively hidden.
+
+### Solution Overview
+
+Multi-layered approach combining:
+1. **CLI commands** for MCP server management
+2. **Project initialization** to create MCP configs
+3. **Post-install hooks** for Homebrew and PyPI
+4. **Documentation** for manual setup and troubleshooting
+
+### Task 0.1: Add MCP CLI Commands
+
+**Time**: 3-4 hours
+**Files**: `src/dazzle/cli.py`, `src/dazzle/mcp/setup.py` (NEW)
+
+#### Implementation
+
+**Add three new CLI commands**:
+
+1. **`dazzle mcp`** - Run MCP server with working directory
+   ```python
+   @app.command()
+   def mcp(
+       working_dir: Path = typer.Option(
+           Path.cwd(),
+           "--working-dir",
+           help="Project root directory"
+       )
+   ):
+       """Run DAZZLE MCP server."""
+       import asyncio
+       from dazzle.mcp.server import run_server
+       asyncio.run(run_server(working_dir.resolve()))
+   ```
+
+2. **`dazzle mcp-setup`** - Register MCP server with Claude Code
+   ```python
+   @app.command()
+   def mcp_setup(
+       force: bool = typer.Option(
+           False,
+           "--force",
+           help="Overwrite existing MCP server config"
+       )
+   ):
+       """Register DAZZLE MCP server with Claude Code."""
+       from dazzle.mcp.setup import register_mcp_server
+
+       success = register_mcp_server(force=force)
+       if success:
+           typer.echo("✅ DAZZLE MCP server registered successfully")
+       else:
+           typer.echo("❌ Failed to register MCP server", err=True)
+           raise typer.Exit(1)
+   ```
+
+3. **`dazzle mcp-check`** - Verify MCP server status
+   ```python
+   @app.command()
+   def mcp_check():
+       """Verify MCP server configuration and availability."""
+       from dazzle.mcp.setup import check_mcp_server
+
+       status = check_mcp_server()
+
+       typer.echo(f"MCP Server Status: {status['status']}")
+       typer.echo(f"Registered: {status['registered']}")
+       typer.echo(f"Config Location: {status['config_path']}")
+
+       if status['tools']:
+           typer.echo(f"\nAvailable Tools ({len(status['tools'])}):")
+           for tool in status['tools']:
+               typer.echo(f"  - {tool}")
+   ```
+
+**Create `src/dazzle/mcp/setup.py`** with functions:
+- `get_claude_config_path()` - Find Claude Code config directory
+- `register_mcp_server(force=False)` - Register in config
+- `check_mcp_server()` - Verify registration and availability
+
+See `dev_docs/mcp_distribution_strategy.md` for complete implementation.
+
+#### Acceptance Criteria
+- [ ] `dazzle mcp` command runs MCP server
+- [ ] `dazzle mcp-setup` registers server in Claude Code config
+- [ ] `dazzle mcp-check` shows current status
+- [ ] Tests added for all commands
+- [ ] Works on macOS and Linux
+
+---
+
+### Task 0.2: Update Project Initialization
+
+**Time**: 2 hours
+**Files**: `src/dazzle/cli.py` (init command), templates in examples/
+
+#### Implementation
+
+**Update `dazzle init` to create `.claude/mcp.json`**:
+
+```python
+def _create_claude_config(project_root: Path):
+    """Create .claude/ configuration."""
+    claude_dir = project_root / ".claude"
+    claude_dir.mkdir(exist_ok=True)
+
+    # Existing CLAUDE.md creation...
+
+    # NEW: Create mcp.json for project-local MCP server
+    mcp_config = {
+        "mcpServers": {
+            "dazzle": {
+                "command": "dazzle",
+                "args": ["mcp", "--working-dir", "${projectDir}"],
+                "env": {},
+                "autoStart": True
+            }
+        }
+    }
+
+    mcp_config_path = claude_dir / "mcp.json"
+    mcp_config_path.write_text(json.dumps(mcp_config, indent=2))
+
+    print(f"✅ Created .claude/mcp.json")
+```
+
+**Update `.claude/CLAUDE.md` template** to include MCP setup instructions:
+
+```markdown
+# DAZZLE Project
+
+This project uses the DAZZLE MCP server for enhanced tooling.
+
+## MCP Server Setup
+
+### Automatic (Recommended)
+If you installed DAZZLE via Homebrew or pip, the MCP server should be automatically available.
+
+### Manual Setup
+If the MCP tools are not available, run:
+
+```bash
+dazzle mcp-setup
+```
+
+Or add this to your Claude Code config manually:
+
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "dazzle",
+      "args": ["mcp", "--working-dir", "${projectDir}"]
+    }
+  }
+}
+```
+
+### Verify MCP Server
+Check if tools are available:
+
+```bash
+dazzle mcp-check
+```
+
+You should have access to these tools:
+- `validate_dsl` - Validate project DSL files
+- `build` - Generate code from DSL
+- `inspect_entity` - Inspect entity definitions
+- `lookup_concept` - Look up DSL concepts
+- And more...
+
+Try asking: "What DAZZLE tools do you have access to?"
+```
+
+#### Acceptance Criteria
+- [ ] `dazzle init` creates `.claude/mcp.json`
+- [ ] Template includes MCP setup instructions
+- [ ] Works for both `init` and `clone` commands
+- [ ] Documentation updated
+
+---
+
+### Task 0.3: Homebrew Post-Install Hook
+
+**Time**: 2-3 hours
+**Files**: `homebrew/dazzle.rb`
+
+#### Implementation
+
+**Add post-install hook to Homebrew formula**:
+
+```ruby
+def post_install
+  require "json"
+
+  # Find Claude Code config directory
+  claude_dirs = [
+    Pathname.new(ENV["HOME"]) / ".config" / "claude-code",
+    Pathname.new(ENV["HOME"]) / ".claude",
+    Pathname.new(ENV["HOME"]) / "Library" / "Application Support" / "Claude Code"
+  ]
+
+  config_path = nil
+  claude_dirs.each do |dir|
+    if dir.exist?
+      config_path = dir / "mcp_servers.json"
+      break
+    end
+  end
+
+  # Default to ~/.claude/
+  config_path ||= Pathname.new(ENV["HOME"]) / ".claude" / "mcp_servers.json"
+  config_path.dirname.mkpath
+
+  # MCP server config
+  dazzle_server = {
+    "command" => "#{opt_libexec}/bin/python",
+    "args" => ["-m", "dazzle.mcp"],
+    "env" => {},
+    "autoStart" => true
+  }
+
+  # Merge with existing config
+  if config_path.exist?
+    config = JSON.parse(config_path.read)
+  else
+    config = { "mcpServers" => {} }
+  end
+
+  config["mcpServers"] ||= {}
+  config["mcpServers"]["dazzle"] = dazzle_server
+
+  config_path.write(JSON.pretty_generate(config))
+
+  ohai "DAZZLE MCP server registered at #{config_path}"
+  ohai "Restart Claude Code to enable DAZZLE tools"
+end
+
+def post_uninstall
+  require "json"
+
+  config_path = Pathname.new(ENV["HOME"]) / ".claude" / "mcp_servers.json"
+  return unless config_path.exist?
+
+  config = JSON.parse(config_path.read)
+  config["mcpServers"]&.delete("dazzle")
+
+  config_path.write(JSON.pretty_generate(config))
+  ohai "DAZZLE MCP server unregistered"
+end
+```
+
+**Update caveats**:
+
+```ruby
+def caveats
+  <<~EOS
+    DAZZLE has been installed!
+
+    MCP Server: ✅ Registered with Claude Code
+    Restart Claude Code to enable DAZZLE tools.
+
+    Quick start:
+      mkdir my-project && cd my-project
+      dazzle init
+      dazzle build
+
+    Verify MCP server:
+      dazzle mcp-check
+
+    Documentation:
+      https://github.com/manwithacat/dazzle
+  EOS
+end
+```
+
+#### Acceptance Criteria
+- [ ] Post-install hook registers MCP server
+- [ ] Merges with existing MCP servers (doesn't overwrite)
+- [ ] Post-uninstall cleans up registration
+- [ ] Caveats mention MCP server status
+- [ ] Tested on fresh install
+
+---
+
+### Task 0.4: PyPI Post-Install Script
+
+**Time**: 2-3 hours
+**Files**: `scripts/post_install.py` (NEW), `pyproject.toml`
+
+#### Implementation
+
+**Create `scripts/post_install.py`**:
+
+```python
+"""Post-install script for PyPI/pip installations."""
+
+import json
+import sys
+from pathlib import Path
+
+
+def post_install():
+    """Register DAZZLE MCP server after pip install."""
+    home = Path.home()
+
+    # Find Claude Code config
+    candidates = [
+        home / ".config" / "claude-code" / "mcp_servers.json",
+        home / ".claude" / "mcp_servers.json",
+    ]
+
+    config_path = None
+    for path in candidates:
+        if path.parent.exists():
+            config_path = path
+            break
+
+    if not config_path:
+        config_path = home / ".claude" / "mcp_servers.json"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # MCP server config
+    dazzle_server = {
+        "command": sys.executable,
+        "args": ["-m", "dazzle.mcp"],
+        "env": {},
+        "autoStart": True
+    }
+
+    # Merge with existing
+    if config_path.exists():
+        config = json.loads(config_path.read_text())
+    else:
+        config = {"mcpServers": {}}
+
+    config.setdefault("mcpServers", {})["dazzle"] = dazzle_server
+
+    config_path.write_text(json.dumps(config, indent=2))
+    print(f"✅ DAZZLE MCP server registered at {config_path}")
+
+
+if __name__ == "__main__":
+    try:
+        post_install()
+    except Exception as e:
+        print(f"⚠️  Could not auto-register MCP server: {e}")
+        print("   Run 'dazzle mcp-setup' manually after installation")
+        # Don't fail install on MCP registration errors
+```
+
+**Update `pyproject.toml`** to run post-install:
+
+```toml
+[project.scripts]
+dazzle = "dazzle.cli:main"
+dazzle-post-install = "scripts.post_install:post_install"
+```
+
+**Add to README.md**:
+
+```markdown
+## Installation
+
+### Via pip/pipx
+
+```bash
+# Install DAZZLE
+pip install dazzle
+
+# MCP server is auto-registered during install
+# If auto-registration failed, run manually:
+dazzle mcp-setup
+```
+```
+
+#### Acceptance Criteria
+- [ ] Post-install script created
+- [ ] Runs after pip install
+- [ ] Gracefully handles errors (doesn't break install)
+- [ ] Works with pip, pipx, and uv
+- [ ] Tested in clean virtual environment
+
+---
+
+### Task 0.5: Documentation
+
+**Time**: 1-2 hours
+**Files**: `docs/MCP_INTEGRATION.md` (NEW), `README.md`, `.claude/CLAUDE.md` templates
+
+#### Create `docs/MCP_INTEGRATION.md`
+
+**Content**:
+
+```markdown
+# DAZZLE MCP Server Integration
+
+The DAZZLE MCP (Model Context Protocol) server provides powerful tools for working with DAZZLE projects directly from Claude Code.
+
+## Quick Start
+
+### Automatic Setup (Recommended)
+
+If you installed DAZZLE via Homebrew or pip, the MCP server should already be registered:
+
+1. Create a new DAZZLE project:
+   ```bash
+   dazzle init my-project
+   cd my-project
+   ```
+
+2. Open Claude Code in this directory
+
+3. Ask Claude: "What DAZZLE tools do you have access to?"
+
+You should see tools like `validate_dsl`, `build`, `inspect_entity`, etc.
+
+### Manual Setup
+
+If the MCP server isn't automatically available:
+
+```bash
+# Register MCP server
+dazzle mcp-setup
+
+# Verify registration
+dazzle mcp-check
+```
+
+## Available Tools
+
+### Project Validation
+- `validate_dsl` - Validate all DSL files in the project
+- `lint_project` - Run extended validation rules
+- `list_modules` - Show all modules and their dependencies
+
+### Code Inspection
+- `inspect_entity <name>` - Show entity definition with fields and types
+- `inspect_surface <name>` - Show surface configuration
+- `analyze_patterns` - Detect CRUD and integration patterns
+
+### Code Generation
+- `build [--stacks <list>]` - Generate code for specified stacks
+
+### Learning & Help
+- `lookup_concept <term>` - Look up DSL concepts (persona, workspace, etc.)
+- `find_examples [--features <list>]` - Find example projects by features
+
+## Resources
+
+The MCP server provides read-only access to:
+- **DAZZLE Glossary** - Definitions of DSL v0.2 terms
+- **DSL Reference** - Complete syntax reference
+- **Semantic Index** - Structured concept definitions
+- **Example Catalog** - Example projects with metadata
+- **Project Manifest** - Your dazzle.toml configuration
+- **DSL Files** - All .dsl files in your project
+
+## Troubleshooting
+
+### MCP Tools Not Showing Up
+
+1. **Check registration**:
+   ```bash
+   dazzle mcp-check
+   ```
+
+2. **Re-register**:
+   ```bash
+   dazzle mcp-setup --force
+   ```
+
+3. **Restart Claude Code**
+
+4. **Verify config** at `~/.claude/mcp_servers.json`:
+   ```json
+   {
+     "mcpServers": {
+       "dazzle": {
+         "command": "dazzle",
+         "args": ["mcp", "--working-dir", "${projectDir}"]
+       }
+     }
+   }
+   ```
+
+### Wrong DAZZLE Version
+
+If you have multiple DAZZLE installations:
+
+```bash
+# Check which version is registered
+dazzle mcp-check
+
+# Re-register current version
+dazzle mcp-setup --force
+```
+
+### Permission Errors
+
+If MCP setup fails due to permissions:
+
+```bash
+# Ensure config directory exists
+mkdir -p ~/.claude
+
+# Run setup again
+dazzle mcp-setup
+```
+
+## Manual Configuration
+
+If automatic setup doesn't work, add this to your Claude Code config:
+
+**Global Config** (`~/.claude/mcp_servers.json`):
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "/path/to/python",
+      "args": ["-m", "dazzle.mcp"],
+      "autoStart": true
+    }
+  }
+}
+```
+
+**Project Config** (`.claude/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "dazzle",
+      "args": ["mcp", "--working-dir", "${projectDir}"],
+      "autoStart": true
+    }
+  }
+}
+```
+
+## Development Mode
+
+When working in the DAZZLE repository itself, the MCP server automatically detects "dev mode" and provides additional tools for working with example projects.
+
+## Advanced Usage
+
+### Custom Working Directory
+
+```bash
+dazzle mcp --working-dir /path/to/project
+```
+
+### Testing MCP Server
+
+```bash
+# Start MCP server manually
+dazzle mcp
+
+# In another terminal, test with MCP inspector
+npx @modelcontextprotocol/inspector dazzle mcp
+```
+
+## See Also
+
+- [VS Code Extension Guide](vscode_extension_user_guide.md)
+- [DAZZLE DSL Reference](DAZZLE_DSL_REFERENCE.md)
+- [MCP Distribution Strategy](../dev_docs/mcp_distribution_strategy.md) (developers)
+```
+
+#### Update README.md
+
+Add section after installation:
+
+```markdown
+## MCP Server Integration
+
+DAZZLE includes an MCP (Model Context Protocol) server that integrates with Claude Code:
+
+- 🛠️ **Tools**: Validate DSL, build projects, inspect definitions
+- 📚 **Resources**: Access glossary, DSL reference, examples
+- 🤖 **Context**: Claude understands your project structure
+
+**Setup** (automatic with Homebrew/pip):
+```bash
+dazzle mcp-check  # Verify MCP server status
+```
+
+See [MCP Integration Guide](docs/MCP_INTEGRATION.md) for details.
+```
+
+#### Acceptance Criteria
+- [ ] `docs/MCP_INTEGRATION.md` created
+- [ ] README mentions MCP integration
+- [ ] Template `.claude/CLAUDE.md` includes setup instructions
+- [ ] Troubleshooting section covers common issues
+- [ ] Cross-links updated
+
+---
+
+### Phase 0 Success Criteria
+
+**This phase is complete when**:
+- [ ] `dazzle mcp`, `dazzle mcp-setup`, `dazzle mcp-check` commands work
+- [ ] `dazzle init` creates `.claude/mcp.json`
+- [ ] Homebrew post-install registers MCP server
+- [ ] PyPI post-install registers MCP server
+- [ ] Documentation complete and accurate
+- [ ] Fresh install → MCP tools available in <5 minutes
+- [ ] Users discover MCP tools without reading docs
 
 ---
 
