@@ -27,6 +27,7 @@ class PagesGenerator:
         self._generate_home_page()
         self._generate_signal_renderer()
         self._generate_loading_skeletons()
+        self._generate_error_boundaries()
         self._generate_workspace_pages()
 
     def _generate_root_layout(self) -> None:
@@ -553,6 +554,282 @@ export * from './SkeletonPrimitives';
 export * from './ArchetypeLoading';
 '''
         index_path = loading_dir / "index.ts"
+        index_path.write_text(index_content)
+
+    def _generate_error_boundaries(self) -> None:
+        """Generate error boundary components."""
+        # Base error boundary component
+        error_boundary = '''/**
+ * Error Boundary Component
+ *
+ * Catches React errors and displays fallback UI.
+ * Use this to wrap components that may fail.
+ */
+
+'use client';
+
+import { Component, ReactNode } from 'react';
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log error to console
+    console.error('ErrorBoundary caught error:', error, errorInfo);
+
+    // Call optional error handler
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render custom fallback if provided
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      // Default fallback UI
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 border border-red-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">Something went wrong</h2>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              An unexpected error occurred. Please try refreshing the page.
+            </p>
+
+            {this.state.error && (
+              <details className="mb-4">
+                <summary className="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Error details
+                </summary>
+                <pre className="mt-2 p-3 bg-gray-50 rounded text-xs text-red-600 overflow-auto max-h-40">
+                  {this.state.error.message}
+                </pre>
+              </details>
+            )}
+
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Refresh page
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+'''
+
+        # Signal error fallback component
+        signal_error = '''/**
+ * Signal Error Fallback
+ *
+ * Fallback UI for individual signal failures.
+ * Allows other signals to continue working.
+ */
+
+'use client';
+
+interface SignalErrorProps {
+  signalLabel?: string;
+  error?: Error;
+  onRetry?: () => void;
+}
+
+export function SignalError({ signalLabel, error, onRetry }: SignalErrorProps) {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4" role="alert" aria-live="assertive">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0">
+          <svg
+            className="w-5 h-5 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium text-red-800">
+            {signalLabel ? `Failed to load ${signalLabel}` : 'Failed to load signal'}
+          </h3>
+
+          {error && (
+            <p className="mt-1 text-xs text-red-700">{error.message}</p>
+          )}
+
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="mt-2 text-xs font-medium text-red-600 hover:text-red-800 underline"
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+'''
+
+        # Archetype error fallbacks
+        archetype_errors = '''/**
+ * Archetype Error Fallbacks
+ *
+ * Error fallback UIs for each archetype pattern.
+ * Maintains layout structure while showing error state.
+ */
+
+'use client';
+
+import { SignalError } from './SignalError';
+
+export function FocusMetricError({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+  return (
+    <main className="focus-metric min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Error state">
+      <section className="hero-section mb-6 sm:mb-8">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 border border-gray-100">
+          <SignalError signalLabel="Primary metric" error={error} onRetry={onRetry} />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function ScannerTableError({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+  return (
+    <main className="scanner-table min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Error state">
+      <section className="table-section">
+        <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200 p-6">
+          <SignalError signalLabel="Table data" error={error} onRetry={onRetry} />
+        </div>
+      </section>
+    </main>
+  );
+}
+
+export function DualPaneFlowError({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+  return (
+    <div className="dual-pane-flow min-h-screen flex flex-col md:flex-row bg-gray-50" role="main" aria-label="Error state">
+      <nav className="list-pane w-full md:w-2/5 lg:w-1/3 xl:w-1/4 md:border-r border-b md:border-b-0 border-gray-200 bg-white p-4">
+        <SignalError signalLabel="List" error={error} onRetry={onRetry} />
+      </nav>
+
+      <main className="detail-pane flex-1 p-4 sm:p-6 lg:p-8">
+        <article className="max-w-4xl mx-auto">
+          <SignalError signalLabel="Detail view" error={error} onRetry={onRetry} />
+        </article>
+      </main>
+    </div>
+  );
+}
+
+export function MonitorWallError({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+  return (
+    <main className="monitor-wall min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Error state">
+      <div className="space-y-4 sm:space-y-6">
+        <section className="primary-section">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <SignalError signalLabel="Metrics" error={error} onRetry={onRetry} />
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export function CommandCenterError({ error, onRetry }: { error?: Error; onRetry?: () => void }) {
+  return (
+    <div className="command-center h-screen flex flex-col bg-gray-900 text-gray-100" role="main" aria-label="Error state">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <section className="main-section flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+              <SignalError signalLabel="Dashboard data" error={error} onRetry={onRetry} />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+'''
+
+        # Write error boundary components
+        error_dir = self.project_path / "src" / "components" / "errors"
+        error_dir.mkdir(parents=True, exist_ok=True)
+
+        boundary_path = error_dir / "ErrorBoundary.tsx"
+        boundary_path.write_text(error_boundary)
+
+        signal_error_path = error_dir / "SignalError.tsx"
+        signal_error_path.write_text(signal_error)
+
+        archetype_errors_path = error_dir / "ArchetypeErrors.tsx"
+        archetype_errors_path.write_text(archetype_errors)
+
+        # Write index file
+        index_content = '''/**
+ * Error Components Index
+ *
+ * Exports all error boundary and fallback components.
+ */
+
+export { ErrorBoundary } from './ErrorBoundary';
+export { SignalError } from './SignalError';
+export * from './ArchetypeErrors';
+'''
+        index_path = error_dir / "index.ts"
         index_path.write_text(index_content)
 
     def _generate_workspace_pages(self) -> None:
