@@ -69,3 +69,30 @@ surface task_edit "Edit Task":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
+
+# Workspaces - compose regions for user-centric views
+workspace dashboard "Task Dashboard":
+  purpose: "Overview of all tasks with key metrics"
+
+  task_count:
+    source: Task
+    aggregate:
+      total: count(Task)
+
+  urgent_tasks:
+    source: Task
+    limit: 5
+
+  all_tasks:
+    source: Task
+
+workspace my_work "My Work":
+  purpose: "Personal task view for assigned work"
+
+  in_progress:
+    source: Task
+    limit: 10
+
+  upcoming:
+    source: Task
+    limit: 5
