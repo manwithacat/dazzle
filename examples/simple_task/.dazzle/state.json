@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-11-27T22:06:11.260810Z",
-  "backend": "nextjs_semantic",
-  "output_dir": "build",
+  "timestamp": "2025-11-28T00:49:36.140221Z",
+  "backend": "docker",
+  "output_dir": "/private/tmp/docker_test",
   "dsl_file_hashes": {
     "dsl/app.dsl": "71dedbb139262fe94d56369efc87b00b2e516afdc837ac2599c8bf3d5f0904c6"
   },

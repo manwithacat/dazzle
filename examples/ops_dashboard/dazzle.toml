@@ -6,3 +6,6 @@ root = "ops_dashboard.core"
 
 [dsl]
 paths = ["dsl/"]
+
+[stack]
+name = "dnr"

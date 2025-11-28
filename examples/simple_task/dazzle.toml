@@ -5,3 +5,6 @@ root = "simple_task.core"
 
 [modules]
 paths = ["./dsl"]
+
+[stack]
+name = "dnr"

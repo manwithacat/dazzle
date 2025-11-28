@@ -124,7 +124,7 @@ def test_backends_command(cli_runner: CliRunner):
     """Test backends command lists available backends."""
     result = cli_runner.invoke(app, ["backends"])
     assert result.exit_code == 0
-    assert "openapi" in result.stdout
+    assert "docker" in result.stdout
 
 
 def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path):
@@ -138,7 +138,7 @@ def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path
             "--manifest",
             str(test_project / "dazzle.toml"),
             "--backend",
-            "openapi",
+            "docker",
             "--out",
             str(output_dir),
         ],
@@ -148,7 +148,7 @@ def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path
     assert "Build complete" in result.stdout
 
     # Check output file was created
-    assert (output_dir / "openapi.yaml").exists()
+    assert (output_dir / "compose.yaml").exists()
 
 
 def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project: Path):

@@ -7,10 +7,10 @@ import pytest
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.parser import parse_modules
-from dazzle.stacks.openapi import OpenAPIBackend
+from dazzle.stacks.docker import DockerStack
 
 
-def test_full_pipeline_dsl_to_openapi(tmp_path: Path):
+def test_full_pipeline_dsl_to_docker(tmp_path: Path):
     """Test complete pipeline: DSL → Parse → Link → Validate → Generate."""
 
     # Step 1: Create DSL file
@@ -92,23 +92,14 @@ surface post_create "Create Post":
     surface_names = {s.name for s in appspec.surfaces}
     assert surface_names == {"user_list", "post_create"}
 
-    # Step 6: Generate OpenAPI
-    backend = OpenAPIBackend()
+    # Step 6: Generate Docker
+    backend = DockerStack()
     output_dir = tmp_path / "output"
-    backend.generate(appspec, output_dir, format="json")
+    backend.generate(appspec, output_dir)
 
     # Verify output
-    import json
-
-    with (output_dir / "openapi.json").open() as f:
-        openapi_doc = json.load(f)
-
-    assert openapi_doc["openapi"] == "3.0.0"
-    assert openapi_doc["info"]["title"] == "My Application"
-    assert "/users" in openapi_doc["paths"]
-    assert "/posts" in openapi_doc["paths"]
-    assert "User" in openapi_doc["components"]["schemas"]
-    assert "Post" in openapi_doc["components"]["schemas"]
+    assert (output_dir / "compose.yaml").exists()
+    assert (output_dir / "Dockerfile").exists()
 
 
 def test_multi_module_project(tmp_path: Path):

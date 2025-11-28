@@ -232,6 +232,7 @@
     'tests': list([
     ]),
     'title': 'Simple Test App',
+    'ux': None,
     'version': '0.1.0',
     'workspaces': list([
     ]),

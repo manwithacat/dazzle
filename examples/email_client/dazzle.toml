@@ -7,4 +7,4 @@ root = "email_client.core"
 paths = ["./dsl"]
 
 [stack]
-name = "nextjs_semantic"
+name = "dnr"

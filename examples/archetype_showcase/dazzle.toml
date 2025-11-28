@@ -1,0 +1,11 @@
+[project]
+name = "archetype_showcase"
+version = "1.0.0"
+description = "Showcase of all DNR layout archetypes"
+root = "archetype_showcase.core"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"

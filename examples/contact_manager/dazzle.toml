@@ -5,3 +5,6 @@ root = "contact_manager.core"
 
 [fileset]
 dsl_paths = ["dsl"]
+
+[stack]
+name = "dnr"

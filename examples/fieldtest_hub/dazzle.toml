@@ -5,3 +5,6 @@ root = "fieldtest_hub.core"
 
 [modules]
 paths = ["./dsl"]
+
+[stack]
+name = "dnr"
