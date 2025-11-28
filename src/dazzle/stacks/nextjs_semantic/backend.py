@@ -23,6 +23,7 @@ from .. import Backend, BackendCapabilities
 from .generators import (
     ArchetypeComponentsGenerator,
     ConfigGenerator,
+    HooksGenerator,
     LayoutTypesGenerator,
     PackageJsonGenerator,
     PagesGenerator,
@@ -80,6 +81,7 @@ class NextjsSemanticBackend(Backend):
             TailwindConfigGenerator(self.spec, self.project_path),
             LayoutTypesGenerator(self.spec, self.project_path, self.layout_plans),
             ArchetypeComponentsGenerator(self.spec, self.project_path),
+            HooksGenerator(self.spec, self.project_path),
             PagesGenerator(self.spec, self.project_path, self.layout_plans),
         ]
 
