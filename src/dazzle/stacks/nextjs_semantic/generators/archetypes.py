@@ -37,8 +37,13 @@ class ArchetypeComponentsGenerator:
  *
  * Single dominant KPI with supporting context.
  * Best for: Dashboards with one critical metric (uptime, revenue, alerts)
+ *
+ * Performance optimizations:
+ * - React.memo prevents unnecessary re-renders
+ * - useMemo caches expensive surface lookups
  */
 
+import { memo, useMemo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -48,10 +53,10 @@ interface FocusMetricProps {
   signalData: Record<string, unknown>;
 }
 
-export function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
-  // Find hero and context surfaces
-  const heroSurface = plan.surfaces.find(s => s.id === 'hero');
-  const contextSurface = plan.surfaces.find(s => s.id === 'context');
+export const FocusMetric = memo(function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
+  // Find hero and context surfaces (memoized to avoid repeated lookups)
+  const heroSurface = useMemo(() => plan.surfaces.find(s => s.id === 'hero'), [plan.surfaces]);
+  const contextSurface = useMemo(() => plan.surfaces.find(s => s.id === 'context'), [plan.surfaces]);
 
   return (
     <main className="focus-metric min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Focus metric dashboard">
@@ -101,7 +106,7 @@ export function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
       )}
     </main>
   );
-}
+});
 '''
         output_dir = self.project_path / "src" / "components" / "archetypes"
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -115,8 +120,13 @@ export function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
  *
  * Dense, scannable table for rapid review.
  * Best for: Admin panels, data review, list processing
+ *
+ * Performance optimizations:
+ * - React.memo prevents unnecessary re-renders
+ * - useMemo caches expensive surface lookups
  */
 
+import { memo, useMemo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -126,10 +136,10 @@ interface ScannerTableProps {
   signalData: Record<string, unknown>;
 }
 
-export function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
-  // Find table and toolbar surfaces
-  const tableSurface = plan.surfaces.find(s => s.id === 'table');
-  const toolbarSurface = plan.surfaces.find(s => s.id === 'toolbar');
+export const ScannerTable = memo(function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
+  // Find table and toolbar surfaces (memoized to avoid repeated lookups)
+  const tableSurface = useMemo(() => plan.surfaces.find(s => s.id === 'table'), [plan.surfaces]);
+  const toolbarSurface = useMemo(() => plan.surfaces.find(s => s.id === 'toolbar'), [plan.surfaces]);
 
   return (
     <main className="scanner-table min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Data table browser">
@@ -193,7 +203,7 @@ export function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
  * Best for: Email clients, file browsers, content management
  */
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -266,7 +276,7 @@ export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalDa
  * Best for: Operations dashboards, analytics, system monitoring
  */
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
@@ -353,7 +363,7 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
  * Best for: Power users, complex workflows, multi-tasking
  */
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { LayoutPlan, AttentionSignal } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
