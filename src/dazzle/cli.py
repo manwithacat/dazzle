@@ -624,6 +624,7 @@ def layout_plan(
         None, "--persona", "-p", help="Persona to generate plan for"
     ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    explain: bool = typer.Option(False, "--explain", "-e", help="Explain archetype selection"),
 ) -> None:
     """
     Generate and visualize layout plans from workspace definitions.
@@ -637,11 +638,17 @@ def layout_plan(
     - Attention budget analysis
     - Warnings for over-budget signals
 
+    Use --explain to see why an archetype was selected and scores for alternatives.
+
     Useful for understanding how workspaces map to UI layouts.
     """
     import json as json_lib
 
-    from dazzle.ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
+    from dazzle.ui.layout_engine import (
+        build_layout_plan,
+        enrich_app_spec_with_layouts,
+        explain_archetype_selection,
+    )
 
     # Use manifest path to determine root directory
     manifest_path = Path(manifest).resolve()
@@ -681,9 +688,14 @@ def layout_plan(
 
         # Generate and display plans
         plans = {}
+        explanations = {}
         for ws in workspaces_to_show:
             plan = build_layout_plan(ws, persona=persona_obj)
             plans[ws.id] = plan
+
+            # Get explanation if requested
+            if explain:
+                explanations[ws.id] = explain_archetype_selection(ws, persona_obj)
 
             if not json_output:
                 # Human-readable output
@@ -695,6 +707,29 @@ def layout_plan(
                 typer.echo(f"Archetype: {plan.archetype.value}")
                 typer.echo(f"Attention Budget: {ws.attention_budget}")
                 typer.echo()
+
+                # Show explanation if requested
+                if explain and ws.id in explanations:
+                    exp = explanations[ws.id]
+                    typer.echo("Selection Explanation:")
+                    typer.echo(f"  Reason: {exp.reason}")
+                    if exp.engine_hint_used:
+                        typer.echo("  (engine_hint override)")
+                    if exp.persona_applied:
+                        typer.echo("  (persona biases applied)")
+                    typer.echo()
+
+                    typer.echo("  Signal Profile:")
+                    for key, value in exp.signal_profile.items():
+                        typer.echo(f"    {key}: {value:.2f}")
+                    typer.echo()
+
+                    typer.echo("  Archetype Scores (ranked):")
+                    for score in exp.all_scores:
+                        marker = "→" if score.archetype == exp.selected else " "
+                        typer.echo(f"  {marker} {score.archetype.value}: {score.score:.2f}")
+                        typer.echo(f"      {score.reason}")
+                    typer.echo()
 
                 # Show signals
                 typer.echo("Attention Signals:")
@@ -717,14 +752,14 @@ def layout_plan(
 
                 # Show warnings
                 if plan.warnings:
-                    typer.echo("⚠ Warnings:")
+                    typer.echo("Warnings:")
                     for warning in plan.warnings:
                         typer.echo(f"  - {warning}")
                     typer.echo()
 
                 # Show over-budget signals
                 if plan.over_budget_signals:
-                    typer.echo("⚠ Over-Budget Signals:")
+                    typer.echo("Over-Budget Signals:")
                     for signal_id in plan.over_budget_signals:
                         typer.echo(f"  - {signal_id}")
                     typer.echo()
@@ -733,7 +768,7 @@ def layout_plan(
             # JSON output
             output = {}
             for ws_id, plan in plans.items():
-                output[ws_id] = {
+                ws_output = {
                     "workspace_id": plan.workspace_id,
                     "persona_id": plan.persona_id,
                     "archetype": plan.archetype.value,
@@ -752,6 +787,27 @@ def layout_plan(
                     "warnings": plan.warnings,
                     "metadata": plan.metadata,
                 }
+
+                # Add explanation if requested
+                if explain and ws_id in explanations:
+                    exp = explanations[ws_id]
+                    ws_output["explanation"] = {
+                        "selected": exp.selected.value,
+                        "reason": exp.reason,
+                        "signal_profile": exp.signal_profile,
+                        "engine_hint_used": exp.engine_hint_used,
+                        "persona_applied": exp.persona_applied,
+                        "all_scores": [
+                            {
+                                "archetype": s.archetype.value,
+                                "score": s.score,
+                                "reason": s.reason,
+                            }
+                            for s in exp.all_scores
+                        ],
+                    }
+
+                output[ws_id] = ws_output
             typer.echo(json_lib.dumps(output, indent=2))
 
     except Exception as e:

@@ -21,7 +21,12 @@ from dazzle.ui.layout_engine.converter import (
     enrich_app_spec_with_layouts,
 )
 from dazzle.ui.layout_engine.plan import build_layout_plan
-from dazzle.ui.layout_engine.select_archetype import select_archetype
+from dazzle.ui.layout_engine.select_archetype import (
+    ArchetypeScore,
+    SelectionExplanation,
+    explain_archetype_selection,
+    select_archetype,
+)
 from dazzle.ui.layout_engine.types import (
     AttentionSignalKind,
     LayoutArchetype,
@@ -44,6 +49,9 @@ __all__ = [
     # Core functions
     "build_layout_plan",
     "select_archetype",
+    "explain_archetype_selection",
+    "SelectionExplanation",
+    "ArchetypeScore",
     # DSL conversion
     "convert_workspace_to_layout",
     "convert_workspaces_to_layouts",

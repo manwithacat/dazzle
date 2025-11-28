@@ -1457,6 +1457,11 @@ class WorkspaceLayout(BaseModel):
         attention_budget: Total attention capacity (1.0 = normal, >1.0 = dense)
         time_horizon: Temporal focus of workspace
         engine_hint: Optional archetype hint (e.g., "scanner_table")
+        engine_options: Archetype-specific customization options
+            - hero_height: "tall" | "medium" | "compact" (for FOCUS_METRIC)
+            - context_columns: int (for FOCUS_METRIC)
+            - show_empty_slots: bool
+            - table_density: "comfortable" | "compact" (for SCANNER_TABLE)
         attention_signals: List of signals to display in this workspace
     """
 
@@ -1468,6 +1473,7 @@ class WorkspaceLayout(BaseModel):
     attention_budget: float = Field(default=1.0, ge=0.0, le=1.5)
     time_horizon: str = "daily"  # realtime, daily, archival
     engine_hint: str | None = None
+    engine_options: dict[str, Any] = Field(default_factory=dict)
     attention_signals: list["LayoutSignal"] = Field(default_factory=list)
 
     @field_validator("time_horizon")
