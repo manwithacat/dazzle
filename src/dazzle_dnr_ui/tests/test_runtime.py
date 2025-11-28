@@ -373,3 +373,222 @@ class TestWorkspace:
         parsed = json.loads(spec_json)
 
         assert parsed["default_workspace"] == "main"
+
+
+# =============================================================================
+# Vite Generator Tests
+# =============================================================================
+
+
+from dazzle_dnr_ui.runtime.vite_generator import (
+    ViteGenerator,
+    generate_vite_app,
+    generate_es_modules,
+)
+
+
+class TestViteGenerator:
+    """Tests for Vite project generation."""
+
+    def test_generate_package_json(self, simple_ui_spec: UISpec) -> None:
+        """Test package.json generation."""
+        generator = ViteGenerator(simple_ui_spec)
+        package_json = generator.generate_package_json()
+
+        parsed = json.loads(package_json)
+        assert parsed["name"] == "test-app"
+        assert parsed["type"] == "module"
+        assert "dev" in parsed["scripts"]
+        assert parsed["scripts"]["dev"] == "vite"
+        assert "vite" in parsed["devDependencies"]
+
+    def test_generate_vite_config(self, simple_ui_spec: UISpec) -> None:
+        """Test vite.config.js generation."""
+        generator = ViteGenerator(simple_ui_spec)
+        config = generator.generate_vite_config()
+
+        assert "defineConfig" in config
+        assert "root: 'src'" in config
+        assert "port: 3000" in config
+        assert "@dnr" in config
+
+    def test_generate_index_html(self, simple_ui_spec: UISpec) -> None:
+        """Test index.html generation."""
+        generator = ViteGenerator(simple_ui_spec)
+        html = generator.generate_index_html()
+
+        assert "<!DOCTYPE html>" in html
+        assert "test_app" in html
+        assert '<div id="app">' in html
+        assert 'type="module"' in html
+        assert "main.js" in html
+
+    def test_generate_main_js(self, simple_ui_spec: UISpec) -> None:
+        """Test main.js generation."""
+        generator = ViteGenerator(simple_ui_spec)
+        main_js = generator.generate_main_js()
+
+        assert "import { createApp }" in main_js
+        assert "import uiSpec" in main_js
+        assert "createApp(uiSpec)" in main_js
+
+    def test_write_to_directory(self, simple_ui_spec: UISpec) -> None:
+        """Test writing complete Vite project to directory."""
+        generator = ViteGenerator(simple_ui_spec)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generator.write_to_directory(tmpdir)
+
+            # Check root files
+            assert any(f.name == "package.json" for f in files)
+            assert any(f.name == "vite.config.js" for f in files)
+
+            # Check src files
+            assert any(f.name == "index.html" for f in files)
+            assert any(f.name == "main.js" for f in files)
+            assert any(f.name == "ui-spec.json" for f in files)
+
+            # Check styles
+            assert any(f.name == "dnr.css" for f in files)
+
+            # Check DNR runtime modules
+            assert any(f.name == "signals.js" for f in files)
+            assert any(f.name == "state.js" for f in files)
+            assert any(f.name == "dom.js" for f in files)
+            assert any(f.name == "components.js" for f in files)
+            assert any(f.name == "renderer.js" for f in files)
+            assert any(f.name == "theme.js" for f in files)
+            assert any(f.name == "app.js" for f in files)
+            assert any(f.name == "index.js" for f in files)
+
+            # Verify all files exist and have content
+            for f in files:
+                assert f.exists()
+                assert f.stat().st_size > 0
+
+    def test_write_runtime_only(self, simple_ui_spec: UISpec) -> None:
+        """Test writing only the ES module runtime."""
+        generator = ViteGenerator(simple_ui_spec)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generator.write_runtime_only(tmpdir)
+
+            # Should only have runtime modules
+            expected_files = {
+                "signals.js",
+                "state.js",
+                "dom.js",
+                "bindings.js",
+                "components.js",
+                "renderer.js",
+                "theme.js",
+                "actions.js",
+                "app.js",
+                "index.js",
+            }
+            actual_files = {f.name for f in files}
+            assert actual_files == expected_files
+
+            # Verify all files exist
+            for f in files:
+                assert f.exists()
+
+    def test_es_module_structure(self, simple_ui_spec: UISpec) -> None:
+        """Test that ES modules have proper import/export structure."""
+        generator = ViteGenerator(simple_ui_spec)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generator.write_runtime_only(tmpdir)
+
+            # Check signals.js exports
+            signals_js = next(f for f in files if f.name == "signals.js")
+            content = signals_js.read_text()
+            assert "export function createSignal" in content
+            assert "export function createEffect" in content
+            assert "export function createMemo" in content
+
+            # Check state.js imports signals
+            state_js = next(f for f in files if f.name == "state.js")
+            content = state_js.read_text()
+            assert "import { createSignal } from './signals.js'" in content
+            assert "export function getState" in content
+            assert "export function setState" in content
+
+            # Check dom.js imports signals
+            dom_js = next(f for f in files if f.name == "dom.js")
+            content = dom_js.read_text()
+            assert "import { createEffect } from './signals.js'" in content
+            assert "export function createElement" in content
+            assert "export function render" in content
+
+            # Check index.js re-exports everything
+            index_js = next(f for f in files if f.name == "index.js")
+            content = index_js.read_text()
+            assert "export { createSignal" in content
+            assert "export { createApp }" in content
+
+
+class TestViteConvenienceFunctions:
+    """Tests for Vite convenience functions."""
+
+    def test_generate_vite_app(self, simple_ui_spec: UISpec) -> None:
+        """Test generate_vite_app function."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generate_vite_app(simple_ui_spec, tmpdir)
+
+            # Should create complete project
+            assert any(f.name == "package.json" for f in files)
+            assert any(f.name == "vite.config.js" for f in files)
+            assert any(f.name == "signals.js" for f in files)
+            assert all(f.exists() for f in files)
+
+    def test_generate_es_modules(self, simple_ui_spec: UISpec) -> None:
+        """Test generate_es_modules function."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            files = generate_es_modules(simple_ui_spec, tmpdir)
+
+            # Should only create runtime modules
+            assert all(f.suffix == ".js" for f in files)
+            assert any(f.name == "signals.js" for f in files)
+            assert all(f.exists() for f in files)
+
+
+class TestViteProjectStructure:
+    """Tests for Vite project structure validation."""
+
+    def test_directory_structure(self, simple_ui_spec: UISpec) -> None:
+        """Test that proper directory structure is created."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generate_vite_app(simple_ui_spec, tmpdir)
+            tmpdir = Path(tmpdir)
+
+            # Root level
+            assert (tmpdir / "package.json").exists()
+            assert (tmpdir / "vite.config.js").exists()
+
+            # src directory
+            assert (tmpdir / "src").is_dir()
+            assert (tmpdir / "src" / "index.html").exists()
+            assert (tmpdir / "src" / "main.js").exists()
+            assert (tmpdir / "src" / "ui-spec.json").exists()
+
+            # styles directory
+            assert (tmpdir / "src" / "styles").is_dir()
+            assert (tmpdir / "src" / "styles" / "dnr.css").exists()
+
+            # dnr runtime directory
+            assert (tmpdir / "src" / "dnr").is_dir()
+            assert (tmpdir / "src" / "dnr" / "index.js").exists()
+
+    def test_spec_json_in_vite_project(self, simple_ui_spec: UISpec) -> None:
+        """Test that UI spec JSON is properly included."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            generate_vite_app(simple_ui_spec, tmpdir)
+            tmpdir = Path(tmpdir)
+
+            spec_path = tmpdir / "src" / "ui-spec.json"
+            parsed = json.loads(spec_path.read_text())
+
+            assert parsed["name"] == "test_app"
+            assert len(parsed["components"]) == 2
+            assert len(parsed["workspaces"]) == 1
