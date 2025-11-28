@@ -9,21 +9,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from fastapi import FastAPI, WebSocket, Query
+    from fastapi import FastAPI, WebSocket
+
     from dazzle_dnr_back.runtime.auth import AuthStore
 
-from dazzle_dnr_back.runtime.websocket_manager import (
-    WebSocketManager,
-    RealtimeMessage,
-    MessageType,
-    create_websocket_manager,
-)
 from dazzle_dnr_back.runtime.event_bus import EntityEventBus, create_event_bus
 from dazzle_dnr_back.runtime.presence_tracker import (
     PresenceTracker,
     create_presence_tracker,
 )
-
+from dazzle_dnr_back.runtime.websocket_manager import (
+    MessageType,
+    RealtimeMessage,
+    WebSocketManager,
+    create_websocket_manager,
+)
 
 # =============================================================================
 # Realtime Context
@@ -155,9 +155,9 @@ class RealtimeContext:
 
 
 def create_realtime_routes(
-    app: "FastAPI",
+    app: FastAPI,
     context: RealtimeContext | None = None,
-    auth_store: "AuthStore | None" = None,
+    auth_store: AuthStore | None = None,
     path: str = "/ws",
 ) -> RealtimeContext:
     """
@@ -173,7 +173,7 @@ def create_realtime_routes(
         The RealtimeContext being used
     """
     try:
-        from fastapi import WebSocket, WebSocketDisconnect, Query
+        from fastapi import Query, WebSocket, WebSocketDisconnect  # noqa: F401
     except ImportError:
         raise RuntimeError("FastAPI is required for realtime routes")
 
@@ -224,7 +224,7 @@ def create_realtime_routes(
     return context
 
 
-async def _validate_token_async(auth_store: "AuthStore", token: str) -> dict[str, Any] | None:
+async def _validate_token_async(auth_store: AuthStore, token: str) -> dict[str, Any] | None:
     """Validate auth token asynchronously."""
     # AuthStore.get_session_user is sync, wrap it
     import asyncio
@@ -239,8 +239,8 @@ async def _validate_token_async(auth_store: "AuthStore", token: str) -> dict[str
 
 
 def setup_realtime(
-    app: "FastAPI",
-    auth_store: "AuthStore | None" = None,
+    app: FastAPI,
+    auth_store: AuthStore | None = None,
     ws_path: str = "/ws",
 ) -> RealtimeContext:
     """

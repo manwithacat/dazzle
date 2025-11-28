@@ -7,15 +7,14 @@ CRUD operations based on surface modes.
 
 from dazzle.core import ir
 from dazzle_dnr_back.specs import (
-    ServiceSpec,
-    SchemaSpec,
-    SchemaFieldSpec,
     DomainOperation,
-    OperationKind,
     EndpointSpec,
     HttpMethod,
+    OperationKind,
+    SchemaFieldSpec,
+    SchemaSpec,
+    ServiceSpec,
 )
-
 
 # =============================================================================
 # Service Generation

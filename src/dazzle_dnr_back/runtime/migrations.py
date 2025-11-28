@@ -21,7 +21,6 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from pathlib import Path
 from typing import Any
 
 from dazzle_dnr_back.runtime.repository import (
@@ -30,7 +29,6 @@ from dazzle_dnr_back.runtime.repository import (
     _python_to_sqlite,
 )
 from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec
-
 
 # =============================================================================
 # Migration Types
@@ -469,7 +467,7 @@ class MigrationHistory:
         with self.db.connection() as conn:
             cursor = conn.execute(sql)
             columns = [desc[0] for desc in cursor.description]
-            return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
 
 # =============================================================================

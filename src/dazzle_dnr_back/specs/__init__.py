@@ -4,39 +4,39 @@ BackendSpec type definitions.
 This module exports all backend specification types.
 """
 
-from dazzle_dnr_back.specs.entity import (
-    EntitySpec,
-    FieldSpec,
-    RelationSpec,
-    RelationKind,
-    ValidatorSpec,
-    ValidatorKind,
-    ScalarType,
-    EnumType,
-    RefType,
-    FieldType,
+from dazzle_dnr_back.specs.auth import (
+    AuthRuleSpec,
+    PermissionSpec,
+    RoleSpec,
+    TenancyRuleSpec,
 )
-from dazzle_dnr_back.specs.service import (
-    ServiceSpec,
-    SchemaSpec,
-    SchemaFieldSpec,
-    DomainOperation,
-    OperationKind,
-    EffectSpec,
-    BusinessRuleSpec,
-)
+from dazzle_dnr_back.specs.backend_spec import BackendSpec
 from dazzle_dnr_back.specs.endpoint import (
     EndpointSpec,
     HttpMethod,
     RateLimitSpec,
 )
-from dazzle_dnr_back.specs.auth import (
-    AuthRuleSpec,
-    TenancyRuleSpec,
-    PermissionSpec,
-    RoleSpec,
+from dazzle_dnr_back.specs.entity import (
+    EntitySpec,
+    EnumType,
+    FieldSpec,
+    FieldType,
+    RefType,
+    RelationKind,
+    RelationSpec,
+    ScalarType,
+    ValidatorKind,
+    ValidatorSpec,
 )
-from dazzle_dnr_back.specs.backend_spec import BackendSpec
+from dazzle_dnr_back.specs.service import (
+    BusinessRuleSpec,
+    DomainOperation,
+    EffectSpec,
+    OperationKind,
+    SchemaFieldSpec,
+    SchemaSpec,
+    ServiceSpec,
+)
 
 __all__ = [
     # Entity types

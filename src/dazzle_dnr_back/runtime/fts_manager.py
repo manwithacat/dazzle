@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from dazzle_dnr_back.specs.entity import EntitySpec, ScalarType
+    from dazzle_dnr_back.specs.entity import EntitySpec
 
 
 @dataclass
@@ -41,7 +41,7 @@ class FTSManager:
 
     def register_entity(
         self,
-        entity: "EntitySpec",
+        entity: EntitySpec,
         searchable_fields: list[str] | None = None,
         tokenizer: str = "porter",
     ) -> FTSConfig | None:
@@ -300,9 +300,9 @@ class FTSManager:
 
         # Build snippet columns - column indexes: 0=id, 1=first field, 2=second field, etc.
         snippet_cols = []
-        for i, field in enumerate(config.searchable_fields):
+        for i, field_name in enumerate(config.searchable_fields):
             snippet_cols.append(
-                f"snippet({config.fts_table_name}, {i + 1}, '<mark>', '</mark>', '...', 32) AS {field}_snippet"
+                f"snippet({config.fts_table_name}, {i + 1}, '<mark>', '</mark>', '...', 32) AS {field_name}_snippet"
             )
         snippet_str = ", ".join(snippet_cols)
 
@@ -350,7 +350,7 @@ class FTSManager:
 
 
 def create_fts_manager(
-    entities: list["EntitySpec"],
+    entities: list[EntitySpec],
     searchable_entities: dict[str, list[str]] | None = None,
 ) -> FTSManager:
     """
@@ -376,7 +376,7 @@ def create_fts_manager(
 def init_fts_tables(
     conn: sqlite3.Connection,
     manager: FTSManager,
-    entities: list["EntitySpec"],
+    entities: list[EntitySpec],
 ) -> None:
     """
     Initialize FTS tables for all registered entities.

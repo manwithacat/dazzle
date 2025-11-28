@@ -10,16 +10,15 @@ Provides a unified development server that:
 from __future__ import annotations
 
 import http.server
-import json
 import socketserver
 import threading
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from dazzle_dnr_ui.specs import UISpec
 from dazzle_dnr_ui.runtime.js_generator import JSGenerator
+from dazzle_dnr_ui.specs import UISpec
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
@@ -238,7 +237,7 @@ class DNRCombinedServer:
 
     def __init__(
         self,
-        backend_spec: "BackendSpec",
+        backend_spec: BackendSpec,
         ui_spec: UISpec,
         backend_host: str = "127.0.0.1",
         backend_port: int = 8000,
@@ -365,7 +364,7 @@ class DNRCombinedServer:
 
 
 def run_combined_server(
-    backend_spec: "BackendSpec",
+    backend_spec: BackendSpec,
     ui_spec: UISpec,
     backend_port: int = 8000,
     frontend_port: int = 3000,

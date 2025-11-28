@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 def create_file_routes(
-    app: "FastAPI",
-    file_service: "FileService",
+    app: FastAPI,
+    file_service: FileService,
     prefix: str = "/api/files",
     require_auth: bool = False,
 ) -> None:
@@ -53,7 +53,7 @@ def create_file_routes(
 
     @app.post(f"{prefix}/upload")
     async def upload_file(
-        file: UploadFile = File(...),
+        file: UploadFile = File(...),  # noqa: B008
         entity: str | None = Query(None, description="Associated entity name"),
         entity_id: str | None = Query(None, description="Associated entity ID"),
         field: str | None = Query(None, description="Field name"),
@@ -284,7 +284,7 @@ def create_file_routes(
 
 
 def create_static_file_routes(
-    app: "FastAPI",
+    app: FastAPI,
     base_path: str = ".dazzle/uploads",
     url_prefix: str = "/files",
 ) -> None:

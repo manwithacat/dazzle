@@ -5,24 +5,24 @@ Basic validation and construction tests to ensure specs work correctly.
 """
 
 import pytest
+
 from dazzle_dnr_ui.specs import (
-    UISpec,
-    WorkspaceSpec,
+    ActionSpec,
     ComponentSpec,
     ElementNode,
-    StateSpec,
-    StateScope,
-    ActionSpec,
-    ThemeSpec,
-    ThemeTokens,
-    TextStyle,
-    SingleColumnLayout,
-    AppShellLayout,
-    RouteSpec,
-    PropsSchema,
-    PropFieldSpec,
     LiteralBinding,
     PropBinding,
+    PropFieldSpec,
+    PropsSchema,
+    RouteSpec,
+    SingleColumnLayout,
+    StateScope,
+    StateSpec,
+    TextStyle,
+    ThemeSpec,
+    ThemeTokens,
+    UISpec,
+    WorkspaceSpec,
 )
 
 

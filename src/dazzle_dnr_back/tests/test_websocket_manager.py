@@ -4,18 +4,17 @@ Tests for WebSocket manager.
 Tests connection management, channel subscriptions, and message routing.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
+
+import pytest
 
 from dazzle_dnr_back.runtime.websocket_manager import (
-    WebSocketManager,
     Connection,
-    RealtimeMessage,
     MessageType,
+    RealtimeMessage,
     create_websocket_manager,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -422,11 +421,11 @@ class TestBroadcasting:
     @pytest.mark.asyncio
     async def test_broadcast_to_all(self, ws_manager, mock_websocket):
         """Test broadcasting to all connections."""
-        conn1 = await ws_manager.connect(mock_websocket)
+        await ws_manager.connect(mock_websocket)
         mock_websocket2 = AsyncMock()
         mock_websocket2.accept = AsyncMock()
         mock_websocket2.send_json = AsyncMock()
-        conn2 = await ws_manager.connect(mock_websocket2)
+        await ws_manager.connect(mock_websocket2)
 
         mock_websocket.send_json.reset_mock()
         mock_websocket2.send_json.reset_mock()
@@ -439,11 +438,11 @@ class TestBroadcasting:
     @pytest.mark.asyncio
     async def test_send_to_user(self, ws_manager, mock_websocket):
         """Test sending to specific user."""
-        conn1 = await ws_manager.connect(mock_websocket, user_id="user_123")
+        await ws_manager.connect(mock_websocket, user_id="user_123")
         mock_websocket2 = AsyncMock()
         mock_websocket2.accept = AsyncMock()
         mock_websocket2.send_json = AsyncMock()
-        conn2 = await ws_manager.connect(mock_websocket2, user_id="user_456")
+        await ws_manager.connect(mock_websocket2, user_id="user_456")
 
         mock_websocket.send_json.reset_mock()
         mock_websocket2.send_json.reset_mock()
@@ -482,7 +481,7 @@ class TestStaleCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_keeps_active_connections(self, ws_manager, mock_websocket):
         """Test that active connections are not cleaned up."""
-        connection_id = await ws_manager.connect(mock_websocket)
+        await ws_manager.connect(mock_websocket)
 
         # Connection is fresh, should not be cleaned up
         stale = await ws_manager.cleanup_stale_connections()

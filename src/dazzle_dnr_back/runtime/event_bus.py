@@ -6,14 +6,14 @@ Provides decoupled event publishing from repositories to WebSocket broadcasts.
 
 from __future__ import annotations
 
-import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
-    from dazzle_dnr_back.runtime.websocket_manager import WebSocketManager, RealtimeMessage
+    from dazzle_dnr_back.runtime.websocket_manager import WebSocketManager
 
 
 # =============================================================================
@@ -77,12 +77,12 @@ class EntityEventBus:
     - Sync and async handler support
     """
 
-    ws_manager: "WebSocketManager | None" = None
+    ws_manager: WebSocketManager | None = None
     _handlers: list[EventHandler] = field(default_factory=list)
     _sync_handlers: list[SyncEventHandler] = field(default_factory=list)
     _enabled: bool = True
 
-    def set_websocket_manager(self, manager: "WebSocketManager") -> None:
+    def set_websocket_manager(self, manager: WebSocketManager) -> None:
         """Set the WebSocket manager for broadcasting."""
         self.ws_manager = manager
 
@@ -396,7 +396,7 @@ class RealtimeRepositoryMixin:
 
 
 def create_event_bus(
-    ws_manager: "WebSocketManager | None" = None,
+    ws_manager: WebSocketManager | None = None,
 ) -> EntityEventBus:
     """
     Create a new event bus.

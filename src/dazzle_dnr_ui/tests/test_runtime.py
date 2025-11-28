@@ -8,27 +8,26 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_ui.specs import (
-    UISpec,
-    WorkspaceSpec,
-    ComponentSpec,
-    ThemeSpec,
-    ThemeTokens,
-    RouteSpec,
-    SingleColumnLayout,
-    PropsSchema,
-    PropFieldSpec,
-    StateSpec,
-    StateScope,
-)
-from dazzle_dnr_ui.specs.view import ElementNode, TextNode
-from dazzle_dnr_ui.specs.state import LiteralBinding, PropBinding
 from dazzle_dnr_ui.runtime.js_generator import (
     JSGenerator,
     generate_js_app,
     generate_single_html,
 )
-
+from dazzle_dnr_ui.specs import (
+    ComponentSpec,
+    PropFieldSpec,
+    PropsSchema,
+    RouteSpec,
+    SingleColumnLayout,
+    StateScope,
+    StateSpec,
+    ThemeSpec,
+    ThemeTokens,
+    UISpec,
+    WorkspaceSpec,
+)
+from dazzle_dnr_ui.specs.state import LiteralBinding
+from dazzle_dnr_ui.specs.view import ElementNode, TextNode
 
 # =============================================================================
 # Fixtures
@@ -380,10 +379,10 @@ class TestWorkspace:
 # =============================================================================
 
 
-from dazzle_dnr_ui.runtime.vite_generator import (
+from dazzle_dnr_ui.runtime.vite_generator import (  # noqa: E402
     ViteGenerator,
-    generate_vite_app,
     generate_es_modules,
+    generate_vite_app,
 )
 
 

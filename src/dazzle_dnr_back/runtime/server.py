@@ -7,22 +7,22 @@ This module provides the main entry point for running a DNR-Back application.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from dazzle_dnr_back.specs import BackendSpec
+from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
+from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
+from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
+from dazzle_dnr_back.runtime.migrations import MigrationPlan, auto_migrate
 from dazzle_dnr_back.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
     generate_update_schema,
 )
-from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
-from dazzle_dnr_back.runtime.migrations import auto_migrate, MigrationPlan
-from dazzle_dnr_back.runtime.auth import AuthStore, AuthMiddleware, create_auth_routes, AuthContext
-from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
-from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
+from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle_dnr_back.specs import BackendSpec
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
 if TYPE_CHECKING:
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 try:
     from fastapi import FastAPI as _FastAPI
     from fastapi.middleware.cors import CORSMiddleware
+
     from dazzle_dnr_back.runtime.route_generator import RouteGenerator
 
     FASTAPI_AVAILABLE = True
@@ -91,15 +92,15 @@ class DNRBackendApp:
         self._enable_files = enable_files
         self._files_path = Path(files_path) if files_path else Path(".dazzle/uploads")
         self._files_db_path = Path(files_db_path) if files_db_path else Path(".dazzle/files.db")
-        self._app: Optional[FastAPI] = None
+        self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
-        self._db_manager: Optional[DatabaseManager] = None
-        self._auth_store: Optional[AuthStore] = None
-        self._auth_middleware: Optional[AuthMiddleware] = None
-        self._file_service: Optional[FileService] = None
-        self._last_migration: Optional[MigrationPlan] = None
+        self._db_manager: DatabaseManager | None = None
+        self._auth_store: AuthStore | None = None
+        self._auth_middleware: AuthMiddleware | None = None
+        self._file_service: FileService | None = None
+        self._last_migration: MigrationPlan | None = None
 
     def build(self) -> FastAPI:
         """
@@ -244,7 +245,7 @@ class DNRBackendApp:
         return self._app
 
     @property
-    def app(self) -> Optional[FastAPI]:
+    def app(self) -> FastAPI | None:
         """Get the FastAPI application (None if not built)."""
         return self._app
 
@@ -263,12 +264,12 @@ class DNRBackendApp:
         return self._services.get(name)
 
     @property
-    def auth_store(self) -> Optional[AuthStore]:
+    def auth_store(self) -> AuthStore | None:
         """Get the auth store (None if auth not enabled)."""
         return self._auth_store
 
     @property
-    def auth_middleware(self) -> Optional[AuthMiddleware]:
+    def auth_middleware(self) -> AuthMiddleware | None:
         """Get the auth middleware (None if auth not enabled)."""
         return self._auth_middleware
 
@@ -278,7 +279,7 @@ class DNRBackendApp:
         return self._enable_auth
 
     @property
-    def file_service(self) -> Optional[FileService]:
+    def file_service(self) -> FileService | None:
         """Get the file service (None if files not enabled)."""
         return self._file_service
 

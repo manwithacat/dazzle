@@ -4,12 +4,11 @@ View specification types for UISpec.
 Defines view trees for component rendering.
 """
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from dazzle_dnr_ui.specs.state import Binding
-
 
 # =============================================================================
 # View Nodes

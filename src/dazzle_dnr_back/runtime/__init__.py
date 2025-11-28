@@ -23,54 +23,48 @@ Example usage:
     >>> run_app(spec, port=8000)
 """
 
+from dazzle_dnr_back.runtime.migrations import (
+    MigrationAction,
+    MigrationError,
+    MigrationExecutor,
+    MigrationHistory,
+    MigrationPlan,
+    MigrationPlanner,
+    MigrationStep,
+    auto_migrate,
+    plan_migrations,
+)
 from dazzle_dnr_back.runtime.model_generator import (
-    generate_entity_model,
     generate_all_entity_models,
     generate_create_schema,
-    generate_update_schema,
+    generate_entity_model,
     generate_list_response_schema,
+    generate_update_schema,
 )
-
+from dazzle_dnr_back.runtime.repository import (
+    DatabaseManager,
+    RepositoryFactory,
+    SQLiteRepository,
+)
+from dazzle_dnr_back.runtime.route_generator import (
+    FASTAPI_AVAILABLE,
+    RouteGenerator,
+    generate_crud_routes,
+)
+from dazzle_dnr_back.runtime.server import (
+    DNRBackendApp,
+    create_app,
+    create_app_from_dict,
+    create_app_from_json,
+    run_app,
+)
 from dazzle_dnr_back.runtime.service_generator import (
     BaseService,
     CRUDService,
     CustomService,
-    ServiceFactory,
     ServiceContext,
+    ServiceFactory,
 )
-
-from dazzle_dnr_back.runtime.route_generator import (
-    RouteGenerator,
-    generate_crud_routes,
-    FASTAPI_AVAILABLE,
-)
-
-from dazzle_dnr_back.runtime.server import (
-    DNRBackendApp,
-    create_app,
-    run_app,
-    create_app_from_dict,
-    create_app_from_json,
-)
-
-from dazzle_dnr_back.runtime.repository import (
-    DatabaseManager,
-    SQLiteRepository,
-    RepositoryFactory,
-)
-
-from dazzle_dnr_back.runtime.migrations import (
-    MigrationAction,
-    MigrationStep,
-    MigrationPlan,
-    MigrationPlanner,
-    MigrationExecutor,
-    MigrationHistory,
-    MigrationError,
-    auto_migrate,
-    plan_migrations,
-)
-
 
 __all__ = [
     # Model generation

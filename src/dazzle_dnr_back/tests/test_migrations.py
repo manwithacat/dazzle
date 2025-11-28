@@ -8,22 +8,21 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_back.runtime.repository import DatabaseManager
 from dazzle_dnr_back.runtime.migrations import (
     MigrationAction,
-    MigrationPlanner,
     MigrationExecutor,
     MigrationHistory,
+    MigrationPlanner,
     auto_migrate,
     plan_migrations,
 )
+from dazzle_dnr_back.runtime.repository import DatabaseManager
 from dazzle_dnr_back.specs.entity import (
     EntitySpec,
     FieldSpec,
     FieldType,
     ScalarType,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -303,7 +302,7 @@ class TestMigrationExecutor:
         plan = planner.plan_migrations([task_entity_v2])
 
         executor = MigrationExecutor(db_manager)
-        executed = executor.execute(plan)
+        executor.execute(plan)  # Execute the plan
 
         # Check new columns exist
         columns = db_manager.get_table_columns("Task")
@@ -419,7 +418,7 @@ class TestAutoMigrate:
         auto_migrate(db_manager, [task_entity_v1])
 
         # Second migration - add columns
-        plan = auto_migrate(db_manager, [task_entity_v2])
+        auto_migrate(db_manager, [task_entity_v2])
 
         # Check new columns exist
         columns = db_manager.get_table_columns("Task")
@@ -493,7 +492,7 @@ class TestMultipleEntities:
             ],
         )
 
-        plan = auto_migrate(db_manager, [task_entity, user_entity])
+        auto_migrate(db_manager, [task_entity, user_entity])
 
         assert db_manager.table_exists("Task")
         assert db_manager.table_exists("User")
@@ -542,7 +541,7 @@ class TestMultipleEntities:
             ],
         )
 
-        plan = auto_migrate(db_manager, [task_entity_v2, user_entity])
+        auto_migrate(db_manager, [task_entity_v2, user_entity])
 
         # Only Task should have the new column
         task_columns = db_manager.get_table_columns("Task")

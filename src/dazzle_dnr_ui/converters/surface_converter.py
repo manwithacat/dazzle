@@ -7,19 +7,17 @@ mapping surface modes to appropriate UI patterns.
 
 from dazzle.core import ir
 from dazzle_dnr_ui.specs import (
-    ComponentSpec,
-    PropsSchema,
-    PropFieldSpec,
-    StateSpec,
-    StateScope,
     ActionSpec,
-    FetchEffect,
-    NavigateEffect,
+    ComponentSpec,
     ElementNode,
+    FetchEffect,
     LiteralBinding,
-    PropBinding,
+    NavigateEffect,
+    PropFieldSpec,
+    PropsSchema,
+    StateScope,
+    StateSpec,
 )
-
 
 # =============================================================================
 # Component Type Inference

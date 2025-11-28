@@ -7,15 +7,14 @@ Tests module loading, bundling, and caching functionality.
 import pytest
 
 from dazzle_dnr_ui.runtime.js_loader import (
+    clear_cache,
+    generate_esm_bundle,
+    generate_iife_bundle,
+    get_realtime_js,
+    get_runtime_js,
     load_js_module,
     load_js_modules,
-    generate_iife_bundle,
-    generate_esm_bundle,
-    get_runtime_js,
-    get_realtime_js,
-    clear_cache,
 )
-
 
 # =============================================================================
 # Module Loading Tests

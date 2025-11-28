@@ -4,9 +4,7 @@ Tests for authentication runtime.
 Tests user management, sessions, and auth endpoints.
 """
 
-import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -31,7 +29,6 @@ from dazzle_dnr_back.runtime.auth_detection import (
     has_auth_fields,
     should_enable_auth,
 )
-
 
 # =============================================================================
 # Password Hashing Tests
@@ -650,7 +647,7 @@ class TestServerAuthIntegration:
             db_path=tmp_path / "noauth.db",
             enable_auth=False,
         )
-        app = builder.build()
+        builder.build()  # Triggers auth setup
 
         assert builder.auth_enabled is False
         assert builder.auth_store is None
@@ -665,7 +662,7 @@ class TestServerAuthIntegration:
             enable_auth=True,
             auth_db_path=tmp_path / "auth_users.db",
         )
-        app = builder.build()
+        builder.build()  # Triggers auth setup
 
         assert builder.auth_enabled is True
         assert builder.auth_store is not None
@@ -987,17 +984,23 @@ class TestAuthDependencies:
         get_admin_user = create_auth_dependency(auth_store, require_roles=["admin"])
 
         @app.get("/protected")
-        async def protected_route(auth: AuthContext = Depends(get_current_user)):
+        async def protected_route(
+            auth: AuthContext = Depends(get_current_user),  # noqa: B008
+        ):
             return {"email": auth.user.email}
 
         @app.get("/optional")
-        async def optional_route(auth: AuthContext = Depends(get_optional_user)):
+        async def optional_route(
+            auth: AuthContext = Depends(get_optional_user),  # noqa: B008
+        ):
             if auth.is_authenticated:
                 return {"authenticated": True, "email": auth.user.email}
             return {"authenticated": False}
 
         @app.get("/admin-only")
-        async def admin_route(auth: AuthContext = Depends(get_admin_user)):
+        async def admin_route(
+            auth: AuthContext = Depends(get_admin_user),  # noqa: B008
+        ):
             return {"admin": True, "email": auth.user.email}
 
         return app, TestClient(app), auth_store

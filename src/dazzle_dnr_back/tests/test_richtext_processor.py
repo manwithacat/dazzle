@@ -8,13 +8,15 @@ import pytest
 
 # Check if dependencies are available
 try:
-    import markdown
+    import markdown  # noqa: F401
+
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
 
 try:
-    import bleach
+    import bleach  # noqa: F401
+
     BLEACH_AVAILABLE = True
 except ImportError:
     BLEACH_AVAILABLE = False
@@ -22,10 +24,8 @@ except ImportError:
 from dazzle_dnr_back.runtime.richtext_processor import (
     HTMLProcessor,
     MarkdownProcessor,
-    RichTextProcessingError,
     RichTextService,
 )
-
 
 # =============================================================================
 # MarkdownProcessor Tests

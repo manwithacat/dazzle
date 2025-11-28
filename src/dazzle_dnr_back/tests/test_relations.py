@@ -7,7 +7,7 @@ Tests relation registry, relation loader, and foreign key handling.
 import sqlite3
 import tempfile
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 
@@ -28,7 +28,6 @@ from dazzle_dnr_back.specs.entity import (
     RelationSpec,
     ScalarType,
 )
-
 
 # =============================================================================
 # Test Fixtures

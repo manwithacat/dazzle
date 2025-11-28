@@ -4,8 +4,8 @@ End-to-end tests for DNR Backend server.
 Tests the complete flow from spec to running API.
 """
 
+
 import pytest
-from uuid import UUID
 
 try:
     from fastapi.testclient import TestClient
@@ -13,20 +13,19 @@ try:
 except ImportError:
     TESTCLIENT_AVAILABLE = False
 
+from dazzle_dnr_back.runtime.server import create_app
 from dazzle_dnr_back.specs import (
     BackendSpec,
+    DomainOperation,
+    EndpointSpec,
     EntitySpec,
     FieldSpec,
     FieldType,
+    HttpMethod,
+    OperationKind,
     ScalarType,
     ServiceSpec,
-    EndpointSpec,
-    HttpMethod,
-    DomainOperation,
-    OperationKind,
 )
-from dazzle_dnr_back.runtime.server import create_app
-
 
 # =============================================================================
 # Fixtures

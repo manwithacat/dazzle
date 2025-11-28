@@ -10,10 +10,10 @@ import os
 import re
 import sqlite3
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator, BinaryIO
+from typing import TYPE_CHECKING, BinaryIO
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field

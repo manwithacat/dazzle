@@ -9,7 +9,6 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs.entity import EntitySpec, RelationSpec
@@ -69,7 +68,7 @@ class RelationRegistry:
         return (entity_name, relation_name) in self._by_name
 
     @classmethod
-    def from_entities(cls, entities: list["EntitySpec"]) -> "RelationRegistry":
+    def from_entities(cls, entities: list[EntitySpec]) -> RelationRegistry:
         """
         Build a relation registry from entity specifications.
 
@@ -80,9 +79,6 @@ class RelationRegistry:
             Populated RelationRegistry
         """
         registry = cls()
-
-        # Build entity lookup
-        entity_map = {e.name: e for e in entities}
 
         for entity in entities:
             # Register explicit relations
@@ -125,7 +121,7 @@ class RelationRegistry:
         return registry
 
 
-def _infer_fk_field(relation: "RelationSpec", entity_name: str) -> str:
+def _infer_fk_field(relation: RelationSpec, entity_name: str) -> str:
     """Infer the foreign key field name from a relation."""
     if relation.kind.value in ("many_to_one", "one_to_one"):
         # FK is on this entity
@@ -144,13 +140,13 @@ class RelationLoader:
     """
 
     registry: RelationRegistry
-    entity_map: dict[str, "EntitySpec"]
+    entity_map: dict[str, EntitySpec]
     _conn_factory: Any = None  # Function that returns a connection
 
     def __init__(
         self,
         registry: RelationRegistry,
-        entities: list["EntitySpec"],
+        entities: list[EntitySpec],
         conn_factory: Any = None,
     ):
         """
@@ -416,7 +412,7 @@ def build_foreign_key_constraint(
 
 
 def get_foreign_key_constraints(
-    entity: "EntitySpec",
+    entity: EntitySpec,
     registry: RelationRegistry,
 ) -> list[str]:
     """
@@ -440,7 +436,7 @@ def get_foreign_key_constraints(
 
 
 def get_foreign_key_indexes(
-    entity: "EntitySpec",
+    entity: EntitySpec,
     registry: RelationRegistry,
 ) -> list[str]:
     """

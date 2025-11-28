@@ -5,9 +5,9 @@ Converts Dazzle AppSpec (IR) to BackendSpec.
 """
 
 from dazzle.core import ir
-from dazzle_dnr_back.specs import BackendSpec
 from dazzle_dnr_back.converters.entity_converter import convert_entities
 from dazzle_dnr_back.converters.surface_converter import convert_surfaces_to_services
+from dazzle_dnr_back.specs import BackendSpec
 
 
 def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:

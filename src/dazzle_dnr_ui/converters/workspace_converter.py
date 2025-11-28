@@ -7,15 +7,11 @@ leveraging the existing layout engine where possible.
 
 from dazzle.core import ir
 from dazzle_dnr_ui.specs import (
-    WorkspaceSpec,
-    RouteSpec,
     AppShellLayout,
+    RouteSpec,
     SingleColumnLayout,
-    ComponentSpec,
-    StateSpec,
-    StateScope,
+    WorkspaceSpec,
 )
-
 
 # =============================================================================
 # Layout Inference
@@ -29,7 +25,6 @@ def _infer_layout_from_workspace(workspace: ir.WorkspaceSpec) -> dict:
     Uses heuristics based on region count and names to select appropriate layout.
     """
     regions = workspace.regions
-    region_names = [r.name for r in regions]
 
     # If engine_hint is specified, use it to guide layout selection
     hint = workspace.engine_hint

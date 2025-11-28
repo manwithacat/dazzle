@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, Iterator, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -27,8 +28,7 @@ from dazzle_dnr_back.specs.entity import (
 )
 
 if TYPE_CHECKING:
-    from dazzle_dnr_back.runtime.query_builder import QueryBuilder
-    from dazzle_dnr_back.runtime.relation_loader import RelationLoader, RelationRegistry
+    from dazzle_dnr_back.runtime.relation_loader import RelationLoader
 
 
 # =============================================================================
@@ -288,7 +288,7 @@ class SQLiteRepository(Generic[T]):
         db_manager: DatabaseManager,
         entity_spec: EntitySpec,
         model_class: type[T],
-        relation_loader: "RelationLoader | None" = None,
+        relation_loader: RelationLoader | None = None,
     ):
         """
         Initialize the repository.
@@ -565,7 +565,7 @@ class RepositoryFactory:
         self,
         db_manager: DatabaseManager,
         models: dict[str, type[BaseModel]],
-        relation_loader: "RelationLoader | None" = None,
+        relation_loader: RelationLoader | None = None,
     ):
         """
         Initialize the factory.

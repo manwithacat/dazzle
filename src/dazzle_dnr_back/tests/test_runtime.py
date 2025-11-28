@@ -2,39 +2,38 @@
 Tests for DNR-Back runtime module.
 """
 
-import pytest
-from uuid import UUID, uuid4
+from uuid import uuid4
 
+import pytest
 from pydantic import BaseModel
 
 pytestmark = pytest.mark.asyncio(loop_scope="function")
 
-from dazzle_dnr_back.specs import (
-    BackendSpec,
-    EntitySpec,
-    FieldSpec,
-    FieldType,
-    ScalarType,
-    ServiceSpec,
-    EndpointSpec,
-    HttpMethod,
-    SchemaSpec,
-    SchemaFieldSpec,
-    DomainOperation,
-    OperationKind,
-)
-from dazzle_dnr_back.runtime.model_generator import (
-    generate_entity_model,
+from dazzle_dnr_back.runtime.model_generator import (  # noqa: E402
     generate_all_entity_models,
     generate_create_schema,
+    generate_entity_model,
     generate_update_schema,
 )
-from dazzle_dnr_back.runtime.service_generator import (
+from dazzle_dnr_back.runtime.service_generator import (  # noqa: E402
     CRUDService,
     CustomService,
     ServiceFactory,
 )
-
+from dazzle_dnr_back.specs import (  # noqa: E402
+    BackendSpec,
+    DomainOperation,
+    EndpointSpec,
+    EntitySpec,
+    FieldSpec,
+    FieldType,
+    HttpMethod,
+    OperationKind,
+    ScalarType,
+    SchemaFieldSpec,
+    SchemaSpec,
+    ServiceSpec,
+)
 
 # =============================================================================
 # Fixtures
@@ -426,7 +425,8 @@ class TestRuntimeIntegration:
 
 # Check if FastAPI is available
 try:
-    import fastapi
+    import fastapi  # noqa: F401
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -493,7 +493,7 @@ class TestServerWithSQLite:
             db_path=db_path,
             use_database=True,
         )
-        app = app_builder.build()
+        app_builder.build()  # Triggers database setup
 
         # Database should be created
         assert db_path.exists()
@@ -511,7 +511,7 @@ class TestServerWithSQLite:
             db_path=db_path,
             use_database=False,
         )
-        app = app_builder.build()
+        app_builder.build()  # Build without database
 
         # Database should NOT be created
         assert not db_path.exists()

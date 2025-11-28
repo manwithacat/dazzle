@@ -5,14 +5,15 @@ This module creates service classes that implement domain operations.
 Services handle business logic and can be customized by users.
 """
 
+import builtins
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Generic, List, TypeVar
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
 from dazzle_dnr_back.specs.service import (
-    OperationKind,
     ServiceSpec,
 )
 
@@ -194,8 +195,8 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         }
 
     def _apply_filters(
-        self, items: List[T], filters: dict[str, Any]
-    ) -> List[T]:
+        self, items: builtins.list[T], filters: dict[str, Any]
+    ) -> builtins.list[T]:
         """Apply filters to a list of items."""
         filtered = []
         for item in items:

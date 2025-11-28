@@ -67,7 +67,7 @@ class FilterCondition:
     relation_path: list[str] = field(default_factory=list)
 
     @classmethod
-    def parse(cls, key: str, value: Any) -> "FilterCondition":
+    def parse(cls, key: str, value: Any) -> FilterCondition:
         """
         Parse a filter key-value pair into a FilterCondition.
 
@@ -211,7 +211,7 @@ class SortField:
     relation_path: list[str] = field(default_factory=list)
 
     @classmethod
-    def parse(cls, sort_str: str) -> "SortField":
+    def parse(cls, sort_str: str) -> SortField:
         """
         Parse a sort string into a SortField.
 
@@ -266,25 +266,25 @@ class QueryBuilder:
     search_query: str | None = None
     search_fields: list[str] = field(default_factory=list)
 
-    def add_filter(self, key: str, value: Any) -> "QueryBuilder":
+    def add_filter(self, key: str, value: Any) -> QueryBuilder:
         """Add a filter condition."""
         condition = FilterCondition.parse(key, value)
         self.conditions.append(condition)
         return self
 
-    def add_filters(self, filters: dict[str, Any]) -> "QueryBuilder":
+    def add_filters(self, filters: dict[str, Any]) -> QueryBuilder:
         """Add multiple filter conditions."""
         for key, value in filters.items():
             self.add_filter(key, value)
         return self
 
-    def add_sort(self, sort_str: str) -> "QueryBuilder":
+    def add_sort(self, sort_str: str) -> QueryBuilder:
         """Add a sort field."""
         sort_field = SortField.parse(sort_str)
         self.sorts.append(sort_field)
         return self
 
-    def add_sorts(self, sorts: str | list[str]) -> "QueryBuilder":
+    def add_sorts(self, sorts: str | list[str]) -> QueryBuilder:
         """Add multiple sort fields."""
         if isinstance(sorts, str):
             sorts = [sorts]
@@ -292,7 +292,7 @@ class QueryBuilder:
             self.add_sort(sort_str)
         return self
 
-    def set_pagination(self, page: int, page_size: int) -> "QueryBuilder":
+    def set_pagination(self, page: int, page_size: int) -> QueryBuilder:
         """Set pagination parameters."""
         self.page = max(1, page)
         self.page_size = max(1, min(page_size, 1000))  # Cap at 1000
@@ -300,7 +300,7 @@ class QueryBuilder:
 
     def set_search(
         self, query: str, fields: list[str] | None = None
-    ) -> "QueryBuilder":
+    ) -> QueryBuilder:
         """Set full-text search query."""
         self.search_query = query
         self.search_fields = fields or []

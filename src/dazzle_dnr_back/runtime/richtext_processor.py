@@ -32,7 +32,7 @@ class MarkdownProcessor:
 
     def __init__(
         self,
-        storage: "StorageBackend | None" = None,
+        storage: StorageBackend | None = None,
         allow_images: bool = True,
         allow_html: bool = False,
         sanitize: bool = True,
@@ -418,7 +418,7 @@ class RichTextService:
 
     def __init__(
         self,
-        storage: "StorageBackend | None" = None,
+        storage: StorageBackend | None = None,
         default_format: str = "markdown",
         allow_images: bool = True,
         sanitize: bool = True,

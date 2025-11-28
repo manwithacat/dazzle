@@ -5,7 +5,6 @@ Tests local storage, metadata store, validation, and file service.
 """
 
 from io import BytesIO
-from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,14 +12,12 @@ import pytest
 from dazzle_dnr_back.runtime.file_storage import (
     FileMetadata,
     FileMetadataStore,
-    FileService,
     FileValidationError,
     FileValidator,
     LocalStorageBackend,
     create_local_file_service,
     secure_filename,
 )
-
 
 # =============================================================================
 # Fixtures

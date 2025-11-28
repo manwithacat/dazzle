@@ -6,7 +6,6 @@ Tracks which users are viewing which resources for collaboration awareness.
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -14,8 +13,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.websocket_manager import (
         WebSocketManager,
-        RealtimeMessage,
-        MessageType,
     )
 
 
@@ -76,9 +73,9 @@ class PresenceTracker:
     # connection_id -> (resource, user_id) for cleanup
     _connection_presence: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
 
-    ws_manager: "WebSocketManager | None" = None
+    ws_manager: WebSocketManager | None = None
 
-    def set_websocket_manager(self, manager: "WebSocketManager") -> None:
+    def set_websocket_manager(self, manager: WebSocketManager) -> None:
         """Set the WebSocket manager for broadcasting."""
         self.ws_manager = manager
 
@@ -362,7 +359,7 @@ class PresenceTracker:
         if not self.ws_manager:
             return
 
-        from dazzle_dnr_back.runtime.websocket_manager import RealtimeMessage, MessageType
+        from dazzle_dnr_back.runtime.websocket_manager import MessageType, RealtimeMessage
 
         channel = self._get_presence_channel(resource)
         message = RealtimeMessage(
@@ -383,7 +380,7 @@ class PresenceTracker:
         if not self.ws_manager:
             return
 
-        from dazzle_dnr_back.runtime.websocket_manager import RealtimeMessage, MessageType
+        from dazzle_dnr_back.runtime.websocket_manager import MessageType, RealtimeMessage
 
         channel = self._get_presence_channel(resource)
         message = RealtimeMessage(
@@ -410,7 +407,7 @@ class PresenceTracker:
         if not self.ws_manager:
             return
 
-        from dazzle_dnr_back.runtime.websocket_manager import RealtimeMessage, MessageType
+        from dazzle_dnr_back.runtime.websocket_manager import MessageType, RealtimeMessage
 
         entries = self.get_present(resource)
         channel = self._get_presence_channel(resource)
@@ -474,7 +471,7 @@ def reset_presence_tracker() -> None:
 
 def create_presence_tracker(
     timeout_seconds: int = 30,
-    ws_manager: "WebSocketManager | None" = None,
+    ws_manager: WebSocketManager | None = None,
 ) -> PresenceTracker:
     """
     Create a presence tracker.

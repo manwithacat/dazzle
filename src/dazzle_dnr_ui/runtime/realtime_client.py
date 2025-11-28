@@ -10,7 +10,6 @@ The REALTIME_CLIENT_JS variable is kept for backward compatibility.
 
 from __future__ import annotations
 
-
 # =============================================================================
 # Runtime Loading
 # =============================================================================

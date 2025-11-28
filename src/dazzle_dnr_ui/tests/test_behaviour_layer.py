@@ -5,34 +5,33 @@ Tests signals, state management, actions, and effects.
 """
 
 import json
+
 import pytest
 
+from dazzle_dnr_ui.runtime.js_generator import JSGenerator
 from dazzle_dnr_ui.specs import (
-    UISpec,
     ComponentSpec,
-    WorkspaceSpec,
-    SingleColumnLayout,
     RouteSpec,
-)
-from dazzle_dnr_ui.specs.state import (
-    StateSpec,
-    StateScope,
-    LiteralBinding,
-    StateBinding,
-    WorkspaceStateBinding,
+    SingleColumnLayout,
+    UISpec,
+    WorkspaceSpec,
 )
 from dazzle_dnr_ui.specs.actions import (
     ActionSpec,
-    TransitionSpec,
-    PatchSpec,
-    PatchOp,
     FetchEffect,
-    NavigateEffect,
-    ToastEffect,
     LogEffect,
+    NavigateEffect,
+    PatchOp,
+    PatchSpec,
+    ToastEffect,
+    TransitionSpec,
 )
-from dazzle_dnr_ui.runtime.js_generator import JSGenerator
-
+from dazzle_dnr_ui.specs.state import (
+    LiteralBinding,
+    StateBinding,
+    StateScope,
+    StateSpec,
+)
 
 # =============================================================================
 # Fixtures

@@ -5,27 +5,22 @@ Tests the unified development server that runs both
 FastAPI backend and frontend dev server together.
 """
 
-import threading
-import time
-import urllib.request
-import urllib.error
 from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_ui.specs import (
-    UISpec,
-    WorkspaceSpec,
-    SingleColumnLayout,
-    ComponentSpec,
-    RouteSpec,
-)
 from dazzle_dnr_ui.runtime.combined_server import (
     DNRCombinedHandler,
     DNRCombinedServer,
 )
 from dazzle_dnr_ui.runtime.js_generator import JSGenerator
-
+from dazzle_dnr_ui.specs import (
+    ComponentSpec,
+    RouteSpec,
+    SingleColumnLayout,
+    UISpec,
+    WorkspaceSpec,
+)
 
 # Check if backend modules are available
 try:

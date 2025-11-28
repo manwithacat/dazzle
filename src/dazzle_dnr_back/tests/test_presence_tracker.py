@@ -4,19 +4,19 @@ Tests for presence tracker.
 Tests presence join/leave, heartbeat, and cleanup.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock
+
+import pytest
 
 from dazzle_dnr_back.runtime.presence_tracker import (
     PresenceEntry,
     PresenceTracker,
     create_presence_tracker,
     get_presence_tracker,
-    set_presence_tracker,
     reset_presence_tracker,
+    set_presence_tracker,
 )
-
 
 # =============================================================================
 # Fixtures

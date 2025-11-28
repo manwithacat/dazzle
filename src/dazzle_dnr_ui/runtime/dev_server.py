@@ -6,16 +6,14 @@ Serves the generated UI with hot reload support.
 
 from __future__ import annotations
 
+import http.server
 import json
-import mimetypes
+import socketserver
 from pathlib import Path
 from typing import Any
-import http.server
-import socketserver
 
-from dazzle_dnr_ui.specs import UISpec
 from dazzle_dnr_ui.runtime.js_generator import JSGenerator
-
+from dazzle_dnr_ui.specs import UISpec
 
 # =============================================================================
 # Request Handler
@@ -183,10 +181,10 @@ class DNRDevServer:
         socketserver.TCPServer.allow_reuse_address = True
         self._server = socketserver.TCPServer((self.host, self.port), DNRDevHandler)
 
-        print(f"[DNR-UI] Development server starting...")
+        print("[DNR-UI] Development server starting...")
         print(f"[DNR-UI] Serving: {self.spec.name}")
         print(f"[DNR-UI] URL: http://{self.host}:{self.port}")
-        print(f"[DNR-UI] Press Ctrl+C to stop")
+        print("[DNR-UI] Press Ctrl+C to stop")
         print()
 
         try:

@@ -6,7 +6,8 @@ This module creates FastAPI routers and routes from backend specifications.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -20,8 +21,8 @@ if TYPE_CHECKING:
 
 # FastAPI is optional - only import if available
 try:
-    from fastapi import APIRouter as _APIRouter, HTTPException, Query, Request, Depends
-    from fastapi.responses import JSONResponse
+    from fastapi import APIRouter as _APIRouter
+    from fastapi import Depends, HTTPException, Query, Request
 
     FASTAPI_AVAILABLE = True
 except ImportError:

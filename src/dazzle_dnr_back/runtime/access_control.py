@@ -6,12 +6,12 @@ Provides owner-based and tenant-based access control for entities.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-
 
 # =============================================================================
 # Access Context
@@ -160,7 +160,7 @@ class AccessPolicy(BaseModel):
     rules: dict[AccessOperation, AccessRule] = Field(default_factory=dict)
 
     @classmethod
-    def create_public(cls, entity_name: str) -> "AccessPolicy":
+    def create_public(cls, entity_name: str) -> AccessPolicy:
         """Create a policy that allows public access to all operations."""
         policy = cls(entity_name=entity_name)
         for op in AccessOperation:
@@ -168,7 +168,7 @@ class AccessPolicy(BaseModel):
         return policy
 
     @classmethod
-    def create_authenticated(cls, entity_name: str) -> "AccessPolicy":
+    def create_authenticated(cls, entity_name: str) -> AccessPolicy:
         """Create a policy that requires authentication for all operations."""
         policy = cls(entity_name=entity_name)
         for op in AccessOperation:
@@ -180,7 +180,7 @@ class AccessPolicy(BaseModel):
         cls,
         entity_name: str,
         owner_field: str = "owner_id",
-    ) -> "AccessPolicy":
+    ) -> AccessPolicy:
         """
         Create a policy where users can only access their own records.
 
@@ -220,7 +220,7 @@ class AccessPolicy(BaseModel):
         cls,
         entity_name: str,
         tenant_field: str = "tenant_id",
-    ) -> "AccessPolicy":
+    ) -> AccessPolicy:
         """
         Create a policy where all operations are scoped to tenant.
 

@@ -4,8 +4,9 @@ Tests for query builder.
 Tests filter parsing, SQL generation, and sorting.
 """
 
-import pytest
 from uuid import UUID
+
+import pytest
 
 from dazzle_dnr_back.runtime.query_builder import (
     FilterCondition,
@@ -15,7 +16,6 @@ from dazzle_dnr_back.runtime.query_builder import (
     parse_filter_string,
     parse_sort_string,
 )
-
 
 # =============================================================================
 # FilterCondition Tests

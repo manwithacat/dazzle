@@ -5,20 +5,19 @@ Basic validation and construction tests to ensure specs work correctly.
 """
 
 import pytest
+
 from dazzle_dnr_back.specs import (
     BackendSpec,
+    DomainOperation,
+    EndpointSpec,
     EntitySpec,
     FieldSpec,
     FieldType,
-    ScalarType,
-    ServiceSpec,
-    EndpointSpec,
     HttpMethod,
-    DomainOperation,
     OperationKind,
+    ScalarType,
     SchemaSpec,
-    AuthRuleSpec,
-    RoleSpec,
+    ServiceSpec,
 )
 
 

@@ -6,14 +6,13 @@ Provides connection management, channel subscriptions, and message routing.
 
 from __future__ import annotations
 
-import asyncio
-import json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -76,7 +75,7 @@ class RealtimeMessage:
         return result
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "RealtimeMessage":
+    def from_dict(cls, data: dict[str, Any]) -> RealtimeMessage:
         """Create from dictionary."""
         return cls(
             type=data.get("type", ""),
@@ -97,7 +96,7 @@ class Connection:
     """A WebSocket connection."""
 
     id: str
-    websocket: "WebSocket"
+    websocket: WebSocket
     user_id: str | None = None
     user_name: str | None = None
     subscriptions: set[str] = field(default_factory=set)
@@ -144,7 +143,7 @@ class WebSocketManager:
 
     async def connect(
         self,
-        websocket: "WebSocket",
+        websocket: WebSocket,
         user_id: str | None = None,
         user_name: str | None = None,
         metadata: dict[str, Any] | None = None,

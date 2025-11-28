@@ -4,27 +4,25 @@ Tests for SQLite repository module.
 Tests database creation, CRUD operations, and persistence.
 """
 
-import tempfile
 from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
+from dazzle_dnr_back.runtime.model_generator import generate_entity_model
 from dazzle_dnr_back.runtime.repository import (
     DatabaseManager,
-    SQLiteRepository,
     RepositoryFactory,
+    SQLiteRepository,
     _python_to_sqlite,
     _sqlite_to_python,
 )
-from dazzle_dnr_back.runtime.model_generator import generate_entity_model
 from dazzle_dnr_back.specs.entity import (
     EntitySpec,
     FieldSpec,
     FieldType,
     ScalarType,
 )
-
 
 # =============================================================================
 # Fixtures

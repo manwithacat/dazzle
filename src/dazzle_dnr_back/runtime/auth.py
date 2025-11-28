@@ -11,7 +11,6 @@ import secrets
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -462,7 +461,7 @@ class AuthMiddleware:
             "/auth/register",
         ]
 
-    def get_auth_context(self, request: "FastAPIRequest") -> AuthContext:
+    def get_auth_context(self, request: FastAPIRequest) -> AuthContext:
         """
         Get auth context from request.
 

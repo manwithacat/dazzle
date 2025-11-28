@@ -23,7 +23,7 @@ PASSWORD_FIELD_NAMES = {"password", "password_hash", "hashed_password", "pwd"}
 USERNAME_FIELD_NAMES = {"username", "user_name", "name", "login"}
 
 
-def find_user_entity(spec: "BackendSpec") -> "EntitySpec | None":
+def find_user_entity(spec: BackendSpec) -> EntitySpec | None:
     """
     Find a User-like entity in the BackendSpec.
 
@@ -47,7 +47,7 @@ def find_user_entity(spec: "BackendSpec") -> "EntitySpec | None":
     return None
 
 
-def has_auth_fields(entity: "EntitySpec") -> bool:
+def has_auth_fields(entity: EntitySpec) -> bool:
     """
     Check if an entity has fields suitable for authentication.
 
@@ -60,21 +60,19 @@ def has_auth_fields(entity: "EntitySpec") -> bool:
         True if entity has auth-compatible fields
     """
     has_email = False
-    has_password = False
 
     for field in entity.fields:
         field_name_lower = field.name.lower()
 
         if field_name_lower in EMAIL_FIELD_NAMES:
             has_email = True
-        elif field_name_lower in PASSWORD_FIELD_NAMES:
-            has_password = True
+            break  # Found email field, that's all we need
 
     # Email is required, password is optional (we might generate it)
     return has_email
 
 
-def get_auth_field_mapping(entity: "EntitySpec") -> dict[str, str | None]:
+def get_auth_field_mapping(entity: EntitySpec) -> dict[str, str | None]:
     """
     Get mapping of auth fields from entity fields.
 
@@ -114,7 +112,7 @@ class AuthConfig:
     def __init__(
         self,
         enabled: bool = False,
-        user_entity: "EntitySpec | None" = None,
+        user_entity: EntitySpec | None = None,
         field_mapping: dict[str, str | None] | None = None,
         use_builtin_user_table: bool = True,
     ):
@@ -133,7 +131,7 @@ class AuthConfig:
         self.use_builtin_user_table = use_builtin_user_table
 
     @classmethod
-    def from_spec(cls, spec: "BackendSpec") -> "AuthConfig":
+    def from_spec(cls, spec: BackendSpec) -> AuthConfig:
         """
         Create auth configuration from BackendSpec.
 
@@ -176,7 +174,7 @@ class AuthConfig:
 # =============================================================================
 
 
-def detect_auth_requirements(spec: "BackendSpec") -> AuthConfig:
+def detect_auth_requirements(spec: BackendSpec) -> AuthConfig:
     """
     Detect authentication requirements from a BackendSpec.
 
@@ -191,7 +189,7 @@ def detect_auth_requirements(spec: "BackendSpec") -> AuthConfig:
     return AuthConfig.from_spec(spec)
 
 
-def should_enable_auth(spec: "BackendSpec") -> bool:
+def should_enable_auth(spec: BackendSpec) -> bool:
     """
     Check if authentication should be enabled for a spec.
 

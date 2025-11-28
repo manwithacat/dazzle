@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 
 from dazzle_dnr_ui.specs.state import Binding
 
-
 # =============================================================================
 # State Patches
 # =============================================================================

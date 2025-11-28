@@ -12,7 +12,6 @@ from dazzle_dnr_ui.specs.actions import ActionSpec
 from dazzle_dnr_ui.specs.state import StateSpec
 from dazzle_dnr_ui.specs.view import ViewNode
 
-
 # =============================================================================
 # Props Schema
 # =============================================================================

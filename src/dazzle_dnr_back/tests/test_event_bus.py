@@ -4,20 +4,20 @@ Tests for entity event bus.
 Tests event emission, handler registration, and WebSocket broadcasting.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from dazzle_dnr_back.runtime.event_bus import (
     EntityEvent,
-    EntityEventType,
     EntityEventBus,
+    EntityEventType,
+    RealtimeRepositoryMixin,
     create_event_bus,
     get_event_bus,
-    set_event_bus,
     reset_event_bus,
-    RealtimeRepositoryMixin,
+    set_event_bus,
 )
-
 
 # =============================================================================
 # Fixtures

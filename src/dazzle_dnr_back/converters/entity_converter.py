@@ -10,13 +10,12 @@ from dazzle_dnr_back.specs import (
     EntitySpec,
     FieldSpec,
     FieldType,
-    RelationSpec,
     RelationKind,
+    RelationSpec,
     ScalarType,
-    ValidatorSpec,
     ValidatorKind,
+    ValidatorSpec,
 )
-
 
 # =============================================================================
 # Type Mapping

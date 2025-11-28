@@ -5,9 +5,9 @@ Converts Dazzle AppSpec (IR) to UISpec.
 """
 
 from dazzle.core import ir
-from dazzle_dnr_ui.specs import UISpec, ThemeSpec, ThemeTokens
-from dazzle_dnr_ui.converters.workspace_converter import convert_workspaces
 from dazzle_dnr_ui.converters.surface_converter import convert_surfaces_to_components
+from dazzle_dnr_ui.converters.workspace_converter import convert_workspaces
+from dazzle_dnr_ui.specs import ThemeSpec, ThemeTokens, UISpec
 
 
 def convert_appspec_to_ui(appspec: ir.AppSpec) -> UISpec:
