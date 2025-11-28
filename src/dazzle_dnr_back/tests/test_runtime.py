@@ -418,3 +418,170 @@ class TestRuntimeIntegration:
         factory = ServiceFactory(models)
         services = factory.create_all_services(spec.services)
         assert "list_items" in services
+
+
+# =============================================================================
+# Server Integration Tests (with SQLite)
+# =============================================================================
+
+# Check if FastAPI is available
+try:
+    import fastapi
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+
+
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+class TestServerWithSQLite:
+    """Integration tests for server with SQLite persistence."""
+
+    @pytest.fixture
+    def simple_backend_spec(self) -> BackendSpec:
+        """Create a simple BackendSpec for testing."""
+        return BackendSpec(
+            name="test_app",
+            version="1.0.0",
+            entities=[
+                EntitySpec(
+                    name="Task",
+                    fields=[
+                        FieldSpec(
+                            name="id",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                            required=True,
+                        ),
+                        FieldSpec(
+                            name="title",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200),
+                            required=True,
+                        ),
+                        FieldSpec(
+                            name="status",
+                            type=FieldType(kind="enum", enum_values=["pending", "done"]),
+                            required=True,
+                            default="pending",
+                        ),
+                    ],
+                ),
+            ],
+            services=[
+                ServiceSpec(
+                    name="task_service",
+                    is_crud=True,
+                    target_entity="Task",
+                    domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
+                ),
+            ],
+            endpoints=[
+                EndpointSpec(
+                    name="list_tasks",
+                    service="task_service",
+                    method=HttpMethod.GET,
+                    path="/api/tasks",
+                ),
+            ],
+        )
+
+    def test_server_creates_database(self, simple_backend_spec: BackendSpec, tmp_path):
+        """Test that server creates SQLite database."""
+        from dazzle_dnr_back.runtime.server import DNRBackendApp
+
+        db_path = tmp_path / "test.db"
+        app_builder = DNRBackendApp(
+            simple_backend_spec,
+            db_path=db_path,
+            use_database=True,
+        )
+        app = app_builder.build()
+
+        # Database should be created
+        assert db_path.exists()
+
+        # Check for database manager
+        assert app_builder._db_manager is not None
+
+    def test_server_without_database(self, simple_backend_spec: BackendSpec, tmp_path):
+        """Test that server works without database (in-memory mode)."""
+        from dazzle_dnr_back.runtime.server import DNRBackendApp
+
+        db_path = tmp_path / "no_db.db"
+        app_builder = DNRBackendApp(
+            simple_backend_spec,
+            db_path=db_path,
+            use_database=False,
+        )
+        app = app_builder.build()
+
+        # Database should NOT be created
+        assert not db_path.exists()
+
+        # Database manager should not be set
+        assert app_builder._db_manager is None
+
+    def test_crud_service_with_repository(self, simple_backend_spec: BackendSpec, tmp_path):
+        """Test that CRUD service is wired up to repository."""
+        from dazzle_dnr_back.runtime.server import DNRBackendApp
+
+        db_path = tmp_path / "test.db"
+        app_builder = DNRBackendApp(
+            simple_backend_spec,
+            db_path=db_path,
+            use_database=True,
+        )
+        app_builder.build()
+
+        # Get the task service
+        task_service = app_builder.get_service("task_service")
+        assert task_service is not None
+        assert isinstance(task_service, CRUDService)
+
+        # Repository should be set
+        assert task_service._repository is not None
+
+    @pytest.mark.asyncio
+    async def test_crud_operations_persist_to_sqlite(
+        self, simple_backend_spec: BackendSpec, tmp_path
+    ):
+        """Test that CRUD operations persist data to SQLite."""
+        from dazzle_dnr_back.runtime.server import DNRBackendApp
+
+        db_path = tmp_path / "test.db"
+        app_builder = DNRBackendApp(
+            simple_backend_spec,
+            db_path=db_path,
+            use_database=True,
+        )
+        app_builder.build()
+
+        task_service = app_builder.get_service("task_service")
+        assert isinstance(task_service, CRUDService)
+
+        # Create schema for test
+        CreateSchema = generate_create_schema(simple_backend_spec.entities[0])
+
+        # Create a task
+        create_data = CreateSchema(title="Test Task", status="pending")
+        task = await task_service.create(create_data)
+
+        task_id = task.id
+
+        # Read it back
+        read_task = await task_service.read(task_id)
+        assert read_task is not None
+        assert read_task.title == "Test Task"
+
+        # Create a new app instance to verify persistence
+        app_builder2 = DNRBackendApp(
+            simple_backend_spec,
+            db_path=db_path,
+            use_database=True,
+        )
+        app_builder2.build()
+
+        task_service2 = app_builder2.get_service("task_service")
+
+        # Should still be able to read the task
+        persisted_task = await task_service2.read(task_id)
+        assert persisted_task is not None
+        assert persisted_task.title == "Test Task"

@@ -4,6 +4,8 @@ Workspace specification types for UISpec.
 Defines workspaces, layouts, and routes.
 """
 
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any, Literal
 
@@ -142,6 +144,9 @@ class WorkspaceSpec(BaseModel):
     layout: LayoutSpec = Field(description="Layout specification")
     routes: list[RouteSpec] = Field(
         default_factory=list, description="Route definitions"
+    )
+    state: list[Any] = Field(
+        default_factory=list, description="Workspace-level state declarations"
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"

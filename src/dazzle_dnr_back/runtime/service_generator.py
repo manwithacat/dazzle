@@ -6,7 +6,7 @@ Services handle business logic and can be customized by users.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, List, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, List, TypeVar
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
@@ -15,6 +15,9 @@ from dazzle_dnr_back.specs.service import (
     OperationKind,
     ServiceSpec,
 )
+
+if TYPE_CHECKING:
+    from dazzle_dnr_back.runtime.repository import SQLiteRepository
 
 
 # =============================================================================
@@ -50,8 +53,8 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
     Generic CRUD service implementation.
 
     Provides standard create, read, update, delete, and list operations.
-    Uses an in-memory store by default, but can be extended to use
-    any persistence backend.
+    Supports both in-memory storage (for testing) and SQLite persistence
+    via the repository pattern.
     """
 
     def __init__(
@@ -60,15 +63,27 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         model_class: type[T],
         create_schema: type[CreateT],
         update_schema: type[UpdateT],
+        repository: "SQLiteRepository[T] | None" = None,
     ):
         self.entity_name = entity_name
         self.model_class = model_class
         self.create_schema = create_schema
         self.update_schema = update_schema
 
-        # In-memory store for demo purposes
-        # Replace with repository pattern for real persistence
+        # Repository for SQLite persistence
+        self._repository = repository
+
+        # In-memory store as fallback (for testing without database)
         self._store: dict[UUID, T] = {}
+
+    def set_repository(self, repository: "SQLiteRepository[T]") -> None:
+        """
+        Set the repository for persistent storage.
+
+        Args:
+            repository: SQLite repository instance
+        """
+        self._repository = repository
 
     async def execute(self, operation: str, **kwargs: Any) -> Any:
         """Route to the appropriate operation."""
@@ -91,26 +106,33 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         # Build entity data
         entity_data = {"id": entity_id, **data.model_dump()}
 
-        # Create instance
+        # Use repository if available
+        if self._repository:
+            return await self._repository.create(entity_data)
+
+        # Fallback to in-memory
         entity = self.model_class(**entity_data)
-
-        # Store
         self._store[entity_id] = entity
-
         return entity
 
     async def read(self, id: UUID) -> T | None:
         """Read an entity by ID."""
+        if self._repository:
+            return await self._repository.read(id)
         return self._store.get(id)
 
     async def update(self, id: UUID, data: UpdateT) -> T | None:
         """Update an existing entity."""
+        # Get update data, excluding None values
+        update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+
+        if self._repository:
+            return await self._repository.update(id, update_data)
+
+        # Fallback to in-memory
         existing = self._store.get(id)
         if not existing:
             return None
-
-        # Get update data, excluding None values
-        update_data = {k: v for k, v in data.model_dump().items() if v is not None}
 
         # Merge with existing
         merged_data = {**existing.model_dump(), **update_data}
@@ -123,6 +145,9 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
     async def delete(self, id: UUID) -> bool:
         """Delete an entity by ID."""
+        if self._repository:
+            return await self._repository.delete(id)
+
         if id in self._store:
             del self._store[id]
             return True
@@ -145,7 +170,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         Returns:
             Dictionary with items, total, page, and page_size
         """
-        # Get all items
+        if self._repository:
+            return await self._repository.list(page, page_size, filters)
+
+        # Fallback to in-memory
         items = list(self._store.values())
 
         # Apply filters if provided

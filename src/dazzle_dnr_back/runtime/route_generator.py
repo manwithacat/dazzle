@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 # FastAPI is optional - only import if available
 try:
-    from fastapi import APIRouter as _APIRouter, Depends, HTTPException, Query
+    from fastapi import APIRouter as _APIRouter, HTTPException, Query, Request, Depends
     from fastapi.responses import JSONResponse
 
     FASTAPI_AVAILABLE = True
@@ -29,6 +29,8 @@ except ImportError:
     _APIRouter = None  # type: ignore
     HTTPException = None  # type: ignore
     Query = None  # type: ignore
+    Request = None  # type: ignore
+    Depends = None  # type: ignore
 
 
 # =============================================================================
@@ -77,10 +79,15 @@ def create_create_handler(
     response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
-
-    async def handler(data: input_schema) -> Any:  # type: ignore
+    # Request is auto-injected by FastAPI when typed correctly
+    async def handler(request: Request) -> Any:
+        body = await request.json()
+        data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
         return result
+
+    # Override annotations with the proper type so FastAPI recognizes it
+    handler.__annotations__ = {"request": Request, "return": Any}
 
     return handler
 
@@ -91,12 +98,16 @@ def create_update_handler(
     response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
-
-    async def handler(id: UUID, data: input_schema) -> Any:  # type: ignore
+    async def handler(id: UUID, request: Request) -> Any:
+        body = await request.json()
+        data = input_schema.model_validate(body)
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         return result
+
+    # Override annotations with the proper types so FastAPI recognizes them
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
 
     return handler
 
@@ -120,12 +131,16 @@ def create_custom_handler(
     input_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for custom operations."""
-
     if input_schema:
 
-        async def handler_with_input(data: input_schema) -> Any:  # type: ignore
+        async def handler_with_input(request: Request) -> Any:
+            body = await request.json()
+            data = input_schema.model_validate(body)
             result = await service.execute(**data.model_dump())
             return result
+
+        # Override annotations with the proper type so FastAPI recognizes it
+        handler_with_input.__annotations__ = {"request": Request, "return": Any}
 
         return handler_with_input
     else:
@@ -189,34 +204,29 @@ class RouteGenerator:
         if not service:
             raise ValueError(f"Service not found: {endpoint.service}")
 
-        # Determine operation kind from service spec or infer from method
-        operation_kind = None
+        # Determine entity name for schemas
         entity_name = None
+        is_crud_service = False
 
         if service_spec:
-            operation_kind = service_spec.domain_operation.kind
             entity_name = service_spec.domain_operation.entity
+            is_crud_service = service_spec.is_crud
 
         # Get schemas for the entity
         entity_schemas = self.schemas.get(entity_name or "", {})
         model = self.models.get(entity_name or "")
 
-        # Create appropriate handler based on operation kind or HTTP method
+        # For CRUD services, determine operation from HTTP method
+        # For non-CRUD services, use the service's domain_operation.kind
+        operation_kind = None
+        if service_spec and not is_crud_service:
+            operation_kind = service_spec.domain_operation.kind
+
+        # Create appropriate handler based on HTTP method (primary) or operation kind (secondary)
         handler: Callable[..., Any]
 
-        if operation_kind == OperationKind.LIST or (
-            endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path
-        ):
-            handler = create_list_handler(service, model)
-            self._add_route(endpoint, handler, response_model=None)
-
-        elif operation_kind == OperationKind.READ or (
-            endpoint.method == HttpMethod.GET and "{id}" in endpoint.path
-        ):
-            handler = create_read_handler(service, model)
-            self._add_route(endpoint, handler, response_model=model)
-
-        elif operation_kind == OperationKind.CREATE or endpoint.method == HttpMethod.POST:
+        # POST -> CREATE
+        if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
             create_schema = entity_schemas.get("create", model)
             if create_schema:
                 handler = create_create_handler(service, create_schema, model)
@@ -224,10 +234,18 @@ class RouteGenerator:
             else:
                 raise ValueError(f"No create schema for endpoint: {endpoint.name}")
 
-        elif operation_kind == OperationKind.UPDATE or endpoint.method in (
-            HttpMethod.PUT,
-            HttpMethod.PATCH,
-        ):
+        # GET with {id} -> READ
+        elif (endpoint.method == HttpMethod.GET and "{id}" in endpoint.path) or operation_kind == OperationKind.READ:
+            handler = create_read_handler(service, model)
+            self._add_route(endpoint, handler, response_model=model)
+
+        # GET without {id} -> LIST
+        elif (endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path) or operation_kind == OperationKind.LIST:
+            handler = create_list_handler(service, model)
+            self._add_route(endpoint, handler, response_model=None)
+
+        # PUT/PATCH -> UPDATE
+        elif endpoint.method in (HttpMethod.PUT, HttpMethod.PATCH) or operation_kind == OperationKind.UPDATE:
             update_schema = entity_schemas.get("update", model)
             if update_schema:
                 handler = create_update_handler(service, update_schema, model)
@@ -235,7 +253,8 @@ class RouteGenerator:
             else:
                 raise ValueError(f"No update schema for endpoint: {endpoint.name}")
 
-        elif operation_kind == OperationKind.DELETE or endpoint.method == HttpMethod.DELETE:
+        # DELETE -> DELETE
+        elif endpoint.method == HttpMethod.DELETE or operation_kind == OperationKind.DELETE:
             handler = create_delete_handler(service)
             self._add_route(endpoint, handler, response_model=None)
 

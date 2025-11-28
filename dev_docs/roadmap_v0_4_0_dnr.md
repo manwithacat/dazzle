@@ -1,6 +1,6 @@
 # DAZZLE v0.4.0 Roadmap - DNR: From Spec to Running App
 
-**Status**: Planning
+**Status**: Phase 2 Week 11-12 complete (Relationships & Queries)
 **Target**: Q1 2025
 **Focus**: Make DNR actually run applications from DSL
 **Theme**: Vertical depth → Horizontal breadth → Meta tooling
@@ -78,16 +78,16 @@ With one key difference: **Dazzle is DSL-first and LLM-friendly**.
 
 **Goal**: `dazzle dnr serve` runs a real app with data persistence
 
-### Week 1-2: Backend Runtime
+### Week 1-2: Backend Runtime ✅ COMPLETE
 
 **Make `dazzle dnr serve` start a real FastAPI server**
 
 Tasks:
-- [ ] SQLite database auto-creation from entities
-- [ ] Auto-migration on entity changes
-- [ ] CRUD endpoints generated from BackendSpec
-- [ ] JSON REST API (no auth yet)
-- [ ] Health check endpoint
+- [x] SQLite database auto-creation from entities
+- [x] Auto-migration on entity changes
+- [x] CRUD endpoints generated from BackendSpec
+- [x] JSON REST API (no auth yet)
+- [x] Health check endpoint
 
 ```bash
 $ dazzle dnr serve
@@ -98,59 +98,93 @@ Starting DNR...
 ```
 
 **Deliverables**:
-- Working FastAPI server from `simple_task` example
-- Create, read, update, delete tasks via API
-- Data persists in SQLite
+- [x] Working FastAPI server from `simple_task` example
+- [x] Create, read, update, delete tasks via API
+- [x] Data persists in SQLite
 
-### Week 3-4: Frontend Runtime
+**Implementation Summary (Nov 2025)**:
+- Repository pattern with SQLite persistence (`src/dazzle_dnr_back/runtime/repository.py`)
+- Auto-migration system with safe schema changes (`src/dazzle_dnr_back/runtime/migrations.py`)
+- Dynamic Pydantic model generation (`src/dazzle_dnr_back/runtime/model_generator.py`)
+- CRUD service layer (`src/dazzle_dnr_back/runtime/service_generator.py`)
+- Route generator with FastAPI integration (`src/dazzle_dnr_back/runtime/route_generator.py`)
+- 8 E2E tests covering full CRUD lifecycle
+
+### Week 3-4: Frontend Runtime ✅ COMPLETE
 
 **Make UISpec render in browser**
 
 Tasks:
-- [ ] Vite dev server integration
-- [ ] UISpec → Preact components (signals-based)
-- [ ] Archetype layouts render correctly
-- [ ] Connect to backend API (fetch data)
-- [ ] Basic forms for create/edit
+- [x] Vite dev server integration (via combined server)
+- [x] UISpec → JavaScript components (signals-based)
+- [x] Archetype layouts render correctly
+- [x] Connect to backend API (API proxy)
+- [x] Basic forms for create/edit
 
 ```bash
 $ dazzle dnr serve
-Starting DNR...
-  Backend: http://localhost:8000
-  Frontend: http://localhost:5173
-  Opening browser...
+============================================================
+  DAZZLE NATIVE RUNTIME (DNR)
+============================================================
+
+[DNR] Backend:  http://127.0.0.1:8000
+[DNR] API Docs: http://127.0.0.1:8000/docs
+[DNR] Database: .dazzle/data.db
+
+[DNR] Frontend: http://127.0.0.1:3000
 ```
 
 **Deliverables**:
-- Browser opens with working UI
-- Task list displays real data
-- Create new task via form
-- Changes persist to database
+- [x] Browser opens with working UI
+- [x] Task list displays real data
+- [x] Create new task via form
+- [x] Changes persist to database
 
-### Week 5-6: Behaviour Layer
+**Implementation Summary (Nov 2025)**:
+- Combined server architecture (`src/dazzle_dnr_ui/runtime/combined_server.py`)
+  - Backend: FastAPI on port 8000 with SQLite persistence
+  - Frontend: Dev server on port 3000 with API proxy
+  - Hot reload support via SSE
+- JS Generator for signals-based UI (`src/dazzle_dnr_ui/runtime/js_generator.py`)
+- Vite generator for production builds (`src/dazzle_dnr_ui/runtime/vite_generator.py`)
+- CLI integration: `dazzle dnr serve` command
+- 15 combined server tests + 8 E2E tests
+
+### Week 5-6: Behaviour Layer ✅ COMPLETE
 
 **Wire up state management and actions**
 
 Tasks:
-- [ ] Signals-based state (Preact signals)
-- [ ] Pure actions (filter, select, sort)
-- [ ] Impure actions (fetch, save, delete)
-- [ ] Effects system (API calls, navigation, toasts)
-- [ ] Loading/error states
+- [x] Signals-based state (custom signals implementation)
+- [x] Pure actions (filter, select, sort, toggle, reset)
+- [x] Impure actions (fetch, save, delete via apiClient)
+- [x] Effects system (API calls, navigation, toasts, log, custom)
+- [x] Loading/error states (globalLoading, globalError, notifications)
 
 **Deliverables**:
-- Full CRUD workflow in browser
-- State updates reactively
-- Error handling with toasts
-- Navigation between workspaces
+- [x] Full CRUD workflow in browser
+- [x] State updates reactively
+- [x] Error handling with toasts
+- [x] Navigation between workspaces
 
-### Vertical Phase Success Criteria
+**Implementation Summary (Nov 2025)**:
+- Enhanced signals system with `batch()`, `createResource()`, cleanup on effect dispose
+- API client with CRUD helpers (`apiClient.list()`, `.create()`, `.update()`, `.remove()`)
+- Toast notification system with variants (success, error, warning, info)
+- Patch operations (SET, MERGE, APPEND, REMOVE, DELETE)
+- Built-in actions: filter, sort, select, toggle, reset
+- UI components: Loading, Error, Empty, Modal
+- 44 behaviour layer tests covering all functionality
 
-- [ ] `simple_task` example runs end-to-end
-- [ ] Create, read, update, delete tasks
-- [ ] Data persists across restarts
-- [ ] Multiple workspaces navigate correctly
-- [ ] < 3 second cold start
+### Vertical Phase Success Criteria ✅ COMPLETE
+
+- [x] `simple_task` example runs end-to-end ✅ (Week 1-4)
+- [x] Create, read, update, delete tasks ✅ (Week 1-2)
+- [x] Data persists across restarts ✅ (Week 1-2)
+- [x] Multiple workspaces navigate correctly ✅ (Week 5-6)
+- [x] < 3 second cold start ✅ (Verified)
+
+**Phase 1 Complete!** 🎉 All vertical milestones achieved.
 
 ---
 
@@ -158,14 +192,38 @@ Tasks:
 
 **Goal**: Production-ready features
 
-### Week 7-8: Authentication & Authorization
+### Week 7-8: Authentication & Authorization ✅ COMPLETE
 
 Tasks:
-- [ ] User entity auto-detection
-- [ ] Session-based auth (cookies)
-- [ ] Login/logout flows
-- [ ] Row-level security (owner-based)
-- [ ] DSL syntax for auth rules
+- [x] User entity auto-detection
+- [x] Session-based auth (cookies)
+- [x] Login/logout flows
+- [x] Auth middleware / dependency injection
+- [x] Row-level security (owner-based)
+- [ ] DSL syntax for auth rules (deferred to future)
+
+**Implementation Summary (Nov 2025)**:
+- Session-based authentication with PBKDF2 password hashing (`src/dazzle_dnr_back/runtime/auth.py`)
+- AuthStore class with SQLite persistence for users and sessions
+- AuthMiddleware for session validation
+- Login/logout/register/me/change-password endpoints
+- User entity auto-detection (`src/dazzle_dnr_back/runtime/auth_detection.py`)
+- Dependency injection for protected routes (`create_auth_dependency`, `create_optional_auth_dependency`)
+- Role-based access control via `require_roles` parameter
+- 65 auth tests covering all functionality
+
+**Row-Level Security** (`src/dazzle_dnr_back/runtime/access_control.py`):
+- `AccessContext`: User/tenant context for access decisions
+- `AccessPolicy`: Configurable policies per entity (public, authenticated, owner, tenant, role)
+- `AccessEnforcer`: Wraps repository to enforce policies
+- Auto-detection of owner fields (`owner_id`, `user_id`, `created_by`)
+- Auto-detection of tenant fields (`tenant_id`, `organization_id`)
+- 42 access control tests
+
+**Multi-tenant Architecture Design** (`dev_docs/Dazzle_Native_Runtime/multi_tenant_architecture.md`):
+- Row-level security (SQLite) - implemented ✅
+- PostgreSQL with native RLS - planned for Week 9-10
+- Schema isolation - planned for enterprise tier
 
 ```dsl
 entity Task:
@@ -178,23 +236,79 @@ entity Task:
     delete: owner = current_user
 ```
 
-### Week 9-10: File Uploads & Rich Fields
+### Week 9-10: File Uploads & Rich Fields ✅ COMPLETE
 
 Tasks:
-- [ ] File upload field type
-- [ ] Image preview/thumbnail
-- [ ] S3-compatible storage (local or cloud)
-- [ ] Rich text field (markdown)
-- [ ] Date/time pickers
+- [x] File upload field type (FILE, IMAGE, RICHTEXT in ScalarType)
+- [x] Image preview/thumbnail (ImageProcessor with Pillow)
+- [x] S3-compatible storage (LocalStorageBackend + S3StorageBackend)
+- [x] Rich text field (MarkdownProcessor with bleach sanitization)
+- [ ] Date/time pickers (deferred)
 
-### Week 11-12: Relationships & Queries
+**Implementation Summary (Nov 2025)**:
+- File storage system (`src/dazzle_dnr_back/runtime/file_storage.py`):
+  - StorageBackend protocol with local and S3 implementations
+  - FileMetadataStore with SQLite persistence
+  - FileValidator for size/type checking
+  - FileService combining storage, metadata, and validation
+  - Secure filename sanitization
+- Image processing (`src/dazzle_dnr_back/runtime/image_processor.py`):
+  - Thumbnail generation with aspect ratio preservation
+  - Image optimization for web delivery
+  - Format conversion (PNG, JPEG, WEBP)
+  - Square cropping for avatars
+- Rich text (`src/dazzle_dnr_back/runtime/richtext_processor.py`):
+  - Markdown to HTML rendering
+  - HTML sanitization (XSS prevention)
+  - Inline base64 image processing
+  - Text extraction for search indexing
+- REST endpoints (`src/dazzle_dnr_back/runtime/file_routes.py`):
+  - POST /api/files/upload
+  - GET /api/files/{id}/download
+  - GET /api/files/{id}/thumbnail
+  - DELETE /api/files/{id}
+  - GET /api/files/entity/{entity}/{id}
+- 96 new tests (34 file storage + 26 image + 36 rich text)
+
+### Week 11-12: Relationships & Queries ✅ COMPLETE
 
 Tasks:
-- [ ] Foreign key relationships
-- [ ] Nested data fetching
-- [ ] List filtering from DSL
-- [ ] Sorting and pagination
-- [ ] Search (full-text)
+- [x] Foreign key relationships
+- [x] Nested data fetching
+- [x] List filtering from DSL
+- [x] Sorting and pagination
+- [x] Search (full-text)
+
+**Implementation Summary (Nov 2025)**:
+- **Query Builder** (`src/dazzle_dnr_back/runtime/query_builder.py`):
+  - Advanced filter operators: eq, ne, gt, gte, lt, lte, contains, icontains, startswith, endswith, in, not_in, isnull, between
+  - Relation path filters (e.g., `owner__name__contains`)
+  - Multi-field sorting with ascending/descending support
+  - SQL generation with parameter binding
+  - 56 query builder tests
+
+- **Relation Loader** (`src/dazzle_dnr_back/runtime/relation_loader.py`):
+  - RelationRegistry for tracking entity relationships
+  - Auto-detection of implicit relations from ref fields
+  - To-one relation loading (many-to-one, one-to-one)
+  - To-many relation loading (one-to-many, many-to-many)
+  - Batch loading to avoid N+1 queries
+  - Foreign key constraint generation
+  - 24 relation tests
+
+- **Full-Text Search** (`src/dazzle_dnr_back/runtime/fts_manager.py`):
+  - SQLite FTS5 virtual table integration
+  - Auto-detection of searchable text fields
+  - Sync triggers for insert/update/delete
+  - Search with snippets and highlighting
+  - Query escaping for safety
+  - Index rebuild functionality
+  - 28 FTS tests
+
+- **Repository Enhancements**:
+  - Extended `list()` with sort, include, and search parameters
+  - Extended `read()` with include parameter
+  - Support for nested data in responses
 
 ```dsl
 workspace task_board "Task Board":
@@ -202,23 +316,62 @@ workspace task_board "Task Board":
     source: Task
     filter: owner = current_user and status != "done"
     sort: priority desc, due_date asc
+    include: owner, project
     limit: 50
 ```
 
-### Week 13-14: Real-time & Collaboration
+### Week 13-14: Real-time & Collaboration ✅ COMPLETE
 
 Tasks:
-- [ ] WebSocket support
-- [ ] Live updates (other users' changes)
-- [ ] Optimistic UI updates
-- [ ] Presence indicators (who's viewing)
+- [x] WebSocket support
+- [x] Live updates (other users' changes)
+- [x] Optimistic UI updates
+- [x] Presence indicators (who's viewing)
+
+**Implementation Summary (Nov 2025)**:
+- **WebSocket Manager** (`src/dazzle_dnr_back/runtime/websocket_manager.py`):
+  - Connection lifecycle management (connect, disconnect, heartbeat)
+  - Channel-based pub/sub subscriptions
+  - Message routing to handlers
+  - Broadcast to all or filtered connections
+  - User tracking across connections
+  - Stale connection cleanup
+  - 26 WebSocket manager tests
+
+- **Event Bus** (`src/dazzle_dnr_back/runtime/event_bus.py`):
+  - Entity event types: CREATED, UPDATED, DELETED
+  - Async and sync event handlers
+  - WebSocket broadcast integration
+  - Repository mixin for automatic event emission
+  - 22 event bus tests
+
+- **Presence Tracker** (`src/dazzle_dnr_back/runtime/presence_tracker.py`):
+  - Join/leave tracking for resources
+  - Heartbeat-based activity detection
+  - Automatic cleanup of stale entries
+  - Presence sync for new connections
+  - Connection cleanup on disconnect
+  - 28 presence tracker tests
+
+- **Realtime Routes** (`src/dazzle_dnr_back/runtime/realtime_routes.py`):
+  - WebSocket endpoint with auth support
+  - Presence message handlers
+  - Stats endpoint for monitoring
+  - Integration with FastAPI
+
+- **Frontend Client** (`src/dazzle_dnr_ui/runtime/realtime_client.py`):
+  - RealtimeClient class with reconnection
+  - Channel subscriptions
+  - OptimisticManager for instant UI updates
+  - PresenceManager for collaboration awareness
+  - EntitySync for auto-updating signals
 
 ### Horizontal Phase Success Criteria
 
-- [ ] Multi-user app with authentication
-- [ ] File uploads work
-- [ ] Complex queries execute correctly
-- [ ] Real-time updates in browser
+- [x] Multi-user app with authentication ✅
+- [x] File uploads work ✅
+- [x] Complex queries execute correctly ✅
+- [x] Real-time updates in browser ✅
 
 ---
 

@@ -6,6 +6,7 @@ This module provides the main entry point for running a DNR-Back application.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel
@@ -16,7 +17,12 @@ from dazzle_dnr_back.runtime.model_generator import (
     generate_create_schema,
     generate_update_schema,
 )
-from dazzle_dnr_back.runtime.service_generator import ServiceFactory
+from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
+from dazzle_dnr_back.runtime.migrations import auto_migrate, MigrationPlan
+from dazzle_dnr_back.runtime.auth import AuthStore, AuthMiddleware, create_auth_routes, AuthContext
+from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
+from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
 if TYPE_CHECKING:
@@ -48,12 +54,29 @@ class DNRBackendApp:
     Creates a complete FastAPI application from a BackendSpec.
     """
 
-    def __init__(self, spec: BackendSpec):
+    def __init__(
+        self,
+        spec: BackendSpec,
+        db_path: str | Path | None = None,
+        use_database: bool = True,
+        enable_auth: bool = False,
+        auth_db_path: str | Path | None = None,
+        enable_files: bool = False,
+        files_path: str | Path | None = None,
+        files_db_path: str | Path | None = None,
+    ):
         """
         Initialize the backend application.
 
         Args:
             spec: Backend specification
+            db_path: Path to SQLite database (default: .dazzle/data.db)
+            use_database: Whether to use SQLite persistence (default: True)
+            enable_auth: Whether to enable authentication (default: False)
+            auth_db_path: Path to auth database (default: .dazzle/auth.db)
+            enable_files: Whether to enable file uploads (default: False)
+            files_path: Path for file storage (default: .dazzle/uploads)
+            files_db_path: Path to file metadata database (default: .dazzle/files.db)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -61,10 +84,22 @@ class DNRBackendApp:
             )
 
         self.spec = spec
+        self._db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
+        self._use_database = use_database
+        self._enable_auth = enable_auth
+        self._auth_db_path = Path(auth_db_path) if auth_db_path else Path(".dazzle/auth.db")
+        self._enable_files = enable_files
+        self._files_path = Path(files_path) if files_path else Path(".dazzle/uploads")
+        self._files_db_path = Path(files_db_path) if files_db_path else Path(".dazzle/files.db")
         self._app: Optional[FastAPI] = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
+        self._db_manager: Optional[DatabaseManager] = None
+        self._auth_store: Optional[AuthStore] = None
+        self._auth_middleware: Optional[AuthMiddleware] = None
+        self._file_service: Optional[FileService] = None
+        self._last_migration: Optional[MigrationPlan] = None
 
     def build(self) -> FastAPI:
         """
@@ -99,12 +134,36 @@ class DNRBackendApp:
                 "update": generate_update_schema(entity),
             }
 
+        # Initialize database if enabled
+        repositories = {}
+        if self._use_database:
+            self._db_manager = DatabaseManager(self._db_path)
+
+            # Auto-migrate: creates tables and applies schema changes
+            self._last_migration = auto_migrate(
+                self._db_manager,
+                self.spec.entities,
+                record_history=True,
+            )
+
+            repo_factory = RepositoryFactory(self._db_manager, self._models)
+            repositories = repo_factory.create_all_repositories(self.spec.entities)
+
         # Create services
         factory = ServiceFactory(self._models)
         self._services = factory.create_all_services(
             self.spec.services,
             self._schemas,
         )
+
+        # Wire up repositories to services
+        if self._use_database:
+            for entity in self.spec.entities:
+                service_name = f"{entity.name.lower()}_service"
+                service = self._services.get(service_name)
+                repo = repositories.get(entity.name)
+                if service and repo and isinstance(service, CRUDService):
+                    service.set_repository(repo)
 
         # Generate routes
         service_specs = {svc.name: svc for svc in self.spec.services}
@@ -121,6 +180,27 @@ class DNRBackendApp:
         # Include router
         self._app.include_router(router)
 
+        # Initialize auth if enabled
+        if self._enable_auth:
+            self._auth_store = AuthStore(self._auth_db_path)
+            self._auth_middleware = AuthMiddleware(self._auth_store)
+            auth_router = create_auth_routes(self._auth_store)
+            self._app.include_router(auth_router)
+
+        # Initialize file uploads if enabled
+        if self._enable_files:
+            self._file_service = create_local_file_service(
+                base_path=self._files_path,
+                db_path=self._files_db_path,
+                base_url="/files",
+            )
+            create_file_routes(self._app, self._file_service)
+            create_static_file_routes(
+                self._app,
+                base_path=str(self._files_path),
+                url_prefix="/files",
+            )
+
         # Add health check
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:
@@ -130,6 +210,36 @@ class DNRBackendApp:
         @self._app.get("/spec", tags=["System"])
         async def get_spec() -> dict[str, Any]:
             return self.spec.model_dump()
+
+        # Add database info endpoint
+        db_path = str(self._db_path) if self._use_database else None
+        auth_db_path = str(self._auth_db_path) if self._enable_auth else None
+        files_path = str(self._files_path) if self._enable_files else None
+        files_db_path = str(self._files_db_path) if self._enable_files else None
+        last_migration = self._last_migration
+        auth_enabled = self._enable_auth
+        files_enabled = self._enable_files
+
+        @self._app.get("/db-info", tags=["System"])
+        async def db_info() -> dict[str, Any]:
+            migration_info = None
+            if last_migration:
+                migration_info = {
+                    "steps_executed": len(last_migration.safe_steps),
+                    "warnings": last_migration.warnings,
+                    "has_pending_destructive": last_migration.has_destructive,
+                }
+            return {
+                "database_enabled": self._use_database,
+                "database_path": db_path,
+                "tables": [e.name for e in self.spec.entities],
+                "last_migration": migration_info,
+                "auth_enabled": auth_enabled,
+                "auth_database_path": auth_db_path,
+                "files_enabled": files_enabled,
+                "files_path": files_path,
+                "files_database_path": files_db_path,
+            }
 
         return self._app
 
@@ -152,13 +262,47 @@ class DNRBackendApp:
         """Get a service by name."""
         return self._services.get(name)
 
+    @property
+    def auth_store(self) -> Optional[AuthStore]:
+        """Get the auth store (None if auth not enabled)."""
+        return self._auth_store
+
+    @property
+    def auth_middleware(self) -> Optional[AuthMiddleware]:
+        """Get the auth middleware (None if auth not enabled)."""
+        return self._auth_middleware
+
+    @property
+    def auth_enabled(self) -> bool:
+        """Check if authentication is enabled."""
+        return self._enable_auth
+
+    @property
+    def file_service(self) -> Optional[FileService]:
+        """Get the file service (None if files not enabled)."""
+        return self._file_service
+
+    @property
+    def files_enabled(self) -> bool:
+        """Check if file uploads are enabled."""
+        return self._enable_files
+
 
 # =============================================================================
 # Convenience Functions
 # =============================================================================
 
 
-def create_app(spec: BackendSpec) -> FastAPI:
+def create_app(
+    spec: BackendSpec,
+    db_path: str | Path | None = None,
+    use_database: bool = True,
+    enable_auth: bool = False,
+    auth_db_path: str | Path | None = None,
+    enable_files: bool = False,
+    files_path: str | Path | None = None,
+    files_db_path: str | Path | None = None,
+) -> FastAPI:
     """
     Create a FastAPI application from a BackendSpec.
 
@@ -166,6 +310,13 @@ def create_app(spec: BackendSpec) -> FastAPI:
 
     Args:
         spec: Backend specification
+        db_path: Path to SQLite database (default: .dazzle/data.db)
+        use_database: Whether to use SQLite persistence (default: True)
+        enable_auth: Whether to enable authentication (default: False)
+        auth_db_path: Path to auth database (default: .dazzle/auth.db)
+        enable_files: Whether to enable file uploads (default: False)
+        files_path: Path for file storage (default: .dazzle/uploads)
+        files_db_path: Path to file metadata database (default: .dazzle/files.db)
 
     Returns:
         FastAPI application
@@ -176,7 +327,16 @@ def create_app(spec: BackendSpec) -> FastAPI:
         >>> app = create_app(spec)
         >>> # Run with uvicorn: uvicorn mymodule:app
     """
-    builder = DNRBackendApp(spec)
+    builder = DNRBackendApp(
+        spec,
+        db_path=db_path,
+        use_database=use_database,
+        enable_auth=enable_auth,
+        auth_db_path=auth_db_path,
+        enable_files=enable_files,
+        files_path=files_path,
+        files_db_path=files_db_path,
+    )
     return builder.build()
 
 
@@ -185,6 +345,13 @@ def run_app(
     host: str = "127.0.0.1",
     port: int = 8000,
     reload: bool = False,
+    db_path: str | Path | None = None,
+    use_database: bool = True,
+    enable_auth: bool = False,
+    auth_db_path: str | Path | None = None,
+    enable_files: bool = False,
+    files_path: str | Path | None = None,
+    files_db_path: str | Path | None = None,
 ) -> None:
     """
     Run a DNR-Back application.
@@ -194,6 +361,13 @@ def run_app(
         host: Host to bind to
         port: Port to bind to
         reload: Enable auto-reload (for development)
+        db_path: Path to SQLite database (default: .dazzle/data.db)
+        use_database: Whether to use SQLite persistence (default: True)
+        enable_auth: Whether to enable authentication (default: False)
+        auth_db_path: Path to auth database (default: .dazzle/auth.db)
+        enable_files: Whether to enable file uploads (default: False)
+        files_path: Path for file storage (default: .dazzle/uploads)
+        files_db_path: Path to file metadata database (default: .dazzle/files.db)
 
     Example:
         >>> from dazzle_dnr_back.specs import BackendSpec
@@ -205,7 +379,16 @@ def run_app(
     except ImportError:
         raise RuntimeError("uvicorn is not installed. Install with: pip install uvicorn")
 
-    app = create_app(spec)
+    app = create_app(
+        spec,
+        db_path=db_path,
+        use_database=use_database,
+        enable_auth=enable_auth,
+        auth_db_path=auth_db_path,
+        enable_files=enable_files,
+        files_path=files_path,
+        files_db_path=files_db_path,
+    )
     uvicorn.run(app, host=host, port=port, reload=reload)
 
 

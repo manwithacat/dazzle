@@ -7,7 +7,7 @@ Defines entities, fields, relationships, and validators.
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # =============================================================================
@@ -29,6 +29,65 @@ class ScalarType(str, Enum):
     EMAIL = "email"
     URL = "url"
     JSON = "json"
+    # File types (Week 9-10)
+    FILE = "file"
+    IMAGE = "image"
+    RICHTEXT = "richtext"
+
+
+class FileFieldConfig(BaseModel):
+    """Configuration for file/image fields."""
+
+    max_size: int = Field(
+        default=10 * 1024 * 1024,  # 10MB
+        description="Maximum file size in bytes",
+    )
+    allowed_types: list[str] | None = Field(
+        default=None,
+        description="Allowed MIME types (e.g., ['image/png', 'image/jpeg'])",
+    )
+    multiple: bool = Field(
+        default=False,
+        description="Allow multiple files",
+    )
+    # Image-specific options
+    generate_thumbnail: bool = Field(
+        default=True,
+        description="Generate thumbnail for images",
+    )
+    thumbnail_width: int = Field(
+        default=200,
+        description="Thumbnail width in pixels",
+    )
+    thumbnail_height: int = Field(
+        default=200,
+        description="Thumbnail height in pixels",
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
+class RichTextConfig(BaseModel):
+    """Configuration for rich text fields."""
+
+    format: Literal["markdown", "html"] = Field(
+        default="markdown",
+        description="Rich text format",
+    )
+    max_length: int | None = Field(
+        default=None,
+        description="Maximum content length",
+    )
+    allow_images: bool = Field(
+        default=True,
+        description="Allow inline images",
+    )
+    sanitize: bool = Field(
+        default=True,
+        description="Sanitize HTML output",
+    )
+
+    model_config = ConfigDict(frozen=True)
 
 
 class FieldType(BaseModel):
@@ -36,11 +95,13 @@ class FieldType(BaseModel):
     Field type specification.
 
     Examples:
-        - str: FieldType(kind="str")
-        - str(200): FieldType(kind="str", max_length=200)
-        - decimal(10,2): FieldType(kind="decimal", precision=10, scale=2)
+        - str: FieldType(kind="scalar", scalar_type=ScalarType.STR)
+        - str(200): FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200)
+        - decimal(10,2): FieldType(kind="scalar", scalar_type=ScalarType.DECIMAL, precision=10, scale=2)
         - enum: FieldType(kind="enum", enum_values=["draft", "issued"])
         - ref: FieldType(kind="ref", ref_entity="Client")
+        - file: FieldType(kind="scalar", scalar_type=ScalarType.FILE, file_config=FileFieldConfig())
+        - richtext: FieldType(kind="scalar", scalar_type=ScalarType.RICHTEXT, richtext_config=RichTextConfig())
     """
 
     kind: Literal["scalar", "enum", "ref"] = Field(
@@ -62,9 +123,16 @@ class FieldType(BaseModel):
     ref_entity: str | None = Field(
         default=None, description="Referenced entity name for ref types"
     )
+    # File field configuration (for FILE/IMAGE types)
+    file_config: FileFieldConfig | None = Field(
+        default=None, description="File upload configuration"
+    )
+    # Rich text configuration (for RICHTEXT type)
+    richtext_config: RichTextConfig | None = Field(
+        default=None, description="Rich text configuration"
+    )
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("enum_values")
     @classmethod
@@ -121,8 +189,7 @@ class ValidatorSpec(BaseModel):
         default=None, description="Custom error message"
     )
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -155,8 +222,7 @@ class FieldSpec(BaseModel):
     indexed: bool = Field(default=False, description="Create database index?")
     unique: bool = Field(default=False, description="Values must be unique?")
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("name")
     @classmethod
@@ -216,8 +282,7 @@ class RelationSpec(BaseModel):
         default=False, description="Is this relation required?"
     )
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -258,8 +323,7 @@ class EntitySpec(BaseModel):
         default_factory=dict, description="Additional metadata"
     )
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("name")
     @classmethod

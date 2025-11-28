@@ -53,6 +53,24 @@ from dazzle_dnr_back.runtime.server import (
     create_app_from_json,
 )
 
+from dazzle_dnr_back.runtime.repository import (
+    DatabaseManager,
+    SQLiteRepository,
+    RepositoryFactory,
+)
+
+from dazzle_dnr_back.runtime.migrations import (
+    MigrationAction,
+    MigrationStep,
+    MigrationPlan,
+    MigrationPlanner,
+    MigrationExecutor,
+    MigrationHistory,
+    MigrationError,
+    auto_migrate,
+    plan_migrations,
+)
+
 
 __all__ = [
     # Model generation
@@ -77,4 +95,18 @@ __all__ = [
     "run_app",
     "create_app_from_dict",
     "create_app_from_json",
+    # Repository
+    "DatabaseManager",
+    "SQLiteRepository",
+    "RepositoryFactory",
+    # Migrations
+    "MigrationAction",
+    "MigrationStep",
+    "MigrationPlan",
+    "MigrationPlanner",
+    "MigrationExecutor",
+    "MigrationHistory",
+    "MigrationError",
+    "auto_migrate",
+    "plan_migrations",
 ]

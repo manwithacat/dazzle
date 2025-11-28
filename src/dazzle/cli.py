@@ -3325,30 +3325,33 @@ except ImportError as e:
 @dnr_app.command("serve")
 def dnr_serve(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    port: int = typer.Option(8000, "--port", "-p", help="Port to serve on"),
+    port: int = typer.Option(3000, "--port", "-p", help="Frontend port"),
+    api_port: int = typer.Option(8000, "--api-port", help="Backend API port"),
     host: str = typer.Option("127.0.0.1", "--host", help="Host to bind to"),
-    reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
     ui_only: bool = typer.Option(False, "--ui-only", help="Serve UI only (static files)"),
+    db_path: str = typer.Option(".dazzle/data.db", "--db", help="SQLite database path"),
 ) -> None:
     """
-    Serve DNR app (backend API + UI preview).
+    Serve DNR app (backend API + UI with live data).
 
-    Starts a FastAPI server with:
-    - Generated REST API endpoints from BackendSpec
-    - Static file serving for UI preview
-    - Interactive API docs at /docs
+    Runs a combined server with:
+    - FastAPI backend on api-port (default 8000) with SQLite persistence
+    - Frontend dev server on port (default 3000) with API proxy
+    - Auto-migration for schema changes
+    - Interactive API docs at http://host:api-port/docs
 
     Examples:
-        dazzle dnr serve                    # Serve on localhost:8000
-        dazzle dnr serve --port 3000        # Different port
-        dazzle dnr serve --reload           # Auto-reload on changes
+        dazzle dnr serve                    # Backend:8000, Frontend:3000
+        dazzle dnr serve --port 4000        # Frontend on 4000
+        dazzle dnr serve --api-port 9000    # API on 9000
         dazzle dnr serve --ui-only          # Static UI only (no API)
+        dazzle dnr serve --db ./my.db       # Custom database path
     """
     try:
         from dazzle_dnr_back.converters import convert_appspec_to_backend
-        from dazzle_dnr_back.runtime import create_app, FASTAPI_AVAILABLE
+        from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE
         from dazzle_dnr_ui.converters import convert_appspec_to_ui
-        from dazzle_dnr_ui.runtime import generate_single_html
+        from dazzle_dnr_ui.runtime import generate_single_html, run_combined_server
     except ImportError as e:
         typer.echo(f"DNR runtime not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dnr-back dazzle-dnr-ui", err=True)
@@ -3405,7 +3408,7 @@ def dnr_serve(
                     typer.echo("\nStopped.")
         return
 
-    # Full server with API
+    # Full combined server with API + UI
     typer.echo(f"Starting DNR server for '{appspec.name}'...")
 
     # Convert specs
@@ -3415,44 +3418,21 @@ def dnr_serve(
     typer.echo(f"  • {len(backend_spec.entities)} entities")
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
+    typer.echo(f"  • Database: {db_path}")
+    typer.echo()
 
-    # Create FastAPI app
-    fastapi_app = create_app(backend_spec)
+    # Ensure database directory exists
+    db_file = Path(db_path)
+    db_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Add UI preview endpoint
-    from fastapi import Response
-
-    ui_html = generate_single_html(ui_spec)
-
-    @fastapi_app.get("/", response_class=Response)
-    def serve_ui():
-        return Response(content=ui_html, media_type="text/html")
-
-    @fastapi_app.get("/ui", response_class=Response)
-    def serve_ui_alt():
-        return Response(content=ui_html, media_type="text/html")
-
-    typer.echo(f"\nDNR Server running at http://{host}:{port}")
-    typer.echo(f"  • UI:   http://{host}:{port}/")
-    typer.echo(f"  • API:  http://{host}:{port}/api/")
-    typer.echo(f"  • Docs: http://{host}:{port}/docs")
-    typer.echo("\nPress Ctrl+C to stop\n")
-
-    # Run with uvicorn
-    try:
-        import uvicorn
-
-        uvicorn.run(
-            fastapi_app,
-            host=host,
-            port=port,
-            reload=reload,
-            log_level="info",
-        )
-    except ImportError:
-        typer.echo("uvicorn not installed. Install with:", err=True)
-        typer.echo("  pip install uvicorn", err=True)
-        raise typer.Exit(code=1)
+    # Run combined server
+    run_combined_server(
+        backend_spec=backend_spec,
+        ui_spec=ui_spec,
+        backend_port=api_port,
+        frontend_port=port,
+        db_path=db_file,
+    )
 
 
 @dnr_app.command("info")
