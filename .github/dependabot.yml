@@ -47,9 +47,9 @@ updates:
       - "github-actions"
     open-pull-requests-limit: 3
 
-  # npm dependencies (for dnr-ui if package.json exists)
+  # npm dependencies (VS Code extension)
   - package-ecosystem: "npm"
-    directory: "/src/dazzle_dnr_ui"
+    directory: "/extensions/vscode"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -58,8 +58,8 @@ updates:
     labels:
       - "dependencies"
       - "javascript"
+      - "vscode-extension"
     open-pull-requests-limit: 3
-    # Only if package.json exists
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
