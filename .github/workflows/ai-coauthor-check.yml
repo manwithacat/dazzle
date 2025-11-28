@@ -27,7 +27,7 @@ jobs:
 
     - name: Check for AI Co-Authorship
       id: ai-check
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       with:
         script: |
           const { owner, repo } = context.repo;
@@ -154,7 +154,7 @@ jobs:
           return result;
 
     - name: Post Check Result
-      uses: actions/github-script@v7
+      uses: actions/github-script@v8
       if: always()
       with:
         script: |
