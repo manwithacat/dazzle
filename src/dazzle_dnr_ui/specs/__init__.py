@@ -37,7 +37,14 @@ from dazzle_dnr_ui.specs.state import (
     AppStateBinding,
     DerivedBinding,
 )
-from dazzle_dnr_ui.specs.actions import ActionSpec, EffectSpec, TransitionSpec, PatchSpec
+from dazzle_dnr_ui.specs.actions import (
+    ActionSpec,
+    EffectSpec,
+    TransitionSpec,
+    PatchSpec,
+    FetchEffect,
+    NavigateEffect,
+)
 from dazzle_dnr_ui.specs.theme import ThemeSpec, ThemeTokens, VariantSpec, TextStyle
 from dazzle_dnr_ui.specs.ui_spec import UISpec
 
@@ -76,6 +83,8 @@ __all__ = [
     "EffectSpec",
     "TransitionSpec",
     "PatchSpec",
+    "FetchEffect",
+    "NavigateEffect",
     # Theme types
     "ThemeSpec",
     "ThemeTokens",

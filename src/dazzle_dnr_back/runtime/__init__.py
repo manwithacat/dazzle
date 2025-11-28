@@ -42,6 +42,7 @@ from dazzle_dnr_back.runtime.service_generator import (
 from dazzle_dnr_back.runtime.route_generator import (
     RouteGenerator,
     generate_crud_routes,
+    FASTAPI_AVAILABLE,
 )
 
 from dazzle_dnr_back.runtime.server import (
@@ -69,6 +70,7 @@ __all__ = [
     # Routes
     "RouteGenerator",
     "generate_crud_routes",
+    "FASTAPI_AVAILABLE",
     # Server
     "DNRBackendApp",
     "create_app",

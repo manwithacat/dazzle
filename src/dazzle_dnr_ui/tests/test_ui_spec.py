@@ -188,9 +188,11 @@ def test_ui_spec_validation():
 
 def test_immutability():
     """Test that specs are immutable (frozen)."""
+    from pydantic import ValidationError
+
     component = ComponentSpec(name="Test", category="custom")
 
-    with pytest.raises((AttributeError, TypeError)):
+    with pytest.raises((AttributeError, TypeError, ValidationError)):
         component.name = "NewName"
 
 

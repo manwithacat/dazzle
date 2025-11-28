@@ -192,9 +192,11 @@ def test_backend_spec_validation():
 
 def test_immutability():
     """Test that specs are immutable (frozen)."""
+    from pydantic import ValidationError
+
     entity = EntitySpec(name="Test", fields=[])
 
-    with pytest.raises((AttributeError, TypeError)):
+    with pytest.raises((AttributeError, TypeError, ValidationError)):
         entity.name = "NewName"
 
 
