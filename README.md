@@ -6,7 +6,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-DAZZLE is a DSL-first toolkit for designing applications from high-level specifications. Define your domain model once, generate concrete artifacts for any stack.
+DAZZLE is a DSL-first toolkit for designing applications from high-level specifications. Define your domain model once, generate concrete artifacts for any stack—or run them directly with the **Dazzle Native Runtime (DNR)**.
 
 ## Install
 
@@ -72,6 +72,33 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
+## Quick Start with DNR
+
+The **Dazzle Native Runtime (DNR)** lets you run your DSL specifications directly—no code generation required:
+
+```bash
+# Navigate to any DAZZLE project
+cd examples/simple_task
+
+# Start the app (FastAPI backend + signals-based UI)
+dazzle dnr serve
+
+# Open http://localhost:3000 for the UI
+# Open http://localhost:8000/docs for the API
+```
+
+DNR provides:
+- **FastAPI Backend**: Auto-generated CRUD endpoints with SQLite persistence
+- **Signals-based UI**: Reactive JavaScript frontend with no virtual DOM
+- **Hot Reload**: Changes to DSL files reflect immediately
+- **OpenAPI Docs**: Automatic Swagger UI at `/docs`
+
+```bash
+dazzle dnr build-ui              # Build static UI assets
+dazzle dnr build-api             # Generate API spec
+dazzle dnr info                  # Show project info
+```
+
 ## Workflow
 
 ```
@@ -79,17 +106,25 @@ surface task_list "Tasks":
 │  DSL Files  │ ──▶ │   Parser    │ ──▶ │  IR/AppSpec │ ──▶ │  Artifacts  │
 │  (.dsl)     │     │   + Linker  │     │  (Semantic) │     │  (Code)     │
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                               │
+                                               ▼
+                                        ┌─────────────┐
+                                        │ DNR Runtime │
+                                        │ (Run Direct)│
+                                        └─────────────┘
 ```
 
 1. **Parse**: DSL files are parsed into an AST
 2. **Link**: Multi-module references are resolved
 3. **AppSpec**: A semantic intermediate representation (IR) captures the full application model
 4. **Generate**: Stack backends transform the AppSpec into concrete artifacts
+5. **Or Run**: DNR executes the AppSpec directly as a live application
 
 ```bash
 dazzle validate                  # Parse + link + validate
 dazzle layout-plan               # Visualize workspace layouts
 dazzle build --stack nextjs      # Generate artifacts
+dazzle dnr serve                 # Run directly with DNR
 ```
 
 ## Semantic Concepts
@@ -174,16 +209,19 @@ Stacks transform the AppSpec into technology-specific artifacts.
 
 | Stack | Status | Output |
 |-------|--------|--------|
+| `dnr` | ✅ Stable | **Native Runtime** - FastAPI + Signals UI (run directly) |
 | `openapi` | ✅ Stable | OpenAPI 3.0 spec |
 | `micro` | ✅ Stable | Django micro app |
-| `django_next` | 🚧 In Progress | Django + Next.js + Docker |
-| `fastapi` | 📋 Planned | FastAPI + SQLAlchemy |
-| `prisma` | 📋 Planned | Prisma schema |
-| `graphql` | 📋 Planned | GraphQL schema + resolvers |
+| `nextjs_semantic` | ✅ Stable | Next.js with semantic layout archetypes |
+| `docker` | ✅ Stable | Docker Compose configuration |
+| `terraform` | ✅ Stable | AWS infrastructure (ECS, RDS, VPC) |
+| `django_api` | ✅ Stable | Django REST Framework API |
+| `express_micro` | ✅ Stable | Express.js + Sequelize + EJS |
 
 ```bash
 dazzle stacks               # List available stacks
 dazzle build --stack micro  # Generate Django app
+dazzle dnr serve            # Run with native runtime (no generation)
 ```
 
 ## IDE Support
