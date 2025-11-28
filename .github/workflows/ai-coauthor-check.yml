@@ -9,6 +9,12 @@ concurrency:
   group: ai-coauthor-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# Required permissions for posting comments and reading PR data
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   check-ai-coauthorship:
     name: Verify AI Co-Authorship
