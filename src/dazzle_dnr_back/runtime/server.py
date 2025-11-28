@@ -158,13 +158,15 @@ class DNRBackendApp:
         )
 
         # Wire up repositories to services
+        # Match services to repositories by their target entity
         if self._use_database:
-            for entity in self.spec.entities:
-                service_name = f"{entity.name.lower()}_service"
-                service = self._services.get(service_name)
-                repo = repositories.get(entity.name)
-                if service and repo and isinstance(service, CRUDService):
-                    service.set_repository(repo)
+            for service_name, service in self._services.items():
+                if isinstance(service, CRUDService):
+                    # Get the entity name from the service
+                    entity_name = service.entity_name
+                    repo = repositories.get(entity_name)
+                    if repo:
+                        service.set_repository(repo)
 
         # Generate routes
         service_specs = {svc.name: svc for svc in self.spec.services}
