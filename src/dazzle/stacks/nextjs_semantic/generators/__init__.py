@@ -8,10 +8,12 @@ Each generator handles a specific aspect of the Next.js application:
 - LayoutTypesGenerator: TypeScript types from IR
 - ArchetypeComponentsGenerator: React components for 5 archetypes
 - PagesGenerator: Next.js pages/routes
+- HooksGenerator: Custom hooks for data fetching and prefetching
 """
 
 from .archetypes import ArchetypeComponentsGenerator
 from .config import ConfigGenerator, PackageJsonGenerator, TailwindConfigGenerator
+from .hooks import HooksGenerator
 from .pages import PagesGenerator
 from .types import LayoutTypesGenerator
 
@@ -22,4 +24,5 @@ __all__ = [
     "LayoutTypesGenerator",
     "ArchetypeComponentsGenerator",
     "PagesGenerator",
+    "HooksGenerator",
 ]

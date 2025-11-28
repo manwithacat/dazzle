@@ -14,6 +14,7 @@ from dazzle.ui.layout_engine.archetypes import (
     ARCHETYPE_DEFINITIONS,
     ArchetypeDefinition,
 )
+from dazzle.ui.layout_engine.cache import LayoutPlanCache, get_layout_cache
 from dazzle.ui.layout_engine.converter import (
     convert_workspace_to_layout,
     convert_workspaces_to_layouts,
@@ -30,6 +31,14 @@ from dazzle.ui.layout_engine.types import (
     PersonaLayout,
     WorkspaceLayout,
 )
+from dazzle.ui.layout_engine.variants import (
+    VARIANT_CONFIGS,
+    EngineVariant,
+    VariantConfig,
+    get_grid_columns,
+    get_variant_config,
+    get_variant_for_persona,
+)
 
 __all__ = [
     # Core functions
@@ -39,9 +48,19 @@ __all__ = [
     "convert_workspace_to_layout",
     "convert_workspaces_to_layouts",
     "enrich_app_spec_with_layouts",
+    # Caching
+    "LayoutPlanCache",
+    "get_layout_cache",
     # Archetype definitions
     "ARCHETYPE_DEFINITIONS",
     "ArchetypeDefinition",
+    # Engine variants
+    "EngineVariant",
+    "VariantConfig",
+    "VARIANT_CONFIGS",
+    "get_variant_config",
+    "get_variant_for_persona",
+    "get_grid_columns",
     # IR types (re-exported for convenience)
     "AttentionSignal",
     "AttentionSignalKind",

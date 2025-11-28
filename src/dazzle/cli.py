@@ -3088,6 +3088,439 @@ def mcp_check() -> None:
         raise typer.Exit(code=1)
 
 
+# =============================================================================
+# DNR (Dazzle Native Runtime) Commands
+# =============================================================================
+
+dnr_app = typer.Typer(
+    help="Dazzle Native Runtime (DNR) commands for generating and serving runtime apps.",
+    no_args_is_help=True,
+)
+app.add_typer(dnr_app, name="dnr")
+
+
+@dnr_app.command("build-ui")
+def dnr_build_ui(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    out: str = typer.Option("./dnr-ui", "--out", "-o", help="Output directory"),
+    format: str = typer.Option(
+        "vite",
+        "--format",
+        "-f",
+        help="Output format: 'vite' (default), 'js' (split files), or 'html' (single file)",
+    ),
+) -> None:
+    """
+    Generate DNR UI artifacts from AppSpec.
+
+    Converts AppSpec to UISpec and generates:
+    - vite: Full Vite project with ES modules (production-ready)
+    - js: Split HTML/JS files for development
+    - html: Single HTML file with embedded runtime (quick preview)
+
+    Examples:
+        dazzle dnr build-ui                         # Vite project in ./dnr-ui
+        dazzle dnr build-ui --format html -o out    # Single HTML file
+        dazzle dnr build-ui --format js             # Split JS files
+    """
+    try:
+        # Import DNR UI components
+        from dazzle_dnr_ui.converters import convert_appspec_to_ui
+        from dazzle_dnr_ui.runtime import (
+            generate_vite_app,
+            generate_js_app,
+            generate_single_html,
+        )
+    except ImportError as e:
+        typer.echo(f"DNR UI not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-dnr-ui", err=True)
+        raise typer.Exit(code=1)
+
+    # Load and build AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        # Validate
+        errors, warnings = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot generate UI; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+        for warn in warnings:
+            typer.echo(f"WARNING: {warn}")
+
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Convert to UISpec
+    typer.echo(f"Converting AppSpec '{appspec.name}' to UISpec...")
+    ui_spec = convert_appspec_to_ui(appspec)
+    typer.echo(f"  • {len(ui_spec.workspaces)} workspace(s)")
+    typer.echo(f"  • {len(ui_spec.components)} component(s)")
+    typer.echo(f"  • {len(ui_spec.themes)} theme(s)")
+
+    # Generate based on format
+    output_dir = Path(out).resolve()
+
+    if format == "vite":
+        typer.echo(f"\nGenerating Vite project → {output_dir}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        files = generate_vite_app(ui_spec, str(output_dir))
+        typer.echo(f"  ✓ Generated {len(files)} files")
+        typer.echo("\nTo run:")
+        typer.echo(f"  cd {output_dir}")
+        typer.echo("  npm install")
+        typer.echo("  npm run dev")
+
+    elif format == "js":
+        typer.echo(f"\nGenerating JS app → {output_dir}")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        files = generate_js_app(ui_spec, str(output_dir))
+        typer.echo(f"  ✓ Generated {len(files)} files")
+        typer.echo("\nTo run:")
+        typer.echo(f"  cd {output_dir}")
+        typer.echo("  python -m http.server 8000")
+
+    elif format == "html":
+        output_file = output_dir / "index.html" if output_dir.suffix != ".html" else output_dir
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        typer.echo(f"\nGenerating single HTML → {output_file}")
+        html = generate_single_html(ui_spec)
+        output_file.write_text(html)
+        typer.echo(f"  ✓ Generated {len(html)} bytes")
+        typer.echo(f"\nOpen in browser: file://{output_file}")
+
+    else:
+        typer.echo(f"Unknown format: {format}", err=True)
+        typer.echo("Use one of: vite, js, html", err=True)
+        raise typer.Exit(code=1)
+
+
+@dnr_app.command("build-api")
+def dnr_build_api(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    out: str = typer.Option("./dnr-api", "--out", "-o", help="Output directory"),
+    format: str = typer.Option(
+        "json",
+        "--format",
+        "-f",
+        help="Output format: 'json' (spec file) or 'python' (stub module)",
+    ),
+) -> None:
+    """
+    Generate DNR API spec from AppSpec.
+
+    Converts AppSpec to BackendSpec suitable for FastAPI runtime.
+
+    Examples:
+        dazzle dnr build-api                        # JSON spec in ./dnr-api
+        dazzle dnr build-api --format python        # Python module stub
+    """
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_dnr_back.specs import BackendSpec
+    except ImportError as e:
+        typer.echo(f"DNR Backend not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-dnr-back", err=True)
+        raise typer.Exit(code=1)
+
+    # Load and build AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        errors, warnings = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot generate API; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+        for warn in warnings:
+            typer.echo(f"WARNING: {warn}")
+
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Convert to BackendSpec
+    typer.echo(f"Converting AppSpec '{appspec.name}' to BackendSpec...")
+    backend_spec = convert_appspec_to_backend(appspec)
+    typer.echo(f"  • {len(backend_spec.entities)} entities")
+    typer.echo(f"  • {len(backend_spec.services)} services")
+    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+
+    # Output
+    output_dir = Path(out).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if format == "json":
+        spec_file = output_dir / "backend-spec.json"
+        typer.echo(f"\nWriting BackendSpec → {spec_file}")
+        spec_file.write_text(backend_spec.model_dump_json(indent=2))
+        typer.echo(f"  ✓ Written {spec_file.stat().st_size} bytes")
+
+    elif format == "python":
+        stub_file = output_dir / "api_stub.py"
+        typer.echo(f"\nWriting Python stub → {stub_file}")
+
+        stub_content = f'''"""
+Auto-generated DNR API stub for {backend_spec.name}.
+
+Usage:
+    from dazzle_dnr_back.runtime import create_app_from_json
+    app = create_app_from_json('backend-spec.json')
+
+Or run directly:
+    uvicorn api_stub:app --reload
+"""
+
+from pathlib import Path
+
+try:
+    from dazzle_dnr_back.runtime import create_app_from_json, FASTAPI_AVAILABLE
+    if not FASTAPI_AVAILABLE:
+        raise ImportError("FastAPI not installed")
+
+    spec_path = Path(__file__).parent / "backend-spec.json"
+    app = create_app_from_json(str(spec_path))
+
+except ImportError as e:
+    print(f"DNR runtime not available: {{e}}")
+    print("Install with: pip install fastapi uvicorn")
+    app = None
+'''
+        stub_file.write_text(stub_content)
+
+        # Also write the JSON spec
+        spec_file = output_dir / "backend-spec.json"
+        spec_file.write_text(backend_spec.model_dump_json(indent=2))
+
+        typer.echo(f"  ✓ Generated stub and spec")
+        typer.echo("\nTo run:")
+        typer.echo(f"  cd {output_dir}")
+        typer.echo("  pip install fastapi uvicorn")
+        typer.echo("  uvicorn api_stub:app --reload")
+
+    else:
+        typer.echo(f"Unknown format: {format}", err=True)
+        typer.echo("Use one of: json, python", err=True)
+        raise typer.Exit(code=1)
+
+
+@dnr_app.command("serve")
+def dnr_serve(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to serve on"),
+    host: str = typer.Option("127.0.0.1", "--host", help="Host to bind to"),
+    reload: bool = typer.Option(False, "--reload", "-r", help="Enable auto-reload"),
+    ui_only: bool = typer.Option(False, "--ui-only", help="Serve UI only (static files)"),
+) -> None:
+    """
+    Serve DNR app (backend API + UI preview).
+
+    Starts a FastAPI server with:
+    - Generated REST API endpoints from BackendSpec
+    - Static file serving for UI preview
+    - Interactive API docs at /docs
+
+    Examples:
+        dazzle dnr serve                    # Serve on localhost:8000
+        dazzle dnr serve --port 3000        # Different port
+        dazzle dnr serve --reload           # Auto-reload on changes
+        dazzle dnr serve --ui-only          # Static UI only (no API)
+    """
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_dnr_back.runtime import create_app, FASTAPI_AVAILABLE
+        from dazzle_dnr_ui.converters import convert_appspec_to_ui
+        from dazzle_dnr_ui.runtime import generate_single_html
+    except ImportError as e:
+        typer.echo(f"DNR runtime not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-dnr-back dazzle-dnr-ui", err=True)
+        raise typer.Exit(code=1)
+
+    if not FASTAPI_AVAILABLE and not ui_only:
+        typer.echo("FastAPI not installed. Use --ui-only or install:", err=True)
+        typer.echo("  pip install fastapi uvicorn", err=True)
+        raise typer.Exit(code=1)
+
+    # Load AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        errors, _ = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot serve; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    if ui_only:
+        # Serve UI only with simple HTTP server
+        import http.server
+        import socketserver
+        import tempfile
+
+        ui_spec = convert_appspec_to_ui(appspec)
+        html = generate_single_html(ui_spec)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            html_path = Path(tmpdir) / "index.html"
+            html_path.write_text(html)
+
+            os.chdir(tmpdir)
+            handler = http.server.SimpleHTTPRequestHandler
+            typer.echo(f"\nServing DNR UI at http://{host}:{port}")
+            typer.echo("Press Ctrl+C to stop\n")
+
+            with socketserver.TCPServer((host, port), handler) as httpd:
+                try:
+                    httpd.serve_forever()
+                except KeyboardInterrupt:
+                    typer.echo("\nStopped.")
+        return
+
+    # Full server with API
+    typer.echo(f"Starting DNR server for '{appspec.name}'...")
+
+    # Convert specs
+    backend_spec = convert_appspec_to_backend(appspec)
+    ui_spec = convert_appspec_to_ui(appspec)
+
+    typer.echo(f"  • {len(backend_spec.entities)} entities")
+    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
+
+    # Create FastAPI app
+    fastapi_app = create_app(backend_spec)
+
+    # Add UI preview endpoint
+    from fastapi import Response
+
+    ui_html = generate_single_html(ui_spec)
+
+    @fastapi_app.get("/", response_class=Response)
+    def serve_ui():
+        return Response(content=ui_html, media_type="text/html")
+
+    @fastapi_app.get("/ui", response_class=Response)
+    def serve_ui_alt():
+        return Response(content=ui_html, media_type="text/html")
+
+    typer.echo(f"\nDNR Server running at http://{host}:{port}")
+    typer.echo(f"  • UI:   http://{host}:{port}/")
+    typer.echo(f"  • API:  http://{host}:{port}/api/")
+    typer.echo(f"  • Docs: http://{host}:{port}/docs")
+    typer.echo("\nPress Ctrl+C to stop\n")
+
+    # Run with uvicorn
+    try:
+        import uvicorn
+
+        uvicorn.run(
+            fastapi_app,
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info",
+        )
+    except ImportError:
+        typer.echo("uvicorn not installed. Install with:", err=True)
+        typer.echo("  pip install uvicorn", err=True)
+        raise typer.Exit(code=1)
+
+
+@dnr_app.command("info")
+def dnr_info() -> None:
+    """
+    Show DNR installation status and available features.
+    """
+    typer.echo("Dazzle Native Runtime (DNR) Status")
+    typer.echo("=" * 50)
+
+    # Check DNR Backend
+    dnr_back_available = False
+    fastapi_available = False
+    try:
+        import dazzle_dnr_back
+
+        dnr_back_available = True
+        from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE
+
+        fastapi_available = FASTAPI_AVAILABLE
+    except ImportError:
+        pass
+
+    # Check DNR UI
+    dnr_ui_available = False
+    try:
+        import dazzle_dnr_ui
+
+        dnr_ui_available = True
+    except ImportError:
+        pass
+
+    # Check uvicorn
+    uvicorn_available = False
+    try:
+        import uvicorn
+
+        uvicorn_available = True
+    except ImportError:
+        pass
+
+    typer.echo(f"DNR Backend:   {'✓' if dnr_back_available else '✗'} {'installed' if dnr_back_available else 'not installed'}")
+    typer.echo(f"DNR UI:        {'✓' if dnr_ui_available else '✗'} {'installed' if dnr_ui_available else 'not installed'}")
+    typer.echo(f"FastAPI:       {'✓' if fastapi_available else '✗'} {'installed' if fastapi_available else 'not installed'}")
+    typer.echo(f"Uvicorn:       {'✓' if uvicorn_available else '✗'} {'installed' if uvicorn_available else 'not installed'}")
+
+    typer.echo("\nAvailable Commands:")
+    if dnr_ui_available:
+        typer.echo("  dazzle dnr build-ui   Generate UI (Vite/JS/HTML)")
+    if dnr_back_available:
+        typer.echo("  dazzle dnr build-api  Generate API spec")
+    if dnr_back_available and fastapi_available and uvicorn_available:
+        typer.echo("  dazzle dnr serve      Run development server")
+    elif dnr_ui_available:
+        typer.echo("  dazzle dnr serve --ui-only  Serve UI only")
+
+    if not (dnr_back_available and dnr_ui_available):
+        typer.echo("\nTo install DNR packages:")
+        if not dnr_back_available:
+            typer.echo("  pip install dazzle-dnr-back")
+        if not dnr_ui_available:
+            typer.echo("  pip install dazzle-dnr-ui")
+        if not fastapi_available:
+            typer.echo("  pip install fastapi")
+        if not uvicorn_available:
+            typer.echo("  pip install uvicorn")
+
+
 def main(argv: list[str] | None = None) -> None:
     import os
 

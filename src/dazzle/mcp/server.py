@@ -26,6 +26,7 @@ from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
+from dazzle.mcp.dnr_tools import DNR_TOOL_NAMES, get_dnr_tools, handle_dnr_tool
 from dazzle.mcp.examples import get_example_metadata, search_examples
 from dazzle.mcp.prompts import create_prompts
 from dazzle.mcp.resources import create_resources
@@ -317,6 +318,9 @@ async def list_tools() -> list[Tool]:
     # Add project tools (always available)
     tools.extend(_get_project_tools())
 
+    # Add DNR tools (always available)
+    tools.extend(get_dnr_tools())
+
     return tools
 
 
@@ -339,6 +343,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = _lookup_concept(arguments)
     elif name == "find_examples":
         result = _find_examples(arguments)
+
+    # DNR tools (always available)
+    elif name in DNR_TOOL_NAMES:
+        result = handle_dnr_tool(name, arguments)
 
     # Project tools - require active project in dev mode
     elif name in (

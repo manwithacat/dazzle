@@ -2,17 +2,28 @@
 Next.js Semantic UI Backend Implementation.
 
 Generates Next.js applications with layout engine integration.
+
+Performance optimizations:
+- Layout plan caching (skip unchanged workspaces)
+- Parallel workspace processing (when cache misses)
 """
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
 from ...core import ir
-from ...ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
+from ...ui.layout_engine import (
+    build_layout_plan,
+    enrich_app_spec_with_layouts,
+    get_layout_cache,
+    LayoutPlanCache,
+)
 from .. import Backend, BackendCapabilities
 from .generators import (
     ArchetypeComponentsGenerator,
     ConfigGenerator,
+    HooksGenerator,
     LayoutTypesGenerator,
     PackageJsonGenerator,
     PagesGenerator,
@@ -70,6 +81,7 @@ class NextjsSemanticBackend(Backend):
             TailwindConfigGenerator(self.spec, self.project_path),
             LayoutTypesGenerator(self.spec, self.project_path, self.layout_plans),
             ArchetypeComponentsGenerator(self.spec, self.project_path),
+            HooksGenerator(self.spec, self.project_path),
             PagesGenerator(self.spec, self.project_path, self.layout_plans),
         ]
 
@@ -100,7 +112,7 @@ class NextjsSemanticBackend(Backend):
         (self.project_path / "public").mkdir(exist_ok=True)
 
     def _generate_layout_plans(self) -> None:
-        """Generate layout plans for all workspaces in the spec."""
+        """Generate layout plans for all workspaces (with caching + parallel processing)."""
         self.layout_plans = {}
 
         # Auto-convert WorkspaceSpec to WorkspaceLayout if needed
@@ -112,12 +124,65 @@ class NextjsSemanticBackend(Backend):
                 # No workspaces at all
                 return
 
-        # Generate plans for each workspace
-        if self.spec.ux and self.spec.ux.workspaces:
-            for workspace in self.spec.ux.workspaces:
-                # Build plan without persona first (can add persona support later)
-                plan = build_layout_plan(workspace)
+        if not self.spec.ux or not self.spec.ux.workspaces:
+            return
+
+        # Get cache instance (stores in output_dir/.dazzle/cache/layout_plans)
+        cache = get_layout_cache(self.output_dir)
+
+        # Separate cached vs uncached workspaces
+        cached_workspaces = []
+        uncached_workspaces = []
+
+        for workspace in self.spec.ux.workspaces:
+            cached_plan = cache.get(workspace)
+            if cached_plan is not None:
+                cached_workspaces.append((workspace, cached_plan))
+            else:
+                uncached_workspaces.append(workspace)
+
+        # Add cached plans immediately
+        for workspace, plan in cached_workspaces:
+            self.layout_plans[workspace.id] = plan
+
+        # Process uncached workspaces in parallel (if multiple)
+        if len(uncached_workspaces) > 1:
+            self._generate_plans_parallel(uncached_workspaces, cache)
+        elif len(uncached_workspaces) == 1:
+            # Single workspace - no parallelization overhead
+            workspace = uncached_workspaces[0]
+            plan = build_layout_plan(workspace)
+            self.layout_plans[workspace.id] = plan
+            cache.set(workspace, plan)
+
+    def _generate_plans_parallel(
+        self,
+        workspaces: list[ir.WorkspaceLayout],
+        cache: LayoutPlanCache,
+    ) -> None:
+        """Generate layout plans in parallel for multiple workspaces."""
+        # Use thread pool for I/O-bound operations
+        # Limit workers to avoid overwhelming CPU (layout planning is mostly CPU-bound)
+        max_workers = min(4, len(workspaces))
+
+        def process_workspace(workspace: ir.WorkspaceLayout):
+            """Process single workspace and return result."""
+            plan = build_layout_plan(workspace)
+            return workspace, plan
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all tasks
+            futures = {
+                executor.submit(process_workspace, ws): ws
+                for ws in workspaces
+            }
+
+            # Collect results as they complete
+            for future in as_completed(futures):
+                workspace, plan = future.result()
                 self.layout_plans[workspace.id] = plan
+                # Cache for next time
+                cache.set(workspace, plan)
 
 
 __all__ = ["NextjsSemanticBackend"]
