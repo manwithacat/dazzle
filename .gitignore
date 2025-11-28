@@ -52,6 +52,7 @@ htmlcov/
 /devdocs
 # Example build outputs
 examples/*/build/
+examples/*/dnr-ui/
 
 # Node.js
 node_modules/
