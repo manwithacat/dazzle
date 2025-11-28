@@ -1,10 +1,8 @@
 [project]
 name = "ops_dashboard"
-version = "0.1.0"
+version = "1.0.0"
+description = "Operations dashboard demonstrating COMMAND_CENTER archetype"
 root = "ops_dashboard.core"
 
-[modules]
-paths = ["./dsl"]
-
-[stack]
-name = "nextjs_semantic"
+[dsl]
+paths = ["dsl/"]

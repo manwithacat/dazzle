@@ -1,86 +1,124 @@
-# DAZZLE Operations Dashboard - High Signal Count Example
-# Demonstrates many signals across multiple entities for complex monitoring
+# DAZZLE Operations Dashboard - COMMAND_CENTER Archetype Example
+# Demonstrates dense expert interface for operations monitoring
 
 module ops_dashboard.core
 
 app ops_dashboard "Operations Dashboard"
 
-# Server entity
-entity Server "Server":
+# =============================================================================
+# Entities
+# =============================================================================
+
+entity System "System":
   id: uuid pk
-  hostname: str(200) required unique
-  ip_address: str(50) required
-  status: enum[online,offline,degraded]=online
+  name: str(200) required
+  service_type: enum[web,api,database,cache,queue]=web
+  status: enum[healthy,degraded,critical,offline]=healthy
+  response_time_ms: int
+  error_rate: decimal(5,2)
   cpu_usage: decimal(5,2)
   memory_usage: decimal(5,2)
-  last_seen: datetime auto_update
+  last_check: datetime auto_update
   created_at: datetime auto_add
 
-# Deployment entity
-entity Deployment "Deployment":
-  id: uuid pk
-  app_name: str(200) required
-  version: str(50) required
-  environment: enum[dev,staging,prod]=dev
-  status: enum[pending,running,failed,success]=pending
-  started_at: datetime auto_add
-  finished_at: datetime optional
-
-# Alert entity
 entity Alert "Alert":
   id: uuid pk
-  severity: enum[info,warn,err,critical]=warn
+  system: ref System required
+  severity: enum[low,medium,high,critical]=low
   message: str(500) required
-  alert_source: str(200) required
-  status: enum[new,acknowledged,resolved]=new
-  created_at: datetime auto_add
-  resolved_at: datetime optional
+  triggered_at: datetime auto_add
+  acknowledged: bool = false
+  acknowledged_by: str(200)
 
-# Workspace with many signals (8+) - triggers MONITOR_WALL or COMMAND_CENTER
-# For COMMAND_CENTER: needs 5+ signals, 3+ kinds, expert persona (not inferrable)
-# Without persona, will get MONITOR_WALL with high signal count
-workspace operations "Operations Center":
-  purpose: "Comprehensive system monitoring and operations"
+# =============================================================================
+# Persona
+# =============================================================================
 
-  # Critical metrics KPI
-  system_health:
-    source: Server
-    aggregate:
-      total_servers: count(Server)
-      online_servers: count(Server WHERE status = 'online')
-      avg_cpu: avg(cpu_usage)
+persona ops_engineer "Operations Engineer":
+  goals:
+    - "Monitor system health in real-time"
+    - "Respond quickly to alerts"
+  proficiency_level: expert
+  session_style: deep_work
 
-  # Recent deployments
-  recent_deploys:
-    source: Deployment
-    limit: 5
+# =============================================================================
+# Workspace - COMMAND_CENTER
+# =============================================================================
 
-  # Failed deployments
-  failed_deploys:
-    source: Deployment
-    limit: 3
-
-  # Critical alerts
-  critical_alerts:
+workspace command_center "Command Center":
+  purpose: "Real-time operations monitoring and incident response"
+  engine_hint: "command_center"
+  
+  # Alert Feed - Shows active alerts
+  active_alerts:
     source: Alert
-    limit: 5
-
-  # All servers table
-  all_servers:
-    source: Server
-
-  # Active deployments
-  active_deployments:
-    source: Deployment
-
-  # Alert feed
-  alert_feed:
-    source: Alert
-    limit: 10
-
-  # Deployment stats
-  deployment_stats:
-    source: Deployment
+    filter: acknowledged = false
+    sort: severity desc, triggered_at desc
+    limit: 20
+  
+  # System Status Grid
+  system_status:
+    source: System
+    sort: status asc, name asc
+  
+  # Health Summary
+  health_summary:
+    source: System
     aggregate:
-      total_today: count(Deployment)
-      failed_today: count(Deployment WHERE status = 'failed')
+      total_systems: count(System)
+      healthy_count: count(System WHERE status = 'healthy')
+      critical_count: count(System WHERE status = 'critical')
+      avg_response_time: avg(response_time_ms)
+
+  ux:
+    for ops_engineer:
+      scope: all
+      purpose: "Full visibility into all systems and alerts"
+
+# =============================================================================
+# Surfaces
+# =============================================================================
+
+surface system_list "Systems":
+  uses entity System
+  mode: list
+  
+  section main "Monitored Systems":
+    field name "Name"
+    field service_type "Type"
+    field status "Status"
+    field response_time_ms "Response Time (ms)"
+    field error_rate "Error Rate"
+
+surface system_detail "System Detail":
+  uses entity System
+  mode: view
+  
+  section main "System Details":
+    field name "Name"
+    field service_type "Type"
+    field status "Status"
+    field last_check "Last Check"
+    field response_time_ms "Response Time (ms)"
+    field error_rate "Error Rate"
+    field cpu_usage "CPU Usage"
+    field memory_usage "Memory Usage"
+
+surface alert_list "Alerts":
+  uses entity Alert
+  mode: list
+  
+  section main "Active Alerts":
+    field system "System"
+    field severity "Severity"
+    field message "Message"
+    field triggered_at "Triggered"
+    field acknowledged "Acknowledged"
+
+surface alert_ack "Acknowledge Alert":
+  uses entity Alert
+  mode: edit
+  
+  section main "Acknowledge":
+    field acknowledged "Acknowledged"
+    field acknowledged_by "Acknowledged By"
