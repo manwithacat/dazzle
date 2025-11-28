@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # =============================================================================
 # Core Field Types
@@ -53,8 +53,7 @@ class FieldType(BaseModel):
     enum_values: list[str] | None = None  # for enum
     ref_entity: str | None = None  # for ref
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("enum_values")
     @classmethod
@@ -95,8 +94,7 @@ class FieldSpec(BaseModel):
     modifiers: list[FieldModifier] = Field(default_factory=list)
     default: str | int | float | bool | None = None
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def is_required(self) -> bool:
@@ -141,8 +139,7 @@ class Constraint(BaseModel):
     kind: ConstraintKind
     fields: list[str]
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class EntitySpec(BaseModel):
@@ -163,8 +160,7 @@ class EntitySpec(BaseModel):
     fields: list[FieldSpec]
     constraints: list[Constraint] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def primary_key(self) -> FieldSpec | None:
@@ -192,8 +188,7 @@ class DomainSpec(BaseModel):
 
     entities: list[EntitySpec] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
@@ -246,8 +241,7 @@ class Outcome(BaseModel):
     step: str | None = None  # for experience outcomes
     action: str | None = None  # for integration outcomes
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class SurfaceElement(BaseModel):
@@ -264,8 +258,7 @@ class SurfaceElement(BaseModel):
     label: str | None = None
     options: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class SurfaceSection(BaseModel):
@@ -282,8 +275,7 @@ class SurfaceSection(BaseModel):
     title: str | None = None
     elements: list[SurfaceElement] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class SurfaceAction(BaseModel):
@@ -302,8 +294,7 @@ class SurfaceAction(BaseModel):
     trigger: SurfaceTrigger
     outcome: Outcome
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -352,8 +343,7 @@ class ConditionValue(BaseModel):
     literal: str | int | float | bool | None = None
     values: list[str | int | float | bool] | None = None  # For 'in' operator
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def is_list(self) -> bool:
@@ -373,8 +363,7 @@ class FunctionCall(BaseModel):
     name: str
     argument: str  # Field name
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class Comparison(BaseModel):
@@ -392,8 +381,7 @@ class Comparison(BaseModel):
     operator: ComparisonOperator
     value: ConditionValue
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def left_operand(self) -> str:
@@ -417,8 +405,7 @@ class ConditionExpr(BaseModel):
     operator: LogicalOperator | None = None  # AND/OR
     right: "ConditionExpr | None" = None  # For compound conditions
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def is_compound(self) -> bool:
@@ -444,8 +431,7 @@ class AttentionSignal(BaseModel):
     message: str
     action: str | None = None  # Surface reference
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @property
     def css_class(self) -> str:
@@ -489,8 +475,7 @@ class PersonaVariant(BaseModel):
     defaults: dict[str, Any] = Field(default_factory=dict)  # Field default values
     focus: list[str] = Field(default_factory=list)  # Workspace regions to emphasize
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def applies_to_user(self, user_context: dict[str, Any]) -> bool:
         """Check if persona applies to given user context."""
@@ -509,8 +494,7 @@ class SortSpec(BaseModel):
     field: str
     direction: str = "asc"  # "asc" or "desc"
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def __str__(self) -> str:
         return f"{self.field} {self.direction}"
@@ -542,8 +526,7 @@ class UXSpec(BaseModel):
     attention_signals: list[AttentionSignal] = Field(default_factory=list)
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_persona_variant(self, user_context: dict[str, Any]) -> PersonaVariant | None:
         """Get applicable persona variant for user context."""
@@ -582,8 +565,7 @@ class SurfaceSpec(BaseModel):
     actions: list[SurfaceAction] = Field(default_factory=list)
     ux: UXSpec | None = None  # UX Semantic Layer extension
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -632,8 +614,7 @@ class WorkspaceRegion(BaseModel):
     group_by: str | None = None  # Field to group by
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class WorkspaceSpec(BaseModel):
@@ -659,8 +640,7 @@ class WorkspaceSpec(BaseModel):
     regions: list[WorkspaceRegion] = Field(default_factory=list)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_region(self, name: str) -> WorkspaceRegion | None:
         """Get region by name."""
@@ -702,8 +682,7 @@ class StepTransition(BaseModel):
     event: TransitionEvent
     next_step: str
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class ExperienceStep(BaseModel):
@@ -726,8 +705,7 @@ class ExperienceStep(BaseModel):
     action: str | None = None
     transitions: list[StepTransition] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class ExperienceSpec(BaseModel):
@@ -748,8 +726,7 @@ class ExperienceSpec(BaseModel):
     start_step: str
     steps: list[ExperienceStep] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_step(self, name: str) -> ExperienceStep | None:
         """Get step by name."""
@@ -787,8 +764,7 @@ class AuthProfile(BaseModel):
     kind: AuthKind
     options: dict[str, str] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class ServiceSpec(BaseModel):
@@ -813,8 +789,7 @@ class ServiceSpec(BaseModel):
     auth_profile: AuthProfile
     owner: str | None = None
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -842,8 +817,7 @@ class ForeignConstraint(BaseModel):
     kind: ForeignConstraintKind
     options: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class ForeignModelSpec(BaseModel):
@@ -868,8 +842,7 @@ class ForeignModelSpec(BaseModel):
     constraints: list[ForeignConstraint] = Field(default_factory=list)
     fields: list[FieldSpec] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_field(self, name: str) -> FieldSpec | None:
         """Get field by name."""
@@ -898,8 +871,7 @@ class Expression(BaseModel):
     path: str | None = None
     literal: str | int | float | bool | None = None
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("path", "literal")
     @classmethod
@@ -925,8 +897,7 @@ class MappingRule(BaseModel):
     target_field: str
     source: Expression
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class IntegrationAction(BaseModel):
@@ -953,8 +924,7 @@ class IntegrationAction(BaseModel):
     response_entity: str | None = None
     response_mapping: list[MappingRule] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class SyncMode(str, Enum):
@@ -976,8 +946,7 @@ class MatchRule(BaseModel):
     foreign_field: str
     entity_field: str
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class IntegrationSync(BaseModel):
@@ -1004,8 +973,7 @@ class IntegrationSync(BaseModel):
     into_entity: str
     match_rules: list[MatchRule] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class IntegrationSpec(BaseModel):
@@ -1031,8 +999,7 @@ class IntegrationSpec(BaseModel):
     actions: list[IntegrationAction] = Field(default_factory=list)
     syncs: list[IntegrationSync] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -1083,8 +1050,7 @@ class TestSetupStep(BaseModel):
     entity_name: str
     data: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class TestAction(BaseModel):
@@ -1101,8 +1067,7 @@ class TestAction(BaseModel):
     target: str  # Entity name or variable reference
     data: dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class TestAssertion(BaseModel):
@@ -1122,8 +1087,7 @@ class TestAssertion(BaseModel):
     expected_value: Any | None = None
     error_message: str | None = None
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class TestSpec(BaseModel):
@@ -1146,8 +1110,7 @@ class TestSpec(BaseModel):
     action: TestAction
     assertions: list[TestAssertion] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 # =============================================================================
@@ -1207,8 +1170,7 @@ class AppSpec(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
@@ -1360,8 +1322,7 @@ class ModuleFragment(BaseModel):
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
 
 class ModuleIR(BaseModel):
@@ -1384,9 +1345,7 @@ class ModuleIR(BaseModel):
     uses: list[str] = Field(default_factory=list)
     fragment: ModuleFragment = Field(default_factory=ModuleFragment)
 
-    class Config:
-        frozen = True
-        arbitrary_types_allowed = True  # for Path
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)  # for Path
 
 
 # =============================================================================

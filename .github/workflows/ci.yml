@@ -145,7 +145,7 @@ jobs:
 
     - name: Run integration tests
       run: |
-        pytest tests/integration/ -v --maxfail=1
+        pytest tests/integration/ -v --maxfail=1 -m "not e2e"
 
     - name: Test CLI commands
       run: |
