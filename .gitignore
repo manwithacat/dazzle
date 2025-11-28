@@ -46,8 +46,9 @@ htmlcov/
 .pytest_cache/
 .hypothesis/
 
-# DAZZLE cache
-.dazzle/cache/
+# DAZZLE runtime data
+.dazzle/
+**/.dazzle/
 
 # Development Docs (legacy)
 /devdocs
