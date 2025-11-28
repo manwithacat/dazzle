@@ -97,6 +97,137 @@ export interface WorkspaceLayout {
   engine_hint?: string;
   attention_signals: AttentionSignal[];
 }
+
+/**
+ * Engine Variants
+ *
+ * Variants control visual density and spacing for the same archetype.
+ * - classic: Default balanced layout (1.0x spacing)
+ * - dense: Higher information density for power users (0.75x spacing)
+ * - comfortable: More whitespace for readability (1.25x spacing)
+ */
+export enum EngineVariant {
+  CLASSIC = "classic",
+  DENSE = "dense",
+  COMFORTABLE = "comfortable",
+}
+
+export interface VariantConfig {
+  name: string;
+  description: string;
+  spacingScale: number;
+  fontScale: number;
+  itemsPerRowModifier: number;
+  borderRadiusScale: number;
+  minElementHeight: string;
+  tailwindClasses: {
+    container: string;
+    card: string;
+    grid: string;
+    textSm: string;
+    textBase: string;
+    textLg: string;
+    heading: string;
+  };
+}
+
+export const VARIANT_CONFIGS: Record<EngineVariant, VariantConfig> = {
+  [EngineVariant.CLASSIC]: {
+    name: "classic",
+    description: "Balanced layout with standard spacing",
+    spacingScale: 1.0,
+    fontScale: 1.0,
+    itemsPerRowModifier: 0,
+    borderRadiusScale: 1.0,
+    minElementHeight: "auto",
+    tailwindClasses: {
+      container: "p-4 sm:p-6",
+      card: "p-4 sm:p-6 rounded-lg",
+      grid: "gap-4 sm:gap-6",
+      textSm: "text-sm",
+      textBase: "text-base",
+      textLg: "text-lg",
+      heading: "text-2xl font-bold",
+    },
+  },
+  [EngineVariant.DENSE]: {
+    name: "dense",
+    description: "Higher density for power users and experts",
+    spacingScale: 0.75,
+    fontScale: 0.9,
+    itemsPerRowModifier: 1,
+    borderRadiusScale: 0.75,
+    minElementHeight: "2rem",
+    tailwindClasses: {
+      container: "p-2 sm:p-3",
+      card: "p-2 sm:p-3 rounded",
+      grid: "gap-2 sm:gap-3",
+      textSm: "text-xs",
+      textBase: "text-sm",
+      textLg: "text-base",
+      heading: "text-xl font-semibold",
+    },
+  },
+  [EngineVariant.COMFORTABLE]: {
+    name: "comfortable",
+    description: "More whitespace for readability and casual use",
+    spacingScale: 1.25,
+    fontScale: 1.1,
+    itemsPerRowModifier: -1,
+    borderRadiusScale: 1.25,
+    minElementHeight: "4rem",
+    tailwindClasses: {
+      container: "p-6 sm:p-8",
+      card: "p-6 sm:p-8 rounded-xl",
+      grid: "gap-6 sm:gap-8",
+      textSm: "text-base",
+      textBase: "text-lg",
+      textLg: "text-xl",
+      heading: "text-3xl font-bold",
+    },
+  },
+};
+
+/**
+ * Get the recommended variant based on persona characteristics.
+ */
+export function getVariantForPersona(
+  proficiencyLevel?: string,
+  sessionStyle?: string
+): EngineVariant {
+  // Experts doing deep work prefer dense layouts
+  if (proficiencyLevel === "expert" && sessionStyle === "deep_work") {
+    return EngineVariant.DENSE;
+  }
+  // Novices or glancers prefer comfortable layouts
+  if (proficiencyLevel === "novice" || sessionStyle === "glance") {
+    return EngineVariant.COMFORTABLE;
+  }
+  // Default to classic
+  return EngineVariant.CLASSIC;
+}
+
+/**
+ * Calculate grid columns adjusted for variant.
+ */
+export function getGridColumns(
+  baseColumns: number,
+  variant: EngineVariant,
+  breakpoint: "default" | "sm" | "md" | "lg" | "xl" = "default"
+): number {
+  const config = VARIANT_CONFIGS[variant];
+  const adjusted = baseColumns + config.itemsPerRowModifier;
+
+  const maxColumns: Record<string, number> = {
+    default: 2,
+    sm: 3,
+    md: 4,
+    lg: 6,
+    xl: 8,
+  };
+
+  return Math.max(1, Math.min(adjusted, maxColumns[breakpoint] || 4));
+}
 '''
         types_dir = self.project_path / "src" / "types"
         types_dir.mkdir(parents=True, exist_ok=True)

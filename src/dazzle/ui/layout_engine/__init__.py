@@ -31,6 +31,14 @@ from dazzle.ui.layout_engine.types import (
     PersonaLayout,
     WorkspaceLayout,
 )
+from dazzle.ui.layout_engine.variants import (
+    VARIANT_CONFIGS,
+    EngineVariant,
+    VariantConfig,
+    get_grid_columns,
+    get_variant_config,
+    get_variant_for_persona,
+)
 
 __all__ = [
     # Core functions
@@ -46,6 +54,13 @@ __all__ = [
     # Archetype definitions
     "ARCHETYPE_DEFINITIONS",
     "ArchetypeDefinition",
+    # Engine variants
+    "EngineVariant",
+    "VariantConfig",
+    "VARIANT_CONFIGS",
+    "get_variant_config",
+    "get_variant_for_persona",
+    "get_grid_columns",
     # IR types (re-exported for convenience)
     "AttentionSignal",
     "AttentionSignalKind",

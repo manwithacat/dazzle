@@ -41,29 +41,45 @@ class ArchetypeComponentsGenerator:
  * Performance optimizations:
  * - React.memo prevents unnecessary re-renders
  * - useMemo caches expensive surface lookups
+ *
+ * Supports engine variants (classic, dense, comfortable) for density control.
  */
 
 import { memo, useMemo } from 'react';
-import { LayoutPlan, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, AttentionSignal, EngineVariant, VARIANT_CONFIGS, getGridColumns } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
 interface FocusMetricProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
 }
 
-export const FocusMetric = memo(function FocusMetric({ plan, signals, signalData }: FocusMetricProps) {
+export const FocusMetric = memo(function FocusMetric({
+  plan,
+  signals,
+  signalData,
+  variant = EngineVariant.CLASSIC
+}: FocusMetricProps) {
   // Find hero and context surfaces (memoized to avoid repeated lookups)
   const heroSurface = useMemo(() => plan.surfaces.find(s => s.id === 'hero'), [plan.surfaces]);
   const contextSurface = useMemo(() => plan.surfaces.find(s => s.id === 'context'), [plan.surfaces]);
 
+  // Get variant-specific classes
+  const variantConfig = VARIANT_CONFIGS[variant];
+  const { tailwindClasses: tw } = variantConfig;
+
+  // Calculate grid columns based on variant
+  const gridCols = getGridColumns(3, variant, 'lg');
+  const gridColsClass = `grid-cols-1 sm:grid-cols-2 lg:grid-cols-${gridCols} xl:grid-cols-${gridCols + 1}`;
+
   return (
-    <main className="focus-metric min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-blue-50 to-indigo-50" role="main" aria-label="Focus metric dashboard">
+    <main className={`focus-metric min-h-screen ${tw.container} bg-gradient-to-br from-blue-50 to-indigo-50`} role="main" aria-label="Focus metric dashboard">
       {/* Hero Section - Large, Prominent */}
       {heroSurface && (
         <section className="hero-section mb-6 sm:mb-8" aria-label="Primary metric">
-          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-6 sm:p-8 lg:p-12 border border-gray-100">
+          <div className={`bg-white shadow-xl ${tw.card} border border-gray-100`}>
             {heroSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
@@ -84,8 +100,8 @@ export const FocusMetric = memo(function FocusMetric({ plan, signals, signalData
       {/* Context Section - Supporting Information */}
       {contextSurface && contextSurface.assigned_signals.length > 0 && (
         <section className="context-section" aria-label="Supporting metrics">
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-100">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" role="list" aria-label="Context metrics">
+          <div className={`bg-white shadow-md ${tw.card} border border-gray-100`}>
+            <div className={`grid ${gridColsClass} ${tw.grid}`} role="list" aria-label="Context metrics">
               {contextSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -124,30 +140,42 @@ export const FocusMetric = memo(function FocusMetric({ plan, signals, signalData
  * Performance optimizations:
  * - React.memo prevents unnecessary re-renders
  * - useMemo caches expensive surface lookups
+ *
+ * Supports engine variants (classic, dense, comfortable) for density control.
  */
 
 import { memo, useMemo } from 'react';
-import { LayoutPlan, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, AttentionSignal, EngineVariant, VARIANT_CONFIGS } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
 interface ScannerTableProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
 }
 
-export const ScannerTable = memo(function ScannerTable({ plan, signals, signalData }: ScannerTableProps) {
+export const ScannerTable = memo(function ScannerTable({
+  plan,
+  signals,
+  signalData,
+  variant = EngineVariant.CLASSIC
+}: ScannerTableProps) {
   // Find table and toolbar surfaces (memoized to avoid repeated lookups)
   const tableSurface = useMemo(() => plan.surfaces.find(s => s.id === 'table'), [plan.surfaces]);
   const toolbarSurface = useMemo(() => plan.surfaces.find(s => s.id === 'toolbar'), [plan.surfaces]);
 
+  // Get variant-specific classes
+  const variantConfig = VARIANT_CONFIGS[variant];
+  const { tailwindClasses: tw } = variantConfig;
+
   return (
-    <main className="scanner-table min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Data table browser">
+    <main className={`scanner-table min-h-screen ${tw.container} bg-gray-50`} role="main" aria-label="Data table browser">
       {/* Toolbar - Actions and Filters */}
       {toolbarSurface && toolbarSurface.assigned_signals.length > 0 && (
         <nav className="toolbar-section mb-3 sm:mb-4" aria-label="Table controls and filters">
-          <div className="bg-white rounded-lg shadow-sm p-3 sm:p-4 border border-gray-200">
-            <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4 items-center" role="toolbar">
+          <div className={`bg-white shadow-sm ${tw.card} border border-gray-200`}>
+            <div className={`flex flex-wrap ${tw.grid} items-center`} role="toolbar">
               {toolbarSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -169,7 +197,7 @@ export const ScannerTable = memo(function ScannerTable({ plan, signals, signalDa
       {/* Table - Dense, Scannable - Horizontally scrollable on mobile */}
       {tableSurface && (
         <section className="table-section" aria-label="Data table">
-          <div className="bg-white rounded-lg shadow-md overflow-x-auto border border-gray-200">
+          <div className={`bg-white shadow-md overflow-x-auto border border-gray-200 ${tw.card}`}>
             {tableSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
               if (!signal) return null;
@@ -188,7 +216,7 @@ export const ScannerTable = memo(function ScannerTable({ plan, signals, signalDa
       )}
     </main>
   );
-}
+});
 '''
         output_dir = self.project_path / "src" / "components" / "archetypes"
         output_path = output_dir / "ScannerTable.tsx"
@@ -201,28 +229,47 @@ export const ScannerTable = memo(function ScannerTable({ plan, signals, signalDa
  *
  * Two-column layout with list navigation and detail view.
  * Best for: Email clients, file browsers, content management
+ *
+ * Supports engine variants (classic, dense, comfortable) for density control.
  */
 
 import { memo, useMemo } from 'react';
-import { LayoutPlan, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, AttentionSignal, EngineVariant, VARIANT_CONFIGS } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
 interface DualPaneFlowProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
 }
 
-export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalData }: DualPaneFlowProps) {
+export const DualPaneFlow = memo(function DualPaneFlow({
+  plan,
+  signals,
+  signalData,
+  variant = EngineVariant.CLASSIC
+}: DualPaneFlowProps) {
   // Find list and detail surfaces
-  const listSurface = plan.surfaces.find(s => s.id === 'list');
-  const detailSurface = plan.surfaces.find(s => s.id === 'detail');
+  const listSurface = useMemo(() => plan.surfaces.find(s => s.id === 'list'), [plan.surfaces]);
+  const detailSurface = useMemo(() => plan.surfaces.find(s => s.id === 'detail'), [plan.surfaces]);
+
+  // Get variant-specific classes
+  const variantConfig = VARIANT_CONFIGS[variant];
+  const { tailwindClasses: tw } = variantConfig;
+
+  // Adjust list pane width based on variant (dense = wider list, comfortable = narrower)
+  const listWidthClass = variant === EngineVariant.DENSE
+    ? 'md:w-1/2 lg:w-2/5 xl:w-1/3'
+    : variant === EngineVariant.COMFORTABLE
+    ? 'md:w-1/3 lg:w-1/4 xl:w-1/5'
+    : 'md:w-2/5 lg:w-1/3 xl:w-1/4';
 
   return (
     <div className="dual-pane-flow min-h-screen flex flex-col md:flex-row bg-gray-50" role="main">
       {/* List Pane - Navigation - Stacks on mobile, side-by-side on desktop */}
       {listSurface && (
-        <nav className="list-pane w-full md:w-2/5 lg:w-1/3 xl:w-1/4 md:border-r border-b md:border-b-0 border-gray-200 bg-white overflow-y-auto max-h-64 md:max-h-none" aria-label="Item list navigation">
+        <nav className={`list-pane w-full ${listWidthClass} md:border-r border-b md:border-b-0 border-gray-200 bg-white overflow-y-auto max-h-64 md:max-h-none`} aria-label="Item list navigation">
           {listSurface.assigned_signals.map(signalId => {
             const signal = signals[signalId];
             if (!signal) return null;
@@ -241,7 +288,7 @@ export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalDa
 
       {/* Detail Pane - Content */}
       {detailSurface && (
-        <main className="detail-pane flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto" aria-label="Item detail view">
+        <main className={`detail-pane flex-1 ${tw.container} overflow-y-auto`} aria-label="Item detail view">
           <article className="max-w-4xl mx-auto">
             {detailSurface.assigned_signals.map(signalId => {
               const signal = signals[signalId];
@@ -261,7 +308,7 @@ export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalDa
       )}
     </div>
   );
-}
+});
 '''
         output_dir = self.project_path / "src" / "components" / "archetypes"
         output_path = output_dir / "DualPaneFlow.tsx"
@@ -274,30 +321,50 @@ export const DualPaneFlow = memo(function DualPaneFlow({ plan, signals, signalDa
  *
  * Grid of multiple signals for at-a-glance monitoring.
  * Best for: Operations dashboards, analytics, system monitoring
+ *
+ * Supports engine variants (classic, dense, comfortable) for density control.
  */
 
 import { memo, useMemo } from 'react';
-import { LayoutPlan, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, AttentionSignal, EngineVariant, VARIANT_CONFIGS, getGridColumns } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
 interface MonitorWallProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
 }
 
-export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData }: MonitorWallProps) {
+export const MonitorWall = memo(function MonitorWall({
+  plan,
+  signals,
+  signalData,
+  variant = EngineVariant.CLASSIC
+}: MonitorWallProps) {
   // Find all surfaces
-  const primarySurfaces = plan.surfaces.filter(s => s.id.startsWith('primary'));
-  const secondarySurfaces = plan.surfaces.filter(s => s.id.startsWith('secondary'));
+  const primarySurfaces = useMemo(() => plan.surfaces.filter(s => s.id.startsWith('primary')), [plan.surfaces]);
+  const secondarySurfaces = useMemo(() => plan.surfaces.filter(s => s.id.startsWith('secondary')), [plan.surfaces]);
+
+  // Get variant-specific classes
+  const variantConfig = VARIANT_CONFIGS[variant];
+  const { tailwindClasses: tw } = variantConfig;
+
+  // Calculate grid columns based on variant
+  const primaryCols = getGridColumns(3, variant, 'lg');
+  const secondaryCols = getGridColumns(4, variant, 'lg');
+
+  // Build responsive grid classes
+  const primaryGridClass = `grid-cols-1 sm:grid-cols-2 lg:grid-cols-${primaryCols} xl:grid-cols-${primaryCols + 1}`;
+  const secondaryGridClass = `grid-cols-2 sm:grid-cols-3 lg:grid-cols-${secondaryCols} xl:grid-cols-${secondaryCols + 2}`;
 
   return (
-    <main className="monitor-wall min-h-screen p-3 sm:p-4 lg:p-6 bg-gray-50" role="main" aria-label="Monitor wall dashboard">
-      <div className="space-y-4 sm:space-y-6">
+    <main className={`monitor-wall min-h-screen ${tw.container} bg-gray-50`} role="main" aria-label="Monitor wall dashboard">
+      <div className={`space-y-4 sm:space-y-6`}>
         {/* Primary Signals - Larger Cards */}
         {primarySurfaces.length > 0 && (
           <section className="primary-section" aria-label="Primary metrics">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" role="list">
+            <div className={`grid ${primaryGridClass} ${tw.grid}`} role="list">
               {primarySurfaces.map(surface => (
                 <div key={surface.id} role="listitem">
                   {surface.assigned_signals.map(signalId => {
@@ -305,7 +372,7 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
                     if (!signal) return null;
 
                     return (
-                      <article key={signalId} className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 h-full">
+                      <article key={signalId} className={`bg-white shadow-md ${tw.card} border border-gray-200 h-full`}>
                         <SignalRenderer
                           signal={signal}
                           data={signalData[signalId]}
@@ -323,7 +390,7 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
         {/* Secondary Signals - Smaller Cards - 2 cols on mobile, 4 cols on desktop */}
         {secondarySurfaces.length > 0 && (
           <section className="secondary-section" aria-label="Secondary metrics">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4" role="list">
+            <div className={`grid ${secondaryGridClass} ${tw.grid}`} role="list">
               {secondarySurfaces.map(surface => (
                 <div key={surface.id} role="listitem">
                   {surface.assigned_signals.map(signalId => {
@@ -331,7 +398,7 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
                     if (!signal) return null;
 
                     return (
-                      <article key={signalId} className="bg-white rounded-md shadow-sm p-3 sm:p-4 border border-gray-100">
+                      <article key={signalId} className={`bg-white shadow-sm ${tw.card} border border-gray-100`}>
                         <SignalRenderer
                           signal={signal}
                           data={signalData[signalId]}
@@ -348,7 +415,7 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
       </div>
     </main>
   );
-}
+});
 '''
         output_dir = self.project_path / "src" / "components" / "archetypes"
         output_path = output_dir / "MonitorWall.tsx"
@@ -369,24 +436,44 @@ export const MonitorWall = memo(function MonitorWall({ plan, signals, signalData
  * - right_rail: Contextual information and tools (priority 2)
  *
  * Best for: DevOps, trading, operations centers, system monitoring
+ *
+ * Supports engine variants (classic, dense, comfortable) for density control.
+ * Note: CommandCenter defaults to DENSE variant as it's designed for experts.
  */
 
 import { memo, useMemo, useState } from 'react';
-import { LayoutPlan, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, AttentionSignal, EngineVariant, VARIANT_CONFIGS, getGridColumns } from '@/types/layout';
 import { SignalRenderer } from '../signals/SignalRenderer';
 
 interface CommandCenterProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
 }
 
-export const CommandCenter = memo(function CommandCenter({ plan, signals, signalData }: CommandCenterProps) {
+export const CommandCenter = memo(function CommandCenter({
+  plan,
+  signals,
+  signalData,
+  variant = EngineVariant.DENSE  // Default to DENSE for command center
+}: CommandCenterProps) {
   // Memoized surface lookups
   const headerSurface = useMemo(() => plan.surfaces.find(s => s.id === 'header'), [plan.surfaces]);
   const mainGridSurface = useMemo(() => plan.surfaces.find(s => s.id === 'main_grid'), [plan.surfaces]);
   const leftRailSurface = useMemo(() => plan.surfaces.find(s => s.id === 'left_rail'), [plan.surfaces]);
   const rightRailSurface = useMemo(() => plan.surfaces.find(s => s.id === 'right_rail'), [plan.surfaces]);
+
+  // Get variant-specific config
+  const variantConfig = VARIANT_CONFIGS[variant];
+  const { tailwindClasses: tw } = variantConfig;
+
+  // Calculate grid columns based on variant
+  const gridCols = getGridColumns(3, variant, 'lg');
+
+  // Rail widths based on variant
+  const leftRailWidth = variant === EngineVariant.COMFORTABLE ? 'w-56 lg:w-64' : 'w-48 lg:w-56';
+  const rightRailWidth = variant === EngineVariant.COMFORTABLE ? 'w-64 lg:w-72' : 'w-56 lg:w-64';
 
   // Track alert acknowledgments
   const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<Set<string>>(new Set());
@@ -477,7 +564,7 @@ export const CommandCenter = memo(function CommandCenter({ plan, signals, signal
       <div className="flex flex-1 overflow-hidden">
         {/* Left Rail - Quick Actions */}
         {leftRailSurface && leftRailSurface.assigned_signals.length > 0 && (
-          <aside className="left-rail w-48 lg:w-56 bg-gray-800 border-r border-gray-700 overflow-y-auto flex-shrink-0" aria-label="Quick actions">
+          <aside className={`left-rail ${leftRailWidth} bg-gray-800 border-r border-gray-700 overflow-y-auto flex-shrink-0`} aria-label="Quick actions">
             <nav className="p-3 space-y-2">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Actions</h2>
               {leftRailSurface.assigned_signals.map(signalId => {
@@ -498,8 +585,8 @@ export const CommandCenter = memo(function CommandCenter({ plan, signals, signal
 
         {/* Main Grid - Dense Metrics */}
         {mainGridSurface && (
-          <section className="main-grid flex-1 p-4 overflow-y-auto" aria-label="Main dashboard">
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" role="list">
+          <section className={`main-grid flex-1 ${tw.container} overflow-y-auto`} aria-label="Main dashboard">
+            <div className={`grid grid-cols-2 lg:grid-cols-${gridCols} xl:grid-cols-${gridCols + 1} ${tw.grid}`} role="list">
               {mainGridSurface.assigned_signals.map(signalId => {
                 const signal = signals[signalId];
                 if (!signal) return null;
@@ -527,7 +614,7 @@ export const CommandCenter = memo(function CommandCenter({ plan, signals, signal
 
         {/* Right Rail - Context & Tools */}
         {rightRailSurface && rightRailSurface.assigned_signals.length > 0 && (
-          <aside className="right-rail w-56 lg:w-64 bg-gray-800 border-l border-gray-700 overflow-y-auto flex-shrink-0" aria-label="Contextual information">
+          <aside className={`right-rail ${rightRailWidth} bg-gray-800 border-l border-gray-700 overflow-y-auto flex-shrink-0`} aria-label="Contextual information">
             <div className="p-3 space-y-4">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Context</h2>
               {rightRailSurface.assigned_signals.map(signalId => {
@@ -595,9 +682,10 @@ export { CommandCenter } from './CommandCenter';
  * Archetype Router
  *
  * Dynamically renders the correct archetype component based on layout plan.
+ * Supports engine variants for density control.
  */
 
-import { LayoutPlan, LayoutArchetype, AttentionSignal } from '@/types/layout';
+import { LayoutPlan, LayoutArchetype, AttentionSignal, EngineVariant, getVariantForPersona } from '@/types/layout';
 import { FocusMetric } from './FocusMetric';
 import { ScannerTable } from './ScannerTable';
 import { DualPaneFlow } from './DualPaneFlow';
@@ -608,24 +696,39 @@ interface ArchetypeRouterProps {
   plan: LayoutPlan;
   signals: Record<string, AttentionSignal>;
   signalData: Record<string, unknown>;
+  variant?: EngineVariant;
+  /** Persona proficiency level for auto-selecting variant */
+  proficiencyLevel?: string;
+  /** Persona session style for auto-selecting variant */
+  sessionStyle?: string;
 }
 
-export function ArchetypeRouter({ plan, signals, signalData }: ArchetypeRouterProps) {
+export function ArchetypeRouter({
+  plan,
+  signals,
+  signalData,
+  variant,
+  proficiencyLevel,
+  sessionStyle
+}: ArchetypeRouterProps) {
+  // Auto-select variant based on persona if not explicitly provided
+  const effectiveVariant = variant ?? getVariantForPersona(proficiencyLevel, sessionStyle);
+
   switch (plan.archetype) {
     case LayoutArchetype.FOCUS_METRIC:
-      return <FocusMetric plan={plan} signals={signals} signalData={signalData} />;
+      return <FocusMetric plan={plan} signals={signals} signalData={signalData} variant={effectiveVariant} />;
 
     case LayoutArchetype.SCANNER_TABLE:
-      return <ScannerTable plan={plan} signals={signals} signalData={signalData} />;
+      return <ScannerTable plan={plan} signals={signals} signalData={signalData} variant={effectiveVariant} />;
 
     case LayoutArchetype.DUAL_PANE_FLOW:
-      return <DualPaneFlow plan={plan} signals={signals} signalData={signalData} />;
+      return <DualPaneFlow plan={plan} signals={signals} signalData={signalData} variant={effectiveVariant} />;
 
     case LayoutArchetype.MONITOR_WALL:
-      return <MonitorWall plan={plan} signals={signals} signalData={signalData} />;
+      return <MonitorWall plan={plan} signals={signals} signalData={signalData} variant={effectiveVariant} />;
 
     case LayoutArchetype.COMMAND_CENTER:
-      return <CommandCenter plan={plan} signals={signals} signalData={signalData} />;
+      return <CommandCenter plan={plan} signals={signals} signalData={signalData} variant={effectiveVariant} />;
 
     default:
       return (

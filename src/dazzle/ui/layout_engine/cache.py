@@ -42,8 +42,9 @@ class LayoutPlanCache:
         workspace_dict = {
             "id": workspace.id,
             "label": workspace.label,
-            "purpose": workspace.purpose,
             "engine_hint": workspace.engine_hint,
+            "attention_budget": workspace.attention_budget,
+            "time_horizon": workspace.time_horizon,
             "signals": [
                 {
                     "id": signal.id,
