@@ -693,7 +693,7 @@ export class EntitySync {
     this.syncs = new Map(); // entityName -> { signal, unsubscribe }
   }
 
-  sync(entityName, signal, options = {}) {
+  sync(entityName, signal, _options = {}) {
     // Unsubscribe existing sync
     this.unsync(entityName);
 

@@ -4,7 +4,7 @@
  */
 
 import { batch } from './signals.js';
-import { getState, setState, updateState, setGlobalLoading, setGlobalError } from './state.js';
+import { setState, updateState, setGlobalLoading, setGlobalError } from './state.js';
 import { resolveBinding } from './binding.js';
 import { apiClient } from './api-client.js';
 import { showToast } from './toast.js';

@@ -52,4 +52,22 @@ repos:
         additional_dependencies: ['bandit[toml]']
         exclude: ^tests/
 
+  # JavaScript/ESLint
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: npx eslint
+        language: system
+        files: ^src/dazzle_dnr_ui/runtime/static/js/.*\.js$
+        exclude: \.test\.js$
+        pass_filenames: true
+
+      - id: js-tests
+        name: js-tests
+        entry: npx vitest run
+        language: system
+        files: ^src/dazzle_dnr_ui/runtime/static/js/.*\.js$
+        pass_filenames: false
+
 # Configuration for specific hooks can be added to pyproject.toml

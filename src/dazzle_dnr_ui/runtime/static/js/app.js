@@ -17,7 +17,7 @@ export function createApp(uiSpec) {
   // Register custom components from spec
   (uiSpec.components || []).forEach(comp => {
     if (comp.view && !getComponent(comp.name)) {
-      registerComponent(comp.name, (props, children) => {
+      registerComponent(comp.name, (props, _children) => {
         // Initialize component state
         (comp.state || []).forEach(stateSpec => {
           const scope = stateSpec.scope || 'local';

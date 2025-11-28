@@ -1,0 +1,19 @@
+{
+  "name": "dazzle-js",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "JavaScript tooling for DAZZLE DNR UI runtime",
+  "scripts": {
+    "lint": "eslint src/dazzle_dnr_ui/runtime/static/js/",
+    "lint:fix": "eslint src/dazzle_dnr_ui/runtime/static/js/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "vitest": "^2.0.0",
+    "jsdom": "^25.0.0"
+  }
+}

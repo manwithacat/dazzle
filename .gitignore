@@ -52,3 +52,6 @@ htmlcov/
 /devdocs
 # Example build outputs
 examples/*/build/
+
+# Node.js
+node_modules/

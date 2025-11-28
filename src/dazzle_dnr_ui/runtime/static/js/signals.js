@@ -4,7 +4,8 @@
  */
 
 let currentSubscriber = null;
-const signalDeps = new Map();
+// Reserved for future dependency tracking
+const _signalDeps = new Map(); // eslint-disable-line no-unused-vars
 let batchDepth = 0;
 const pendingEffects = new Set();
 

@@ -50,6 +50,7 @@ export function resolveBinding(binding, context) {
 export function evalExpression(expr, context) {
   // Safe expression evaluation using Function constructor
   // Only allows access to context values
+  // eslint-disable-next-line no-new-func -- Required for DSL expression binding
   const fn = new Function('ctx', `with(ctx) { return ${expr}; }`);
   return fn({
     props: context.props || {},

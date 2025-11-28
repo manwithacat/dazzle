@@ -105,7 +105,7 @@ registerComponent('DataTable', (props) => {
     ))
   ]);
 
-  const tbody = createElement('tbody', {}, (data || []).map((row, idx) =>
+  const tbody = createElement('tbody', {}, (data || []).map((row, _idx) =>
     createElement('tr', {
       onClick: () => onRowClick && onRowClick(row),
       style: { cursor: onRowClick ? 'pointer' : 'default' }
