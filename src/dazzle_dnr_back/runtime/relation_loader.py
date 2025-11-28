@@ -90,7 +90,9 @@ class RelationRegistry:
                     kind=rel.kind.value if hasattr(rel.kind, "value") else str(rel.kind),
                     foreign_key_field=_infer_fk_field(rel, entity.name),
                     backref=rel.backref,
-                    on_delete=rel.on_delete.value if hasattr(rel.on_delete, "value") else str(rel.on_delete),
+                    on_delete=rel.on_delete.value
+                    if hasattr(rel.on_delete, "value")
+                    else str(rel.on_delete),
                 )
                 registry.register(entity.name, info)
 

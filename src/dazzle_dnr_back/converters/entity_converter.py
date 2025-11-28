@@ -81,9 +81,7 @@ def _extract_validators(field: ir.FieldSpec) -> list[ValidatorSpec]:
 
     # Add max_length validator for string types
     if field.type.max_length:
-        validators.append(
-            ValidatorSpec(kind=ValidatorKind.MAX_LENGTH, value=field.type.max_length)
-        )
+        validators.append(ValidatorSpec(kind=ValidatorKind.MAX_LENGTH, value=field.type.max_length))
 
     # Add precision/scale for decimal (not validators, but useful metadata)
     # These would be handled by the type itself

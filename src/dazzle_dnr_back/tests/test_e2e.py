@@ -4,11 +4,11 @@ End-to-end tests for DNR Backend server.
 Tests the complete flow from spec to running API.
 """
 
-
 import pytest
 
 try:
     from fastapi.testclient import TestClient
+
     TESTCLIENT_AVAILABLE = True
 except ImportError:
     TESTCLIENT_AVAILABLE = False

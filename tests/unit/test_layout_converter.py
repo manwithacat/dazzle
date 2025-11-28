@@ -1,7 +1,5 @@
 """Tests for DSL to Layout IR converter."""
 
-import pytest
-
 from dazzle.core.ir import (
     AppSpec,
     AttentionSignalKind,

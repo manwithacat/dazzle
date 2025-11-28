@@ -143,9 +143,7 @@ class MigrationPlanner:
 
         with self.db.connection() as conn:
             for entity in entities:
-                entity_steps, entity_warnings = self._plan_entity_migration(
-                    conn, entity
-                )
+                entity_steps, entity_warnings = self._plan_entity_migration(conn, entity)
                 steps.extend(entity_steps)
                 warnings.extend(entity_warnings)
 
@@ -362,9 +360,7 @@ class MigrationExecutor:
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
 
-    def execute(
-        self, plan: MigrationPlan, skip_destructive: bool = True
-    ) -> list[MigrationStep]:
+    def execute(self, plan: MigrationPlan, skip_destructive: bool = True) -> list[MigrationStep]:
         """
         Execute a migration plan.
 

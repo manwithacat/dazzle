@@ -88,12 +88,8 @@ class FetchEffect(BaseModel):
     inputs: dict[str, Binding] | None = Field(
         default=None, description="Input bindings for the service"
     )
-    on_success: str | None = Field(
-        default=None, description="Action to dispatch on success"
-    )
-    on_error: str | None = Field(
-        default=None, description="Action to dispatch on error"
-    )
+    on_success: str | None = Field(default=None, description="Action to dispatch on success")
+    on_error: str | None = Field(default=None, description="Action to dispatch on error")
 
     class Config:
         frozen = True
@@ -109,9 +105,7 @@ class NavigateEffect(BaseModel):
 
     kind: Literal["navigate"] = "navigate"
     route: str = Field(description="Route path to navigate to")
-    params: dict[str, Binding] | None = Field(
-        default=None, description="Route parameters"
-    )
+    params: dict[str, Binding] | None = Field(default=None, description="Route parameters")
 
     class Config:
         frozen = True
@@ -149,9 +143,7 @@ class ToastEffect(BaseModel):
     variant: str = Field(
         default="info", description="Toast variant (info, success, warning, error)"
     )
-    duration: int | None = Field(
-        default=3000, description="Duration in milliseconds"
-    )
+    duration: int | None = Field(default=3000, description="Duration in milliseconds")
 
     class Config:
         frozen = True
@@ -167,9 +159,7 @@ class CustomEffect(BaseModel):
 
     kind: Literal["custom"] = "custom"
     name: str = Field(description="Custom effect name")
-    config: dict[str, Any] = Field(
-        default_factory=dict, description="Effect configuration"
-    )
+    config: dict[str, Any] = Field(default_factory=dict, description="Effect configuration")
 
     class Config:
         frozen = True
@@ -212,9 +202,7 @@ class ActionSpec(BaseModel):
     transitions: list[TransitionSpec] = Field(
         default_factory=list, description="State transitions to apply"
     )
-    effect: EffectSpec | None = Field(
-        default=None, description="Side effect to execute"
-    )
+    effect: EffectSpec | None = Field(default=None, description="Side effect to execute")
 
     class Config:
         frozen = True

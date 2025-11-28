@@ -304,11 +304,14 @@ class TestMessageHandling:
         """Test handling subscribe message."""
         connection_id = await ws_manager.connect(mock_websocket)
 
-        await ws_manager.handle_message(connection_id, {
-            "type": "subscribe",
-            "channel": "entity:Task",
-            "requestId": "req_123",
-        })
+        await ws_manager.handle_message(
+            connection_id,
+            {
+                "type": "subscribe",
+                "channel": "entity:Task",
+                "requestId": "req_123",
+            },
+        )
 
         assert ws_manager.is_subscribed(connection_id, "entity:Task")
 
@@ -318,10 +321,13 @@ class TestMessageHandling:
         connection_id = await ws_manager.connect(mock_websocket)
         await ws_manager.subscribe(connection_id, "entity:Task")
 
-        await ws_manager.handle_message(connection_id, {
-            "type": "unsubscribe",
-            "channel": "entity:Task",
-        })
+        await ws_manager.handle_message(
+            connection_id,
+            {
+                "type": "unsubscribe",
+                "channel": "entity:Task",
+            },
+        )
 
         assert not ws_manager.is_subscribed(connection_id, "entity:Task")
 
@@ -331,10 +337,13 @@ class TestMessageHandling:
         connection_id = await ws_manager.connect(mock_websocket)
         mock_websocket.send_json.reset_mock()
 
-        await ws_manager.handle_message(connection_id, {
-            "type": "unknown_type",
-            "requestId": "req_123",
-        })
+        await ws_manager.handle_message(
+            connection_id,
+            {
+                "type": "unknown_type",
+                "requestId": "req_123",
+            },
+        )
 
         # Should send error
         mock_websocket.send_json.assert_called_once()
@@ -353,10 +362,13 @@ class TestMessageHandling:
         ws_manager.register_handler("custom:event", custom_handler)
         connection_id = await ws_manager.connect(mock_websocket)
 
-        await ws_manager.handle_message(connection_id, {
-            "type": "custom:event",
-            "payload": {"data": "test"},
-        })
+        await ws_manager.handle_message(
+            connection_id,
+            {
+                "type": "custom:event",
+                "payload": {"data": "test"},
+            },
+        )
 
         assert len(handler_called) == 1
         assert handler_called[0][0] == connection_id

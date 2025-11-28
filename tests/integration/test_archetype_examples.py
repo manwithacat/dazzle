@@ -94,7 +94,7 @@ class TestScannerTableArchetype:
         appspec = load_example_appspec("inventory_scanner", examples_dir)
 
         workspace_spec = appspec.workspaces[0]
-        assert workspace_spec.name =="inventory"
+        assert workspace_spec.name == "inventory"
 
         layout = convert_workspace_to_layout(workspace_spec)
         plan = build_layout_plan(layout)
@@ -128,7 +128,7 @@ class TestMonitorWallArchetype:
         appspec = load_example_appspec("email_client", examples_dir)
 
         workspace_spec = appspec.workspaces[0]
-        assert workspace_spec.name =="inbox"
+        assert workspace_spec.name == "inbox"
 
         layout = convert_workspace_to_layout(workspace_spec)
         plan = build_layout_plan(layout)
@@ -195,12 +195,15 @@ class TestHighSignalCount:
 class TestDeterministicGeneration:
     """Tests that layout plan generation is deterministic."""
 
-    @pytest.mark.parametrize("example_name", [
-        "uptime_monitor",
-        "inventory_scanner",
-        "email_client",
-        "ops_dashboard",
-    ])
+    @pytest.mark.parametrize(
+        "example_name",
+        [
+            "uptime_monitor",
+            "inventory_scanner",
+            "email_client",
+            "ops_dashboard",
+        ],
+    )
     def test_layout_plan_deterministic(self, example_name, examples_dir):
         """Test that parsing same example twice produces identical layout plans."""
         # Generate plan twice
@@ -221,7 +224,7 @@ class TestDeterministicGeneration:
         assert len(plan1.surfaces) == len(plan2.surfaces)
 
         # Surface allocations should match
-        for surf1, surf2 in zip(plan1.surfaces, plan2.surfaces):
+        for surf1, surf2 in zip(plan1.surfaces, plan2.surfaces, strict=True):
             assert surf1.id == surf2.id
             assert surf1.archetype == surf2.archetype
             assert surf1.assigned_signals == surf2.assigned_signals
@@ -231,12 +234,15 @@ class TestLayoutPlanSnapshots:
     """Snapshot tests for layout plans."""
 
     @pytest.mark.skip(reason="Snapshot testing not yet configured")
-    @pytest.mark.parametrize("example_name", [
-        "uptime_monitor",
-        "inventory_scanner",
-        "email_client",
-        "ops_dashboard",
-    ])
+    @pytest.mark.parametrize(
+        "example_name",
+        [
+            "uptime_monitor",
+            "inventory_scanner",
+            "email_client",
+            "ops_dashboard",
+        ],
+    )
     def test_layout_plan_snapshot(self, example_name, examples_dir, snapshot):
         """Test that layout plan matches snapshot."""
         appspec = load_example_appspec(example_name, examples_dir)

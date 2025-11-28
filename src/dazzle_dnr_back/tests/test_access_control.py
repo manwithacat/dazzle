@@ -502,12 +502,8 @@ class TestCreatePolicyFromEntity:
             {"name": "name", "type": {"kind": "scalar"}},
         ]
 
-        policy = create_policy_from_entity(
-            "Secret", fields, default_mode="authenticated"
-        )
+        policy = create_policy_from_entity("Secret", fields, default_mode="authenticated")
 
         # Should require authentication
         assert policy.can_access(AccessOperation.READ, AccessContext()) is False
-        assert policy.can_access(
-            AccessOperation.READ, AccessContext(user_id=uuid4())
-        ) is True
+        assert policy.can_access(AccessOperation.READ, AccessContext(user_id=uuid4())) is True

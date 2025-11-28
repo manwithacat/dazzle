@@ -190,9 +190,7 @@ class TestSQLiteRepository:
     """Test SQLite repository CRUD operations."""
 
     @pytest.fixture
-    def repository(
-        self, db_manager: DatabaseManager, task_entity: EntitySpec
-    ) -> SQLiteRepository:
+    def repository(self, db_manager: DatabaseManager, task_entity: EntitySpec) -> SQLiteRepository:
         """Create a Task repository."""
         db_manager.create_table(task_entity)
         model = generate_entity_model(task_entity)
@@ -247,11 +245,13 @@ class TestSQLiteRepository:
     async def test_update(self, repository: SQLiteRepository):
         """Test updating an entity."""
         task_id = uuid4()
-        await repository.create({
-            "id": task_id,
-            "title": "Original",
-            "priority": "low",
-        })
+        await repository.create(
+            {
+                "id": task_id,
+                "title": "Original",
+                "priority": "low",
+            }
+        )
 
         result = await repository.update(task_id, {"title": "Updated"})
 
@@ -269,11 +269,13 @@ class TestSQLiteRepository:
     async def test_delete(self, repository: SQLiteRepository):
         """Test deleting an entity."""
         task_id = uuid4()
-        await repository.create({
-            "id": task_id,
-            "title": "To Delete",
-            "priority": "medium",
-        })
+        await repository.create(
+            {
+                "id": task_id,
+                "title": "To Delete",
+                "priority": "medium",
+            }
+        )
 
         result = await repository.delete(task_id)
         assert result is True
@@ -292,11 +294,13 @@ class TestSQLiteRepository:
         """Test listing entities with pagination."""
         # Create multiple tasks
         for i in range(5):
-            await repository.create({
-                "id": uuid4(),
-                "title": f"Task {i}",
-                "priority": "medium",
-            })
+            await repository.create(
+                {
+                    "id": uuid4(),
+                    "title": f"Task {i}",
+                    "priority": "medium",
+                }
+            )
 
         result = await repository.list(page=1, page_size=3)
 
@@ -308,16 +312,20 @@ class TestSQLiteRepository:
     @pytest.mark.asyncio
     async def test_list_with_filter(self, repository: SQLiteRepository):
         """Test listing entities with filters."""
-        await repository.create({
-            "id": uuid4(),
-            "title": "High Priority",
-            "priority": "high",
-        })
-        await repository.create({
-            "id": uuid4(),
-            "title": "Low Priority",
-            "priority": "low",
-        })
+        await repository.create(
+            {
+                "id": uuid4(),
+                "title": "High Priority",
+                "priority": "high",
+            }
+        )
+        await repository.create(
+            {
+                "id": uuid4(),
+                "title": "Low Priority",
+                "priority": "low",
+            }
+        )
 
         result = await repository.list(filters={"priority": "high"})
 
@@ -328,11 +336,13 @@ class TestSQLiteRepository:
     async def test_exists(self, repository: SQLiteRepository):
         """Test exists check."""
         task_id = uuid4()
-        await repository.create({
-            "id": task_id,
-            "title": "Exists Test",
-            "priority": "medium",
-        })
+        await repository.create(
+            {
+                "id": task_id,
+                "title": "Exists Test",
+                "priority": "medium",
+            }
+        )
 
         assert await repository.exists(task_id) is True
         assert await repository.exists(uuid4()) is False
@@ -346,9 +356,7 @@ class TestSQLiteRepository:
 class TestRepositoryFactory:
     """Test repository factory functionality."""
 
-    def test_create_repository(
-        self, db_manager: DatabaseManager, task_entity: EntitySpec
-    ):
+    def test_create_repository(self, db_manager: DatabaseManager, task_entity: EntitySpec):
         """Test creating a repository via factory."""
         db_manager.create_table(task_entity)
         model = generate_entity_model(task_entity)
@@ -359,9 +367,7 @@ class TestRepositoryFactory:
         assert repo is not None
         assert repo.table_name == "Task"
 
-    def test_create_all_repositories(
-        self, db_manager: DatabaseManager, task_entity: EntitySpec
-    ):
+    def test_create_all_repositories(self, db_manager: DatabaseManager, task_entity: EntitySpec):
         """Test creating multiple repositories."""
         user_entity = EntitySpec(
             name="User",
@@ -384,9 +390,7 @@ class TestRepositoryFactory:
         task_model = generate_entity_model(task_entity)
         user_model = generate_entity_model(user_entity)
 
-        factory = RepositoryFactory(
-            db_manager, {"Task": task_model, "User": user_model}
-        )
+        factory = RepositoryFactory(db_manager, {"Task": task_model, "User": user_model})
         repos = factory.create_all_repositories([task_entity, user_entity])
 
         assert len(repos) == 2
@@ -413,11 +417,13 @@ class TestPersistence:
         model = generate_entity_model(task_entity)
         repo1 = SQLiteRepository(db1, task_entity, model)
 
-        await repo1.create({
-            "id": task_id,
-            "title": "Persistent Task",
-            "priority": "high",
-        })
+        await repo1.create(
+            {
+                "id": task_id,
+                "title": "Persistent Task",
+                "priority": "high",
+            }
+        )
 
         # Reconnect with new manager
         db2 = DatabaseManager(temp_db_path)

@@ -28,15 +28,11 @@ class ElementNode(BaseModel):
     """
 
     kind: Literal["element"] = "element"
-    as_: str = Field(
-        description="Component or element name", alias="as"
-    )  # 'as' is Python keyword
+    as_: str = Field(description="Component or element name", alias="as")  # 'as' is Python keyword
     props: dict[str, Binding] = Field(
         default_factory=dict, description="Element props with bindings"
     )
-    children: list["ViewNode"] = Field(
-        default_factory=list, description="Child nodes"
-    )
+    children: list["ViewNode"] = Field(default_factory=list, description="Child nodes")
 
     class Config:
         frozen = True
@@ -58,9 +54,7 @@ class ConditionalNode(BaseModel):
     kind: Literal["conditional"] = "conditional"
     condition: Binding = Field(description="Condition binding")
     then_branch: "ViewNode" = Field(description="Node to render if true")
-    else_branch: "ViewNode | None" = Field(
-        default=None, description="Node to render if false"
-    )
+    else_branch: "ViewNode | None" = Field(default=None, description="Node to render if false")
 
     class Config:
         frozen = True
@@ -82,9 +76,7 @@ class LoopNode(BaseModel):
     kind: Literal["loop"] = "loop"
     items: Binding = Field(description="Array binding to iterate over")
     item_var: str = Field(description="Variable name for each item")
-    key_path: str = Field(
-        description="Path to unique key in item (for efficient re-rendering)"
-    )
+    key_path: str = Field(description="Path to unique key in item (for efficient re-rendering)")
     template: "ViewNode" = Field(description="Template to render for each item")
 
     class Config:

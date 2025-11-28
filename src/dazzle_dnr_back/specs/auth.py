@@ -24,9 +24,7 @@ class PermissionSpec(BaseModel):
 
     name: str = Field(description="Permission name (e.g., 'invoice:create')")
     description: str | None = Field(default=None, description="Permission description")
-    resource: str | None = Field(
-        default=None, description="Resource this permission applies to"
-    )
+    resource: str | None = Field(default=None, description="Resource this permission applies to")
     actions: list[str] = Field(
         default_factory=list, description="Actions allowed (create, read, update, delete)"
     )
@@ -46,12 +44,8 @@ class RoleSpec(BaseModel):
 
     name: str = Field(description="Role name")
     description: str | None = Field(default=None, description="Role description")
-    permissions: list[str] = Field(
-        default_factory=list, description="Permission names"
-    )
-    inherits: list[str] = Field(
-        default_factory=list, description="Inherited roles"
-    )
+    permissions: list[str] = Field(default_factory=list, description="Permission names")
+    inherits: list[str] = Field(default_factory=list, description="Inherited roles")
 
     class Config:
         frozen = True
@@ -81,24 +75,16 @@ class AuthRuleSpec(BaseModel):
         AuthRuleSpec(required=False)  # Public endpoint
     """
 
-    required: bool = Field(
-        default=True, description="Is authentication required?"
-    )
-    scheme: AuthScheme = Field(
-        default=AuthScheme.BEARER, description="Authentication scheme"
-    )
-    roles: list[str] = Field(
-        default_factory=list, description="Required roles (any of)"
-    )
+    required: bool = Field(default=True, description="Is authentication required?")
+    scheme: AuthScheme = Field(default=AuthScheme.BEARER, description="Authentication scheme")
+    roles: list[str] = Field(default_factory=list, description="Required roles (any of)")
     permissions: list[str] = Field(
         default_factory=list, description="Required permissions (all of)"
     )
     custom_checks: list[str] = Field(
         default_factory=list, description="Custom auth check expressions"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True
@@ -136,21 +122,15 @@ class TenancyRuleSpec(BaseModel):
         )
     """
 
-    strategy: TenancyStrategy = Field(
-        default=TenancyStrategy.NONE, description="Tenancy strategy"
-    )
+    strategy: TenancyStrategy = Field(default=TenancyStrategy.NONE, description="Tenancy strategy")
     tenant_field: str | None = Field(
         default=None, description="Field name for tenant discriminator"
     )
-    enforce: bool = Field(
-        default=True, description="Enforce tenant isolation?"
-    )
+    enforce: bool = Field(default=True, description="Enforce tenant isolation?")
     allow_cross_tenant: bool = Field(
         default=False, description="Allow cross-tenant access for superusers?"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

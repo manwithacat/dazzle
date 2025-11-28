@@ -60,9 +60,7 @@ def build_layout_plan(
     archetype_def = get_archetype_definition(archetype)
 
     # Step 3: Allocate signals to surfaces
-    surfaces, over_budget_signals = assign_signals_to_surfaces(
-        adjusted_workspace, archetype_def
-    )
+    surfaces, over_budget_signals = assign_signals_to_surfaces(adjusted_workspace, archetype_def)
 
     # Step 4: Generate warnings
     warnings = _generate_warnings(
@@ -110,8 +108,7 @@ def _generate_warnings(
         count = len(over_budget_signals)
         warnings.append(
             f"{count} signal(s) exceeded capacity and were not allocated: "
-            f"{', '.join(over_budget_signals[:3])}"
-            + ("..." if count > 3 else "")
+            f"{', '.join(over_budget_signals[:3])}" + ("..." if count > 3 else "")
         )
 
     # Warning 2: Total attention weight vs budget
@@ -145,9 +142,7 @@ def _build_metadata(
     """Build metadata for debugging and logging."""
     return {
         "signal_count": len(workspace.attention_signals),
-        "total_attention_weight": sum(
-            s.attention_weight for s in workspace.attention_signals
-        ),
+        "total_attention_weight": sum(s.attention_weight for s in workspace.attention_signals),
         "attention_budget": workspace.attention_budget,
         "archetype_name": archetype_def.name,
         "surface_count": len(archetype_def.surfaces),

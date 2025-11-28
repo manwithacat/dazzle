@@ -41,10 +41,7 @@ def create_file_routes(
         from fastapi import File, HTTPException, Query, UploadFile
         from fastapi.responses import Response, StreamingResponse
     except ImportError:
-        raise ImportError(
-            "FastAPI is required for file routes. "
-            "Install with: pip install fastapi"
-        )
+        raise ImportError("FastAPI is required for file routes. Install with: pip install fastapi")
 
     from .file_storage import FileValidationError
     from .image_processor import ImageProcessor, ThumbnailService

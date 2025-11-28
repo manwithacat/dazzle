@@ -80,6 +80,7 @@ def create_create_handler(
     response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
+
     # Request is auto-injected by FastAPI when typed correctly
     async def handler(request: Request) -> Any:
         body = await request.json()
@@ -99,6 +100,7 @@ def create_update_handler(
     response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
+
     async def handler(id: UUID, request: Request) -> Any:
         body = await request.json()
         data = input_schema.model_validate(body)
@@ -180,9 +182,7 @@ class RouteGenerator:
             schemas: Optional dictionary with create/update schemas per entity
         """
         if not FASTAPI_AVAILABLE:
-            raise RuntimeError(
-                "FastAPI is not installed. Install with: pip install fastapi"
-            )
+            raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
 
         self.services = services
         self.models = models
@@ -236,17 +236,24 @@ class RouteGenerator:
                 raise ValueError(f"No create schema for endpoint: {endpoint.name}")
 
         # GET with {id} -> READ
-        elif (endpoint.method == HttpMethod.GET and "{id}" in endpoint.path) or operation_kind == OperationKind.READ:
+        elif (
+            endpoint.method == HttpMethod.GET and "{id}" in endpoint.path
+        ) or operation_kind == OperationKind.READ:
             handler = create_read_handler(service, model)
             self._add_route(endpoint, handler, response_model=model)
 
         # GET without {id} -> LIST
-        elif (endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path) or operation_kind == OperationKind.LIST:
+        elif (
+            endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path
+        ) or operation_kind == OperationKind.LIST:
             handler = create_list_handler(service, model)
             self._add_route(endpoint, handler, response_model=None)
 
         # PUT/PATCH -> UPDATE
-        elif endpoint.method in (HttpMethod.PUT, HttpMethod.PATCH) or operation_kind == OperationKind.UPDATE:
+        elif (
+            endpoint.method in (HttpMethod.PUT, HttpMethod.PATCH)
+            or operation_kind == OperationKind.UPDATE
+        ):
             update_schema = entity_schemas.get("update", model)
             if update_schema:
                 handler = create_update_handler(service, update_schema, model)
@@ -360,9 +367,7 @@ def generate_crud_routes(
         FastAPI router with CRUD routes
     """
     if not FASTAPI_AVAILABLE:
-        raise RuntimeError(
-            "FastAPI is not installed. Install with: pip install fastapi"
-        )
+        raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
 
     router = _APIRouter()
     prefix = prefix or f"/{entity_name.lower()}s"
@@ -390,7 +395,9 @@ def generate_crud_routes(
         return await service.execute(operation="create", data=data)
 
     # Update
-    @router.put(f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model)
+    @router.put(
+        f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model
+    )
     async def update_item(id: UUID, data: update_schema) -> Any:  # type: ignore
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:

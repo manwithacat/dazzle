@@ -136,18 +136,14 @@ class FilterCondition:
             if not isinstance(converted_value, (list, tuple)):
                 converted_value = [converted_value]
             placeholders = ", ".join("?" * len(converted_value))
-            sql = OPERATOR_SQL[self.operator].format(
-                field=field_ref, placeholders=placeholders
-            )
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.NOT_IN:
             if not isinstance(converted_value, (list, tuple)):
                 converted_value = [converted_value]
             placeholders = ", ".join("?" * len(converted_value))
-            sql = OPERATOR_SQL[self.operator].format(
-                field=field_ref, placeholders=placeholders
-            )
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.BETWEEN:
@@ -298,9 +294,7 @@ class QueryBuilder:
         self.page_size = max(1, min(page_size, 1000))  # Cap at 1000
         return self
 
-    def set_search(
-        self, query: str, fields: list[str] | None = None
-    ) -> QueryBuilder:
+    def set_search(self, query: str, fields: list[str] | None = None) -> QueryBuilder:
         """Set full-text search query."""
         self.search_query = query
         self.search_fields = fields or []
@@ -340,9 +334,7 @@ class QueryBuilder:
         offset = (self.page - 1) * self.page_size
         return "LIMIT ? OFFSET ?", [self.page_size, offset]
 
-    def build_select(
-        self, count_only: bool = False
-    ) -> tuple[str, list[Any]]:
+    def build_select(self, count_only: bool = False) -> tuple[str, list[Any]]:
         """
         Build complete SELECT query.
 

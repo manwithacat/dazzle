@@ -160,7 +160,7 @@ class DNRBackendApp:
         # Wire up repositories to services
         # Match services to repositories by their target entity
         if self._use_database:
-            for service_name, service in self._services.items():
+            for _service_name, service in self._services.items():
                 if isinstance(service, CRUDService):
                     # Get the entity name from the service
                     entity_name = service.entity_name

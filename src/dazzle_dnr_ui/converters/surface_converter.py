@@ -57,28 +57,40 @@ def _generate_props_schema(
 
     if surface.mode == ir.SurfaceMode.LIST:
         # List needs data source
-        fields.extend([
-            PropFieldSpec(name="items", type=f"list[{surface.entity_ref}]", required=True),
-            PropFieldSpec(name="loading", type="bool", required=False, default=False),
-            PropFieldSpec(name="onRowClick", type="Action", required=False),
-        ])
+        fields.extend(
+            [
+                PropFieldSpec(name="items", type=f"list[{surface.entity_ref}]", required=True),
+                PropFieldSpec(name="loading", type="bool", required=False, default=False),
+                PropFieldSpec(name="onRowClick", type="Action", required=False),
+            ]
+        )
 
     elif surface.mode == ir.SurfaceMode.VIEW:
         # View needs entity data
-        fields.extend([
-            PropFieldSpec(name=surface.entity_ref.lower() if surface.entity_ref else "item", type=surface.entity_ref or "object", required=True),
-        ])
+        fields.extend(
+            [
+                PropFieldSpec(
+                    name=surface.entity_ref.lower() if surface.entity_ref else "item",
+                    type=surface.entity_ref or "object",
+                    required=True,
+                ),
+            ]
+        )
 
     elif surface.mode in (ir.SurfaceMode.CREATE, ir.SurfaceMode.EDIT):
         # Forms need submit handler
-        fields.extend([
-            PropFieldSpec(name="onSubmit", type="Action", required=True),
-            PropFieldSpec(name="onCancel", type="Action", required=False),
-        ])
+        fields.extend(
+            [
+                PropFieldSpec(name="onSubmit", type="Action", required=True),
+                PropFieldSpec(name="onCancel", type="Action", required=False),
+            ]
+        )
 
         if surface.mode == ir.SurfaceMode.EDIT:
             fields.append(
-                PropFieldSpec(name="initialValues", type=surface.entity_ref or "object", required=True)
+                PropFieldSpec(
+                    name="initialValues", type=surface.entity_ref or "object", required=True
+                )
             )
 
     return PropsSchema(fields=fields)
@@ -175,31 +187,35 @@ def _generate_state(
 
     if surface.mode == ir.SurfaceMode.LIST:
         # List state
-        state.extend([
-            StateSpec(name="items", scope=StateScope.LOCAL, initial=[]),
-            StateSpec(name="loading", scope=StateScope.LOCAL, initial=True),
-            StateSpec(name="selectedId", scope=StateScope.LOCAL, initial=None),
-        ])
+        state.extend(
+            [
+                StateSpec(name="items", scope=StateScope.LOCAL, initial=[]),
+                StateSpec(name="loading", scope=StateScope.LOCAL, initial=True),
+                StateSpec(name="selectedId", scope=StateScope.LOCAL, initial=None),
+            ]
+        )
 
         # Filter state if UX spec has filters
         if surface.ux and surface.ux.filter:
-            state.append(
-                StateSpec(name="filters", scope=StateScope.LOCAL, initial={})
-            )
+            state.append(StateSpec(name="filters", scope=StateScope.LOCAL, initial={}))
 
     elif surface.mode in (ir.SurfaceMode.CREATE, ir.SurfaceMode.EDIT):
         # Form state
-        state.extend([
-            StateSpec(name="formData", scope=StateScope.LOCAL, initial={}),
-            StateSpec(name="errors", scope=StateScope.LOCAL, initial={}),
-            StateSpec(name="submitting", scope=StateScope.LOCAL, initial=False),
-        ])
+        state.extend(
+            [
+                StateSpec(name="formData", scope=StateScope.LOCAL, initial={}),
+                StateSpec(name="errors", scope=StateScope.LOCAL, initial={}),
+                StateSpec(name="submitting", scope=StateScope.LOCAL, initial=False),
+            ]
+        )
 
     elif surface.mode == ir.SurfaceMode.VIEW:
         # Detail view state
-        state.extend([
-            StateSpec(name="loading", scope=StateScope.LOCAL, initial=True),
-        ])
+        state.extend(
+            [
+                StateSpec(name="loading", scope=StateScope.LOCAL, initial=True),
+            ]
+        )
 
     return state
 

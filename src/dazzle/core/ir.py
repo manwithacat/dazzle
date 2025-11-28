@@ -1464,9 +1464,7 @@ class LayoutSignal(BaseModel):
     def validate_interaction_frequency(cls, v: str) -> str:
         """Validate interaction frequency is one of allowed values."""
         if v not in ("rare", "occasional", "frequent"):
-            raise ValueError(
-                f"interaction_frequency must be rare/occasional/frequent, got: {v}"
-            )
+            raise ValueError(f"interaction_frequency must be rare/occasional/frequent, got: {v}")
         return v
 
     @field_validator("density_preference")
@@ -1474,9 +1472,7 @@ class LayoutSignal(BaseModel):
     def validate_density_preference(cls, v: str) -> str:
         """Validate density preference is one of allowed values."""
         if v not in ("compact", "comfortable", "spacious"):
-            raise ValueError(
-                f"density_preference must be compact/comfortable/spacious, got: {v}"
-            )
+            raise ValueError(f"density_preference must be compact/comfortable/spacious, got: {v}")
         return v
 
     @field_validator("mode")
@@ -1554,9 +1550,7 @@ class PersonaLayout(BaseModel):
     def validate_proficiency_level(cls, v: str) -> str:
         """Validate proficiency level is one of allowed values."""
         if v not in ("novice", "intermediate", "expert"):
-            raise ValueError(
-                f"proficiency_level must be novice/intermediate/expert, got: {v}"
-            )
+            raise ValueError(f"proficiency_level must be novice/intermediate/expert, got: {v}")
         return v
 
     @field_validator("session_style")

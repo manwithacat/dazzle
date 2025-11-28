@@ -194,9 +194,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             "page_size": page_size,
         }
 
-    def _apply_filters(
-        self, items: builtins.list[T], filters: dict[str, Any]
-    ) -> builtins.list[T]:
+    def _apply_filters(self, items: builtins.list[T], filters: dict[str, Any]) -> builtins.list[T]:
         """Apply filters to a list of items."""
         filtered = []
         for item in items:

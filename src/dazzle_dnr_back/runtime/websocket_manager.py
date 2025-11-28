@@ -134,7 +134,9 @@ class WebSocketManager:
 
     _connections: dict[str, Connection] = field(default_factory=dict)
     _channels: dict[str, set[str]] = field(default_factory=dict)  # channel -> connection_ids
-    _user_connections: dict[str, set[str]] = field(default_factory=dict)  # user_id -> connection_ids
+    _user_connections: dict[str, set[str]] = field(
+        default_factory=dict
+    )  # user_id -> connection_ids
     _handlers: dict[str, MessageHandler] = field(default_factory=dict)
 
     def register_handler(self, message_type: str, handler: MessageHandler) -> None:
@@ -225,11 +227,7 @@ class WebSocketManager:
     def get_user_connections(self, user_id: str) -> list[Connection]:
         """Get all connections for a user."""
         connection_ids = self._user_connections.get(user_id, set())
-        return [
-            self._connections[cid]
-            for cid in connection_ids
-            if cid in self._connections
-        ]
+        return [self._connections[cid] for cid in connection_ids if cid in self._connections]
 
     @property
     def connection_count(self) -> int:
@@ -555,9 +553,7 @@ class WebSocketManager:
             "connections": len(self._connections),
             "channels": len(self._channels),
             "users": len(self._user_connections),
-            "subscriptions": sum(
-                len(c.subscriptions) for c in self._connections.values()
-            ),
+            "subscriptions": sum(len(c.subscriptions) for c in self._connections.values()),
         }
 
 

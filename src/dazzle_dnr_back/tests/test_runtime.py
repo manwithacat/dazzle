@@ -453,7 +453,9 @@ class TestServerWithSQLite:
                         ),
                         FieldSpec(
                             name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200),
+                            type=FieldType(
+                                kind="scalar", scalar_type=ScalarType.STR, max_length=200
+                            ),
                             required=True,
                         ),
                         FieldSpec(

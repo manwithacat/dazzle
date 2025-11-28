@@ -273,9 +273,7 @@ class TestMigrationPlanner:
 class TestMigrationExecutor:
     """Test migration execution."""
 
-    def test_execute_create_table(
-        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
-    ):
+    def test_execute_create_table(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
         """Test executing CREATE TABLE migration."""
         planner = MigrationPlanner(db_manager)
         plan = planner.plan_migrations([task_entity_v1])
@@ -425,9 +423,7 @@ class TestAutoMigrate:
         assert "priority" in columns
         assert "description" in columns
 
-    def test_auto_migrate_idempotent(
-        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
-    ):
+    def test_auto_migrate_idempotent(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
         """Test auto_migrate is idempotent."""
         # First migration
         plan1 = auto_migrate(db_manager, [task_entity_v1])
@@ -437,9 +433,7 @@ class TestAutoMigrate:
         plan2 = auto_migrate(db_manager, [task_entity_v1])
         assert plan2.is_empty
 
-    def test_plan_migrations_preview(
-        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
-    ):
+    def test_plan_migrations_preview(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
         """Test plan_migrations for preview without execution."""
         plan = plan_migrations(db_manager, [task_entity_v1])
 

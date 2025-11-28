@@ -14,6 +14,7 @@ from __future__ import annotations
 # Runtime Loading
 # =============================================================================
 
+
 def _load_realtime_js() -> str:
     """
     Load the realtime client JavaScript from the modular file.
@@ -22,6 +23,7 @@ def _load_realtime_js() -> str:
     """
     try:
         from dazzle_dnr_ui.runtime.js_loader import load_js_module
+
         # Load and wrap in IIFE for non-module usage
         source = load_js_module("realtime.js")
         return _wrap_in_iife(source)
@@ -32,13 +34,13 @@ def _load_realtime_js() -> str:
 
 def _wrap_in_iife(source: str) -> str:
     """Wrap ES module source in an IIFE for non-module browsers."""
-    lines = source.split('\n')
+    lines = source.split("\n")
     result = [
-        '/**',
-        ' * DNR-UI Realtime Client',
-        ' * Provides WebSocket communication, presence, and optimistic updates.',
-        ' * Version: 0.4.0 (Week 13-14)',
-        ' */',
+        "/**",
+        " * DNR-UI Realtime Client",
+        " * Provides WebSocket communication, presence, and optimistic updates.",
+        " * Version: 0.4.0 (Week 13-14)",
+        " */",
         "(function(global) {",
         "  'use strict';",
         "",
@@ -47,39 +49,41 @@ def _wrap_in_iife(source: str) -> str:
     for line in lines:
         stripped = line.strip()
         # Skip import/export statements
-        if stripped.startswith('import '):
+        if stripped.startswith("import "):
             continue
-        if stripped.startswith('export '):
-            line = line.replace('export ', '', 1)
-        if stripped.startswith('export default'):
+        if stripped.startswith("export "):
+            line = line.replace("export ", "", 1)
+        if stripped.startswith("export default"):
             continue
         if line.strip():
-            result.append('  ' + line)
+            result.append("  " + line)
         else:
-            result.append('')
+            result.append("")
 
     # Add exports
-    result.extend([
-        '',
-        '  // Export',
-        '  const Realtime = {',
-        '    RealtimeClient,',
-        '    OptimisticManager,',
-        '    PresenceManager,',
-        '    EntitySync,',
-        '    createRealtimeClient',
-        '  };',
-        '',
-        '  if (global.DNR) {',
-        '    global.DNR.Realtime = Realtime;',
-        '    global.DNR.createRealtimeClient = createRealtimeClient;',
-        '  }',
-        '  global.DNRRealtime = Realtime;',
-        '',
-        "})(typeof window !== 'undefined' ? window : global);",
-    ])
+    result.extend(
+        [
+            "",
+            "  // Export",
+            "  const Realtime = {",
+            "    RealtimeClient,",
+            "    OptimisticManager,",
+            "    PresenceManager,",
+            "    EntitySync,",
+            "    createRealtimeClient",
+            "  };",
+            "",
+            "  if (global.DNR) {",
+            "    global.DNR.Realtime = Realtime;",
+            "    global.DNR.createRealtimeClient = createRealtimeClient;",
+            "  }",
+            "  global.DNRRealtime = Realtime;",
+            "",
+            "})(typeof window !== 'undefined' ? window : global);",
+        ]
+    )
 
-    return '\n'.join(result)
+    return "\n".join(result)
 
 
 # =============================================================================
@@ -88,7 +92,7 @@ def _wrap_in_iife(source: str) -> str:
 
 # This is kept for backward compatibility and as a fallback if the modular
 # file is not available. The canonical source is now in static/js/realtime.js
-_REALTIME_CLIENT_JS_INLINE = '''
+_REALTIME_CLIENT_JS_INLINE = """
 /**
  * DNR-UI Realtime Client
  * Provides WebSocket communication, presence, and optimistic updates.
@@ -902,7 +906,7 @@ _REALTIME_CLIENT_JS_INLINE = '''
   global.DNRRealtime = Realtime;
 
 })(typeof window !== 'undefined' ? window : global);
-'''
+"""
 
 # Lazy-loaded realtime JS
 _REALTIME_JS_CACHED: str | None = None
@@ -948,7 +952,7 @@ def generate_realtime_init_js(websocket_url: str = "/ws", options: dict | None =
     options = options or {}
     options_js = ", ".join(f"{k}: {repr(v)}" for k, v in options.items())
 
-    return f'''
+    return f"""
 // Initialize DNR Realtime Client
 (function() {{
   'use strict';
@@ -976,4 +980,4 @@ def generate_realtime_init_js(websocket_url: str = "/ws", options: dict | None =
     window.dnrRealtime = realtime;
   }});
 }})();
-'''
+"""

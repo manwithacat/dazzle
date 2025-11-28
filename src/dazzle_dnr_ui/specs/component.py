@@ -50,9 +50,7 @@ class PropsSchema(BaseModel):
         )
     """
 
-    fields: list[PropFieldSpec] = Field(
-        default_factory=list, description="Prop fields"
-    )
+    fields: list[PropFieldSpec] = Field(default_factory=list, description="Prop fields")
 
     class Config:
         frozen = True
@@ -121,24 +119,12 @@ class ComponentSpec(BaseModel):
     )
     name: str = Field(description="Component name")
     description: str | None = Field(default=None, description="Component description")
-    category: str = Field(
-        default=ComponentCategory.CUSTOM, description="Component category"
-    )
-    props_schema: PropsSchema = Field(
-        default_factory=PropsSchema, description="Props schema"
-    )
-    view: ViewNode | None = Field(
-        default=None, description="View tree (None for primitives)"
-    )
-    state: list[StateSpec] = Field(
-        default_factory=list, description="Component state declarations"
-    )
-    actions: list[ActionSpec] = Field(
-        default_factory=list, description="Component actions"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    category: str = Field(default=ComponentCategory.CUSTOM, description="Component category")
+    props_schema: PropsSchema = Field(default_factory=PropsSchema, description="Props schema")
+    view: ViewNode | None = Field(default=None, description="View tree (None for primitives)")
+    state: list[StateSpec] = Field(default_factory=list, description="Component state declarations")
+    actions: list[ActionSpec] = Field(default_factory=list, description="Component actions")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

@@ -135,9 +135,7 @@ def _initialize_surfaces(
     return surfaces
 
 
-def _calculate_surface_load(
-    surface: MutableSurface, all_signals: list[LayoutSignal]
-) -> float:
+def _calculate_surface_load(surface: MutableSurface, all_signals: list[LayoutSignal]) -> float:
     """
     Calculate current attention weight load on a surface.
 

@@ -11,6 +11,7 @@ import pytest
 # Check if Pillow is available
 try:
     from PIL import Image
+
     PILLOW_AVAILABLE = True
 except ImportError:
     PILLOW_AVAILABLE = False
@@ -80,9 +81,7 @@ class TestImageProcessor:
 
     def test_generate_thumbnail(self, sample_image):
         """Test thumbnail generation."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=200, height=200
-        )
+        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
 
         # Verify it's a valid image
         img = Image.open(BytesIO(thumbnail))
@@ -91,9 +90,7 @@ class TestImageProcessor:
 
     def test_thumbnail_preserves_aspect_ratio(self, sample_image):
         """Test thumbnail preserves aspect ratio."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=200, height=200
-        )
+        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
 
         img = Image.open(BytesIO(thumbnail))
         # Original is 800x600 (4:3), so thumbnail should be ~200x150 or ~267x200
@@ -133,9 +130,7 @@ class TestImageProcessor:
 
     def test_optimize_image(self, large_image):
         """Test image optimization."""
-        optimized = ImageProcessor.optimize_image(
-            large_image, max_dimension=1024
-        )
+        optimized = ImageProcessor.optimize_image(large_image, max_dimension=1024)
 
         img = Image.open(BytesIO(optimized))
         assert max(img.size) <= 1024
@@ -143,9 +138,7 @@ class TestImageProcessor:
 
     def test_optimize_preserves_aspect_ratio(self, large_image):
         """Test optimization preserves aspect ratio."""
-        optimized = ImageProcessor.optimize_image(
-            large_image, max_dimension=1000
-        )
+        optimized = ImageProcessor.optimize_image(large_image, max_dimension=1000)
 
         img = Image.open(BytesIO(optimized))
         # Original was 4000x3000 (4:3)
@@ -154,9 +147,7 @@ class TestImageProcessor:
 
     def test_optimize_small_image_unchanged(self, sample_image):
         """Test small image not resized during optimization."""
-        optimized = ImageProcessor.optimize_image(
-            sample_image, max_dimension=2048
-        )
+        optimized = ImageProcessor.optimize_image(sample_image, max_dimension=2048)
 
         img = Image.open(BytesIO(optimized))
         # Should not be larger than original dimensions
@@ -240,9 +231,7 @@ class TestThumbnailService:
 
     def test_custom_settings(self):
         """Test custom thumbnail settings."""
-        service = ThumbnailService(
-            width=300, height=300, format="PNG", quality=90
-        )
+        service = ThumbnailService(width=300, height=300, format="PNG", quality=90)
 
         assert service.width == 300
         assert service.height == 300
@@ -297,9 +286,7 @@ class TestEdgeCases:
 
     def test_very_small_thumbnail(self, sample_image):
         """Test generating very small thumbnail."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=10, height=10
-        )
+        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=10, height=10)
 
         img = Image.open(BytesIO(thumbnail))
         assert img.size[0] <= 10
@@ -307,9 +294,7 @@ class TestEdgeCases:
 
     def test_very_large_dimensions(self, sample_image):
         """Test with dimensions larger than image."""
-        thumbnail = ImageProcessor.generate_thumbnail(
-            sample_image, width=2000, height=2000
-        )
+        thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=2000, height=2000)
 
         img = Image.open(BytesIO(thumbnail))
         # Should not upscale
@@ -326,9 +311,7 @@ class TestEdgeCases:
         img.save(buffer, format="PNG")
         buffer.seek(0)
 
-        thumbnail = ImageProcessor.generate_thumbnail(
-            buffer.getvalue(), width=100, height=100
-        )
+        thumbnail = ImageProcessor.generate_thumbnail(buffer.getvalue(), width=100, height=100)
 
         result = Image.open(BytesIO(thumbnail))
         assert result.size == (1, 1)  # Can't upscale

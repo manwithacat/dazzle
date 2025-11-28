@@ -62,9 +62,7 @@ def _generate_service_name(surface: ir.SurfaceSpec) -> str:
         return f"{surface.name}_operation"
 
 
-def _generate_input_schema(
-    surface: ir.SurfaceSpec, entity: ir.EntitySpec | None
-) -> SchemaSpec:
+def _generate_input_schema(surface: ir.SurfaceSpec, entity: ir.EntitySpec | None) -> SchemaSpec:
     """Generate input schema for a service based on surface mode."""
     fields: list[SchemaFieldSpec] = []
 
@@ -103,41 +101,39 @@ def _generate_input_schema(
 
     if surface.mode == ir.SurfaceMode.LIST:
         # Add pagination and filter params
-        fields.extend([
-            SchemaFieldSpec(name="page", type="int", required=False),
-            SchemaFieldSpec(name="page_size", type="int", required=False),
-        ])
+        fields.extend(
+            [
+                SchemaFieldSpec(name="page", type="int", required=False),
+                SchemaFieldSpec(name="page_size", type="int", required=False),
+            ]
+        )
 
         # Add filter fields from UX spec
         if surface.ux and surface.ux.filter:
             for filter_field in surface.ux.filter:
-                fields.append(
-                    SchemaFieldSpec(name=filter_field, type="str", required=False)
-                )
+                fields.append(SchemaFieldSpec(name=filter_field, type="str", required=False))
 
     return SchemaSpec(fields=fields)
 
 
-def _generate_output_schema(
-    surface: ir.SurfaceSpec, entity: ir.EntitySpec | None
-) -> SchemaSpec:
+def _generate_output_schema(surface: ir.SurfaceSpec, entity: ir.EntitySpec | None) -> SchemaSpec:
     """Generate output schema for a service based on surface mode."""
     fields: list[SchemaFieldSpec] = []
 
     entity_name = surface.entity_ref or "Item"
 
     if surface.mode == ir.SurfaceMode.LIST:
-        fields.extend([
-            SchemaFieldSpec(name="items", type=f"list[{entity_name}]", required=True),
-            SchemaFieldSpec(name="total", type="int", required=True),
-            SchemaFieldSpec(name="page", type="int", required=True),
-            SchemaFieldSpec(name="page_size", type="int", required=True),
-        ])
+        fields.extend(
+            [
+                SchemaFieldSpec(name="items", type=f"list[{entity_name}]", required=True),
+                SchemaFieldSpec(name="total", type="int", required=True),
+                SchemaFieldSpec(name="page", type="int", required=True),
+                SchemaFieldSpec(name="page_size", type="int", required=True),
+            ]
+        )
     else:
         # Single entity output
-        fields.append(
-            SchemaFieldSpec(name=entity_name.lower(), type=entity_name, required=True)
-        )
+        fields.append(SchemaFieldSpec(name=entity_name.lower(), type=entity_name, required=True))
 
     return SchemaSpec(fields=fields)
 

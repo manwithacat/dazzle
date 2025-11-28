@@ -52,22 +52,14 @@ class UISpec(BaseModel):
     components: list[ComponentSpec] = Field(
         default_factory=list, description="Component specifications"
     )
-    themes: list[ThemeSpec] = Field(
-        default_factory=list, description="Theme specifications"
-    )
+    themes: list[ThemeSpec] = Field(default_factory=list, description="Theme specifications")
 
     # Default selections
-    default_workspace: str | None = Field(
-        default=None, description="Default workspace to show"
-    )
-    default_theme: str | None = Field(
-        default=None, description="Default theme to apply"
-    )
+    default_workspace: str | None = Field(default=None, description="Default workspace to show")
+    default_theme: str | None = Field(default=None, description="Default theme to apply")
 
     # Additional metadata
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True
@@ -123,9 +115,7 @@ class UISpec(BaseModel):
 
         # Check that default workspace exists
         if self.default_workspace and not self.get_workspace(self.default_workspace):
-            errors.append(
-                f"Default workspace '{self.default_workspace}' does not exist"
-            )
+            errors.append(f"Default workspace '{self.default_workspace}' does not exist")
 
         # Check that default theme exists
         if self.default_theme and not self.get_theme(self.default_theme):

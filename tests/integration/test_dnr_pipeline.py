@@ -21,18 +21,15 @@ from dazzle.core import ir
 
 # DNR Backend
 from dazzle_dnr_back.converters import convert_appspec_to_backend
+from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE, create_app
 from dazzle_dnr_back.specs import BackendSpec
-from dazzle_dnr_back.runtime import create_app, FASTAPI_AVAILABLE
-
-# DNR UI
 from dazzle_dnr_ui.converters import convert_appspec_to_ui
-from dazzle_dnr_ui.specs import UISpec
 from dazzle_dnr_ui.runtime import (
     generate_js_app,
     generate_single_html,
     generate_vite_app,
 )
-
+from dazzle_dnr_ui.specs import UISpec
 
 # =============================================================================
 # Test Fixtures - Hand-built AppSpecs
@@ -442,7 +439,7 @@ class TestViteRuntime:
         ui = convert_appspec_to_ui(simple_appspec)
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            files = generate_vite_app(ui, tmpdir)
+            generate_vite_app(ui, tmpdir)
             tmpdir = Path(tmpdir)
 
             assert (tmpdir / "package.json").exists()

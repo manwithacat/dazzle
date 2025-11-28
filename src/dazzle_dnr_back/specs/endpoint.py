@@ -41,9 +41,7 @@ class RateLimitSpec(BaseModel):
 
     requests: int = Field(description="Number of allowed requests")
     window_seconds: int = Field(description="Time window in seconds")
-    strategy: str = Field(
-        default="sliding_window", description="Rate limiting strategy"
-    )
+    strategy: str = Field(default="sliding_window", description="Rate limiting strategy")
 
     class Config:
         frozen = True
@@ -76,15 +74,11 @@ class EndpointSpec(BaseModel):
     method: HttpMethod = Field(description="HTTP method")
     path: str = Field(description="URL path (e.g., /api/invoices)")
     description: str | None = Field(default=None, description="Endpoint description")
-    tags: list[str] = Field(
-        default_factory=list, description="OpenAPI tags for grouping"
-    )
+    tags: list[str] = Field(default_factory=list, description="OpenAPI tags for grouping")
     rate_limit: RateLimitSpec | None = Field(
         default=None, description="Rate limiting configuration"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

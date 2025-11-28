@@ -56,7 +56,7 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
 
         html = self.generator.generate_html(include_runtime=False)
         # Inject hot reload script
-        hot_reload_script = '''
+        hot_reload_script = """
 <script>
 (function() {
   const eventSource = new EventSource('/__hot-reload__');
@@ -68,12 +68,12 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
 })();
 </script>
 </body>
-'''
+"""
         html = html.replace("</body>", hot_reload_script)
         # Fix script references
         html = html.replace(
-            '<script>\n\n  </script>\n  <script>',
-            '<script src="dnr-runtime.js"></script>\n  <script src="app.js">'
+            "<script>\n\n  </script>\n  <script>",
+            '<script src="dnr-runtime.js"></script>\n  <script src="app.js">',
         )
 
         self._send_response(html, "text/html")
@@ -111,6 +111,7 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
         try:
             while True:
                 import time
+
                 time.sleep(1)
                 self.wfile.write(b": keepalive\n\n")
                 self.wfile.flush()

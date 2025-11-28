@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 # FastAPI is optional - import for type hints and runtime
 try:
     from fastapi import Request as FastAPIRequest
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FastAPIRequest = None  # type: ignore
@@ -86,10 +87,10 @@ def hash_password(password: str, salt: str | None = None) -> str:
 
     # Use PBKDF2 with SHA-256
     key = hashlib.pbkdf2_hmac(
-        'sha256',
-        password.encode('utf-8'),
-        salt.encode('utf-8'),
-        100000  # iterations
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100000,  # iterations
     )
 
     return f"{salt}${key.hex()}"
@@ -98,7 +99,7 @@ def hash_password(password: str, salt: str | None = None) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     """Verify a password against its hash."""
     try:
-        salt, _ = password_hash.split('$')
+        salt, _ = password_hash.split("$")
         return hash_password(password, salt) == password_hash
     except ValueError:
         return False
@@ -227,9 +228,7 @@ class AuthStore:
         import json
 
         with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM users WHERE email = ?", (email,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
             if row:
                 return UserRecord(
@@ -251,9 +250,7 @@ class AuthStore:
         import json
 
         with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM users WHERE id = ?", (str(user_id),)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM users WHERE id = ?", (str(user_id),)).fetchone()
 
             if row:
                 return UserRecord(
@@ -349,9 +346,7 @@ class AuthStore:
     def get_session(self, session_id: str) -> SessionRecord | None:
         """Get session by ID."""
         with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT * FROM sessions WHERE id = ?", (session_id,)
-            ).fetchone()
+            row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
 
             if row:
                 return SessionRecord(
@@ -398,18 +393,14 @@ class AuthStore:
     def delete_session(self, session_id: str) -> bool:
         """Delete a session."""
         with self._get_connection() as conn:
-            cursor = conn.execute(
-                "DELETE FROM sessions WHERE id = ?", (session_id,)
-            )
+            cursor = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
             conn.commit()
             return cursor.rowcount > 0
 
     def delete_user_sessions(self, user_id: UUID) -> int:
         """Delete all sessions for a user."""
         with self._get_connection() as conn:
-            cursor = conn.execute(
-                "DELETE FROM sessions WHERE user_id = ?", (str(user_id),)
-            )
+            cursor = conn.execute("DELETE FROM sessions WHERE user_id = ?", (str(user_id),))
             conn.commit()
             return cursor.rowcount
 
@@ -489,12 +480,14 @@ class AuthMiddleware:
 
 class LoginRequest(BaseModel):
     """Login request body."""
+
     email: str
     password: str
 
 
 class RegisterRequest(BaseModel):
     """Registration request body."""
+
     email: str
     password: str
     username: str | None = None
@@ -502,6 +495,7 @@ class RegisterRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     """Change password request body."""
+
     current_password: str
     new_password: str
 
@@ -549,15 +543,17 @@ def create_auth_routes(
         )
 
         # Return response with cookie
-        response = JSONResponse(content={
-            "user": {
-                "id": str(user.id),
-                "email": user.email,
-                "username": user.username,
-                "roles": user.roles,
-            },
-            "message": "Login successful",
-        })
+        response = JSONResponse(
+            content={
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "username": user.username,
+                    "roles": user.roles,
+                },
+                "message": "Login successful",
+            }
+        )
 
         response.set_cookie(
             key=cookie_name,

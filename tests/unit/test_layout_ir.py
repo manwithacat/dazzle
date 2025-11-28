@@ -209,9 +209,7 @@ class TestWorkspaceLayout:
     def test_workspace_layout_with_signals(self):
         """Test workspace with attention signals."""
         signals = [
-            LayoutSignal(
-                id="kpi1", kind=AttentionSignalKind.KPI, label="KPI 1", source="Entity1"
-            ),
+            LayoutSignal(id="kpi1", kind=AttentionSignalKind.KPI, label="KPI 1", source="Entity1"),
             LayoutSignal(
                 id="table1",
                 kind=AttentionSignalKind.TABLE,
@@ -358,18 +356,12 @@ class TestLayoutSurface:
     def test_capacity_validation(self):
         """Test capacity must be >= 0.0."""
         # Valid capacities
-        LayoutSurface(
-            id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=0.0
-        )
-        LayoutSurface(
-            id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=2.0
-        )
+        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
+        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
 
         # Invalid capacity
         with pytest.raises(ValidationError):
-            LayoutSurface(
-                id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=-0.1
-            )
+            LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
 
     def test_priority_validation(self):
         """Test priority must be >= 1."""
@@ -394,9 +386,7 @@ class TestLayoutPlan:
 
     def test_layout_plan_creation(self):
         """Test creating a basic layout plan."""
-        plan = LayoutPlan(
-            workspace_id="dashboard", archetype=LayoutArchetype.MONITOR_WALL
-        )
+        plan = LayoutPlan(workspace_id="dashboard", archetype=LayoutArchetype.MONITOR_WALL)
 
         assert plan.workspace_id == "dashboard"
         assert plan.persona_id is None
@@ -439,9 +429,7 @@ class TestLayoutPlan:
 
     def test_immutability(self):
         """Test that LayoutPlan is immutable."""
-        plan = LayoutPlan(
-            workspace_id="test", archetype=LayoutArchetype.FOCUS_METRIC
-        )
+        plan = LayoutPlan(workspace_id="test", archetype=LayoutArchetype.FOCUS_METRIC)
 
         with pytest.raises((ValidationError, AttributeError)):
             plan.archetype = LayoutArchetype.SCANNER_TABLE

@@ -146,9 +146,7 @@ def test_backend_spec_validation():
     # Valid spec
     spec = BackendSpec(
         name="valid_backend",
-        entities=[
-            EntitySpec(name="Client", fields=[])
-        ],
+        entities=[EntitySpec(name="Client", fields=[])],
         services=[
             ServiceSpec(
                 name="list_clients",

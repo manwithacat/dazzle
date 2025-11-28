@@ -1,10 +1,7 @@
 """Tests for MCP server setup and configuration."""
 
 import json
-from pathlib import Path
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import patch
 
 from dazzle.mcp.setup import (
     check_mcp_server,
@@ -88,14 +85,7 @@ class TestRegisterMcpServer:
         config_path.parent.mkdir(parents=True)
 
         # Create existing config with another server
-        existing_config = {
-            "mcpServers": {
-                "other-server": {
-                    "command": "other",
-                    "args": []
-                }
-            }
-        }
+        existing_config = {"mcpServers": {"other-server": {"command": "other", "args": []}}}
         config_path.write_text(json.dumps(existing_config))
 
         with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
@@ -119,7 +109,7 @@ class TestRegisterMcpServer:
                 "dazzle": {
                     "command": "custom-python",
                     "args": ["-m", "dazzle.mcp"],
-                    "customField": "should-be-preserved"
+                    "customField": "should-be-preserved",
                 }
             }
         }
@@ -150,7 +140,7 @@ class TestRegisterMcpServer:
                 "dazzle": {
                     "command": "custom-python",
                     "args": ["-m", "dazzle.mcp"],
-                    "customField": "should-be-removed"
+                    "customField": "should-be-removed",
                 }
             }
         }
@@ -213,14 +203,7 @@ class TestCheckMcpServer:
         config_path = tmp_path / ".claude" / "mcp_servers.json"
         config_path.parent.mkdir(parents=True)
 
-        config = {
-            "mcpServers": {
-                "other-server": {
-                    "command": "other",
-                    "args": []
-                }
-            }
-        }
+        config = {"mcpServers": {"other-server": {"command": "other", "args": []}}}
         config_path.write_text(json.dumps(config))
 
         with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
@@ -235,12 +218,7 @@ class TestCheckMcpServer:
         config_path.parent.mkdir(parents=True)
 
         config = {
-            "mcpServers": {
-                "dazzle": {
-                    "command": "/usr/bin/python3",
-                    "args": ["-m", "dazzle.mcp"]
-                }
-            }
+            "mcpServers": {"dazzle": {"command": "/usr/bin/python3", "args": ["-m", "dazzle.mcp"]}}
         }
         config_path.write_text(json.dumps(config))
 
@@ -270,14 +248,7 @@ class TestCheckMcpServer:
         config_path = tmp_path / ".claude" / "mcp_servers.json"
         config_path.parent.mkdir(parents=True)
 
-        config = {
-            "mcpServers": {
-                "dazzle": {
-                    "command": "python",
-                    "args": ["-m", "dazzle.mcp"]
-                }
-            }
-        }
+        config = {"mcpServers": {"dazzle": {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
         config_path.write_text(json.dumps(config))
 
         with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):

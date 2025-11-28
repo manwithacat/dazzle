@@ -427,11 +427,14 @@ class TestAuthRoutes:
         """Test successful registration."""
         _, client, _ = app
 
-        response = client.post("/auth/register", json={
-            "email": "new@example.com",
-            "password": "password123",
-            "username": "newuser",
-        })
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "new@example.com",
+                "password": "password123",
+                "username": "newuser",
+            },
+        )
 
         assert response.status_code == 201
         data = response.json()
@@ -446,10 +449,13 @@ class TestAuthRoutes:
         # Create existing user
         auth_store.create_user(email="existing@example.com", password="pass")
 
-        response = client.post("/auth/register", json={
-            "email": "existing@example.com",
-            "password": "password123",
-        })
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "existing@example.com",
+                "password": "password123",
+            },
+        )
 
         assert response.status_code == 400
         assert "already registered" in response.json()["detail"]
@@ -458,9 +464,12 @@ class TestAuthRoutes:
         """Test registration with missing fields."""
         _, client, _ = app
 
-        response = client.post("/auth/register", json={
-            "email": "only@email.com",
-        })
+        response = client.post(
+            "/auth/register",
+            json={
+                "email": "only@email.com",
+            },
+        )
 
         # FastAPI returns 422 for validation errors (missing required fields)
         assert response.status_code == 422
@@ -471,10 +480,13 @@ class TestAuthRoutes:
 
         auth_store.create_user(email="login@example.com", password="correct_pass")
 
-        response = client.post("/auth/login", json={
-            "email": "login@example.com",
-            "password": "correct_pass",
-        })
+        response = client.post(
+            "/auth/login",
+            json={
+                "email": "login@example.com",
+                "password": "correct_pass",
+            },
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -487,10 +499,13 @@ class TestAuthRoutes:
 
         auth_store.create_user(email="wrong@example.com", password="correct_pass")
 
-        response = client.post("/auth/login", json={
-            "email": "wrong@example.com",
-            "password": "wrong_pass",
-        })
+        response = client.post(
+            "/auth/login",
+            json={
+                "email": "wrong@example.com",
+                "password": "wrong_pass",
+            },
+        )
 
         assert response.status_code == 401
 
@@ -498,10 +513,13 @@ class TestAuthRoutes:
         """Test login with non-existent user."""
         _, client, _ = app
 
-        response = client.post("/auth/login", json={
-            "email": "nonexistent@example.com",
-            "password": "any_pass",
-        })
+        response = client.post(
+            "/auth/login",
+            json={
+                "email": "nonexistent@example.com",
+                "password": "any_pass",
+            },
+        )
 
         assert response.status_code == 401
 
@@ -511,10 +529,13 @@ class TestAuthRoutes:
 
         # First login
         auth_store.create_user(email="logout@example.com", password="pass")
-        login_response = client.post("/auth/login", json={
-            "email": "logout@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "logout@example.com",
+                "password": "pass",
+            },
+        )
 
         # Then logout
         response = client.post(
@@ -530,10 +551,13 @@ class TestAuthRoutes:
 
         # Login
         auth_store.create_user(email="me@example.com", password="pass")
-        login_response = client.post("/auth/login", json={
-            "email": "me@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "me@example.com",
+                "password": "pass",
+            },
+        )
 
         # Get me
         response = client.get("/auth/me", cookies=login_response.cookies)
@@ -556,10 +580,13 @@ class TestAuthRoutes:
 
         # Login
         auth_store.create_user(email="change@example.com", password="old_pass")
-        login_response = client.post("/auth/login", json={
-            "email": "change@example.com",
-            "password": "old_pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "change@example.com",
+                "password": "old_pass",
+            },
+        )
 
         # Change password
         response = client.post(
@@ -574,10 +601,13 @@ class TestAuthRoutes:
         assert response.status_code == 200
 
         # Verify new password works
-        login_response = client.post("/auth/login", json={
-            "email": "change@example.com",
-            "password": "new_pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "change@example.com",
+                "password": "new_pass",
+            },
+        )
         assert login_response.status_code == 200
 
     def test_change_password_wrong_current(self, app):
@@ -586,10 +616,13 @@ class TestAuthRoutes:
 
         # Login
         auth_store.create_user(email="wrongcur@example.com", password="correct_pass")
-        login_response = client.post("/auth/login", json={
-            "email": "wrongcur@example.com",
-            "password": "correct_pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "wrongcur@example.com",
+                "password": "correct_pass",
+            },
+        )
 
         # Try to change with wrong current password
         response = client.post(
@@ -686,10 +719,13 @@ class TestServerAuthIntegration:
         client = TestClient(app)
 
         # Check auth endpoints are available
-        response = client.post("/auth/login", json={
-            "email": "test@test.com",
-            "password": "test",
-        })
+        response = client.post(
+            "/auth/login",
+            json={
+                "email": "test@test.com",
+                "password": "test",
+            },
+        )
         # Should return 401 (invalid credentials), not 404
         assert response.status_code == 401
 
@@ -1019,10 +1055,13 @@ class TestAuthDependencies:
 
         # Create user and login
         auth_store.create_user(email="test@example.com", password="pass")
-        login_response = client.post("/auth/login", json={
-            "email": "test@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "test@example.com",
+                "password": "pass",
+            },
+        )
 
         # Access protected route
         response = client.get("/protected", cookies=login_response.cookies)
@@ -1045,10 +1084,13 @@ class TestAuthDependencies:
 
         # Create user and login
         auth_store.create_user(email="opt@example.com", password="pass")
-        login_response = client.post("/auth/login", json={
-            "email": "opt@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "opt@example.com",
+                "password": "pass",
+            },
+        )
 
         # Access optional route
         response = client.get("/optional", cookies=login_response.cookies)
@@ -1064,10 +1106,13 @@ class TestAuthDependencies:
 
         # Create regular user and login
         auth_store.create_user(email="regular@example.com", password="pass")
-        login_response = client.post("/auth/login", json={
-            "email": "regular@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "regular@example.com",
+                "password": "pass",
+            },
+        )
 
         # Access admin route
         response = client.get("/admin-only", cookies=login_response.cookies)
@@ -1085,10 +1130,13 @@ class TestAuthDependencies:
             password="pass",
             roles=["admin"],
         )
-        login_response = client.post("/auth/login", json={
-            "email": "admin@example.com",
-            "password": "pass",
-        })
+        login_response = client.post(
+            "/auth/login",
+            json={
+                "email": "admin@example.com",
+                "password": "pass",
+            },
+        )
 
         # Access admin route
         response = client.get("/admin-only", cookies=login_response.cookies)

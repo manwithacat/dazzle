@@ -56,6 +56,7 @@ class MarkdownProcessor:
         """Check if markdown processing is available."""
         try:
             import markdown  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -77,8 +78,7 @@ class MarkdownProcessor:
             import markdown as md
         except ImportError:
             raise RichTextProcessingError(
-                "markdown package is required. "
-                "Install with: pip install markdown"
+                "markdown package is required. Install with: pip install markdown"
             )
 
         try:
@@ -121,14 +121,39 @@ class MarkdownProcessor:
 
         # Allowed tags
         allowed_tags = [
-            "p", "br", "hr",
-            "h1", "h2", "h3", "h4", "h5", "h6",
-            "strong", "em", "b", "i", "u", "s", "strike",
-            "a", "img",
-            "ul", "ol", "li",
-            "code", "pre", "blockquote",
-            "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-            "div", "span",
+            "p",
+            "br",
+            "hr",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "h5",
+            "h6",
+            "strong",
+            "em",
+            "b",
+            "i",
+            "u",
+            "s",
+            "strike",
+            "a",
+            "img",
+            "ul",
+            "ol",
+            "li",
+            "code",
+            "pre",
+            "blockquote",
+            "table",
+            "thead",
+            "tbody",
+            "tfoot",
+            "tr",
+            "th",
+            "td",
+            "div",
+            "span",
         ]
 
         # Allowed attributes
@@ -225,7 +250,7 @@ class MarkdownProcessor:
 
         # Pattern to match base64 images in markdown
         # ![alt](data:image/png;base64,...)
-        pattern = r'!\[([^\]]*)\]\(data:([^;]+);base64,([^)]+)\)'
+        pattern = r"!\[([^\]]*)\]\(data:([^;]+);base64,([^)]+)\)"
 
         async def replace_match(match) -> str:
             alt = match.group(1)
@@ -254,9 +279,7 @@ class MarkdownProcessor:
                 return f"![{alt}]({metadata.url})"
 
             except Exception as e:
-                raise RichTextProcessingError(
-                    f"Failed to process inline image: {e}"
-                )
+                raise RichTextProcessingError(f"Failed to process inline image: {e}")
 
         # Find all matches and process
         matches = list(re.finditer(pattern, markdown_text))
@@ -267,7 +290,7 @@ class MarkdownProcessor:
         result = markdown_text
         for match in reversed(matches):  # Reverse to preserve positions
             replacement = await replace_match(match)
-            result = result[:match.start()] + replacement + result[match.end():]
+            result = result[: match.start()] + replacement + result[match.end() :]
 
         return result
 
@@ -284,23 +307,23 @@ class MarkdownProcessor:
             Plain text without formatting
         """
         # Remove images
-        text = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', markdown_text)
+        text = re.sub(r"!\[[^\]]*\]\([^)]+\)", "", markdown_text)
 
         # Remove links but keep text
-        text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
 
         # Remove formatting
-        text = re.sub(r'[*_~`#]+', '', text)
+        text = re.sub(r"[*_~`#]+", "", text)
 
         # Remove code blocks
-        text = re.sub(r'```[^`]*```', '', text, flags=re.DOTALL)
-        text = re.sub(r'`[^`]+`', '', text)
+        text = re.sub(r"```[^`]*```", "", text, flags=re.DOTALL)
+        text = re.sub(r"`[^`]+`", "", text)
 
         # Remove HTML tags
-        text = re.sub(r'<[^>]+>', '', text)
+        text = re.sub(r"<[^>]+>", "", text)
 
         # Normalize whitespace
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"\s+", " ", text).strip()
 
         return text
 
@@ -389,17 +412,18 @@ class HTMLProcessor:
             Plain text
         """
         # Remove all tags
-        text = re.sub(r'<[^>]+>', ' ', html)
+        text = re.sub(r"<[^>]+>", " ", html)
 
         # Decode HTML entities
         try:
             import html as html_module
+
             text = html_module.unescape(text)
         except ImportError:
             pass
 
         # Normalize whitespace
-        text = re.sub(r'\s+', ' ', text).strip()
+        text = re.sub(r"\s+", " ", text).strip()
 
         return text
 

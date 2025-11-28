@@ -31,6 +31,7 @@ try:
         FieldType,
         ScalarType,
     )
+
     BACKEND_AVAILABLE = True
 except ImportError:
     BACKEND_AVAILABLE = False
@@ -245,6 +246,7 @@ class TestCombinedServerIntegration:
     def server_ports(self):
         """Return unique ports for testing."""
         import random
+
         base = random.randint(10000, 60000)
         return {
             "backend": base,

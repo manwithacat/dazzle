@@ -74,9 +74,9 @@ def sample_image():
     """Create a minimal valid PNG image."""
     # Minimal 1x1 red PNG
     png_data = (
-        b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01'
-        b'\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0'
-        b'\x00\x00\x00\x03\x00\x01\x00\x05\xfe\xd4\x00\x00\x00\x00IEND\xaeB`\x82'
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0"
+        b"\x00\x00\x00\x03\x00\x01\x00\x05\xfe\xd4\x00\x00\x00\x00IEND\xaeB`\x82"
     )
     return BytesIO(png_data)
 
@@ -137,9 +137,7 @@ class TestFileValidator:
     def test_validate_valid_file(self, sample_file):
         """Test validation passes for valid file."""
         validator = FileValidator(max_size=1024 * 1024)
-        is_valid, error, content_type = validator.validate(
-            sample_file, "test.txt"
-        )
+        is_valid, error, content_type = validator.validate(sample_file, "test.txt")
 
         assert is_valid is True
         assert error is None
@@ -168,9 +166,7 @@ class TestFileValidator:
         """Test validation with allowed types."""
         validator = FileValidator(allowed_types=["image/*"])
 
-        is_valid, error, content_type = validator.validate(
-            sample_image, "image.png"
-        )
+        is_valid, error, content_type = validator.validate(sample_image, "image.png")
 
         assert is_valid is True
         assert "image" in content_type

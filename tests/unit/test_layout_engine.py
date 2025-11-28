@@ -1,7 +1,5 @@
 """Tests for UI semantic layout engine."""
 
-import pytest
-
 from dazzle.core.ir import (
     AttentionSignalKind,
     LayoutArchetype,
@@ -140,13 +138,9 @@ class TestArchetypeSelection:
             )
             for i in range(6)
         ]
-        workspace = WorkspaceLayout(
-            id="test", label="Test", attention_signals=signals
-        )
+        workspace = WorkspaceLayout(id="test", label="Test", attention_signals=signals)
 
-        persona = PersonaLayout(
-            id="expert", label="Expert", proficiency_level="expert"
-        )
+        persona = PersonaLayout(id="expert", label="Expert", proficiency_level="expert")
 
         archetype = select_archetype(workspace, persona)
         # With 6 diverse signals and expert persona → COMMAND_CENTER
@@ -301,9 +295,7 @@ class TestSurfaceAllocation:
         )
 
         # Run allocation multiple times
-        results = [
-            assign_signals_to_surfaces(workspace, FOCUS_METRIC) for _ in range(10)
-        ]
+        results = [assign_signals_to_surfaces(workspace, FOCUS_METRIC) for _ in range(10)]
 
         # All results should be identical
         for i in range(1, len(results)):
@@ -312,7 +304,7 @@ class TestSurfaceAllocation:
 
             assert len(surfaces1) == len(surfaces2)
             assert over1 == over2
-            for s1, s2 in zip(surfaces1, surfaces2):
+            for s1, s2 in zip(surfaces1, surfaces2, strict=True):
                 assert s1.assigned_signals == s2.assigned_signals
 
 
@@ -348,9 +340,7 @@ class TestPersonaAdjustment:
 
     def test_adjust_attention_budget_expert(self):
         """Test that expert persona increases budget."""
-        workspace = WorkspaceLayout(
-            id="test", label="Test", attention_budget=1.0
-        )
+        workspace = WorkspaceLayout(id="test", label="Test", attention_budget=1.0)
 
         persona = PersonaLayout(
             id="expert",
@@ -366,13 +356,9 @@ class TestPersonaAdjustment:
 
     def test_adjust_attention_budget_novice(self):
         """Test that novice persona decreases budget."""
-        workspace = WorkspaceLayout(
-            id="test", label="Test", attention_budget=1.0
-        )
+        workspace = WorkspaceLayout(id="test", label="Test", attention_budget=1.0)
 
-        persona = PersonaLayout(
-            id="novice", label="Novice", proficiency_level="novice"
-        )
+        persona = PersonaLayout(id="novice", label="Novice", proficiency_level="novice")
 
         adjusted = adjust_attention_for_persona(workspace, persona)
 
@@ -548,7 +534,7 @@ class TestLayoutPlanBuilder:
             assert len(plans[0].surfaces) == len(plans[i].surfaces)
             assert plans[0].over_budget_signals == plans[i].over_budget_signals
             # Check surface assignments match
-            for s1, s2 in zip(plans[0].surfaces, plans[i].surfaces):
+            for s1, s2 in zip(plans[0].surfaces, plans[i].surfaces, strict=True):
                 assert s1.assigned_signals == s2.assigned_signals
 
 

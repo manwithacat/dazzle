@@ -53,12 +53,8 @@ class AppShellLayout(BaseModel):
     kind: Literal["appShell"] = "appShell"
     sidebar: str = Field(description="Component name for sidebar")
     main: str = Field(description="Component name for main content")
-    header: str | None = Field(
-        default=None, description="Component name for header (optional)"
-    )
-    footer: str | None = Field(
-        default=None, description="Component name for footer (optional)"
-    )
+    header: str | None = Field(default=None, description="Component name for header (optional)")
+    footer: str | None = Field(default=None, description="Component name for footer (optional)")
 
     class Config:
         frozen = True
@@ -68,18 +64,14 @@ class CustomLayout(BaseModel):
     """Custom layout with named regions."""
 
     kind: Literal["custom"] = "custom"
-    regions: dict[str, str] = Field(
-        description="Map of region name to component name"
-    )
+    regions: dict[str, str] = Field(description="Map of region name to component name")
 
     class Config:
         frozen = True
 
 
 # Union type for all layouts
-LayoutSpec = (
-    SingleColumnLayout | TwoColumnWithHeaderLayout | AppShellLayout | CustomLayout
-)
+LayoutSpec = SingleColumnLayout | TwoColumnWithHeaderLayout | AppShellLayout | CustomLayout
 
 
 # =============================================================================
@@ -99,9 +91,7 @@ class RouteSpec(BaseModel):
     path: str = Field(description="Route path (supports :params)")
     component: str = Field(description="Component name to render")
     title: str | None = Field(default=None, description="Page title")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True
@@ -137,19 +127,11 @@ class WorkspaceSpec(BaseModel):
     name: str = Field(description="Workspace name")
     label: str | None = Field(default=None, description="Human-readable label")
     description: str | None = Field(default=None, description="Workspace description")
-    persona: str | None = Field(
-        default=None, description="Target persona (for persona-aware UIs)"
-    )
+    persona: str | None = Field(default=None, description="Target persona (for persona-aware UIs)")
     layout: LayoutSpec = Field(description="Layout specification")
-    routes: list[RouteSpec] = Field(
-        default_factory=list, description="Route definitions"
-    )
-    state: list[Any] = Field(
-        default_factory=list, description="Workspace-level state declarations"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    routes: list[RouteSpec] = Field(default_factory=list, description="Route definitions")
+    state: list[Any] = Field(default_factory=list, description="Workspace-level state declarations")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

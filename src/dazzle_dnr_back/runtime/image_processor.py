@@ -24,6 +24,7 @@ class ImageProcessor:
         """Check if Pillow is available."""
         try:
             from PIL import Image  # noqa: F401
+
             return True
         except ImportError:
             return False
@@ -59,8 +60,7 @@ class ImageProcessor:
             from PIL import Image
         except ImportError:
             raise ImageProcessingError(
-                "Pillow is required for image processing. "
-                "Install with: pip install Pillow"
+                "Pillow is required for image processing. Install with: pip install Pillow"
             )
 
         try:
@@ -125,8 +125,7 @@ class ImageProcessor:
             from PIL import Image
         except ImportError:
             raise ImageProcessingError(
-                "Pillow is required for image processing. "
-                "Install with: pip install Pillow"
+                "Pillow is required for image processing. Install with: pip install Pillow"
             )
 
         try:
@@ -178,9 +177,7 @@ class ImageProcessor:
         try:
             from PIL import Image
         except ImportError:
-            raise ImageProcessingError(
-                "Pillow is required for image processing"
-            )
+            raise ImageProcessingError("Pillow is required for image processing")
 
         try:
             img = Image.open(BytesIO(image_data))
@@ -261,9 +258,7 @@ class ImageProcessor:
         try:
             from PIL import Image
         except ImportError:
-            raise ImageProcessingError(
-                "Pillow is required for image processing"
-            )
+            raise ImageProcessingError("Pillow is required for image processing")
 
         try:
             img = Image.open(BytesIO(image_data))
@@ -314,9 +309,7 @@ class ImageProcessor:
         try:
             from PIL import Image
         except ImportError:
-            raise ImageProcessingError(
-                "Pillow is required for image processing"
-            )
+            raise ImageProcessingError("Pillow is required for image processing")
 
         try:
             img = Image.open(BytesIO(image_data))

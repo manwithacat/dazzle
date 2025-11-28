@@ -289,26 +289,33 @@ def _list_dnr_entities() -> str:
     """List all entities in BackendSpec."""
     spec = get_backend_spec()
     if not spec:
-        return json.dumps({
-            "status": "no_spec",
-            "message": "No BackendSpec loaded. Use AppSpec converter or load a spec first.",
-            "entities": [],
-        })
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Use AppSpec converter or load a spec first.",
+                "entities": [],
+            }
+        )
 
     entities = spec.get("entities", [])
     summaries = []
     for entity in entities:
-        summaries.append({
-            "name": entity.get("name"),
-            "label": entity.get("label"),
-            "field_count": len(entity.get("fields", [])),
-            "relation_count": len(entity.get("relations", [])),
-        })
+        summaries.append(
+            {
+                "name": entity.get("name"),
+                "label": entity.get("label"),
+                "field_count": len(entity.get("fields", [])),
+                "relation_count": len(entity.get("relations", [])),
+            }
+        )
 
-    return json.dumps({
-        "count": len(summaries),
-        "entities": summaries,
-    }, indent=2)
+    return json.dumps(
+        {
+            "count": len(summaries),
+            "entities": summaries,
+        },
+        indent=2,
+    )
 
 
 def _get_dnr_entity(args: dict[str, Any]) -> str:
@@ -325,10 +332,12 @@ def _get_dnr_entity(args: dict[str, Any]) -> str:
     entity = next((e for e in entities if e.get("name") == name), None)
 
     if not entity:
-        return json.dumps({
-            "error": f"Entity '{name}' not found",
-            "available": [e.get("name") for e in entities],
-        })
+        return json.dumps(
+            {
+                "error": f"Entity '{name}' not found",
+                "available": [e.get("name") for e in entities],
+            }
+        )
 
     return json.dumps(entity, indent=2)
 
@@ -339,37 +348,43 @@ def _list_backend_services(args: dict[str, Any]) -> str:
 
     spec = get_backend_spec()
     if not spec:
-        return json.dumps({
-            "status": "no_spec",
-            "message": "No BackendSpec loaded",
-            "services": [],
-        })
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded",
+                "services": [],
+            }
+        )
 
     services = spec.get("services", [])
 
     # Apply filter if provided
     if entity_filter:
         services = [
-            s for s in services
-            if s.get("domain_operation", {}).get("entity") == entity_filter
+            s for s in services if s.get("domain_operation", {}).get("entity") == entity_filter
         ]
 
     summaries = []
     for svc in services:
         domain_op = svc.get("domain_operation", {})
-        summaries.append({
-            "name": svc.get("name"),
-            "entity": domain_op.get("entity"),
-            "kind": domain_op.get("kind"),
-            "input_summary": _summarize_schema(svc.get("inputs", {})),
-            "output_summary": _summarize_schema(svc.get("outputs", {})),
-        })
+        summaries.append(
+            {
+                "name": svc.get("name"),
+                "entity": domain_op.get("entity"),
+                "kind": domain_op.get("kind"),
+                "input_summary": _summarize_schema(svc.get("inputs", {})),
+                "output_summary": _summarize_schema(svc.get("outputs", {})),
+            }
+        )
 
-    return json.dumps({
-        "count": len(summaries),
-        "filter": entity_filter,
-        "services": summaries,
-    }, indent=2)
+    return json.dumps(
+        {
+            "count": len(summaries),
+            "filter": entity_filter,
+            "services": summaries,
+        },
+        indent=2,
+    )
 
 
 def _get_backend_service_spec(args: dict[str, Any]) -> str:
@@ -386,10 +401,12 @@ def _get_backend_service_spec(args: dict[str, Any]) -> str:
     service = next((s for s in services if s.get("name") == name), None)
 
     if not service:
-        return json.dumps({
-            "error": f"Service '{name}' not found",
-            "available": [s.get("name") for s in services],
-        })
+        return json.dumps(
+            {
+                "error": f"Service '{name}' not found",
+                "available": [s.get("name") for s in services],
+            }
+        )
 
     return json.dumps({"serviceSpec": service}, indent=2)
 
@@ -410,10 +427,22 @@ def _summarize_schema(schema: dict[str, Any]) -> str:
 # Built-in component registry (from DNR-Components-v1.md)
 PRIMITIVE_COMPONENTS = [
     {"name": "Page", "category": "primitive", "description": "Top-level container for a screen"},
-    {"name": "LayoutShell", "category": "primitive", "description": "Generic shell arranging header/sidebar/content"},
+    {
+        "name": "LayoutShell",
+        "category": "primitive",
+        "description": "Generic shell arranging header/sidebar/content",
+    },
     {"name": "Card", "category": "primitive", "description": "Groups related content visually"},
-    {"name": "DataTable", "category": "primitive", "description": "Feature-rich table for tabular data"},
-    {"name": "SimpleTable", "category": "primitive", "description": "Minimal table for static layouts"},
+    {
+        "name": "DataTable",
+        "category": "primitive",
+        "description": "Feature-rich table for tabular data",
+    },
+    {
+        "name": "SimpleTable",
+        "category": "primitive",
+        "description": "Minimal table for static layouts",
+    },
     {"name": "Form", "category": "primitive", "description": "Container for form fields"},
     {"name": "Button", "category": "primitive", "description": "Primary clickable action control"},
     {"name": "IconButton", "category": "primitive", "description": "Compact icon-only button"},
@@ -422,23 +451,55 @@ PRIMITIVE_COMPONENTS = [
     {"name": "Modal", "category": "primitive", "description": "Centered overlay dialog"},
     {"name": "Drawer", "category": "primitive", "description": "Side panel overlay"},
     {"name": "Toolbar", "category": "primitive", "description": "Row of actions and controls"},
-    {"name": "FilterBar", "category": "primitive", "description": "Quick filters above tables/lists"},
-    {"name": "SearchBox", "category": "primitive", "description": "Single search input with debounce"},
+    {
+        "name": "FilterBar",
+        "category": "primitive",
+        "description": "Quick filters above tables/lists",
+    },
+    {
+        "name": "SearchBox",
+        "category": "primitive",
+        "description": "Single search input with debounce",
+    },
     {"name": "MetricTile", "category": "primitive", "description": "Simple KPI metric display"},
     {"name": "MetricRow", "category": "primitive", "description": "Row of KPI metrics"},
     {"name": "SideNav", "category": "primitive", "description": "Sidebar navigation"},
     {"name": "TopNav", "category": "primitive", "description": "Top navigation bar"},
-    {"name": "Breadcrumbs", "category": "primitive", "description": "Hierarchical navigation indicator"},
+    {
+        "name": "Breadcrumbs",
+        "category": "primitive",
+        "description": "Hierarchical navigation indicator",
+    },
 ]
 
 PATTERN_COMPONENTS = [
     {"name": "FilterableTable", "category": "pattern", "description": "DataTable with FilterBar"},
-    {"name": "SearchableList", "category": "pattern", "description": "List with SearchBox and optional FilterBar"},
-    {"name": "MasterDetailLayout", "category": "pattern", "description": "Master list + detail panel layout"},
+    {
+        "name": "SearchableList",
+        "category": "pattern",
+        "description": "List with SearchBox and optional FilterBar",
+    },
+    {
+        "name": "MasterDetailLayout",
+        "category": "pattern",
+        "description": "Master list + detail panel layout",
+    },
     {"name": "WizardForm", "category": "pattern", "description": "Multi-step form workflow"},
-    {"name": "CRUDPage", "category": "pattern", "description": "Complete CRUD interface for an entity"},
-    {"name": "MetricsDashboard", "category": "pattern", "description": "Overview page with metrics and charts"},
-    {"name": "SettingsFormPage", "category": "pattern", "description": "Single-page settings panel"},
+    {
+        "name": "CRUDPage",
+        "category": "pattern",
+        "description": "Complete CRUD interface for an entity",
+    },
+    {
+        "name": "MetricsDashboard",
+        "category": "pattern",
+        "description": "Overview page with metrics and charts",
+    },
+    {
+        "name": "SettingsFormPage",
+        "category": "pattern",
+        "description": "Single-page settings panel",
+    },
 ]
 
 LAYOUT_TYPES = [
@@ -491,10 +552,13 @@ def _list_dnr_components(args: dict[str, Any]) -> str:
         if kind in ("all", "custom"):
             components = components + custom_components
 
-    return json.dumps({
-        "count": len(components),
-        "components": components,
-    }, indent=2)
+    return json.dumps(
+        {
+            "count": len(components),
+            "components": components,
+        },
+        indent=2,
+    )
 
 
 def _get_dnr_component_spec(args: dict[str, Any]) -> str:
@@ -506,13 +570,16 @@ def _get_dnr_component_spec(args: dict[str, Any]) -> str:
     # Check built-in components
     all_builtins = {c["name"]: c for c in PRIMITIVE_COMPONENTS + PATTERN_COMPONENTS}
     if name in all_builtins:
-        return json.dumps({
-            "componentSpec": {
-                **all_builtins[name],
-                "props_schema": {"fields": []},  # Would be defined in component implementation
-                "view": None,  # Built-in components have native implementations
-            }
-        }, indent=2)
+        return json.dumps(
+            {
+                "componentSpec": {
+                    **all_builtins[name],
+                    "props_schema": {"fields": []},  # Would be defined in component implementation
+                    "view": None,  # Built-in components have native implementations
+                }
+            },
+            indent=2,
+        )
 
     # Check custom components in UISpec
     ui_spec = get_ui_spec()
@@ -522,18 +589,23 @@ def _get_dnr_component_spec(args: dict[str, Any]) -> str:
         if component:
             return json.dumps({"componentSpec": component}, indent=2)
 
-    return json.dumps({
-        "error": f"Component '{name}' not found",
-        "available_primitives": [c["name"] for c in PRIMITIVE_COMPONENTS],
-        "available_patterns": [c["name"] for c in PATTERN_COMPONENTS],
-    })
+    return json.dumps(
+        {
+            "error": f"Component '{name}' not found",
+            "available_primitives": [c["name"] for c in PRIMITIVE_COMPONENTS],
+            "available_patterns": [c["name"] for c in PATTERN_COMPONENTS],
+        }
+    )
 
 
 def _list_workspace_layouts() -> str:
     """List available workspace layouts."""
-    return json.dumps({
-        "layouts": LAYOUT_TYPES,
-    }, indent=2)
+    return json.dumps(
+        {
+            "layouts": LAYOUT_TYPES,
+        },
+        indent=2,
+    )
 
 
 def _create_uispec_component(args: dict[str, Any]) -> str:
@@ -557,10 +629,12 @@ def _create_uispec_component(args: dict[str, Any]) -> str:
     all_component_names = {c["name"] for c in PRIMITIVE_COMPONENTS + PATTERN_COMPONENTS}
     invalid_atoms = [a for a in atoms if a not in all_component_names]
     if invalid_atoms:
-        return json.dumps({
-            "error": f"Unknown component atoms: {invalid_atoms}",
-            "available": list(all_component_names),
-        })
+        return json.dumps(
+            {
+                "error": f"Unknown component atoms: {invalid_atoms}",
+                "available": list(all_component_names),
+            }
+        )
 
     # Create component spec
     component_spec = {
@@ -572,10 +646,9 @@ def _create_uispec_component(args: dict[str, Any]) -> str:
         "view": {
             "kind": "element",
             "as": atoms[0] if atoms else "Card",
-            "children": [
-                {"kind": "element", "as": atom}
-                for atom in atoms[1:]
-            ] if len(atoms) > 1 else [],
+            "children": [{"kind": "element", "as": atom} for atom in atoms[1:]]
+            if len(atoms) > 1
+            else [],
         },
         "state": [],
         "actions": [],
@@ -588,11 +661,14 @@ def _create_uispec_component(args: dict[str, Any]) -> str:
 
     _ui_spec["components"].append(component_spec)
 
-    return json.dumps({
-        "status": "created",
-        "componentSpec": component_spec,
-        "location": f"ui_spec.components[{len(_ui_spec['components']) - 1}]",
-    }, indent=2)
+    return json.dumps(
+        {
+            "status": "created",
+            "componentSpec": component_spec,
+            "location": f"ui_spec.components[{len(_ui_spec['components']) - 1}]",
+        },
+        indent=2,
+    )
 
 
 def _patch_uispec_component(args: dict[str, Any]) -> str:
@@ -610,16 +686,15 @@ def _patch_uispec_component(args: dict[str, Any]) -> str:
         return json.dumps({"error": "No UISpec loaded"})
 
     components = ui_spec.get("components", [])
-    component_idx = next(
-        (i for i, c in enumerate(components) if c.get("name") == name),
-        None
-    )
+    component_idx = next((i for i, c in enumerate(components) if c.get("name") == name), None)
 
     if component_idx is None:
-        return json.dumps({
-            "error": f"Component '{name}' not found",
-            "available": [c.get("name") for c in components],
-        })
+        return json.dumps(
+            {
+                "error": f"Component '{name}' not found",
+                "available": [c.get("name") for c in components],
+            }
+        )
 
     # Apply patches (simplified - real implementation would use jsonpatch)
     component = components[component_idx]
@@ -636,10 +711,13 @@ def _patch_uispec_component(args: dict[str, Any]) -> str:
             component.pop(path[0], None)
         # More complex path handling would be needed for nested patches
 
-    return json.dumps({
-        "status": "patched",
-        "componentSpec": component,
-    }, indent=2)
+    return json.dumps(
+        {
+            "status": "patched",
+            "componentSpec": component,
+        },
+        indent=2,
+    )
 
 
 def _compose_workspace(args: dict[str, Any]) -> str:
@@ -660,10 +738,12 @@ def _compose_workspace(args: dict[str, Any]) -> str:
     # Validate layout kind
     valid_layouts = {lt["kind"] for lt in LAYOUT_TYPES}
     if layout_kind not in valid_layouts:
-        return json.dumps({
-            "error": f"Invalid layout_kind: {layout_kind}",
-            "valid_layouts": list(valid_layouts),
-        })
+        return json.dumps(
+            {
+                "error": f"Invalid layout_kind: {layout_kind}",
+                "valid_layouts": list(valid_layouts),
+            }
+        )
 
     # Build layout spec
     if layout_kind == "singleColumn":
@@ -702,8 +782,7 @@ def _compose_workspace(args: dict[str, Any]) -> str:
     # Check if workspace already exists
     workspaces = _ui_spec.get("workspaces", [])
     existing_idx = next(
-        (i for i, w in enumerate(workspaces) if w.get("name") == workspace_name),
-        None
+        (i for i, w in enumerate(workspaces) if w.get("name") == workspace_name), None
     )
 
     if existing_idx is not None:
@@ -715,10 +794,13 @@ def _compose_workspace(args: dict[str, Any]) -> str:
 
     _ui_spec["workspaces"] = workspaces
 
-    return json.dumps({
-        "status": status,
-        "workspaceSpec": workspace_spec,
-    }, indent=2)
+    return json.dumps(
+        {
+            "status": status,
+            "workspaceSpec": workspace_spec,
+        },
+        indent=2,
+    )
 
 
 # =============================================================================

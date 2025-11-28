@@ -353,11 +353,13 @@ class TestQueryBuilder:
     def test_add_filters_dict(self):
         """Test adding multiple filters from dict."""
         builder = QueryBuilder(table_name="Task")
-        builder.add_filters({
-            "status": "active",
-            "priority__gte": 5,
-            "title__contains": "bug",
-        })
+        builder.add_filters(
+            {
+                "status": "active",
+                "priority__gte": 5,
+                "title__contains": "bug",
+            }
+        )
 
         assert len(builder.conditions) == 3
 

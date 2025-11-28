@@ -124,7 +124,7 @@ class TestMarkdownProcessor:
     def test_sanitize_javascript_urls(self):
         """Test that javascript: URLs are blocked."""
         processor = MarkdownProcessor(sanitize=True)
-        md = '[Click](javascript:alert(1))'
+        md = "[Click](javascript:alert(1))"
         html = processor.render_html(md)
 
         assert "javascript:" not in html

@@ -90,9 +90,7 @@ class ThemeTokens(BaseModel):
     shadows: dict[str, str] = Field(
         default_factory=dict, description="Shadow tokens (name -> CSS shadow)"
     )
-    custom: dict[str, Any] = Field(
-        default_factory=dict, description="Custom tokens"
-    )
+    custom: dict[str, Any] = Field(default_factory=dict, description="Custom tokens")
 
     class Config:
         frozen = True
@@ -124,9 +122,7 @@ class VariantSpec(BaseModel):
 
     name: str = Field(description="Variant name (e.g., 'dark', 'compact')")
     description: str | None = Field(default=None, description="Variant description")
-    applies_to: str = Field(
-        default="*", description="Selector or '*' for global application"
-    )
+    applies_to: str = Field(default="*", description="Selector or '*' for global application")
     tokens: ThemeTokens = Field(description="Token overrides for this variant")
 
     class Config:
@@ -170,12 +166,8 @@ class ThemeSpec(BaseModel):
     name: str = Field(description="Theme name")
     description: str | None = Field(default=None, description="Theme description")
     tokens: ThemeTokens = Field(description="Base design tokens")
-    variants: list[VariantSpec] = Field(
-        default_factory=list, description="Theme variants"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    variants: list[VariantSpec] = Field(default_factory=list, description="Theme variants")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

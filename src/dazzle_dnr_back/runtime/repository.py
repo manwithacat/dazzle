@@ -258,8 +258,7 @@ class DatabaseManager:
         """Check if a table exists."""
         with self.connection() as conn:
             cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-                (table_name,)
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
             )
             return cursor.fetchone() is not None
 
@@ -306,25 +305,17 @@ class SQLiteRepository(Generic[T]):
         self._relation_loader = relation_loader
 
         # Build field type lookup for conversions
-        self._field_types: dict[str, FieldType] = {
-            f.name: f.type for f in entity_spec.fields
-        }
+        self._field_types: dict[str, FieldType] = {f.name: f.type for f in entity_spec.fields}
 
     def _model_to_row(self, model: T) -> dict[str, Any]:
         """Convert Pydantic model to row dict for SQLite."""
         data = model.model_dump()
-        return {
-            k: _python_to_sqlite(v, self._field_types.get(k))
-            for k, v in data.items()
-        }
+        return {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
 
     def _row_to_model(self, row: sqlite3.Row) -> T:
         """Convert SQLite row to Pydantic model."""
         data = dict(row)
-        converted = {
-            k: _sqlite_to_python(v, self._field_types.get(k))
-            for k, v in data.items()
-        }
+        converted = {k: _sqlite_to_python(v, self._field_types.get(k)) for k, v in data.items()}
         return self.model_class(**converted)
 
     async def create(self, data: dict[str, Any]) -> T:
@@ -338,10 +329,7 @@ class SQLiteRepository(Generic[T]):
             Created entity
         """
         # Convert values for SQLite
-        sqlite_data = {
-            k: _python_to_sqlite(v, self._field_types.get(k))
-            for k, v in data.items()
-        }
+        sqlite_data = {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
 
         columns = ", ".join(sqlite_data.keys())
         placeholders = ", ".join("?" * len(sqlite_data))
@@ -410,8 +398,7 @@ class SQLiteRepository(Generic[T]):
 
         # Convert values for SQLite
         sqlite_data = {
-            k: _python_to_sqlite(v, self._field_types.get(k))
-            for k, v in update_data.items()
+            k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in update_data.items()
         }
 
         set_clause = ", ".join(f"{k} = ?" for k in sqlite_data.keys())

@@ -52,20 +52,14 @@ class BackendSpec(BaseModel):
     description: str | None = Field(default=None, description="Backend description")
 
     # Core specifications
-    entities: list[EntitySpec] = Field(
-        default_factory=list, description="Entity specifications"
-    )
-    services: list[ServiceSpec] = Field(
-        default_factory=list, description="Service specifications"
-    )
+    entities: list[EntitySpec] = Field(default_factory=list, description="Entity specifications")
+    services: list[ServiceSpec] = Field(default_factory=list, description="Service specifications")
     endpoints: list[EndpointSpec] = Field(
         default_factory=list, description="Endpoint specifications"
     )
 
     # Authorization
-    roles: list[RoleSpec] = Field(
-        default_factory=list, description="Role definitions"
-    )
+    roles: list[RoleSpec] = Field(default_factory=list, description="Role definitions")
     default_auth: AuthRuleSpec | None = Field(
         default=None, description="Default auth rule for all endpoints"
     )
@@ -76,9 +70,7 @@ class BackendSpec(BaseModel):
     )
 
     # Additional metadata
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True
@@ -121,11 +113,7 @@ class BackendSpec(BaseModel):
 
     def get_services_for_entity(self, entity_name: str) -> list[ServiceSpec]:
         """Get all services that operate on a given entity."""
-        return [
-            svc
-            for svc in self.services
-            if svc.domain_operation.entity == entity_name
-        ]
+        return [svc for svc in self.services if svc.domain_operation.entity == entity_name]
 
     # =========================================================================
     # Validation

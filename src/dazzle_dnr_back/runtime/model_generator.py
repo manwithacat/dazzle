@@ -133,7 +133,10 @@ def generate_entity_model(
     # Always add an id field if not present
     has_id = any(f.name == "id" for f in entity.fields)
     if not has_id:
-        field_definitions["id"] = (UUID | None, Field(default=None, description="Unique identifier"))
+        field_definitions["id"] = (
+            UUID | None,
+            Field(default=None, description="Unique identifier"),
+        )
 
     # Add fields from spec
     for field in entity.fields:

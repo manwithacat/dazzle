@@ -617,8 +617,12 @@ def inspect(
 @app.command(name="layout-plan")
 def layout_plan(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    workspace: str | None = typer.Option(None, "--workspace", "-w", help="Specific workspace to show (shows all if not specified)"),
-    persona: str | None = typer.Option(None, "--persona", "-p", help="Persona to generate plan for"),
+    workspace: str | None = typer.Option(
+        None, "--workspace", "-w", help="Specific workspace to show (shows all if not specified)"
+    ),
+    persona: str | None = typer.Option(
+        None, "--persona", "-p", help="Persona to generate plan for"
+    ),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """
@@ -753,6 +757,7 @@ def layout_plan(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         import traceback
+
         traceback.print_exc()
         raise typer.Exit(code=1)
 
@@ -1017,6 +1022,7 @@ def build(
         raise typer.Exit(code=1)
     except Exception as e:
         import traceback
+
         typer.echo(f"Unexpected error during build: {e}", err=True)
         traceback.print_exc()
         raise typer.Exit(code=1)
@@ -3068,22 +3074,22 @@ def mcp_check() -> None:
     typer.echo(f"Status:        {status['status']}")
     typer.echo(f"Registered:    {'✓ Yes' if status['registered'] else '✗ No'}")
 
-    if status['config_path']:
+    if status["config_path"]:
         typer.echo(f"Config:        {status['config_path']}")
 
-    if status['server_command']:
+    if status["server_command"]:
         typer.echo(f"Command:       {status['server_command']}")
 
-    if status['tools']:
+    if status["tools"]:
         typer.echo("")
         typer.echo(f"Available Tools ({len(status['tools'])}):")
-        for tool in sorted(status['tools']):
+        for tool in sorted(status["tools"]):
             typer.echo(f"  • {tool}")
-    elif status['registered']:
+    elif status["registered"]:
         typer.echo("")
         typer.echo("Tools: Unable to enumerate (MCP SDK not available)")
 
-    if not status['registered']:
+    if not status["registered"]:
         typer.echo("")
         typer.echo("💡 To register the MCP server, run: dazzle mcp-setup")
         raise typer.Exit(code=1)
@@ -3476,10 +3482,18 @@ def dnr_info() -> None:
     except ImportError:
         pass
 
-    typer.echo(f"DNR Backend:   {'✓' if dnr_back_available else '✗'} {'installed' if dnr_back_available else 'not installed'}")
-    typer.echo(f"DNR UI:        {'✓' if dnr_ui_available else '✗'} {'installed' if dnr_ui_available else 'not installed'}")
-    typer.echo(f"FastAPI:       {'✓' if fastapi_available else '✗'} {'installed' if fastapi_available else 'not installed'}")
-    typer.echo(f"Uvicorn:       {'✓' if uvicorn_available else '✗'} {'installed' if uvicorn_available else 'not installed'}")
+    typer.echo(
+        f"DNR Backend:   {'✓' if dnr_back_available else '✗'} {'installed' if dnr_back_available else 'not installed'}"
+    )
+    typer.echo(
+        f"DNR UI:        {'✓' if dnr_ui_available else '✗'} {'installed' if dnr_ui_available else 'not installed'}"
+    )
+    typer.echo(
+        f"FastAPI:       {'✓' if fastapi_available else '✗'} {'installed' if fastapi_available else 'not installed'}"
+    )
+    typer.echo(
+        f"Uvicorn:       {'✓' if uvicorn_available else '✗'} {'installed' if uvicorn_available else 'not installed'}"
+    )
 
     typer.echo("\nAvailable Commands:")
     if dnr_ui_available:

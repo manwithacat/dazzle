@@ -109,19 +109,11 @@ class FieldType(BaseModel):
     scalar_type: ScalarType | None = Field(
         default=None, description="Scalar type (for kind=scalar)"
     )
-    max_length: int | None = Field(
-        default=None, description="Max length for str types"
-    )
-    precision: int | None = Field(
-        default=None, description="Precision for decimal types"
-    )
+    max_length: int | None = Field(default=None, description="Max length for str types")
+    precision: int | None = Field(default=None, description="Precision for decimal types")
     scale: int | None = Field(default=None, description="Scale for decimal types")
-    enum_values: list[str] | None = Field(
-        default=None, description="Allowed values for enum types"
-    )
-    ref_entity: str | None = Field(
-        default=None, description="Referenced entity name for ref types"
-    )
+    enum_values: list[str] | None = Field(default=None, description="Allowed values for enum types")
+    ref_entity: str | None = Field(default=None, description="Referenced entity name for ref types")
     # File field configuration (for FILE/IMAGE types)
     file_config: FileFieldConfig | None = Field(
         default=None, description="File upload configuration"
@@ -140,9 +132,7 @@ class FieldType(BaseModel):
         if v:
             for val in v:
                 if not val.replace("_", "").replace("-", "").isalnum():
-                    raise ValueError(
-                        f"Enum value '{val}' must be alphanumeric (with _ or -)"
-                    )
+                    raise ValueError(f"Enum value '{val}' must be alphanumeric (with _ or -)")
         return v
 
 
@@ -181,12 +171,8 @@ class ValidatorSpec(BaseModel):
 
     kind: ValidatorKind = Field(description="Validator type")
     value: Any | None = Field(default=None, description="Validator value (e.g., min=0)")
-    expr: str | None = Field(
-        default=None, description="Custom expression (for kind=custom)"
-    )
-    message: str | None = Field(
-        default=None, description="Custom error message"
-    )
+    expr: str | None = Field(default=None, description="Custom expression (for kind=custom)")
+    message: str | None = Field(default=None, description="Custom error message")
 
     model_config = ConfigDict(frozen=True)
 
@@ -215,9 +201,7 @@ class FieldSpec(BaseModel):
     type: FieldType = Field(description="Field type specification")
     required: bool = Field(default=False, description="Is this field required?")
     default: Any | None = Field(default=None, description="Default value")
-    validators: list[ValidatorSpec] = Field(
-        default_factory=list, description="Validation rules"
-    )
+    validators: list[ValidatorSpec] = Field(default_factory=list, description="Validation rules")
     indexed: bool = Field(default=False, description="Create database index?")
     unique: bool = Field(default=False, description="Values must be unique?")
 
@@ -271,15 +255,11 @@ class RelationSpec(BaseModel):
     from_entity: str = Field(description="Source entity")
     to_entity: str = Field(description="Target entity")
     kind: RelationKind = Field(description="Relationship type")
-    backref: str | None = Field(
-        default=None, description="Back-reference name on target entity"
-    )
+    backref: str | None = Field(default=None, description="Back-reference name on target entity")
     on_delete: OnDeleteAction = Field(
         default=OnDeleteAction.RESTRICT, description="Action on delete"
     )
-    required: bool = Field(
-        default=False, description="Is this relation required?"
-    )
+    required: bool = Field(default=False, description="Is this relation required?")
 
     model_config = ConfigDict(frozen=True)
 
@@ -312,15 +292,9 @@ class EntitySpec(BaseModel):
     name: str = Field(description="Entity name")
     label: str | None = Field(default=None, description="Human-readable label")
     description: str | None = Field(default=None, description="Entity description")
-    fields: list[FieldSpec] = Field(
-        default_factory=list, description="Entity fields"
-    )
-    relations: list[RelationSpec] = Field(
-        default_factory=list, description="Entity relationships"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    fields: list[FieldSpec] = Field(default_factory=list, description="Entity fields")
+    relations: list[RelationSpec] = Field(default_factory=list, description="Entity relationships")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = ConfigDict(frozen=True)
 

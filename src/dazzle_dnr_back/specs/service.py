@@ -43,9 +43,7 @@ class SchemaSpec(BaseModel):
         )
     """
 
-    fields: list[SchemaFieldSpec] = Field(
-        default_factory=list, description="Schema fields"
-    )
+    fields: list[SchemaFieldSpec] = Field(default_factory=list, description="Schema fields")
     description: str | None = Field(default=None, description="Schema description")
 
     class Config:
@@ -88,12 +86,8 @@ class DomainOperation(BaseModel):
     """
 
     kind: OperationKind = Field(description="Operation type")
-    entity: str | None = Field(
-        default=None, description="Target entity (for CRUD operations)"
-    )
-    name: str | None = Field(
-        default=None, description="Operation name (for custom operations)"
-    )
+    entity: str | None = Field(default=None, description="Target entity (for CRUD operations)")
+    name: str | None = Field(default=None, description="Operation name (for custom operations)")
     description: str | None = Field(default=None, description="Operation description")
 
     class Config:
@@ -127,9 +121,7 @@ class EffectSpec(BaseModel):
     """
 
     kind: EffectKind = Field(description="Effect type")
-    config: dict[str, Any] = Field(
-        default_factory=dict, description="Effect configuration"
-    )
+    config: dict[str, Any] = Field(default_factory=dict, description="Effect configuration")
     description: str | None = Field(default=None, description="Effect description")
 
     class Config:
@@ -166,9 +158,7 @@ class BusinessRuleSpec(BaseModel):
 
     kind: RuleKind = Field(description="Rule type")
     expr: str = Field(description="Rule expression (evaluated at runtime)")
-    message: str | None = Field(
-        default=None, description="Error message if rule fails"
-    )
+    message: str | None = Field(default=None, description="Error message if rule fails")
     description: str | None = Field(default=None, description="Rule description")
 
     class Config:
@@ -205,22 +195,14 @@ class ServiceSpec(BaseModel):
 
     name: str = Field(description="Service name")
     description: str | None = Field(default=None, description="Service description")
-    inputs: SchemaSpec = Field(
-        default_factory=SchemaSpec, description="Input schema"
-    )
-    outputs: SchemaSpec = Field(
-        default_factory=SchemaSpec, description="Output schema"
-    )
+    inputs: SchemaSpec = Field(default_factory=SchemaSpec, description="Input schema")
+    outputs: SchemaSpec = Field(default_factory=SchemaSpec, description="Output schema")
     domain_operation: DomainOperation = Field(description="Domain operation")
-    effects: list[EffectSpec] = Field(
-        default_factory=list, description="Side effects"
-    )
+    effects: list[EffectSpec] = Field(default_factory=list, description="Side effects")
     constraints: list[BusinessRuleSpec] = Field(
         default_factory=list, description="Business rules and constraints"
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     class Config:
         frozen = True

@@ -310,8 +310,7 @@ class S3StorageBackend(StorageBackend):
             import aioboto3
         except ImportError:
             raise ImportError(
-                "aioboto3 is required for S3 storage. "
-                "Install with: pip install aioboto3"
+                "aioboto3 is required for S3 storage. Install with: pip install aioboto3"
             )
 
         file_id = uuid4()
@@ -689,7 +688,7 @@ class FileValidator:
         if size > self.max_size:
             return (
                 False,
-                f"File exceeds maximum size of {self.max_size // (1024*1024)}MB",
+                f"File exceeds maximum size of {self.max_size // (1024 * 1024)}MB",
                 "",
             )
 
@@ -720,6 +719,7 @@ class FileValidator:
         """Detect MIME type from file content."""
         try:
             import magic
+
             content = file.read(2048)
             file.seek(0)
             return magic.from_buffer(content, mime=True)
@@ -864,9 +864,7 @@ class FileService:
             FileValidationError: If validation fails
         """
         # Validate
-        is_valid, error, detected_type = self.validator.validate(
-            file, filename, content_type
-        )
+        is_valid, error, detected_type = self.validator.validate(file, filename, content_type)
         if not is_valid:
             raise FileValidationError(error or "Validation failed")
 
@@ -875,9 +873,7 @@ class FileService:
 
         # Store file
         file.seek(0)
-        metadata = await self.storage.store(
-            file, filename, content_type, path_prefix
-        )
+        metadata = await self.storage.store(file, filename, content_type, path_prefix)
 
         # Update with entity association
         if entity_name or entity_id or field_name:
@@ -1041,9 +1037,7 @@ def create_s3_file_service(
     Returns:
         Configured FileService
     """
-    storage = S3StorageBackend(
-        bucket, region, endpoint_url, access_key, secret_key, public_url
-    )
+    storage = S3StorageBackend(bucket, region, endpoint_url, access_key, secret_key, public_url)
     metadata_store = FileMetadataStore(db_path)
     validator = FileValidator(max_size, allowed_types)
     return FileService(storage, metadata_store, validator)

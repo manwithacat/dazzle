@@ -374,12 +374,16 @@ class RealtimeRepositoryMixin:
         """Get the event bus, using global if not set."""
         return self._event_bus or get_event_bus()
 
-    async def _emit_created(self, entity_id: str, data: dict[str, Any], user_id: str | None = None) -> None:
+    async def _emit_created(
+        self, entity_id: str, data: dict[str, Any], user_id: str | None = None
+    ) -> None:
         """Emit a created event."""
         bus = self.get_event_bus()
         await bus.emit_created(self.entity_name, entity_id, data, user_id)
 
-    async def _emit_updated(self, entity_id: str, data: dict[str, Any], user_id: str | None = None) -> None:
+    async def _emit_updated(
+        self, entity_id: str, data: dict[str, Any], user_id: str | None = None
+    ) -> None:
         """Emit an updated event."""
         bus = self.get_event_bus()
         await bus.emit_updated(self.entity_name, entity_id, data, user_id)

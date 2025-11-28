@@ -10,14 +10,13 @@ import pytest
 
 from dazzle.mcp.dnr_tools import (
     DNR_TOOL_NAMES,
+    LAYOUT_TYPES,
+    PATTERN_COMPONENTS,
+    PRIMITIVE_COMPONENTS,
+    get_ui_spec,
     handle_dnr_tool,
     set_backend_spec,
     set_ui_spec,
-    get_backend_spec,
-    get_ui_spec,
-    PRIMITIVE_COMPONENTS,
-    PATTERN_COMPONENTS,
-    LAYOUT_TYPES,
 )
 
 
@@ -65,13 +64,24 @@ class TestBackendTools:
 
     def test_list_entities_with_spec(self):
         """Test list_dnr_entities with a spec loaded."""
-        set_backend_spec({
-            "name": "test_backend",
-            "entities": [
-                {"name": "Client", "label": "Client", "fields": [{"name": "id"}, {"name": "name"}]},
-                {"name": "Invoice", "label": "Invoice", "fields": [{"name": "id"}], "relations": [{"name": "client"}]},
-            ],
-        })
+        set_backend_spec(
+            {
+                "name": "test_backend",
+                "entities": [
+                    {
+                        "name": "Client",
+                        "label": "Client",
+                        "fields": [{"name": "id"}, {"name": "name"}],
+                    },
+                    {
+                        "name": "Invoice",
+                        "label": "Invoice",
+                        "fields": [{"name": "id"}],
+                        "relations": [{"name": "client"}],
+                    },
+                ],
+            }
+        )
 
         result = json.loads(handle_dnr_tool("list_dnr_entities", {}))
         assert result["count"] == 2
@@ -81,11 +91,17 @@ class TestBackendTools:
 
     def test_get_entity(self):
         """Test get_dnr_entity."""
-        set_backend_spec({
-            "entities": [
-                {"name": "Client", "label": "Client", "fields": [{"name": "id"}, {"name": "name"}]},
-            ],
-        })
+        set_backend_spec(
+            {
+                "entities": [
+                    {
+                        "name": "Client",
+                        "label": "Client",
+                        "fields": [{"name": "id"}, {"name": "name"}],
+                    },
+                ],
+            }
+        )
 
         result = json.loads(handle_dnr_tool("get_dnr_entity", {"name": "Client"}))
         assert result["name"] == "Client"
@@ -101,16 +117,18 @@ class TestBackendTools:
 
     def test_list_services(self):
         """Test list_backend_services."""
-        set_backend_spec({
-            "services": [
-                {
-                    "name": "create_client",
-                    "domain_operation": {"kind": "create", "entity": "Client"},
-                    "inputs": {"fields": [{"name": "name"}]},
-                    "outputs": {"fields": [{"name": "client"}]},
-                },
-            ],
-        })
+        set_backend_spec(
+            {
+                "services": [
+                    {
+                        "name": "create_client",
+                        "domain_operation": {"kind": "create", "entity": "Client"},
+                        "inputs": {"fields": [{"name": "name"}]},
+                        "outputs": {"fields": [{"name": "client"}]},
+                    },
+                ],
+            }
+        )
 
         result = json.loads(handle_dnr_tool("list_backend_services", {}))
         assert result["count"] == 1
@@ -119,12 +137,24 @@ class TestBackendTools:
 
     def test_list_services_filtered(self):
         """Test list_backend_services with entity filter."""
-        set_backend_spec({
-            "services": [
-                {"name": "create_client", "domain_operation": {"entity": "Client"}, "inputs": {}, "outputs": {}},
-                {"name": "create_invoice", "domain_operation": {"entity": "Invoice"}, "inputs": {}, "outputs": {}},
-            ],
-        })
+        set_backend_spec(
+            {
+                "services": [
+                    {
+                        "name": "create_client",
+                        "domain_operation": {"entity": "Client"},
+                        "inputs": {},
+                        "outputs": {},
+                    },
+                    {
+                        "name": "create_invoice",
+                        "domain_operation": {"entity": "Invoice"},
+                        "inputs": {},
+                        "outputs": {},
+                    },
+                ],
+            }
+        )
 
         result = json.loads(handle_dnr_tool("list_backend_services", {"entity_name": "Client"}))
         assert result["count"] == 1
@@ -189,11 +219,16 @@ class TestUITools:
 
     def test_create_component(self):
         """Test create_uispec_component."""
-        result = json.loads(handle_dnr_tool("create_uispec_component", {
-            "name": "ClientDetails",
-            "description": "Shows client details in a card",
-            "atoms": ["Card", "Form"],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "create_uispec_component",
+                {
+                    "name": "ClientDetails",
+                    "description": "Shows client details in a card",
+                    "atoms": ["Card", "Form"],
+                },
+            )
+        )
 
         assert result["status"] == "created"
         assert result["componentSpec"]["name"] == "ClientDetails"
@@ -207,37 +242,52 @@ class TestUITools:
 
     def test_create_component_invalid_name(self):
         """Test create_uispec_component with invalid name."""
-        result = json.loads(handle_dnr_tool("create_uispec_component", {
-            "name": "invalidName",  # Not PascalCase
-            "description": "Test",
-            "atoms": ["Card"],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "create_uispec_component",
+                {
+                    "name": "invalidName",  # Not PascalCase
+                    "description": "Test",
+                    "atoms": ["Card"],
+                },
+            )
+        )
         assert "error" in result
 
     def test_create_component_invalid_atom(self):
         """Test create_uispec_component with unknown atom."""
-        result = json.loads(handle_dnr_tool("create_uispec_component", {
-            "name": "TestComponent",
-            "description": "Test",
-            "atoms": ["UnknownAtom"],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "create_uispec_component",
+                {
+                    "name": "TestComponent",
+                    "description": "Test",
+                    "atoms": ["UnknownAtom"],
+                },
+            )
+        )
         assert "error" in result
         assert "UnknownAtom" in str(result)
 
     def test_compose_workspace(self):
         """Test compose_workspace."""
-        result = json.loads(handle_dnr_tool("compose_workspace", {
-            "workspace_name": "dashboard",
-            "layout_kind": "appShell",
-            "region_components": {
-                "sidebar": "SideNav",
-                "main": "DataTable",
-                "header": "TopNav",
-            },
-            "routes": [
-                {"path": "/", "component": "Overview"},
-            ],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "compose_workspace",
+                {
+                    "workspace_name": "dashboard",
+                    "layout_kind": "appShell",
+                    "region_components": {
+                        "sidebar": "SideNav",
+                        "main": "DataTable",
+                        "header": "TopNav",
+                    },
+                    "routes": [
+                        {"path": "/", "component": "Overview"},
+                    ],
+                },
+            )
+        )
 
         assert result["status"] == "created"
         assert result["workspaceSpec"]["name"] == "dashboard"
@@ -251,20 +301,28 @@ class TestUITools:
     def test_compose_workspace_update(self):
         """Test compose_workspace updates existing workspace."""
         # Create first
-        handle_dnr_tool("compose_workspace", {
-            "workspace_name": "dashboard",
-            "layout_kind": "singleColumn",
-            "region_components": {"main": "Card"},
-            "routes": [],
-        })
+        handle_dnr_tool(
+            "compose_workspace",
+            {
+                "workspace_name": "dashboard",
+                "layout_kind": "singleColumn",
+                "region_components": {"main": "Card"},
+                "routes": [],
+            },
+        )
 
         # Update
-        result = json.loads(handle_dnr_tool("compose_workspace", {
-            "workspace_name": "dashboard",
-            "layout_kind": "appShell",
-            "region_components": {"sidebar": "SideNav", "main": "DataTable"},
-            "routes": [],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "compose_workspace",
+                {
+                    "workspace_name": "dashboard",
+                    "layout_kind": "appShell",
+                    "region_components": {"sidebar": "SideNav", "main": "DataTable"},
+                    "routes": [],
+                },
+            )
+        )
 
         assert result["status"] == "updated"
         assert result["workspaceSpec"]["layout"]["kind"] == "appShell"
@@ -280,37 +338,49 @@ class TestPatchComponent:
     def setup_method(self):
         """Set up test fixtures."""
         # Create a component to patch
-        set_ui_spec({
-            "name": "test",
-            "components": [
-                {
-                    "name": "TestComponent",
-                    "description": "Original description",
-                    "category": "custom",
-                },
-            ],
-            "workspaces": [],
-            "themes": [],
-        })
+        set_ui_spec(
+            {
+                "name": "test",
+                "components": [
+                    {
+                        "name": "TestComponent",
+                        "description": "Original description",
+                        "category": "custom",
+                    },
+                ],
+                "workspaces": [],
+                "themes": [],
+            }
+        )
 
     def test_patch_component_replace(self):
         """Test patching a component with replace operation."""
-        result = json.loads(handle_dnr_tool("patch_uispec_component", {
-            "name": "TestComponent",
-            "patch": [
-                {"op": "replace", "path": "/description", "value": "Updated description"},
-            ],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "patch_uispec_component",
+                {
+                    "name": "TestComponent",
+                    "patch": [
+                        {"op": "replace", "path": "/description", "value": "Updated description"},
+                    ],
+                },
+            )
+        )
 
         assert result["status"] == "patched"
         assert result["componentSpec"]["description"] == "Updated description"
 
     def test_patch_component_not_found(self):
         """Test patching non-existent component."""
-        result = json.loads(handle_dnr_tool("patch_uispec_component", {
-            "name": "NonExistent",
-            "patch": [],
-        }))
+        result = json.loads(
+            handle_dnr_tool(
+                "patch_uispec_component",
+                {
+                    "name": "NonExistent",
+                    "patch": [],
+                },
+            )
+        )
         assert "error" in result
 
 
