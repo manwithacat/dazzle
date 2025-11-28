@@ -8,6 +8,7 @@ workspace characteristics and persona preferences.
 from dazzle.core.ir import (
     AttentionSignalKind,
     LayoutArchetype,
+    LayoutSignal,
     PersonaLayout,
     WorkspaceLayout,
 )
@@ -37,7 +38,7 @@ def select_archetype(
         ...     id="dashboard",
         ...     label="Dashboard",
         ...     attention_signals=[
-        ...         AttentionSignal(id="kpi1", kind=AttentionSignalKind.KPI,
+        ...         LayoutSignal(id="kpi1", kind=AttentionSignalKind.KPI,
         ...                        label="KPI", source="Entity",
         ...                        attention_weight=0.9)
         ...     ]
@@ -74,7 +75,7 @@ def select_archetype(
 
 
 def _analyze_signal_profile(
-    signals: list, persona: PersonaLayout | None
+    signals: list[LayoutSignal], persona: PersonaLayout | None
 ) -> dict[str, float]:
     """
     Analyze signal characteristics to build selection profile.

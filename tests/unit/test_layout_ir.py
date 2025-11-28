@@ -4,22 +4,22 @@ import pytest
 from pydantic import ValidationError
 
 from dazzle.core.ir import (
-    AttentionSignal,
     AttentionSignalKind,
     LayoutArchetype,
     LayoutPlan,
+    LayoutSignal,
     LayoutSurface,
     PersonaLayout,
     WorkspaceLayout,
 )
 
 
-class TestAttentionSignal:
-    """Tests for AttentionSignal model."""
+class TestLayoutSignal:
+    """Tests for LayoutSignal model."""
 
     def test_attention_signal_creation(self):
         """Test creating a basic attention signal."""
-        signal = AttentionSignal(
+        signal = LayoutSignal(
             id="task_count",
             kind=AttentionSignalKind.KPI,
             label="Active Tasks",
@@ -36,7 +36,7 @@ class TestAttentionSignal:
 
     def test_attention_signal_with_all_fields(self):
         """Test creating signal with all fields specified."""
-        signal = AttentionSignal(
+        signal = LayoutSignal(
             id="urgent_alerts",
             kind=AttentionSignalKind.ALERT_FEED,
             label="Urgent Alerts",
@@ -59,14 +59,14 @@ class TestAttentionSignal:
     def test_attention_weight_validation(self):
         """Test attention weight must be 0.0-1.0."""
         # Valid weights
-        AttentionSignal(
+        LayoutSignal(
             id="test1",
             kind=AttentionSignalKind.KPI,
             label="Test",
             source="Entity",
             attention_weight=0.0,
         )
-        AttentionSignal(
+        LayoutSignal(
             id="test2",
             kind=AttentionSignalKind.KPI,
             label="Test",
@@ -76,7 +76,7 @@ class TestAttentionSignal:
 
         # Invalid weights
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -85,7 +85,7 @@ class TestAttentionSignal:
             )
 
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -97,7 +97,7 @@ class TestAttentionSignal:
         """Test urgency must be low/medium/high."""
         # Valid urgencies
         for urgency in ("low", "medium", "high"):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -107,7 +107,7 @@ class TestAttentionSignal:
 
         # Invalid urgency
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -119,7 +119,7 @@ class TestAttentionSignal:
         """Test interaction frequency must be rare/occasional/frequent."""
         # Valid frequencies
         for freq in ("rare", "occasional", "frequent"):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -129,7 +129,7 @@ class TestAttentionSignal:
 
         # Invalid frequency
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -141,7 +141,7 @@ class TestAttentionSignal:
         """Test density preference must be compact/comfortable/spacious."""
         # Valid preferences
         for pref in ("compact", "comfortable", "spacious"):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -151,7 +151,7 @@ class TestAttentionSignal:
 
         # Invalid preference
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -163,7 +163,7 @@ class TestAttentionSignal:
         """Test mode must be read/act/configure."""
         # Valid modes
         for mode in ("read", "act", "configure"):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -173,7 +173,7 @@ class TestAttentionSignal:
 
         # Invalid mode
         with pytest.raises(ValidationError):
-            AttentionSignal(
+            LayoutSignal(
                 id="test",
                 kind=AttentionSignalKind.KPI,
                 label="Test",
@@ -183,7 +183,7 @@ class TestAttentionSignal:
 
     def test_immutability(self):
         """Test that AttentionSignal is immutable."""
-        signal = AttentionSignal(
+        signal = LayoutSignal(
             id="test", kind=AttentionSignalKind.KPI, label="Test", source="Entity"
         )
 
@@ -209,10 +209,10 @@ class TestWorkspaceLayout:
     def test_workspace_layout_with_signals(self):
         """Test workspace with attention signals."""
         signals = [
-            AttentionSignal(
+            LayoutSignal(
                 id="kpi1", kind=AttentionSignalKind.KPI, label="KPI 1", source="Entity1"
             ),
-            AttentionSignal(
+            LayoutSignal(
                 id="table1",
                 kind=AttentionSignalKind.TABLE,
                 label="Table 1",
@@ -472,7 +472,7 @@ class TestLayoutArchetype:
 
 
 class TestAttentionSignalKind:
-    """Tests for AttentionSignalKind enum."""
+    """Tests for LayoutSignalKind enum."""
 
     def test_all_signal_kinds_defined(self):
         """Test that all expected signal kinds are defined."""

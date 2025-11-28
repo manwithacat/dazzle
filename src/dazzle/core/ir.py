@@ -1414,13 +1414,16 @@ class AttentionSignalKind(str, Enum):
     FILTER = "filter"  # Filter controls
 
 
-class AttentionSignal(BaseModel):
+class LayoutSignal(BaseModel):
     """
-    Semantic UI element requiring user attention.
+    Semantic UI element requiring user attention in the layout engine.
 
-    An attention signal represents a logical UI element that the user needs to
+    A layout signal represents a logical UI element that the user needs to
     be aware of and potentially interact with. Signals are allocated to surfaces
     by the layout engine based on their characteristics.
+
+    Note: This is distinct from AttentionSignal (line 429) which is for DSL-based
+    data-driven attention signals with conditions and messages.
 
     Attributes:
         id: Unique signal identifier
@@ -1510,7 +1513,7 @@ class WorkspaceLayout(BaseModel):
     attention_budget: float = Field(default=1.0, ge=0.0, le=1.5)
     time_horizon: str = "daily"  # realtime, daily, archival
     engine_hint: str | None = None
-    attention_signals: list[AttentionSignal] = Field(default_factory=list)
+    attention_signals: list["LayoutSignal"] = Field(default_factory=list)
 
     @field_validator("time_horizon")
     @classmethod

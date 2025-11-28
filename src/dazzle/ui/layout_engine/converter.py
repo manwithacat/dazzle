@@ -6,11 +6,11 @@ Converts parsed DSL constructs (WorkspaceSpec, etc.) into layout engine IR (Work
 
 from ...core.ir import (
     AppSpec,
-    AttentionSignal,
     AttentionSignalKind,
-    PersonaLayout,
+    LayoutSignal,
     UXLayouts,
     WorkspaceLayout,
+    WorkspaceRegion,
     WorkspaceSpec,
 )
 
@@ -55,9 +55,19 @@ def convert_workspace_to_layout(workspace: WorkspaceSpec) -> WorkspaceLayout:
     engine_hint = workspace.engine_hint  # Direct from DSL
 
     if workspace.ux:
-        # Check for attention signals in UX spec
+        # Check for attention signals in UX spec (convert DSL AttentionSignal to LayoutSignal)
         if workspace.ux.attention_signals:
-            attention_signals.extend(workspace.ux.attention_signals)
+            for idx, dsl_signal in enumerate(workspace.ux.attention_signals):
+                # Generate ID from level and index since DSL AttentionSignal has no id
+                signal_id = f"{workspace.name}_ux_signal_{dsl_signal.level.value}_{idx}"
+                layout_signal = LayoutSignal(
+                    id=signal_id,
+                    kind=AttentionSignalKind.KPI,  # Default to KPI for DSL attention signals
+                    label=dsl_signal.message,
+                    source="ux",  # DSL attention signals come from UX spec
+                    attention_weight=0.8,  # High weight for explicit DSL attention signals
+                )
+                attention_signals.append(layout_signal)
 
     return WorkspaceLayout(
         id=workspace.name,
@@ -72,7 +82,7 @@ def convert_workspace_to_layout(workspace: WorkspaceSpec) -> WorkspaceLayout:
 
 def _extract_attention_signals_from_regions(
     workspace: WorkspaceSpec,
-) -> list[AttentionSignal]:
+) -> list[LayoutSignal]:
     """
     Extract attention signals from workspace regions.
 
@@ -93,7 +103,7 @@ def _extract_attention_signals_from_regions(
         # Determine attention weight (higher for filtered/limited views)
         attention_weight = _calculate_attention_weight(region)
 
-        signal = AttentionSignal(
+        signal = LayoutSignal(
             id=region.name,
             kind=signal_kind,
             label=region.name,  # WorkspaceRegion doesn't have title field
@@ -106,7 +116,7 @@ def _extract_attention_signals_from_regions(
     return signals
 
 
-def _infer_signal_kind_from_region(region) -> AttentionSignalKind:
+def _infer_signal_kind_from_region(region: WorkspaceRegion) -> AttentionSignalKind:
     """
     Infer attention signal kind from region characteristics.
 
@@ -145,7 +155,7 @@ def _infer_signal_kind_from_region(region) -> AttentionSignalKind:
     return AttentionSignalKind.TABLE
 
 
-def _calculate_attention_weight(region) -> float:
+def _calculate_attention_weight(region: WorkspaceRegion) -> float:
     """
     Calculate attention weight for a region.
 

@@ -8,7 +8,6 @@ Invalidates cache when DSL files or layout engine code changes.
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Optional
 
 from ...core import ir
 from .types import LayoutPlan
@@ -74,7 +73,7 @@ class LayoutPlanCache:
         """
         return self.cache_dir / f"{cache_key}.json"
 
-    def get(self, workspace: ir.WorkspaceLayout) -> Optional[LayoutPlan]:
+    def get(self, workspace: ir.WorkspaceLayout) -> LayoutPlan | None:
         """
         Get cached layout plan for workspace.
 
@@ -96,14 +95,14 @@ class LayoutPlanCache:
                 data = json.load(f)
 
             # Reconstruct LayoutPlan
-            from .types import LayoutArchetype, Surface
+            from .types import LayoutArchetype, LayoutSurface
 
             plan = LayoutPlan(
                 workspace_id=data["workspace_id"],
                 persona_id=data.get("persona_id"),
                 archetype=LayoutArchetype(data["archetype"]),
                 surfaces=[
-                    Surface(
+                    LayoutSurface(
                         id=s["id"],
                         archetype=s["archetype"],
                         capacity=s["capacity"],

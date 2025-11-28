@@ -5,7 +5,7 @@ Applies persona preferences to modify attention weights and workspace
 characteristics before layout planning.
 """
 
-from dazzle.core.ir import AttentionSignal, PersonaLayout, WorkspaceLayout
+from dazzle.core.ir import LayoutSignal, PersonaLayout, WorkspaceLayout
 
 
 def adjust_attention_for_persona(
@@ -31,7 +31,7 @@ def adjust_attention_for_persona(
         ...     label="Test",
         ...     attention_budget=1.0,
         ...     attention_signals=[
-        ...         AttentionSignal(id="kpi", kind=AttentionSignalKind.KPI,
+        ...         LayoutSignal(id="kpi", kind=AttentionSignalKind.KPI,
         ...                        label="KPI", source="E", attention_weight=0.5)
         ...     ]
         ... )
@@ -65,8 +65,8 @@ def adjust_attention_for_persona(
 
 
 def _adjust_signal_weights(
-    signals: list[AttentionSignal], persona: PersonaLayout
-) -> list[AttentionSignal]:
+    signals: list[LayoutSignal], persona: PersonaLayout
+) -> list[LayoutSignal]:
     """
     Apply persona attention biases to signal weights.
 
@@ -86,7 +86,7 @@ def _adjust_signal_weights(
         new_weight = min(1.0, max(0.0, signal.attention_weight * bias))
 
         # Create new signal with adjusted weight
-        adjusted_signal = AttentionSignal(
+        adjusted_signal = LayoutSignal(
             id=signal.id,
             kind=signal.kind,
             label=signal.label,

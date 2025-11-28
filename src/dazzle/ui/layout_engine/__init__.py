@@ -23,10 +23,10 @@ from dazzle.ui.layout_engine.converter import (
 from dazzle.ui.layout_engine.plan import build_layout_plan
 from dazzle.ui.layout_engine.select_archetype import select_archetype
 from dazzle.ui.layout_engine.types import (
-    AttentionSignal,
     AttentionSignalKind,
     LayoutArchetype,
     LayoutPlan,
+    LayoutSignal,
     LayoutSurface,
     PersonaLayout,
     WorkspaceLayout,
@@ -62,7 +62,7 @@ __all__ = [
     "get_variant_for_persona",
     "get_grid_columns",
     # IR types (re-exported for convenience)
-    "AttentionSignal",
+    "LayoutSignal",
     "AttentionSignalKind",
     "LayoutArchetype",
     "LayoutPlan",

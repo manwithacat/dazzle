@@ -636,6 +636,7 @@ def layout_plan(
     Useful for understanding how workspaces map to UI layouts.
     """
     import json as json_lib
+
     from dazzle.ui.layout_engine import build_layout_plan, enrich_app_spec_with_layouts
 
     # Use manifest path to determine root directory
@@ -658,7 +659,7 @@ def layout_plan(
                 raise typer.Exit(code=1)
 
         # Filter to specific workspace if requested
-        workspaces_to_show = appspec.ux.workspaces
+        workspaces_to_show = appspec.ux.workspaces if appspec.ux else []
         if workspace:
             workspaces_to_show = [ws for ws in workspaces_to_show if ws.id == workspace]
             if not workspaces_to_show:
@@ -2986,7 +2987,7 @@ def vocab_expand(
 
 @app.command()
 def mcp(
-    working_dir: Path = typer.Option(
+    working_dir: Path = typer.Option(  # noqa: B008
         None,
         "--working-dir",
         help="Project root directory (default: current directory)",
@@ -3127,9 +3128,9 @@ def dnr_build_ui(
         # Import DNR UI components
         from dazzle_dnr_ui.converters import convert_appspec_to_ui
         from dazzle_dnr_ui.runtime import (
-            generate_vite_app,
             generate_js_app,
             generate_single_html,
+            generate_vite_app,
         )
     except ImportError as e:
         typer.echo(f"DNR UI not available: {e}", err=True)
@@ -3227,11 +3228,12 @@ def dnr_build_api(
     """
     try:
         from dazzle_dnr_back.converters import convert_appspec_to_backend
-        from dazzle_dnr_back.specs import BackendSpec
+        from dazzle_dnr_back.specs import BackendSpec as _BackendSpec  # noqa: F401
     except ImportError as e:
         typer.echo(f"DNR Backend not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dnr-back", err=True)
         raise typer.Exit(code=1)
+    del _BackendSpec  # Used only to verify import availability
 
     # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
@@ -3310,7 +3312,7 @@ except ImportError as e:
         spec_file = output_dir / "backend-spec.json"
         spec_file.write_text(backend_spec.model_dump_json(indent=2))
 
-        typer.echo(f"  ✓ Generated stub and spec")
+        typer.echo("  ✓ Generated stub and spec")
         typer.echo("\nTo run:")
         typer.echo(f"  cd {output_dir}")
         typer.echo("  pip install fastapi uvicorn")
@@ -3447,7 +3449,7 @@ def dnr_info() -> None:
     dnr_back_available = False
     fastapi_available = False
     try:
-        import dazzle_dnr_back
+        import dazzle_dnr_back  # noqa: F401
 
         dnr_back_available = True
         from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE
@@ -3459,7 +3461,7 @@ def dnr_info() -> None:
     # Check DNR UI
     dnr_ui_available = False
     try:
-        import dazzle_dnr_ui
+        import dazzle_dnr_ui  # noqa: F401
 
         dnr_ui_available = True
     except ImportError:
@@ -3468,7 +3470,7 @@ def dnr_info() -> None:
     # Check uvicorn
     uvicorn_available = False
     try:
-        import uvicorn
+        import uvicorn  # noqa: F401
 
         uvicorn_available = True
     except ImportError:

@@ -5,8 +5,19 @@ Assigns attention signals to surfaces based on capacity constraints
 and priority rules. This is the core of the layout planning process.
 """
 
-from dazzle.core.ir import LayoutSurface, WorkspaceLayout
-from dazzle.ui.layout_engine.archetypes import ArchetypeDefinition, SurfaceDefinition
+from typing import TypedDict
+
+from dazzle.core.ir import LayoutArchetype, LayoutSignal, LayoutSurface, WorkspaceLayout
+from dazzle.ui.layout_engine.archetypes import ArchetypeDefinition
+
+
+class MutableSurface(TypedDict):
+    """Mutable surface tracking structure during allocation."""
+
+    id: str
+    capacity: float
+    priority: int
+    assigned_signals: list[str]
 
 
 def assign_signals_to_surfaces(
@@ -31,14 +42,14 @@ def assign_signals_to_surfaces(
         - list[str]: Signal IDs that couldn't fit (over-budget)
 
     Examples:
-        >>> from dazzle.core.ir import AttentionSignal, AttentionSignalKind
+        >>> from dazzle.core.ir import LayoutSignal, AttentionSignalKind
         >>> workspace = WorkspaceLayout(
         ...     id="test",
         ...     label="Test",
         ...     attention_signals=[
-        ...         AttentionSignal(id="s1", kind=AttentionSignalKind.KPI,
+        ...         LayoutSignal(id="s1", kind=AttentionSignalKind.KPI,
         ...                        label="S1", source="E", attention_weight=0.8),
-        ...         AttentionSignal(id="s2", kind=AttentionSignalKind.TABLE,
+        ...         LayoutSignal(id="s2", kind=AttentionSignalKind.TABLE,
         ...                        label="S2", source="E", attention_weight=0.6),
         ...     ]
         ... )
@@ -102,19 +113,19 @@ def _create_empty_surfaces(archetype_def: ArchetypeDefinition) -> list[LayoutSur
 
 def _initialize_surfaces(
     archetype_def: ArchetypeDefinition,
-) -> list[dict]:
+) -> list[MutableSurface]:
     """
     Initialize mutable surface tracking structures.
 
     Returns list of dicts (mutable) sorted by priority.
     """
-    surfaces = [
-        {
-            "id": surface_def.id,
-            "capacity": surface_def.capacity,
-            "priority": surface_def.priority,
-            "assigned_signals": [],
-        }
+    surfaces: list[MutableSurface] = [
+        MutableSurface(
+            id=surface_def.id,
+            capacity=surface_def.capacity,
+            priority=surface_def.priority,
+            assigned_signals=[],
+        )
         for surface_def in archetype_def.surfaces
     ]
 
@@ -124,13 +135,15 @@ def _initialize_surfaces(
     return surfaces
 
 
-def _calculate_surface_load(surface: dict, all_signals: list) -> float:
+def _calculate_surface_load(
+    surface: MutableSurface, all_signals: list[LayoutSignal]
+) -> float:
     """
     Calculate current attention weight load on a surface.
 
     Args:
         surface: Mutable surface dict with assigned_signals
-        all_signals: Complete list of AttentionSignal objects
+        all_signals: Complete list of LayoutSignal objects
 
     Returns:
         Total attention weight of assigned signals
@@ -145,7 +158,9 @@ def _calculate_surface_load(surface: dict, all_signals: list) -> float:
     return total
 
 
-def _finalize_surfaces(surfaces: list[dict], archetype) -> list[LayoutSurface]:
+def _finalize_surfaces(
+    surfaces: list[MutableSurface], archetype: LayoutArchetype
+) -> list[LayoutSurface]:
     """Convert mutable surface dicts to immutable LayoutSurface instances."""
     return [
         LayoutSurface(

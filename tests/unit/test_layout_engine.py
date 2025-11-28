@@ -3,9 +3,9 @@
 import pytest
 
 from dazzle.core.ir import (
-    AttentionSignal,
     AttentionSignalKind,
     LayoutArchetype,
+    LayoutSignal,
     PersonaLayout,
     WorkspaceLayout,
 )
@@ -28,7 +28,7 @@ class TestArchetypeSelection:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="Critical KPI",
@@ -47,7 +47,7 @@ class TestArchetypeSelection:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="table1",
                     kind=AttentionSignalKind.TABLE,
                     label="Data Table",
@@ -66,21 +66,21 @@ class TestArchetypeSelection:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI 1",
                     source="E1",
                     attention_weight=0.5,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi2",
                     kind=AttentionSignalKind.KPI,
                     label="KPI 2",
                     source="E2",
                     attention_weight=0.4,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="chart1",
                     kind=AttentionSignalKind.CHART,
                     label="Chart",
@@ -99,14 +99,14 @@ class TestArchetypeSelection:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="list1",
                     kind=AttentionSignalKind.ITEM_LIST,
                     label="Item List",
                     source="E1",
                     attention_weight=0.6,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="detail1",
                     kind=AttentionSignalKind.DETAIL_VIEW,
                     label="Detail",
@@ -131,7 +131,7 @@ class TestArchetypeSelection:
             AttentionSignalKind.SEARCH,
         ]
         signals = [
-            AttentionSignal(
+            LayoutSignal(
                 id=f"signal{i}",
                 kind=signal_kinds[i],
                 label=f"Signal {i}",
@@ -159,7 +159,7 @@ class TestArchetypeSelection:
             label="Test",
             engine_hint="scanner_table",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -179,7 +179,7 @@ class TestArchetypeSelection:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -206,7 +206,7 @@ class TestSurfaceAllocation:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -229,14 +229,14 @@ class TestSurfaceAllocation:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="heavy",
                     kind=AttentionSignalKind.KPI,
                     label="Heavy",
                     source="E",
                     attention_weight=0.9,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="light",
                     kind=AttentionSignalKind.KPI,
                     label="Light",
@@ -260,7 +260,7 @@ class TestSurfaceAllocation:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id=f"signal{i}",
                     kind=AttentionSignalKind.KPI,
                     label=f"Signal {i}",
@@ -283,14 +283,14 @@ class TestSurfaceAllocation:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="s1",
                     kind=AttentionSignalKind.KPI,
                     label="S1",
                     source="E",
                     attention_weight=0.6,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="s2",
                     kind=AttentionSignalKind.KPI,
                     label="S2",
@@ -325,7 +325,7 @@ class TestPersonaAdjustment:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -385,7 +385,7 @@ class TestPersonaAdjustment:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -416,7 +416,7 @@ class TestLayoutPlanBuilder:
             id="dashboard",
             label="Dashboard",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -440,7 +440,7 @@ class TestLayoutPlanBuilder:
             id="dashboard",
             label="Dashboard",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -471,7 +471,7 @@ class TestLayoutPlanBuilder:
             label="Test",
             attention_budget=1.0,
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id=f"signal{i}",
                     kind=AttentionSignalKind.KPI,
                     label=f"Signal {i}",
@@ -495,7 +495,7 @@ class TestLayoutPlanBuilder:
             label="Test",
             attention_budget=1.2,
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
@@ -522,14 +522,14 @@ class TestLayoutPlanBuilder:
             id="test",
             label="Test",
             attention_signals=[
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi1",
                     kind=AttentionSignalKind.KPI,
                     label="KPI",
                     source="E",
                     attention_weight=0.7,
                 ),
-                AttentionSignal(
+                LayoutSignal(
                     id="kpi2",
                     kind=AttentionSignalKind.KPI,
                     label="KPI 2",

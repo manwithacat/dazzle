@@ -5,10 +5,12 @@ Main orchestrator that combines archetype selection, surface allocation,
 and persona adjustments to produce complete layout plans.
 """
 
-from dazzle.core.ir import LayoutPlan, PersonaLayout, WorkspaceLayout
+from typing import Any
+
+from dazzle.core.ir import LayoutArchetype, LayoutPlan, PersonaLayout, WorkspaceLayout
 from dazzle.ui.layout_engine.adjust import adjust_attention_for_persona
 from dazzle.ui.layout_engine.allocate import assign_signals_to_surfaces
-from dazzle.ui.layout_engine.archetypes import get_archetype_definition
+from dazzle.ui.layout_engine.archetypes import ArchetypeDefinition, get_archetype_definition
 from dazzle.ui.layout_engine.select_archetype import select_archetype
 
 
@@ -32,12 +34,12 @@ def build_layout_plan(
         Complete LayoutPlan ready for rendering
 
     Examples:
-        >>> from dazzle.core.ir import AttentionSignal, AttentionSignalKind
+        >>> from dazzle.core.ir import LayoutSignal, AttentionSignalKind
         >>> workspace = WorkspaceLayout(
         ...     id="dashboard",
         ...     label="Dashboard",
         ...     attention_signals=[
-        ...         AttentionSignal(id="kpi", kind=AttentionSignalKind.KPI,
+        ...         LayoutSignal(id="kpi", kind=AttentionSignalKind.KPI,
         ...                        label="KPI", source="E", attention_weight=0.9)
         ...     ]
         ... )
@@ -90,7 +92,7 @@ def build_layout_plan(
 
 def _generate_warnings(
     workspace: WorkspaceLayout,
-    archetype_def,
+    archetype_def: ArchetypeDefinition,
     over_budget_signals: list[str],
 ) -> list[str]:
     """
@@ -137,7 +139,9 @@ def _generate_warnings(
     return warnings
 
 
-def _build_metadata(workspace: WorkspaceLayout, archetype, archetype_def) -> dict:
+def _build_metadata(
+    workspace: WorkspaceLayout, archetype: LayoutArchetype, archetype_def: ArchetypeDefinition
+) -> dict[str, Any]:
     """Build metadata for debugging and logging."""
     return {
         "signal_count": len(workspace.attention_signals),
