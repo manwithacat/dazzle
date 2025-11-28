@@ -219,6 +219,17 @@ def _convert_to_iife_compatible(source: str, module_name: str) -> str:
     Returns:
         IIFE-compatible JavaScript code
     """
+    import re
+
+    # First, remove multi-line export blocks: export { ... };
+    # This handles cases like:
+    #   export {
+    #     foo,
+    #     bar,
+    #     baz
+    #   };
+    source = re.sub(r"export\s*\{[^}]*\}\s*;?", "", source, flags=re.DOTALL)
+
     lines = source.split("\n")
     result = []
 
@@ -234,10 +245,7 @@ def _convert_to_iife_compatible(source: str, module_name: str) -> str:
             # export function foo() -> function foo()
             # export const foo = -> const foo =
             # export class Foo -> class Foo
-            # export { foo } -> skip
             # export default -> skip or handle
-            if stripped.startswith("export {"):
-                continue
             if stripped.startswith("export default"):
                 continue
             line = line.replace("export ", "", 1)

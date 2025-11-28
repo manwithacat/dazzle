@@ -112,7 +112,41 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
 
 ## Upcoming Releases
 
-### v0.3.1 - DNR Developer Experience (January 2026)
+### v0.3.1 - Critical Bug Fixes & E2E Testing (PRIORITY)
+
+**Status**: 🔴 CRITICAL - Required before any other work
+**Focus**: Fix DNR runtime bugs and prevent regressions
+
+**Background**: User testing revealed that `dazzle dnr serve` produces non-functional applications due to JavaScript generation bugs. These must be fixed immediately.
+
+#### Bug Fixes (COMPLETE)
+- [x] **Bug 1**: ES module export block conversion failure in `js_loader.py`
+  - Multi-line `export { ... }` blocks were not fully stripped
+  - Fix: Use regex to remove entire export blocks before line processing
+- [x] **Bug 2**: HTML script tag malformation in `js_generator.py`
+  - `<script src="app.js">` with inline content is invalid HTML
+  - Fix: Properly close external script tags
+
+#### E2E Testing (TODO)
+- [ ] Add Playwright E2E test for `dazzle dnr serve`
+- [ ] Verify browser can load without JavaScript errors
+- [ ] Test CRUD operations work end-to-end
+- [ ] Add to CI pipeline to prevent regressions
+
+#### MCP Server Improvements (TODO)
+- [ ] Improve MCP context for Claude engagement
+- [ ] Add getting-started workflow guidance
+- [ ] Document common DSL patterns
+
+**Files Changed**:
+- `src/dazzle_dnr_ui/runtime/js_loader.py` - Export block regex fix
+- `src/dazzle_dnr_ui/runtime/js_generator.py` - Script tag fix
+- `src/dazzle_dnr_ui/runtime/combined_server.py` - Script tag fix
+- `src/dazzle_dnr_ui/runtime/dev_server.py` - Script tag fix
+
+---
+
+### v0.3.2 - DNR Developer Experience (January 2026)
 
 **Focus**: Make development delightful
 
