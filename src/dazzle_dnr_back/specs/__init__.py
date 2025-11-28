@@ -17,7 +17,9 @@ from dazzle_dnr_back.specs.entity import (
 from dazzle_dnr_back.specs.service import (
     ServiceSpec,
     SchemaSpec,
+    SchemaFieldSpec,
     DomainOperation,
+    OperationKind,
     EffectSpec,
     BusinessRuleSpec,
 )
@@ -47,7 +49,9 @@ __all__ = [
     # Service types
     "ServiceSpec",
     "SchemaSpec",
+    "SchemaFieldSpec",
     "DomainOperation",
+    "OperationKind",
     "EffectSpec",
     "BusinessRuleSpec",
     # Endpoint types
