@@ -34,9 +34,7 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
         """Handle GET requests."""
         path = self.path.split("?")[0]  # Remove query string
 
-        if path == "/" or path == "/index.html":
-            self._serve_html()
-        elif path == "/dnr-runtime.js":
+        if path == "/dnr-runtime.js":
             self._serve_runtime()
         elif path == "/app.js":
             self._serve_app()
@@ -44,9 +42,13 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
             self._serve_spec()
         elif path == "/__hot-reload__":
             self._serve_hot_reload()
+        elif path.startswith("/api/"):
+            # API routes should 404 (they go to backend server)
+            self.send_error(404, "API route - use backend server")
         else:
-            # Serve static files from directory
-            super().do_GET()
+            # For SPA: serve HTML for all non-static routes
+            # This enables path-based routing (e.g., /task/create, /task/123)
+            self._serve_html()
 
     def _serve_html(self) -> None:
         """Serve the main HTML page."""

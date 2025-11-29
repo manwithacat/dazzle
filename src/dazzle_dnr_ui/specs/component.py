@@ -126,6 +126,10 @@ class ComponentSpec(BaseModel):
     actions: list[ActionSpec] = Field(default_factory=list, description="Component actions")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
+    # Semantic context for DOM contract (data-dazzle-* attributes)
+    view_name: str | None = Field(default=None, description="Semantic view name for DOM contract")
+    entity_name: str | None = Field(default=None, description="Entity name for DOM contract")
+
     class Config:
         frozen = True
 

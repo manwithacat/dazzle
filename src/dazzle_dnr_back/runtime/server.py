@@ -22,6 +22,7 @@ from dazzle_dnr_back.runtime.model_generator import (
 )
 from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
 from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle_dnr_back.runtime.test_routes import create_test_routes
 from dazzle_dnr_back.specs import BackendSpec
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
@@ -65,6 +66,7 @@ class DNRBackendApp:
         enable_files: bool = False,
         files_path: str | Path | None = None,
         files_db_path: str | Path | None = None,
+        enable_test_mode: bool = False,
     ):
         """
         Initialize the backend application.
@@ -78,6 +80,7 @@ class DNRBackendApp:
             enable_files: Whether to enable file uploads (default: False)
             files_path: Path for file storage (default: .dazzle/uploads)
             files_db_path: Path to file metadata database (default: .dazzle/files.db)
+            enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -92,10 +95,12 @@ class DNRBackendApp:
         self._enable_files = enable_files
         self._files_path = Path(files_path) if files_path else Path(".dazzle/uploads")
         self._files_db_path = Path(files_db_path) if files_db_path else Path(".dazzle/files.db")
+        self._enable_test_mode = enable_test_mode
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
+        self._repositories: dict[str, Any] = {}
         self._db_manager: DatabaseManager | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
@@ -136,7 +141,6 @@ class DNRBackendApp:
             }
 
         # Initialize database if enabled
-        repositories = {}
         if self._use_database:
             self._db_manager = DatabaseManager(self._db_path)
 
@@ -148,7 +152,7 @@ class DNRBackendApp:
             )
 
             repo_factory = RepositoryFactory(self._db_manager, self._models)
-            repositories = repo_factory.create_all_repositories(self.spec.entities)
+            self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
         # Create services
         factory = ServiceFactory(self._models)
@@ -164,7 +168,7 @@ class DNRBackendApp:
                 if isinstance(service, CRUDService):
                     # Get the entity name from the service
                     entity_name = service.entity_name
-                    repo = repositories.get(entity_name)
+                    repo = self._repositories.get(entity_name)
                     if repo:
                         service.set_repository(repo)
 
@@ -203,6 +207,15 @@ class DNRBackendApp:
                 base_path=str(self._files_path),
                 url_prefix="/files",
             )
+
+        # Initialize test routes if enabled
+        if self._enable_test_mode and self._use_database and self._db_manager:
+            test_router = create_test_routes(
+                db_manager=self._db_manager,
+                repositories=self._repositories,
+                entities=self.spec.entities,
+            )
+            self._app.include_router(test_router)
 
         # Add health check
         @self._app.get("/health", tags=["System"])
@@ -290,6 +303,16 @@ class DNRBackendApp:
         """Check if file uploads are enabled."""
         return self._enable_files
 
+    @property
+    def test_mode_enabled(self) -> bool:
+        """Check if test mode is enabled."""
+        return self._enable_test_mode
+
+    @property
+    def repositories(self) -> dict[str, Any]:
+        """Get repository instances."""
+        return self._repositories
+
 
 # =============================================================================
 # Convenience Functions
@@ -305,6 +328,7 @@ def create_app(
     enable_files: bool = False,
     files_path: str | Path | None = None,
     files_db_path: str | Path | None = None,
+    enable_test_mode: bool = False,
 ) -> FastAPI:
     """
     Create a FastAPI application from a BackendSpec.
@@ -320,6 +344,7 @@ def create_app(
         enable_files: Whether to enable file uploads (default: False)
         files_path: Path for file storage (default: .dazzle/uploads)
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
+        enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
 
     Returns:
         FastAPI application
@@ -339,6 +364,7 @@ def create_app(
         enable_files=enable_files,
         files_path=files_path,
         files_db_path=files_db_path,
+        enable_test_mode=enable_test_mode,
     )
     return builder.build()
 
@@ -355,6 +381,7 @@ def run_app(
     enable_files: bool = False,
     files_path: str | Path | None = None,
     files_db_path: str | Path | None = None,
+    enable_test_mode: bool = False,
 ) -> None:
     """
     Run a DNR-Back application.
@@ -371,6 +398,7 @@ def run_app(
         enable_files: Whether to enable file uploads (default: False)
         files_path: Path for file storage (default: .dazzle/uploads)
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
+        enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
 
     Example:
         >>> from dazzle_dnr_back.specs import BackendSpec
@@ -391,6 +419,7 @@ def run_app(
         enable_files=enable_files,
         files_path=files_path,
         files_db_path=files_db_path,
+        enable_test_mode=enable_test_mode,
     )
     uvicorn.run(app, host=host, port=port, reload=reload)
 

@@ -37,6 +37,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     ui_spec: UISpec | None = None
     generator: JSGenerator | None = None
     backend_url: str = "http://127.0.0.1:8000"
+    test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
 
     def do_GET(self) -> None:
         """Handle GET requests."""
@@ -45,8 +46,8 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         # Proxy API requests to backend
         if path.startswith("/api/"):
             self._proxy_request("GET")
-        elif path == "/" or path == "/index.html":
-            self._serve_html()
+        elif path.startswith("/__test__/"):
+            self._proxy_request("GET")
         elif path == "/dnr-runtime.js":
             self._serve_runtime()
         elif path == "/app.js":
@@ -62,11 +63,15 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/openapi.json":
             self._proxy_request("GET")
         else:
-            super().do_GET()
+            # For SPA: serve HTML for all non-static routes
+            # This enables path-based routing (e.g., /task/create, /task/123)
+            self._serve_html()
 
     def do_POST(self) -> None:
         """Handle POST requests."""
         if self.path.startswith("/api/"):
+            self._proxy_request("POST")
+        elif self.path.startswith("/__test__/"):
             self._proxy_request("POST")
         else:
             self.send_error(405, "Method Not Allowed")
@@ -81,6 +86,8 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     def do_DELETE(self) -> None:
         """Handle DELETE requests."""
         if self.path.startswith("/api/"):
+            self._proxy_request("DELETE")
+        elif self.path.startswith("/__test__/"):
             self._proxy_request("DELETE")
         else:
             self.send_error(405, "Method Not Allowed")
@@ -142,8 +149,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = self.generator.generate_html(include_runtime=False)
-        # Inject hot reload script
-        hot_reload_script = """
+        # Inject hot reload script (disabled in test mode for Playwright compatibility)
+        if not self.test_mode:
+            hot_reload_script = """
 <script>
 (function() {
   const eventSource = new EventSource('/__hot-reload__');
@@ -156,7 +164,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 </script>
 </body>
 """
-        html = html.replace("</body>", hot_reload_script)
+            html = html.replace("</body>", hot_reload_script)
         # Fix script references - replace inline script placeholders with external references
         html = html.replace(
             "<script>\n\n  </script>\n  <script>",
@@ -250,6 +258,7 @@ class DNRCombinedServer:
         frontend_host: str = "127.0.0.1",
         frontend_port: int = 3000,
         db_path: str | Path | None = None,
+        enable_test_mode: bool = False,
     ):
         """
         Initialize the combined server.
@@ -262,6 +271,7 @@ class DNRCombinedServer:
             frontend_host: Frontend server host
             frontend_port: Frontend server port
             db_path: Path to SQLite database
+            enable_test_mode: Enable test endpoints (/__test__/*)
         """
         self.backend_spec = backend_spec
         self.ui_spec = ui_spec
@@ -270,6 +280,7 @@ class DNRCombinedServer:
         self.frontend_host = frontend_host
         self.frontend_port = frontend_port
         self.db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
+        self.enable_test_mode = enable_test_mode
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
@@ -299,6 +310,9 @@ class DNRCombinedServer:
             print("[DNR] Warning: dazzle_dnr_back not available, skipping backend")
             return
 
+        # Capture test mode flag for closure
+        enable_test_mode = self.enable_test_mode
+
         def run_backend() -> None:
             try:
                 import uvicorn
@@ -307,6 +321,7 @@ class DNRCombinedServer:
                     self.backend_spec,
                     db_path=self.db_path,
                     use_database=True,
+                    enable_test_mode=enable_test_mode,
                 )
                 app = app_builder.build()
 
@@ -329,6 +344,8 @@ class DNRCombinedServer:
         print(f"[DNR] Backend:  http://{self.backend_host}:{self.backend_port}")
         print(f"[DNR] API Docs: http://{self.backend_host}:{self.backend_port}/docs")
         print(f"[DNR] Database: {self.db_path}")
+        if self.enable_test_mode:
+            print("[DNR] Test endpoints: /__test__/* (enabled)")
         print()
 
     def _start_frontend(self) -> None:
@@ -337,6 +354,7 @@ class DNRCombinedServer:
         DNRCombinedHandler.ui_spec = self.ui_spec
         DNRCombinedHandler.generator = JSGenerator(self.ui_spec)
         DNRCombinedHandler.backend_url = f"http://{self.backend_host}:{self.backend_port}"
+        DNRCombinedHandler.test_mode = self.enable_test_mode
 
         # Create server
         socketserver.TCPServer.allow_reuse_address = True
@@ -375,6 +393,8 @@ def run_combined_server(
     backend_port: int = 8000,
     frontend_port: int = 3000,
     db_path: str | Path | None = None,
+    enable_test_mode: bool = False,
+    host: str = "127.0.0.1",
 ) -> None:
     """
     Run a combined DNR development server.
@@ -385,13 +405,18 @@ def run_combined_server(
         backend_port: Backend server port
         frontend_port: Frontend server port
         db_path: Path to SQLite database
+        enable_test_mode: Enable test endpoints (/__test__/*)
+        host: Host to bind both servers to
     """
     server = DNRCombinedServer(
         backend_spec=backend_spec,
         ui_spec=ui_spec,
+        backend_host=host,
         backend_port=backend_port,
+        frontend_host=host,
         frontend_port=frontend_port,
         db_path=db_path,
+        enable_test_mode=enable_test_mode,
     )
     server.start()
 

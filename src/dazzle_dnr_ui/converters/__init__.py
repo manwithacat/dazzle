@@ -5,7 +5,10 @@ Converts Dazzle AppSpec (IR) to UISpec.
 """
 
 from dazzle.core import ir
-from dazzle_dnr_ui.converters.surface_converter import convert_surfaces_to_components
+from dazzle_dnr_ui.converters.surface_converter import (
+    _generate_component_name,
+    convert_surfaces_to_components,
+)
 from dazzle_dnr_ui.converters.workspace_converter import convert_workspaces
 from dazzle_dnr_ui.specs import ThemeSpec, ThemeTokens, UISpec
 
@@ -28,13 +31,22 @@ def convert_appspec_to_ui(appspec: ir.AppSpec) -> UISpec:
         >>> appspec = build_appspec(modules, project_root)
         >>> ui_spec = convert_appspec_to_ui(appspec)
     """
-    # Convert workspaces
-    workspaces = convert_workspaces(appspec.workspaces)
-
-    # Convert surfaces to components
+    # Convert surfaces to components first so we can reference them in workspaces
     components = convert_surfaces_to_components(
         appspec.surfaces,
         appspec.domain,
+    )
+
+    # Build surface name -> component name mapping for workspace routing
+    surface_component_map = {
+        surface.name: _generate_component_name(surface) for surface in appspec.surfaces
+    }
+
+    # Convert workspaces, passing surfaces for intelligent route generation
+    workspaces = convert_workspaces(
+        appspec.workspaces,
+        appspec.surfaces,
+        surface_component_map,
     )
 
     # Create a default theme

@@ -46,6 +46,23 @@ function renderElementNode(node, context) {
     resolvedProps[key] = resolveBinding(binding, context);
   });
 
+  // Pass dazzle semantic context to components
+  // This enables the DOM contract (data-dazzle-* attributes)
+  if (context.dazzle || node.dazzle) {
+    resolvedProps.dazzle = {
+      ...context.dazzle,
+      ...node.dazzle,
+    };
+  }
+
+  // If component has entityRef, add it to dazzle context
+  if (resolvedProps.entityRef || resolvedProps.entity_ref) {
+    resolvedProps.dazzle = {
+      ...resolvedProps.dazzle,
+      entity: resolvedProps.entityRef || resolvedProps.entity_ref,
+    };
+  }
+
   // Render children
   const children = (node.children || []).map(child => renderViewNode(child, context)).filter(Boolean);
 

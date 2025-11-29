@@ -41,6 +41,13 @@ from dazzle_dnr_ui.runtime.dev_server import (
     run_dev_server_from_dict,
     run_dev_server_from_json,
 )
+from dazzle_dnr_ui.runtime.docker_runner import (
+    DockerRunConfig,
+    DockerRunner,
+    is_docker_available,
+    run_in_docker,
+    stop_docker_container,
+)
 from dazzle_dnr_ui.runtime.js_generator import (
     JSGenerator,
     generate_js_app,
@@ -91,4 +98,10 @@ __all__ = [
     "DNRCombinedHandler",
     "run_combined_server",
     "run_frontend_only",
+    # Docker runner (docker-first infrastructure)
+    "DockerRunner",
+    "DockerRunConfig",
+    "is_docker_available",
+    "run_in_docker",
+    "stop_docker_container",
 ]

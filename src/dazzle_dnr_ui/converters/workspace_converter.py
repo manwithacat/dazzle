@@ -14,11 +14,59 @@ from dazzle_dnr_ui.specs import (
 )
 
 # =============================================================================
+# Surface Matching
+# =============================================================================
+
+
+def _find_list_surface_for_entity(
+    entity_name: str,
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
+) -> str | None:
+    """Find the list surface component for an entity."""
+    for surface in surfaces:
+        if surface.entity_ref == entity_name and surface.mode == ir.SurfaceMode.LIST:
+            return surface_component_map.get(surface.name)
+    return None
+
+
+def _find_surface_by_mode(
+    entity_name: str,
+    mode: ir.SurfaceMode,
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
+) -> str | None:
+    """Find a surface component by entity and mode."""
+    for surface in surfaces:
+        if surface.entity_ref == entity_name and surface.mode == mode:
+            return surface_component_map.get(surface.name)
+    return None
+
+
+def _get_default_list_component(
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
+) -> str | None:
+    """Get the first list surface component as default."""
+    for surface in surfaces:
+        if surface.mode == ir.SurfaceMode.LIST:
+            return surface_component_map.get(surface.name)
+    # Fall back to any surface
+    if surfaces:
+        return surface_component_map.get(surfaces[0].name)
+    return None
+
+
+# =============================================================================
 # Layout Inference
 # =============================================================================
 
 
-def _infer_layout_from_workspace(workspace: ir.WorkspaceSpec) -> dict:
+def _infer_layout_from_workspace(
+    workspace: ir.WorkspaceSpec,
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
+) -> dict:
     """
     Infer a layout spec from workspace regions.
 
@@ -29,70 +77,141 @@ def _infer_layout_from_workspace(workspace: ir.WorkspaceSpec) -> dict:
     # If engine_hint is specified, use it to guide layout selection
     hint = workspace.engine_hint
 
+    # Find the main component to use from surfaces
+    main_component = _get_default_list_component(surfaces, surface_component_map) or "Page"
+
     if hint == "focus_metric":
         # Single hero metric with supporting context
-        return SingleColumnLayout(main="FocusMetricView")
+        return SingleColumnLayout(main=main_component)
     elif hint == "scanner_table":
         # Large data table with filters
-        return SingleColumnLayout(main="ScannerTableView")
+        return SingleColumnLayout(main=main_component)
     elif hint == "monitor_wall":
         # Multiple equal-weight metrics
-        return SingleColumnLayout(main="MonitorWallView")
+        return SingleColumnLayout(main=main_component)
 
     # Default heuristics based on region count
     if len(regions) == 1:
-        return SingleColumnLayout(main=f"{workspace.name}_main")
+        return SingleColumnLayout(main=main_component)
     elif len(regions) <= 3:
         # Check if we have a natural sidebar candidate
         if any(r.name in ("navigation", "nav", "sidebar", "menu") for r in regions):
             return AppShellLayout(
                 sidebar=f"{workspace.name}_sidebar",
-                main=f"{workspace.name}_main",
+                main=main_component,
                 header=f"{workspace.name}_header" if len(regions) >= 3 else None,
             )
         else:
-            return SingleColumnLayout(main=f"{workspace.name}_main")
+            return SingleColumnLayout(main=main_component)
     else:
         # Many regions -> app shell with sidebar navigation
         return AppShellLayout(
             sidebar=f"{workspace.name}_sidebar",
-            main=f"{workspace.name}_main",
+            main=main_component,
             header=f"{workspace.name}_header",
         )
 
 
-def _generate_routes_from_regions(
+def _generate_routes_from_surfaces(
     workspace: ir.WorkspaceSpec,
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
 ) -> list[RouteSpec]:
     """
-    Generate routes for workspace based on regions.
+    Generate routes for workspace based on available surfaces.
 
-    Each region that can be displayed independently gets a route.
+    Maps surface modes to standard routes:
+    - LIST surfaces -> / (root) and /list
+    - VIEW surfaces -> /detail/:id
+    - CREATE surfaces -> /create
+    - EDIT surfaces -> /edit/:id
     """
     routes: list[RouteSpec] = []
+    entities_seen = set()
 
-    # Default route
-    routes.append(
-        RouteSpec(
-            path="/",
-            component=f"{workspace.name.title()}Overview",
-            title=workspace.title or workspace.name.title(),
-        )
-    )
-
-    # Route per region (for regions that make sense as standalone views)
+    # Collect entities used in workspace regions
+    workspace_entities = set()
     for region in workspace.regions:
-        # Skip aggregate-only regions
-        if region.aggregates and not region.source:
+        if region.source:
+            workspace_entities.add(region.source)
+
+    # If no specific entities, use all surfaces
+    if not workspace_entities:
+        for surface in surfaces:
+            if surface.entity_ref:
+                workspace_entities.add(surface.entity_ref)
+
+    # Generate routes for each entity's surfaces
+    for surface in surfaces:
+        entity_name = surface.entity_ref
+        if not entity_name:
             continue
 
-        routes.append(
-            RouteSpec(
-                path=f"/{region.name}",
-                component=f"{region.name.title()}View",
-                title=region.name.replace("_", " ").title(),
+        component_name = surface_component_map.get(surface.name)
+        if not component_name:
+            continue
+
+        entity_lower = entity_name.lower()
+
+        if surface.mode == ir.SurfaceMode.LIST:
+            # First list surface becomes the root route
+            if entity_name not in entities_seen:
+                routes.append(
+                    RouteSpec(
+                        path="/",
+                        component=component_name,
+                        title=surface.title or f"{entity_name} List",
+                    )
+                )
+                entities_seen.add(entity_name)
+
+            # Also add explicit /list route
+            routes.append(
+                RouteSpec(
+                    path=f"/{entity_lower}/list",
+                    component=component_name,
+                    title=surface.title or f"{entity_name} List",
+                )
             )
-        )
+
+        elif surface.mode == ir.SurfaceMode.VIEW:
+            routes.append(
+                RouteSpec(
+                    path=f"/{entity_lower}/:id",
+                    component=component_name,
+                    title=surface.title or f"{entity_name} Detail",
+                )
+            )
+
+        elif surface.mode == ir.SurfaceMode.CREATE:
+            routes.append(
+                RouteSpec(
+                    path=f"/{entity_lower}/create",
+                    component=component_name,
+                    title=surface.title or f"Create {entity_name}",
+                )
+            )
+
+        elif surface.mode == ir.SurfaceMode.EDIT:
+            routes.append(
+                RouteSpec(
+                    path=f"/{entity_lower}/:id/edit",
+                    component=component_name,
+                    title=surface.title or f"Edit {entity_name}",
+                )
+            )
+
+    # Ensure we have at least one route
+    if not routes:
+        default_component = _get_default_list_component(surfaces, surface_component_map)
+        if default_component:
+            routes.append(
+                RouteSpec(
+                    path="/",
+                    component=default_component,
+                    title=workspace.title or workspace.name.title(),
+                )
+            )
 
     return routes
 
@@ -102,21 +221,27 @@ def _generate_routes_from_regions(
 # =============================================================================
 
 
-def convert_workspace(workspace: ir.WorkspaceSpec) -> WorkspaceSpec:
+def convert_workspace(
+    workspace: ir.WorkspaceSpec,
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
+) -> WorkspaceSpec:
     """
     Convert a Dazzle IR WorkspaceSpec to DNR UISpec WorkspaceSpec.
 
     Args:
         workspace: Dazzle IR workspace specification
+        surfaces: List of all surfaces in the app
+        surface_component_map: Mapping of surface names to component names
 
     Returns:
         DNR UISpec workspace specification
     """
-    # Infer layout
-    layout = _infer_layout_from_workspace(workspace)
+    # Infer layout using surfaces
+    layout = _infer_layout_from_workspace(workspace, surfaces, surface_component_map)
 
-    # Generate routes
-    routes = _generate_routes_from_regions(workspace)
+    # Generate routes from surfaces
+    routes = _generate_routes_from_surfaces(workspace, surfaces, surface_component_map)
 
     # Extract persona from UX spec if available
     persona = None
@@ -136,14 +261,18 @@ def convert_workspace(workspace: ir.WorkspaceSpec) -> WorkspaceSpec:
 
 def convert_workspaces(
     workspaces: list[ir.WorkspaceSpec],
+    surfaces: list[ir.SurfaceSpec],
+    surface_component_map: dict[str, str],
 ) -> list[WorkspaceSpec]:
     """
     Convert a list of Dazzle IR workspaces to DNR UISpec workspaces.
 
     Args:
         workspaces: List of Dazzle IR workspace specifications
+        surfaces: List of all surfaces in the app
+        surface_component_map: Mapping of surface names to component names
 
     Returns:
         List of DNR UISpec workspace specifications
     """
-    return [convert_workspace(w) for w in workspaces]
+    return [convert_workspace(w, surfaces, surface_component_map) for w in workspaces]
