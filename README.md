@@ -251,9 +251,10 @@ my_project/
 
 ## Documentation
 
-- [DSL Reference](docs/DSL_REFERENCE.md) - Language specification
-- [CLI Reference](docs/CLI_REFERENCE.md) - Command-line interface
-- [Stack Guide](docs/STACK_GUIDE.md) - Creating custom stacks
+- [DSL Quick Reference](docs/DAZZLE_DSL_QUICK_REFERENCE.md) - Language specification
+- [DNR CLI Reference](docs/dnr/CLI.md) - Command-line interface
+- [Example Projects](docs/EXAMPLES.md) - Live demos with E2E test coverage
+- [Custom Stacks](docs/CUSTOM_STACKS.md) - Creating code generation stacks
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ## Contributing
