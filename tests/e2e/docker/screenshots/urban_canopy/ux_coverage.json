@@ -1,0 +1,97 @@
+{
+  "overall_coverage": 26.25,
+  "route_coverage": 100.0,
+  "component_coverage": 12.5,
+  "entity_crud_coverage": 0.0,
+  "entity_ui_coverage": 12.5,
+  "routes": {
+    "total": 0,
+    "visited": 0
+  },
+  "components": {
+    "total": 16,
+    "tested": 2
+  },
+  "entities": {
+    "Volunteer": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "create",
+        "list",
+        "read",
+        "delete"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "detail",
+        "create",
+        "list",
+        "edit"
+      ]
+    },
+    "Task": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "create",
+        "list",
+        "read",
+        "delete"
+      ],
+      "ui_views_tested": [
+        "create",
+        "list"
+      ],
+      "ui_views_missing": [
+        "detail",
+        "edit"
+      ]
+    },
+    "Observation": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "create",
+        "list",
+        "read",
+        "delete"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "detail",
+        "create",
+        "list",
+        "edit"
+      ]
+    },
+    "Tree": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "create",
+        "list",
+        "read",
+        "delete"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "detail",
+        "create",
+        "list",
+        "edit"
+      ]
+    }
+  },
+  "interactions_tested": [
+    "click"
+  ]
+}

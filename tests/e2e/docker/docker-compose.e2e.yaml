@@ -1,0 +1,60 @@
+# Docker Compose stack for E2E testing
+# Runs DNR app + Playwright for isolated testing
+#
+# Usage:
+#   docker compose -f tests/e2e/docker/docker-compose.e2e.yaml up --build
+#   docker compose -f tests/e2e/docker/docker-compose.e2e.yaml run playwright pytest
+#   docker compose -f tests/e2e/docker/docker-compose.e2e.yaml down
+
+services:
+  # DNR Application Server
+  dnr-app:
+    build:
+      context: ../../..
+      dockerfile: tests/e2e/docker/Dockerfile.dnr
+      args:
+        PROJECT_PATH: examples/simple_task
+    container_name: dazzle-e2e-dnr
+    ports:
+      - "8000:8000"  # API port
+      - "3000:3000"  # UI port (if separate)
+    environment:
+      - DNR_TEST_MODE=1
+      - DNR_HOST=0.0.0.0
+      - DNR_API_PORT=8000
+      - DNR_FRONTEND_PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - e2e-network
+
+  # Playwright Test Runner
+  playwright:
+    image: mcr.microsoft.com/playwright/python:v1.55.0-noble
+    container_name: dazzle-e2e-playwright
+    depends_on:
+      dnr-app:
+        condition: service_healthy
+    environment:
+      - DNR_BASE_URL=http://dnr-app:8000
+      - DNR_UI_URL=http://dnr-app:3000
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      # Mount test files
+      - ../../../tests:/tests:ro
+      # Mount source for test utilities
+      - ../../../src:/src:ro
+      # Screenshots output
+      - ./screenshots:/screenshots
+    working_dir: /tests
+    command: ["sleep", "infinity"]  # Keep container running for interactive testing
+    networks:
+      - e2e-network
+
+networks:
+  e2e-network:
+    driver: bridge

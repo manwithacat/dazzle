@@ -1,0 +1,103 @@
+{
+  "overall_coverage": 12.52,
+  "route_coverage": 14.29,
+  "component_coverage": 33.33,
+  "entity_crud_coverage": 0.0,
+  "entity_ui_coverage": 10.0,
+  "routes": {
+    "total": 7,
+    "visited": 1
+  },
+  "components": {
+    "total": 6,
+    "tested": 2
+  },
+  "entities": {
+    "Task": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [
+        "create",
+        "list"
+      ],
+      "ui_views_missing": [
+        "detail"
+      ]
+    },
+    "Alert": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list"
+      ]
+    },
+    "Metric": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list"
+      ]
+    },
+    "Item": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list"
+      ]
+    },
+    "Service": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list"
+      ]
+    }
+  },
+  "interactions_tested": [
+    "click"
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "overall_coverage": 6.22,
+  "route_coverage": 9.09,
+  "component_coverage": 9.52,
+  "entity_crud_coverage": 0.0,
+  "entity_ui_coverage": 8.33,
+  "routes": {
+    "total": 22,
+    "visited": 2
+  },
+  "components": {
+    "total": 21,
+    "tested": 2
+  },
+  "entities": {
+    "Device": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "edit",
+        "create",
+        "list",
+        "detail"
+      ]
+    },
+    "Tester": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "edit",
+        "create",
+        "list",
+        "detail"
+      ]
+    },
+    "FirmwareRelease": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "create",
+        "list",
+        "detail"
+      ]
+    },
+    "TestSession": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "create",
+        "list"
+      ]
+    },
+    "Task": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [
+        "create",
+        "list"
+      ],
+      "ui_views_missing": [
+        "edit",
+        "detail"
+      ]
+    },
+    "IssueReport": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "update",
+        "delete",
+        "list",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "edit",
+        "create",
+        "list",
+        "detail"
+      ]
+    }
+  },
+  "interactions_tested": [
+    "click"
+  ]
+}

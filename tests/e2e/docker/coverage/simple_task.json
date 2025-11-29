@@ -1,0 +1,39 @@
+{
+  "overall_coverage": 96.0,
+  "route_coverage": 80.0,
+  "component_coverage": 100.0,
+  "entity_crud_coverage": 100.0,
+  "entity_ui_coverage": 100.0,
+  "routes": {
+    "total": 5,
+    "visited": 4
+  },
+  "components": {
+    "total": 4,
+    "tested": 4
+  },
+  "entities": {
+    "Task": {
+      "crud_coverage": 100.0,
+      "ui_coverage": 100.0,
+      "operations_tested": [
+        "read",
+        "delete",
+        "list",
+        "create",
+        "update"
+      ],
+      "operations_missing": [],
+      "ui_views_tested": [
+        "detail",
+        "create",
+        "list",
+        "edit"
+      ],
+      "ui_views_missing": []
+    }
+  },
+  "interactions_tested": [
+    "click"
+  ]
+}

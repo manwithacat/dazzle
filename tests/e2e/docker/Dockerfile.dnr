@@ -1,0 +1,62 @@
+# DNR E2E Test Container
+# Builds Dazzle from source and serves a specified project
+#
+# Build args:
+#   PROJECT_PATH: Path to the Dazzle project to serve (e.g., examples/simple_task)
+#
+# Usage:
+#   docker build -f tests/e2e/docker/Dockerfile.dnr -t dazzle-dnr-e2e --build-arg PROJECT_PATH=examples/simple_task .
+#   docker run -p 8000:8000 -e DNR_TEST_MODE=1 dazzle-dnr-e2e
+
+FROM python:3.11-slim
+
+# Build argument for the project to serve
+ARG PROJECT_PATH=examples/simple_task
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /dazzle
+
+# Copy Python source code
+COPY pyproject.toml ./
+COPY src/ ./src/
+
+# Install Dazzle in editable mode with DNR dependencies
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    aiosqlite \
+    && pip install --no-cache-dir -e .
+
+# Copy the project to serve
+COPY ${PROJECT_PATH} /project
+
+# Set working directory to project
+WORKDIR /project
+
+# Create data directory
+RUN mkdir -p /project/.dazzle
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV DNR_HOST=0.0.0.0
+ENV DNR_API_PORT=8000
+ENV DNR_FRONTEND_PORT=3000
+ENV DNR_DB_PATH=/project/.dazzle/data.db
+ENV DNR_TEST_MODE=0
+
+# Expose ports
+EXPOSE 8000 3000
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run DNR serve with local mode (single process, both API and UI)
+# Use --host 0.0.0.0 to allow external access from Docker
+CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--test-mode", "--host", "0.0.0.0"]

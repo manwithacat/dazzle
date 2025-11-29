@@ -1,0 +1,70 @@
+{
+  "overall_coverage": 24.0,
+  "route_coverage": 20.0,
+  "component_coverage": 50.0,
+  "entity_crud_coverage": 0.0,
+  "entity_ui_coverage": 33.33,
+  "routes": {
+    "total": 5,
+    "visited": 1
+  },
+  "components": {
+    "total": 4,
+    "tested": 2
+  },
+  "entities": {
+    "Alert": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "create",
+        "update",
+        "list",
+        "delete",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list"
+      ]
+    },
+    "System": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "create",
+        "update",
+        "list",
+        "delete",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list",
+        "detail"
+      ]
+    },
+    "Task": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 100.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "create",
+        "update",
+        "list",
+        "delete",
+        "read"
+      ],
+      "ui_views_tested": [
+        "create",
+        "list"
+      ],
+      "ui_views_missing": []
+    }
+  },
+  "interactions_tested": [
+    "click"
+  ]
+}
