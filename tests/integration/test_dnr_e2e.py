@@ -119,9 +119,7 @@ class DNRDockerServerManager:
         )
 
         if result.returncode != 0:
-            raise RuntimeError(
-                f"Failed to start Docker container: {result.stderr}"
-            )
+            raise RuntimeError(f"Failed to start Docker container: {result.stderr}")
 
         # Wait for API to be ready
         if not wait_for_server(f"{self.api_url}/health"):

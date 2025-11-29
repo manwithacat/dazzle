@@ -711,6 +711,7 @@ def init_project(
     Raises:
         InitError: If initialization fails
     """
+
     def log(msg: str) -> None:
         """Log progress message if callback provided."""
         if progress_callback:

@@ -211,6 +211,7 @@ class JSGenerator:
         """
         try:
             from dazzle_dnr_ui.tokens import generate_css_bundle
+
             return generate_css_bundle()
         except ImportError:
             # Fallback to minimal styles if tokens module not available

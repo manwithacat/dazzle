@@ -23,9 +23,9 @@ UX Coverage:
 """
 
 import os
+
 import pytest
 from playwright.sync_api import Page, expect, sync_playwright
-
 
 # Configuration from environment
 DNR_BASE_URL = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
@@ -43,19 +43,20 @@ def track_ux(route=None, component=None, entity=None, crud_op=None, ui_view=None
         def test_task_list(self, page, ux_tracker):
             ...
     """
+
     def decorator(func):
         def wrapper(self, *args, **kwargs):
             # Get ux_tracker from kwargs or args
-            ux_tracker = kwargs.get('ux_tracker') or kwargs.get('track_route')
+            ux_tracker = kwargs.get("ux_tracker") or kwargs.get("track_route")
             if not ux_tracker:
                 # Try to find it in fixtures
                 for arg in args:
-                    if hasattr(arg, 'visit_route'):
+                    if hasattr(arg, "visit_route"):
                         ux_tracker = arg
                         break
 
             # Track if we have a tracker
-            if ux_tracker and hasattr(ux_tracker, 'visit_route'):
+            if ux_tracker and hasattr(ux_tracker, "visit_route"):
                 if route:
                     ux_tracker.visit_route(route)
                 if component:
@@ -68,7 +69,9 @@ def track_ux(route=None, component=None, entity=None, crud_op=None, ui_view=None
                     ux_tracker.test_interaction(interaction)
 
             return func(self, *args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -95,6 +98,7 @@ def page(browser):
 def api_client():
     """HTTP client for API operations."""
     import httpx
+
     return httpx.Client(base_url=DNR_BASE_URL, timeout=10)
 
 
@@ -111,6 +115,7 @@ class TestAPIHealth:
     def test_ui_spec_available(self):
         """Test that the UI spec is available from the frontend server."""
         import httpx
+
         # UI spec is served from frontend server at /ui-spec.json, not /api/ui-spec
         client = httpx.Client(base_url=DNR_UI_URL, timeout=10)
         response = client.get("/ui-spec.json")
@@ -186,7 +191,9 @@ class TestCRUDFlow:
         ux_tracker.test_interaction("click")
 
         # Look for create button
-        create_button = page.locator("button:has-text('Create'), a:has-text('Create'), [data-action='create']")
+        create_button = page.locator(
+            "button:has-text('Create'), a:has-text('Create'), [data-action='create']"
+        )
 
         if create_button.count() == 0:
             page.screenshot(path=f"{SCREENSHOT_DIR}/04_no_create_button.png")
@@ -200,7 +207,9 @@ class TestCRUDFlow:
         page.wait_for_load_state("networkidle")
 
         # Click create button
-        create_button = page.locator("button:has-text('Create'), a:has-text('Create'), [data-action='create']").first
+        create_button = page.locator(
+            "button:has-text('Create'), a:has-text('Create'), [data-action='create']"
+        ).first
 
         if create_button.count() > 0:
             create_button.click()
@@ -226,7 +235,9 @@ class TestCRUDFlow:
         page.wait_for_load_state("networkidle")
 
         # Click create button
-        create_button = page.locator("button:has-text('Create'), a:has-text('Create'), [data-action='create']").first
+        create_button = page.locator(
+            "button:has-text('Create'), a:has-text('Create'), [data-action='create']"
+        ).first
 
         if create_button.count() > 0:
             create_button.click()
@@ -260,12 +271,15 @@ class TestTableDisplay:
     def test_table_headers_visible(self, page: Page, api_client):
         """Test that table headers are displayed."""
         # Seed some data first
-        api_client.post("/__test__/seed", json={
-            "Task": [
-                {"title": "Test Task 1", "completed": False},
-                {"title": "Test Task 2", "completed": True},
-            ]
-        })
+        api_client.post(
+            "/__test__/seed",
+            json={
+                "Task": [
+                    {"title": "Test Task 1", "completed": False},
+                    {"title": "Test Task 2", "completed": True},
+                ]
+            },
+        )
 
         page.goto(DNR_UI_URL)
         page.wait_for_load_state("networkidle")
@@ -284,12 +298,15 @@ class TestTableDisplay:
     def test_table_data_loads(self, page: Page, api_client):
         """Test that table data loads and displays."""
         # Seed some data first
-        api_client.post("/__test__/seed", json={
-            "Task": [
-                {"title": "Test Task 1", "completed": False},
-                {"title": "Test Task 2", "completed": True},
-            ]
-        })
+        api_client.post(
+            "/__test__/seed",
+            json={
+                "Task": [
+                    {"title": "Test Task 1", "completed": False},
+                    {"title": "Test Task 2", "completed": True},
+                ]
+            },
+        )
 
         page.goto(DNR_UI_URL)
         page.wait_for_load_state("networkidle")
@@ -360,8 +377,8 @@ class TestStyling:
 
             if padding:
                 # Check that at least some padding exists
-                values = [padding.get('top', '0px'), padding.get('left', '0px')]
-                has_padding = any(v != '0px' for v in values)
+                values = [padding.get("top", "0px"), padding.get("left", "0px")]
+                has_padding = any(v != "0px" for v in values)
 
                 if not has_padding:
                     page.screenshot(path=f"{SCREENSHOT_DIR}/10_no_app_padding.png")
@@ -383,12 +400,15 @@ class TestViewContentCompleteness:
     def test_detail_view_shows_data(self, page: Page, api_client, ux_tracker):
         """Test that the detail view displays task data, not an empty card."""
         # Create a task via API first
-        response = api_client.post("/api/tasks", json={
-            "title": "Detail View Test Task",
-            "description": "This task tests the detail view",
-            "status": "pending",
-            "priority": "high"
-        })
+        response = api_client.post(
+            "/api/tasks",
+            json={
+                "title": "Detail View Test Task",
+                "description": "This task tests the detail view",
+                "status": "pending",
+                "priority": "high",
+            },
+        )
         assert response.status_code == 200, f"Failed to create task: {response.text}"
         task = response.json()
         task_id = task.get("id")
@@ -406,7 +426,9 @@ class TestViewContentCompleteness:
         page.wait_for_timeout(2000)
 
         # Check that the card body has content
-        card_body = page.locator(".dz-card__body, [data-dazzle-view] .card-body, [class*='card'] [class*='body']").first
+        card_body = page.locator(
+            ".dz-card__body, [data-dazzle-view] .card-body, [class*='card'] [class*='body']"
+        ).first
 
         if card_body.count() > 0:
             body_content = card_body.inner_text().strip()
@@ -438,12 +460,15 @@ class TestViewContentCompleteness:
     def test_edit_form_has_populated_fields(self, page: Page, api_client, ux_tracker):
         """Test that the edit form shows existing data in form fields."""
         # Create a task via API first
-        response = api_client.post("/api/tasks", json={
-            "title": "Edit Form Test Task",
-            "description": "Testing edit form population",
-            "status": "in_progress",
-            "priority": "medium"
-        })
+        response = api_client.post(
+            "/api/tasks",
+            json={
+                "title": "Edit Form Test Task",
+                "description": "Testing edit form population",
+                "status": "in_progress",
+                "priority": "medium",
+            },
+        )
         assert response.status_code == 200, f"Failed to create task: {response.text}"
         task = response.json()
         task_id = task.get("id")
@@ -467,8 +492,7 @@ class TestViewContentCompleteness:
 
         if input_count == 0:
             pytest.fail(
-                "Edit form has no input fields. "
-                "Expected form inputs for editing task data."
+                "Edit form has no input fields. Expected form inputs for editing task data."
             )
 
         # Check that at least one input has a value
@@ -535,12 +559,15 @@ class TestViewContentCompleteness:
     def test_list_view_shows_entity_data(self, page: Page, api_client):
         """Test that list view displays actual entity data from the API."""
         # Seed known data
-        api_client.post("/__test__/seed", json={
-            "Task": [
-                {"title": "List Test Task Alpha", "status": "pending"},
-                {"title": "List Test Task Beta", "status": "completed"},
-            ]
-        })
+        api_client.post(
+            "/__test__/seed",
+            json={
+                "Task": [
+                    {"title": "List Test Task Alpha", "status": "pending"},
+                    {"title": "List Test Task Beta", "status": "completed"},
+                ]
+            },
+        )
 
         page.goto(DNR_UI_URL)
         page.wait_for_load_state("networkidle")
@@ -572,12 +599,10 @@ class TestAPIUIIntegration:
         """Test that a task created via API appears in the UI list."""
         # Create unique task
         import uuid
+
         unique_title = f"UI Sync Test {uuid.uuid4().hex[:8]}"
 
-        response = api_client.post("/api/tasks", json={
-            "title": unique_title,
-            "status": "pending"
-        })
+        response = api_client.post("/api/tasks", json={"title": unique_title, "status": "pending"})
         assert response.status_code == 200
 
         # Track coverage
@@ -605,10 +630,9 @@ class TestAPIUIIntegration:
     def test_delete_button_removes_from_list(self, page: Page, api_client, ux_tracker):
         """Test that clicking delete actually removes the task."""
         # Create a task to delete
-        response = api_client.post("/api/tasks", json={
-            "title": "Task To Delete",
-            "status": "pending"
-        })
+        response = api_client.post(
+            "/api/tasks", json={"title": "Task To Delete", "status": "pending"}
+        )
         assert response.status_code == 200
         task_id = response.json().get("id")
 
@@ -622,7 +646,9 @@ class TestAPIUIIntegration:
         page.wait_for_timeout(2000)
 
         # Find and click delete button for this task
-        delete_button = page.locator(f"[data-task-id='{task_id}'] button:has-text('Delete'), tr:has-text('Task To Delete') button:has-text('Delete')")
+        delete_button = page.locator(
+            f"[data-task-id='{task_id}'] button:has-text('Delete'), tr:has-text('Task To Delete') button:has-text('Delete')"
+        )
 
         if delete_button.count() > 0:
             delete_button.first.click()
@@ -634,8 +660,8 @@ class TestAPIUIIntegration:
             check_response = api_client.get(f"/api/tasks/{task_id}")
             if check_response.status_code == 200:
                 pytest.fail(
-                    f"Task still exists in API after clicking Delete button. "
-                    f"Delete button may not be wired to API correctly."
+                    "Task still exists in API after clicking Delete button. "
+                    "Delete button may not be wired to API correctly."
                 )
         else:
             page.screenshot(path=f"{SCREENSHOT_DIR}/16_no_delete_button.png")

@@ -20,7 +20,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 # =============================================================================
 # Token Loading
 # =============================================================================
@@ -109,7 +108,16 @@ def compile_tokens_to_variables(tokens: dict[str, Any] | None = None) -> str:
     ]
 
     # Process each top-level category
-    for category in ["color", "space", "radius", "shadow", "font", "transition", "breakpoint", "zIndex"]:
+    for category in [
+        "color",
+        "space",
+        "radius",
+        "shadow",
+        "font",
+        "transition",
+        "breakpoint",
+        "zIndex",
+    ]:
         if category not in tokens:
             continue
 
@@ -1162,9 +1170,7 @@ def write_css_bundle(
     if split:
         # Write separate files
         variables_path = output_dir / "variables.css"
-        variables_path.write_text(
-            compile_tokens_to_variables(tokens) + generate_dark_theme(tokens)
-        )
+        variables_path.write_text(compile_tokens_to_variables(tokens) + generate_dark_theme(tokens))
         written.append(variables_path)
 
         components_path = output_dir / "components.css"

@@ -287,9 +287,7 @@ def _generate_form_fields(
                     "variant": LiteralBinding(value="label"),
                     "dazzle": LiteralBinding(value={"label": f"{entity_name}.{field_name}"}),
                 },
-                children=[
-                    TextNode(content=LiteralBinding(value=field_label))
-                ],
+                children=[TextNode(content=LiteralBinding(value=field_label))],
             )
         )
 
@@ -327,18 +325,22 @@ def _generate_table_columns(
     if surface.sections:
         for section in surface.sections:
             for element in section.elements:
-                columns.append({
-                    "key": element.field_name,
-                    "label": element.label or element.field_name.replace("_", " ").title(),
-                })
+                columns.append(
+                    {
+                        "key": element.field_name,
+                        "label": element.label or element.field_name.replace("_", " ").title(),
+                    }
+                )
     elif entity and entity.fields:
         # Use all non-pk entity fields as columns
         for field in entity.fields:
             if not field.is_primary_key:
-                columns.append({
-                    "key": field.name,
-                    "label": field.name.replace("_", " ").title(),
-                })
+                columns.append(
+                    {
+                        "key": field.name,
+                        "label": field.name.replace("_", " ").title(),
+                    }
+                )
 
     return columns
 

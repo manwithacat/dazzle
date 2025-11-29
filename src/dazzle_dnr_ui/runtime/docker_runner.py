@@ -16,7 +16,6 @@ Usage:
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -509,12 +508,9 @@ class DockerRunner:
 
             # Write pre-generated specs
             import json
-            (build_dir / "backend_spec.json").write_text(
-                json.dumps(backend_spec, indent=2)
-            )
-            (build_dir / "ui_spec.json").write_text(
-                json.dumps(ui_spec, indent=2)
-            )
+
+            (build_dir / "backend_spec.json").write_text(json.dumps(backend_spec, indent=2))
+            (build_dir / "ui_spec.json").write_text(json.dumps(ui_spec, indent=2))
 
             # Create static directory and write HTML
             static_dir = build_dir / "static"
@@ -558,10 +554,10 @@ class DockerRunner:
             Tuple of (backend_spec_dict, ui_spec_dict, html_content)
         """
         from dazzle.cli import (
-            load_manifest,
-            discover_dsl_files,
-            parse_modules,
             build_appspec,
+            discover_dsl_files,
+            load_manifest,
+            parse_modules,
         )
         from dazzle_dnr_back.converters import convert_appspec_to_backend
         from dazzle_dnr_ui.converters import convert_appspec_to_ui
@@ -624,6 +620,7 @@ class DockerRunner:
         else:
             # Only use -it if we have a TTY, otherwise just run attached
             import sys
+
             if sys.stdin.isatty():
                 cmd.append("-it")
             cmd.append("--rm")

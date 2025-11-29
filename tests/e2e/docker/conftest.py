@@ -5,14 +5,12 @@ This configures fixtures for UX coverage tracking.
 """
 
 import os
-import pytest
-from typing import Optional, List
 
+import pytest
 from ux_coverage import UXCoverageTracker
 
-
 # Global tracker instance (shared across all tests)
-_ux_tracker: Optional[UXCoverageTracker] = None
+_ux_tracker: UXCoverageTracker | None = None
 
 
 def pytest_configure(config):
@@ -56,38 +54,48 @@ def ux_tracker():
 @pytest.fixture
 def track_route(ux_tracker):
     """Fixture to track route visits."""
+
     def _track(path: str):
         ux_tracker.visit_route(path)
+
     return _track
 
 
 @pytest.fixture
 def track_component(ux_tracker):
     """Fixture to track component tests."""
-    def _track(name: str, aspects: Optional[List[str]] = None):
+
+    def _track(name: str, aspects: list[str] | None = None):
         ux_tracker.test_component(name, aspects)
+
     return _track
 
 
 @pytest.fixture
 def track_crud(ux_tracker):
     """Fixture to track CRUD operation tests."""
+
     def _track(entity: str, operation: str):
         ux_tracker.test_crud(entity, operation)
+
     return _track
 
 
 @pytest.fixture
 def track_ui_view(ux_tracker):
     """Fixture to track UI view tests."""
+
     def _track(entity: str, view: str):
         ux_tracker.test_ui_view(entity, view)
+
     return _track
 
 
 @pytest.fixture
 def track_interaction(ux_tracker):
     """Fixture to track interaction types."""
+
     def _track(interaction_type: str):
         ux_tracker.test_interaction(interaction_type)
+
     return _track

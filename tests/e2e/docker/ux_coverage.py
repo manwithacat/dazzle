@@ -25,42 +25,53 @@ Usage:
     print(report.summary())
 """
 
-import os
 import json
+import os
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Optional
-from pathlib import Path
+
 import httpx
 
 
 @dataclass
 class EntityCoverage:
     """Track CRUD coverage for a single entity."""
+
     name: str
-    operations_expected: Set[str] = field(default_factory=lambda: {"create", "read", "update", "delete", "list"})
-    operations_tested: Set[str] = field(default_factory=set)
-    ui_views_expected: Set[str] = field(default_factory=set)  # list, detail, create, edit
-    ui_views_tested: Set[str] = field(default_factory=set)
+    operations_expected: set[str] = field(
+        default_factory=lambda: {"create", "read", "update", "delete", "list"}
+    )
+    operations_tested: set[str] = field(default_factory=set)
+    ui_views_expected: set[str] = field(default_factory=set)  # list, detail, create, edit
+    ui_views_tested: set[str] = field(default_factory=set)
 
     @property
     def crud_coverage(self) -> float:
         if not self.operations_expected:
             return 100.0
-        return len(self.operations_tested & self.operations_expected) / len(self.operations_expected) * 100
+        return (
+            len(self.operations_tested & self.operations_expected)
+            / len(self.operations_expected)
+            * 100
+        )
 
     @property
     def ui_coverage(self) -> float:
         if not self.ui_views_expected:
             return 100.0
-        return len(self.ui_views_tested & self.ui_views_expected) / len(self.ui_views_expected) * 100
+        return (
+            len(self.ui_views_tested & self.ui_views_expected) / len(self.ui_views_expected) * 100
+        )
 
 
 @dataclass
 class ComponentCoverage:
     """Track coverage for a single UI component."""
+
     name: str
-    aspects_expected: Set[str] = field(default_factory=lambda: {"renders", "displays_data", "interactive"})
-    aspects_tested: Set[str] = field(default_factory=set)
+    aspects_expected: set[str] = field(
+        default_factory=lambda: {"renders", "displays_data", "interactive"}
+    )
+    aspects_tested: set[str] = field(default_factory=set)
 
     @property
     def coverage(self) -> float:
@@ -72,13 +83,14 @@ class ComponentCoverage:
 @dataclass
 class UXCoverageReport:
     """Final coverage report."""
+
     routes_total: int
     routes_visited: int
     components_total: int
     components_tested: int
-    entities: Dict[str, EntityCoverage]
-    components: Dict[str, ComponentCoverage]
-    interactions_tested: Set[str]
+    entities: dict[str, EntityCoverage]
+    components: dict[str, ComponentCoverage]
+    interactions_tested: set[str]
 
     @property
     def route_coverage(self) -> float:
@@ -116,10 +128,10 @@ class UXCoverageReport:
             "entity_ui": 0.3,
         }
         return (
-            self.route_coverage * weights["routes"] +
-            self.component_coverage * weights["components"] +
-            self.entity_crud_coverage * weights["entity_crud"] +
-            self.entity_ui_coverage * weights["entity_ui"]
+            self.route_coverage * weights["routes"]
+            + self.component_coverage * weights["components"]
+            + self.entity_crud_coverage * weights["entity_crud"]
+            + self.entity_ui_coverage * weights["entity_ui"]
         )
 
     def summary(self) -> str:
@@ -145,27 +157,35 @@ class UXCoverageReport:
             tested = ", ".join(sorted(entity.operations_tested)) or "none"
             missing = entity.operations_expected - entity.operations_tested
             missing_str = ", ".join(sorted(missing)) if missing else "none"
-            lines.append(f"  {name}: {entity.crud_coverage:.0f}% (tested: {tested}; missing: {missing_str})")
+            lines.append(
+                f"  {name}: {entity.crud_coverage:.0f}% (tested: {tested}; missing: {missing_str})"
+            )
 
-        lines.extend([
-            "",
-            "--- Entity UI Coverage ---",
-            f"Average UI coverage: {self.entity_ui_coverage:.1f}%",
-        ])
+        lines.extend(
+            [
+                "",
+                "--- Entity UI Coverage ---",
+                f"Average UI coverage: {self.entity_ui_coverage:.1f}%",
+            ]
+        )
 
         for name, entity in self.entities.items():
             tested = ", ".join(sorted(entity.ui_views_tested)) or "none"
             missing = entity.ui_views_expected - entity.ui_views_tested
             missing_str = ", ".join(sorted(missing)) if missing else "none"
-            lines.append(f"  {name}: {entity.ui_coverage:.0f}% (tested: {tested}; missing: {missing_str})")
+            lines.append(
+                f"  {name}: {entity.ui_coverage:.0f}% (tested: {tested}; missing: {missing_str})"
+            )
 
-        lines.extend([
-            "",
-            "--- Interactions ---",
-            f"Interaction types tested: {', '.join(sorted(self.interactions_tested)) or 'none'}",
-            "",
-            "=" * 60,
-        ])
+        lines.extend(
+            [
+                "",
+                "--- Interactions ---",
+                f"Interaction types tested: {', '.join(sorted(self.interactions_tested)) or 'none'}",
+                "",
+                "=" * 60,
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -208,7 +228,7 @@ class UXCoverageTracker:
     then call tracking methods during tests.
     """
 
-    def __init__(self, ui_spec: Optional[dict] = None, api_url: Optional[str] = None):
+    def __init__(self, ui_spec: dict | None = None, api_url: str | None = None):
         """
         Initialize tracker with UISpec.
 
@@ -223,14 +243,14 @@ class UXCoverageTracker:
             self._fetch_ui_spec()
 
         # Expected surface area
-        self._routes: Set[str] = set()
-        self._components: Set[str] = set()
-        self._entities: Dict[str, EntityCoverage] = {}
+        self._routes: set[str] = set()
+        self._components: set[str] = set()
+        self._entities: dict[str, EntityCoverage] = {}
 
         # What we've actually tested
-        self._routes_visited: Set[str] = set()
-        self._components_tested: Dict[str, ComponentCoverage] = {}
-        self._interactions: Set[str] = set()
+        self._routes_visited: set[str] = set()
+        self._components_tested: dict[str, ComponentCoverage] = {}
+        self._interactions: set[str] = set()
 
         # Parse UISpec to set expectations
         self._parse_ui_spec()
@@ -279,19 +299,17 @@ class UXCoverageTracker:
                     aspects.add("displays_data")
 
                 self._components_tested[name] = ComponentCoverage(
-                    name=name,
-                    aspects_expected=aspects,
-                    aspects_tested=set()
+                    name=name, aspects_expected=aspects, aspects_tested=set()
                 )
 
         # Extract entities (from component naming convention)
-        entity_names: Set[str] = set()
+        entity_names: set[str] = set()
         for component in self.ui_spec.get("components", []):
             name = component.get("name", "")
             # Extract entity name from component name (e.g., TaskList -> Task)
             for suffix in ["List", "Detail", "Create", "Edit", "Form"]:
                 if name.endswith(suffix):
-                    entity_name = name[:-len(suffix)]
+                    entity_name = name[: -len(suffix)]
                     if entity_name:
                         entity_names.add(entity_name)
 
@@ -319,17 +337,16 @@ class UXCoverageTracker:
         """Normalize a route path for matching."""
         # Convert /task/123 to /task/:id
         import re
+
         # UUID pattern
         normalized = re.sub(
-            r'/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
-            '/:id',
-            path
+            r"/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "/:id", path
         )
         # Numeric ID pattern
-        normalized = re.sub(r'/\d+', '/:id', normalized)
+        normalized = re.sub(r"/\d+", "/:id", normalized)
         return normalized
 
-    def test_component(self, name: str, aspects: Optional[List[str]] = None):
+    def test_component(self, name: str, aspects: list[str] | None = None):
         """Record that a component was tested with certain aspects."""
         if name not in self._components_tested:
             self._components_tested[name] = ComponentCoverage(name=name)
@@ -361,10 +378,7 @@ class UXCoverageTracker:
     def get_report(self) -> UXCoverageReport:
         """Generate coverage report."""
         # Count components with at least one aspect tested
-        components_tested = sum(
-            1 for c in self._components_tested.values()
-            if c.aspects_tested
-        )
+        components_tested = sum(1 for c in self._components_tested.values() if c.aspects_tested)
 
         return UXCoverageReport(
             routes_total=len(self._routes),
@@ -390,6 +404,7 @@ class UXCoverageTracker:
 
 # --- Pytest Plugin ---
 
+
 class UXCoveragePlugin:
     """
     Pytest plugin to track UX coverage across tests.
@@ -403,7 +418,7 @@ class UXCoveragePlugin:
     """
 
     def __init__(self):
-        self.tracker: Optional[UXCoverageTracker] = None
+        self.tracker: UXCoverageTracker | None = None
 
     def pytest_sessionstart(self, session):
         """Initialize tracker at session start."""
@@ -423,6 +438,7 @@ class UXCoveragePlugin:
 
 # --- Pytest Fixtures ---
 
+
 def create_coverage_fixtures():
     """
     Create pytest fixtures for UX coverage tracking.
@@ -436,7 +452,7 @@ def create_coverage_fixtures():
     import pytest
 
     # Global tracker instance
-    _tracker: Optional[UXCoverageTracker] = None
+    _tracker: UXCoverageTracker | None = None
 
     @pytest.fixture(scope="session")
     def ux_tracker():
@@ -450,32 +466,46 @@ def create_coverage_fixtures():
     @pytest.fixture
     def mark_route_visited(ux_tracker):
         """Fixture to mark routes as visited."""
+
         def _mark(path: str):
             ux_tracker.visit_route(path)
+
         return _mark
 
     @pytest.fixture
     def mark_component_tested(ux_tracker):
         """Fixture to mark components as tested."""
-        def _mark(name: str, aspects: Optional[List[str]] = None):
+
+        def _mark(name: str, aspects: list[str] | None = None):
             ux_tracker.test_component(name, aspects)
+
         return _mark
 
     @pytest.fixture
     def mark_crud_tested(ux_tracker):
         """Fixture to mark CRUD operations as tested."""
+
         def _mark(entity: str, operation: str):
             ux_tracker.test_crud(entity, operation)
+
         return _mark
 
     @pytest.fixture
     def mark_ui_view_tested(ux_tracker):
         """Fixture to mark UI views as tested."""
+
         def _mark(entity: str, view: str):
             ux_tracker.test_ui_view(entity, view)
+
         return _mark
 
-    return ux_tracker, mark_route_visited, mark_component_tested, mark_crud_tested, mark_ui_view_tested
+    return (
+        ux_tracker,
+        mark_route_visited,
+        mark_component_tested,
+        mark_crud_tested,
+        mark_ui_view_tested,
+    )
 
 
 # Example usage / self-test
@@ -488,16 +518,18 @@ if __name__ == "__main__":
             {"name": "TaskCreate"},
             {"name": "TaskEdit"},
         ],
-        "workspaces": [{
-            "name": "dashboard",
-            "routes": [
-                {"path": "/", "component": "TaskList"},
-                {"path": "/task/list", "component": "TaskList"},
-                {"path": "/task/:id", "component": "TaskDetail"},
-                {"path": "/task/create", "component": "TaskCreate"},
-                {"path": "/task/:id/edit", "component": "TaskEdit"},
-            ]
-        }]
+        "workspaces": [
+            {
+                "name": "dashboard",
+                "routes": [
+                    {"path": "/", "component": "TaskList"},
+                    {"path": "/task/list", "component": "TaskList"},
+                    {"path": "/task/:id", "component": "TaskDetail"},
+                    {"path": "/task/create", "component": "TaskCreate"},
+                    {"path": "/task/:id/edit", "component": "TaskEdit"},
+                ],
+            }
+        ],
     }
 
     # Create tracker
