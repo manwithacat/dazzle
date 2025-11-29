@@ -130,6 +130,33 @@ class TokenType(Enum):
     # v0.3.1 keywords
     ENGINE_HINT = "engine_hint"
 
+    # Flow/E2E Test Keywords (v0.3.2)
+    # Note: Only include keywords that don't conflict with common DSL usage
+    # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
+    # because they're commonly used as enum values or field names.
+    FLOW = "flow"
+    STEPS = "steps"
+    NAVIGATE = "navigate"
+    CLICK = "click"
+    FILL = "fill"
+    WAIT = "wait"
+    SNAPSHOT = "snapshot"
+    PRECONDITIONS = "preconditions"
+    AUTHENTICATED = "authenticated"
+    USER_ROLE = "user_role"
+    FIXTURES = "fixtures"
+    VIEW = "view"
+    ENTITY_EXISTS = "entity_exists"
+    ENTITY_NOT_EXISTS = "entity_not_exists"
+    VALIDATION_ERROR = "validation_error"
+    VISIBLE = "visible"
+    NOT_VISIBLE = "not_visible"
+    TEXT_CONTAINS = "text_contains"
+    REDIRECTS_TO = "redirects_to"
+    FIELD_VALUE = "field_value"
+    # PRIORITY, HIGH, MEDIUM, LOW are handled as identifiers
+    TAGS = "tags"
+
     # Comparison operators (for condition expressions)
     NOT_EQUALS = "!="
     GREATER_THAN = ">"
@@ -279,6 +306,30 @@ KEYWORDS = {
     "where",
     # v0.3.1 keywords
     "engine_hint",
+    # Flow/E2E Test keywords (v0.3.2)
+    # Note: 'priority', 'high', 'medium', 'low' are NOT keywords
+    # because they're commonly used as enum values or field names
+    "flow",
+    "steps",
+    "navigate",
+    "click",
+    "fill",
+    "wait",
+    "snapshot",
+    "preconditions",
+    "authenticated",
+    "user_role",
+    "fixtures",
+    "view",
+    "entity_exists",
+    "entity_not_exists",
+    "validation_error",
+    "visible",
+    "not_visible",
+    "text_contains",
+    "redirects_to",
+    "field_value",
+    "tags",
     # Comparison/logical keywords
     "in",
     "not",

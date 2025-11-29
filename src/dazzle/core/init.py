@@ -13,6 +13,10 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from .errors import DazzleError
 from .llm_context import create_llm_instrumentation
@@ -688,6 +692,7 @@ def init_project(
     no_git: bool = False,
     stack_name: str | None = None,
     allow_existing: bool = False,
+    progress_callback: "Callable[[str], None] | None" = None,
 ) -> None:
     """
     Initialize a new DAZZLE project.
@@ -701,21 +706,31 @@ def init_project(
         no_git: If True, skip git initialization (default: False)
         stack_name: Optional stack name to include in LLM context
         allow_existing: If True, allow initializing in existing directory
+        progress_callback: Optional callback for progress messages
 
     Raises:
         InitError: If initialization fails
     """
+    def log(msg: str) -> None:
+        """Log progress message if callback provided."""
+        if progress_callback:
+            progress_callback(msg)
+
     # Determine project name
     if project_name is None:
         project_name = target_dir.name
 
+    log(f"Initializing project '{project_name}'...")
+
     # Sanitize for use as module name
     module_name = sanitize_name(project_name)
+    log(f"  Module name: {module_name}")
 
     # Determine title
     if title is None:
         # Convert project_name to title case
         title = project_name.replace("_", " ").replace("-", " ").title()
+    log(f"  Project title: {title}")
 
     # Prepare template variables
     variables = {
@@ -726,6 +741,7 @@ def init_project(
 
     # Determine source directory
     if from_example:
+        log(f"Copying from example '{from_example}'...")
         # Copy from example
         examples_dir = Path(__file__).parent.parent.parent.parent / "examples"
         template_dir = examples_dir / from_example
@@ -737,6 +753,7 @@ def init_project(
                 f"Available examples: {', '.join(available) if available else 'none'}"
             )
     else:
+        log("Creating blank project from template...")
         # Use blank template
         template_dir = Path(__file__).parent.parent / "templates" / "blank"
 
@@ -744,34 +761,44 @@ def init_project(
             raise InitError(f"Blank template not found at {template_dir}")
 
     # Copy template
+    log(f"  Copying project files to {target_dir}...")
     copy_template(template_dir, target_dir, variables, allow_existing=allow_existing)
+    log("  Project files copied")
 
     # Create SPEC.md template (only for blank projects, not examples)
     if not from_example:
+        log("  Creating SPEC.md template...")
         create_spec_template(target_dir, project_name, title)
 
     # Create .mcp.json if it doesn't exist
     mcp_path = target_dir / ".mcp.json"
     if not mcp_path.exists():
+        log("  Creating MCP configuration (.mcp.json)...")
         create_mcp_config(target_dir)
 
     # Create LLM instrumentation (unless disabled)
     if not no_llm:
+        log("Creating LLM instrumentation files...")
         try:
             create_llm_instrumentation(
                 project_dir=target_dir,
                 project_name=project_name,
                 stack_name=stack_name,
             )
+            log("  Created LLM_CONTEXT.md, .llm/, .claude/, .copilot/")
         except Exception as e:
             # Don't fail the entire init if LLM instrumentation fails
             # Just warn the user
             import warnings
 
             warnings.warn(f"Failed to create LLM instrumentation: {e}", stacklevel=2)
+            log(f"  Warning: LLM instrumentation failed ({e})")
+    else:
+        log("Skipping LLM instrumentation (--no-llm)")
 
     # Initialize git repository (unless disabled)
     if not no_git:
+        log("Initializing git repository...")
         try:
             # Initialize git repo
             subprocess.run(
@@ -781,10 +808,12 @@ def init_project(
                 capture_output=True,
                 text=True,
             )
+            log("  Git repository initialized")
 
             # Create .gitignore if it doesn't exist
             gitignore_path = target_dir / ".gitignore"
             if not gitignore_path.exists():
+                log("  Creating .gitignore...")
                 gitignore_content = """# Python
 __pycache__/
 *.py[cod]
@@ -842,6 +871,7 @@ dev_docs/
                 text=True,
             )
             if status_result.stdout.strip():
+                log("  Staging files for initial commit...")
                 # Add all files
                 subprocess.run(
                     ["git", "add", "."],
@@ -849,6 +879,7 @@ dev_docs/
                     check=True,
                     capture_output=True,
                 )
+                log("  Creating initial commit...")
                 # Make initial commit
                 subprocess.run(
                     ["git", "commit", "-m", "Initial commit: DAZZLE project setup"],
@@ -856,6 +887,7 @@ dev_docs/
                     check=True,
                     capture_output=True,
                 )
+                log("  Initial commit created")
 
         except subprocess.CalledProcessError as e:
             # Don't fail the entire init if git initialization fails
@@ -863,11 +895,15 @@ dev_docs/
             import warnings
 
             warnings.warn(f"Failed to initialize git repository: {e}", stacklevel=2)
+            log(f"  Warning: git initialization failed ({e})")
         except FileNotFoundError:
             # git not installed
             import warnings
 
             warnings.warn("git command not found - skipping git initialization", stacklevel=2)
+            log("  Warning: git not found, skipping")
+    else:
+        log("Skipping git initialization (--no-git)")
 
 
 def reset_project(
