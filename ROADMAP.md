@@ -127,26 +127,133 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
   - `<script src="app.js">` with inline content is invalid HTML
   - Fix: Properly close external script tags
 
-#### E2E Testing (TODO)
-- [ ] Add Playwright E2E test for `dazzle dnr serve`
-- [ ] Verify browser can load without JavaScript errors
-- [ ] Test CRUD operations work end-to-end
-- [ ] Add to CI pipeline to prevent regressions
+#### E2E Testing (COMPLETE)
+- [x] Add E2E tests for DNR serve in `tests/e2e/test_dnr_serve.py`
+- [x] Verify JavaScript bundle generation is valid
+- [x] Verify HTML generation is correct (no malformed script tags)
+- [x] Verify entity conversion to BackendSpec works
+- [x] Add to CI pipeline to prevent regressions
 
 #### MCP Server Improvements (TODO)
 - [ ] Improve MCP context for Claude engagement
 - [ ] Add getting-started workflow guidance
 - [ ] Document common DSL patterns
 
+#### CI/CD E2E Testing (COMPLETE)
+- [x] Remove fallback JavaScript from `js_generator.py` - single source of truth via `js_loader.py`
+- [x] Add matrix-based E2E testing for example projects
+- [x] P0 examples (simple_task, contact_manager) block PRs on failure
+- [x] P1/P2 examples run on main branch only with warnings
+- [x] Upload test artifacts on failure for debugging
+- [x] Document CI strategy in `dev_docs/ci_e2e_testing_strategy.md`
+
 **Files Changed**:
 - `src/dazzle_dnr_ui/runtime/js_loader.py` - Export block regex fix
-- `src/dazzle_dnr_ui/runtime/js_generator.py` - Script tag fix
+- `src/dazzle_dnr_ui/runtime/js_generator.py` - Removed fallback JS, always load from files
 - `src/dazzle_dnr_ui/runtime/combined_server.py` - Script tag fix
 - `src/dazzle_dnr_ui/runtime/dev_server.py` - Script tag fix
+- `src/dazzle_dnr_ui/runtime/static/js/components.js` - DOM contract implementation
+- `tests/e2e/test_dnr_serve.py` - New E2E tests for DNR
+- `.github/workflows/ci.yml` - Matrix E2E testing for examples
 
 ---
 
-### v0.3.2 - DNR Developer Experience (January 2026)
+### v0.3.2 - Semantic E2E Testing Framework ✅ COMPLETE
+
+**Status**: ✅ All 8 phases complete
+**Focus**: Stack-agnostic E2E testing generated from AppSpec
+**Plan**: `dev_docs/plans/semantic_e2e_testing_implementation.md`
+
+Tests are generated from the same AppSpec that generates the app. Tests operate on semantic identifiers (entities, fields, actions) rather than CSS selectors, making them stack-agnostic.
+
+#### Phase 1: DOM Contract (COMPLETE)
+- [x] Define `data-dazzle-*` attribute specification (`docs/SEMANTIC_DOM_CONTRACT.md`)
+- [x] Update DNR UI components to emit semantic attributes
+- [x] Add `withDazzleAttrs` helper in `dom.js`
+- [x] Update surface converter to pass entity context
+- [x] Add unit tests for attribute presence (`tests/e2e/test_semantic_dom_contract.py`)
+
+#### Phase 2: TestSpec IR Extensions (COMPLETE)
+- [x] Add FlowSpec, FlowStep, FlowAssertion to IR (`src/dazzle/core/ir.py`)
+- [x] Add FixtureSpec, E2ETestSpec, UsabilityRule, A11yRule to IR
+- [x] Flow step types: navigate, fill, click, wait, assert, snapshot
+- [x] Semantic targets: `view:task_list`, `field:Task.title`, `action:Task.create`
+- [x] Extend AppSpec with `e2e_flows` and `fixtures` fields
+- [x] Unit tests for new IR types (`tests/unit/test_ir_e2e_types.py`)
+
+#### Phase 3: Auto-Generate E2ETestSpec (COMPLETE)
+- [x] Generator to produce E2ETestSpec from AppSpec (`src/dazzle/testing/testspec_generator.py`)
+- [x] Auto-generate CRUD flows for each entity (create, view, update, delete)
+- [x] Auto-generate validation flows from field constraints
+- [x] Auto-generate navigation flows for surfaces
+- [x] Generate fixtures from entity schemas
+- [x] Generate usability and accessibility rules
+- [x] Unit tests for generator (`tests/unit/test_testspec_generator.py`)
+- [ ] CLI: `dazzle test generate` (deferred to Phase 7)
+
+#### Phase 4: Playwright Harness (COMPLETE)
+- [x] Semantic locator library (`src/dazzle_e2e/locators.py`)
+- [x] Flow execution engine (`src/dazzle_e2e/harness.py`)
+- [x] Domain-level assertions (`src/dazzle_e2e/assertions.py`)
+- [x] Base adapter interface (`src/dazzle_e2e/adapters/base.py`)
+- [x] DNR adapter implementation (`src/dazzle_e2e/adapters/dnr.py`)
+- [x] Unit tests (`tests/unit/test_e2e_harness.py`)
+
+#### Phase 5: Test Endpoints (COMPLETE)
+- [x] `/__test__/seed` - Seed fixtures
+- [x] `/__test__/reset` - Clear test data
+- [x] `/__test__/snapshot` - Database state for assertions
+- [x] `/__test__/authenticate` - Test authentication
+- [x] `/__test__/entity/{name}` - Get entity data
+- [x] `/__test__/entity/{name}/count` - Get entity count
+- [x] Test mode configuration (`enable_test_mode` parameter)
+- [x] Unit tests (`tests/unit/test_dnr_test_routes.py`)
+
+#### Phase 6: DSL Extensions (COMPLETE)
+- [x] `flow` block syntax in DSL
+- [x] Parser support for flow definitions (`src/dazzle/core/dsl_parser.py`)
+- [x] New keywords in lexer (`src/dazzle/core/lexer.py`)
+- [x] Unit tests (`tests/unit/test_flow_parsing.py` - 22 tests)
+- [ ] Grammar documentation update (deferred)
+
+#### Phase 7: CLI & CI Integration (COMPLETE)
+- [x] `dazzle test generate` command - Generate E2ETestSpec from AppSpec
+- [x] `dazzle test run` command - Run E2E tests with Playwright
+- [x] `dazzle test list` command - List available test flows
+- [x] `dazzle dnr serve --test-mode` flag
+- [x] CI workflow for semantic E2E (`semantic-e2e` job)
+
+#### Phase 8: Usability & Accessibility (COMPLETE)
+- [x] Usability rule engine (`src/dazzle_e2e/usability.py`)
+  - max_steps rule for flow complexity checking
+  - destructive_confirm rule for delete action safety
+  - primary_action_visible rule for page usability
+  - validation_placement rule for form UX
+- [x] axe-core accessibility integration (`src/dazzle_e2e/accessibility.py`)
+  - AccessibilityChecker class with axe-core loading
+  - WCAG Level A/AA/AAA checking
+  - Dazzle semantic element mapping
+  - Violation filtering by A11yRule
+- [x] WCAG violation mapping to AppSpec elements (`src/dazzle_e2e/wcag_mapping.py`)
+  - WCAGMapper for violation-to-AppSpec mapping
+  - WCAG criteria database (Level A, AA)
+  - Axe rule to WCAG criterion mapping
+  - Suggested fix generation
+  - Violation report formatting
+- [x] Unit tests (61 new tests):
+  - `tests/unit/test_usability_checker.py` (17 tests)
+  - `tests/unit/test_accessibility_checker.py` (21 tests)
+  - `tests/unit/test_wcag_mapping.py` (23 tests)
+
+**Success Criteria**:
+- All DNR UI components emit `data-dazzle-*` attributes
+- `dazzle test generate` produces valid E2ETestSpec
+- High-priority flows block PRs on failure
+- 100% of entities have auto-generated CRUD tests
+
+---
+
+### v0.3.3 - DNR Developer Experience (February 2026)
 
 **Focus**: Make development delightful
 
@@ -168,7 +275,7 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
 
 ---
 
-### v0.4.0 - DNR Production Ready (February 2026)
+### v0.4.0 - DNR Production Ready (March 2026)
 
 **Focus**: Production deployment and testing
 

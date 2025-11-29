@@ -6,6 +6,8 @@ and verify that:
 1. The API endpoints work correctly
 2. CRUD operations function properly
 3. The frontend is served correctly
+
+Uses Docker-first approach for consistent, reliable testing.
 """
 
 import os
@@ -25,7 +27,7 @@ DNR_EXAMPLES = [
 ]
 
 # Timeout for server startup
-SERVER_STARTUP_TIMEOUT = 30
+SERVER_STARTUP_TIMEOUT = 60  # Increased for Docker builds
 # Request timeout
 REQUEST_TIMEOUT = 10
 
@@ -50,8 +52,119 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
     return False
 
 
-class DNRServerManager:
-    """Context manager for running DNR server in background."""
+def is_docker_available() -> bool:
+    """Check if Docker is available."""
+    try:
+        result = subprocess.run(
+            ["docker", "info"],
+            capture_output=True,
+            timeout=5,
+        )
+        return result.returncode == 0
+    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+class DNRDockerServerManager:
+    """Context manager for running DNR server in Docker container.
+
+    Note: The Docker container uses a self-contained entrypoint that serves
+    both API and static UI files on the same port (api_port). The ui_port
+    parameter is passed for compatibility but the UI is served from api_port.
+    """
+
+    def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
+        self.example_dir = example_dir
+        self.api_port = api_port
+        self.ui_port = ui_port  # Kept for interface compatibility
+        self.container_name = f"dazzle-test-{example_dir.name}-{api_port}"
+        self.api_url = f"http://127.0.0.1:{api_port}"
+        # Docker entrypoint serves UI on same port as API
+        self.ui_url = f"http://127.0.0.1:{api_port}"
+
+    def __enter__(self):
+        # Stop any existing container with same name
+        subprocess.run(
+            ["docker", "stop", self.container_name],
+            capture_output=True,
+            timeout=10,
+        )
+        subprocess.run(
+            ["docker", "rm", self.container_name],
+            capture_output=True,
+            timeout=10,
+        )
+
+        # Start the DNR server in Docker with detach mode
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        result = subprocess.run(
+            [
+                "dazzle",
+                "dnr",
+                "serve",
+                "--port",
+                str(self.ui_port),
+                "--api-port",
+                str(self.api_port),
+                "--test-mode",
+                "--detach",  # Run in background
+            ],
+            cwd=self.example_dir,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=300,  # 5 minutes for Docker build
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Failed to start Docker container: {result.stderr}"
+            )
+
+        # Wait for API to be ready
+        if not wait_for_server(f"{self.api_url}/health"):
+            # Try to get container logs
+            logs = subprocess.run(
+                ["docker", "logs", self.container_name],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            self._cleanup()
+            raise RuntimeError(
+                f"DNR server failed to become healthy within {SERVER_STARTUP_TIMEOUT}s. "
+                f"Container logs: {logs.stdout}\n{logs.stderr}"
+            )
+
+        return self
+
+    def _cleanup(self):
+        """Stop and remove the Docker container."""
+        try:
+            subprocess.run(
+                ["docker", "stop", self.container_name],
+                capture_output=True,
+                timeout=15,
+            )
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            pass
+        try:
+            subprocess.run(
+                ["docker", "rm", "-f", self.container_name],
+                capture_output=True,
+                timeout=10,
+            )
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._cleanup()
+
+
+class DNRLocalServerManager:
+    """Context manager for running DNR server locally (fallback)."""
 
     def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
         self.example_dir = example_dir
@@ -62,7 +175,7 @@ class DNRServerManager:
         self.ui_url = f"http://127.0.0.1:{ui_port}"
 
     def __enter__(self):
-        # Start the DNR server
+        # Start the DNR server locally
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
@@ -78,12 +191,14 @@ class DNRServerManager:
                 "dazzle",
                 "dnr",
                 "serve",
+                "--local",  # Explicitly use local mode
                 "--port",
                 str(self.ui_port),
                 "--api-port",
                 str(self.api_port),
                 "--host",
                 "127.0.0.1",
+                "--test-mode",
             ],
             cwd=self.example_dir,
             stdout=subprocess.PIPE,
@@ -93,7 +208,7 @@ class DNRServerManager:
         )
 
         # Wait for API to be ready
-        if not wait_for_server(f"{self.api_url}/docs"):
+        if not wait_for_server(f"{self.api_url}/health"):
             # Get any error output
             self.process.terminate()
             _, stderr = self.process.communicate(timeout=5)
@@ -119,6 +234,15 @@ class DNRServerManager:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=2)
+
+
+def DNRServerManager(example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
+    """Factory function to get appropriate server manager (Docker-first)."""
+    if is_docker_available():
+        return DNRDockerServerManager(example_dir, api_port, ui_port)
+    else:
+        # Fallback to local if Docker not available
+        return DNRLocalServerManager(example_dir, api_port, ui_port)
 
 
 @pytest.fixture(scope="module")
