@@ -15,6 +15,15 @@ if TYPE_CHECKING:
 
     from dazzle_dnr_back.specs import BackendSpec
 
+# Check if FastAPI is available (needed for integration tests)
+try:
+    import fastapi  # noqa: F401
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+
+# These imports are safe - they only depend on Pydantic
 from dazzle_dnr_back.runtime.test_routes import (
     AuthenticateRequest,
     AuthenticateResponse,
@@ -157,6 +166,7 @@ class TestAuthenticateResponse:
         assert response.session_token == "token-123"
 
 
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestRoutesIntegration:
     """Integration tests for test routes with real server."""
 
@@ -407,6 +417,7 @@ class TestTestRoutesIntegration:
         assert response.status_code == 400
 
 
+@pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestModeDisabled:
     """Test that test endpoints are not available when test mode is disabled."""
 

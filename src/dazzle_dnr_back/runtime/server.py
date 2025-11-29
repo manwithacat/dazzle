@@ -22,7 +22,6 @@ from dazzle_dnr_back.runtime.model_generator import (
 )
 from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
 from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
-from dazzle_dnr_back.runtime.test_routes import create_test_routes
 from dazzle_dnr_back.specs import BackendSpec
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
@@ -210,6 +209,9 @@ class DNRBackendApp:
 
         # Initialize test routes if enabled
         if self._enable_test_mode and self._use_database and self._db_manager:
+            # Lazy import to avoid FastAPI dependency at module load
+            from dazzle_dnr_back.runtime.test_routes import create_test_routes
+
             test_router = create_test_routes(
                 db_manager=self._db_manager,
                 repositories=self._repositories,

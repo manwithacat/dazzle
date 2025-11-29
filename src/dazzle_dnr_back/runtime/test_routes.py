@@ -11,7 +11,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, HTTPException
+try:
+    from fastapi import APIRouter, HTTPException
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+    APIRouter = None  # type: ignore[misc, assignment]
+    HTTPException = None  # type: ignore[misc, assignment]
+
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
@@ -90,7 +98,15 @@ def create_test_routes(
 
     Returns:
         APIRouter with test endpoints
+
+    Raises:
+        RuntimeError: If FastAPI is not available
     """
+    if not FASTAPI_AVAILABLE:
+        raise RuntimeError(
+            "FastAPI is required for test routes. Install it with: pip install fastapi"
+        )
+
     router = APIRouter(prefix="/__test__", tags=["Testing"])
 
     # Build entity lookup

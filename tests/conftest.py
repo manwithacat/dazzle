@@ -8,6 +8,10 @@ from dazzle.core import ir
 from dazzle.core.linker import build_appspec
 from dazzle.core.parser import parse_modules
 
+# Exclude e2e/docker tests from regular collection
+# These tests require playwright which is only available in Docker containers
+collect_ignore = ["e2e/docker"]
+
 
 @pytest.fixture
 def fixtures_dir() -> Path:
