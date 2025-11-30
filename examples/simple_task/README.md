@@ -241,11 +241,11 @@ After mastering this example:
 ### Dashboard
 ![Dashboard](screenshots/dashboard.png)
 
-### List View
-![List View](screenshots/list_view.png)
+### List View with Data
+![List View](screenshots/14_list_view_data.png)
 
 ### Create Form
-![Create Form](screenshots/create_form.png)
+![Create Form](screenshots/05_create_form_no_inputs.png)
 
 ## Getting Help
 

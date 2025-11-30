@@ -483,7 +483,7 @@ class TestViewScreenshots:
 
             api_client.post(entity.api_endpoint, json=test_data)
 
-            # Navigate to list view
+            # Navigate to list view using path-based routing (SPA serves same HTML for all routes)
             list_route = entity.routes.get("list", f"/{entity.name.lower()}/list")
             page.goto(f"{DNR_UI_URL}{list_route}")
             page.wait_for_load_state("networkidle")
@@ -499,6 +499,7 @@ class TestViewScreenshots:
     def test_create_form_screenshot(self, page: Page, ux_tracker, app_info: AppInfo):
         """Take screenshots of create forms."""
         for entity in app_info.entities:
+            # Navigate to create form using path-based routing (SPA serves same HTML for all routes)
             create_route = entity.routes.get("create", f"/{entity.name.lower()}/create")
             page.goto(f"{DNR_UI_URL}{create_route}")
             page.wait_for_load_state("networkidle")
@@ -529,6 +530,7 @@ class TestNavigation:
             if ":id" in path:
                 continue  # Skip parameterized routes
 
+            # Use path-based routing for SPA navigation (server serves same HTML for all routes)
             full_url = f"{DNR_UI_URL}{path}"
             page.goto(full_url)
             page.wait_for_timeout(500)
