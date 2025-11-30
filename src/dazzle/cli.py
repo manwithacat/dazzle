@@ -4359,7 +4359,10 @@ def e2e_run(
 
     if not example_path.exists():
         typer.echo(f"Example '{example}' not found at {example_path}", err=True)
-        typer.echo(f"Available examples: {', '.join(d.name for d in examples_dir.iterdir() if d.is_dir())}", err=True)
+        typer.echo(
+            f"Available examples: {', '.join(d.name for d in examples_dir.iterdir() if d.is_dir())}",
+            err=True,
+        )
         raise typer.Exit(code=2)
 
     # Check Docker is available
@@ -4459,7 +4462,9 @@ def e2e_run_all(
         dazzle_root = Path.cwd()
 
     examples_dir = dazzle_root / "examples"
-    examples = sorted(d.name for d in examples_dir.iterdir() if d.is_dir() and (d / "dazzle.toml").exists())
+    examples = sorted(
+        d.name for d in examples_dir.iterdir() if d.is_dir() and (d / "dazzle.toml").exists()
+    )
 
     if not examples:
         typer.echo("No examples found with dazzle.toml", err=True)
@@ -4479,9 +4484,9 @@ def e2e_run_all(
     results: dict[str, str] = {}
 
     for example in examples:
-        typer.echo(f"\n{'='*60}")
+        typer.echo(f"\n{'=' * 60}")
         typer.echo(f"Testing: {example}")
-        typer.echo(f"{'='*60}")
+        typer.echo(f"{'=' * 60}")
 
         cmd = [dazzle_cmd, "e2e", "run", example]
         if coverage_threshold > 0:
@@ -4502,9 +4507,9 @@ def e2e_run_all(
                 break
 
     # Summary
-    typer.echo(f"\n{'='*60}")
+    typer.echo(f"\n{'=' * 60}")
     typer.echo("E2E Test Summary")
-    typer.echo(f"{'='*60}")
+    typer.echo(f"{'=' * 60}")
 
     for example, status in results.items():
         color = {

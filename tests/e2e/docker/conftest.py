@@ -58,9 +58,7 @@ class PageDiagnostics:
 
     def has_errors(self) -> bool:
         """Check if any errors were captured."""
-        return bool(self.page_errors) or any(
-            log.type == "error" for log in self.console_logs
-        )
+        return bool(self.page_errors) or any(log.type == "error" for log in self.console_logs)
 
     def get_errors(self) -> list[str]:
         """Get all error messages."""
@@ -90,6 +88,7 @@ class PageDiagnostics:
             print(f"\n{prefix}=== Network Failures ({len(self.network_failures)} entries) ===")
             for failure in self.network_failures:
                 print(f"  FAILED: {failure[:200]}")
+
 
 # Global tracker instance (shared across all tests)
 _ux_tracker: UXCoverageTracker | None = None

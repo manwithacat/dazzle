@@ -59,6 +59,7 @@ def main():
     try:
         # Test server is running
         import urllib.request
+
         try:
             response = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
             print(f"Server health: {response.read().decode()}")
@@ -87,7 +88,9 @@ def main():
                     "line": loc.get("lineNumber", 0),
                 }
                 console_messages.append(entry)
-                print(f"  CONSOLE {msg.type.upper():8} [{loc.get('url', 'unknown')}:{loc.get('lineNumber', 0)}] {msg.text[:150]}")
+                print(
+                    f"  CONSOLE {msg.type.upper():8} [{loc.get('url', 'unknown')}:{loc.get('lineNumber', 0)}] {msg.text[:150]}"
+                )
 
             def on_page_error(error):
                 page_errors.append(str(error))
@@ -107,9 +110,9 @@ def main():
             screenshot_dir.mkdir(exist_ok=True)
 
             for route_name, url in routes:
-                print(f"\n{'='*60}")
+                print(f"\n{'=' * 60}")
                 print(f"=== Testing route: {route_name} ({url}) ===")
-                print(f"{'='*60}")
+                print(f"{'=' * 60}")
 
                 console_messages.clear()
                 page_errors.clear()
@@ -134,7 +137,10 @@ def main():
                     print(f"--- data-dazzle-surface elements: {dazzle_elements}")
 
                     # Take screenshot
-                    screenshot_path = screenshot_dir / f"{example_name}_{route_name.lower().replace(' ', '_')}.png"
+                    screenshot_path = (
+                        screenshot_dir
+                        / f"{example_name}_{route_name.lower().replace(' ', '_')}.png"
+                    )
                     page.screenshot(path=str(screenshot_path), full_page=True)
                     screenshot_size = screenshot_path.stat().st_size
                     print(f"--- Screenshot saved: {screenshot_path} ({screenshot_size} bytes)")

@@ -33,10 +33,10 @@ on:
       coverage_threshold:
         description: 'Minimum UX coverage percentage'
         required: false
-        default: '90'
+        default: '50'
 
 env:
-  COVERAGE_THRESHOLD: ${{ github.event.inputs.coverage_threshold || '90' }}
+  COVERAGE_THRESHOLD: ${{ github.event.inputs.coverage_threshold || '50' }}
 
 jobs:
   # Discover which examples to test

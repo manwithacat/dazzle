@@ -249,7 +249,12 @@ def generate_test_data(entity: EntityInfo) -> dict:
         elif entity_lower == "product":
             data = {"name": "Test Product", "sku": "SKU-001", "quantity": 10, "price": 9.99}
         elif entity_lower == "message":
-            data = {"subject": "Test Subject", "sender": "test@a.com", "recipient": "test@b.com", "body": "Test body"}
+            data = {
+                "subject": "Test Subject",
+                "sender": "test@a.com",
+                "recipient": "test@b.com",
+                "body": "Test body",
+            }
         elif entity_lower == "system":
             data = {"name": "Test System"}
         elif entity_lower == "alert":
@@ -425,7 +430,11 @@ class TestCRUDFlow:
             ux_tracker.test_crud(entity.name, "list")
 
             # UPDATE
-            update_data = {**test_data, "name": f"Updated {entity.name}"} if "name" in test_data else test_data
+            update_data = (
+                {**test_data, "name": f"Updated {entity.name}"}
+                if "name" in test_data
+                else test_data
+            )
             update_resp = api_client.put(f"{entity.api_endpoint}/{entity_id}", json=update_data)
             if update_resp.status_code == 200:
                 ux_tracker.test_crud(entity.name, "update")
