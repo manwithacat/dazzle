@@ -124,6 +124,17 @@ workspace dashboard "Dashboard":
     ...
 ```
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### List View
+![List View](screenshots/list_view.png)
+
+### Create Form
+![Create Form](screenshots/create_form.png)
+
 ## See Also
 
 - [DNR Documentation](../../docs/dnr/README.md)

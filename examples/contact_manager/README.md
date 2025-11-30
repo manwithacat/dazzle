@@ -157,6 +157,17 @@ npm run dev
    - Mobile: Stacked with transitions
    - No custom CSS needed
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### List View
+![List View](screenshots/list_view.png)
+
+### Create Form
+![Create Form](screenshots/create_form.png)
+
 ## References
 
 - Archetype Guide: [docs/ARCHETYPE_SELECTION.md](../../docs/ARCHETYPE_SELECTION.md)

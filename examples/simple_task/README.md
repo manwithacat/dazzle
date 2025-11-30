@@ -236,6 +236,17 @@ After mastering this example:
 - **Create your own** - `dazzle init my-app`
 - **Explore other stacks** - Try Django API, Express, OpenAPI
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### List View
+![List View](screenshots/list_view.png)
+
+### Create Form
+![Create Form](screenshots/create_form.png)
+
 ## Getting Help
 
 - Documentation: `docs/` in the DAZZLE repository

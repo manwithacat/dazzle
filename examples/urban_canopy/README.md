@@ -303,6 +303,19 @@ If you enhance this example (add features, improve DSL patterns, etc.), please:
 
 ---
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### List View
+![List View](screenshots/list_view.png)
+
+### Create Form
+![Create Form](screenshots/create_form.png)
+
+---
+
 **Created**: 2025-11-23
 **Last Updated**: 2025-11-23
 **DAZZLE Version**: 0.1.1

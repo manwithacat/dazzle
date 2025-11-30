@@ -153,6 +153,17 @@ surface urgent_tickets "Urgent Tickets":
 - Experiment with different surface modes
 - Check `LLM_CONTEXT.md` for AI assistant guidance
 
+## Screenshots
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### List View
+![List View](screenshots/list_view.png)
+
+### Create Form
+![Create Form](screenshots/create_form.png)
+
 ## Learn More
 
 - Run `dazzle --help` to see all commands
