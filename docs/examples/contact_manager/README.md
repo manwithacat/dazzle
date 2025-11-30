@@ -91,7 +91,14 @@ dazzle test list
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI.*
+### Dashboard
+![Dashboard](../../../examples/contact_manager/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/contact_manager/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/contact_manager/screenshots/create_form.png)
 
 ## API Endpoints
 

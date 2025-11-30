@@ -92,7 +92,14 @@ This example demonstrates the **MONITOR_WALL** archetype:
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI.*
+### Dashboard
+![Dashboard](../../../examples/email_client/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/email_client/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/email_client/screenshots/create_form.png)
 
 ## API Endpoints
 

@@ -76,7 +76,14 @@ This example demonstrates the **FOCUS_METRIC** archetype:
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI.*
+### Dashboard
+![Dashboard](../../../examples/uptime_monitor/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/uptime_monitor/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/uptime_monitor/screenshots/create_form.png)
 
 ## API Endpoints
 

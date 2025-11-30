@@ -76,7 +76,14 @@ This example demonstrates the **SCANNER_TABLE** archetype:
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI.*
+### Dashboard
+![Dashboard](../../../examples/inventory_scanner/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/inventory_scanner/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/inventory_scanner/screenshots/create_form.png)
 
 ## API Endpoints
 

@@ -135,7 +135,14 @@ The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER arche
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI.*
+### Dashboard
+![Dashboard](../../../examples/ops_dashboard/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/ops_dashboard/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/ops_dashboard/screenshots/create_form.png)
 
 ## API Endpoints
 

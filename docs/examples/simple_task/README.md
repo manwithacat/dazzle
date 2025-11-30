@@ -104,7 +104,14 @@ dazzle test list
 
 ## Screenshots
 
-*Screenshots are generated automatically during CI. See the latest CI run for visual examples.*
+### Dashboard
+![Dashboard](../../../examples/simple_task/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/simple_task/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/simple_task/screenshots/create_form.png)
 
 ## API Endpoints
 
