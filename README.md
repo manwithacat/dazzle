@@ -46,7 +46,7 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 - `analyze_patterns` - Detect CRUD and integration patterns
 - And more! Ask Claude: "What DAZZLE tools do you have access to?"
 
-See [MCP Integration](docs/MCP_INTEGRATION.md) for details.
+See [Tooling Guide](docs/TOOLING.md) for details.
 
 ## The DSL
 
@@ -251,10 +251,24 @@ my_project/
 
 ## Documentation
 
+### Getting Started
+- [Philosophy](docs/PHILOSOPHY.md) - How DAZZLE's features work together
+- [Example Projects](docs/EXAMPLES.md) - Live demos with E2E test coverage
+- [Installation](docs/INSTALLATION.md) - Setup instructions
+
+### Reference
 - [DSL Quick Reference](docs/DAZZLE_DSL_QUICK_REFERENCE.md) - Language specification
 - [DNR CLI Reference](docs/dnr/CLI.md) - Command-line interface
-- [Example Projects](docs/EXAMPLES.md) - Live demos with E2E test coverage
+- [DNR Architecture](docs/dnr/ARCHITECTURE.md) - Runtime internals
+- [Archetype Selection](docs/ARCHETYPE_SELECTION.md) - Workspace layout system
+
+### Tooling
+- [Tooling Guide](docs/TOOLING.md) - MCP server, IDE integration, developer tools
+- [VS Code Extension](docs/VSCODE_EXTENSION.md) - Editor support
+
+### Advanced
 - [Custom Stacks](docs/CUSTOM_STACKS.md) - Creating code generation stacks
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ## Contributing
