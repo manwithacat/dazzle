@@ -93,7 +93,7 @@ jobs:
 
       - name: Generate Docker Compose for ${{ matrix.example }}
         run: |
-          cat > tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml <<'EOF'
+          cat > docker-compose.${{ matrix.example }}.yaml <<'EOF'
           # Auto-generated Docker Compose for E2E testing: ${{ matrix.example }}
 
           services:
@@ -134,9 +134,9 @@ jobs:
                 - EXAMPLE_NAME=${{ matrix.example }}
                 - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
               volumes:
-                - ../../../tests:/tests:ro
-                - ../../../src:/src:ro
-                - ./screenshots/${{ matrix.example }}:/screenshots
+                - ./tests:/tests:ro
+                - ./src:/src:ro
+                - ./tests/e2e/docker/screenshots/${{ matrix.example }}:/screenshots
               working_dir: /tests/e2e/docker
               networks:
                 - e2e-network
@@ -148,23 +148,23 @@ jobs:
 
       - name: Build DNR image
         run: |
-          docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml build dnr-app
+          docker compose -f docker-compose.${{ matrix.example }}.yaml build dnr-app
 
       - name: Start services
         run: |
-          docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml up -d dnr-app
+          docker compose -f docker-compose.${{ matrix.example }}.yaml up -d dnr-app
 
       - name: Wait for health check
         run: |
           echo "Waiting for DNR app to be healthy..."
           for i in {1..90}; do
-            if docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml ps | grep -q "healthy"; then
+            if docker compose -f docker-compose.${{ matrix.example }}.yaml ps | grep -q "healthy"; then
               echo "DNR app is healthy after ${i}s!"
               break
             fi
             if [ $i -eq 90 ]; then
               echo "Timeout waiting for DNR app"
-              docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml logs dnr-app
+              docker compose -f docker-compose.${{ matrix.example }}.yaml logs dnr-app
               exit 1
             fi
             sleep 1
@@ -174,7 +174,7 @@ jobs:
         id: run-tests
         run: |
           # Pin playwright version to match Docker image (v1.55.0-noble)
-          docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml run --rm playwright \
+          docker compose -f docker-compose.${{ matrix.example }}.yaml run --rm playwright \
             bash -c "pip install httpx pytest-playwright 'playwright==1.55.0' --quiet && \
                      python -m pytest test_ux_validation.py -v --tb=short" \
             || echo "test_exit_code=$?" >> $GITHUB_OUTPUT
@@ -225,7 +225,7 @@ jobs:
       - name: Cleanup containers
         if: always()
         run: |
-          docker compose -f tests/e2e/docker/docker-compose.${{ matrix.example }}.yaml down --volumes --remove-orphans || true
+          docker compose -f docker-compose.${{ matrix.example }}.yaml down --volumes --remove-orphans || true
 
       - name: Upload screenshots
         if: always()
