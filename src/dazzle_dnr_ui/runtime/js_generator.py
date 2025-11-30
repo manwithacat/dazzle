@@ -308,12 +308,12 @@ body { margin: 0; min-height: 100vh; }
             html = self.generate_html(include_runtime=False)
             html = html.replace(
                 "<script>\n\n  </script>\n  <script>",
-                '<script src="dnr-runtime.js"></script>\n  <script src="app.js"></script>\n  <script>',
+                '<script src="/dnr-runtime.js"></script>\n  <script src="/app.js"></script>\n  <script>',
             )
             # Remove the now-empty inline script that follows
             html = html.replace(
-                '<script src="app.js"></script>\n  <script>\n\n  </script>',
-                '<script src="app.js"></script>',
+                '<script src="/app.js"></script>\n  <script>\n\n  </script>',
+                '<script src="/app.js"></script>',
             )
             html_path = output_dir / "index.html"
             html_path.write_text(html)

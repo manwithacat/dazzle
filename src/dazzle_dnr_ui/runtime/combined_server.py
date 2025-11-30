@@ -168,12 +168,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         # Fix script references - replace inline script placeholders with external references
         html = html.replace(
             "<script>\n\n  </script>\n  <script>",
-            '<script src="dnr-runtime.js"></script>\n  <script src="app.js"></script>\n  <script>',
+            '<script src="/dnr-runtime.js"></script>\n  <script src="/app.js"></script>\n  <script>',
         )
         # Remove the now-empty inline app script that follows
         html = html.replace(
-            '<script src="app.js"></script>\n  <script>\n\n  </script>',
-            '<script src="app.js"></script>',
+            '<script src="/app.js"></script>\n  <script>\n\n  </script>',
+            '<script src="/app.js"></script>',
         )
 
         self._send_response(html, "text/html")

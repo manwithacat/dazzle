@@ -22,12 +22,11 @@ Environment variables:
 """
 
 import os
-import re
 from dataclasses import dataclass
 
 import httpx
 import pytest
-from playwright.sync_api import Page, expect, sync_playwright
+from playwright.sync_api import Page, expect
 
 # Configuration from environment
 DNR_BASE_URL = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
@@ -178,27 +177,8 @@ def discover_app_structure(api_url: str, ui_url: str) -> AppInfo:
 
 
 # =============================================================================
-# Pytest Fixtures
+# Pytest Fixtures (browser and page fixtures are in conftest.py with console logging)
 # =============================================================================
-
-
-@pytest.fixture(scope="module")
-def browser():
-    """Create a browser instance for the test module."""
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        yield browser
-        browser.close()
-
-
-@pytest.fixture
-def page(browser):
-    """Create a new page for each test."""
-    context = browser.new_context(viewport={"width": 1280, "height": 720})
-    page = context.new_page()
-    yield page
-    page.close()
-    context.close()
 
 
 @pytest.fixture(scope="module")
@@ -374,7 +354,6 @@ class TestCRUDFlow:
         page.wait_for_load_state("networkidle")
 
         if app_info.entities:
-            entity = app_info.entities[0]
             ux_tracker.visit_route("/")
             ux_tracker.test_interaction("click")
 
