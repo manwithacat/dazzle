@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from textwrap import dedent, indent
 
 from dazzle.core.ir import (
     E2ETestSpec,
@@ -20,7 +19,6 @@ from dazzle.core.ir import (
     FlowStep,
     FlowStepKind,
 )
-
 
 # =============================================================================
 # Selector Mapping
@@ -116,27 +114,29 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
     if step.description:
         lines.append(f"# {step.description}")
 
+    target = step.target or ""
+
     if step.kind == FlowStepKind.NAVIGATE:
-        route = _target_to_route(step.target)
+        route = _target_to_route(target)
         lines.append(f'page.goto(f"{{base_url}}{route}")')
         lines.append('page.wait_for_load_state("networkidle")')
 
     elif step.kind == FlowStepKind.FILL:
-        selector = _target_to_selector(step.target)
+        selector = _target_to_selector(target)
         # Get value from fixture or step.value
         if step.fixture_ref:
             # fixture_ref format: "Entity_valid.field_name"
             fixture_id, field_name = step.fixture_ref.rsplit(".", 1)
             value = f'fixtures["{fixture_id}"]["{field_name}"]'
-            lines.append(f'page.locator(\'{selector}\').fill(str({value}))')
+            lines.append(f"page.locator('{selector}').fill(str({value}))")
         elif step.value is not None:
-            lines.append(f'page.locator(\'{selector}\').fill("{step.value}")')
+            lines.append(f"page.locator('{selector}').fill(\"{step.value}\")")
         else:
-            lines.append(f'page.locator(\'{selector}\').fill("test_value")')
+            lines.append(f"page.locator('{selector}').fill(\"test_value\")")
 
     elif step.kind == FlowStepKind.CLICK:
-        selector = _target_to_selector(step.target)
-        lines.append(f'page.locator(\'{selector}\').click()')
+        selector = _target_to_selector(target)
+        lines.append(f"page.locator('{selector}').click()")
         # Wait for any navigation or network activity to settle
         lines.append('page.wait_for_load_state("networkidle")')
 
@@ -144,47 +144,43 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
         if step.value:
             lines.append(f"page.wait_for_timeout({step.value})")
         else:
-            selector = _target_to_selector(step.target)
-            lines.append(f'page.locator(\'{selector}\').wait_for()')
+            selector = _target_to_selector(target)
+            lines.append(f"page.locator('{selector}').wait_for()")
 
     elif step.kind == FlowStepKind.ASSERT:
         if step.assertion:
             assertion = step.assertion
+            assertion_target = assertion.target or ""
             if assertion.kind == FlowAssertionKind.VISIBLE:
-                selector = _target_to_selector(assertion.target)
-                lines.append(f'expect(page.locator(\'{selector}\')).to_be_visible()')
+                selector = _target_to_selector(assertion_target)
+                lines.append(f"expect(page.locator('{selector}')).to_be_visible()")
 
             elif assertion.kind == FlowAssertionKind.ENTITY_EXISTS:
                 # Check that entity was created via API or table row exists
-                entity = assertion.target.lower()
-                lines.append(f'# Verify {assertion.target} entity exists')
+                lines.append(f"# Verify {assertion_target} entity exists")
                 lines.append(
-                    f'expect(page.locator(\'[data-dazzle-row]\')).to_have_count(1, timeout=5000)'
+                    "expect(page.locator('[data-dazzle-row]')).to_have_count(1, timeout=5000)"
                 )
 
             elif assertion.kind == FlowAssertionKind.ENTITY_NOT_EXISTS:
-                entity = assertion.target.lower()
-                lines.append(f'# Verify {assertion.target} entity was deleted')
+                lines.append(f"# Verify {assertion_target} entity was deleted")
                 lines.append(
-                    f'expect(page.locator(\'[data-dazzle-row]\')).to_have_count(0, timeout=5000)'
+                    "expect(page.locator('[data-dazzle-row]')).to_have_count(0, timeout=5000)"
                 )
 
             elif assertion.kind == FlowAssertionKind.VALIDATION_ERROR:
-                selector = _target_to_selector(assertion.target)
-                lines.append(f'# Verify validation error appears')
-                lines.append(
-                    f'expect(page.locator(\'[data-dazzle-error]\')).to_be_visible()'
-                )
+                lines.append("# Verify validation error appears")
+                lines.append("expect(page.locator('[data-dazzle-error]')).to_be_visible()")
 
-            elif assertion.kind == FlowAssertionKind.VALUE_EQUALS:
-                selector = _target_to_selector(assertion.target)
+            elif assertion.kind == FlowAssertionKind.FIELD_VALUE:
+                selector = _target_to_selector(assertion_target)
                 lines.append(
-                    f'expect(page.locator(\'{selector}\')).to_have_value("{assertion.expected}")'
+                    f"expect(page.locator('{selector}')).to_have_value(\"{assertion.expected}\")"
                 )
 
     elif step.kind == FlowStepKind.SNAPSHOT:
-        lines.append(f'# Snapshot: {step.target}')
-        lines.append(f'page.screenshot(path=f"screenshots/{{test_name}}_{step.target}.png")')
+        lines.append(f"# Snapshot: {target}")
+        lines.append(f'page.screenshot(path=f"screenshots/{{test_name}}_{target}.png")')
 
     return "\n    ".join(lines)
 
@@ -213,7 +209,7 @@ def _generate_test_function(
 
     # Generate step code
     step_code_parts: list[str] = []
-    for i, step in enumerate(flow.steps):
+    for step in flow.steps:
         step_code = _generate_step_code(step, fixtures)
         step_code_parts.append(step_code)
 
@@ -233,7 +229,7 @@ def _generate_test_function(
         marks.append("@pytest.mark.high_priority")
     if flow.tags:
         for tag in flow.tags:
-            marks.append(f'@pytest.mark.{tag.replace("-", "_")}')
+            marks.append(f"@pytest.mark.{tag.replace('-', '_')}")
 
     marks_str = "\n".join(marks)
 

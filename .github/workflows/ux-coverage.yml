@@ -134,9 +134,9 @@ jobs:
                 - EXAMPLE_NAME=${{ matrix.example }}
                 - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
               volumes:
-                - ./tests:/tests:ro
-                - ./src:/src:ro
-                - ./tests/e2e/docker/screenshots/${{ matrix.example }}:/screenshots
+                - ../../../tests:/tests:ro
+                - ../../../src:/src:ro
+                - ./screenshots/${{ matrix.example }}:/screenshots
               working_dir: /tests/e2e/docker
               networks:
                 - e2e-network
