@@ -12,8 +12,8 @@ a fully functional, professionally-styled web application.
 | Metric | Value |
 |--------|-------|
 | **Example** | `contact_manager` |
-| **Generated** | 2025-11-29 23:09 |
-| **UX Coverage** | 70.0% |
+| **Generated** | 2025-11-30 00:51 |
+| **UX Coverage** | 100.0% |
 
 ---
 
@@ -59,7 +59,13 @@ Form for creating new items with validation.
 
 The main list view showing all items with sorting and filtering.
 
-![List View](../screenshots/contact_manager/14_list_view_data.png)
+![List View](../screenshots/contact_manager/dashboard.png)
+
+### 10 App Container
+
+Screenshot: 10 App Container
+
+![10 App Container](../screenshots/contact_manager/10_app_container.png)
 
 ### 01 Page Loaded
 
@@ -95,7 +101,7 @@ Screenshot: 07 No Table Headers
 
 ## UX Coverage Report
 
-![Coverage](https://img.shields.io/badge/UX%20Coverage-70%25-yellow)
+![Coverage](https://img.shields.io/badge/UX%20Coverage-100%25-brightgreen)
 
 | Category | Coverage |
 |----------|----------|

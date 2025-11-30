@@ -1,9 +1,9 @@
 {
-  "overall_coverage": 30.83,
+  "overall_coverage": 28.33,
   "route_coverage": 100.0,
   "component_coverage": 16.67,
   "entity_crud_coverage": 0.0,
-  "entity_ui_coverage": 25.0,
+  "entity_ui_coverage": 16.67,
   "routes": {
     "total": 0,
     "visited": 0
@@ -13,41 +13,42 @@
     "tested": 2
   },
   "entities": {
+    "Comment": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "delete",
+        "list",
+        "create",
+        "read",
+        "update"
+      ],
+      "ui_views_tested": [
+        "list",
+        "create"
+      ],
+      "ui_views_missing": [
+        "detail",
+        "edit"
+      ]
+    },
     "Ticket": {
       "crud_coverage": 0.0,
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
-        "update",
-        "list",
         "delete",
+        "list",
         "create",
-        "read"
+        "read",
+        "update"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "create",
-        "list",
         "detail",
-        "edit"
-      ]
-    },
-    "Comment": {
-      "crud_coverage": 0.0,
-      "ui_coverage": 0.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
         "list",
-        "delete",
         "create",
-        "read"
-      ],
-      "ui_views_tested": [],
-      "ui_views_missing": [
-        "create",
-        "list",
-        "detail",
         "edit"
       ]
     },
@@ -56,36 +57,19 @@
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
-        "update",
-        "list",
         "delete",
+        "list",
         "create",
-        "read"
+        "read",
+        "update"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "create",
-        "list",
         "detail",
+        "list",
+        "create",
         "edit"
       ]
-    },
-    "Task": {
-      "crud_coverage": 0.0,
-      "ui_coverage": 100.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
-        "list",
-        "delete",
-        "create",
-        "read"
-      ],
-      "ui_views_tested": [
-        "create",
-        "list"
-      ],
-      "ui_views_missing": []
     }
   },
   "interactions_tested": [

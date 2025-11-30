@@ -13,62 +13,23 @@
     "tested": 2
   },
   "entities": {
-    "Volunteer": {
-      "crud_coverage": 0.0,
-      "ui_coverage": 0.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
-        "create",
-        "list",
-        "read",
-        "delete"
-      ],
-      "ui_views_tested": [],
-      "ui_views_missing": [
-        "detail",
-        "create",
-        "list",
-        "edit"
-      ]
-    },
     "Task": {
       "crud_coverage": 0.0,
-      "ui_coverage": 50.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
-        "create",
-        "list",
-        "read",
-        "delete"
-      ],
-      "ui_views_tested": [
-        "create",
-        "list"
-      ],
-      "ui_views_missing": [
-        "detail",
-        "edit"
-      ]
-    },
-    "Observation": {
-      "crud_coverage": 0.0,
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
-        "update",
-        "create",
-        "list",
         "read",
-        "delete"
+        "create",
+        "update",
+        "delete",
+        "list"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "detail",
         "create",
-        "list",
-        "edit"
+        "edit",
+        "detail",
+        "list"
       ]
     },
     "Tree": {
@@ -76,18 +37,57 @@
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
-        "update",
-        "create",
-        "list",
         "read",
-        "delete"
+        "create",
+        "update",
+        "delete",
+        "list"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "detail",
         "create",
-        "list",
-        "edit"
+        "edit",
+        "detail",
+        "list"
+      ]
+    },
+    "Observation": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [
+        "create",
+        "list"
+      ],
+      "ui_views_missing": [
+        "edit",
+        "detail"
+      ]
+    },
+    "Volunteer": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "read",
+        "create",
+        "update",
+        "delete",
+        "list"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "create",
+        "edit",
+        "detail",
+        "list"
       ]
     }
   },

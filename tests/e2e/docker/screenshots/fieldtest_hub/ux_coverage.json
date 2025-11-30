@@ -1,54 +1,54 @@
 {
-  "overall_coverage": 6.22,
-  "route_coverage": 9.09,
+  "overall_coverage": 16.22,
+  "route_coverage": 59.09,
   "component_coverage": 9.52,
   "entity_crud_coverage": 0.0,
   "entity_ui_coverage": 8.33,
   "routes": {
     "total": 22,
-    "visited": 2
+    "visited": 13
   },
   "components": {
     "total": 21,
     "tested": 2
   },
   "entities": {
-    "Device": {
-      "crud_coverage": 0.0,
-      "ui_coverage": 0.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
-        "delete",
-        "list",
-        "create",
-        "read"
-      ],
-      "ui_views_tested": [],
-      "ui_views_missing": [
-        "edit",
-        "create",
-        "list",
-        "detail"
-      ]
-    },
     "Tester": {
       "crud_coverage": 0.0,
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
+        "list",
         "update",
         "delete",
-        "list",
         "create",
         "read"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "edit",
-        "create",
         "list",
-        "detail"
+        "detail",
+        "create",
+        "edit"
+      ]
+    },
+    "Task": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 0.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "list",
+        "update",
+        "delete",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [],
+      "ui_views_missing": [
+        "list",
+        "detail",
+        "create",
+        "edit"
       ]
     },
     "FirmwareRelease": {
@@ -56,17 +56,17 @@
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
+        "list",
         "update",
         "delete",
-        "list",
         "create",
         "read"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "create",
         "list",
-        "detail"
+        "detail",
+        "create"
       ]
     },
     "TestSession": {
@@ -74,36 +74,16 @@
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
+        "list",
         "update",
         "delete",
-        "list",
         "create",
         "read"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "create",
-        "list"
-      ]
-    },
-    "Task": {
-      "crud_coverage": 0.0,
-      "ui_coverage": 50.0,
-      "operations_tested": [],
-      "operations_missing": [
-        "update",
-        "delete",
         "list",
-        "create",
-        "read"
-      ],
-      "ui_views_tested": [
-        "create",
-        "list"
-      ],
-      "ui_views_missing": [
-        "edit",
-        "detail"
+        "create"
       ]
     },
     "IssueReport": {
@@ -111,18 +91,38 @@
       "ui_coverage": 0.0,
       "operations_tested": [],
       "operations_missing": [
+        "list",
         "update",
         "delete",
-        "list",
         "create",
         "read"
       ],
       "ui_views_tested": [],
       "ui_views_missing": [
-        "edit",
-        "create",
         "list",
-        "detail"
+        "detail",
+        "create",
+        "edit"
+      ]
+    },
+    "Device": {
+      "crud_coverage": 0.0,
+      "ui_coverage": 50.0,
+      "operations_tested": [],
+      "operations_missing": [
+        "list",
+        "update",
+        "delete",
+        "create",
+        "read"
+      ],
+      "ui_views_tested": [
+        "list",
+        "create"
+      ],
+      "ui_views_missing": [
+        "detail",
+        "edit"
       ]
     }
   },
