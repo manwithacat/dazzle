@@ -1,0 +1,497 @@
+# Dazzle Standard Library: UI Patterns
+# =====================================
+# Common UI patterns for surfaces and workspaces.
+# Generate consistent, well-structured interfaces.
+
+version: 1.0.0
+app_id: _stdlib
+dsl_core_version: 1.0.0
+
+entries:
+  # ==========================================================================
+  # CRUD SURFACE PATTERNS - Complete interface sets
+  # ==========================================================================
+
+  - id: crud_surfaces
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Complete CRUD surface set for an entity: list, detail, create, edit.
+      Generates four surfaces with standard layouts.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: title_field
+        type: string
+        required: true
+        description: Main display field for lists and titles
+      - name: list_fields
+        type: list
+        required: false
+        default: []
+        description: Additional fields to show in list view
+      - name: detail_fields
+        type: list
+        required: false
+        default: []
+        description: Additional fields to show in detail view
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+            {% for f in list_fields %}
+            field {{ f }} "{{ f | title | replace('_', ' ') }}"
+            {% endfor %}
+
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+            {% for f in detail_fields %}
+            field {{ f }} "{{ f | title | replace('_', ' ') }}"
+            {% endfor %}
+
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - crud
+      - surfaces
+      - ui
+      - stdlib
+
+  - id: crud_with_ux
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      CRUD surfaces with UX layer (sort, filter, search, empty states).
+      More complete than basic crud_surfaces.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: title_field
+        type: string
+        required: true
+      - name: status_field
+        type: string
+        required: false
+        default: ""
+        description: Status field for filtering (optional)
+      - name: search_fields
+        type: list
+        required: false
+        default: []
+        description: Fields to search
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+            {% if status_field %}field {{ status_field }} "{{ status_field | title | replace('_', ' ') }}"{% endif %}
+
+          ux:
+            purpose: "Browse and manage {{ entity_name | lower }}s"
+            sort: {{ title_field }} asc
+            {% if status_field %}filter: {{ status_field }}{% endif %}
+            {% if search_fields %}search: {{ search_fields | join(', ') }}{% endif %}
+            empty: "No {{ entity_name | lower }}s yet. Create one to get started."
+
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - crud
+      - ux
+      - surfaces
+      - ui
+      - stdlib
+
+  # ==========================================================================
+  # INDIVIDUAL SURFACE PATTERNS
+  # ==========================================================================
+
+  - id: list_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Simple list surface for an entity.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: display_field
+        type: string
+        required: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ display_field }} "{{ display_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - list
+      - surface
+      - ui
+      - stdlib
+
+  - id: detail_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Simple detail/view surface for an entity.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: display_field
+        type: string
+        required: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ display_field }} "{{ display_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - detail
+      - view
+      - surface
+      - ui
+      - stdlib
+
+  - id: create_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Simple create form surface.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: main_field
+        type: string
+        required: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ main_field }} "{{ main_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - create
+      - form
+      - surface
+      - ui
+      - stdlib
+
+  - id: edit_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Simple edit form surface.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: main_field
+        type: string
+        required: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ main_field }} "{{ main_field | title | replace('_', ' ') }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - edit
+      - form
+      - surface
+      - ui
+      - stdlib
+
+  # ==========================================================================
+  # WORKSPACE PATTERNS
+  # ==========================================================================
+
+  - id: dashboard_workspace
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Dashboard workspace with metrics and recent items.
+    parameters:
+      - name: name
+        type: string
+        required: false
+        default: dashboard
+      - name: title
+        type: string
+        required: false
+        default: Dashboard
+      - name: main_entity
+        type: string
+        required: true
+        description: Primary entity to show metrics for
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        workspace {{ name }} "{{ title }}":
+          purpose: "Overview of {{ main_entity | lower }} activity and metrics"
+
+          metrics:
+            source: {{ main_entity }}
+            aggregate:
+              total: count({{ main_entity }})
+
+          recent:
+            source: {{ main_entity }}
+            limit: 10
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - workspace
+      - dashboard
+      - ui
+      - stdlib
+
+  - id: management_workspace
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Management workspace for CRUD operations on an entity.
+    parameters:
+      - name: name
+        type: string
+        required: true
+      - name: title
+        type: string
+        required: true
+      - name: entity_name
+        type: string
+        required: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        workspace {{ name }} "{{ title }}":
+          purpose: "Manage {{ entity_name | lower }} records"
+
+          all_items:
+            source: {{ entity_name }}
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - workspace
+      - management
+      - crud
+      - ui
+      - stdlib
+
+  # ==========================================================================
+  # UX PATTERNS - Attention signals and persona variants
+  # ==========================================================================
+
+  - id: status_attention
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Attention signals based on status field.
+    parameters:
+      - name: status_field
+        type: string
+        required: false
+        default: status
+      - name: warn_status
+        type: string
+        required: true
+        description: Status value that triggers warning
+      - name: critical_status
+        type: string
+        required: true
+        description: Status value that triggers critical alert
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        attention warning:
+          when: {{ status_field }} = {{ warn_status }}
+          message: "Needs attention"
+
+        attention critical:
+          when: {{ status_field }} = {{ critical_status }}
+          message: "Requires immediate action"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - attention
+      - ux
+      - status
+      - stdlib
+
+  - id: overdue_attention
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Attention signal for overdue items based on date field.
+    parameters:
+      - name: date_field
+        type: string
+        required: false
+        default: due_date
+      - name: warn_days
+        type: number
+        required: false
+        default: 3
+        description: Days before due to show warning
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        attention warning:
+          when: days_until({{ date_field }}) <= {{ warn_days }} and days_until({{ date_field }}) > 0
+          message: "Due soon"
+
+        attention critical:
+          when: days_until({{ date_field }}) <= 0
+          message: "Overdue"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - attention
+      - ux
+      - overdue
+      - deadline
+      - stdlib
+
+  - id: admin_persona
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Admin persona variant - shows all fields and actions.
+    parameters:
+      - name: extra_fields
+        type: list
+        required: false
+        default: []
+        description: Additional fields to show for admins
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        for admin:
+          show: all
+          {% for f in extra_fields %}
+          show: {{ f }}
+          {% endfor %}
+          actions: all
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - persona
+      - admin
+      - ux
+      - stdlib
+
+  - id: readonly_persona
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: |
+      Read-only persona variant - view access only.
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        for viewer:
+          actions: none
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - persona
+      - readonly
+      - viewer
+      - ux
+      - stdlib

@@ -58,7 +58,7 @@ def get_dnr_tools() -> list[Tool]:
         # Backend Tools
         Tool(
             name="list_dnr_entities",
-            description="List all entities in the DNR BackendSpec with field summaries",
+            description="List all entities in the DNR BackendSpec with field summaries. BackendSpec is auto-loaded when you select a project or call get_active_project.",
             inputSchema={
                 "type": "object",
                 "properties": {},

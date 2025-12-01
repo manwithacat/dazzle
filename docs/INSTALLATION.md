@@ -46,74 +46,30 @@ pip install -e .
 pip install -e ".[dev,llm]"
 ```
 
-### Method 3: Homebrew (Coming Soon)
+### Method 3: Homebrew (macOS)
 
-Homebrew installation will be available in a future release:
+Install via our Homebrew tap:
 
 ```bash
-# Future command (not yet available)
-brew install dazzle
+brew install manwithacat/tap/dazzle
 ```
 
-#### Creating a Homebrew Formula (For Maintainers)
+This installs DAZZLE with Python 3.12 in an isolated environment.
 
-To publish DAZZLE to Homebrew in the future:
+**Post-installation** - For LLM features (optional):
+```bash
+# Install LLM providers if needed
+/opt/homebrew/opt/dazzle/libexec/bin/pip install anthropic openai
+```
 
-1. **Create a GitHub Release**:
-   ```bash
-   git tag -a v0.1.0 -m "Release v0.1.0"
-   git push origin v0.1.0
-   ```
+**VS Code integration**:
+```bash
+# Install the DAZZLE DSL extension
+code --install-extension dazzle.dazzle-dsl
 
-2. **Build Source Distribution**:
-   ```bash
-   python -m build --sdist
-   ```
-
-3. **Calculate SHA256**:
-   ```bash
-   shasum -a 256 dist/dazzle-0.1.0.tar.gz
-   ```
-
-4. **Create Homebrew Formula** (`Formula/dazzle.rb`):
-   ```ruby
-   class Dazzle < Formula
-     desc "Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
-     homepage "https://github.com/manwithacat/dazzle"
-     url "https://github.com/manwithacat/dazzle/archive/v0.1.0.tar.gz"
-     sha256 "YOUR_SHA256_HERE"
-     license "MIT"
-
-     depends_on "python@3.11"
-
-     def install
-       virtualenv_install_with_resources
-     end
-
-     test do
-       system "#{bin}/dazzle", "--version"
-     end
-   end
-   ```
-
-5. **Publish to Homebrew Tap**:
-   ```bash
-   # Create tap repository
-   gh repo create manwithacat/homebrew-dazzle --public
-
-   # Add formula
-   cp Formula/dazzle.rb ../homebrew-dazzle/Formula/
-   cd ../homebrew-dazzle
-   git add Formula/dazzle.rb
-   git commit -m "Add dazzle formula"
-   git push
-   ```
-
-6. **Install from Tap**:
-   ```bash
-   brew tap manwithacat/dazzle
-   brew install dazzle
-   ```
+# Set Python path in VS Code settings
+# "dazzle.pythonPath": "/opt/homebrew/opt/dazzle/libexec/bin/python"
+```
 
 ### Method 4: Using pipx (Isolated Environment)
 
@@ -172,11 +128,11 @@ git pull
 pip install -e .
 ```
 
-### Update Homebrew Installation (Future)
+### Update Homebrew Installation
 
 ```bash
 brew update
-brew upgrade dazzle
+brew upgrade manwithacat/tap/dazzle
 ```
 
 ## Uninstallation
@@ -187,10 +143,10 @@ brew upgrade dazzle
 pip uninstall dazzle
 ```
 
-### Remove Homebrew Installation (Future)
+### Remove Homebrew Installation
 
 ```bash
-brew uninstall dazzle
+brew uninstall manwithacat/tap/dazzle
 ```
 
 ## Troubleshooting

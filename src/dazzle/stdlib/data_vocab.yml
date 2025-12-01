@@ -1,0 +1,702 @@
+# Dazzle Standard Library: Data Patterns
+# =======================================
+# Common data model patterns for entities and fields.
+# These patterns encode best practices and reduce boilerplate.
+
+version: 1.0.0
+app_id: _stdlib
+dsl_core_version: 1.0.0
+
+entries:
+  # ==========================================================================
+  # FIELD PATTERNS - Common field combinations
+  # ==========================================================================
+
+  - id: audit_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Standard audit timestamp fields. Add to any entity to track
+      creation and modification times.
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - audit
+      - timestamp
+      - stdlib
+
+  - id: audit_fields_with_user
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Audit fields with user tracking. Records who created and
+      last modified the record.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+        created_by: ref {{ user_entity }}
+        updated_by: ref {{ user_entity }}
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - audit
+      - timestamp
+      - user
+      - stdlib
+
+  - id: soft_delete
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Soft delete support. Records are marked as deleted but not
+      removed from the database. Enables recovery and audit trails.
+    parameters:
+      - name: track_who
+        type: boolean
+        required: false
+        default: true
+        description: Track who deleted the record
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        deleted_at: datetime optional
+        is_deleted: bool = false
+        {% if track_who %}deleted_by: ref {{ user_entity }}{% endif %}
+    metadata:
+      stability: stable
+      source: stdlib
+      note: |
+        Stack should automatically exclude soft-deleted records
+        from default queries. Configure in backend spec.
+    tags:
+      - soft-delete
+      - audit
+      - stdlib
+
+  - id: tenant_scoped
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Multi-tenant data isolation. Links record to a tenant/organization.
+      Essential for SaaS applications.
+    parameters:
+      - name: tenant_field
+        type: string
+        required: false
+        default: tenant
+      - name: tenant_entity
+        type: string
+        required: false
+        default: Organization
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ tenant_field }}: ref {{ tenant_entity }} required
+    metadata:
+      stability: stable
+      source: stdlib
+      note: |
+        Backend should automatically filter by current user's tenant.
+        Configure tenant isolation in [auth] section of dazzle.toml.
+    tags:
+      - multi-tenant
+      - saas
+      - isolation
+      - stdlib
+
+  - id: versioned
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Version tracking for entities. Each update increments version.
+      Useful for optimistic locking and change tracking.
+    parameters:
+      - name: track_history
+        type: boolean
+        required: false
+        default: false
+        description: Keep full history of all versions
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        version: int = 1
+        {% if track_history %}version_created_at: datetime auto_add{% endif %}
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - versioning
+      - optimistic-locking
+      - stdlib
+
+  - id: slugged
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      URL-friendly slug field. Automatically generated from a source
+      field (usually title or name).
+    parameters:
+      - name: max_length
+        type: number
+        required: false
+        default: 100
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        slug: str({{ max_length }}) unique
+    metadata:
+      stability: stable
+      source: stdlib
+      note: |
+        Slug is auto-generated from title/name field on create.
+        Configure source field in entity metadata.
+    tags:
+      - slug
+      - url
+      - seo
+      - stdlib
+
+  - id: publishable
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Publication status for content. Supports draft/published states
+      with optional scheduling.
+    parameters:
+      - name: with_scheduling
+        type: boolean
+        required: false
+        default: true
+        description: Include publish_at for scheduled publishing
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        status: enum[draft,published,archived]=draft
+        {% if with_scheduling %}publish_at: datetime optional
+        {% endif %}published_at: datetime optional
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - publishing
+      - cms
+      - content
+      - stdlib
+
+  - id: sortable
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Manual sort order field. Enables drag-and-drop reordering
+      of records.
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: sort_order
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ field_name }}: int = 0
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - sorting
+      - ordering
+      - stdlib
+
+  # ==========================================================================
+  # ENUM PATTERNS - Common enumeration fields
+  # ==========================================================================
+
+  - id: status_todo
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Basic to-do status (todo, in_progress, done).
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+      - name: default_value
+        type: string
+        required: false
+        default: todo
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[todo,in_progress,done]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - enum
+      - status
+      - todo
+      - stdlib
+
+  - id: status_ticket
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Support ticket status (new, open, pending, resolved, closed).
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+      - name: default_value
+        type: string
+        required: false
+        default: new
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[new,open,pending,resolved,closed]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - enum
+      - status
+      - ticket
+      - support
+      - stdlib
+
+  - id: status_order
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      E-commerce order status (pending, processing, shipped, delivered, cancelled).
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+      - name: default_value
+        type: string
+        required: false
+        default: pending
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[pending,processing,shipped,delivered,cancelled]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - enum
+      - status
+      - order
+      - ecommerce
+      - stdlib
+
+  - id: priority_basic
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Basic priority levels (low, medium, high).
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: priority
+      - name: default_value
+        type: string
+        required: false
+        default: medium
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[low,medium,high]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - enum
+      - priority
+      - stdlib
+
+  - id: priority_extended
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Extended priority with urgent (low, medium, high, urgent).
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: priority
+      - name: default_value
+        type: string
+        required: false
+        default: medium
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[low,medium,high,urgent]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - enum
+      - priority
+      - stdlib
+
+  # ==========================================================================
+  # ENTITY TEMPLATES - Complete entity patterns
+  # ==========================================================================
+
+  - id: base_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Base entity template with UUID primary key and audit fields.
+      Starting point for most entities.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: title
+        type: string
+        required: false
+        default: ""
+        description: Human-readable title (defaults to entity_name)
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ title or entity_name }}":
+          id: uuid pk
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - entity
+      - template
+      - stdlib
+
+  - id: named_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Entity with name field - for simple lookup tables
+      (categories, tags, types, etc.).
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: name_max_length
+        type: number
+        required: false
+        default: 100
+      - name: with_description
+        type: boolean
+        required: false
+        default: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          name: str({{ name_max_length }}) unique required
+          {% if with_description %}description: text{% endif %}
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - entity
+      - template
+      - lookup
+      - stdlib
+
+  - id: content_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Content entity template - for blog posts, articles, pages.
+      Includes title, slug, content, and publication status.
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          title: str(200) required
+          slug: str(200) unique
+          content: text required
+          excerpt: text
+          status: enum[draft,published,archived]=draft
+          published_at: datetime optional
+          author: ref {{ user_entity }} required
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - entity
+      - template
+      - content
+      - cms
+      - stdlib
+
+  - id: comment_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Comment entity for discussions. Can be attached to any parent entity.
+    parameters:
+      - name: parent_entity
+        type: string
+        required: true
+        description: Entity that comments are attached to
+      - name: parent_field
+        type: string
+        required: false
+        default: ""
+        description: Field name for parent reference (defaults to lowercase parent_entity)
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity Comment "Comment":
+          id: uuid pk
+          {{ parent_field or (parent_entity | lower) }}: ref {{ parent_entity }} required
+          author: ref {{ user_entity }} required
+          content: text required
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - entity
+      - template
+      - comment
+      - discussion
+      - stdlib
+
+  - id: file_attachment
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      File attachment entity. Store file metadata with reference to parent.
+    parameters:
+      - name: parent_entity
+        type: string
+        required: true
+      - name: parent_field
+        type: string
+        required: false
+        default: ""
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity Attachment "Attachment":
+          id: uuid pk
+          {{ parent_field or (parent_entity | lower) }}: ref {{ parent_entity }} required
+          filename: str(255) required
+          content_type: str(100) required
+          size_bytes: int required
+          storage_path: str(500) required hidden
+          uploaded_by: ref {{ user_entity }} required
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      note: |
+        Actual file storage handled by backend.
+        Configure storage provider in dazzle.toml.
+    tags:
+      - entity
+      - template
+      - file
+      - attachment
+      - stdlib
+
+  # ==========================================================================
+  # ADDRESS AND CONTACT PATTERNS
+  # ==========================================================================
+
+  - id: address_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Standard postal address fields.
+    parameters:
+      - name: prefix
+        type: string
+        required: false
+        default: ""
+        description: Prefix for field names (e.g., "billing_" for billing_street)
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ prefix }}street: str(200)
+        {{ prefix }}street2: str(200)
+        {{ prefix }}city: str(100)
+        {{ prefix }}state: str(100)
+        {{ prefix }}postal_code: str(20)
+        {{ prefix }}country: str(2)
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - address
+      - contact
+      - stdlib
+
+  - id: contact_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Contact information fields (phone, email, website).
+    parameters:
+      - name: require_email
+        type: boolean
+        required: false
+        default: true
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        email: email{% if require_email %} required{% endif %}
+        phone: str(20)
+        website: str(200)
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - contact
+      - stdlib
+
+  # ==========================================================================
+  # MONEY AND QUANTITY PATTERNS
+  # ==========================================================================
+
+  - id: money_field
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Money/currency field with precision.
+    parameters:
+      - name: field_name
+        type: string
+        required: true
+      - name: required
+        type: boolean
+        required: false
+        default: false
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: decimal(10,2){% if required %} required{% endif %}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - money
+      - currency
+      - decimal
+      - stdlib
+
+  - id: price_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      E-commerce price fields (price, cost, compare_at_price).
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        price: decimal(10,2) required
+        cost: decimal(10,2)
+        compare_at_price: decimal(10,2)
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - money
+      - price
+      - ecommerce
+      - stdlib
+
+  - id: quantity_field
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Quantity field with optional minimum.
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: quantity
+      - name: default_value
+        type: number
+        required: false
+        default: 0
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: int = {{ default_value }}"
+    metadata:
+      stability: stable
+      source: stdlib
+    tags:
+      - quantity
+      - inventory
+      - stdlib

@@ -223,10 +223,13 @@ class FlowRunner:
         if not step.target:
             raise ValueError("Navigate step requires target")
 
-        # Parse target to get view ID
+        # Parse target to get URL
         if step.target.startswith("view:"):
             view_id = step.target.split(":", 1)[1]
             url = self.adapter.resolve_view_url(view_id)
+        elif step.target.startswith("/"):
+            # Direct path - prepend base URL
+            url = f"{self.adapter.base_url}{step.target}"
         else:
             url = step.target
 
@@ -345,6 +348,29 @@ class FlowRunner:
                 if target.startswith("field:"):
                     target = target.split(":", 1)[1]
                 await self.assertions.field_value(target, assertion.expected)
+
+            # Auth assertions
+            case FlowAssertionKind.IS_AUTHENTICATED:
+                await self.assertions.is_authenticated()
+
+            case FlowAssertionKind.IS_NOT_AUTHENTICATED:
+                await self.assertions.is_not_authenticated()
+
+            case FlowAssertionKind.LOGIN_SUCCEEDED:
+                await self.assertions.login_succeeded()
+
+            case FlowAssertionKind.LOGIN_FAILED:
+                expected_error = (
+                    str(assertion.expected) if assertion.expected else None
+                )
+                await self.assertions.login_failed(expected_error)
+
+            case FlowAssertionKind.ROUTE_PROTECTED:
+                await self.assertions.route_protected()
+
+            case FlowAssertionKind.HAS_PERSONA:
+                persona = assertion.target or ""
+                await self.assertions.has_persona(persona)
 
             case _:
                 raise ValueError(f"Unknown assertion kind: {assertion.kind}")

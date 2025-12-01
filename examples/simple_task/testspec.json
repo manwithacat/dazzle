@@ -33,9 +33,161 @@
       },
       "refs": {},
       "description": "Updated Task fixture for update tests"
+    },
+    {
+      "id": "test_user",
+      "entity": "User",
+      "data": {
+        "username": "testuser",
+        "password": "testpass123"
+      },
+      "refs": {},
+      "description": "Test user for authentication flows"
     }
   ],
   "flows": [
+    {
+      "id": "auth_login",
+      "description": "Login with valid credentials",
+      "priority": "high",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:login",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to login page"
+        },
+        {
+          "kind": "fill",
+          "target": "field:username",
+          "value": "testuser",
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Fill username field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:password",
+          "value": "testpass123",
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Fill password field"
+        },
+        {
+          "kind": "click",
+          "target": "action:login",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click login button"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "element:user_menu",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert user menu is visible after login"
+        }
+      ],
+      "tags": [
+        "auth",
+        "login"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
+    {
+      "id": "auth_logout",
+      "description": "Logout after being logged in",
+      "priority": "high",
+      "preconditions": {
+        "authenticated": true,
+        "fixtures": [],
+        "user_role": null,
+        "view": null
+      },
+      "steps": [
+        {
+          "kind": "click",
+          "target": "action:user_menu",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Open user menu"
+        },
+        {
+          "kind": "click",
+          "target": "action:logout",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click logout"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:login",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert redirected to login page"
+        }
+      ],
+      "tags": [
+        "auth",
+        "logout"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
+    {
+      "id": "auth_protected_route",
+      "description": "Unauthenticated user redirected to login",
+      "priority": "medium",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to protected task list"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "redirects_to",
+            "target": null,
+            "expected": "/login",
+            "operator": null
+          },
+          "description": "Assert redirected to login"
+        }
+      ],
+      "tags": [
+        "auth",
+        "protection"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
     {
       "id": "Task_create_valid",
       "description": "Create a valid Task entity",
@@ -580,6 +732,7 @@
   "metadata": {
     "generator": "dazzle.testing.testspec_generator",
     "entity_count": 1,
-    "surface_count": 4
+    "surface_count": 4,
+    "auth_enabled": false
   }
 }

@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from dazzle_dnr_ui.specs.component import ComponentSpec
+from dazzle_dnr_ui.specs.shell import ShellSpec
 from dazzle_dnr_ui.specs.theme import ThemeSpec
 from dazzle_dnr_ui.specs.workspace import WorkspaceSpec
 
@@ -18,6 +19,7 @@ class UISpec(BaseModel):
     Complete UI specification.
 
     This is the aggregate root for all UI specifications, containing:
+    - Shell (app chrome: nav, header, footer)
     - Workspaces (logical sections of the UI)
     - Components (reusable UI elements)
     - Themes (visual design systems)
@@ -26,6 +28,10 @@ class UISpec(BaseModel):
         UISpec(
             name="invoice_system_ui",
             version="1.0.0",
+            shell=ShellSpec(
+                nav=NavSpec(style="sidebar", brand="Invoice System"),
+                footer=FooterSpec(powered_by=True)
+            ),
             workspaces=[
                 WorkspaceSpec(name="dashboard", layout=AppShellLayout(...), routes=[...]),
                 WorkspaceSpec(name="settings", layout=SingleColumnLayout(...)),
@@ -44,6 +50,9 @@ class UISpec(BaseModel):
     name: str = Field(description="UI name")
     version: str = Field(default="1.0.0", description="UI version")
     description: str | None = Field(default=None, description="UI description")
+
+    # Shell (app chrome)
+    shell: ShellSpec = Field(default_factory=ShellSpec, description="Application shell config")
 
     # Core specifications
     workspaces: list[WorkspaceSpec] = Field(

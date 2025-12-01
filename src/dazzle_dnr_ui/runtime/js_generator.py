@@ -164,7 +164,7 @@ class JSGenerator:
         include_runtime: bool = True,
     ) -> str:
         """
-        Generate a complete HTML page.
+        Generate a complete HTML page with DaisyUI styling.
 
         Args:
             title: Page title (defaults to spec name)
@@ -177,20 +177,18 @@ class JSGenerator:
         runtime_js = self.generate_runtime() if include_runtime else ""
         app_js = self.generate_app_js()
 
-        # Load DDT CSS bundle for inline embedding
-        ddt_css = self._get_ddt_css()
-
         return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
-  <style>
-{ddt_css}
-  </style>
+  <!-- DaisyUI - semantic component classes -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
+  <!-- Tailwind Browser - minimal utilities for layout -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body>
+<body class="bg-base-200 min-h-screen">
   <div id="app"></div>
   <script>
 {runtime_js}
@@ -200,72 +198,6 @@ class JSGenerator:
   </script>
 </body>
 </html>
-"""
-
-    def _get_ddt_css(self) -> str:
-        """
-        Get the DDT CSS bundle for embedding in HTML.
-
-        Returns:
-            Complete CSS string with tokens, components, and utilities.
-        """
-        try:
-            from dazzle_dnr_ui.tokens import generate_css_bundle
-
-            return generate_css_bundle()
-        except ImportError:
-            # Fallback to minimal styles if tokens module not available
-            return self._get_fallback_css()
-
-    def _get_fallback_css(self) -> str:
-        """Fallback CSS if DDT module is not available."""
-        return """/* DNR-UI Fallback Styles */
-:root {
-  --dz-color-background-default: #ffffff;
-  --dz-color-foreground-default: #0f172a;
-  --dz-color-border-default: #e2e8f0;
-  --dz-color-intent-primary-default: #3b82f6;
-  --dz-space-4: 1rem;
-  --dz-space-6: 1.5rem;
-  --dz-radius-md: 0.375rem;
-  --dz-font-family-base: ui-sans-serif, system-ui, sans-serif;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-
-html {
-  font-family: var(--dz-font-family-base);
-  color: var(--dz-color-foreground-default);
-  background: var(--dz-color-background-default);
-}
-
-body { margin: 0; min-height: 100vh; }
-#app { min-height: 100vh; padding: var(--dz-space-6); }
-
-.dz-page { padding: var(--dz-space-6); }
-.dz-button {
-  padding: var(--dz-space-4);
-  border: 1px solid var(--dz-color-border-default);
-  border-radius: var(--dz-radius-md);
-  cursor: pointer;
-}
-.dz-button--primary {
-  background: var(--dz-color-intent-primary-default);
-  color: white;
-  border-color: var(--dz-color-intent-primary-default);
-}
-.dz-input {
-  padding: var(--dz-space-4);
-  border: 1px solid var(--dz-color-border-default);
-  border-radius: var(--dz-radius-md);
-  width: 100%;
-}
-.dz-table { width: 100%; border-collapse: collapse; }
-.dz-table th, .dz-table td {
-  padding: var(--dz-space-4);
-  border-bottom: 1px solid var(--dz-color-border-default);
-  text-align: left;
-}
 """
 
     def write_to_directory(

@@ -48,6 +48,17 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 
 See [Tooling Guide](docs/TOOLING.md) for details.
 
+## Version Status
+
+| Version | Runtime | Status |
+|---------|---------|--------|
+| **v0.2.x** (Current) | DNR + UX Semantic Layer | Active development |
+| v0.1.x | Code generation stacks | Deprecated, functional |
+
+- **DNR is the primary runtime** - Run DSL directly without code generation
+- **Legacy stacks** (`django_micro`, `express_micro`, `nextjs_semantic`) are deprecated but still functional
+- **Migration**: Optional but recommended. Legacy stacks will be removed in v1.0
+
 ## The DSL
 
 DAZZLE uses a machine-first DSL optimized for LLM consumption and generation.

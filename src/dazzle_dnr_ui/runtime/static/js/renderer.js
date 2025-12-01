@@ -4,7 +4,7 @@
  */
 
 import { createElement, getByPath } from './dom.js';
-import { resolveBinding } from './binding.js';
+import { resolveBinding } from './bindings.js';
 import { getComponent } from './components.js';
 
 // =============================================================================

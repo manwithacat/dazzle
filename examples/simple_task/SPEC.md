@@ -157,13 +157,16 @@ Automatic navigation menu with:
 - Pagination if I have lots of tasks
 
 ### Out of Scope (for now)
-- User authentication (single user only)
 - Task sharing or collaboration
-- Due dates or reminders
 - Categories or tags
 - File attachments
-- Search functionality
 - Mobile apps
+
+### Included Features
+- User authentication (login/logout)
+- Due dates for tasks
+- Search functionality (title, description)
+- Filter by status and priority
 
 ---
 

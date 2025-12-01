@@ -1,7 +1,7 @@
 # DAZZLE Documentation Index
 
-**Last Updated**: 2025-11-25
-**DAZZLE Version**: v0.2.0 (Beta)
+**Last Updated**: 2025-12-01
+**DAZZLE Version**: v0.2.x
 **Purpose**: Complete index of all DAZZLE documentation
 
 ---
@@ -43,17 +43,29 @@
 |----------|-------------|------|
 | **[v0.2/UX_SEMANTIC_LAYER_SPEC.md](v0.2/UX_SEMANTIC_LAYER_SPEC.md)** | **UX Semantic Layer specification** | Markdown |
 | [v0.2/APP_LOCAL_VOCABULARY.md](v0.2/APP_LOCAL_VOCABULARY.md) | App-local vocabulary system | Markdown |
-| [v0.2/CAPABILITIES_MATRIX.md](v0.2/CAPABILITIES_MATRIX.md) | Stack feature support matrix | Markdown |
+
+### Capabilities & Policies
+
+| Document | Description | Type |
+|----------|-------------|------|
+| **[CAPABILITIES.md](CAPABILITIES.md)** | **Authoritative capability reference** | Markdown |
+| [DEPRECATION_POLICY.md](DEPRECATION_POLICY.md) | Deprecation timeline and policy | Markdown |
 
 ### Tools & Integration
 
 | Document | Description | Type |
 |----------|-------------|------|
-| **[MCP_SERVER.md](MCP_SERVER.md)** | **MCP server for Claude Code** | Markdown |
-| **[MCP_V0_2_ENHANCEMENTS.md](MCP_V0_2_ENHANCEMENTS.md)** | **v0.2 semantic lookup features** | Markdown |
-| [IDE_INTEGRATION.md](IDE_INTEGRATION.md) | IDE support overview | Markdown |
+| **[TOOLING.md](TOOLING.md)** | **MCP server, IDE, developer tools** | Markdown |
 | [VSCODE_EXTENSION.md](VSCODE_EXTENSION.md) | VS Code extension guide | Markdown |
-| [FEATURE_COMPATIBILITY_MATRIX.md](FEATURE_COMPATIBILITY_MATRIX.md) | Feature compatibility across stacks | Markdown |
+| [CLI_REFERENCE.md](CLI_REFERENCE.md) | Complete CLI command reference | Markdown |
+
+### Runtime & Features
+
+| Document | Description | Type |
+|----------|-------------|------|
+| [AUTHENTICATION.md](AUTHENTICATION.md) | Built-in auth system guide | Markdown |
+| [E2E_TESTING.md](E2E_TESTING.md) | E2E testing infrastructure | Markdown |
+| [SEMANTIC_DOM_CONTRACT.md](SEMANTIC_DOM_CONTRACT.md) | UI attribute specification | Markdown |
 
 ---
 
@@ -136,13 +148,13 @@
 3. [v0.2/DAZZLE_EXAMPLES.dsl](v0.2/DAZZLE_EXAMPLES.dsl) - v0.2 examples
 
 ### "I want to integrate with tools"
-1. **Claude Code**: [MCP_SERVER.md](MCP_SERVER.md) → [MCP_V0_2_ENHANCEMENTS.md](MCP_V0_2_ENHANCEMENTS.md)
+1. **Claude Code**: [TOOLING.md](TOOLING.md) (MCP Server section)
 2. **VS Code**: [VSCODE_EXTENSION.md](VSCODE_EXTENSION.md)
-3. **Other IDEs**: [IDE_INTEGRATION.md](IDE_INTEGRATION.md)
+3. **Other IDEs**: [TOOLING.md](TOOLING.md) (IDE Integration section)
 
 ### "I want to know what features are supported"
-1. [v0.2/CAPABILITIES_MATRIX.md](v0.2/CAPABILITIES_MATRIX.md) - Stack capabilities
-2. [FEATURE_COMPATIBILITY_MATRIX.md](FEATURE_COMPATIBILITY_MATRIX.md) - Feature support
+1. [CAPABILITIES.md](CAPABILITIES.md) - Current capabilities (authoritative)
+2. [DEPRECATION_POLICY.md](DEPRECATION_POLICY.md) - What's deprecated
 
 ### "I want to contribute"
 1. [../CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution guidelines
@@ -175,11 +187,10 @@ docs/
 │   ├── DAZZLE_EXAMPLES.dsl            # v0.1 examples
 │   └── DAZZLE_IR.md                   # IR specification
 │
-├── MCP_SERVER.md                       # MCP server guide
-├── MCP_V0_2_ENHANCEMENTS.md           # MCP v0.2 features
-├── IDE_INTEGRATION.md                  # IDE support
+├── TOOLING.md                          # MCP, IDE, developer tools
 ├── VSCODE_EXTENSION.md                 # VS Code guide
-└── FEATURE_COMPATIBILITY_MATRIX.md     # Feature support
+├── CAPABILITIES.md                     # Current capabilities
+└── DEPRECATION_POLICY.md               # Deprecation timeline
 
 dev_docs/                               # Development documentation
 ├── mcp_v0_2_implementation_summary.md
@@ -214,10 +225,8 @@ Start Here
          │    └── examples/support_tickets/
          │
          ├── Tool Integration
-         │    ├── MCP_SERVER.md
-         │    │    └── MCP_V0_2_ENHANCEMENTS.md
-         │    ├── VSCODE_EXTENSION.md
-         │    └── IDE_INTEGRATION.md
+         │    ├── TOOLING.md (MCP + IDE)
+         │    └── VSCODE_EXTENSION.md
          │
          └── Installation
               └── INSTALLATION.md
@@ -290,6 +299,5 @@ Throughout DAZZLE documentation:
 
 ---
 
-**Last Updated**: 2025-11-25
-**Maintained by**: Anthropic *(placeholder)*
-**Version**: v0.2.0 (Beta)
+**Last Updated**: 2025-12-01
+**Version**: v0.2.x

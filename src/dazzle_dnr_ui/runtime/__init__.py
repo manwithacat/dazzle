@@ -32,6 +32,7 @@ Example usage:
 from dazzle_dnr_ui.runtime.combined_server import (
     DNRCombinedHandler,
     DNRCombinedServer,
+    run_backend_only,
     run_combined_server,
     run_frontend_only,
 )
@@ -98,6 +99,7 @@ __all__ = [
     "DNRCombinedHandler",
     "run_combined_server",
     "run_frontend_only",
+    "run_backend_only",
     # Docker runner (docker-first infrastructure)
     "DockerRunner",
     "DockerRunConfig",

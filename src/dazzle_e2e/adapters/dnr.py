@@ -206,6 +206,92 @@ class DNRAdapter(BaseAdapter):
 
         await client.post(f"{self.api_url}/api/auth/logout")
 
+    async def get_current_user(self) -> dict[str, Any] | None:
+        """
+        Get the current authenticated user's info.
+
+        Returns:
+            User info dict or None if not authenticated
+        """
+        client = await self._get_client()
+
+        try:
+            response = await client.get(f"{self.api_url}/api/auth/me")
+            if response.status_code == 200:
+                return response.json()
+        except Exception:
+            pass
+
+        return None
+
+    async def create_test_user(
+        self,
+        email: str,
+        password: str,
+        display_name: str | None = None,
+        persona: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Create a test user via /__test__/create_user endpoint.
+
+        Args:
+            email: User email
+            password: User password
+            display_name: Optional display name
+            persona: Optional persona/role
+
+        Returns:
+            Created user data
+        """
+        client = await self._get_client()
+
+        user_data: dict[str, Any] = {
+            "email": email,
+            "password": password,
+        }
+        if display_name:
+            user_data["display_name"] = display_name
+        if persona:
+            user_data["persona"] = persona
+
+        response = await client.post(
+            f"{self.api_url}/__test__/create_user",
+            json=user_data,
+        )
+        response.raise_for_status()
+
+        return response.json()
+
+    async def login_as(
+        self,
+        email: str,
+        password: str,
+    ) -> dict[str, Any]:
+        """
+        Login via API and return session info.
+
+        Args:
+            email: User email
+            password: User password
+
+        Returns:
+            Session info dict with cookies/token
+        """
+        client = await self._get_client()
+
+        response = await client.post(
+            f"{self.api_url}/api/auth/login",
+            json={"email": email, "password": password},
+        )
+        response.raise_for_status()
+
+        result = response.json()
+
+        # Store cookies from response
+        result["cookies"] = dict(response.cookies)
+
+        return result
+
     def resolve_view_url(self, view_id: str) -> str:
         """
         Resolve a view ID to a DNR URL.

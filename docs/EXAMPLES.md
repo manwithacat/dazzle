@@ -15,14 +15,18 @@ dazzle dnr serve
 
 ## Example Gallery
 
-| Example | Complexity | Archetype | Documentation |
-|---------|------------|-----------|---------------|
-| [Simple Task](#simple-task-manager) | Beginner | - | [Full Docs](examples/simple_task/) |
-| [Contact Manager](#contact-manager) | Beginner | DUAL_PANE_FLOW | [Full Docs](examples/contact_manager/) |
-| [Uptime Monitor](#uptime-monitor) | Intermediate | FOCUS_METRIC | [Full Docs](examples/uptime_monitor/) |
-| [Inventory Scanner](#inventory-scanner) | Intermediate | SCANNER_TABLE | [Full Docs](examples/inventory_scanner/) |
-| [Email Client](#email-client) | Intermediate | MONITOR_WALL | [Full Docs](examples/email_client/) |
-| [Ops Dashboard](#ops-dashboard) | Advanced | COMMAND_CENTER | [Full Docs](examples/ops_dashboard/) |
+| Example | Complexity | Archetype | Features |
+|---------|------------|-----------|----------|
+| [Simple Task](#simple-task-manager) | Beginner | - | Basic CRUD |
+| [Contact Manager](#contact-manager) | Beginner | DUAL_PANE_FLOW | Multi-entity relations |
+| [Support Tickets](#support-tickets) | Intermediate | - | UX Semantic Layer, personas |
+| [Fieldtest Hub](#fieldtest-hub) | Intermediate | - | Workspaces, personas |
+| [Uptime Monitor](#uptime-monitor) | Intermediate | FOCUS_METRIC | KPI dashboard |
+| [Inventory Scanner](#inventory-scanner) | Intermediate | SCANNER_TABLE | Data browsing |
+| [Email Client](#email-client) | Intermediate | MONITOR_WALL | Multi-signal dashboard |
+| [Ops Dashboard](#ops-dashboard) | Advanced | COMMAND_CENTER | Complex monitoring |
+| [Urban Canopy](#urban-canopy) | Advanced | - | Local vocabulary |
+| [Archetype Showcase](#archetype-showcase) | Reference | Multiple | All layout archetypes |
 
 ---
 
@@ -142,6 +146,82 @@ Complex monitoring with high signal count - DevOps, system monitoring.
 
 ```bash
 cd examples/ops_dashboard && dazzle dnr serve
+```
+
+---
+
+### Support Tickets
+
+**Path**: `examples/support_tickets/`
+
+Full UX Semantic Layer showcase - demonstrates personas, workspaces, and attention signals.
+
+| Attribute | Value |
+|-----------|-------|
+| **Path** | `examples/support_tickets/` |
+| **DSL Source** | [`dsl/app.dsl`](../examples/support_tickets/dsl/app.dsl) |
+| **v0.2 Features** | Personas, workspaces, UX blocks |
+| **CI Status** | P1 |
+
+```bash
+cd examples/support_tickets && dazzle dnr serve
+```
+
+---
+
+### Fieldtest Hub
+
+**Path**: `examples/fieldtest_hub/`
+
+Demonstrates workspace organization with multiple personas.
+
+| Attribute | Value |
+|-----------|-------|
+| **Path** | `examples/fieldtest_hub/` |
+| **DSL Source** | [`dsl/app.dsl`](../examples/fieldtest_hub/dsl/app.dsl) |
+| **v0.2 Features** | Workspaces, personas |
+| **CI Status** | P2 |
+
+```bash
+cd examples/fieldtest_hub && dazzle dnr serve
+```
+
+---
+
+### Urban Canopy
+
+**Path**: `examples/urban_canopy/`
+
+Advanced example demonstrating local vocabulary for domain-specific terminology.
+
+| Attribute | Value |
+|-----------|-------|
+| **Path** | `examples/urban_canopy/` |
+| **DSL Source** | [`dsl/app.dsl`](../examples/urban_canopy/dsl/app.dsl) |
+| **v0.2 Features** | Local vocabulary, domain patterns |
+| **CI Status** | P2 |
+
+```bash
+cd examples/urban_canopy && dazzle dnr serve
+```
+
+---
+
+### Archetype Showcase
+
+**Path**: `examples/archetype_showcase/`
+
+Reference implementation demonstrating all available layout archetypes.
+
+| Attribute | Value |
+|-----------|-------|
+| **Path** | `examples/archetype_showcase/` |
+| **DSL Source** | [`dsl/app.dsl`](../examples/archetype_showcase/dsl/app.dsl) |
+| **Purpose** | Layout archetype reference |
+| **CI Status** | P2 |
+
+```bash
+cd examples/archetype_showcase && dazzle dnr serve
 ```
 
 ---

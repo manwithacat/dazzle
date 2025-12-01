@@ -251,6 +251,112 @@ def _generate_dazzle_attrs(
     }
 
 
+def _get_field_spec(entity: ir.EntitySpec | None, field_name: str) -> ir.FieldSpec | None:
+    """Look up a field spec from an entity by name."""
+    if not entity or not entity.fields:
+        return None
+    for field in entity.fields:
+        if field.name == field_name:
+            return field
+    return None
+
+
+def _generate_field_element(
+    field_name: str,
+    field_label: str,
+    field_spec: ir.FieldSpec | None,
+    entity_name: str | None,
+) -> ElementNode:
+    """
+    Generate the appropriate input element based on field type.
+
+    Returns an Input, Select, or Checkbox component based on the field's type.
+    """
+    dazzle_attrs = {
+        "field": f"{entity_name}.{field_name}" if entity_name else field_name,
+        "entity": entity_name,
+    }
+
+    # Determine the field type
+    if field_spec and field_spec.type:
+        field_type = field_spec.type
+        type_kind = field_type.kind.value if field_type.kind else "str"
+
+        # Handle enum fields -> Select component
+        if type_kind == "enum" and field_type.enum_values:
+            return ElementNode(
+                as_="Select",
+                props={
+                    "placeholder": LiteralBinding(value=f"Select {field_label}"),
+                    "options": LiteralBinding(value=field_type.enum_values),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+        # Handle boolean fields -> Checkbox component
+        if type_kind == "bool":
+            return ElementNode(
+                as_="Checkbox",
+                props={
+                    "label": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+        # Handle date/datetime fields -> Input with type
+        if type_kind == "date":
+            return ElementNode(
+                as_="Input",
+                props={
+                    "fieldType": LiteralBinding(value="date"),
+                    "placeholder": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+        if type_kind == "datetime":
+            return ElementNode(
+                as_="Input",
+                props={
+                    "fieldType": LiteralBinding(value="datetime"),
+                    "placeholder": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+        # Handle numeric fields
+        if type_kind in ("int", "float", "decimal"):
+            return ElementNode(
+                as_="Input",
+                props={
+                    "fieldType": LiteralBinding(value=type_kind),
+                    "placeholder": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+        # Handle text fields (multiline)
+        if type_kind == "text":
+            return ElementNode(
+                as_="Input",
+                props={
+                    "fieldType": LiteralBinding(value="text"),
+                    "multiline": LiteralBinding(value=True),
+                    "placeholder": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
+    # Default: standard text input
+    return ElementNode(
+        as_="Input",
+        props={
+            "placeholder": LiteralBinding(value=field_label),
+            "dazzle": LiteralBinding(value=dazzle_attrs),
+        },
+    )
+
+
 def _generate_form_fields(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -259,53 +365,54 @@ def _generate_form_fields(
     children: list[ElementNode] = []
     entity_name = entity.name if entity else surface.entity_ref
 
-    # Get fields from surface sections, or entity fields if not defined
-    # SurfaceElement has field_name and label
-    fields_to_render: list[tuple[str, str]] = []  # (field_name, label)
+    # Collect fields to render: (field_name, label, field_spec)
+    fields_to_render: list[tuple[str, str, ir.FieldSpec | None]] = []
 
     if surface.sections:
         for section in surface.sections:
             for element in section.elements:
-                fields_to_render.append(
-                    (element.field_name, element.label or element.field_name.title())
-                )
+                field_spec = _get_field_spec(entity, element.field_name)
+                label = element.label or element.field_name.replace("_", " ").title()
+                fields_to_render.append((element.field_name, label, field_spec))
     elif entity and entity.fields:
         # Use all non-pk entity fields
         for field in entity.fields:
             if not field.is_primary_key:
-                # Generate a human-readable label from field name
                 label = field.name.replace("_", " ").title()
-                fields_to_render.append((field.name, label))
+                fields_to_render.append((field.name, label, field))
 
-    # Generate Input elements for each field
-    for field_name, field_label in fields_to_render:
-        # Create label element with actual text content
-        children.append(
-            ElementNode(
-                as_="Text",
-                props={
-                    "variant": LiteralBinding(value="label"),
-                    "dazzle": LiteralBinding(value={"label": f"{entity_name}.{field_name}"}),
-                },
-                children=[TextNode(content=LiteralBinding(value=field_label))],
-            )
+    # Generate form groups for each field
+    for field_name, field_label, field_spec in fields_to_render:
+        # For checkbox/boolean fields, the label is inline with the component
+        is_checkbox = (
+            field_spec
+            and field_spec.type
+            and field_spec.type.kind == ir.FieldTypeKind.BOOL
         )
 
-        # Create input element with semantic field attribute
-        children.append(
-            ElementNode(
-                as_="Input",
-                props={
-                    "placeholder": LiteralBinding(value=field_label),
-                    "dazzle": LiteralBinding(
-                        value={
-                            "field": f"{entity_name}.{field_name}",
-                            "entity": entity_name,
-                        }
-                    ),
-                },
+        if is_checkbox:
+            # Checkbox has built-in label
+            children.append(
+                _generate_field_element(field_name, field_label, field_spec, entity_name)
             )
-        )
+        else:
+            # Create label element
+            children.append(
+                ElementNode(
+                    as_="Text",
+                    props={
+                        "variant": LiteralBinding(value="label"),
+                        "dazzle": LiteralBinding(
+                            value={"label": f"{entity_name}.{field_name}"}
+                        ),
+                    },
+                    children=[TextNode(content=LiteralBinding(value=field_label))],
+                )
+            )
+            # Create appropriate input element
+            children.append(
+                _generate_field_element(field_name, field_label, field_spec, entity_name)
+            )
 
     return children
 

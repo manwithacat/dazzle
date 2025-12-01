@@ -33,11 +33,11 @@ def create_prompts() -> list[dict[str, Any]]:
         },
         {
             "name": "code_review",
-            "description": "Review generated code artifacts for quality and best practices",
+            "description": "Review generated code artifacts for quality and best practices. NOTE: DNR is the primary runtime - use code generation only for custom deployments.",
             "arguments": [
                 {
                     "name": "stack",
-                    "description": "Stack to review (django_micro_modular, openapi, etc.)",
+                    "description": "Stack to review (docker, base). Legacy stacks (django_micro_modular, etc.) are deprecated.",
                     "required": True,
                 }
             ],

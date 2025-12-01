@@ -7,9 +7,9 @@ This module uses the console logging infrastructure from conftest.py:
 - page_diagnostics: Captures all browser console output
 - Errors are reported at the end of each test
 
-Test Count: 9
-- High Priority: 2
-- Medium Priority: 3
+Test Count: 12
+- High Priority: 4
+- Medium Priority: 4
 - Low Priority: 4
 """
 
@@ -38,6 +38,76 @@ def base_url() -> str:
 # =============================================================================
 # Generated Tests
 # =============================================================================
+
+@pytest.mark.e2e
+@pytest.mark.high_priority
+@pytest.mark.auth
+@pytest.mark.login
+def test_auth_login(page, page_diagnostics, track_route, track_crud, base_url):
+    """
+    Login with valid credentials
+    Tags: auth, login
+    """
+    test_name = "test_auth_login"
+
+    # Fixture data
+    fixtures = {}
+
+    # Execute flow steps
+    # Navigate to login page
+    page.goto(f"{base_url}/login")
+    page.wait_for_load_state("networkidle")
+    
+    # Fill username field
+    page.locator('[data-dazzle-field="username"]').fill("testuser")
+    
+    # Fill password field
+    page.locator('[data-dazzle-field="password"]').fill("testpass123")
+    
+    # Click login button
+    page.locator('[data-dazzle-action="login"]').click()
+    page.wait_for_load_state("networkidle")
+    
+    # Assert user menu is visible after login
+    expect(page.locator('[data-testid="user_menu"]')).to_be_visible()
+
+    # Check for console errors after test
+    if page_diagnostics.has_errors():
+        errors = page_diagnostics.get_errors()
+        pytest.fail(f"Browser console errors detected: {errors}")
+
+
+@pytest.mark.e2e
+@pytest.mark.high_priority
+@pytest.mark.auth
+@pytest.mark.logout
+def test_auth_logout(page, page_diagnostics, track_route, track_crud, base_url):
+    """
+    Logout after being logged in
+    Tags: auth, logout
+    """
+    test_name = "test_auth_logout"
+
+    # Fixture data
+    fixtures = {}
+
+    # Execute flow steps
+    # Open user menu
+    page.locator('[data-dazzle-action="user_menu"]').click()
+    page.wait_for_load_state("networkidle")
+    
+    # Click logout
+    page.locator('[data-dazzle-action="logout"]').click()
+    page.wait_for_load_state("networkidle")
+    
+    # Assert redirected to login page
+    expect(page.locator('[data-dazzle-view="login"]')).to_be_visible()
+
+    # Check for console errors after test
+    if page_diagnostics.has_errors():
+        errors = page_diagnostics.get_errors()
+        pytest.fail(f"Browser console errors detected: {errors}")
+
 
 @pytest.mark.e2e
 @pytest.mark.high_priority
@@ -155,6 +225,32 @@ def test_Task_update_valid(page, page_diagnostics, track_route, track_crud, base
     # Assert Task was updated
     # Verify Task entity exists
     expect(page.locator('[data-dazzle-row]')).to_have_count(1, timeout=5000)
+
+    # Check for console errors after test
+    if page_diagnostics.has_errors():
+        errors = page_diagnostics.get_errors()
+        pytest.fail(f"Browser console errors detected: {errors}")
+
+
+@pytest.mark.e2e
+@pytest.mark.auth
+@pytest.mark.protection
+def test_auth_protected_route(page, page_diagnostics, track_route, track_crud, base_url):
+    """
+    Unauthenticated user redirected to login
+    Tags: auth, protection
+    """
+    test_name = "test_auth_protected_route"
+
+    # Fixture data
+    fixtures = {}
+
+    # Execute flow steps
+    # Navigate to protected task list
+    page.goto(f"{base_url}/task/list")
+    page.wait_for_load_state("networkidle")
+    
+    # Assert redirected to login
 
     # Check for console errors after test
     if page_diagnostics.has_errors():
@@ -388,4 +484,5 @@ def test_navigate_task_edit(page, page_diagnostics, track_route, track_crud, bas
     if page_diagnostics.has_errors():
         errors = page_diagnostics.get_errors()
         pytest.fail(f"Browser console errors detected: {errors}")
+
 

@@ -388,3 +388,144 @@ class DazzleAssertions:
             content = await locator.first.text_content()
             if text not in (content or ""):
                 raise AssertionError(f"Error message '{content}' doesn't contain '{text}'")
+
+    # =========================================================================
+    # Auth Assertions - For authentication testing
+    # =========================================================================
+
+    async def is_authenticated(self, timeout: int = 3000) -> None:
+        """
+        Assert that user is authenticated (user indicator visible).
+
+        Args:
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If user is not authenticated
+        """
+        locator = self.locators.auth_user_indicator()
+        try:
+            await locator.wait_for(state="visible", timeout=timeout)
+        except Exception as e:
+            raise AssertionError("User is not authenticated (user indicator not visible)") from e
+
+    async def is_not_authenticated(self, timeout: int = 3000) -> None:
+        """
+        Assert that user is not authenticated (login button visible).
+
+        Args:
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If user is authenticated
+        """
+        locator = self.locators.auth_login_button()
+        try:
+            await locator.wait_for(state="visible", timeout=timeout)
+        except Exception as e:
+            raise AssertionError(
+                "User appears to be authenticated (login button not visible)"
+            ) from e
+
+    async def login_succeeded(self, timeout: int = 5000) -> None:
+        """
+        Assert that login was successful (modal closed, user indicator visible).
+
+        Args:
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If login did not succeed
+        """
+        # Auth modal should be closed
+        modal = self.locators.auth_modal()
+        try:
+            await modal.wait_for(state="hidden", timeout=timeout)
+        except Exception as e:
+            raise AssertionError("Auth modal is still open after login") from e
+
+        # User indicator should be visible
+        await self.is_authenticated(timeout)
+
+    async def login_failed(
+        self,
+        expected_error: str | None = None,
+        timeout: int = 3000,
+    ) -> None:
+        """
+        Assert that login failed (error message visible).
+
+        Args:
+            expected_error: Optional expected error message text
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If login didn't fail or error doesn't match
+        """
+        error_locator = self.locators.auth_error()
+        try:
+            await error_locator.wait_for(state="visible", timeout=timeout)
+        except Exception as e:
+            raise AssertionError("No auth error visible - login may have succeeded") from e
+
+        if expected_error:
+            text = await error_locator.text_content()
+            if expected_error not in (text or ""):
+                raise AssertionError(
+                    f"Auth error '{text}' doesn't contain expected '{expected_error}'"
+                )
+
+    async def route_protected(self, timeout: int = 3000) -> None:
+        """
+        Assert that the current route is protected (auth modal shown or redirected).
+
+        Args:
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If route is not protected
+        """
+        # Either auth modal is shown, or we see login button (redirected to public page)
+        modal = self.locators.auth_modal()
+        login_button = self.locators.auth_login_button()
+
+        try:
+            # Try modal first
+            await modal.wait_for(state="visible", timeout=timeout // 2)
+            return  # Modal visible = protected
+        except Exception:
+            pass  # Modal not visible, check for login button
+
+        try:
+            await login_button.wait_for(state="visible", timeout=timeout // 2)
+            return  # Login button visible = redirected to public page
+        except Exception as e:
+            raise AssertionError(
+                "Route does not appear protected (no auth modal or login button visible)"
+            ) from e
+
+    async def has_persona(self, persona: str, timeout: int = 3000) -> None:
+        """
+        Assert that the current user has a specific persona/role.
+
+        Args:
+            persona: Persona identifier to check
+            timeout: Timeout in milliseconds
+
+        Raises:
+            AssertionError: If user doesn't have the persona
+        """
+        # Check for persona indicator in user menu or via API
+        persona_locator = self.page.locator(f'[data-dazzle-persona="{persona}"]')
+        try:
+            await persona_locator.wait_for(state="visible", timeout=timeout)
+        except Exception:
+            # Fallback: check via adapter if available
+            if self.adapter:
+                try:
+                    user_info = await self.adapter.get_current_user()
+                    if user_info and user_info.get("persona") == persona:
+                        return
+                except Exception:
+                    pass
+            raise AssertionError(f"User does not have persona '{persona}'")

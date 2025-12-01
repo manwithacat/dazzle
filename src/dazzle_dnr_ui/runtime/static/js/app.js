@@ -8,6 +8,7 @@ import { registerState } from './state.js';
 import { applyTheme } from './theme.js';
 import { renderViewNode } from './renderer.js';
 import { render } from './dom.js';
+import { createShell, updateActiveNav, checkAuthState } from './shell.js';
 
 // =============================================================================
 // Route Matching
@@ -108,10 +109,67 @@ export function createApp(uiSpec) {
 
   let currentWorkspace = null;
   let appContainer = null;
+  let shellContainer = null;
+
+  // Check if path matches a static page
+  function findStaticPage(path) {
+    const pages = uiSpec.shell?.pages || [];
+    return pages.find(page => page.route === path);
+  }
+
+  // Render a static page
+  async function renderStaticPage(page) {
+    const StaticPageFn = getComponent('StaticPage');
+    if (!StaticPageFn) {
+      console.warn('StaticPage component not found');
+      return false;
+    }
+
+    // Show loading state
+    render(appContainer, () => StaticPageFn({ loading: true }, []));
+
+    try {
+      // Fetch page content from backend
+      const response = await fetch(`/api/pages${page.route}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load page: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Render with content
+      render(appContainer, () => StaticPageFn({
+        title: data.title || page.title,
+        content: data.content
+      }, []));
+
+      return true;
+    } catch (error) {
+      console.error('Error loading static page:', error);
+      render(appContainer, () => StaticPageFn({
+        error: `Failed to load page: ${error.message}`
+      }, []));
+      return false;
+    }
+  }
 
   // Render function for a given path
   function renderRoute(path) {
-    if (!currentWorkspace || !appContainer) return;
+    if (!appContainer) return;
+
+    // Update nav active state
+    if (shellContainer) {
+      updateActiveNav(shellContainer, path);
+    }
+
+    // Check for static page first
+    const staticPage = findStaticPage(path);
+    if (staticPage) {
+      renderStaticPage(staticPage);
+      return true;
+    }
+
+    // Then check workspace routes
+    if (!currentWorkspace) return false;
 
     const match = findRoute(currentWorkspace.routes, path);
     if (match) {
@@ -147,7 +205,13 @@ export function createApp(uiSpec) {
       }
 
       currentWorkspace = workspace;
-      appContainer = container;
+      shellContainer = container;
+
+      // Create shell and get the main content area
+      appContainer = createShell(uiSpec.shell, container);
+
+      // Check authentication state and update UI
+      checkAuthState();
 
       // Initialize workspace state
       (workspace.state || []).forEach(stateSpec => {

@@ -116,18 +116,27 @@ def _generate_routes_from_surfaces(
     workspace: ir.WorkspaceSpec,
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
+    is_primary: bool = True,
 ) -> list[RouteSpec]:
     """
     Generate routes for workspace based on available surfaces.
 
     Maps surface modes to standard routes:
-    - LIST surfaces -> / (root) and /list
+    - LIST surfaces -> / (root) and /list for primary workspace
+    - LIST surfaces -> /workspace-name for secondary workspaces
     - VIEW surfaces -> /detail/:id
     - CREATE surfaces -> /create
     - EDIT surfaces -> /edit/:id
+
+    Args:
+        is_primary: If True, this workspace gets the root "/" route.
+                   Otherwise, routes are prefixed with workspace name.
     """
     routes: list[RouteSpec] = []
     entities_seen = set()
+
+    # Base path for routes - primary workspace gets "/", others get "/workspace-name"
+    workspace_prefix = "" if is_primary else f"/{workspace.name.replace('_', '-')}"
 
     # Collect entities used in workspace regions
     workspace_entities = set()
@@ -154,11 +163,12 @@ def _generate_routes_from_surfaces(
         entity_lower = entity_name.lower()
 
         if surface.mode == ir.SurfaceMode.LIST:
-            # First list surface becomes the root route
+            # First list surface becomes the root route for this workspace
             if entity_name not in entities_seen:
+                root_path = workspace_prefix if workspace_prefix else "/"
                 routes.append(
                     RouteSpec(
-                        path="/",
+                        path=root_path,
                         component=component_name,
                         title=surface.title or f"{entity_name} List",
                     )
@@ -168,7 +178,7 @@ def _generate_routes_from_surfaces(
             # Also add explicit /list route
             routes.append(
                 RouteSpec(
-                    path=f"/{entity_lower}/list",
+                    path=f"{workspace_prefix}/{entity_lower}/list",
                     component=component_name,
                     title=surface.title or f"{entity_name} List",
                 )
@@ -177,7 +187,7 @@ def _generate_routes_from_surfaces(
         elif surface.mode == ir.SurfaceMode.VIEW:
             routes.append(
                 RouteSpec(
-                    path=f"/{entity_lower}/:id",
+                    path=f"{workspace_prefix}/{entity_lower}/:id",
                     component=component_name,
                     title=surface.title or f"{entity_name} Detail",
                 )
@@ -186,7 +196,7 @@ def _generate_routes_from_surfaces(
         elif surface.mode == ir.SurfaceMode.CREATE:
             routes.append(
                 RouteSpec(
-                    path=f"/{entity_lower}/create",
+                    path=f"{workspace_prefix}/{entity_lower}/create",
                     component=component_name,
                     title=surface.title or f"Create {entity_name}",
                 )
@@ -195,7 +205,7 @@ def _generate_routes_from_surfaces(
         elif surface.mode == ir.SurfaceMode.EDIT:
             routes.append(
                 RouteSpec(
-                    path=f"/{entity_lower}/:id/edit",
+                    path=f"{workspace_prefix}/{entity_lower}/:id/edit",
                     component=component_name,
                     title=surface.title or f"Edit {entity_name}",
                 )
@@ -205,13 +215,26 @@ def _generate_routes_from_surfaces(
     if not routes:
         default_component = _get_default_list_component(surfaces, surface_component_map)
         if default_component:
+            root_path = workspace_prefix if workspace_prefix else "/"
             routes.append(
                 RouteSpec(
-                    path="/",
+                    path=root_path,
                     component=default_component,
                     title=workspace.title or workspace.name.title(),
                 )
             )
+
+    # Sort routes so static paths come before dynamic paths
+    # This prevents /task/:id from matching before /task/create
+    def route_priority(route: RouteSpec) -> tuple[int, str]:
+        path = route.path
+        # Count dynamic segments (those starting with :)
+        segments = path.split("/")
+        dynamic_count = sum(1 for seg in segments if seg.startswith(":"))
+        # Static routes (0 dynamic segments) come first, then by path length, then alphabetically
+        return (dynamic_count, -len(segments), path)
+
+    routes.sort(key=route_priority)
 
     return routes
 
@@ -225,6 +248,7 @@ def convert_workspace(
     workspace: ir.WorkspaceSpec,
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
+    is_primary: bool = True,
 ) -> WorkspaceSpec:
     """
     Convert a Dazzle IR WorkspaceSpec to DNR UISpec WorkspaceSpec.
@@ -233,6 +257,7 @@ def convert_workspace(
         workspace: Dazzle IR workspace specification
         surfaces: List of all surfaces in the app
         surface_component_map: Mapping of surface names to component names
+        is_primary: If True, this workspace gets the root "/" route
 
     Returns:
         DNR UISpec workspace specification
@@ -241,7 +266,9 @@ def convert_workspace(
     layout = _infer_layout_from_workspace(workspace, surfaces, surface_component_map)
 
     # Generate routes from surfaces
-    routes = _generate_routes_from_surfaces(workspace, surfaces, surface_component_map)
+    routes = _generate_routes_from_surfaces(
+        workspace, surfaces, surface_component_map, is_primary
+    )
 
     # Extract persona from UX spec if available
     persona = None
@@ -275,4 +302,8 @@ def convert_workspaces(
     Returns:
         List of DNR UISpec workspace specifications
     """
-    return [convert_workspace(w, surfaces, surface_component_map) for w in workspaces]
+    # First workspace is primary (gets "/" route), others get workspace-prefixed routes
+    return [
+        convert_workspace(w, surfaces, surface_component_map, is_primary=(i == 0))
+        for i, w in enumerate(workspaces)
+    ]

@@ -74,9 +74,41 @@ def _target_to_selector(target: str) -> str:
         # Components use data-dazzle-component attribute
         return f'[data-dazzle-component="{target_name}"]'
 
+    elif target_type == "auth":
+        # Auth elements use specific data-dazzle-auth-* attributes or IDs
+        return _auth_target_to_selector(target_name)
+
     else:
         # Fallback to test ID
         return f'[data-testid="{target_name}"]'
+
+
+def _auth_target_to_selector(target_name: str) -> str:
+    """Convert auth target to selector."""
+    selectors = {
+        "login_button": '[data-dazzle-auth-action="login"]',
+        "logout_button": '[data-dazzle-auth-action="logout"]',
+        "modal": "#dz-auth-modal",
+        "form": "#dz-auth-form",
+        "submit": "#dz-auth-submit",
+        "error": "#dz-auth-error:not(.hidden)",
+        "user_indicator": "[data-dazzle-auth-user]",
+    }
+
+    if target_name in selectors:
+        return selectors[target_name]
+
+    # Handle field.* and toggle.* patterns
+    if target_name.startswith("field."):
+        field_name = target_name[6:]  # Strip "field." prefix
+        return f'#dz-auth-form [name="{field_name}"]'
+
+    if target_name.startswith("toggle."):
+        mode = target_name[7:]  # Strip "toggle." prefix
+        return f'[data-dazzle-auth-toggle="{mode}"]'
+
+    # Fallback
+    return f'[data-dazzle-auth="{target_name}"]'
 
 
 def _target_to_route(target: str) -> str:
@@ -84,7 +116,12 @@ def _target_to_route(target: str) -> str:
     Convert a semantic target to a route path for navigation.
 
     Example: 'view:task_list' -> '/task/list'
+    Example: '/' -> '/' (direct path)
     """
+    # Direct path targets (starting with /)
+    if target.startswith("/"):
+        return target
+
     target_type, target_name = _parse_target(target)
 
     if target_type == "view":
@@ -176,6 +213,52 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
                 selector = _target_to_selector(assertion_target)
                 lines.append(
                     f"expect(page.locator('{selector}')).to_have_value(\"{assertion.expected}\")"
+                )
+
+            # Auth assertions
+            elif assertion.kind == FlowAssertionKind.IS_AUTHENTICATED:
+                lines.append("# Verify user is authenticated")
+                lines.append(
+                    "expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()"
+                )
+
+            elif assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED:
+                lines.append("# Verify user is not authenticated")
+                lines.append(
+                    'expect(page.locator(\'[data-dazzle-auth-action="login"]\')).to_be_visible()'
+                )
+
+            elif assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED:
+                lines.append("# Verify login succeeded")
+                lines.append(
+                    "expect(page.locator('#dz-auth-modal')).not_to_be_visible(timeout=5000)"
+                )
+                lines.append(
+                    "expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()"
+                )
+
+            elif assertion.kind == FlowAssertionKind.LOGIN_FAILED:
+                lines.append("# Verify login failed with error")
+                lines.append(
+                    "expect(page.locator('#dz-auth-error:not(.hidden)')).to_be_visible()"
+                )
+
+            elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
+                lines.append("# Verify route is protected")
+                lines.append(
+                    "# Either auth modal is shown or login button is visible (redirected)"
+                )
+                lines.append("modal_visible = page.locator('#dz-auth-modal').is_visible()")
+                lines.append(
+                    'login_visible = page.locator(\'[data-dazzle-auth-action="login"]\').is_visible()'
+                )
+                lines.append("assert modal_visible or login_visible, 'Route should be protected'")
+
+            elif assertion.kind == FlowAssertionKind.HAS_PERSONA:
+                persona = assertion_target
+                lines.append(f"# Verify user has '{persona}' persona")
+                lines.append(
+                    f"expect(page.locator('[data-dazzle-persona=\"{persona}\"]')).to_be_visible()"
                 )
 
     elif step.kind == FlowStepKind.SNAPSHOT:
@@ -439,8 +522,8 @@ def generate_tests_for_app(
     # Build AppSpec
     appspec = build_appspec(modules, manifest.project_root)
 
-    # Generate E2ETestSpec
-    testspec = generate_e2e_testspec(appspec)
+    # Generate E2ETestSpec (pass manifest for auth test generation)
+    testspec = generate_e2e_testspec(appspec, manifest)
 
     # Generate test file
     test_file = output_dir / f"test_{appspec.name.lower()}_generated.py"

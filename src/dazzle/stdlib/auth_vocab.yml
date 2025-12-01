@@ -1,0 +1,458 @@
+# Dazzle Standard Library: Authentication Vocabulary
+# ==================================================
+# These vocabulary entries provide standard authentication patterns
+# for Dazzle applications. They are designed to be:
+# - Simple to use (minimal configuration)
+# - Secure by default
+# - Extensible for advanced use cases
+#
+# Usage:
+#   @use simple_auth()                    # Basic session-based auth
+#   @use simple_auth(user_entity=Account) # Custom user entity name
+#   @use jwt_auth()                       # JWT-based auth (stateless)
+#
+# These entries work with [auth] config in dazzle.toml
+
+version: 1.0.0
+app_id: _stdlib
+dsl_core_version: 1.0.0
+
+entries:
+  # ==========================================================================
+  # SIMPLE SESSION AUTH - Username/password with server-side sessions
+  # ==========================================================================
+  # Best for: Traditional web apps, admin panels, internal tools
+  # Pros: Simple, secure, easy to invalidate sessions
+  # Cons: Requires session storage, not ideal for APIs
+
+  - id: simple_auth
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      Complete session-based authentication with User and Session entities.
+      Provides login, logout, and registration endpoints. Sessions are stored
+      server-side and validated on each request.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity
+      - name: include_profile_fields
+        type: boolean
+        required: false
+        default: true
+        description: Include display_name and avatar_url fields
+      - name: require_email_verification
+        type: boolean
+        required: false
+        default: false
+        description: Require email verification before login
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ user_entity }} "{{ user_entity }}":
+          id: uuid pk
+          email: email unique required
+          password_hash: str(255) required hidden
+          {% if include_profile_fields %}display_name: str(100)
+          avatar_url: str(500){% endif %}
+          is_active: bool = true
+          {% if require_email_verification %}email_verified: bool = false
+          email_verify_token: str(100) hidden{% endif %}
+          last_login: datetime
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+
+        entity AuthSession "Auth Session":
+          id: uuid pk
+          user: ref {{ user_entity }} required
+          token: str(64) unique required hidden
+          expires_at: datetime required
+          ip_address: str(45)
+          user_agent: str(500)
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      generates:
+        endpoints:
+          - POST /api/auth/login
+          - POST /api/auth/logout
+          - POST /api/auth/register
+          - GET /api/auth/me
+          - POST /api/auth/refresh
+        middleware:
+          - session_validation
+          - user_context_injection
+    tags:
+      - auth
+      - session
+      - login
+      - user
+      - stdlib
+
+  # ==========================================================================
+  # JWT AUTH - Stateless token-based authentication
+  # ==========================================================================
+  # Best for: APIs, mobile apps, microservices
+  # Pros: Stateless, scalable, works across services
+  # Cons: Can't easily invalidate tokens, larger request size
+
+  - id: jwt_auth
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      JWT-based authentication with access and refresh tokens.
+      Stateless authentication ideal for APIs and mobile apps.
+      Access tokens are short-lived, refresh tokens stored server-side.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity
+      - name: access_token_minutes
+        type: number
+        required: false
+        default: 15
+        description: Access token expiry in minutes
+      - name: refresh_token_days
+        type: number
+        required: false
+        default: 7
+        description: Refresh token expiry in days
+      - name: include_profile_fields
+        type: boolean
+        required: false
+        default: true
+        description: Include display_name and avatar_url fields
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ user_entity }} "{{ user_entity }}":
+          id: uuid pk
+          email: email unique required
+          password_hash: str(255) required hidden
+          {% if include_profile_fields %}display_name: str(100)
+          avatar_url: str(500){% endif %}
+          is_active: bool = true
+          last_login: datetime
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+
+        entity RefreshToken "Refresh Token":
+          id: uuid pk
+          user: ref {{ user_entity }} required
+          token_hash: str(64) unique required hidden
+          expires_at: datetime required
+          revoked: bool = false
+          revoked_at: datetime
+          device_info: str(500)
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      generates:
+        endpoints:
+          - POST /api/auth/login
+          - POST /api/auth/logout
+          - POST /api/auth/register
+          - POST /api/auth/refresh
+          - GET /api/auth/me
+        middleware:
+          - jwt_validation
+          - user_context_injection
+      config_required:
+        - JWT_SECRET (environment variable)
+    tags:
+      - auth
+      - jwt
+      - token
+      - api
+      - stdlib
+
+  # ==========================================================================
+  # ROLE-BASED ACCESS - Add roles to existing auth
+  # ==========================================================================
+  # Use with simple_auth or jwt_auth to add role-based permissions
+
+  - id: role_based_access
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      Add role-based access control to your auth system.
+      Defines Role entity and links users to roles.
+      Use with simple_auth or jwt_auth.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity (must exist)
+      - name: default_roles
+        type: list
+        required: false
+        default: ["admin", "user"]
+        description: Default role names to create
+      - name: allow_multiple_roles
+        type: boolean
+        required: false
+        default: true
+        description: Allow users to have multiple roles
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity Role "Role":
+          id: uuid pk
+          name: str(50) unique required
+          description: str(200)
+          permissions: text
+          is_system: bool = false
+          created_at: datetime auto_add
+
+        {% if allow_multiple_roles %}
+        entity UserRole "User Role":
+          id: uuid pk
+          user: ref {{ user_entity }} required
+          role: ref Role required
+          granted_at: datetime auto_add
+          granted_by: ref {{ user_entity }}
+        {% endif %}
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      note: |
+        For single-role users, add a 'role: ref Role' field to your User entity
+        instead of using this pattern with allow_multiple_roles=true.
+    tags:
+      - auth
+      - rbac
+      - roles
+      - permissions
+      - stdlib
+
+  # ==========================================================================
+  # API KEY AUTH - For service-to-service or public APIs
+  # ==========================================================================
+  # Best for: Public APIs, webhooks, service accounts
+
+  - id: api_key_auth
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      API key authentication for service accounts and integrations.
+      Keys can be scoped to specific permissions and have expiry dates.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity (key owner)
+      - name: include_rate_limits
+        type: boolean
+        required: false
+        default: true
+        description: Include rate limiting fields
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity ApiKey "API Key":
+          id: uuid pk
+          owner: ref {{ user_entity }} required
+          name: str(100) required
+          key_prefix: str(8) required
+          key_hash: str(64) required hidden
+          scopes: text
+          {% if include_rate_limits %}rate_limit_per_minute: int = 60
+          rate_limit_per_day: int = 10000{% endif %}
+          expires_at: datetime
+          last_used_at: datetime
+          is_active: bool = true
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      generates:
+        endpoints:
+          - POST /api/auth/keys (create key)
+          - GET /api/auth/keys (list keys)
+          - DELETE /api/auth/keys/:id (revoke key)
+        middleware:
+          - api_key_validation
+      note: |
+        API keys are displayed only once at creation.
+        Store the key_hash (SHA-256) for validation.
+    tags:
+      - auth
+      - api-key
+      - service
+      - integration
+      - stdlib
+
+  # ==========================================================================
+  # PASSWORD RESET - Add password reset flow
+  # ==========================================================================
+
+  - id: password_reset
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      Password reset flow with email tokens.
+      Generates reset request and confirmation endpoints.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity
+      - name: token_expiry_hours
+        type: number
+        required: false
+        default: 24
+        description: Hours until reset token expires
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity PasswordResetToken "Password Reset Token":
+          id: uuid pk
+          user: ref {{ user_entity }} required
+          token_hash: str(64) unique required hidden
+          expires_at: datetime required
+          used: bool = false
+          used_at: datetime
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      generates:
+        endpoints:
+          - POST /api/auth/forgot-password
+          - POST /api/auth/reset-password
+      note: |
+        Requires email service integration for sending reset emails.
+        Configure [auth.email] in dazzle.toml.
+    tags:
+      - auth
+      - password
+      - reset
+      - email
+      - stdlib
+
+  # ==========================================================================
+  # OAUTH2 SOCIAL LOGIN - Google, GitHub, etc.
+  # ==========================================================================
+
+  - id: oauth2_social
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      OAuth2 social login support (Google, GitHub, etc.).
+      Links social accounts to local user accounts.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity
+      - name: providers
+        type: list
+        required: false
+        default: ["google", "github"]
+        description: OAuth2 providers to support
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity SocialAccount "Social Account":
+          id: uuid pk
+          user: ref {{ user_entity }} required
+          provider: str(50) required
+          provider_user_id: str(255) required
+          provider_email: email
+          access_token: str(500) hidden
+          refresh_token: str(500) hidden
+          token_expires_at: datetime
+          profile_data: text
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: experimental
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      generates:
+        endpoints:
+          - GET /api/auth/oauth/:provider (initiate flow)
+          - GET /api/auth/oauth/:provider/callback (handle callback)
+      config_required:
+        - OAUTH_GOOGLE_CLIENT_ID
+        - OAUTH_GOOGLE_CLIENT_SECRET
+        - OAUTH_GITHUB_CLIENT_ID
+        - OAUTH_GITHUB_CLIENT_SECRET
+    tags:
+      - auth
+      - oauth2
+      - social
+      - google
+      - github
+      - stdlib
+
+  # ==========================================================================
+  # AUDIT LOG - Track authentication events
+  # ==========================================================================
+
+  - id: auth_audit_log
+    kind: pattern
+    scope: auth
+    dsl_core_version: 1.0.0
+    description: |
+      Audit log for authentication events.
+      Tracks logins, logouts, failed attempts, and security events.
+    parameters:
+      - name: user_entity
+        type: string
+        required: false
+        default: User
+        description: Name of the user entity
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity AuthAuditLog "Auth Audit Log":
+          id: uuid pk
+          user: ref {{ user_entity }}
+          event_type: enum[login_success,login_failed,logout,password_change,password_reset,account_locked,account_unlocked,token_refresh,api_key_created,api_key_revoked] required
+          ip_address: str(45)
+          user_agent: str(500)
+          location: str(200)
+          details: text
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: stdlib
+      created_at: "2025-11-30T00:00:00Z"
+      usage_count: 0
+      note: |
+        Automatically populated by auth middleware when enabled.
+        Configure [auth.audit] in dazzle.toml.
+    tags:
+      - auth
+      - audit
+      - security
+      - logging
+      - stdlib

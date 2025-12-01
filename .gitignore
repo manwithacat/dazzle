@@ -58,3 +58,4 @@ examples/*/dnr-ui/
 
 # Node.js
 node_modules/
+dev_docs/

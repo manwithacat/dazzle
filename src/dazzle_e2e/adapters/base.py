@@ -108,7 +108,7 @@ class BaseAdapter(ABC):
         elif parts[-1] == "list":
             return f"{self.base_url}/{parts[0]}"
         elif parts[-1] == "create":
-            return f"{self.base_url}/{parts[0]}/new"
+            return f"{self.base_url}/{parts[0]}/create"
         elif parts[-1] == "detail":
             return f"{self.base_url}/{parts[0]}/{{id}}"
         elif parts[-1] == "edit":
@@ -160,3 +160,14 @@ class BaseAdapter(ABC):
         Default implementation does nothing. Override for auth-enabled stacks.
         """
         pass
+
+    async def get_current_user(self) -> dict[str, Any] | None:
+        """
+        Get the current authenticated user's info.
+
+        Default implementation returns None. Override for auth-enabled stacks.
+
+        Returns:
+            User info dict with at least 'email' and optionally 'persona', or None
+        """
+        return None

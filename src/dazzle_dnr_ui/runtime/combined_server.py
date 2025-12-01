@@ -259,6 +259,7 @@ class DNRCombinedServer:
         frontend_port: int = 3000,
         db_path: str | Path | None = None,
         enable_test_mode: bool = False,
+        enable_auth: bool = False,
     ):
         """
         Initialize the combined server.
@@ -272,6 +273,7 @@ class DNRCombinedServer:
             frontend_port: Frontend server port
             db_path: Path to SQLite database
             enable_test_mode: Enable test endpoints (/__test__/*)
+            enable_auth: Enable authentication endpoints (/auth/*)
         """
         self.backend_spec = backend_spec
         self.ui_spec = ui_spec
@@ -281,6 +283,7 @@ class DNRCombinedServer:
         self.frontend_port = frontend_port
         self.db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
         self.enable_test_mode = enable_test_mode
+        self.enable_auth = enable_auth
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
@@ -310,8 +313,9 @@ class DNRCombinedServer:
             print("[DNR] Warning: dazzle_dnr_back not available, skipping backend")
             return
 
-        # Capture test mode flag for closure
+        # Capture flags for closure
         enable_test_mode = self.enable_test_mode
+        enable_auth = self.enable_auth
 
         def run_backend() -> None:
             try:
@@ -322,6 +326,7 @@ class DNRCombinedServer:
                     db_path=self.db_path,
                     use_database=True,
                     enable_test_mode=enable_test_mode,
+                    enable_auth=enable_auth,
                 )
                 app = app_builder.build()
 
@@ -346,6 +351,8 @@ class DNRCombinedServer:
         print(f"[DNR] Database: {self.db_path}")
         if self.enable_test_mode:
             print("[DNR] Test endpoints: /__test__/* (enabled)")
+        if self.enable_auth:
+            print("[DNR] Authentication: ENABLED (/auth/* endpoints available)")
         print()
 
     def _start_frontend(self) -> None:
@@ -394,6 +401,7 @@ def run_combined_server(
     frontend_port: int = 3000,
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    enable_auth: bool = False,
     host: str = "127.0.0.1",
 ) -> None:
     """
@@ -406,6 +414,7 @@ def run_combined_server(
         frontend_port: Frontend server port
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
+        enable_auth: Enable authentication endpoints (/auth/*)
         host: Host to bind both servers to
     """
     server = DNRCombinedServer(
@@ -417,6 +426,7 @@ def run_combined_server(
         frontend_port=frontend_port,
         db_path=db_path,
         enable_test_mode=enable_test_mode,
+        enable_auth=enable_auth,
     )
     server.start()
 
@@ -455,3 +465,58 @@ def run_frontend_only(
         print("\n[DNR-UI] Shutting down...")
     finally:
         server.shutdown()
+
+
+def run_backend_only(
+    backend_spec: "BackendSpec",
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    db_path: str | Path | None = None,
+    enable_test_mode: bool = False,
+) -> None:
+    """
+    Run only the FastAPI backend server.
+
+    Args:
+        backend_spec: Backend specification
+        host: Host to bind to
+        port: Port to bind to
+        db_path: Path to SQLite database
+        enable_test_mode: Enable test endpoints (/__test__/*)
+    """
+    try:
+        import uvicorn
+
+        from dazzle_dnr_back.runtime.server import DNRBackendApp
+    except ImportError as e:
+        print(f"[DNR] Error: Required dependencies not available: {e}")
+        print("[DNR] Install with: pip install fastapi uvicorn dazzle-dnr-back")
+        return
+
+    print("\n" + "=" * 60)
+    print("  DAZZLE NATIVE RUNTIME (DNR) - Backend Only")
+    print("=" * 60)
+    print()
+
+    app_builder = DNRBackendApp(
+        backend_spec,
+        db_path=db_path,
+        use_database=True,
+        enable_test_mode=enable_test_mode,
+    )
+    app = app_builder.build()
+
+    print(f"[DNR] Backend:  http://{host}:{port}")
+    print(f"[DNR] API Docs: http://{host}:{port}/docs")
+    print(f"[DNR] Database: {db_path}")
+    if enable_test_mode:
+        print("[DNR] Test endpoints: /__test__/* (enabled)")
+    print()
+    print("Press Ctrl+C to stop")
+    print("-" * 60)
+    print()
+
+    try:
+        uvicorn.run(app, host=host, port=port, log_level="info")
+    except KeyboardInterrupt:
+        print("\n[DNR] Shutting down...")

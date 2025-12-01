@@ -17,6 +17,15 @@ from dazzle_dnr_ui.specs.component import (
     PropFieldSpec,
     PropsSchema,
 )
+from dazzle_dnr_ui.specs.shell import (
+    FooterLinkSpec,
+    FooterSpec,
+    HeaderSpec,
+    NavItemSpec,
+    NavSpec,
+    ShellSpec,
+    StaticPageSpec,
+)
 from dazzle_dnr_ui.specs.state import (
     AppStateBinding,
     Binding,
@@ -49,6 +58,14 @@ from dazzle_dnr_ui.specs.workspace import (
 )
 
 __all__ = [
+    # Shell types
+    "ShellSpec",
+    "NavSpec",
+    "NavItemSpec",
+    "HeaderSpec",
+    "FooterSpec",
+    "FooterLinkSpec",
+    "StaticPageSpec",
     # Workspace types
     "WorkspaceSpec",
     "LayoutSpec",

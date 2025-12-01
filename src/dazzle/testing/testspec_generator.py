@@ -24,10 +24,13 @@ from dazzle.core.ir import (
     FlowSpec,
     FlowStep,
     FlowStepKind,
+    SurfaceAccessSpec,
     SurfaceMode,
     SurfaceSpec,
     UsabilityRule,
 )
+from dazzle.core.manifest import ProjectManifest
+from dazzle.testing.auth_flows import generate_all_auth_flows
 
 # =============================================================================
 # Fixture Generation
@@ -553,11 +556,52 @@ def generate_a11y_rules() -> list[A11yRule]:
 
 
 # =============================================================================
+# Auth Flow Generation
+# =============================================================================
+
+
+def generate_auth_tests(
+    appspec: AppSpec,
+    manifest: ProjectManifest | None = None,
+) -> tuple[list[FixtureSpec], list[FlowSpec]]:
+    """
+    Generate auth-related fixtures and flows.
+
+    Only generates if auth is enabled in the manifest.
+
+    Args:
+        appspec: Application specification
+        manifest: Optional project manifest with auth config
+
+    Returns:
+        Tuple of (fixtures, flows)
+    """
+    if manifest is None or not manifest.auth.enabled:
+        return [], []
+
+    # Collect protected surfaces
+    protected_surfaces: list[tuple[str, str | None, SurfaceAccessSpec]] = []
+    for surface in appspec.surfaces:
+        if surface.access and surface.access.require_auth:
+            protected_surfaces.append(
+                (surface.name, surface.title, surface.access)
+            )
+
+    return generate_all_auth_flows(
+        allow_registration=manifest.auth.allow_registration,
+        protected_surfaces=protected_surfaces if protected_surfaces else None,
+    )
+
+
+# =============================================================================
 # Main Generator
 # =============================================================================
 
 
-def generate_e2e_testspec(appspec: AppSpec) -> E2ETestSpec:
+def generate_e2e_testspec(
+    appspec: AppSpec,
+    manifest: ProjectManifest | None = None,
+) -> E2ETestSpec:
     """
     Generate a complete E2ETestSpec from an AppSpec.
 
@@ -566,11 +610,13 @@ def generate_e2e_testspec(appspec: AppSpec) -> E2ETestSpec:
     - CRUD flows for each entity (create, read, update, delete)
     - Validation flows for required field constraints
     - Navigation flows for each surface
+    - Auth flows (if auth enabled in manifest)
     - Default usability rules
     - Default accessibility rules
 
     Args:
         appspec: The application specification to generate tests from
+        manifest: Optional project manifest for auth config
 
     Returns:
         Complete E2ETestSpec ready for test execution
@@ -590,6 +636,11 @@ def generate_e2e_testspec(appspec: AppSpec) -> E2ETestSpec:
     for surface in appspec.surfaces:
         flows.extend(generate_surface_flows(surface, appspec))
 
+    # Generate auth flows if auth is enabled
+    auth_fixtures, auth_flows = generate_auth_tests(appspec, manifest)
+    fixtures.extend(auth_fixtures)
+    flows.extend(auth_flows)
+
     # Generate usability and a11y rules
     usability_rules = generate_usability_rules(appspec)
     a11y_rules = generate_a11y_rules()
@@ -605,5 +656,6 @@ def generate_e2e_testspec(appspec: AppSpec) -> E2ETestSpec:
             "generator": "dazzle.testing.testspec_generator",
             "entity_count": len(appspec.domain.entities),
             "surface_count": len(appspec.surfaces),
+            "auth_enabled": manifest.auth.enabled if manifest else False,
         },
     )

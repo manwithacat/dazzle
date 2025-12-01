@@ -240,6 +240,108 @@ def substitute_template_vars(content: str, variables: dict[str, str]) -> str:
     return content
 
 
+def generate_dnr_ui(
+    project_dir: Path,
+    log: "Callable[[str], None] | None" = None,
+) -> bool:
+    """
+    Generate DNR UI artifacts from the project's DSL.
+
+    This ensures that dnr-ui/ is always generated from the canonical
+    vite_generator templates, not copied from stale example files.
+
+    Args:
+        project_dir: Project directory containing dazzle.toml and dsl/
+        log: Optional logging callback
+
+    Returns:
+        True if generation succeeded, False otherwise
+    """
+    if log is None:
+        log = lambda msg: None  # noqa: E731
+
+    # Check if dazzle.toml exists
+    manifest_path = project_dir / "dazzle.toml"
+    if not manifest_path.exists():
+        log("  Skipping dnr-ui generation (no dazzle.toml)")
+        return False
+
+    try:
+        # Import required modules
+        from dazzle.core.dsl_parser import parse_dsl
+        from dazzle.core.ir import ModuleIR
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.manifest import load_manifest
+
+        # Try to import DNR UI - it's optional
+        try:
+            from dazzle_dnr_ui.converters import convert_appspec_to_ui
+            from dazzle_dnr_ui.runtime import generate_vite_app
+        except ImportError:
+            log("  Skipping dnr-ui generation (dazzle-dnr-ui not installed)")
+            return False
+
+        # Load manifest
+        manifest = load_manifest(manifest_path)
+
+        # Discover and parse DSL files
+        dsl_dir = project_dir / "dsl"
+        if not dsl_dir.exists():
+            log("  Skipping dnr-ui generation (no dsl/ directory)")
+            return False
+
+        dsl_files = list(dsl_dir.glob("**/*.dsl"))
+        if not dsl_files:
+            log("  Skipping dnr-ui generation (no .dsl files found)")
+            return False
+
+        # Parse all DSL files
+        modules: list[ModuleIR] = []
+        for dsl_file in dsl_files:
+            content = dsl_file.read_text()
+            module_name, app_name, app_title, uses, fragment = parse_dsl(content, dsl_file)
+
+            module_ir = ModuleIR(
+                name=module_name,
+                file=dsl_file,
+                app_name=app_name,
+                app_title=app_title,
+                uses=uses,
+                fragment=fragment,
+            )
+            modules.append(module_ir)
+
+        if not modules:
+            log("  Skipping dnr-ui generation (no modules parsed)")
+            return False
+
+        # Build AppSpec
+        root_module = modules[0].name
+        appspec = build_appspec(modules, root_module)
+
+        # Convert to UISpec
+        ui_spec = convert_appspec_to_ui(appspec)
+
+        # Generate Vite project
+        output_dir = project_dir / "dnr-ui"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        files = generate_vite_app(ui_spec, str(output_dir))
+        log(f"  Generated dnr-ui/ ({len(files)} files)")
+
+        return True
+
+    except Exception as e:
+        # Don't fail init if dnr-ui generation fails
+        log(f"  Warning: dnr-ui generation failed ({e})")
+        return False
+
+
+# Directories that should be generated, not copied from templates
+# These are auto-generated from DSL and should use canonical templates
+GENERATED_DIRECTORIES = {"dnr-ui", "build"}
+
+
 def copy_template(
     template_dir: Path,
     target_dir: Path,
@@ -248,6 +350,9 @@ def copy_template(
 ) -> None:
     """
     Copy a template directory to target, substituting variables.
+
+    Skips directories in GENERATED_DIRECTORIES (e.g., dnr-ui/, build/)
+    since these are auto-generated from DSL and should use canonical templates.
 
     Args:
         template_dir: Source template directory
@@ -275,6 +380,12 @@ def copy_template(
             if src_path.is_file():
                 # Compute relative path
                 rel_path = src_path.relative_to(template_dir)
+
+                # Skip files in generated directories (dnr-ui/, build/, etc.)
+                # These will be regenerated from DSL using canonical templates
+                if any(part in GENERATED_DIRECTORIES for part in rel_path.parts):
+                    continue
+
                 dst_path = target_dir / rel_path
 
                 # Skip if file already exists (when allow_existing=True)
@@ -796,6 +907,10 @@ def init_project(
             log(f"  Warning: LLM instrumentation failed ({e})")
     else:
         log("Skipping LLM instrumentation (--no-llm)")
+
+    # Generate DNR UI from DSL (ensures we use canonical templates, not stale copies)
+    log("Generating DNR UI from DSL...")
+    generate_dnr_ui(target_dir, log)
 
     # Initialize git repository (unless disabled)
     if not no_git:

@@ -120,11 +120,11 @@ def test_lint_command(cli_runner: CliRunner, test_project: Path):
     assert result.exit_code == 0 or "WARNING" in result.stdout
 
 
-def test_backends_command(cli_runner: CliRunner):
-    """Test backends command lists available backends."""
-    result = cli_runner.invoke(app, ["backends"])
+def test_stacks_command(cli_runner: CliRunner):
+    """Test stacks command lists available stacks."""
+    result = cli_runner.invoke(app, ["stacks"])
     assert result.exit_code == 0
-    assert "docker" in result.stdout
+    assert "docker" in result.stdout.lower()
 
 
 def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path):

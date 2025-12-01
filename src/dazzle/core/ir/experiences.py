@@ -1,0 +1,93 @@
+"""
+Experience types for DAZZLE IR.
+
+This module contains experience flow specifications including
+steps, transitions, and orchestrated user journeys.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class StepKind(str, Enum):
+    """Types of steps in an experience."""
+
+    SURFACE = "surface"
+    PROCESS = "process"
+    INTEGRATION = "integration"
+
+
+class TransitionEvent(str, Enum):
+    """Events that trigger step transitions."""
+
+    SUCCESS = "success"
+    FAILURE = "failure"
+
+
+class StepTransition(BaseModel):
+    """
+    Transition from one step to another.
+
+    Attributes:
+        event: Event that triggers transition
+        next_step: Name of the next step
+    """
+
+    event: TransitionEvent
+    next_step: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ExperienceStep(BaseModel):
+    """
+    Single step in an experience flow.
+
+    Attributes:
+        name: Step identifier
+        kind: Type of step
+        surface: Surface name (if kind=surface)
+        integration: Integration name (if kind=integration)
+        action: Action name (if kind=integration)
+        transitions: List of transitions to other steps
+    """
+
+    name: str
+    kind: StepKind
+    surface: str | None = None
+    integration: str | None = None
+    action: str | None = None
+    transitions: list[StepTransition] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ExperienceSpec(BaseModel):
+    """
+    Specification for an orchestrated experience (flow).
+
+    Experiences define multi-step user journeys.
+
+    Attributes:
+        name: Experience identifier
+        title: Human-readable title
+        start_step: Name of the starting step
+        steps: List of steps in this experience
+    """
+
+    name: str
+    title: str | None = None
+    start_step: str
+    steps: list[ExperienceStep] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+    def get_step(self, name: str) -> ExperienceStep | None:
+        """Get step by name."""
+        for step in self.steps:
+            if step.name == name:
+                return step
+        return None

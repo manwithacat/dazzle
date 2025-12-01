@@ -301,6 +301,52 @@ Mark loading indicators.
 
 ---
 
+### Authentication Elements
+
+Mark authentication-related UI elements for E2E testing.
+
+```html
+<!-- Login button (opens auth modal) -->
+<button data-dazzle-auth-action="login">Sign In</button>
+
+<!-- Logout button -->
+<button data-dazzle-auth-action="logout">Sign Out</button>
+
+<!-- User indicator (shown when logged in) -->
+<div data-dazzle-auth-user="true" data-dazzle-persona="admin">
+  Welcome, Admin
+</div>
+
+<!-- Auth modal container -->
+<div id="dz-auth-modal" data-dazzle-dialog="auth">
+  <form id="dz-auth-form">
+    <input name="email" type="email" />
+    <input name="password" type="password" />
+    <input name="display_name" type="text" />  <!-- For registration -->
+    <button id="dz-auth-submit" type="submit">Sign In</button>
+  </form>
+  <div id="dz-auth-error">Error message here</div>
+</div>
+
+<!-- Mode toggle (login/register) -->
+<button data-dazzle-auth-toggle="register">Create Account</button>
+<button data-dazzle-auth-toggle="login">Sign In</button>
+```
+
+**Authentication Attributes**:
+- `data-dazzle-auth-action` - Auth action type (`login`, `logout`)
+- `data-dazzle-auth-user` - Present when user is authenticated
+- `data-dazzle-persona` - User's persona/role
+- `data-dazzle-auth-toggle` - Switch between login/register modes
+
+**Standard Auth Element IDs**:
+- `#dz-auth-modal` - Auth modal container
+- `#dz-auth-form` - Login/register form
+- `#dz-auth-submit` - Form submit button
+- `#dz-auth-error` - Error message display
+
+---
+
 ## Attribute Reference Table
 
 | Attribute | Values | Description |
@@ -328,6 +374,10 @@ Mark loading indicators.
 | `data-dazzle-dialog` | dialog name | Dialog identifier |
 | `data-dazzle-dialog-open` | true/false | Dialog visibility |
 | `data-dazzle-loading` | true or context | Loading state |
+| `data-dazzle-auth-action` | login, logout | Auth action type |
+| `data-dazzle-auth-user` | true | Present when authenticated |
+| `data-dazzle-persona` | persona name | User's role/persona |
+| `data-dazzle-auth-toggle` | login, register | Auth mode switch |
 
 ---
 
@@ -358,6 +408,243 @@ page.locator('[data-dazzle-loading="true"]')
 
 ---
 
+## Custom Events
+
+DNR-UI dispatches standard `CustomEvent` events for cross-component communication and E2E testing hooks. All events are dispatched on `window` unless otherwise noted.
+
+### Navigation Events
+
+```typescript
+// Event: dnr-navigate
+// Triggered when navigation is requested
+interface DnrNavigateEvent {
+  detail: {
+    url: string;               // Target URL path
+    params?: Record<string, string>;  // Optional URL parameters
+    replace?: boolean;         // Replace history instead of push
+  }
+}
+
+// Example
+window.addEventListener('dnr-navigate', (e) => {
+  console.log('Navigate to:', e.detail.url);
+});
+
+// Dispatching
+window.dispatchEvent(new CustomEvent('dnr-navigate', {
+  detail: { url: '/task/123/edit' }
+}));
+```
+
+### Entity CRUD Events
+
+```typescript
+// Event: dnr-delete
+// Triggered when entity deletion is requested
+interface DnrDeleteEvent {
+  detail: {
+    entity: string;            // Entity name (e.g., "Task")
+    id: string | number;       // Entity ID
+  }
+}
+
+// Event: dnr-create
+// Triggered when entity creation is requested
+interface DnrCreateEvent {
+  detail: {
+    entity: string;            // Entity name
+    data?: Record<string, any>; // Initial data
+  }
+}
+
+// Event: dnr-update
+// Triggered when entity update is requested
+interface DnrUpdateEvent {
+  detail: {
+    entity: string;            // Entity name
+    id: string | number;       // Entity ID
+    data: Record<string, any>; // Updated fields
+  }
+}
+
+// Example
+window.addEventListener('dnr-delete', async (e) => {
+  const { entity, id } = e.detail;
+  await fetch(`/api/${entity.toLowerCase()}/${id}`, { method: 'DELETE' });
+});
+```
+
+### Authentication Events
+
+```typescript
+// Event: dnr-auth-login
+// Triggered when login is successful
+interface DnrAuthLoginEvent {
+  detail: {
+    user: {
+      id: string;
+      email: string;
+      display_name?: string;
+      persona?: string;
+    }
+  }
+}
+
+// Event: dnr-auth-logout
+// Triggered when logout is requested or completed
+interface DnrAuthLogoutEvent {
+  detail: {
+    reason?: 'user_action' | 'session_expired' | 'forced';
+  }
+}
+
+// Event: dnr-auth-error
+// Triggered when authentication fails
+interface DnrAuthErrorEvent {
+  detail: {
+    error: string;             // Error message
+    code?: string;             // Error code
+  }
+}
+```
+
+### Form Events
+
+```typescript
+// Event: dnr-form-submit
+// Triggered when a form is submitted
+interface DnrFormSubmitEvent {
+  detail: {
+    entity: string;            // Entity name
+    mode: 'create' | 'edit';   // Form mode
+    data: Record<string, any>; // Form data
+    entityId?: string;         // ID if editing
+  }
+}
+
+// Event: dnr-form-validate
+// Triggered when validation is needed
+interface DnrFormValidateEvent {
+  detail: {
+    entity: string;
+    field?: string;            // Specific field or all
+    value?: any;               // Field value
+  }
+}
+
+// Event: dnr-form-error
+// Triggered when form submission fails
+interface DnrFormErrorEvent {
+  detail: {
+    entity: string;
+    errors: Record<string, string>; // Field -> error message
+    global?: string;           // Global error message
+  }
+}
+```
+
+### Data Loading Events
+
+```typescript
+// Event: dnr-data-loading
+// Triggered when data fetch starts
+interface DnrDataLoadingEvent {
+  detail: {
+    entity: string;
+    context?: string;          // e.g., "list", "detail"
+  }
+}
+
+// Event: dnr-data-loaded
+// Triggered when data fetch completes
+interface DnrDataLoadedEvent {
+  detail: {
+    entity: string;
+    data: any;                 // Loaded data
+    count?: number;            // Total count for lists
+  }
+}
+
+// Event: dnr-data-error
+// Triggered when data fetch fails
+interface DnrDataErrorEvent {
+  detail: {
+    entity: string;
+    error: string;
+    status?: number;           // HTTP status code
+  }
+}
+```
+
+### Modal/Dialog Events
+
+```typescript
+// Event: dnr-modal-open
+// Triggered when a modal opens
+interface DnrModalOpenEvent {
+  detail: {
+    name: string;              // Modal identifier
+    data?: any;                // Data passed to modal
+  }
+}
+
+// Event: dnr-modal-close
+// Triggered when a modal closes
+interface DnrModalCloseEvent {
+  detail: {
+    name: string;
+    result?: any;              // Result from modal
+    action?: 'confirm' | 'cancel' | 'dismiss';
+  }
+}
+```
+
+### Event Reference Table
+
+| Event | Detail Properties | Description |
+|-------|------------------|-------------|
+| `dnr-navigate` | `url`, `params?`, `replace?` | Navigation request |
+| `dnr-delete` | `entity`, `id` | Entity deletion request |
+| `dnr-create` | `entity`, `data?` | Entity creation request |
+| `dnr-update` | `entity`, `id`, `data` | Entity update request |
+| `dnr-auth-login` | `user` | Login success |
+| `dnr-auth-logout` | `reason?` | Logout request/complete |
+| `dnr-auth-error` | `error`, `code?` | Authentication failure |
+| `dnr-form-submit` | `entity`, `mode`, `data`, `entityId?` | Form submission |
+| `dnr-form-validate` | `entity`, `field?`, `value?` | Validation request |
+| `dnr-form-error` | `entity`, `errors`, `global?` | Form errors |
+| `dnr-data-loading` | `entity`, `context?` | Data fetch started |
+| `dnr-data-loaded` | `entity`, `data`, `count?` | Data fetch complete |
+| `dnr-data-error` | `entity`, `error`, `status?` | Data fetch failed |
+| `dnr-modal-open` | `name`, `data?` | Modal opened |
+| `dnr-modal-close` | `name`, `result?`, `action?` | Modal closed |
+
+### Testing with Events
+
+E2E tests can listen for these events to verify behavior:
+
+```typescript
+// Playwright example - wait for navigation
+await page.evaluate(() => {
+  return new Promise((resolve) => {
+    window.addEventListener('dnr-navigate', (e) => resolve(e.detail), { once: true });
+  });
+});
+
+// Verify delete event was dispatched
+const deletePromise = page.evaluate(() => {
+  return new Promise((resolve) => {
+    window.addEventListener('dnr-delete', (e) => resolve(e.detail), { once: true });
+  });
+});
+
+await page.click('[data-dazzle-action="Task.delete"]');
+const deleteEvent = await deletePromise;
+expect(deleteEvent.entity).toBe('Task');
+```
+
+---
+
 ## Implementation Requirements
 
 All Dazzle builders (DNR, future stacks) MUST:
@@ -367,6 +654,7 @@ All Dazzle builders (DNR, future stacks) MUST:
 3. Include entity context where applicable
 4. Mark all actions with appropriate roles
 5. Provide validation message containers even when empty
+6. Dispatch standard events for navigation, CRUD, and auth operations
 
 ---
 
@@ -375,3 +663,4 @@ All Dazzle builders (DNR, future stacks) MUST:
 This contract is versioned. Breaking changes require a major version bump.
 
 - **v1.0** (2025-11-29): Initial specification
+- **v1.1** (2025-12-01): Added event schemas, authentication attributes

@@ -389,6 +389,134 @@ scope: status = Active and owner = current_user""",
                 "related": ["entity", "field_types"],
                 "v0_2_changes": "No changes from v0.1",
             },
+            # ================================================================
+            # Authentication (DNR Runtime)
+            # ================================================================
+            "authentication": {
+                "category": "DNR Runtime",
+                "definition": "Session-based authentication system in DNR. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project.",
+                "endpoints": {
+                    "/auth/login": "POST - Authenticate with username/password",
+                    "/auth/logout": "POST - End session",
+                    "/auth/me": "GET - Get current user info",
+                    "/auth/register": "POST - Create new user (if enabled)",
+                },
+                "test_mode": {
+                    "description": "When running with --test-mode, additional endpoints are available:",
+                    "endpoints": {
+                        "/__test__/auth/login": "Test login without password",
+                        "/__test__/auth/set-user": "Set current user for testing",
+                    },
+                },
+                "persona_binding": "Personas in DSL map to user roles. Use current_user in scope expressions to filter data by logged-in user.",
+                "example": """# In DSL, use personas to define role-based access:
+ux:
+  for admin:
+    scope: all
+  for member:
+    scope: owner = current_user
+
+# API login:
+POST /auth/login
+Content-Type: application/json
+{"username": "admin", "password": "secret"}
+
+# Response sets session cookie automatically""",
+                "related": ["persona", "scope"],
+                "commands": {
+                    "enable": "dazzle dnr serve (auth enabled by default if User entity exists)",
+                    "test_mode": "dazzle dnr serve --test-mode",
+                },
+            },
+            # ================================================================
+            # E2E Testing
+            # ================================================================
+            "e2e_testing": {
+                "category": "Testing",
+                "definition": "End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app.",
+                "workflow": [
+                    "1. Start app: dazzle dnr serve --test-mode",
+                    "2. Generate tests: dazzle test generate -o testspec.json",
+                    "3. Run tests: dazzle test run",
+                ],
+                "commands": {
+                    "dazzle test generate": "Generate FlowSpec from DSL",
+                    "dazzle test run": "Execute tests with Playwright",
+                    "dazzle test list": "List available test flows",
+                },
+                "options": {
+                    "--test-mode": "Enable test endpoints (/__test__/*) for fixtures and auth",
+                    "--headed": "Show browser window during tests",
+                    "--priority": "Filter tests by priority (high, medium, low)",
+                    "--tag": "Filter tests by tag (crud, auth, validation)",
+                },
+                "related": ["flowspec", "semantic_dom", "authentication"],
+            },
+            "flowspec": {
+                "category": "Testing",
+                "definition": "JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can be customized.",
+                "structure": {
+                    "metadata": "Test suite info (name, version, generated_at)",
+                    "config": "Test configuration (base_url, timeouts)",
+                    "flows": "Array of test flow definitions",
+                    "fixtures": "Test data fixtures",
+                },
+                "flow_structure": {
+                    "id": "Unique flow identifier",
+                    "name": "Human-readable flow name",
+                    "description": "What the flow tests",
+                    "priority": "high | medium | low",
+                    "tags": "Array of tags (crud, auth, validation)",
+                    "steps": "Array of test steps",
+                },
+                "step_types": {
+                    "navigate": "Go to a URL",
+                    "click": "Click an element",
+                    "fill": "Fill a form field",
+                    "assert": "Verify condition",
+                    "wait": "Wait for element or condition",
+                },
+                "example": """{
+  "flows": [{
+    "id": "task_crud_create",
+    "name": "Create Task",
+    "priority": "high",
+    "tags": ["crud", "task"],
+    "steps": [
+      {"type": "navigate", "url": "/tasks/new"},
+      {"type": "fill", "selector": "[data-dazzle-field='title']", "value": "Test Task"},
+      {"type": "click", "selector": "[data-dazzle-action='submit']"},
+      {"type": "assert", "condition": "url_contains", "value": "/tasks"}
+    ]
+  }]
+}""",
+                "related": ["e2e_testing", "semantic_dom"],
+            },
+            "semantic_dom": {
+                "category": "Testing",
+                "definition": "Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements.",
+                "attributes": {
+                    "data-dazzle-surface": "Surface identifier (e.g., 'task_list')",
+                    "data-dazzle-entity": "Entity type (e.g., 'Task')",
+                    "data-dazzle-field": "Field name (e.g., 'title', 'status')",
+                    "data-dazzle-action": "Action type (e.g., 'submit', 'cancel', 'delete')",
+                    "data-dazzle-row": "Row identifier in lists",
+                    "data-dazzle-mode": "Surface mode (list, view, create, edit)",
+                },
+                "selectors": {
+                    "surface": "[data-dazzle-surface='task_list']",
+                    "field": "[data-dazzle-field='title']",
+                    "action": "[data-dazzle-action='submit']",
+                    "row": "[data-dazzle-row]",
+                },
+                "benefits": [
+                    "Stable selectors that survive CSS/layout changes",
+                    "Semantic meaning for test assertions",
+                    "Auto-generated from DSL - no manual annotation",
+                    "Enables visual regression testing",
+                ],
+                "related": ["e2e_testing", "flowspec"],
+            },
         },
         # ================================================================
         # Common Patterns

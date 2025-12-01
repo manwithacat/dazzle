@@ -256,6 +256,97 @@ class DazzleLocators:
         """
         return self.page.locator("[data-dazzle-breadcrumb-current]")
 
+    # =========================================================================
+    # Auth Locators - For authentication testing
+    # =========================================================================
+
+    def auth_login_button(self) -> "Locator":
+        """
+        Locate the login button in the header/nav.
+
+        Returns:
+            Playwright Locator for the login button
+        """
+        return self.page.locator('[data-dazzle-auth-action="login"]')
+
+    def auth_logout_button(self) -> "Locator":
+        """
+        Locate the logout button in the user menu.
+
+        Returns:
+            Playwright Locator for the logout button
+        """
+        return self.page.locator('[data-dazzle-auth-action="logout"]')
+
+    def auth_modal(self) -> "Locator":
+        """
+        Locate the authentication modal dialog.
+
+        Returns:
+            Playwright Locator for the auth modal
+        """
+        return self.page.locator("#dz-auth-modal")
+
+    def auth_form(self) -> "Locator":
+        """
+        Locate the authentication form (within modal).
+
+        Returns:
+            Playwright Locator for the auth form
+        """
+        return self.page.locator("#dz-auth-form")
+
+    def auth_field(self, name: str) -> "Locator":
+        """
+        Locate an auth form field by name.
+
+        Args:
+            name: Field name (e.g., "email", "password")
+
+        Returns:
+            Playwright Locator for the field
+        """
+        return self.page.locator(f'#dz-auth-form [name="{name}"]')
+
+    def auth_error(self) -> "Locator":
+        """
+        Locate the auth error message element.
+
+        Returns:
+            Playwright Locator for visible error message
+        """
+        return self.page.locator("#dz-auth-error:not(.hidden)")
+
+    def auth_submit(self) -> "Locator":
+        """
+        Locate the auth form submit button.
+
+        Returns:
+            Playwright Locator for the submit button
+        """
+        return self.page.locator("#dz-auth-submit")
+
+    def auth_user_indicator(self) -> "Locator":
+        """
+        Locate the user indicator (avatar/menu) when logged in.
+
+        Returns:
+            Playwright Locator for the user indicator
+        """
+        return self.page.locator("[data-dazzle-auth-user]")
+
+    def auth_mode_toggle(self, mode: str) -> "Locator":
+        """
+        Locate auth mode toggle (login vs register).
+
+        Args:
+            mode: Mode to toggle to ("login" or "register")
+
+        Returns:
+            Playwright Locator for the mode toggle link
+        """
+        return self.page.locator(f'[data-dazzle-auth-toggle="{mode}"]')
+
 
 def parse_semantic_target(target: str) -> tuple[str, str]:
     """
@@ -322,5 +413,47 @@ def get_locator_for_target(locators: DazzleLocators, target: str) -> "Locator":
             return locators.dialog(identifier)
         case "nav":
             return locators.nav(identifier)
+        case "auth":
+            # Auth locators: auth:login_button, auth:logout_button, auth:modal, etc.
+            return _get_auth_locator(locators, identifier)
         case _:
             raise ValueError(f"Unknown target type: {target_type}")
+
+
+def _get_auth_locator(locators: DazzleLocators, identifier: str) -> "Locator":
+    """
+    Get auth locator by identifier.
+
+    Args:
+        locators: DazzleLocators instance
+        identifier: Auth element identifier
+
+    Returns:
+        Playwright Locator for the auth element
+
+    Raises:
+        ValueError: If identifier is unknown
+    """
+    match identifier:
+        case "login_button":
+            return locators.auth_login_button()
+        case "logout_button":
+            return locators.auth_logout_button()
+        case "modal":
+            return locators.auth_modal()
+        case "form":
+            return locators.auth_form()
+        case "submit":
+            return locators.auth_submit()
+        case "error":
+            return locators.auth_error()
+        case "user_indicator":
+            return locators.auth_user_indicator()
+        case _ if identifier.startswith("field."):
+            field_name = identifier[6:]  # Strip "field." prefix
+            return locators.auth_field(field_name)
+        case _ if identifier.startswith("toggle."):
+            mode = identifier[7:]  # Strip "toggle." prefix
+            return locators.auth_mode_toggle(mode)
+        case _:
+            raise ValueError(f"Unknown auth identifier: {identifier}")

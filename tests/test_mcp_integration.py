@@ -194,9 +194,9 @@ class TestMCPServerUnit:
         """Test list_tools returns expected tools."""
         import asyncio
 
-        from dazzle.mcp.server import list_tools
+        from dazzle.mcp.server import list_tools_handler
 
-        tools = asyncio.run(list_tools())
+        tools = asyncio.run(list_tools_handler())
 
         assert len(tools) >= 7
         tool_names = [t.name for t in tools]
@@ -228,7 +228,7 @@ class TestMCPDevMode:
 
     def test_detect_dev_environment(self):
         """Test that dev environment is correctly detected."""
-        from dazzle.mcp.server import _detect_dev_environment
+        from dazzle.mcp.server.state import _detect_dev_environment
 
         # PROJECT_ROOT is the Dazzle dev environment
         assert _detect_dev_environment(PROJECT_ROOT) is True
@@ -240,7 +240,7 @@ class TestMCPDevMode:
 
     def test_discover_example_projects(self):
         """Test that example projects are discovered."""
-        from dazzle.mcp.server import _discover_example_projects
+        from dazzle.mcp.server.state import _discover_example_projects
 
         projects = _discover_example_projects(PROJECT_ROOT)
 
@@ -254,31 +254,32 @@ class TestMCPDevMode:
 
     def test_dev_mode_initialization(self):
         """Test dev mode initialization."""
-        import dazzle.mcp.server as mcp_server
+        from dazzle.mcp.server import state as mcp_state
 
         # Initialize dev mode with project root
-        mcp_server._init_dev_mode(PROJECT_ROOT)
+        mcp_state.init_dev_mode(PROJECT_ROOT)
 
         # Should be in dev mode
-        assert mcp_server.is_dev_mode() is True
+        assert mcp_state.is_dev_mode() is True
 
-        # Should have discovered projects (access module-level vars directly)
-        assert len(mcp_server._available_projects) > 0
+        # Should have discovered projects
+        assert len(mcp_state.get_available_projects()) > 0
 
         # Should have auto-selected first project
-        assert mcp_server._active_project is not None
-        assert mcp_server._active_project in mcp_server._available_projects
+        assert mcp_state.get_active_project() is not None
+        assert mcp_state.get_active_project() in mcp_state.get_available_projects()
 
     def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, list_tools
+        from dazzle.mcp.server import list_tools_handler
+        from dazzle.mcp.server.state import init_dev_mode
 
         # Ensure dev mode is initialized
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
-        tools = asyncio.run(list_tools())
+        tools = asyncio.run(list_tools_handler())
         tool_names = [t.name for t in tools]
 
         # Dev mode tools should be present
@@ -295,9 +296,10 @@ class TestMCPDevMode:
         """Test the list_projects tool."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, call_tool
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server.state import init_dev_mode
 
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
         result = asyncio.run(call_tool("list_projects", {}))
 
@@ -313,19 +315,18 @@ class TestMCPDevMode:
         """Test the select_project tool."""
         import asyncio
 
-        import dazzle.mcp.server as mcp_server
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server import state as mcp_state
 
-        mcp_server._init_dev_mode(PROJECT_ROOT)
+        mcp_state.init_dev_mode(PROJECT_ROOT)
 
         # Get a project to select
-        project_names = list(mcp_server._available_projects.keys())
+        project_names = list(mcp_state.get_available_projects().keys())
         assert len(project_names) > 0
 
         # Select a project
         target_project = project_names[-1]  # Pick last one (different from auto-selected first)
-        result = asyncio.run(
-            mcp_server.call_tool("select_project", {"project_name": target_project})
-        )
+        result = asyncio.run(call_tool("select_project", {"project_name": target_project}))
 
         data = json.loads(result[0].text)
         assert data["status"] == "selected"
@@ -335,9 +336,10 @@ class TestMCPDevMode:
         """Test selecting an invalid project."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, call_tool
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server.state import init_dev_mode
 
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
         result = asyncio.run(call_tool("select_project", {"project_name": "nonexistent_project"}))
 
@@ -350,9 +352,10 @@ class TestMCPDevMode:
         """Test the get_active_project tool."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, call_tool
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server.state import init_dev_mode
 
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
         result = asyncio.run(call_tool("get_active_project", {}))
 
@@ -365,9 +368,10 @@ class TestMCPDevMode:
         """Test the validate_all_projects tool."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, call_tool
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server.state import init_dev_mode
 
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
         result = asyncio.run(call_tool("validate_all_projects", {}))
 
@@ -380,9 +384,10 @@ class TestMCPDevMode:
         """Test that validate_dsl works with active project in dev mode."""
         import asyncio
 
-        from dazzle.mcp.server import _init_dev_mode, call_tool
+        from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server.state import init_dev_mode
 
-        _init_dev_mode(PROJECT_ROOT)
+        init_dev_mode(PROJECT_ROOT)
 
         result = asyncio.run(call_tool("validate_dsl", {}))
 

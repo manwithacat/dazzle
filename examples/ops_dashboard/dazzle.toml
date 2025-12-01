@@ -9,3 +9,8 @@ paths = ["dsl/"]
 
 [stack]
 name = "dnr"
+
+[auth]
+enabled = true
+provider = "session"
+allow_registration = true

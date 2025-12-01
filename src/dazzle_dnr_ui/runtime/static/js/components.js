@@ -2,8 +2,8 @@
  * DNR-UI Components - Built-in UI primitives
  * Part of the Dazzle Native Runtime
  *
- * Uses DDT (Dazzle Design Tokens) semantic classes for styling.
- * See: runtime/static/css/components.css
+ * Uses DaisyUI (via CDN) + Tailwind for styling.
+ * See: https://daisyui.com/components/
  *
  * All components support semantic attributes via the `dazzle` prop:
  * - dazzle.entity: Entity name context
@@ -11,6 +11,11 @@
  * - dazzle.action: Action identifier (Entity.action)
  * - dazzle.view: View identifier
  * - etc. (see SEMANTIC_DOM_CONTRACT.md)
+ *
+ * Accessibility:
+ * - Modal: Focus trap, Escape to close, ARIA attributes
+ * - Toast: aria-live regions for screen readers
+ * - Form elements: Proper labels and ARIA attributes
  */
 
 import { createElement, withDazzleAttrs } from './dom.js';
@@ -117,13 +122,32 @@ registerComponent('Text', (props, children) => {
 });
 
 // Button component - represents an action
+// Uses DaisyUI: btn, btn-primary, btn-secondary, btn-error, btn-ghost, btn-sm, btn-lg
 registerComponent('Button', (props, children) => {
   const variant = props.variant || 'secondary';
   const size = props.size || 'default';
 
-  const classNames = ['dz-button'];
-  classNames.push(`dz-button--${variant}`);
-  if (size !== 'default') classNames.push(`dz-button--${size}`);
+  // Map variants to DaisyUI classes
+  const variantMap = {
+    'primary': 'btn-primary',
+    'secondary': 'btn-secondary',
+    'danger': 'btn-error',
+    'destructive': 'btn-error',
+    'ghost': 'btn-ghost',
+    'link': 'btn-link',
+    'outline': 'btn-outline',
+  };
+
+  const sizeMap = {
+    'xs': 'btn-xs',
+    'sm': 'btn-sm',
+    'lg': 'btn-lg',
+    'xl': 'btn-xl',
+  };
+
+  const classNames = ['btn'];
+  if (variantMap[variant]) classNames.push(variantMap[variant]);
+  if (sizeMap[size]) classNames.push(sizeMap[size]);
 
   const el = createElement('button', {
     className: classNames.join(' '),
@@ -146,39 +170,176 @@ registerComponent('Button', (props, children) => {
 });
 
 // Input component - represents a field input
+// Uses DaisyUI: input, input-error, textarea
+// Supports type-aware rendering: text, date, datetime, number, etc.
 registerComponent('Input', (props) => {
-  const classNames = ['dz-input'];
-  if (props.error) classNames.push('dz-input--error');
+  // DaisyUI input classes
+  const classNames = ['input', 'input-bordered', 'w-full'];
+  if (props.error) classNames.push('input-error');
 
-  const el = createElement('input', {
+  // Map field types to HTML input types
+  const fieldType = props.fieldType || props.type || 'text';
+  const inputTypeMap = {
+    'str': 'text',
+    'text': 'text',
+    'int': 'number',
+    'float': 'number',
+    'decimal': 'number',
+    'bool': 'checkbox',
+    'date': 'date',
+    'datetime': 'datetime-local',
+    'time': 'time',
+    'email': 'email',
+    'url': 'url',
+    'tel': 'tel',
+    'password': 'password',
+  };
+  const htmlType = inputTypeMap[fieldType] || fieldType;
+
+  // For textarea (text fields), use textarea element with DaisyUI classes
+  if (fieldType === 'text' && props.multiline) {
+    const el = createElement('textarea', {
+      className: 'textarea textarea-bordered w-full' + (props.error ? ' textarea-error' : ''),
+      value: props.value,
+      placeholder: props.placeholder,
+      disabled: props.disabled,
+      required: props.required,
+      rows: props.rows || 4,
+      onInput: (e) => props.onChange && props.onChange(e.target.value)
+    });
+
+    return withDazzleAttrs(el, {
+      field: props.dazzle?.field || props.field,
+      fieldType: 'text',
+      required: props.required,
+      entity: props.dazzle?.entity,
+      ...props.dazzle
+    });
+  }
+
+  // Standard input element
+  const inputProps = {
     className: classNames.join(' '),
-    type: props.type || 'text',
+    type: htmlType,
     value: props.value,
     placeholder: props.placeholder,
     disabled: props.disabled,
     required: props.required,
-    onInput: (e) => props.onChange && props.onChange(e.target.value)
-  });
+    onInput: (e) => props.onChange && props.onChange(
+      htmlType === 'checkbox' ? e.target.checked : e.target.value
+    )
+  };
+
+  // Add number-specific attributes
+  if (htmlType === 'number') {
+    if (props.min !== undefined) inputProps.min = props.min;
+    if (props.max !== undefined) inputProps.max = props.max;
+    if (props.step !== undefined) inputProps.step = props.step;
+    // Default step for decimals
+    if (fieldType === 'decimal' || fieldType === 'float') {
+      inputProps.step = props.step || 'any';
+    }
+  }
+
+  const el = createElement('input', inputProps);
 
   // Add semantic attributes for fields
   return withDazzleAttrs(el, {
     field: props.dazzle?.field || props.field,
-    fieldType: props.dazzle?.fieldType || props.type || 'text',
+    fieldType: fieldType,
     required: props.required,
     entity: props.dazzle?.entity,
     ...props.dazzle
   });
 });
 
+// Select component - dropdown for enum fields
+// Uses DaisyUI: select, select-bordered, select-error
+registerComponent('Select', (props) => {
+  const classNames = ['select', 'select-bordered', 'w-full'];
+  if (props.error) classNames.push('select-error');
+
+  const options = props.options || [];
+
+  // Build option elements
+  const optionElements = [];
+
+  // Add placeholder option if specified
+  if (props.placeholder) {
+    optionElements.push(
+      createElement('option', { value: '', disabled: true, selected: !props.value }, [props.placeholder])
+    );
+  }
+
+  // Add options
+  options.forEach(opt => {
+    const optValue = typeof opt === 'object' ? opt.value : opt;
+    const optLabel = typeof opt === 'object' ? (opt.label || opt.value) : opt;
+    // Format label: capitalize and replace underscores with spaces
+    const displayLabel = optLabel.charAt(0).toUpperCase() + optLabel.slice(1).replace(/_/g, ' ');
+
+    optionElements.push(
+      createElement('option', {
+        value: optValue,
+        selected: props.value === optValue
+      }, [displayLabel])
+    );
+  });
+
+  const el = createElement('select', {
+    className: classNames.join(' '),
+    disabled: props.disabled,
+    required: props.required,
+    onChange: (e) => props.onChange && props.onChange(e.target.value)
+  }, optionElements);
+
+  // Add semantic attributes for fields
+  return withDazzleAttrs(el, {
+    field: props.dazzle?.field || props.field,
+    fieldType: 'enum',
+    required: props.required,
+    entity: props.dazzle?.entity,
+    ...props.dazzle
+  });
+});
+
+// Checkbox component - for boolean fields
+// Uses DaisyUI: checkbox, label with cursor-pointer
+registerComponent('Checkbox', (props, children) => {
+  const el = createElement('label', { className: 'label cursor-pointer justify-start gap-3' }, [
+    createElement('input', {
+      type: 'checkbox',
+      className: 'checkbox',
+      checked: props.checked || props.value,
+      disabled: props.disabled,
+      onChange: (e) => props.onChange && props.onChange(e.target.checked)
+    }),
+    createElement('span', { className: 'label-text' }, children.length ? children : [props.label || ''])
+  ]);
+
+  return withDazzleAttrs(el, {
+    field: props.dazzle?.field || props.field,
+    fieldType: 'bool',
+    entity: props.dazzle?.entity,
+    ...props.dazzle
+  });
+});
+
 // Label component
+// Uses DaisyUI: label, label-text
 registerComponent('Label', (props, children) => {
-  const classNames = ['dz-label'];
-  if (props.required) classNames.push('dz-label--required');
+  const labelContent = createElement('span', { className: 'label-text' }, children);
+
+  // Add required indicator
+  if (props.required) {
+    const indicator = createElement('span', { className: 'text-error ml-1' }, ['*']);
+    labelContent.appendChild(indicator);
+  }
 
   const el = createElement('label', {
-    className: classNames.join(' '),
+    className: 'label',
     htmlFor: props.for
-  }, children);
+  }, [labelContent]);
 
   if (props.dazzle) {
     return withDazzleAttrs(el, props.dazzle);
@@ -187,15 +348,15 @@ registerComponent('Label', (props, children) => {
 });
 
 // DataTable component - represents an entity list
+// Uses DaisyUI: table, table-zebra, btn btn-sm
 registerComponent('DataTable', (props) => {
   const { columns, data, onRowClick, entity, showActions = true } = props;
   const entityName = props.dazzle?.entity || entity;
-  const compact = props.compact || false;
   const striped = props.striped !== false; // Default to true
 
-  const tableClasses = ['dz-table'];
-  if (compact) tableClasses.push('dz-table--compact');
-  if (striped) tableClasses.push('dz-table--striped');
+  // DaisyUI table classes
+  const tableClasses = ['table', 'w-full'];
+  if (striped) tableClasses.push('table-zebra');
 
   // Create header row with optional actions column
   const headerCells = (columns || []).map(col => {
@@ -209,7 +370,7 @@ registerComponent('DataTable', (props) => {
   // Add actions column header if showActions is true
   if (showActions && entityName) {
     headerCells.push(
-      createElement('th', { className: 'dz-text-right' }, ['Actions'])
+      createElement('th', { className: 'text-right' }, ['Actions'])
     );
   }
 
@@ -231,10 +392,10 @@ registerComponent('DataTable', (props) => {
 
     // Add actions cell if showActions is true
     if (showActions && entityName) {
-      // Edit button
+      // Edit button - DaisyUI
       const editBtn = withDazzleAttrs(
         createElement('button', {
-          className: 'dz-button dz-button--secondary dz-button--sm',
+          className: 'btn btn-secondary btn-sm',
           onClick: (e) => {
             e.stopPropagation();
             window.dispatchEvent(new CustomEvent('dnr-navigate', {
@@ -245,10 +406,10 @@ registerComponent('DataTable', (props) => {
         { action: `${entityName}.edit`, actionRole: 'secondary', entityId: rowId }
       );
 
-      // Delete button
+      // Delete button - DaisyUI
       const deleteBtn = withDazzleAttrs(
         createElement('button', {
-          className: 'dz-button dz-button--danger dz-button--sm',
+          className: 'btn btn-error btn-sm',
           onClick: (e) => {
             e.stopPropagation();
             if (confirm(`Are you sure you want to delete this ${entityName}?`)) {
@@ -262,15 +423,15 @@ registerComponent('DataTable', (props) => {
       );
 
       cells.push(
-        createElement('td', { className: 'dz-text-right' }, [
-          createElement('div', { className: 'dz-flex dz-gap-2 dz-justify-end' }, [editBtn, deleteBtn])
+        createElement('td', { className: 'text-right' }, [
+          createElement('div', { className: 'flex gap-2 justify-end' }, [editBtn, deleteBtn])
         ])
       );
     }
 
     const tr = createElement('tr', {
-      onClick: () => onRowClick && onRowClick(row),
-      style: { cursor: onRowClick ? 'pointer' : 'default' }
+      className: onRowClick ? 'hover cursor-pointer' : '',
+      onClick: () => onRowClick && onRowClick(row)
     }, cells);
 
     // Add row semantic attributes
@@ -295,15 +456,16 @@ registerComponent('DataTable', (props) => {
 });
 
 // Form component - represents an entity form
+// Uses DaisyUI: card structure with Tailwind flex utilities
 registerComponent('Form', (props, children) => {
   const el = createElement('form', {
-    className: 'dz-form',
+    className: 'flex flex-col gap-4 max-w-lg',
     onSubmit: (e) => {
       e.preventDefault();
       props.onSubmit && props.onSubmit(e);
     }
   }, [
-    props.title ? createElement('h2', { className: 'dz-card__title dz-mb-4' }, [props.title]) : null,
+    props.title ? createElement('h2', { className: 'text-xl font-semibold mb-2' }, [props.title]) : null,
     ...children
   ].filter(Boolean));
 
@@ -319,8 +481,9 @@ registerComponent('Form', (props, children) => {
 });
 
 // FormGroup component - wraps label + input
+// Uses DaisyUI: fieldset structure
 registerComponent('FormGroup', (props, children) => {
-  const el = createElement('div', { className: 'dz-form__group' }, children);
+  const el = createElement('fieldset', { className: 'fieldset' }, children);
   if (props.dazzle) {
     return withDazzleAttrs(el, props.dazzle);
   }
@@ -329,25 +492,39 @@ registerComponent('FormGroup', (props, children) => {
 
 // FormActions component - container for form buttons
 registerComponent('FormActions', (props, children) => {
-  const el = createElement('div', { className: 'dz-form__actions' }, children);
+  const el = createElement('div', { className: 'flex gap-3 pt-4 border-t border-base-300 mt-2' }, children);
   if (props.dazzle) {
     return withDazzleAttrs(el, props.dazzle);
   }
   return el;
 });
 
-// Stack (flexbox) component
+// Stack (flexbox) component - uses Tailwind utilities
 registerComponent('Stack', (props, children) => {
-  const classNames = ['dz-stack'];
-  if (props.direction === 'row') classNames.push('dz-stack--row');
-  if (props.wrap) classNames.push('dz-stack--wrap');
-  if (props.align === 'center') classNames.push('dz-stack--center');
-  if (props.align === 'stretch') classNames.push('dz-stack--stretch');
-  if (props.justify === 'between') classNames.push('dz-stack--between');
+  const classNames = ['flex'];
 
-  // Add gap utility class
-  const gap = props.gap || 'md';
-  classNames.push(`dz-gap-${gap === 'sm' ? '2' : gap === 'md' ? '4' : gap === 'lg' ? '6' : '4'}`);
+  // Direction
+  if (props.direction === 'row') {
+    classNames.push('flex-row');
+  } else {
+    classNames.push('flex-col');
+  }
+
+  // Wrap
+  if (props.wrap) classNames.push('flex-wrap');
+
+  // Alignment
+  if (props.align === 'center') classNames.push('items-center');
+  else if (props.align === 'stretch') classNames.push('items-stretch');
+
+  // Justify
+  if (props.justify === 'between') classNames.push('justify-between');
+  else if (props.justify === 'center') classNames.push('justify-center');
+  else if (props.justify === 'end') classNames.push('justify-end');
+
+  // Gap
+  const gapMap = { 'xs': 'gap-1', 'sm': 'gap-2', 'md': 'gap-4', 'lg': 'gap-6', 'xl': 'gap-8' };
+  classNames.push(gapMap[props.gap] || 'gap-4');
 
   const el = createElement('div', { className: classNames.join(' ') }, children);
 
@@ -357,11 +534,18 @@ registerComponent('Stack', (props, children) => {
   return el;
 });
 
-// Grid component
+// Grid component - uses Tailwind grid utilities
 registerComponent('Grid', (props, children) => {
   const cols = props.cols || 1;
-  const classNames = ['dz-grid'];
-  if (cols > 1) classNames.push(`dz-grid--cols-${cols}`);
+  const colsMap = {
+    1: 'grid-cols-1',
+    2: 'grid-cols-2',
+    3: 'grid-cols-3',
+    4: 'grid-cols-4',
+  };
+
+  const classNames = ['grid', 'gap-4'];
+  classNames.push(colsMap[cols] || 'grid-cols-1');
 
   const el = createElement('div', { className: classNames.join(' ') }, children);
 
@@ -372,6 +556,7 @@ registerComponent('Grid', (props, children) => {
 });
 
 // FilterableTable pattern component with auto-fetch
+// Uses DaisyUI: card, btn, input, table patterns
 registerComponent('FilterableTable', (props) => {
   const entityName = props.dazzle?.entity || props.entity;
   const viewName = props.dazzle?.view || props.view;
@@ -379,36 +564,36 @@ registerComponent('FilterableTable', (props) => {
   const columns = props.columns || [];
   const apiEndpoint = props.apiEndpoint;
 
-  // Create container element
-  const container = createElement('div', { className: 'dz-filterable-table' });
+  // Create container element - using DaisyUI card
+  const container = createElement('div', { className: 'card bg-base-100 shadow-sm' });
 
-  // Create "Create" button with semantic attributes
+  // Create "Create" button with semantic attributes - DaisyUI btn
   const createBtn = withDazzleAttrs(
     createElement('button', {
-      className: 'dz-button dz-button--primary',
+      className: 'btn btn-primary',
       onClick: () => {
         window.dispatchEvent(new CustomEvent('dnr-navigate', {
-          detail: { url: `/${entityName ? entityName.toLowerCase() : 'item'}/new` }
+          detail: { url: `/${entityName ? entityName.toLowerCase() : 'item'}/create` }
         }));
       }
     }, [`Create ${entityName || 'Item'}`]),
     { action: `${entityName}.create`, actionRole: 'primary' }
   );
 
-  // Create header with title and actions
+  // Create header with title and actions - DaisyUI card-body styling
   const header = createElement('div', {
-    className: 'dz-filterable-table__header'
+    className: 'flex justify-between items-center p-4 border-b border-base-300'
   }, [
-    createElement('h2', { className: 'dz-filterable-table__title' }, [title]),
-    createElement('div', { className: 'dz-filterable-table__controls' }, [createBtn])
+    createElement('h2', { className: 'text-xl font-semibold' }, [title]),
+    createElement('div', {}, [createBtn])
   ]);
 
-  // Create filter input
-  const filterSection = createElement('div', { className: 'dz-filterable-table__controls dz-mb-4' }, [
+  // Create filter input - DaisyUI input
+  const filterSection = createElement('div', { className: 'p-4 border-b border-base-300' }, [
     props.filterPlaceholder ?
       createElement('input', {
         type: 'text',
-        className: 'dz-input dz-filterable-table__search',
+        className: 'input input-bordered w-full max-w-xs',
         placeholder: props.filterPlaceholder
       }) : null
   ].filter(Boolean));
@@ -439,14 +624,15 @@ registerComponent('FilterableTable', (props) => {
           label: `Create ${entityName || 'Item'}`,
           onClick: () => {
             window.dispatchEvent(new CustomEvent('dnr-navigate', {
-              detail: { url: `/${entityName ? entityName.toLowerCase() : 'item'}/new` }
+              detail: { url: `/${entityName ? entityName.toLowerCase() : 'item'}/create` }
             }));
           }
         }
       });
       container.appendChild(emptyEl);
     } else {
-      const bodyWrapper = createElement('div', { className: 'dz-filterable-table__body' });
+      // Table body wrapper - using DaisyUI overflow pattern
+      const bodyWrapper = createElement('div', { className: 'overflow-x-auto' });
       const tableEl = componentRegistry.get('DataTable')({
         columns: columns,
         data: data,
@@ -511,10 +697,11 @@ registerComponent('FilterableTable', (props) => {
 });
 
 // Loading indicator
+// Uses DaisyUI: loading spinner
 registerComponent('Loading', (props) => {
-  const el = createElement('div', { className: 'dz-loading' }, [
-    createElement('div', { className: 'dz-spinner' }),
-    props.text ? createElement('span', { className: 'dz-text-muted' }, [props.text]) : null
+  const el = createElement('div', { className: 'flex items-center justify-center gap-3 p-8' }, [
+    createElement('span', { className: 'loading loading-spinner loading-md' }),
+    props.text ? createElement('span', { className: 'text-base-content/70' }, [props.text]) : null
   ].filter(Boolean));
 
   return withDazzleAttrs(el, {
@@ -524,12 +711,13 @@ registerComponent('Loading', (props) => {
 });
 
 // Skeleton loader
+// Uses DaisyUI: skeleton
 registerComponent('Skeleton', (props) => {
   const width = props.width || '100%';
   const height = props.height || '1rem';
 
   const el = createElement('div', {
-    className: 'dz-skeleton',
+    className: 'skeleton',
     style: { width, height }
   });
 
@@ -537,16 +725,17 @@ registerComponent('Skeleton', (props) => {
 });
 
 // Error display
+// Uses DaisyUI: alert alert-error
 registerComponent('Error', (props) => {
   const el = createElement('div', {
-    className: 'dz-toast dz-toast--error dz-p-4'
+    className: 'alert alert-error'
   }, [
-    createElement('div', { className: 'dz-toast__message' }, [
+    createElement('div', {}, [
       createElement('strong', {}, [props.title || 'Error']),
-      props.message ? createElement('p', { className: 'dz-mt-2 dz-m-0' }, [props.message]) : null
+      props.message ? createElement('p', { className: 'mt-1 text-sm' }, [props.message]) : null
     ]),
     props.onRetry ? createElement('button', {
-      className: 'dz-button dz-button--danger dz-button--sm dz-mt-2',
+      className: 'btn btn-sm',
       onClick: props.onRetry
     }, ['Retry']) : null
   ].filter(Boolean));
@@ -559,22 +748,23 @@ registerComponent('Error', (props) => {
 });
 
 // Empty state
+// Uses DaisyUI: flex layout with btn
 registerComponent('Empty', (props) => {
   const entityName = props.dazzle?.entity || props.entity;
 
   const actionButton = props.action ? withDazzleAttrs(
     createElement('button', {
       onClick: props.action.onClick,
-      className: 'dz-button dz-button--primary'
+      className: 'btn btn-primary'
     }, [props.action.label]),
     { action: props.action.name || `${entityName}.create`, actionRole: 'primary' }
   ) : null;
 
-  const el = createElement('div', { className: 'dz-empty' }, [
-    props.icon ? createElement('div', { className: 'dz-empty__icon' }, [props.icon]) : null,
-    createElement('p', { className: 'dz-empty__title' }, [props.title || 'No data']),
-    createElement('p', { className: 'dz-empty__description' }, [props.message || 'No data available']),
-    actionButton
+  const el = createElement('div', { className: 'flex flex-col items-center justify-center py-12 px-4 text-center' }, [
+    props.icon ? createElement('div', { className: 'text-4xl mb-4 opacity-50' }, [props.icon]) : null,
+    createElement('p', { className: 'text-lg font-medium text-base-content' }, [props.title || 'No data']),
+    createElement('p', { className: 'text-base-content/60 mt-1' }, [props.message || 'No data available']),
+    actionButton ? createElement('div', { className: 'mt-4' }, [actionButton]) : null
   ].filter(Boolean));
 
   if (props.dazzle) {
@@ -584,9 +774,21 @@ registerComponent('Empty', (props) => {
 });
 
 // Badge component
+// Uses DaisyUI: badge, badge-primary, etc.
 registerComponent('Badge', (props, children) => {
   const variant = props.variant || 'default';
-  const classNames = ['dz-badge', `dz-badge--${variant}`];
+  const variantMap = {
+    'default': 'badge-ghost',
+    'primary': 'badge-primary',
+    'secondary': 'badge-secondary',
+    'success': 'badge-success',
+    'warning': 'badge-warning',
+    'error': 'badge-error',
+    'info': 'badge-info',
+  };
+
+  const classNames = ['badge'];
+  if (variantMap[variant]) classNames.push(variantMap[variant]);
 
   const el = createElement('span', { className: classNames.join(' ') }, children);
 
@@ -629,38 +831,144 @@ registerComponent('NavLink', (props, children) => {
   return el;
 });
 
-// Modal/Dialog
+// Modal/Dialog - Accessible modal with focus trap and ARIA attributes
+// Uses DaisyUI modal pattern with proper a11y
 registerComponent('Modal', (props, children) => {
   if (!props.open) return null;
 
   const dialogName = props.dazzle?.dialog || props.name || 'modal';
+  const titleId = `modal-title-${dialogName}`;
+  const descId = `modal-desc-${dialogName}`;
 
-  const titleEl = createElement('h2', { className: 'dz-dialog__title' }, [props.title || '']);
+  // Title element with proper ID for aria-labelledby
+  const titleEl = createElement('h2', {
+    className: 'text-lg font-bold',
+    id: titleId
+  }, [props.title || '']);
   withDazzleAttrs(titleEl, { dialogTitle: true });
 
+  // Close button with proper accessibility
   const closeBtn = props.onClose ? withDazzleAttrs(
     createElement('button', {
-      className: 'dz-button dz-button--ghost',
-      onClick: props.onClose
-    }, ['×']),
+      className: 'btn btn-sm btn-circle btn-ghost absolute right-2 top-2',
+      onClick: props.onClose,
+      'aria-label': 'Close modal'
+    }, ['✕']),
     { action: 'cancel', actionRole: 'cancel' }
   ) : null;
 
-  const contentEl = createElement('div', { className: 'dz-dialog__body' }, children);
+  // Content element
+  const contentEl = createElement('div', {
+    className: 'py-4',
+    id: descId
+  }, children);
   withDazzleAttrs(contentEl, { dialogContent: true });
 
-  const overlay = createElement('div', {
-    className: 'dz-dialog-overlay',
-    onClick: (e) => {
-      if (e.target === e.currentTarget && props.onClose) props.onClose();
-    }
+  // Footer with actions
+  const footerEl = props.footer ? createElement('div', {
+    className: 'modal-action'
+  }, [props.footer]) : null;
+  if (footerEl) {
+    withDazzleAttrs(footerEl, { dialogActions: true });
+  }
+
+  // Dialog element with proper ARIA attributes
+  const dialog = createElement('div', {
+    className: 'modal-box relative',
+    role: 'dialog',
+    'aria-modal': 'true',
+    'aria-labelledby': titleId,
+    'aria-describedby': descId
   }, [
-    createElement('div', { className: 'dz-dialog' }, [
-      createElement('div', { className: 'dz-dialog__header' }, [titleEl, closeBtn].filter(Boolean)),
-      contentEl,
-      props.footer ? createElement('div', { className: 'dz-dialog__footer' }, [props.footer]) : null
-    ].filter(Boolean))
-  ]);
+    closeBtn,
+    titleEl,
+    contentEl,
+    footerEl
+  ].filter(Boolean));
+
+  // Overlay/backdrop - DaisyUI modal pattern
+  const overlay = createElement('div', {
+    className: 'modal modal-open',
+    onClick: (e) => {
+      // Close on backdrop click (outside dialog box)
+      if (e.target === e.currentTarget && props.onClose) {
+        props.onClose();
+      }
+    }
+  }, [dialog]);
+
+  // Focus trap and keyboard handling
+  // Store reference for cleanup
+  let previousActiveElement = document.activeElement;
+
+  // Set up focus trap and keyboard handling after render
+  setTimeout(() => {
+    // Focus the dialog
+    dialog.setAttribute('tabindex', '-1');
+    dialog.focus();
+
+    // Get all focusable elements within dialog
+    const getFocusableElements = () => {
+      return dialog.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+    };
+
+    // Keyboard handler for Escape and Tab trap
+    const handleKeyDown = (e) => {
+      // Close on Escape
+      if (e.key === 'Escape' && props.onClose) {
+        e.preventDefault();
+        props.onClose();
+        return;
+      }
+
+      // Focus trap on Tab
+      if (e.key === 'Tab') {
+        const focusable = getFocusableElements();
+        if (focusable.length === 0) return;
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    overlay.addEventListener('keydown', handleKeyDown);
+
+    // Focus first focusable element or the dialog itself
+    const focusable = getFocusableElements();
+    if (focusable.length > 0) {
+      focusable[0].focus();
+    }
+
+    // Store cleanup function
+    overlay._modalCleanup = () => {
+      overlay.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to previous element
+      if (previousActiveElement && previousActiveElement.focus) {
+        previousActiveElement.focus();
+      }
+    };
+  }, 0);
+
+  // Add cleanup on removal (via MutationObserver or manual call)
+  const originalRemove = overlay.remove?.bind(overlay);
+  overlay.remove = function() {
+    if (overlay._modalCleanup) {
+      overlay._modalCleanup();
+    }
+    if (originalRemove) {
+      originalRemove();
+    }
+  };
 
   return withDazzleAttrs(overlay, {
     dialog: dialogName,
@@ -669,24 +977,98 @@ registerComponent('Modal', (props, children) => {
   });
 });
 
-// Toast notification container
+// Toast notification container - DaisyUI toast pattern
 registerComponent('ToastContainer', (props, children) => {
-  const el = createElement('div', { className: 'dz-toast-container' }, children);
+  const position = props.position || 'top-end';
+  const positionMap = {
+    'top-start': 'toast toast-top toast-start',
+    'top-center': 'toast toast-top toast-center',
+    'top-end': 'toast toast-top toast-end',
+    'bottom-start': 'toast toast-bottom toast-start',
+    'bottom-center': 'toast toast-bottom toast-center',
+    'bottom-end': 'toast toast-bottom toast-end',
+  };
+
+  const el = createElement('div', {
+    className: positionMap[position] || 'toast toast-top toast-end',
+    role: 'region',
+    'aria-label': 'Notifications',
+    'aria-live': 'polite'
+  }, children);
   return el;
 });
 
-// Toast notification
+// Toast notification - DaisyUI alert with a11y
 registerComponent('Toast', (props, children) => {
   const variant = props.variant || 'info';
-  const classNames = ['dz-toast', `dz-toast--${variant}`];
+  const variantMap = {
+    'info': 'alert-info',
+    'success': 'alert-success',
+    'warning': 'alert-warning',
+    'error': 'alert-error',
+  };
 
-  const el = createElement('div', { className: classNames.join(' ') }, [
-    createElement('div', { className: 'dz-toast__message' }, children),
+  const classNames = ['alert', 'shadow-lg'];
+  if (variantMap[variant]) classNames.push(variantMap[variant]);
+
+  const el = createElement('div', {
+    className: classNames.join(' '),
+    role: 'alert',
+    'aria-live': variant === 'error' ? 'assertive' : 'polite'
+  }, [
+    createElement('span', {}, children),
     props.onClose ? createElement('button', {
-      className: 'dz-toast__close',
-      onClick: props.onClose
-    }, ['×']) : null
+      className: 'btn btn-sm btn-ghost',
+      onClick: props.onClose,
+      'aria-label': 'Dismiss notification'
+    }, ['✕']) : null
   ].filter(Boolean));
+
+  return el;
+});
+
+// =============================================================================
+// Static Page Component
+// =============================================================================
+
+// StaticPage - renders markdown or HTML content for legal pages, about, etc.
+// Uses DaisyUI prose class for nice typography
+registerComponent('StaticPage', (props) => {
+  const { title, content, loading, error } = props;
+
+  // Error state
+  if (error) {
+    return createElement('div', { className: 'p-8' }, [
+      createElement('div', { className: 'alert alert-error' }, [
+        createElement('span', {}, [error])
+      ])
+    ]);
+  }
+
+  // Loading state
+  if (loading) {
+    return createElement('div', { className: 'flex justify-center items-center p-8' }, [
+      createElement('span', { className: 'loading loading-spinner loading-lg' })
+    ]);
+  }
+
+  // Content container with nice typography
+  const el = createElement('article', {
+    className: 'max-w-4xl mx-auto py-8 px-4'
+  }, [
+    title ? createElement('h1', {
+      className: 'text-3xl font-bold mb-6'
+    }, [title]) : null,
+    createElement('div', {
+      className: 'prose prose-lg max-w-none'
+    })
+  ].filter(Boolean));
+
+  // Set HTML content (content is already HTML from backend)
+  const contentDiv = el.querySelector('.prose');
+  if (contentDiv && content) {
+    contentDiv.innerHTML = content;
+  }
 
   return el;
 });
