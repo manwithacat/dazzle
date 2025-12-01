@@ -15,15 +15,14 @@ This package provides the modular structure for future migration.
 """
 
 # Re-export the main app and entry point from cli_legacy
-from dazzle.cli_legacy import __version__, app, main
-
 # Export the modular sub-apps (duplicates exist in cli_legacy for now)
 from dazzle.cli.dnr import dnr_app
 from dazzle.cli.e2e import e2e_app
-from dazzle.cli.testing import test_app
-from dazzle.cli.vocab import vocab_app
 from dazzle.cli.mcp import mcp, mcp_check, mcp_setup
+from dazzle.cli.testing import test_app
 from dazzle.cli.utils import get_version, version_callback
+from dazzle.cli.vocab import vocab_app
+from dazzle.cli_legacy import __version__, app, main
 
 __all__ = [
     "__version__",

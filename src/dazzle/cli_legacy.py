@@ -14,12 +14,16 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core.stacks import StackPreset
+from dazzle.core.stacks import BUILTIN_STACKS
 from dazzle.core.state import compute_dsl_hashes, load_state, save_state
-
 
 # Version is defined here as the single source of truth
 __version__ = "0.3.0"
+
+
+def _get_available_stacks() -> list[str]:
+    """Get list of available stack preset names."""
+    return list(BUILTIN_STACKS.keys())
 
 
 def get_version() -> str:
@@ -1087,7 +1091,6 @@ def build(
         typer.echo(f"Unexpected error during build: {e}", err=True)
         traceback.print_exc()
         raise typer.Exit(code=1)
-
 
 
 @app.command()

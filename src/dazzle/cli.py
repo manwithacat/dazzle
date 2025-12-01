@@ -17,34 +17,7 @@ For new code, prefer importing from dazzle.cli (the package).
 # Re-export everything from the legacy module for backward compatibility
 from dazzle.cli_legacy import (
     # Main app
-    app,
     main,
-    # Version
-    __version__,
-    # Utility functions
-    get_version,
-    version_callback,
-    _print_human_diagnostics,
-    _print_vscode_diagnostics,
-    _print_vscode_parse_error,
-    _is_directory_empty,
-    # Core commands
-    init,
-    validate,
-    lint,
-    inspect,
-    build,
-    stacks,
-    example,
-    # Analysis commands
-    layout_plan,
-    analyze_spec,
-    infra,
-    # Sub-apps (still defined in legacy for now)
-    vocab_app,
-    dnr_app,
-    test_app,
-    e2e_app,
 )
 
 # For the package structure

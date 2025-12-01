@@ -4,7 +4,6 @@ Unit tests for auth flow generation.
 Tests the auth_flows module and its integration with testspec_generator.
 """
 
-import pytest
 
 from dazzle.core.ir import (
     FlowAssertionKind,

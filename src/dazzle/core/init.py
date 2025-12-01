@@ -281,8 +281,8 @@ def generate_dnr_ui(
             log("  Skipping dnr-ui generation (dazzle-dnr-ui not installed)")
             return False
 
-        # Load manifest
-        manifest = load_manifest(manifest_path)
+        # Load manifest (validates it exists and is well-formed)
+        _manifest = load_manifest(manifest_path)
 
         # Discover and parse DSL files
         dsl_dir = project_dir / "dsl"
@@ -300,6 +300,10 @@ def generate_dnr_ui(
         for dsl_file in dsl_files:
             content = dsl_file.read_text()
             module_name, app_name, app_title, uses, fragment = parse_dsl(content, dsl_file)
+
+            if module_name is None:
+                log(f"  Skipping {dsl_file} (no module name found)")
+                continue
 
             module_ir = ModuleIR(
                 name=module_name,

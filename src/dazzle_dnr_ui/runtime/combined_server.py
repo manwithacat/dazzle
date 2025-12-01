@@ -468,7 +468,7 @@ def run_frontend_only(
 
 
 def run_backend_only(
-    backend_spec: "BackendSpec",
+    backend_spec: BackendSpec,
     host: str = "127.0.0.1",
     port: int = 8000,
     db_path: str | Path | None = None,

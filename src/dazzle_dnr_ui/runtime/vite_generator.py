@@ -10,12 +10,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from dazzle_dnr_ui.specs import UISpec
-
 # =============================================================================
 # ES Module Runtime Templates
 # =============================================================================
-
 # =============================================================================
 # Runtime File Loading
 # =============================================================================
@@ -25,8 +22,9 @@ from dazzle_dnr_ui.specs import UISpec
 # The static/js/*.js files are ES modules that work directly with Vite.
 # The static/css/*.css files provide the design token system (DDT).
 # This ensures vite_generator always uses the latest runtime code.
-
 from pathlib import Path as _Path
+
+from dazzle_dnr_ui.specs import UISpec
 
 _STATIC_DIR = _Path(__file__).parent / "static"
 _STATIC_JS_DIR = _STATIC_DIR / "js"
