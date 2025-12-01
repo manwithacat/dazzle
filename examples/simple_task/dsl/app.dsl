@@ -1,5 +1,5 @@
 # DAZZLE Simple Task Manager
-# A minimal example demonstrating DAZZLE DSL basics
+# A minimal example demonstrating DAZZLE DSL basics with v0.2 features
 
 module simple_task.core
 
@@ -24,11 +24,25 @@ surface task_list "Task List":
 
   section main "Tasks":
     field title "Title"
-    field description "Description"
     field status "Status"
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
+
+  ux:
+    purpose: "View and manage all tasks at a glance"
+    sort: created_at desc
+    filter: status, priority
+    search: title, description, assigned_to
+    empty: "No tasks yet. Create your first task!"
+
+    attention warning:
+      when: due_date < today and status != done
+      message: "Overdue task"
+
+    attention notice:
+      when: priority = high and status = todo
+      message: "High priority - needs attention"
 
 # Detail view - individual task
 surface task_detail "Task Detail":
@@ -45,6 +59,9 @@ surface task_detail "Task Detail":
     field created_at "Created"
     field updated_at "Updated"
 
+  ux:
+    purpose: "View complete task information"
+
 # Create form
 surface task_create "Create Task":
   uses entity Task
@@ -56,6 +73,9 @@ surface task_create "Create Task":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
+
+  ux:
+    purpose: "Add a new task to track"
 
 # Edit form
 surface task_edit "Edit Task":
@@ -70,29 +90,71 @@ surface task_edit "Edit Task":
     field due_date "Due Date"
     field assigned_to "Assigned To"
 
+  ux:
+    purpose: "Update task details and status"
+
 # Workspaces - compose regions for user-centric views
 workspace dashboard "Task Dashboard":
   purpose: "Overview of all tasks with key metrics"
 
-  task_count:
+  metrics:
     source: Task
     aggregate:
       total: count(Task)
+      todo: count(Task where status = todo)
+      in_progress: count(Task where status = in_progress)
+      done: count(Task where status = done)
 
-  urgent_tasks:
+  overdue:
     source: Task
+    filter: due_date < today and status != done
+    sort: due_date asc
     limit: 5
+    display: list
+    action: task_edit
+    empty: "No overdue tasks!"
 
-  all_tasks:
+  high_priority:
     source: Task
+    filter: priority = high and status != done
+    sort: due_date asc
+    limit: 5
+    display: list
+    action: task_edit
+    empty: "No high priority tasks pending"
+
+  recent:
+    source: Task
+    sort: created_at desc
+    limit: 10
+    display: list
+    action: task_detail
 
 workspace my_work "My Work":
   purpose: "Personal task view for assigned work"
 
-  in_progress:
+  my_in_progress:
     source: Task
+    filter: status = in_progress
+    sort: priority desc, due_date asc
     limit: 10
+    display: list
+    action: task_edit
+    empty: "No tasks in progress"
 
-  upcoming:
+  my_todo:
     source: Task
+    filter: status = todo
+    sort: priority desc, due_date asc
+    limit: 10
+    display: list
+    action: task_edit
+    empty: "No pending tasks"
+
+  my_completed:
+    source: Task
+    filter: status = done
+    sort: updated_at desc
     limit: 5
+    display: list
+    empty: "No completed tasks yet"

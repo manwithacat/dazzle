@@ -171,12 +171,30 @@ class DNRBackendApp:
                     if repo:
                         service.set_repository(repo)
 
+        # Initialize auth if enabled (needed before route generation)
+        get_auth_context = None
+        if self._enable_auth:
+            self._auth_store = AuthStore(self._auth_db_path)
+            self._auth_middleware = AuthMiddleware(self._auth_store)
+            auth_router = create_auth_routes(self._auth_store)
+            self._app.include_router(auth_router)
+            # Create auth context getter for routes
+            get_auth_context = self._auth_middleware.get_auth_context
+
+        # Extract entity access specs from entity metadata
+        entity_access_specs: dict[str, dict[str, Any]] = {}
+        for entity in self.spec.entities:
+            if entity.metadata and "access" in entity.metadata:
+                entity_access_specs[entity.name] = entity.metadata["access"]
+
         # Generate routes
         service_specs = {svc.name: svc for svc in self.spec.services}
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
             schemas=self._schemas,
+            entity_access_specs=entity_access_specs,
+            get_auth_context=get_auth_context,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
@@ -185,13 +203,6 @@ class DNRBackendApp:
 
         # Include router
         self._app.include_router(router)
-
-        # Initialize auth if enabled
-        if self._enable_auth:
-            self._auth_store = AuthStore(self._auth_db_path)
-            self._auth_middleware = AuthMiddleware(self._auth_store)
-            auth_router = create_auth_routes(self._auth_store)
-            self._app.include_router(auth_router)
 
         # Initialize file uploads if enabled
         if self._enable_files:

@@ -42,19 +42,66 @@ except ImportError:
 def create_list_handler(
     service: Any,
     response_schema: type[BaseModel] | None = None,
+    access_spec: dict[str, Any] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for list operations."""
+    """Create a handler for list operations with optional access control."""
+    from dazzle_dnr_back.runtime.condition_evaluator import (
+        build_visibility_filter,
+        filter_records_by_condition,
+    )
 
     async def handler(
+        request: Request,
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     ) -> Any:
+        # Get auth context if available
+        auth_context = None
+        user_id = None
+        is_authenticated = False
+
+        if get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if auth_context and auth_context.is_authenticated:
+                    is_authenticated = True
+                    user_id = str(auth_context.user.id) if auth_context.user else None
+            except Exception:
+                # Auth not available or failed - treat as anonymous
+                pass
+
+        # Build visibility filters
+        sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+
+        # Execute list with filters
         result = await service.execute(
             operation="list",
             page=page,
             page_size=page_size,
+            filters=sql_filters if sql_filters else None,
         )
+
+        # Apply post-filtering if needed (for OR conditions)
+        if post_filter and result and "items" in result:
+            context = {"current_user_id": user_id}
+            # Convert Pydantic models to dicts for filtering
+            items = result["items"]
+            if items and hasattr(items[0], "model_dump"):
+                items = [item.model_dump() for item in items]
+            filtered_items = filter_records_by_condition(items, post_filter, context)
+            result["items"] = filtered_items
+            result["total"] = len(filtered_items)
+
         return result
+
+    # Set proper annotations for FastAPI
+    handler.__annotations__ = {
+        "request": Request,
+        "page": int,
+        "page_size": int,
+        "return": Any,
+    }
 
     return handler
 
@@ -172,6 +219,8 @@ class RouteGenerator:
         services: dict[str, Any],
         models: dict[str, type[BaseModel]],
         schemas: dict[str, dict[str, type[BaseModel]]] | None = None,
+        entity_access_specs: dict[str, dict[str, Any]] | None = None,
+        get_auth_context: Callable[..., Any] | None = None,
     ):
         """
         Initialize the route generator.
@@ -180,6 +229,8 @@ class RouteGenerator:
             services: Dictionary mapping service names to service instances
             models: Dictionary mapping entity names to Pydantic models
             schemas: Optional dictionary with create/update schemas per entity
+            entity_access_specs: Optional dictionary mapping entity names to access specs
+            get_auth_context: Optional callable to get auth context from request
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -187,6 +238,8 @@ class RouteGenerator:
         self.services = services
         self.models = models
         self.schemas = schemas or {}
+        self.entity_access_specs = entity_access_specs or {}
+        self.get_auth_context = get_auth_context
         self._router = _APIRouter()
 
     def generate_route(
@@ -246,7 +299,14 @@ class RouteGenerator:
         elif (
             endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path
         ) or operation_kind == OperationKind.LIST:
-            handler = create_list_handler(service, model)
+            # Get access spec for this entity
+            access_spec = self.entity_access_specs.get(entity_name or "")
+            handler = create_list_handler(
+                service,
+                model,
+                access_spec=access_spec,
+                get_auth_context=self.get_auth_context,
+            )
             self._add_route(endpoint, handler, response_model=None)
 
         # PUT/PATCH -> UPDATE

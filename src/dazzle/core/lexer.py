@@ -92,6 +92,10 @@ class TokenType(Enum):
     TRUE = "true"
     FALSE = "false"
 
+    # Access Control Keywords
+    ANONYMOUS = "anonymous"
+    PERMISSIONS = "permissions"
+
     # UX Semantic Layer Keywords
     UX = "ux"
     PURPOSE = "purpose"
@@ -318,6 +322,8 @@ KEYWORDS = {
     "snapshot",
     "preconditions",
     "authenticated",
+    "anonymous",
+    "permissions",
     "user_role",
     "fixtures",
     "view",

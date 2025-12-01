@@ -142,6 +142,88 @@ class Constraint(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class AuthContext(str, Enum):
+    """Authentication context for access control rules."""
+
+    ANONYMOUS = "anonymous"  # Not logged in
+    AUTHENTICATED = "authenticated"  # Any logged-in user
+
+
+class VisibilityRule(BaseModel):
+    """
+    Row-level visibility rule for a specific auth context.
+
+    Defines which records are visible based on authentication state.
+
+    Examples:
+        - when anonymous: is_public = true
+        - when authenticated: is_public = true or created_by = current_user
+    """
+
+    context: AuthContext
+    condition: "ConditionExpr"
+
+    model_config = ConfigDict(frozen=True)
+
+
+class PermissionKind(str, Enum):
+    """Types of operations that can have permission rules."""
+
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+
+
+class PermissionRule(BaseModel):
+    """
+    Permission rule for a specific operation.
+
+    Defines who can perform create/update/delete operations.
+
+    Examples:
+        - create: authenticated
+        - update: created_by = current_user or assigned_to = current_user
+        - delete: created_by = current_user
+    """
+
+    operation: PermissionKind
+    require_auth: bool = True  # If True, must be authenticated
+    condition: "ConditionExpr | None" = None  # Additional row-level check
+
+    model_config = ConfigDict(frozen=True)
+
+
+class AccessSpec(BaseModel):
+    """
+    Access control specification for an entity.
+
+    Defines row-level visibility and operation permissions.
+
+    Attributes:
+        visibility: List of visibility rules by auth context
+        permissions: List of permission rules by operation
+    """
+
+    visibility: list[VisibilityRule] = Field(default_factory=list)
+    permissions: list[PermissionRule] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+    def get_visibility_for(self, context: AuthContext) -> "ConditionExpr | None":
+        """Get visibility condition for a specific auth context."""
+        for rule in self.visibility:
+            if rule.context == context:
+                return rule.condition
+        return None
+
+    def get_permission_for(self, operation: PermissionKind) -> PermissionRule | None:
+        """Get permission rule for a specific operation."""
+        for rule in self.permissions:
+            if rule.operation == operation:
+                return rule
+        return None
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -153,12 +235,14 @@ class EntitySpec(BaseModel):
         title: Human-readable title
         fields: List of field specifications
         constraints: Entity-level constraints (unique, index)
+        access: Access control specification (visibility + permissions)
     """
 
     name: str
     title: str | None = None
     fields: list[FieldSpec]
     constraints: list[Constraint] = Field(default_factory=list)
+    access: AccessSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -293,6 +377,28 @@ class SurfaceAction(BaseModel):
     label: str | None = None
     trigger: SurfaceTrigger
     outcome: Outcome
+
+    model_config = ConfigDict(frozen=True)
+
+
+class SurfaceAccessSpec(BaseModel):
+    """
+    Access control specification for surfaces.
+
+    Defines authentication and authorization requirements for accessing a surface.
+    Used by the E2E test generator to create protected route tests.
+
+    Attributes:
+        require_auth: Whether authentication is required
+        allow_personas: List of personas that can access (empty = all authenticated)
+        deny_personas: List of personas explicitly denied access
+        redirect_unauthenticated: Where to redirect unauthenticated users
+    """
+
+    require_auth: bool = False
+    allow_personas: list[str] = Field(default_factory=list)
+    deny_personas: list[str] = Field(default_factory=list)
+    redirect_unauthenticated: str = "/"
 
     model_config = ConfigDict(frozen=True)
 
@@ -555,6 +661,7 @@ class SurfaceSpec(BaseModel):
         sections: List of sections containing elements
         actions: List of actions available on this surface
         ux: Optional UX semantic layer specification
+        access: Optional access control specification for auth/RBAC
     """
 
     name: str
@@ -564,6 +671,7 @@ class SurfaceSpec(BaseModel):
     sections: list[SurfaceSection] = Field(default_factory=list)
     actions: list[SurfaceAction] = Field(default_factory=list)
     ux: UXSpec | None = None  # UX Semantic Layer extension
+    access: SurfaceAccessSpec | None = None  # Auth/RBAC access control
 
     model_config = ConfigDict(frozen=True)
 
@@ -1149,6 +1257,14 @@ class FlowAssertionKind(str, Enum):
     REDIRECTS_TO = "redirects_to"  # Navigation to view
     COUNT = "count"  # Count of elements/entities
     FIELD_VALUE = "field_value"  # Field has specific value
+
+    # Auth-related assertions (v0.3.3)
+    IS_AUTHENTICATED = "is_authenticated"  # User is logged in
+    IS_NOT_AUTHENTICATED = "is_not_authenticated"  # User is logged out
+    LOGIN_SUCCEEDED = "login_succeeded"  # Login was successful
+    LOGIN_FAILED = "login_failed"  # Login attempt failed with error
+    ROUTE_PROTECTED = "route_protected"  # Route requires auth (modal/redirect)
+    HAS_PERSONA = "has_persona"  # User has specific persona/role
 
 
 class FlowAssertion(BaseModel):

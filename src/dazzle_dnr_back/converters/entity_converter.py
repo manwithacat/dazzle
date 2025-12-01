@@ -151,12 +151,19 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
                 )
             )
 
+    # Build metadata with access spec if present
+    metadata: dict[str, object] = {}
+    if dazzle_entity.access:
+        # Store access spec in metadata for runtime evaluation
+        metadata["access"] = dazzle_entity.access.model_dump()
+
     return EntitySpec(
         name=dazzle_entity.name,
         label=dazzle_entity.title or dazzle_entity.name,
         description=dazzle_entity.title,
         fields=fields,
         relations=relations,
+        metadata=metadata,
     )
 
 

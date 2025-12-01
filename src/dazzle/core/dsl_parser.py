@@ -171,6 +171,8 @@ class Parser:
             TokenType.TAGS,
             TokenType.FIELD,
             TokenType.ACTION,
+            TokenType.ANONYMOUS,
+            TokenType.PERMISSIONS,
         ):
             return self.advance()
 
@@ -446,6 +448,8 @@ class Parser:
 
         fields = []
         constraints = []
+        visibility_rules: list[ir.VisibilityRule] = []
+        permission_rules: list[ir.PermissionRule] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -471,6 +475,42 @@ class Parser:
                 self.skip_newlines()
                 continue
 
+            # Check for visible: block
+            if self.match(TokenType.VISIBLE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    visibility_rules.append(self._parse_visibility_rule())
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
+            # Check for permissions: block
+            if self.match(TokenType.PERMISSIONS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    permission_rules.append(self._parse_permission_rule())
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
             # Parse field
             field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
@@ -491,12 +531,101 @@ class Parser:
 
         self.expect(TokenType.DEDENT)
 
+        # Build access spec if any rules were defined
+        access = None
+        if visibility_rules or permission_rules:
+            access = ir.AccessSpec(
+                visibility=visibility_rules,
+                permissions=permission_rules,
+            )
+
         return ir.EntitySpec(
             name=name,
             title=title,
             fields=fields,
             constraints=constraints,
+            access=access,
         )
+
+    def _parse_visibility_rule(self) -> ir.VisibilityRule:
+        """
+        Parse a visibility rule.
+
+        Syntax:
+            when anonymous: is_public = true
+            when authenticated: is_public = true or created_by = current_user
+        """
+        self.expect(TokenType.WHEN)
+
+        # Parse auth context (anonymous or authenticated)
+        if self.match(TokenType.ANONYMOUS):
+            self.advance()
+            context = ir.AuthContext.ANONYMOUS
+        elif self.match(TokenType.AUTHENTICATED):
+            self.advance()
+            context = ir.AuthContext.AUTHENTICATED
+        else:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Expected 'anonymous' or 'authenticated', got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        self.expect(TokenType.COLON)
+
+        # Parse condition expression
+        condition = self.parse_condition_expr()
+
+        return ir.VisibilityRule(context=context, condition=condition)
+
+    def _parse_permission_rule(self) -> ir.PermissionRule:
+        """
+        Parse a permission rule.
+
+        Syntax:
+            create: authenticated
+            update: created_by = current_user or assigned_to = current_user
+            delete: created_by = current_user
+        """
+        # Parse operation (create, update, delete)
+        token = self.current_token()
+        if token.type == TokenType.IDENTIFIER:
+            op_name = self.advance().value
+        else:
+            op_name = self.expect_identifier_or_keyword().value
+
+        # Map to PermissionKind
+        op_map = {
+            "create": ir.PermissionKind.CREATE,
+            "update": ir.PermissionKind.UPDATE,
+            "delete": ir.PermissionKind.DELETE,
+        }
+        if op_name not in op_map:
+            raise make_parse_error(
+                f"Expected 'create', 'update', or 'delete', got '{op_name}'",
+                self.file,
+                token.line,
+                token.column,
+            )
+        operation = op_map[op_name]
+
+        self.expect(TokenType.COLON)
+
+        # Check for simple "authenticated" (no condition)
+        if self.match(TokenType.AUTHENTICATED):
+            self.advance()
+            return ir.PermissionRule(operation=operation, require_auth=True)
+
+        # Check for "anonymous" (no auth required, no condition)
+        if self.match(TokenType.ANONYMOUS):
+            self.advance()
+            return ir.PermissionRule(operation=operation, require_auth=False, condition=None)
+
+        # Otherwise, parse a condition expression (implies authenticated)
+        condition = self.parse_condition_expr()
+        return ir.PermissionRule(operation=operation, require_auth=True, condition=condition)
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
