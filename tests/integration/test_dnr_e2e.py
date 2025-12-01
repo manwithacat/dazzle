@@ -109,7 +109,7 @@ class DNRDockerServerManager:
                 "--api-port",
                 str(self.api_port),
                 "--test-mode",
-                "--detach",  # Run in background
+                # Note: Docker mode runs detached by default (no --detach flag needed)
             ],
             cwd=self.example_dir,
             capture_output=True,
