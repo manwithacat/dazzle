@@ -1,7 +1,54 @@
+// @ts-check
 /**
  * DNR-UI Signals - Reactive state primitives
  * Part of the Dazzle Native Runtime
+ *
+ * @module signals
  */
+
+// =============================================================================
+// Type Definitions
+// =============================================================================
+
+/**
+ * @template T
+ * @typedef {() => T} SignalGetter - Function that returns the current signal value
+ */
+
+/**
+ * @template T
+ * @typedef {(value: T | ((prev: T) => T)) => void} SignalSetter - Function to update signal value
+ */
+
+/**
+ * @template T
+ * @typedef {[SignalGetter<T>, SignalSetter<T>]} Signal - Tuple of getter and setter functions
+ */
+
+/**
+ * @typedef {Object} SignalOptions
+ * @property {boolean} [persistent] - Persist value to localStorage
+ * @property {string} [key] - Storage key for persistence
+ * @property {(a: any, b: any) => boolean} [equals] - Custom equality check
+ */
+
+/**
+ * @typedef {Object} EffectOptions
+ * @property {boolean} [defer] - Defer first execution to next animation frame
+ */
+
+/**
+ * @template T
+ * @typedef {Object} Resource
+ * @property {SignalGetter<T|undefined>} data - The fetched data
+ * @property {SignalGetter<boolean>} loading - Loading state
+ * @property {SignalGetter<Error|null>} error - Error state
+ * @property {(source?: any) => Promise<T>} refetch - Trigger a refetch
+ */
+
+// =============================================================================
+// Internal State
+// =============================================================================
 
 let currentSubscriber = null;
 // Reserved for future dependency tracking
@@ -9,6 +56,24 @@ const _signalDeps = new Map(); // eslint-disable-line no-unused-vars
 let batchDepth = 0;
 const pendingEffects = new Set();
 
+// =============================================================================
+// Signal Functions
+// =============================================================================
+
+/**
+ * Create a reactive signal.
+ *
+ * @template T
+ * @param {T} initialValue - Initial value for the signal
+ * @param {SignalOptions} [options={}] - Signal configuration options
+ * @returns {Signal<T>} Tuple of [getter, setter] functions
+ *
+ * @example
+ * const [count, setCount] = createSignal(0);
+ * console.log(count()); // 0
+ * setCount(5);
+ * setCount(prev => prev + 1); // Updater function
+ */
 export function createSignal(initialValue, options = {}) {
   let value = initialValue;
   const subscribers = new Set();
@@ -56,6 +121,18 @@ export function createSignal(initialValue, options = {}) {
   return [getter, setter];
 }
 
+/**
+ * Batch multiple signal updates into a single effect run.
+ *
+ * @param {() => void} fn - Function containing signal updates
+ *
+ * @example
+ * batch(() => {
+ *   setX(1);
+ *   setY(2);
+ *   setZ(3);
+ * }); // Effects run once, not three times
+ */
 export function batch(fn) {
   batchDepth++;
   try {
@@ -70,6 +147,20 @@ export function batch(fn) {
   }
 }
 
+/**
+ * Create a reactive effect that re-runs when its dependencies change.
+ *
+ * @param {() => (void | (() => void))} fn - Effect function, may return cleanup
+ * @param {EffectOptions} [options={}] - Effect configuration
+ * @returns {() => void} Dispose function to stop the effect
+ *
+ * @example
+ * const dispose = createEffect(() => {
+ *   console.log('Count is:', count());
+ *   return () => console.log('Cleanup');
+ * });
+ * dispose(); // Stop tracking
+ */
 export function createEffect(fn, options = {}) {
   let cleanup = null;
   const { defer = false } = options;
@@ -99,6 +190,18 @@ export function createEffect(fn, options = {}) {
   };
 }
 
+/**
+ * Create a memoized computed value that updates when dependencies change.
+ *
+ * @template T
+ * @param {() => T} fn - Computation function
+ * @param {SignalOptions} [options={}] - Signal options for the memo
+ * @returns {SignalGetter<T>} Getter function for the computed value
+ *
+ * @example
+ * const doubled = createMemo(() => count() * 2);
+ * console.log(doubled()); // Recomputed when count changes
+ */
 export function createMemo(fn, options = {}) {
   const [signal, setSignal] = createSignal(undefined, options);
   createEffect(() => {
@@ -107,6 +210,21 @@ export function createMemo(fn, options = {}) {
   return signal;
 }
 
+/**
+ * Create an async resource with loading and error states.
+ *
+ * @template T
+ * @param {(source?: any) => Promise<T>} fetcher - Async fetch function
+ * @param {Object} [options={}] - Resource options
+ * @param {T} [options.initialValue] - Initial value before first fetch
+ * @param {any} [options.source] - Source to pass to fetcher on creation
+ * @returns {Resource<T>} Resource object with data, loading, error, and refetch
+ *
+ * @example
+ * const { data, loading, error, refetch } = createResource(
+ *   async () => fetch('/api/items').then(r => r.json())
+ * );
+ */
 export function createResource(fetcher, options = {}) {
   const [data, setData] = createSignal(options.initialValue);
   const [loading, setLoading] = createSignal(false);
