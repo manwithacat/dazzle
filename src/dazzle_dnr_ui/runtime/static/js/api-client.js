@@ -74,7 +74,8 @@ export const apiClient = {
     const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
-      const error = new Error(`HTTP ${response.status}`);
+      /** @type {ApiError & Error} */
+      const error = /** @type {any} */ (new Error(`HTTP ${response.status}`));
       error.status = response.status;
       try {
         error.data = await response.json();

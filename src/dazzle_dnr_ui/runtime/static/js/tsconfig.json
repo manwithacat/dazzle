@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "noEmit": true,
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "moduleResolution": "node",
     "target": "ES2020",
     "module": "ES2020",

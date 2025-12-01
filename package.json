@@ -7,12 +7,14 @@
   "scripts": {
     "lint": "eslint src/dazzle_dnr_ui/runtime/static/js/",
     "lint:fix": "eslint src/dazzle_dnr_ui/runtime/static/js/ --fix",
+    "typecheck": "tsc --noEmit -p src/dazzle_dnr_ui/runtime/static/js/",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
+    "typescript": "^5.0.0",
     "vitest": "^2.0.0",
     "jsdom": "^25.0.0"
   }
