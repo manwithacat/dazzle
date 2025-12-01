@@ -223,7 +223,7 @@ class TestHTMLGeneration:
         assert "</html>" in html
         assert "<head>" in html
         assert "</head>" in html
-        assert "<body>" in html
+        assert "<body" in html  # Body tag may have attributes
         assert "</body>" in html
         assert '<div id="app">' in html
 
