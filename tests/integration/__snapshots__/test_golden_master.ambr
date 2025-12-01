@@ -4,6 +4,7 @@
     'domain': dict({
       'entities': list([
         dict({
+          'access': None,
           'constraints': list([
           ]),
           'fields': list([
@@ -105,6 +106,7 @@
     ]),
     'surfaces': list([
       dict({
+        'access': None,
         'actions': list([
         ]),
         'entity_ref': 'Task',
@@ -134,6 +136,7 @@
         'ux': None,
       }),
       dict({
+        'access': None,
         'actions': list([
         ]),
         'entity_ref': 'Task',
@@ -169,6 +172,7 @@
         'ux': None,
       }),
       dict({
+        'access': None,
         'actions': list([
         ]),
         'entity_ref': 'Task',
@@ -198,6 +202,7 @@
         'ux': None,
       }),
       dict({
+        'access': None,
         'actions': list([
         ]),
         'entity_ref': 'Task',
