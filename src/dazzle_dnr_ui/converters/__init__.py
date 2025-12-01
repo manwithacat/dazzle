@@ -77,8 +77,7 @@ def convert_shell_config(
         )
 
         footer_links = [
-            FooterLinkSpec(label=link.label, href=link.href)
-            for link in shell_config.footer.links
+            FooterLinkSpec(label=link.label, href=link.href) for link in shell_config.footer.links
         ]
 
         # Add static page links to footer (skip if already linked)

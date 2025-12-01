@@ -360,9 +360,7 @@ class FlowRunner:
                 await self.assertions.login_succeeded()
 
             case FlowAssertionKind.LOGIN_FAILED:
-                expected_error = (
-                    str(assertion.expected) if assertion.expected else None
-                )
+                expected_error = str(assertion.expected) if assertion.expected else None
                 await self.assertions.login_failed(expected_error)
 
             case FlowAssertionKind.ROUTE_PROTECTED:

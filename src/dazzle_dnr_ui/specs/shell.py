@@ -29,7 +29,8 @@ class NavSpec(BaseModel):
         default="sidebar", description="Navigation style"
     )
     items: list[NavItemSpec] = Field(
-        default_factory=list, description="Navigation items (auto-generated from workspaces if empty)"
+        default_factory=list,
+        description="Navigation items (auto-generated from workspaces if empty)",
     )
     brand: str | None = Field(default=None, description="Brand text/name in nav")
     logo: str | None = Field(default=None, description="Logo URL")

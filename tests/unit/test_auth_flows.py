@@ -4,7 +4,6 @@ Unit tests for auth flow generation.
 Tests the auth_flows module and its integration with testspec_generator.
 """
 
-
 from dazzle.core.ir import (
     FlowAssertionKind,
     FlowPriority,
@@ -83,18 +82,14 @@ class TestLoginFlows:
 
         # Should click login button
         click_steps = [s for s in flow.steps if s.kind == FlowStepKind.CLICK]
-        login_click = next(
-            (s for s in click_steps if s.target == "auth:login_button"), None
-        )
+        login_click = next((s for s in click_steps if s.target == "auth:login_button"), None)
         assert login_click is not None
 
         # Should fill email and password
         fill_steps = [s for s in flow.steps if s.kind == FlowStepKind.FILL]
         assert len(fill_steps) >= 2
 
-        email_fill = next(
-            (s for s in fill_steps if s.target == "auth:field.email"), None
-        )
+        email_fill = next((s for s in fill_steps if s.target == "auth:field.email"), None)
         assert email_fill is not None
         assert email_fill.fixture_ref == "auth_test_user.email"
 
@@ -104,8 +99,7 @@ class TestLoginFlows:
             (
                 s
                 for s in assert_steps
-                if s.assertion
-                and s.assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED
+                if s.assertion and s.assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED
             ),
             None,
         )
@@ -140,8 +134,7 @@ class TestLoginFlows:
             (
                 s
                 for s in assert_steps
-                if s.assertion
-                and s.assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED
+                if s.assertion and s.assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED
             ),
             None,
         )
@@ -177,8 +170,7 @@ class TestLogoutFlow:
             (
                 s
                 for s in assert_steps
-                if s.assertion
-                and s.assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED
+                if s.assertion and s.assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED
             ),
             None,
         )
@@ -201,9 +193,7 @@ class TestRegistrationFlow:
 
         fill_steps = [s for s in flow.steps if s.kind == FlowStepKind.FILL]
 
-        name_fill = next(
-            (s for s in fill_steps if s.target == "auth:field.display_name"), None
-        )
+        name_fill = next((s for s in fill_steps if s.target == "auth:field.display_name"), None)
         assert name_fill is not None
 
 
@@ -227,8 +217,7 @@ class TestProtectedRouteFlows:
             (
                 s
                 for s in assert_steps
-                if s.assertion
-                and s.assertion.kind == FlowAssertionKind.ROUTE_PROTECTED
+                if s.assertion and s.assertion.kind == FlowAssertionKind.ROUTE_PROTECTED
             ),
             None,
         )
@@ -240,9 +229,7 @@ class TestPersonaAccessFlows:
 
     def test_persona_allowed_flow(self):
         """Test persona allowed access flow."""
-        flow = generate_persona_access_allowed_flow(
-            "admin", "admin_dashboard", "Admin Dashboard"
-        )
+        flow = generate_persona_access_allowed_flow("admin", "admin_dashboard", "Admin Dashboard")
 
         assert flow.id == "auth_persona_admin_admin_dashboard_allowed"
         assert "rbac" in flow.tags
@@ -267,8 +254,7 @@ class TestPersonaAccessFlows:
             (
                 s
                 for s in assert_steps
-                if s.assertion
-                and s.assertion.kind == FlowAssertionKind.ROUTE_PROTECTED
+                if s.assertion and s.assertion.kind == FlowAssertionKind.ROUTE_PROTECTED
             ),
             None,
         )
@@ -302,10 +288,14 @@ class TestGenerateAllAuthFlows:
     def test_with_protected_surfaces(self):
         """Test auth flows with protected surfaces."""
         protected_surfaces = [
-            ("admin_panel", "Admin Panel", SurfaceAccessSpec(
-                require_auth=True,
-                allow_personas=["admin"],
-            )),
+            (
+                "admin_panel",
+                "Admin Panel",
+                SurfaceAccessSpec(
+                    require_auth=True,
+                    allow_personas=["admin"],
+                ),
+            ),
         ]
 
         fixtures, flows = generate_all_auth_flows(

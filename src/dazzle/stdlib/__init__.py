@@ -46,10 +46,7 @@ def list_stdlib_vocabs() -> list[str]:
     Returns:
         List of vocabulary names (without _vocab.yml suffix)
     """
-    return [
-        f.stem.replace("_vocab", "")
-        for f in STDLIB_DIR.glob("*_vocab.yml")
-    ]
+    return [f.stem.replace("_vocab", "") for f in STDLIB_DIR.glob("*_vocab.yml")]
 
 
 __all__ = [

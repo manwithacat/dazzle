@@ -583,9 +583,7 @@ def generate_auth_tests(
     protected_surfaces: list[tuple[str, str | None, SurfaceAccessSpec]] = []
     for surface in appspec.surfaces:
         if surface.access and surface.access.require_auth:
-            protected_surfaces.append(
-                (surface.name, surface.title, surface.access)
-            )
+            protected_surfaces.append((surface.name, surface.title, surface.access))
 
     return generate_all_auth_flows(
         allow_registration=manifest.auth.allow_registration,

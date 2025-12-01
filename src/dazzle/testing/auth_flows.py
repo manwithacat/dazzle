@@ -610,14 +610,10 @@ def generate_auth_flows_for_surface(
 
     # Persona-specific access tests
     for persona in access.allow_personas:
-        flows.append(
-            generate_persona_access_allowed_flow(persona, surface_name, surface_title)
-        )
+        flows.append(generate_persona_access_allowed_flow(persona, surface_name, surface_title))
 
     for persona in access.deny_personas:
-        flows.append(
-            generate_persona_access_denied_flow(persona, surface_name, surface_title)
-        )
+        flows.append(generate_persona_access_denied_flow(persona, surface_name, surface_title))
 
     return flows
 
@@ -659,8 +655,6 @@ def generate_all_auth_flows(
     # Generate protected surface flows
     if protected_surfaces:
         for surface_name, surface_title, access in protected_surfaces:
-            flows.extend(
-                generate_auth_flows_for_surface(surface_name, surface_title, access)
-            )
+            flows.extend(generate_auth_flows_for_surface(surface_name, surface_title, access))
 
     return fixtures, flows

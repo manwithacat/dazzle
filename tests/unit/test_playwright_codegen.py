@@ -4,7 +4,6 @@ Unit tests for Playwright code generation.
 Tests for selector mapping, step code generation, and auth assertion generation.
 """
 
-
 from dazzle.core.ir import (
     FlowAssertion,
     FlowAssertionKind,

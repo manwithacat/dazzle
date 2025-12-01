@@ -218,14 +218,12 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
             # Auth assertions
             elif assertion.kind == FlowAssertionKind.IS_AUTHENTICATED:
                 lines.append("# Verify user is authenticated")
-                lines.append(
-                    "expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()"
-                )
+                lines.append("expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()")
 
             elif assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED:
                 lines.append("# Verify user is not authenticated")
                 lines.append(
-                    'expect(page.locator(\'[data-dazzle-auth-action="login"]\')).to_be_visible()'
+                    "expect(page.locator('[data-dazzle-auth-action=\"login\"]')).to_be_visible()"
                 )
 
             elif assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED:
@@ -233,24 +231,18 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
                 lines.append(
                     "expect(page.locator('#dz-auth-modal')).not_to_be_visible(timeout=5000)"
                 )
-                lines.append(
-                    "expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()"
-                )
+                lines.append("expect(page.locator('[data-dazzle-auth-user]')).to_be_visible()")
 
             elif assertion.kind == FlowAssertionKind.LOGIN_FAILED:
                 lines.append("# Verify login failed with error")
-                lines.append(
-                    "expect(page.locator('#dz-auth-error:not(.hidden)')).to_be_visible()"
-                )
+                lines.append("expect(page.locator('#dz-auth-error:not(.hidden)')).to_be_visible()")
 
             elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
                 lines.append("# Verify route is protected")
-                lines.append(
-                    "# Either auth modal is shown or login button is visible (redirected)"
-                )
+                lines.append("# Either auth modal is shown or login button is visible (redirected)")
                 lines.append("modal_visible = page.locator('#dz-auth-modal').is_visible()")
                 lines.append(
-                    'login_visible = page.locator(\'[data-dazzle-auth-action="login"]\').is_visible()'
+                    "login_visible = page.locator('[data-dazzle-auth-action=\"login\"]').is_visible()"
                 )
                 lines.append("assert modal_visible or login_visible, 'Route should be protected'")
 

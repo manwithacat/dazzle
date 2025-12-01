@@ -266,9 +266,7 @@ def convert_workspace(
     layout = _infer_layout_from_workspace(workspace, surfaces, surface_component_map)
 
     # Generate routes from surfaces
-    routes = _generate_routes_from_surfaces(
-        workspace, surfaces, surface_component_map, is_primary
-    )
+    routes = _generate_routes_from_surfaces(workspace, surfaces, surface_component_map, is_primary)
 
     # Extract persona from UX spec if available
     persona = None

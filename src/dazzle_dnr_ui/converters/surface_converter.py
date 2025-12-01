@@ -385,9 +385,7 @@ def _generate_form_fields(
     for field_name, field_label, field_spec in fields_to_render:
         # For checkbox/boolean fields, the label is inline with the component
         is_checkbox = (
-            field_spec
-            and field_spec.type
-            and field_spec.type.kind == ir.FieldTypeKind.BOOL
+            field_spec and field_spec.type and field_spec.type.kind == ir.FieldTypeKind.BOOL
         )
 
         if is_checkbox:
@@ -402,9 +400,7 @@ def _generate_form_fields(
                     as_="Text",
                     props={
                         "variant": LiteralBinding(value="label"),
-                        "dazzle": LiteralBinding(
-                            value={"label": f"{entity_name}.{field_name}"}
-                        ),
+                        "dazzle": LiteralBinding(value={"label": f"{entity_name}.{field_name}"}),
                     },
                     children=[TextNode(content=LiteralBinding(value=field_label))],
                 )

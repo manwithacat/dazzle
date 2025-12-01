@@ -23,4 +23,5 @@ from dazzle.cli_legacy import (
 # For the package structure
 if __name__ == "__main__":
     import sys
+
     main(sys.argv[1:])

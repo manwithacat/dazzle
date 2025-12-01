@@ -430,16 +430,16 @@ def get_workflow_guide(workflow: str) -> dict[str, Any]:
                     "step": 1,
                     "action": "Edit DSL file",
                     "file": "dsl/app.dsl",
-                    "example": '''entity Customer "Customer":
+                    "example": """entity Customer "Customer":
   id: uuid pk
   name: str(200) required
   email: email unique
-  created_at: datetime auto_add''',
+  created_at: datetime auto_add""",
                 },
                 {
                     "step": 2,
                     "action": "Add CRUD surfaces",
-                    "example": '''surface customer_list "Customers":
+                    "example": """surface customer_list "Customers":
   uses entity Customer
   mode: list
   section main:
@@ -448,7 +448,7 @@ def get_workflow_guide(workflow: str) -> dict[str, Any]:
 
 surface customer_create "New Customer":
   uses entity Customer
-  mode: create''',
+  mode: create""",
                 },
                 {
                     "step": 3,
