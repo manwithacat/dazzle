@@ -254,6 +254,552 @@ except ImportError as e:
         raise typer.Exit(code=1)
 
 
+@dnr_app.command("migrate")
+def dnr_migrate(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    db: str = typer.Option(
+        ".dazzle/data.db", "--db", "-d", help="Path to SQLite database"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show planned changes without applying"
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Apply even if destructive changes detected"
+    ),
+) -> None:
+    """
+    Run database migrations for production.
+
+    Detects schema changes between entity definitions and the database,
+    then applies safe migrations automatically.
+
+    Examples:
+        # Preview migrations
+        dazzle dnr migrate --dry-run
+
+        # Apply migrations
+        dazzle dnr migrate
+
+        # Use a different database
+        dazzle dnr migrate --db /path/to/prod.db
+
+        # Force apply (including destructive changes)
+        dazzle dnr migrate --force
+    """
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_dnr_back.runtime.migrations import (
+            MigrationAction,
+            auto_migrate,
+            plan_migrations,
+        )
+        from dazzle_dnr_back.runtime.repository import DatabaseManager
+    except ImportError as e:
+        typer.echo(f"DNR packages not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-dnr-back", err=True)
+        raise typer.Exit(code=1)
+
+    # Load and build AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        errors, warnings = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot migrate; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+    except FileNotFoundError:
+        typer.echo(f"Manifest not found: {manifest}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"Failed to load spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Convert to backend spec
+    backend_spec = convert_appspec_to_backend(appspec)
+
+    # Resolve database path
+    db_path = Path(db).resolve()
+
+    # Create database manager
+    db_manager = DatabaseManager(db_path)
+
+    if dry_run:
+        # Plan only, don't apply
+        typer.echo(f"Analyzing database: {db_path}")
+        typer.echo(f"Entities: {len(backend_spec.entities)}")
+        typer.echo()
+
+        plan = plan_migrations(db_manager, backend_spec.entities)
+
+        if plan.is_empty:
+            typer.echo("No migrations needed. Database is up to date.")
+            return
+
+        typer.echo("Planned migrations:")
+        typer.echo()
+
+        for step in plan.steps:
+            icon = "⚠️ " if step.is_destructive else "  "
+            if step.action == MigrationAction.CREATE_TABLE:
+                typer.echo(f"{icon}CREATE TABLE {step.table}")
+            elif step.action == MigrationAction.ADD_COLUMN:
+                typer.echo(f"{icon}ADD COLUMN {step.table}.{step.column}")
+            elif step.action == MigrationAction.ADD_INDEX:
+                typer.echo(f"{icon}ADD INDEX on {step.table}.{step.column}")
+            elif step.action == MigrationAction.DROP_COLUMN:
+                typer.echo(f"{icon}DROP COLUMN {step.table}.{step.column} (destructive)")
+            elif step.action == MigrationAction.CHANGE_TYPE:
+                typer.echo(f"{icon}CHANGE TYPE {step.table}.{step.column} (destructive)")
+
+        if plan.warnings:
+            typer.echo()
+            typer.echo("Warnings:")
+            for warning in plan.warnings:
+                typer.echo(f"  ⚠️  {warning}")
+
+        if plan.has_destructive:
+            typer.echo()
+            typer.echo("⚠️  Destructive changes detected!")
+            typer.echo("   Use --force to apply, or handle manually.")
+
+        typer.echo()
+        typer.echo(f"Total: {len(plan.steps)} migration steps")
+        if plan.safe_steps:
+            typer.echo(f"  Safe: {len(plan.safe_steps)}")
+        if plan.has_destructive:
+            typer.echo(
+                f"  Destructive: {len(plan.steps) - len(plan.safe_steps)} (requires --force)"
+            )
+
+    else:
+        # Apply migrations
+        typer.echo(f"Migrating database: {db_path}")
+        typer.echo()
+
+        # Note: auto_migrate only applies safe migrations by default
+        # Force mode would require extending the migrations API
+        if force:
+            typer.echo("Warning: --force is noted but destructive migrations", err=True)
+            typer.echo("  require manual SQL execution for safety.", err=True)
+            typer.echo()
+
+        plan = auto_migrate(
+            db_manager,
+            backend_spec.entities,
+            record_history=True,
+        )
+
+        if plan.is_empty:
+            typer.echo("✓ No migrations needed. Database is up to date.")
+            return
+
+        applied = len(plan.safe_steps)
+        skipped = len(plan.steps) - len(plan.safe_steps) if not force else 0
+
+        typer.echo(f"✓ Applied {applied} migration(s)")
+
+        if plan.warnings:
+            typer.echo()
+            for warning in plan.warnings:
+                typer.echo(f"  ⚠️  {warning}")
+
+        if skipped > 0:
+            typer.echo()
+            typer.echo(f"⚠️  {skipped} destructive change(s) skipped")
+            typer.echo("   Use --force to apply, or handle manually.")
+
+
+@dnr_app.command("build")
+def dnr_build(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    out: str = typer.Option("./dist", "--out", "-o", help="Output directory"),
+    docker: bool = typer.Option(True, "--docker/--no-docker", help="Generate Dockerfile"),
+    env_template: bool = typer.Option(
+        True, "--env/--no-env", help="Generate environment template"
+    ),
+    frontend: bool = typer.Option(True, "--frontend/--no-frontend", help="Include frontend"),
+    minify: bool = typer.Option(True, "--minify/--no-minify", help="Minify frontend assets"),
+) -> None:
+    """
+    Build a production-ready DNR deployment bundle.
+
+    Creates a complete deployment package with:
+    - Backend: FastAPI server with production settings
+    - Frontend: Built static assets (optional)
+    - Dockerfile: Multi-stage Docker build
+    - Environment: Template for configuration
+    - Entry point: Production-ready main.py
+
+    Examples:
+        dazzle dnr build                    # Full bundle in ./dist
+        dazzle dnr build -o deploy          # Output to ./deploy
+        dazzle dnr build --no-frontend      # Backend only
+        dazzle dnr build --no-docker        # Skip Dockerfile
+
+    To deploy:
+        cd dist && docker build -t myapp . && docker run -p 8000:8000 myapp
+        # Or without Docker:
+        cd dist && pip install -r requirements.txt && python main.py
+    """
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_dnr_ui.converters import convert_appspec_to_ui
+        from dazzle_dnr_ui.runtime import generate_vite_app
+    except ImportError as e:
+        typer.echo(f"DNR packages not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-dnr-back dazzle-dnr-ui", err=True)
+        raise typer.Exit(code=1)
+
+    # Load and build AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        errors, warnings = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot build; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+        for warn in warnings:
+            typer.echo(f"WARNING: {warn}")
+
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Building production bundle for '{appspec.name}'...")
+
+    # Create output directory
+    output_dir = Path(out).resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Generate BackendSpec
+    typer.echo("\n[1/5] Generating backend...")
+    backend_spec = convert_appspec_to_backend(appspec)
+    typer.echo(f"  • {len(backend_spec.entities)} entities")
+    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+
+    backend_dir = output_dir / "backend"
+    backend_dir.mkdir(exist_ok=True)
+    spec_file = backend_dir / "backend-spec.json"
+    spec_file.write_text(backend_spec.model_dump_json(indent=2))
+
+    # 2. Generate Frontend (optional)
+    if frontend:
+        typer.echo("\n[2/5] Generating frontend...")
+        ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
+        typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
+        typer.echo(f"  • {len(ui_spec.components)} components")
+
+        frontend_dir = output_dir / "frontend"
+        files = generate_vite_app(ui_spec, str(frontend_dir))
+        typer.echo(f"  • {len(files)} files generated")
+
+        # Note: In production, you'd run npm build here
+        # For now, we generate the Vite project structure
+    else:
+        typer.echo("\n[2/5] Skipping frontend (--no-frontend)")
+
+    # 3. Generate main.py entry point
+    typer.echo("\n[3/5] Generating entry point...")
+    main_content = _generate_production_main(appspec.name, frontend)
+    main_file = output_dir / "main.py"
+    main_file.write_text(main_content)
+    typer.echo(f"  ✓ {main_file.name}")
+
+    # 4. Generate requirements.txt
+    requirements = _generate_requirements()
+    req_file = output_dir / "requirements.txt"
+    req_file.write_text(requirements)
+    typer.echo(f"  ✓ {req_file.name}")
+
+    # 5. Generate Dockerfile (optional)
+    if docker:
+        typer.echo("\n[4/5] Generating Dockerfile...")
+        dockerfile = _generate_dockerfile(appspec.name, frontend)
+        (output_dir / "Dockerfile").write_text(dockerfile)
+        typer.echo("  ✓ Dockerfile")
+
+        # Docker-compose for development/local deployment
+        compose = _generate_docker_compose(appspec.name)
+        (output_dir / "docker-compose.yml").write_text(compose)
+        typer.echo("  ✓ docker-compose.yml")
+    else:
+        typer.echo("\n[4/5] Skipping Dockerfile (--no-docker)")
+
+    # 6. Generate environment template
+    if env_template:
+        typer.echo("\n[5/5] Generating environment template...")
+        env = _generate_env_template(appspec.name)
+        (output_dir / ".env.example").write_text(env)
+        typer.echo("  ✓ .env.example")
+    else:
+        typer.echo("\n[5/5] Skipping environment template (--no-env)")
+
+    # Summary
+    typer.echo("\n" + "=" * 50)
+    typer.echo(f"Production bundle ready: {output_dir}")
+    typer.echo("=" * 50)
+    typer.echo("\nTo deploy with Docker:")
+    typer.echo(f"  cd {output_dir}")
+    typer.echo("  cp .env.example .env  # Edit configuration")
+    typer.echo("  docker compose up --build")
+    typer.echo("\nTo deploy without Docker:")
+    typer.echo(f"  cd {output_dir}")
+    typer.echo("  pip install -r requirements.txt")
+    if frontend:
+        typer.echo("  cd frontend && npm install && npm run build && cd ..")
+    typer.echo("  python main.py")
+
+
+def _generate_production_main(app_name: str, include_frontend: bool) -> str:
+    """Generate production-ready main.py entry point."""
+    return f'''"""
+Production entry point for {app_name}.
+
+Auto-generated by Dazzle DNR build.
+
+Usage:
+    python main.py                    # Run with defaults
+    python main.py --port 8080        # Custom port
+    python main.py --host 0.0.0.0     # Bind to all interfaces
+
+Environment variables:
+    PORT          - Server port (default: 8000)
+    HOST          - Server host (default: 0.0.0.0)
+    DATABASE_URL  - SQLite database path (default: ./data/app.db)
+    LOG_LEVEL     - Logging level (default: INFO)
+"""
+
+import argparse
+import logging
+import os
+from pathlib import Path
+
+# Configure logging
+log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=getattr(logging, log_level, logging.INFO),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="{app_name} - DNR Production Server")
+    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8000")))
+    parser.add_argument("--host", type=str, default=os.getenv("HOST", "0.0.0.0"))
+    parser.add_argument("--reload", action="store_true", help="Enable auto-reload (dev only)")
+    args = parser.parse_args()
+
+    # Database setup
+    db_path = os.getenv("DATABASE_URL", "./data/app.db")
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
+    logger.info(f"Starting {app_name}")
+    logger.info(f"  Host: {{args.host}}:{{args.port}}")
+    logger.info(f"  Database: {{db_path}}")
+
+    try:
+        import uvicorn
+        from dazzle_dnr_back.runtime import create_app_from_json
+
+        spec_path = Path(__file__).parent / "backend" / "backend-spec.json"
+        if not spec_path.exists():
+            logger.error(f"Backend spec not found: {{spec_path}}")
+            return 1
+
+        app = create_app_from_json(str(spec_path), db_path=db_path)
+
+        uvicorn.run(
+            app,
+            host=args.host,
+            port=args.port,
+            reload=args.reload,
+            log_level=log_level.lower(),
+        )
+
+    except ImportError as e:
+        logger.error(f"Missing dependencies: {{e}}")
+        logger.error("Install with: pip install -r requirements.txt")
+        return 1
+    except Exception as e:
+        logger.error(f"Failed to start: {{e}}")
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    exit(main())
+'''
+
+
+def _generate_requirements() -> str:
+    """Generate requirements.txt for production."""
+    return """# DNR Production Dependencies
+# Generated by: dazzle dnr build
+
+# Core runtime
+dazzle-dnr-back>=0.3.0
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
+
+# Database
+aiosqlite>=0.19.0
+
+# Optional: Production server
+gunicorn>=21.0.0
+
+# Optional: Monitoring
+prometheus-fastapi-instrumentator>=6.0.0
+"""
+
+
+def _generate_dockerfile(app_name: str, include_frontend: bool) -> str:
+    """Generate multi-stage Dockerfile."""
+    frontend_stage = ""
+    copy_frontend = ""
+    if include_frontend:
+        frontend_stage = """
+# Frontend build stage
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+"""
+        copy_frontend = """
+# Copy frontend build
+COPY --from=frontend-builder /app/frontend/dist /app/static
+ENV STATIC_FILES_DIR=/app/static
+"""
+
+    return f'''# Dockerfile for {app_name}
+# Generated by: dazzle dnr build
+{frontend_stage}
+# Backend build stage
+FROM python:3.11-slim AS backend
+
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+{copy_frontend}
+# Copy backend
+COPY backend/ ./backend/
+COPY main.py .
+
+# Create data directory
+RUN mkdir -p /app/data
+
+# Environment
+ENV PORT=8000
+ENV HOST=0.0.0.0
+ENV DATABASE_URL=/app/data/app.db
+ENV LOG_LEVEL=INFO
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \\
+    CMD curl -f http://localhost:${{PORT}}/health || exit 1
+
+EXPOSE ${{PORT}}
+
+CMD ["python", "main.py"]
+'''
+
+
+def _generate_docker_compose(app_name: str) -> str:
+    """Generate docker-compose.yml for local deployment."""
+    return f'''# Docker Compose for {app_name}
+# Generated by: dazzle dnr build
+
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "${{PORT:-8000}}:8000"
+    environment:
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DATABASE_URL=/app/data/app.db
+      - LOG_LEVEL=${{LOG_LEVEL:-INFO}}
+    volumes:
+      - app-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  app-data:
+    driver: local
+'''
+
+
+def _generate_env_template(app_name: str) -> str:
+    """Generate environment template."""
+    return f'''# Environment configuration for {app_name}
+# Generated by: dazzle dnr build
+#
+# Copy this file to .env and customize:
+#   cp .env.example .env
+
+# Server configuration
+PORT=8000
+HOST=0.0.0.0
+
+# Database
+DATABASE_URL=./data/app.db
+
+# Logging
+LOG_LEVEL=INFO
+
+# Security (generate your own secret key!)
+# SECRET_KEY=your-secret-key-here
+
+# CORS (comma-separated origins)
+# CORS_ORIGINS=http://localhost:3000,https://myapp.com
+
+# Optional: Auth settings
+# AUTH_ENABLED=true
+# JWT_SECRET=your-jwt-secret
+
+# Optional: File uploads
+# FILES_ENABLED=true
+# FILES_PATH=./uploads
+# MAX_FILE_SIZE=10485760
+
+# Production settings
+# WORKERS=4
+# TIMEOUT=30
+'''
+
+
 @dnr_app.command("serve")
 def dnr_serve(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),

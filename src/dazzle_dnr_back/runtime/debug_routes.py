@@ -59,6 +59,20 @@ class SystemHealth(BaseModel):
     timestamp: str
 
 
+class LivenessResponse(BaseModel):
+    """Liveness probe response (Kubernetes-style)."""
+
+    alive: bool
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness probe response (Kubernetes-style)."""
+
+    ready: bool
+    database: str
+    reason: str | None = None
+
+
 class SpecInfo(BaseModel):
     """Information about the loaded spec."""
 
@@ -121,6 +135,35 @@ def create_debug_routes(
             database=db_status,
             timestamp=datetime.now().isoformat(),
         )
+
+    @router.get("/live", response_model=LivenessResponse)
+    async def liveness_probe() -> LivenessResponse:
+        """
+        Kubernetes liveness probe.
+
+        Returns alive=true if the process is running.
+        Use for detecting if the container needs restart.
+        """
+        return LivenessResponse(alive=True)
+
+    @router.get("/ready", response_model=ReadinessResponse)
+    async def readiness_probe() -> ReadinessResponse:
+        """
+        Kubernetes readiness probe.
+
+        Returns ready=true if the application can handle traffic.
+        Checks database connectivity before returning ready.
+        """
+        try:
+            with db_manager.connection() as conn:
+                conn.execute("SELECT 1")
+            return ReadinessResponse(ready=True, database="ok")
+        except Exception as e:
+            return ReadinessResponse(
+                ready=False,
+                database="error",
+                reason=str(e),
+            )
 
     @router.get("/stats", response_model=RuntimeStats)
     async def runtime_stats() -> RuntimeStats:

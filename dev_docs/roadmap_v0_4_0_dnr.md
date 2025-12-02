@@ -1,6 +1,6 @@
 # DAZZLE v0.4.0 Roadmap - DNR: From Spec to Running App
 
-**Status**: Phase 2 Week 11-12 complete (Relationships & Queries)
+**Status**: Phase 3 Week 21-22 complete (Deployment & Distribution)
 **Target**: Q1 2025
 **Focus**: Make DNR actually run applications from DSL
 **Theme**: Vertical depth → Horizontal breadth → Meta tooling
@@ -433,23 +433,71 @@ Tasks:
   - Change count badges per action
   - Full payload inspection in expanded view
 
-### Week 19-20: Testing & Validation
+### Week 19-20: Testing & Validation ✅ COMPLETE
 
 Tasks:
-- [ ] Spec-based testing (`test` blocks in DSL)
-- [ ] Automated UI tests (Playwright integration)
-- [ ] API contract testing
-- [ ] Performance benchmarks
-- [ ] Accessibility checks
+- [x] Spec-based testing (`test` blocks in DSL)
+- [x] Automated UI tests (Playwright integration)
+- [x] API contract testing
+- [x] Performance benchmarks
+- [x] Accessibility checks
 
-### Week 21-22: Deployment & Distribution
+**Implementation Summary (Dec 2025)**:
+- **`dazzle dnr test` Command** (`src/dazzle/cli/dnr.py`):
+  - Unified testing command for DNR applications
+  - `--api-only` for API contract tests only
+  - `--e2e` for Playwright-based UI tests
+  - `--benchmark` for performance metrics
+  - `--a11y` for WCAG accessibility checks
+  - Auto-starts server in test mode
+  - JSON output with `-o results.json`
+
+- **API Contract Testing**:
+  - Tests health, spec, and CRUD endpoints
+  - Validates against BackendSpec definitions
+  - Dynamic test data generation per field type
+  - Checks available endpoints before testing
+
+- **Performance Benchmarks**:
+  - Cold start time measurement
+  - Latency percentiles (p50, p95, p99)
+  - Sequential throughput (100 requests)
+  - Concurrent throughput (50 requests, 10 workers)
+
+- **WCAG Accessibility Testing**:
+  - Integrates axe-core via Playwright
+  - Configurable level (A, AA, AAA)
+  - Maps violations to Dazzle entities/views
+  - Checks multiple pages from workspace routes
+
+### Week 21-22: Deployment & Distribution ✅ COMPLETE
 
 Tasks:
-- [ ] `dazzle dnr build` - production bundle
-- [ ] Docker image generation
-- [ ] Environment configuration
-- [ ] Database migrations for prod
-- [ ] Health monitoring
+- [x] `dazzle dnr build` - production bundle
+- [x] Docker image generation
+- [x] Environment configuration
+- [x] Database migrations for prod
+- [x] Health monitoring
+
+**Implementation Summary**:
+- `dazzle dnr build` command creates complete production bundles:
+  - Backend spec and static files
+  - Optional Vite frontend project
+  - Production `main.py` entry point with argparse, logging
+  - `requirements.txt` for dependencies
+  - Multi-stage `Dockerfile` with health checks
+  - `docker-compose.yml` for local deployment
+  - `.env.example` template for configuration
+- `dazzle dnr migrate` command for explicit database migrations:
+  - `--dry-run` to preview planned migrations
+  - `--db` to specify production database path
+  - Detection of safe vs destructive changes
+  - Migration history recording
+- Kubernetes-style health probes:
+  - `/_dnr/live` - liveness probe (process alive)
+  - `/_dnr/ready` - readiness probe (database connected)
+  - `/_dnr/health` - comprehensive health status
+  - `/_dnr/stats` - runtime statistics (uptime, entity counts)
 
 ### Meta Phase Success Criteria
 
