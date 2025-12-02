@@ -1403,3 +1403,552 @@ def _format_uptime(seconds: float) -> str:
         hours = int(seconds // 3600)
         mins = int((seconds % 3600) // 60)
         return f"{hours}h {mins}m"
+
+
+@dnr_app.command("test")
+def dnr_test(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    api_only: bool = typer.Option(
+        False,
+        "--api-only",
+        help="Run only API contract tests (no UI tests)",
+    ),
+    e2e: bool = typer.Option(
+        False,
+        "--e2e",
+        help="Run E2E tests with Playwright (requires app running or --start-server)",
+    ),
+    start_server: bool = typer.Option(
+        True,
+        "--start-server/--no-start-server",
+        help="Automatically start server for testing (default: true)",
+    ),
+    port: int = typer.Option(
+        8000,
+        "--port",
+        "-p",
+        help="API server port",
+    ),
+    ui_port: int = typer.Option(
+        3000,
+        "--ui-port",
+        help="UI server port (for E2E tests)",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Verbose output",
+    ),
+    output: str = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file for test results JSON",
+    ),
+) -> None:
+    """
+    Run tests for a DNR application.
+
+    This command provides comprehensive testing for DNR apps:
+    - API contract tests: Validates all endpoints against the spec
+    - E2E tests: Runs Playwright-based UI tests (with --e2e)
+
+    The server is automatically started in test mode for the duration of tests.
+
+    Examples:
+        dazzle dnr test                       # Run API tests (starts server)
+        dazzle dnr test --api-only            # Run only API contract tests
+        dazzle dnr test --e2e                 # Include E2E UI tests
+        dazzle dnr test --no-start-server     # Use already-running server
+        dazzle dnr test -o results.json       # Save results to file
+    """
+    import json as json_module
+    import subprocess
+    import sys
+    import time
+
+    # Load and build AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+
+        # Validate
+        errors, warnings = lint_appspec(appspec)
+        if errors:
+            typer.echo("Cannot run tests; spec has validation errors:", err=True)
+            for err in errors:
+                typer.echo(f"  ERROR: {err}", err=True)
+            raise typer.Exit(code=1)
+
+        for warn in warnings:
+            if verbose:
+                typer.echo(f"WARNING: {warn}")
+
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Convert to BackendSpec for API testing
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+    except ImportError as e:
+        typer.echo(f"DNR backend not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    backend_spec = convert_appspec_to_backend(appspec)
+
+    typer.echo(f"Testing DNR application: {appspec.name}")
+    typer.echo(f"  • {len(backend_spec.entities)} entities")
+    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    typer.echo()
+
+    # Start server if requested
+    server_process = None
+    api_url = f"http://localhost:{port}"
+
+    if start_server:
+        typer.echo("Starting DNR server in test mode...")
+        # Use subprocess to start the server
+        cmd = [
+            sys.executable,
+            "-m",
+            "dazzle.cli",
+            "dnr",
+            "serve",
+            "--local",
+            "--backend-only",
+            "--port",
+            str(port),
+            "--test-mode",
+            "-m",
+            str(manifest_path),
+        ]
+
+        server_process = subprocess.Popen(
+            cmd,
+            cwd=root,
+            stdout=subprocess.PIPE if not verbose else None,
+            stderr=subprocess.PIPE if not verbose else None,
+        )
+
+        # Wait for server to be ready
+        max_wait = 30.0
+        waited = 0.0
+        while waited < max_wait:
+            try:
+                import urllib.request
+
+                with urllib.request.urlopen(f"{api_url}/health", timeout=1) as resp:
+                    if resp.status == 200:
+                        break
+            except Exception:
+                pass
+            time.sleep(0.5)
+            waited += 0.5
+
+        if waited >= max_wait:
+            typer.echo("Server failed to start within timeout", err=True)
+            if server_process:
+                server_process.terminate()
+            raise typer.Exit(code=1)
+
+        typer.echo(f"  Server ready at {api_url}")
+        typer.echo()
+
+    results: dict[str, Any] = {
+        "app_name": appspec.name,
+        "api_tests": [],
+        "e2e_tests": [],
+        "summary": {
+            "api_passed": 0,
+            "api_failed": 0,
+            "e2e_passed": 0,
+            "e2e_failed": 0,
+        },
+    }
+
+    try:
+        # Run API contract tests
+        typer.echo("Running API contract tests...")
+        api_results = _run_api_contract_tests(
+            backend_spec, api_url, verbose
+        )
+        results["api_tests"] = api_results["tests"]
+        results["summary"]["api_passed"] = api_results["passed"]
+        results["summary"]["api_failed"] = api_results["failed"]
+
+        typer.echo(
+            f"  API tests: {api_results['passed']} passed, {api_results['failed']} failed"
+        )
+
+        # Run E2E tests if requested
+        if e2e and not api_only:
+            typer.echo()
+            typer.echo("Running E2E tests...")
+            e2e_results = _run_e2e_tests(
+                manifest_path, api_url, f"http://localhost:{ui_port}", verbose
+            )
+            results["e2e_tests"] = e2e_results["tests"]
+            results["summary"]["e2e_passed"] = e2e_results["passed"]
+            results["summary"]["e2e_failed"] = e2e_results["failed"]
+
+            typer.echo(
+                f"  E2E tests: {e2e_results['passed']} passed, {e2e_results['failed']} failed"
+            )
+
+    finally:
+        # Stop server if we started it
+        if server_process:
+            server_process.terminate()
+            try:
+                server_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server_process.kill()
+
+    # Summary
+    typer.echo()
+    total_passed = results["summary"]["api_passed"] + results["summary"]["e2e_passed"]
+    total_failed = results["summary"]["api_failed"] + results["summary"]["e2e_failed"]
+
+    if total_failed == 0:
+        typer.secho(f"✓ All {total_passed} tests passed!", fg=typer.colors.GREEN)
+    else:
+        typer.secho(
+            f"✗ {total_passed} passed, {total_failed} failed",
+            fg=typer.colors.RED,
+        )
+
+    # Output results to file
+    if output:
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json_module.dumps(results, indent=2))
+        typer.echo(f"Results saved to {output_path}")
+
+    if total_failed > 0:
+        raise typer.Exit(code=1)
+
+
+def _run_api_contract_tests(
+    backend_spec: BackendSpec,
+    api_url: str,
+    verbose: bool,
+) -> dict[str, Any]:
+    """Run API contract tests against the running server."""
+    import json as json_module
+    import urllib.error
+    import urllib.request
+
+    tests: list[dict[str, Any]] = []
+    passed = 0
+    failed = 0
+
+    def make_request(
+        method: str, path: str, data: dict[str, Any] | None = None
+    ) -> tuple[int, dict[str, Any] | None]:
+        """Make HTTP request and return status code and response."""
+        url = f"{api_url}{path}"
+        req = urllib.request.Request(url, method=method)
+        req.add_header("Content-Type", "application/json")
+
+        body = None
+        if data:
+            body = json_module.dumps(data).encode("utf-8")
+
+        try:
+            with urllib.request.urlopen(req, body, timeout=10) as resp:
+                response_data = json_module.loads(resp.read().decode())
+                return resp.status, response_data
+        except urllib.error.HTTPError as e:
+            try:
+                response_data = json_module.loads(e.read().decode())
+                return e.code, response_data
+            except Exception:
+                return e.code, None
+        except Exception as e:
+            if verbose:
+                typer.echo(f"    Request error: {e}")
+            return 0, None
+
+    # Test health endpoint
+    status, _ = make_request("GET", "/health")
+    test_result = {
+        "name": "health_endpoint",
+        "endpoint": "GET /health",
+        "passed": status == 200,
+        "status_code": status,
+    }
+    tests.append(test_result)
+    if status == 200:
+        passed += 1
+        if verbose:
+            typer.secho("  ✓ GET /health", fg=typer.colors.GREEN)
+    else:
+        failed += 1
+        if verbose:
+            typer.secho(f"  ✗ GET /health (status: {status})", fg=typer.colors.RED)
+
+    # Test spec endpoint
+    status, _ = make_request("GET", "/spec")
+    test_result = {
+        "name": "spec_endpoint",
+        "endpoint": "GET /spec",
+        "passed": status == 200,
+        "status_code": status,
+    }
+    tests.append(test_result)
+    if status == 200:
+        passed += 1
+        if verbose:
+            typer.secho("  ✓ GET /spec", fg=typer.colors.GREEN)
+    else:
+        failed += 1
+        if verbose:
+            typer.secho(f"  ✗ GET /spec (status: {status})", fg=typer.colors.RED)
+
+    # Build a set of endpoints that actually exist in the spec
+    available_endpoints: set[tuple[str, str]] = set()
+    for ep in backend_spec.endpoints:
+        available_endpoints.add((ep.method.value.upper(), ep.path))
+
+    # Test each entity's CRUD endpoints (only those defined in spec)
+    for entity in backend_spec.entities:
+        entity_name = entity.name
+        # Pluralize the entity name (simple s suffix for most cases)
+        plural_name = entity_name.lower() + "s"
+        base_path = f"/api/{plural_name}"
+
+        # Test LIST endpoint (only if defined)
+        if ("GET", base_path) not in available_endpoints:
+            continue  # Skip entities with no endpoints
+
+        status, response = make_request("GET", base_path)
+        # API returns {"items": [...], "total": N, ...} not a raw list
+        is_valid_list = (
+            status == 200
+            and isinstance(response, dict)
+            and "items" in response
+            and isinstance(response.get("items"), list)
+        )
+        test_result = {
+            "name": f"{entity_name}_list",
+            "endpoint": f"GET {base_path}",
+            "passed": is_valid_list,
+            "status_code": status,
+        }
+        tests.append(test_result)
+        if test_result["passed"]:
+            passed += 1
+            if verbose:
+                typer.secho(f"  ✓ GET {base_path}", fg=typer.colors.GREEN)
+        else:
+            failed += 1
+            if verbose:
+                typer.secho(f"  ✗ GET {base_path} (status: {status})", fg=typer.colors.RED)
+
+        # Test CREATE endpoint with minimal valid data
+        create_data = _generate_test_data(entity)
+        status, response = make_request("POST", base_path, create_data)
+        test_result = {
+            "name": f"{entity_name}_create",
+            "endpoint": f"POST {base_path}",
+            "passed": status in (200, 201),
+            "status_code": status,
+        }
+        tests.append(test_result)
+
+        created_id = None
+        if test_result["passed"] and response:
+            created_id = response.get("id")
+            passed += 1
+            if verbose:
+                typer.secho(f"  ✓ POST {base_path}", fg=typer.colors.GREEN)
+        else:
+            failed += 1
+            if verbose:
+                typer.secho(f"  ✗ POST {base_path} (status: {status})", fg=typer.colors.RED)
+
+        # Test GET by ID (if we created one)
+        if created_id:
+            status, response = make_request("GET", f"{base_path}/{created_id}")
+            test_result = {
+                "name": f"{entity_name}_get_by_id",
+                "endpoint": f"GET {base_path}/{{id}}",
+                "passed": status == 200,
+                "status_code": status,
+            }
+            tests.append(test_result)
+            if status == 200:
+                passed += 1
+                if verbose:
+                    typer.secho(f"  ✓ GET {base_path}/{{id}}", fg=typer.colors.GREEN)
+            else:
+                failed += 1
+                if verbose:
+                    typer.secho(
+                        f"  ✗ GET {base_path}/{{id}} (status: {status})",
+                        fg=typer.colors.RED,
+                    )
+
+            # Test UPDATE
+            update_data = _generate_test_data(entity, update=True)
+            status, _ = make_request("PUT", f"{base_path}/{created_id}", update_data)
+            test_result = {
+                "name": f"{entity_name}_update",
+                "endpoint": f"PUT {base_path}/{{id}}",
+                "passed": status == 200,
+                "status_code": status,
+            }
+            tests.append(test_result)
+            if status == 200:
+                passed += 1
+                if verbose:
+                    typer.secho(f"  ✓ PUT {base_path}/{{id}}", fg=typer.colors.GREEN)
+            else:
+                failed += 1
+                if verbose:
+                    typer.secho(
+                        f"  ✗ PUT {base_path}/{{id}} (status: {status})",
+                        fg=typer.colors.RED,
+                    )
+
+            # Test DELETE (only if defined in spec)
+            if ("DELETE", f"{base_path}/{{id}}") in available_endpoints:
+                status, _ = make_request("DELETE", f"{base_path}/{created_id}")
+                test_result = {
+                    "name": f"{entity_name}_delete",
+                    "endpoint": f"DELETE {base_path}/{{id}}",
+                    "passed": status in (200, 204),
+                    "status_code": status,
+                }
+                tests.append(test_result)
+                if test_result["passed"]:
+                    passed += 1
+                    if verbose:
+                        typer.secho(f"  ✓ DELETE {base_path}/{{id}}", fg=typer.colors.GREEN)
+                else:
+                    failed += 1
+                    if verbose:
+                        typer.secho(
+                            f"  ✗ DELETE {base_path}/{{id}} (status: {status})",
+                            fg=typer.colors.RED,
+                        )
+
+    return {"tests": tests, "passed": passed, "failed": failed}
+
+
+def _generate_test_data(
+    entity: Any,
+    update: bool = False,
+) -> dict[str, Any]:
+    """Generate minimal test data for an entity."""
+    from dazzle_dnr_back.specs.entity import ScalarType
+
+    data: dict[str, Any] = {}
+
+    for field in entity.fields:
+        # Skip auto-generated fields
+        if field.name == "id" or field.name.endswith("_at"):
+            continue
+
+        # Skip non-required fields for create, include for update
+        if not field.required and not update:
+            continue
+
+        # Generate appropriate test value based on type
+        scalar = field.type.scalar_type
+        if scalar in (ScalarType.STR, ScalarType.TEXT, ScalarType.EMAIL, ScalarType.URL):
+            data[field.name] = f"test_{field.name}" if not update else f"updated_{field.name}"
+        elif scalar == ScalarType.INT:
+            data[field.name] = 42 if not update else 43
+        elif scalar == ScalarType.DECIMAL:
+            data[field.name] = 3.14 if not update else 3.15
+        elif scalar == ScalarType.BOOL:
+            data[field.name] = True if not update else False
+        elif scalar == ScalarType.UUID:
+            import uuid
+
+            data[field.name] = str(uuid.uuid4())
+        elif scalar == ScalarType.DATETIME:
+            data[field.name] = "2024-01-01T00:00:00Z"
+        elif scalar == ScalarType.DATE:
+            data[field.name] = "2024-01-01"
+        elif field.type.kind == "enum" and field.type.enum_values:
+            data[field.name] = field.type.enum_values[0]
+
+    return data
+
+
+def _run_e2e_tests(
+    manifest_path: Path,
+    api_url: str,
+    base_url: str,
+    verbose: bool,
+) -> dict[str, Any]:
+    """Run E2E tests using existing test infrastructure."""
+    import subprocess
+    import sys
+
+    tests: list[dict[str, Any]] = []
+    passed = 0
+    failed = 0
+
+    # Run dazzle test run command
+    cmd = [
+        sys.executable,
+        "-m",
+        "dazzle.cli",
+        "test",
+        "run",
+        "-m",
+        str(manifest_path),
+        "--api-url",
+        api_url,
+        "--base-url",
+        base_url,
+        "--headless",
+    ]
+
+    if verbose:
+        cmd.append("--verbose")
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        # Parse output to count results
+        for line in result.stdout.split("\n"):
+            if "✓" in line:
+                passed += 1
+                flow_id = line.strip().replace("✓", "").strip()
+                tests.append({"flow_id": flow_id, "passed": True})
+            elif "✗" in line:
+                failed += 1
+                flow_id = line.strip().replace("✗", "").strip()
+                tests.append({"flow_id": flow_id, "passed": False})
+
+        if verbose and result.stdout:
+            typer.echo(result.stdout)
+        if verbose and result.stderr:
+            typer.echo(result.stderr, err=True)
+
+    except subprocess.TimeoutExpired:
+        typer.echo("E2E tests timed out", err=True)
+        failed += 1
+        tests.append({"flow_id": "timeout", "passed": False, "error": "Timeout"})
+    except FileNotFoundError:
+        typer.echo("Could not run E2E tests - dazzle CLI not found", err=True)
+        failed += 1
+        tests.append({"flow_id": "error", "passed": False, "error": "CLI not found"})
+
+    return {"tests": tests, "passed": passed, "failed": failed}

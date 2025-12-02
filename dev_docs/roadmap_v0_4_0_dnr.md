@@ -405,14 +405,33 @@ Tasks:
   - Auto-initialization in development mode
   - 528 lines of devtools UI
 
-### Week 17-18: Debugging & Visualization
+### Week 17-18: Debugging & Visualization ✅ COMPLETE
 
 Tasks:
-- [ ] `dazzle dnr inspect` - show running state
-- [ ] Action log (what happened)
-- [ ] State diff viewer
-- [ ] Layout plan visualizer
-- [ ] Component tree explorer
+- [x] `dazzle dnr inspect --live` - show running state from server
+- [x] Action log (what happened) with expandable details
+- [x] State diff viewer (integrated into action log)
+- [ ] Layout plan visualizer (deferred)
+- [ ] Component tree explorer (deferred)
+
+**Implementation Summary (Dec 2025)**:
+- **Debug Routes** (`src/dazzle_dnr_back/runtime/debug_routes.py`):
+  - `/_dnr/health` - System health check with database status
+  - `/_dnr/stats` - Runtime statistics (uptime, entity counts, total records)
+  - `/_dnr/spec` - Loaded specification info
+  - `/_dnr/entity/{name}` - Entity schema and sample data
+  - `/_dnr/tables` - Database table listing
+- **CLI Live Inspection** (`src/dazzle/cli/dnr.py`):
+  - `dazzle dnr inspect --live` - Query running server
+  - Tree view with status, uptime, entity record counts
+  - JSON/summary output formats
+  - Entity-specific inspection with sample data
+- **Enhanced DevTools Actions Tab** (`src/dazzle_dnr_ui/runtime/static/js/devtools.js`):
+  - Rich action entries with timestamp, name, payload preview
+  - Click to expand/collapse with state diff details
+  - Before→after visualization for each state change
+  - Change count badges per action
+  - Full payload inspection in expanded view
 
 ### Week 19-20: Testing & Validation
 
