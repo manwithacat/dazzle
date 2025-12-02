@@ -66,9 +66,7 @@ def _initialize_server(proc: subprocess.Popen) -> dict:
     )
 
     # Send initialized notification
-    proc.stdin.write(
-        json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-    )
+    proc.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
     proc.stdin.flush()
 
     return response
