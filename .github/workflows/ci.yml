@@ -352,18 +352,15 @@ jobs:
       fail-fast: false
       matrix:
         example:
-          - uptime_monitor
-          - inventory_scanner
-          - email_client
           - ops_dashboard
+          - support_tickets
+          - fieldtest_hub
         include:
-          - example: uptime_monitor
-            priority: medium
-          - example: inventory_scanner
-            priority: medium
-          - example: email_client
-            priority: low
           - example: ops_dashboard
+            priority: medium
+          - example: support_tickets
+            priority: medium
+          - example: fieldtest_hub
             priority: low
 
     steps:
