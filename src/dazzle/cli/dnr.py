@@ -1418,6 +1418,11 @@ def dnr_test(
         "--e2e",
         help="Run E2E tests with Playwright (requires app running or --start-server)",
     ),
+    benchmark: bool = typer.Option(
+        False,
+        "--benchmark",
+        help="Run performance benchmarks",
+    ),
     start_server: bool = typer.Option(
         True,
         "--start-server/--no-start-server",
@@ -1453,6 +1458,7 @@ def dnr_test(
     This command provides comprehensive testing for DNR apps:
     - API contract tests: Validates all endpoints against the spec
     - E2E tests: Runs Playwright-based UI tests (with --e2e)
+    - Benchmarks: Performance testing with latency/throughput metrics (with --benchmark)
 
     The server is automatically started in test mode for the duration of tests.
 
@@ -1460,6 +1466,7 @@ def dnr_test(
         dazzle dnr test                       # Run API tests (starts server)
         dazzle dnr test --api-only            # Run only API contract tests
         dazzle dnr test --e2e                 # Include E2E UI tests
+        dazzle dnr test --benchmark           # Run performance benchmarks
         dazzle dnr test --no-start-server     # Use already-running server
         dazzle dnr test -o results.json       # Save results to file
     """
@@ -1601,6 +1608,20 @@ def dnr_test(
             typer.echo(
                 f"  E2E tests: {e2e_results['passed']} passed, {e2e_results['failed']} failed"
             )
+
+        # Run benchmarks if requested
+        if benchmark:
+            typer.echo()
+            typer.echo("Running performance benchmarks...")
+            bench_results = _run_benchmarks(backend_spec, api_url, verbose)
+            results["benchmarks"] = bench_results
+
+            # Display benchmark summary
+            typer.echo(f"  Cold start:    {bench_results['cold_start_ms']:.0f}ms")
+            typer.echo(f"  Latency p50:   {bench_results['latency_p50_ms']:.1f}ms")
+            typer.echo(f"  Latency p95:   {bench_results['latency_p95_ms']:.1f}ms")
+            typer.echo(f"  Latency p99:   {bench_results['latency_p99_ms']:.1f}ms")
+            typer.echo(f"  Throughput:    {bench_results['throughput_rps']:.0f} req/s")
 
     finally:
         # Stop server if we started it
@@ -1952,3 +1973,122 @@ def _run_e2e_tests(
         tests.append({"flow_id": "error", "passed": False, "error": "CLI not found"})
 
     return {"tests": tests, "passed": passed, "failed": failed}
+
+
+def _run_benchmarks(
+    backend_spec: BackendSpec,
+    api_url: str,
+    verbose: bool,
+) -> dict[str, Any]:
+    """Run performance benchmarks against the running server."""
+    import statistics
+    import time
+    import urllib.request
+
+    results: dict[str, Any] = {
+        "cold_start_ms": 0.0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "latency_p99_ms": 0.0,
+        "throughput_rps": 0.0,
+        "sample_count": 0,
+        "latencies_ms": [],
+    }
+
+    # Find a list endpoint to benchmark
+    list_endpoint = None
+    for entity in backend_spec.entities:
+        plural_name = entity.name.lower() + "s"
+        list_endpoint = f"/api/{plural_name}"
+        break
+
+    if not list_endpoint:
+        list_endpoint = "/health"
+
+    # Measure cold start (time to first response after server start)
+    # This is approximate since server is already running
+    start = time.perf_counter()
+    try:
+        with urllib.request.urlopen(f"{api_url}{list_endpoint}", timeout=10):
+            pass
+    except Exception:
+        pass
+    cold_start = (time.perf_counter() - start) * 1000
+    results["cold_start_ms"] = cold_start
+
+    # Run latency benchmark (100 sequential requests)
+    latencies: list[float] = []
+    num_requests = 100
+
+    if verbose:
+        typer.echo(f"  Running {num_requests} sequential requests to {list_endpoint}...")
+
+    for _ in range(num_requests):
+        start = time.perf_counter()
+        try:
+            with urllib.request.urlopen(f"{api_url}{list_endpoint}", timeout=10):
+                pass
+            latency = (time.perf_counter() - start) * 1000
+            latencies.append(latency)
+        except Exception:
+            pass
+
+    if latencies:
+        latencies.sort()
+        results["sample_count"] = len(latencies)
+        results["latencies_ms"] = latencies
+
+        # Calculate percentiles
+        results["latency_p50_ms"] = statistics.median(latencies)
+
+        p95_idx = int(len(latencies) * 0.95)
+        results["latency_p95_ms"] = latencies[min(p95_idx, len(latencies) - 1)]
+
+        p99_idx = int(len(latencies) * 0.99)
+        results["latency_p99_ms"] = latencies[min(p99_idx, len(latencies) - 1)]
+
+        # Calculate throughput (requests per second)
+        total_time_s = sum(latencies) / 1000
+        if total_time_s > 0:
+            results["throughput_rps"] = len(latencies) / total_time_s
+
+    # Run concurrent throughput test if possible
+    try:
+        import concurrent.futures
+
+        concurrent_requests = 50
+        concurrent_latencies: list[float] = []
+
+        def make_request() -> float:
+            req_start = time.perf_counter()
+            try:
+                with urllib.request.urlopen(f"{api_url}{list_endpoint}", timeout=10):
+                    pass
+                return (time.perf_counter() - req_start) * 1000
+            except Exception:
+                return 0.0
+
+        if verbose:
+            typer.echo(f"  Running {concurrent_requests} concurrent requests...")
+
+        start = time.perf_counter()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(make_request) for _ in range(concurrent_requests)]
+            for future in concurrent.futures.as_completed(futures):
+                latency = future.result()
+                if latency > 0:
+                    concurrent_latencies.append(latency)
+        total_concurrent_time = time.perf_counter() - start
+
+        if concurrent_latencies and total_concurrent_time > 0:
+            # Concurrent throughput
+            concurrent_rps = len(concurrent_latencies) / total_concurrent_time
+            results["concurrent_throughput_rps"] = concurrent_rps
+            if verbose:
+                typer.echo(f"  Concurrent throughput: {concurrent_rps:.0f} req/s")
+
+    except Exception as e:
+        if verbose:
+            typer.echo(f"  Concurrent test skipped: {e}")
+
+    return results
