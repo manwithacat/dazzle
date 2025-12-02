@@ -58,4 +58,59 @@ def create_prompts() -> list[dict[str, Any]]:
             "description": "Suggest optimizations for DSL based on patterns and best practices",
             "arguments": [],
         },
+        {
+            "name": "getting_started",
+            "description": "Get a complete getting started guide for new DAZZLE users",
+            "arguments": [],
+        },
     ]
+
+
+# =============================================================================
+# System Context for Claude
+# =============================================================================
+
+DAZZLE_CONTEXT = """# DAZZLE Assistant Context
+
+You are helping a user work with DAZZLE, a DSL-first toolkit for building applications.
+
+## Quick Start
+```bash
+dazzle init my-app && cd my-app
+dazzle dnr serve
+# UI: http://localhost:3000 | API: http://localhost:8000/docs
+```
+
+## Key Concepts
+- **Entity**: Data model (like a database table)
+- **Surface**: UI definition for an entity (list, view, create, edit modes)
+- **Workspace**: Dashboard combining multiple data views
+- **Persona**: Role-based variants (admin, manager, member)
+- **Attention Signal**: Data-driven alerts (critical, warning, notice, info)
+
+## Primary Runtime
+DNR (Dazzle Native Runtime) runs apps directly from DSL - no code generation needed.
+Use `dazzle dnr serve` to run any DAZZLE project.
+
+## Available Tools
+When helping users, use these MCP tools:
+- `get_workflow_guide("getting_started")` - Complete beginner guide
+- `lookup_concept("patterns")` - List available DSL patterns with examples
+- `lookup_concept("<pattern>")` - Get specific pattern (crud, dashboard, etc.)
+- `get_cli_help("<command>")` - CLI command documentation
+- `validate_dsl` - Check project for errors
+
+## Common User Requests → Tool to Use
+- "How do I start?" → get_workflow_guide("getting_started")
+- "Add a new entity" → get_workflow_guide("add_entity")
+- "Create a dashboard" → get_workflow_guide("add_workspace") or lookup_concept("dashboard")
+- "Role-based access" → get_workflow_guide("add_personas") or lookup_concept("role_based_access")
+- "What patterns exist?" → lookup_concept("patterns")
+- "Run the app" → get_cli_help("dnr serve")
+- "Something is broken" → get_workflow_guide("troubleshoot")
+"""
+
+
+def get_dazzle_context() -> str:
+    """Return context string for Claude about DAZZLE."""
+    return DAZZLE_CONTEXT

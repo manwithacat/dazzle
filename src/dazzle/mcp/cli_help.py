@@ -391,6 +391,83 @@ def get_workflow_guide(workflow: str) -> dict[str, Any]:
         Step-by-step workflow guide
     """
     workflows = {
+        "getting_started": {
+            "name": "Getting Started with DAZZLE",
+            "description": "Complete beginner's guide to building your first DAZZLE app",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Create a new project",
+                    "command": "dazzle init my-app && cd my-app",
+                    "notes": "This creates dazzle.toml and dsl/app.dsl starter files",
+                },
+                {
+                    "step": 2,
+                    "action": "Understand the project structure",
+                    "explanation": """
+my-app/
+├── dazzle.toml    # Project manifest (name, version)
+├── dsl/
+│   └── app.dsl    # Your DSL definitions
+└── .dazzle/       # Runtime data (created on first run)
+    └── data.db    # SQLite database""",
+                },
+                {
+                    "step": 3,
+                    "action": "Edit the DSL file",
+                    "file": "dsl/app.dsl",
+                    "example": """module my_app
+app MyApp "My Application"
+
+# Define your data model
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  completed: bool=false
+  created_at: datetime auto_add
+
+# Define the UI
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+    field completed "Done"
+  ux:
+    purpose: "Track your daily tasks"
+    sort: created_at desc
+    empty: "No tasks yet. Create your first one!"
+
+surface task_create "New Task":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title" """,
+                },
+                {
+                    "step": 4,
+                    "action": "Validate your DSL",
+                    "command": "dazzle validate",
+                    "notes": "Fix any syntax errors before running",
+                },
+                {
+                    "step": 5,
+                    "action": "Run the application",
+                    "command": "dazzle dnr serve",
+                    "output": {
+                        "ui": "http://localhost:3000",
+                        "api": "http://localhost:8000/docs",
+                    },
+                    "notes": "DNR creates the database and runs both frontend and API",
+                },
+            ],
+            "next_steps": [
+                "Add more entities (use 'add_entity' workflow)",
+                "Create a dashboard workspace",
+                "Add personas for role-based access",
+                "Set up E2E testing (use 'setup_testing' workflow)",
+            ],
+        },
         "new_project": {
             "name": "Create a New DAZZLE Project",
             "steps": [
@@ -489,6 +566,207 @@ surface customer_create "New Customer":
                 },
             ],
         },
+        "add_workspace": {
+            "name": "Add a Dashboard Workspace",
+            "description": "Create a workspace that aggregates multiple data views",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Add workspace to DSL",
+                    "file": "dsl/app.dsl",
+                    "example": """workspace dashboard "Dashboard":
+  purpose: "Overview of all active tasks and team metrics"
+
+  # Recent urgent tasks
+  urgent_tasks:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc
+    limit: 5
+    action: task_edit
+    empty: "No urgent tasks!"
+
+  # Activity summary
+  recent_activity:
+    source: Task
+    filter: status = done
+    sort: completed_at desc
+    limit: 10
+    display: timeline
+
+  # Key metrics
+  metrics:
+    aggregate:
+      total_tasks: count(Task)
+      completed: count(Task where status = done)
+      overdue: count(Task where due_date < today and status != done)""",
+                },
+                {
+                    "step": 2,
+                    "action": "Validate",
+                    "command": "dazzle validate",
+                },
+                {
+                    "step": 3,
+                    "action": "Preview layout",
+                    "command": "dazzle layout-plan --explain",
+                    "notes": "See which archetype is selected and why",
+                },
+            ],
+            "archetypes": [
+                "FOCUS_METRIC - Single KPI with supporting data",
+                "SCANNER_TABLE - Data table for scanning records",
+                "DUAL_PANE_FLOW - List + detail side by side",
+                "MONITOR_WALL - Multiple signal regions",
+                "COMMAND_CENTER - Complex multi-region layout",
+            ],
+        },
+        "add_personas": {
+            "name": "Add Role-Based Access with Personas",
+            "description": "Define different views for admin, manager, and regular users",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Add personas to surface UX block",
+                    "file": "dsl/app.dsl",
+                    "example": """surface user_list "Users":
+  uses entity User
+  mode: list
+
+  section main:
+    field name
+    field email
+    field role
+
+  ux:
+    purpose: "Manage user accounts"
+
+    # Admin sees everything
+    for admin:
+      scope: all
+      action_primary: user_create
+      show_aggregate: total_users, active_count
+
+    # Manager sees their department
+    for manager:
+      scope: department = current_user.department
+      hide: salary, ssn
+      action_primary: user_invite
+
+    # Regular users see only themselves
+    for member:
+      scope: id = current_user.id
+      read_only: true""",
+                },
+                {
+                    "step": 2,
+                    "action": "Add personas to workspace",
+                    "example": """workspace dashboard "Dashboard":
+  purpose: "Team overview"
+
+  tasks:
+    source: Task
+
+  ux:
+    for admin:
+      scope: all
+      purpose: "Full system visibility"
+
+    for member:
+      scope: assigned_to = current_user
+      purpose: "Your personal tasks" """,
+                },
+            ],
+            "persona_directives": {
+                "scope": "Filter expression (all, owner = current_user, etc.)",
+                "purpose": "Persona-specific purpose statement",
+                "show": "Fields to display",
+                "hide": "Fields to hide",
+                "show_aggregate": "Metrics to display",
+                "action_primary": "Default action surface",
+                "read_only": "Disable editing (true/false)",
+            },
+        },
+        "add_relationships": {
+            "name": "Add Entity Relationships",
+            "description": "Connect entities with foreign key references",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Define related entities",
+                    "example": """entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+  owner: ref User required
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  project: ref Project required
+  assigned_to: ref User optional""",
+                },
+                {
+                    "step": 2,
+                    "action": "Show related data in surfaces",
+                    "example": """surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title
+    field project.name "Project"
+    field assigned_to.name "Assigned To" """,
+                },
+            ],
+            "relationship_types": {
+                "ref Entity required": "Must have a related record",
+                "ref Entity optional": "Can be null",
+                "ref Entity[]": "One-to-many (array of references)",
+            },
+        },
+        "add_attention_signals": {
+            "name": "Add Attention Signals",
+            "description": "Alert users to important conditions in their data",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Add attention blocks to surface UX",
+                    "example": """surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title
+    field status
+    field due_date
+
+  ux:
+    purpose: "Track task progress"
+
+    # Critical - action required immediately
+    attention critical:
+      when: due_date < today and status != done
+      message: "Overdue!"
+      action: task_edit
+
+    # Warning - needs attention soon
+    attention warning:
+      when: due_date = today and status != done
+      message: "Due today"
+
+    # Notice - informational
+    attention notice:
+      when: status = blocked
+      message: "Blocked - needs help" """,
+                },
+            ],
+            "levels": {
+                "critical": "Requires immediate action (red)",
+                "warning": "Needs attention soon (yellow/orange)",
+                "notice": "Worth noting (blue)",
+                "info": "Informational only (gray)",
+            },
+        },
         "troubleshoot": {
             "name": "Troubleshooting Common Issues",
             "issues": [
@@ -511,6 +789,14 @@ surface customer_create "New Customer":
                 {
                     "problem": "Tests fail to find elements",
                     "solution": "Check data-dazzle-* attributes, use --headed to debug",
+                },
+                {
+                    "problem": "Database locked",
+                    "solution": "Stop any running 'dazzle dnr serve' instances",
+                },
+                {
+                    "problem": "Changes not appearing",
+                    "solution": "Restart 'dazzle dnr serve' - hot reload coming in v0.3.3",
                 },
             ],
         },

@@ -123,13 +123,13 @@ def get_project_tools() -> list[Tool]:
         ),
         Tool(
             name="lookup_concept",
-            description="Look up DAZZLE DSL v0.2 concepts by name. Returns definition, syntax, examples, and related concepts. Use this when Dazzle-specific terminology is mentioned (persona, workspace, attention signal, ux block, etc.).",
+            description="Look up DAZZLE DSL v0.2 concepts OR patterns by name. Returns definition, syntax, examples, and copy-paste code. Use 'patterns' to list all available patterns (crud, dashboard, role_based_access, kanban_board, etc.).",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "term": {
                         "type": "string",
-                        "description": "DSL concept to look up (e.g., 'persona', 'workspace', 'attention signal')",
+                        "description": "DSL concept or pattern to look up (e.g., 'persona', 'workspace', 'crud', 'dashboard', 'patterns')",
                     }
                 },
                 "required": ["term"],
@@ -170,13 +170,13 @@ def get_project_tools() -> list[Tool]:
         ),
         Tool(
             name="get_workflow_guide",
-            description="Get step-by-step guide for common DAZZLE workflows like creating a project, adding entities, or setting up testing.",
+            description="Get step-by-step guide for common DAZZLE workflows. Use 'getting_started' for new users. Each workflow includes complete code examples.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "workflow": {
                         "type": "string",
-                        "description": "Workflow name: 'new_project', 'add_entity', 'setup_testing', or 'troubleshoot'",
+                        "description": "Workflow name: 'getting_started', 'new_project', 'add_entity', 'add_workspace', 'add_personas', 'add_relationships', 'add_attention_signals', 'setup_testing', or 'troubleshoot'",
                     }
                 },
                 "required": ["workflow"],

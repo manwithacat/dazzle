@@ -519,7 +519,7 @@ Content-Type: application/json
             },
         },
         # ================================================================
-        # Common Patterns
+        # Common Patterns with Copy-Paste Examples
         # ================================================================
         "patterns": {
             "crud": {
@@ -531,12 +531,52 @@ Content-Type: application/json
                     "{entity}_create (create mode)",
                     "{entity}_edit (edit mode)",
                 ],
-                "example_entity": "Task",
-                "example_surfaces": ["task_list", "task_detail", "task_create", "task_edit"],
+                "example": """# Complete CRUD for Task entity
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  description: text optional
+  status: enum[todo,in_progress,done]=todo
+  created_at: datetime auto_add
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title
+    field status
+  ux:
+    purpose: "View and manage all tasks"
+    sort: created_at desc
+    filter: status
+
+surface task_detail "Task Details":
+  uses entity Task
+  mode: view
+  section main:
+    field title
+    field description
+    field status
+    field created_at
+
+surface task_create "New Task":
+  uses entity Task
+  mode: create
+  section main:
+    field title
+    field description
+
+surface task_edit "Edit Task":
+  uses entity Task
+  mode: edit
+  section main:
+    field title
+    field description
+    field status""",
             },
             "dashboard": {
                 "name": "Dashboard Pattern",
-                "description": "Workspace aggregating multiple data views",
+                "description": "Workspace aggregating multiple data views with metrics",
                 "components": [
                     "Metrics/KPIs",
                     "Recent activity",
@@ -544,6 +584,34 @@ Content-Type: application/json
                     "Quick actions",
                 ],
                 "v0_2_feature": True,
+                "example": """# Team dashboard with metrics and activity
+workspace team_dashboard "Team Dashboard":
+  purpose: "Real-time team overview and key metrics"
+
+  # Urgent items needing attention
+  urgent_items:
+    source: Task
+    filter: priority = high and status != done
+    sort: due_date asc
+    limit: 5
+    action: task_edit
+    empty: "All caught up!"
+
+  # Recent completions
+  recent_done:
+    source: Task
+    filter: status = done
+    sort: completed_at desc
+    limit: 10
+    display: timeline
+
+  # Key performance metrics
+  metrics:
+    aggregate:
+      total: count(Task)
+      completed: count(Task where status = done)
+      in_progress: count(Task where status = in_progress)
+      completion_rate: round(count(Task where status = done) * 100 / count(Task), 1)""",
             },
             "role_based_access": {
                 "name": "Role-Based Access Pattern",
@@ -554,6 +622,201 @@ Content-Type: application/json
                     "Member: own records only",
                 ],
                 "v0_2_feature": True,
+                "example": """# Role-based access with personas
+surface ticket_list "Support Tickets":
+  uses entity Ticket
+  mode: list
+
+  section main:
+    field subject
+    field status
+    field assigned_to.name
+
+  ux:
+    purpose: "Manage support tickets by role"
+
+    # Admins see everything, can reassign
+    for admin:
+      scope: all
+      action_primary: ticket_assign
+      show_aggregate: total, open, resolved_today
+
+    # Agents see assigned + unassigned
+    for agent:
+      scope: assigned_to = current_user or assigned_to = null
+      action_primary: ticket_respond
+
+    # Customers see only their tickets
+    for customer:
+      scope: created_by = current_user
+      hide: internal_notes, assigned_to
+      read_only: true""",
+            },
+            "master_detail": {
+                "name": "Master-Detail Pattern",
+                "description": "Parent-child relationship with nested views",
+                "v0_2_feature": False,
+                "example": """# Project with nested tasks
+entity Project "Project":
+  id: uuid pk
+  name: str(200) required
+  status: enum[active,completed,archived]=active
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  project: ref Project required
+  status: enum[todo,done]=todo
+
+surface project_list "Projects":
+  uses entity Project
+  mode: list
+  section main:
+    field name
+    field status
+
+surface project_detail "Project":
+  uses entity Project
+  mode: view
+  section info:
+    field name
+    field status
+  section tasks "Tasks":
+    uses entity Task
+    filter: project = this
+    field title
+    field status""",
+            },
+            "kanban_board": {
+                "name": "Kanban Board Pattern",
+                "description": "Status-based workflow visualization",
+                "example": """# Kanban-style task board
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[backlog,todo,in_progress,review,done]=backlog
+  priority: enum[low,medium,high]=medium
+  assigned_to: ref User optional
+
+workspace kanban "Task Board":
+  purpose: "Visual workflow management"
+
+  backlog:
+    source: Task
+    filter: status = backlog
+    sort: priority desc
+    display: grid
+    action: task_edit
+
+  in_progress:
+    source: Task
+    filter: status = in_progress
+    sort: priority desc
+    display: grid
+
+  review:
+    source: Task
+    filter: status = review
+    sort: priority desc
+    display: grid
+
+  done:
+    source: Task
+    filter: status = done
+    sort: completed_at desc
+    limit: 20
+    display: grid""",
+            },
+            "audit_trail": {
+                "name": "Audit Trail Pattern",
+                "description": "Track who changed what and when",
+                "example": """# Entity with full audit fields
+entity Document "Document":
+  id: uuid pk
+  title: str(200) required
+  content: text
+  # Audit fields
+  created_by: ref User required
+  created_at: datetime auto_add
+  updated_by: ref User optional
+  updated_at: datetime auto_update
+  version: int=1
+
+surface document_history "Document History":
+  uses entity Document
+  mode: view
+  section main:
+    field title
+    field version
+  section audit "Audit Trail":
+    field created_by.name "Created By"
+    field created_at "Created At"
+    field updated_by.name "Last Updated By"
+    field updated_at "Last Updated At" """,
+            },
+            "search_filter": {
+                "name": "Search & Filter Pattern",
+                "description": "Full-text search with faceted filtering",
+                "v0_2_feature": True,
+                "example": """# Searchable product catalog
+entity Product "Product":
+  id: uuid pk
+  name: str(200) required
+  description: text
+  category: enum[electronics,clothing,home,other]
+  price: decimal(10,2)
+  in_stock: bool=true
+
+surface product_catalog "Products":
+  uses entity Product
+  mode: list
+
+  section main:
+    field name
+    field category
+    field price
+    field in_stock
+
+  ux:
+    purpose: "Browse and find products"
+    search: name, description
+    filter: category, in_stock
+    sort: name asc
+    empty: "No products match your search" """,
+            },
+            "notifications": {
+                "name": "Notifications Pattern",
+                "description": "Alert users to important events",
+                "v0_2_feature": True,
+                "example": """# Surface with attention signals
+surface order_list "Orders":
+  uses entity Order
+  mode: list
+
+  section main:
+    field order_number
+    field customer.name
+    field status
+    field total
+
+  ux:
+    purpose: "Process and fulfill orders"
+
+    # Payment failed - critical
+    attention critical:
+      when: payment_status = failed
+      message: "Payment failed!"
+      action: order_retry_payment
+
+    # Shipping delayed
+    attention warning:
+      when: days_since(shipped_at) > 5 and status = shipped
+      message: "Delayed shipment"
+
+    # New order
+    attention notice:
+      when: status = new and created_at > today
+      message: "New order today" """,
             },
         },
         # ================================================================
@@ -591,9 +854,37 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
     # Normalize term
     term_normalized = term.lower().replace(" ", "_").replace("-", "_")
 
-    # Direct lookup
+    # Direct lookup in concepts
     if term_normalized in index["concepts"]:
-        return {"term": term, "found": True, **index["concepts"][term_normalized]}
+        return {
+            "term": term,
+            "found": True,
+            "type": "concept",
+            **index["concepts"][term_normalized],
+        }
+
+    # Check patterns
+    if term_normalized in index["patterns"]:
+        return {
+            "term": term,
+            "found": True,
+            "type": "pattern",
+            **index["patterns"][term_normalized],
+        }
+
+    # Check if asking for "pattern" or "patterns" - return all patterns
+    if term_normalized in ("pattern", "patterns"):
+        pattern_list = [
+            {"name": name, "description": data.get("description")}
+            for name, data in index["patterns"].items()
+        ]
+        return {
+            "term": term,
+            "found": True,
+            "type": "pattern_list",
+            "patterns": pattern_list,
+            "hint": "Use lookup_concept with a specific pattern name (e.g., 'crud', 'dashboard') to get full example code",
+        }
 
     # Search in all concepts for partial matches
     matches = []
@@ -610,7 +901,35 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
                 }
             )
 
+    # Also search patterns
+    for pattern_name, pattern_data in index["patterns"].items():
+        if (
+            term_normalized in pattern_name
+            or term_normalized in pattern_data.get("description", "").lower()
+        ):
+            matches.append(
+                {
+                    "name": pattern_name,
+                    "type": "pattern",
+                    "description": pattern_data.get("description"),
+                }
+            )
+
     if matches:
         return {"term": term, "found": False, "suggestions": matches}
 
     return {"term": term, "found": False, "error": f"Concept '{term}' not found in semantic index"}
+
+
+def get_dsl_patterns() -> dict[str, Any]:
+    """
+    Get all available DSL patterns with examples.
+
+    Returns:
+        Dictionary of pattern names to their definitions and examples
+    """
+    index = get_semantic_index()
+    return {
+        "patterns": index["patterns"],
+        "hint": "Each pattern includes a complete, copy-paste ready example",
+    }

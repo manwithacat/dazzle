@@ -8,6 +8,35 @@ from pathlib import Path
 from typing import Any
 
 
+def create_static_resources() -> list[dict[str, Any]]:
+    """
+    Create static resources that are always available (not project-specific).
+
+    Returns:
+        List of static resource definitions
+    """
+    return [
+        {
+            "uri": "dazzle://docs/context",
+            "name": "DAZZLE Context",
+            "description": "Quick reference context for Claude - key concepts, tools, and common workflows",
+            "mimeType": "text/markdown",
+        },
+        {
+            "uri": "dazzle://docs/patterns",
+            "name": "DSL Patterns",
+            "description": "Common DSL patterns with copy-paste examples (CRUD, dashboard, role-based access, etc.)",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "dazzle://docs/workflows",
+            "name": "Workflow Guides",
+            "description": "Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
+            "mimeType": "application/json",
+        },
+    ]
+
+
 def create_resources(project_root: Path) -> list[dict[str, Any]]:
     """
     Create available resources for the MCP server.
@@ -18,32 +47,38 @@ def create_resources(project_root: Path) -> list[dict[str, Any]]:
     Returns:
         List of resource definitions with URI, name, and description
     """
-    resources = [
-        {
-            "uri": "dazzle://project/manifest",
-            "name": "Project Manifest",
-            "description": "dazzle.toml project configuration",
-            "mimeType": "text/plain",
-        },
-        {
-            "uri": "dazzle://modules",
-            "name": "Project Modules",
-            "description": "List of all modules and their dependencies",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dazzle://entities",
-            "name": "Project Entities",
-            "description": "All entity definitions in the project",
-            "mimeType": "application/json",
-        },
-        {
-            "uri": "dazzle://surfaces",
-            "name": "Project Surfaces",
-            "description": "All surface definitions in the project",
-            "mimeType": "application/json",
-        },
-    ]
+    # Start with static resources
+    resources = create_static_resources()
+
+    # Add project-specific resources
+    resources.extend(
+        [
+            {
+                "uri": "dazzle://project/manifest",
+                "name": "Project Manifest",
+                "description": "dazzle.toml project configuration",
+                "mimeType": "text/plain",
+            },
+            {
+                "uri": "dazzle://modules",
+                "name": "Project Modules",
+                "description": "List of all modules and their dependencies",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "dazzle://entities",
+                "name": "Project Entities",
+                "description": "All entity definitions in the project",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "dazzle://surfaces",
+                "name": "Project Surfaces",
+                "description": "All surface definitions in the project",
+                "mimeType": "application/json",
+            },
+        ]
+    )
 
     # Add DSL file resources
     dsl_dir = project_root / "dsl"

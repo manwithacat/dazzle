@@ -25,7 +25,7 @@ from pydantic import AnyUrl
 from dazzle.mcp.dnr_tools import DNR_TOOL_NAMES, handle_dnr_tool
 from dazzle.mcp.examples import get_example_metadata
 from dazzle.mcp.resources import create_resources
-from dazzle.mcp.semantics import get_semantic_index
+from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
 
 from .glossary import get_glossary
 from .state import (
@@ -214,6 +214,33 @@ async def list_resources() -> list[Resource]:
         )
     )
 
+    resources.append(
+        Resource(
+            uri=AnyUrl("dazzle://docs/context"),
+            name="DAZZLE Context",
+            description="Quick reference context for Claude - key concepts, tools, and common workflows",
+            mimeType="text/markdown",
+        )
+    )
+
+    resources.append(
+        Resource(
+            uri=AnyUrl("dazzle://docs/patterns"),
+            name="DSL Patterns",
+            description="Common DSL patterns with copy-paste examples (CRUD, dashboard, role-based access, etc.)",
+            mimeType="application/json",
+        )
+    )
+
+    resources.append(
+        Resource(
+            uri=AnyUrl("dazzle://docs/workflows"),
+            name="Workflow Guides",
+            description="Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
+            mimeType="application/json",
+        )
+    )
+
     # Add project-specific resources if we have an active project
     project_path = get_active_project_path()
     if project_path and (project_path / "dazzle.toml").exists():
@@ -262,6 +289,32 @@ async def read_resource(uri: str) -> str:
     # Example resources
     elif uri == "dazzle://examples/catalog":
         return json.dumps(get_example_metadata(), indent=2)
+
+    # Context and pattern resources
+    elif uri == "dazzle://docs/context":
+        from dazzle.mcp.prompts import get_dazzle_context
+
+        return get_dazzle_context()
+
+    elif uri == "dazzle://docs/patterns":
+        return json.dumps(get_dsl_patterns(), indent=2)
+
+    elif uri == "dazzle://docs/workflows":
+        from dazzle.mcp.cli_help import get_workflow_guide
+
+        workflows = [
+            "getting_started",
+            "new_project",
+            "add_entity",
+            "add_workspace",
+            "add_personas",
+            "add_relationships",
+            "add_attention_signals",
+            "setup_testing",
+            "troubleshoot",
+        ]
+        result = {name: get_workflow_guide(name) for name in workflows}
+        return json.dumps(result, indent=2)
 
     # Project resources
     elif uri.startswith("dazzle://project/"):
@@ -378,6 +431,18 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Opportunities for workspaces
    - Better use of UX semantics
 3. Suggest specific DSL improvements with before/after examples"""
+
+    elif name == "getting_started":
+        return """Help the user get started with DAZZLE:
+
+1. Use get_workflow_guide("getting_started") to get the complete guide
+2. Walk them through:
+   - Creating a new project with `dazzle init`
+   - Understanding the project structure
+   - Writing their first entity and surface in DSL
+   - Running with `dazzle dnr serve`
+3. Offer to help them customize the starter code for their use case
+4. Point them to lookup_concept("patterns") for common patterns they can use"""
 
     return f"Unknown prompt: {name}"
 
