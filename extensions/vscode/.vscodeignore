@@ -1,6 +1,8 @@
+# Development files
 .vscode/**
 .vscode-test/**
 src/**
+test/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
@@ -8,6 +10,28 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+test-build.sh
+
+# Old vsix files
+*.vsix
+
+# node_modules unnecessary files
 node_modules/**/test/**
+node_modules/**/tests/**
 node_modules/**/.bin
-test/**
+node_modules/**/README.md
+node_modules/**/readme.md
+node_modules/**/CHANGELOG.md
+node_modules/**/changelog.md
+node_modules/**/HISTORY.md
+node_modules/**/LICENSE
+node_modules/**/LICENSE.md
+node_modules/**/license
+node_modules/**/.npmignore
+node_modules/**/.travis.yml
+node_modules/**/.eslintrc*
+node_modules/**/tsconfig.json
+node_modules/**/*.d.ts.map
+node_modules/**/docs/**
+node_modules/**/example/**
+node_modules/**/examples/**
