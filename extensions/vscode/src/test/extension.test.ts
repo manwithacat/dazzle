@@ -157,3 +157,101 @@ suite('DAZZLE Extension Test Suite', () => {
         );
     });
 });
+
+/**
+ * LSP Server Tests
+ *
+ * These tests verify the Python LSP server starts correctly.
+ * They run outside VS Code's extension host to test the server directly.
+ */
+suite('DAZZLE LSP Server Tests', () => {
+    const child_process = require('child_process');
+
+    test('LSP server should start without RuntimeWarning', function(done) {
+        this.timeout(10000);
+
+        // Spawn the LSP server briefly to check for warnings
+        const proc = child_process.spawn('python3', ['-m', 'dazzle.lsp'], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        let stderr = '';
+        proc.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+        });
+
+        // Give it a moment to start, then kill it
+        setTimeout(() => {
+            proc.kill();
+        }, 2000);
+
+        proc.on('close', () => {
+            // Check for the specific warning about module double-loading
+            if (stderr.includes('found in sys.modules after import')) {
+                done(new Error(
+                    'LSP server produced RuntimeWarning about module loading. ' +
+                    'This indicates the wrong entry point is being used. ' +
+                    'Use "python -m dazzle.lsp" not "python -m dazzle.lsp.server"'
+                ));
+            } else {
+                done();
+            }
+        });
+
+        proc.on('error', (err: Error) => {
+            // Server not available is OK - we're testing the startup behavior
+            if (err.message.includes('ENOENT')) {
+                console.log('python3 not found, skipping LSP server test');
+                done();
+            } else {
+                done(err);
+            }
+        });
+    });
+
+    test('LSP server should not register features twice', function(done) {
+        this.timeout(10000);
+
+        const proc = child_process.spawn('python3', ['-m', 'dazzle.lsp'], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        let stderr = '';
+        proc.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+        });
+
+        setTimeout(() => {
+            proc.kill();
+        }, 2000);
+
+        proc.on('close', () => {
+            // Count how many times 'initialize' feature was registered
+            const initializeCount = (stderr.match(/Registered "initialize"/g) || []).length;
+            const hoverCount = (stderr.match(/Registered "textDocument\/hover"/g) || []).length;
+
+            if (initializeCount > 1) {
+                done(new Error(
+                    `Feature "initialize" was registered ${initializeCount} times (expected 1). ` +
+                    'This indicates duplicate module loading in the LSP server.'
+                ));
+            } else if (hoverCount > 1) {
+                done(new Error(
+                    `Feature "textDocument/hover" was registered ${hoverCount} times (expected 1). ` +
+                    'This indicates duplicate module loading in the LSP server.'
+                ));
+            } else {
+                done();
+            }
+        });
+
+        proc.on('error', (err: Error) => {
+            if (err.message.includes('ENOENT')) {
+                console.log('python3 not found, skipping LSP server test');
+                done();
+            } else {
+                done(err);
+            }
+        });
+    });
+});
