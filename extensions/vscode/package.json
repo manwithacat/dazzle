@@ -86,7 +86,10 @@
         },
         "dazzle.llm.provider": {
           "type": "string",
-          "enum": ["anthropic", "openai"],
+          "enum": [
+            "anthropic",
+            "openai"
+          ],
           "default": "anthropic",
           "description": "LLM provider for spec analysis (anthropic or openai)"
         },
@@ -97,7 +100,7 @@
         },
         "dazzle.llm.maxCostPerAnalysis": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "description": "Maximum cost per spec analysis in USD (warning shown if exceeded)"
         }
       }
@@ -166,19 +169,27 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run esbuild-base -- --production",
+    "esbuild-base": "node esbuild.js",
+    "esbuild": "npm run esbuild-base -- --sourcemap",
+    "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
     "compile": "tsc -p ./",
+    "compile-tests": "tsc -p ./tsconfig.test.json",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile",
-    "test": "node ./out/test/runTest.js",
+    "pretest": "npm run compile && npm run compile-tests",
+    "test": "vscode-test",
+    "test:integration": "vscode-test",
+    "lint": "tsc --noEmit",
     "package": "vsce package"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.80.0",
+    "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.3.0",
     "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.27.0",
     "glob": "^11.0.0",
     "mocha": "^11.0.0",
     "typescript": "^5.0.0"
