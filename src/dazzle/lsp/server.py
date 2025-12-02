@@ -80,22 +80,43 @@ def initialize(ls: DazzleLanguageServer, params: InitializeParams) -> Any:
             logger.error(f"Failed to load project: {e}")
 
 
-def _load_project(ls: DazzleLanguageServer) -> None:
-    """Load DAZZLE project and build AppSpec."""
-    if not ls.workspace_root:
+def _find_project_root(start_path: Path) -> Path | None:
+    """Find the nearest directory containing dazzle.toml, searching upward."""
+    current = start_path if start_path.is_dir() else start_path.parent
+    while current != current.parent:  # Stop at filesystem root
+        if (current / "dazzle.toml").exists():
+            return current
+        current = current.parent
+    return None
+
+
+def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> None:
+    """Load DAZZLE project and build AppSpec.
+
+    Args:
+        ls: Language server instance
+        file_path: Optional file path to search from (for finding project root)
+    """
+    # Try to find project root from file path first, then workspace root
+    project_root = None
+    if file_path:
+        project_root = _find_project_root(file_path)
+    if not project_root and ls.workspace_root:
+        project_root = _find_project_root(ls.workspace_root)
+
+    if not project_root:
+        if ls.workspace_root:
+            logger.warning(f"No dazzle.toml found in {ls.workspace_root} or parent directories")
         return
 
-    manifest_path = ls.workspace_root / "dazzle.toml"
-    if not manifest_path.exists():
-        logger.warning(f"No dazzle.toml found in {ls.workspace_root}")
-        return
+    manifest_path = project_root / "dazzle.toml"
 
     try:
         mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(ls.workspace_root, mf)
+        dsl_files = discover_dsl_files(project_root, mf)
         modules = parse_modules(dsl_files)
         ls.appspec = build_appspec(modules, mf.project_root)
-        logger.info(f"Loaded project with {len(ls.appspec.domain.entities)} entities")
+        logger.info(f"Loaded project from {project_root} with {len(ls.appspec.domain.entities)} entities")
     except Exception as e:
         logger.error(f"Error loading project: {e}")
         ls.appspec = None
@@ -106,13 +127,19 @@ def did_open(ls: DazzleLanguageServer, params: DidOpenTextDocumentParams) -> Non
     """Handle document open."""
     logger.info(f"Opened: {params.text_document.uri}")
 
+    # If we don't have an appspec yet, try to load from this file's location
+    if not ls.appspec:
+        file_path = Path(params.text_document.uri.replace("file://", ""))
+        _load_project(ls, file_path)
+
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls: DazzleLanguageServer, params: DidChangeTextDocumentParams) -> None:
     """Handle document change."""
     # Reload project on change
     try:
-        _load_project(ls)
+        file_path = Path(params.text_document.uri.replace("file://", ""))
+        _load_project(ls, file_path)
     except Exception as e:
         logger.error(f"Error reloading project: {e}")
 
@@ -123,7 +150,8 @@ def did_save(ls: DazzleLanguageServer, params: DidSaveTextDocumentParams) -> Non
     logger.info(f"Saved: {params.text_document.uri}")
     # Reload project on save
     try:
-        _load_project(ls)
+        file_path = Path(params.text_document.uri.replace("file://", ""))
+        _load_project(ls, file_path)
     except Exception as e:
         logger.error(f"Error reloading project: {e}")
 
