@@ -314,6 +314,24 @@ entity MyEntity:
   deleted_by: ref User optional
 ```
 
+### Access Control Pattern (v0.5.0+)
+
+```dsl
+# Inline access rules for read/write permissions
+entity Task:
+  id: uuid pk
+  title: str(200) required
+  owner_id: ref User required
+  is_public: bool=false
+
+  access:
+    read: owner_id = current_user or is_public = true
+    write: owner_id = current_user
+
+# read: maps to visibility rules (who can see records)
+# write: maps to create/update/delete permissions
+```
+
 ---
 
 ## Reserved Keywords
@@ -323,7 +341,8 @@ entity MyEntity:
 ```
 app, module, entity, surface, experience, service,
 foreign_model, integration, test, use, section,
-field, action, true, false, null, none
+field, action, true, false, null, none,
+access, read, write, visible, permissions
 ```
 
 ### Project Name Validation

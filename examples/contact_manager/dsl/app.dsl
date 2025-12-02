@@ -1,5 +1,5 @@
-# DAZZLE Contact Manager - DUAL_PANE_FLOW Archetype Example
-# Demonstrates list + detail pattern with explicit display modes
+# DAZZLE Contact Manager
+# Demonstrates DUAL_PANE_FLOW archetype with list + detail pattern
 
 module contact_manager.core
 
@@ -22,32 +22,105 @@ entity Contact "Contact":
   index email
   index last_name,first_name
 
-# Workspace with list + detail signals
-# Should trigger DUAL_PANE_FLOW archetype
+# List view - browsable contact directory
+surface contact_list "Contact List":
+  uses entity Contact
+  mode: list
+
+  section main "Contacts":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email"
+    field company "Company"
+    field is_favorite "Favorite"
+
+  ux:
+    purpose: "Browse and search contacts"
+    sort: last_name asc, first_name asc
+    filter: is_favorite
+    search: first_name, last_name, email, company
+    empty: "No contacts yet. Add your first contact!"
+
+# Detail view - full contact information
+surface contact_detail "Contact Detail":
+  uses entity Contact
+  mode: view
+
+  section main "Contact Details":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email"
+    field phone "Phone"
+    field company "Company"
+    field job_title "Job Title"
+    field notes "Notes"
+    field is_favorite "Favorite"
+    field created_at "Created"
+    field updated_at "Updated"
+
+  ux:
+    purpose: "View complete contact information"
+
+# Create form
+surface contact_create "Create Contact":
+  uses entity Contact
+  mode: create
+
+  section main "New Contact":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email"
+    field phone "Phone"
+    field company "Company"
+    field job_title "Job Title"
+    field notes "Notes"
+
+  ux:
+    purpose: "Add a new contact"
+
+# Edit form
+surface contact_edit "Edit Contact":
+  uses entity Contact
+  mode: edit
+
+  section main "Edit Contact":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email"
+    field phone "Phone"
+    field company "Company"
+    field job_title "Job Title"
+    field notes "Notes"
+    field is_favorite "Favorite"
+
+  ux:
+    purpose: "Update contact information"
+
+# Workspace with list + detail pattern
+# Demonstrates DUAL_PANE_FLOW archetype selection
 workspace contacts "Contacts":
   purpose: "Browse contacts and view details"
 
   # List signal - browsable contact list
   contact_list:
     source: Contact
+    sort: last_name asc, first_name asc
     limit: 20
+    display: list
+    action: contact_detail
     # Weight: 0.5 (base) + 0.1 (limit) = 0.6 (ITEM_LIST)
 
   # Detail signal - selected contact details
-  # NEW in v0.3.0: display: detail creates DETAIL_VIEW signal
   contact_detail:
     source: Contact
     display: detail
+    action: contact_edit
     # Weight: 0.5 (base) + 0.2 (detail) = 0.7 (DETAIL_VIEW)
 
 # Archetype Selection:
 # - list_weight = 0.6 >= 0.3 ✓
 # - detail_weight = 0.7 >= 0.3 ✓
 # → DUAL_PANE_FLOW archetype selected
-#
-# Surfaces Allocated:
-# - list (priority 1, capacity 0.6) → contact_list
-# - detail (priority 2, capacity 0.8) → contact_detail
 #
 # Layout:
 # Desktop: Side-by-side list and detail panes

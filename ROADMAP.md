@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-02
-**Current Version**: v0.4.0
+**Current Version**: v0.5.0
 **Status**: DNR is primary runtime with full deployment tooling
 
 ---
@@ -297,58 +297,58 @@ Tests are generated from the same AppSpec that generates the app. Tests operate 
 
 ---
 
-### v0.5.0 - Advanced DSL Features (Q2 2026)
+### v0.5.0 - Advanced DSL Features ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: DSL language enhancements for complex apps
 
-**Planned Features**:
+**Delivered**:
 
-#### Component Roles
-```dsl
-component TaskCard:
-  role: presentational
-  props:
-    task: Task
-    onEdit: action
-```
-
-#### Action Purity (Explicit)
-```dsl
-actions:
-  toggleFilter: pure
-    filter = not filter
-
-  saveTask: impure
-    effect: fetch POST /tasks body=currentTask
-```
-
-#### Access Rules (Inline)
+#### Inline Access Rules (COMPLETE) ✅
 ```dsl
 entity Task:
   access:
     read: owner = current_user or shared = true
     write: owner = current_user
 ```
+- Parser support for `access:` block with `read:` and `write:` rules
+- `read:` maps to VisibilityRule for authenticated users
+- `write:` maps to CREATE, UPDATE, DELETE PermissionRules
+- ACCESS, READ, WRITE tokens added to lexer
+- Keywords can still be used as enum values (backward compatible)
+- 8 unit tests in `test_access_rules.py`
 
-**Estimate**: 8-10 weeks
+#### Component Roles (COMPLETE) ✅
+```dsl
+component TaskCard:
+  role: presentational  # or container
+```
+- ComponentRole enum: PRESENTATIONAL, CONTAINER
+- `role` field on ComponentSpec with auto-inference
+- `is_presentational` property: True if no state and no impure actions
+- `is_container` property: True if has state or impure actions
+- Explicit role overrides inference
+- 13 unit tests in `test_component_roles.py`
+
+#### Action Purity (COMPLETE) ✅
+```dsl
+actions:
+  toggleFilter: pure
+  saveTask: impure
+```
+- ActionPurity enum: PURE, IMPURE
+- `purity` field on ActionSpec with auto-inference
+- `is_pure` property: True if no effect
+- `is_impure` property: True if has effect (fetch, navigate, etc.)
+- Explicit purity overrides inference
+- 14 unit tests in `test_action_purity.py`
+
+**Test Results**: 530 tests pass (35 new tests, no regressions)
 
 ---
 
-### v0.6.0 - Multi-Platform (Q3 2026)
-
-**Focus**: Beyond web applications
-
-**Planned Features**:
-- React Native runtime (mobile)
-- Desktop app packaging (Electron/Tauri)
-- Offline-first patterns
-- Cross-platform sync
-
-**Estimate**: 10-12 weeks
-
----
-
-### v0.7.0 - GraphQL BFF Layer (Q4 2026)
+### v0.6.0 - GraphQL BFF Layer (Q3 2026)
 
 **Focus**: API aggregation and external service facade
 
@@ -384,7 +384,7 @@ dazzle dnr inspect --schema   # View generated schema
 
 ---
 
-### v0.8.0 - Full GraphQL Builder (Q1 2027)
+### v0.7.0 - Full GraphQL Builder (Q4 2026)
 
 **Focus**: Auto-generate GraphQL from BackendSpec
 
@@ -398,7 +398,7 @@ dazzle dnr inspect --schema   # View generated schema
 
 ---
 
-### v1.0.0 - Dazzle Orchestrator Control Plane (Q2 2027)
+### v1.0.0 - Dazzle Orchestrator Control Plane (Q1 2027)
 
 **Focus**: Hosted control plane for production app management
 
@@ -448,6 +448,22 @@ This is a **major version** representing the shift from CLI tool to hosted platf
 
 ---
 
+### v1.1.0 - Multi-Platform (Q2 2027)
+
+**Focus**: Beyond web applications
+
+**Planned Features**:
+- React Native runtime (mobile)
+- Desktop app packaging (Electron/Tauri)
+- Offline-first patterns
+- Cross-platform sync
+
+**Rationale**: Multi-platform support is deferred until after the Control Plane is established, as the orchestration layer will provide the deployment and management infrastructure needed for mobile and desktop apps.
+
+**Estimate**: 10-12 weeks
+
+---
+
 ## Deprecated Features
 
 The following are **deprecated** as of v0.3.0 in favor of DNR:
@@ -484,6 +500,16 @@ For detailed phase planning, see:
 ---
 
 ## Success Metrics
+
+### v0.5.0 Success Criteria ✅ ALL MET
+
+- [x] Inline access rules in entity definitions
+- [x] `access:` block parsing with `read:` and `write:` rules
+- [x] Component roles (presentational/container) with inference
+- [x] Action purity (pure/impure) with inference
+- [x] All features backward compatible
+- [x] 35 new unit tests, 530 total passing
+- [x] No regressions from v0.4.0
 
 ### v0.4.0 Success Criteria ✅ ALL MET
 
@@ -533,11 +559,25 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 **Document Owner**: Claude + James
 **Last Review**: 2025-12-02
-**Next Review**: Q1 2026 (planning v0.5.0)
+**Next Review**: Q2 2026 (planning v0.6.0)
 
 ---
 
 ## Changelog
+
+### 2025-12-02 (v0.5.0 Release)
+- **v0.5.0 COMPLETE**: All Advanced DSL Features delivered
+- Inline Access Rules: `access:` block with `read:`/`write:` rules
+- Component Roles: presentational/container with auto-inference
+- Action Purity: pure/impure with auto-inference
+- 35 new tests (8 access rules + 13 component roles + 14 action purity)
+- 530 total tests passing, no regressions
+- Updated current version to v0.5.0
+- **Roadmap restructure**: Multi-Platform moved to v1.1.0 (after Control Plane)
+  - v0.6.0: GraphQL BFF Layer (was v0.7.0)
+  - v0.7.0: Full GraphQL Builder (was v0.8.0)
+  - v1.0.0: Control Plane (unchanged)
+  - v1.1.0: Multi-Platform (was v0.6.0)
 
 ### 2025-12-02 (Evening)
 - Added future roadmap items v0.7.0, v0.8.0, v1.0.0

@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2025-12-02
+
+### Added
+
+**Advanced DSL Features**:
+
+- **Inline Access Rules**:
+  - New `access:` block syntax in entity definitions
+  - `read:` rule for visibility/view access control
+  - `write:` rule for create/update/delete permissions
+  - Parser support with ACCESS, READ, WRITE tokens
+  - Backward compatible - keywords can still be used as enum values
+  - Maps to existing AccessSpec, VisibilityRule, PermissionRule IR types
+  - 8 unit tests in `tests/unit/test_access_rules.py`
+
+- **Component Roles** (UISpec):
+  - New `ComponentRole` enum: PRESENTATIONAL, CONTAINER
+  - `role` field on ComponentSpec with auto-inference
+  - `is_presentational` property: True if no state and no impure actions
+  - `is_container` property: True if has state or impure actions
+  - Explicit role annotation overrides inference
+  - 13 unit tests in `tests/unit/test_component_roles.py`
+
+- **Action Purity** (UISpec):
+  - New `ActionPurity` enum: PURE, IMPURE
+  - `purity` field on ActionSpec with auto-inference
+  - `is_pure` property: True if no effect
+  - `is_impure` property: True if has effect (fetch, navigate, log, toast, custom)
+  - Explicit purity annotation overrides inference
+  - 14 unit tests in `tests/unit/test_action_purity.py`
+
+### Changed
+
+- DSL Quick Reference updated with access control pattern
+- Reserved keywords list updated (access, read, write)
+
+### Status
+- **v0.5.0**: Complete ✅
+- **Test Results**: 530 tests pass (35 new, no regressions from 495 baseline)
+- **Next**: v0.6.0 - GraphQL BFF Layer (Q3 2026)
+
+---
+
 ## [0.4.0] - 2025-12-02
 
 ### Added

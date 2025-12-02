@@ -1,166 +1,164 @@
-# Contact Manager - DUAL_PANE_FLOW Example
+# Contact Manager
 
-This example demonstrates the **DUAL_PANE_FLOW** archetype, which provides a master-detail interface for browsing items and viewing detailed information.
+> **Complexity**: Beginner+ | **Entities**: 1 | **DSL Lines**: ~55
 
-## Archetype: DUAL_PANE_FLOW
+A personal contact management app demonstrating the **DUAL_PANE_FLOW** archetype with master-detail interface. This example builds on `simple_task` by introducing signal weighting and layout archetypes.
 
-**Purpose**: Browse list of items while viewing details of selected item
+## Quick Start
 
-**Best For**:
-- Contact managers
-- Email clients
-- File browsers
-- Item catalogs with details
+```bash
+cd examples/contact_manager
+dazzle dnr serve
+```
 
-## Features
+- **UI**: http://localhost:3000
+- **API**: http://localhost:8000/docs
 
-### Entity: Contact
-- Personal information (name, email, phone)
-- Professional details (company, job title)
-- Notes and favorites
-- Automatic timestamps
+## What This Example Demonstrates
 
-### Workspace: Contacts
-Two complementary signals create the dual-pane interface:
+### DSL Features
 
-1. **contact_list** (ITEM_LIST signal)
-   - Displays all contacts in a browsable list
-   - Sorted alphabetically by last name, first name
-   - Limited to 20 items for performance
-   - Weight: 0.6 (base 0.5 + limit 0.1)
+| Feature | Usage |
+|---------|-------|
+| **Email Field Type** | `email: email unique required` with validation |
+| **Indexes** | Multi-column index: `index last_name,first_name` |
+| **Workspace Signals** | List + detail dual-signal pattern |
+| **Display Mode** | `display: detail` creates DETAIL_VIEW signal |
+| **Archetype Selection** | DUAL_PANE_FLOW from signal weighting |
 
-2. **contact_detail** (DETAIL_VIEW signal)
-   - Shows full details of selected contact
-   - Uses new `display: detail` syntax (v0.3.0)
-   - Weight: 0.7 (base 0.5 + detail 0.2)
+### Building on simple_task
 
-## Archetype Selection
+This example adds:
+1. **Unique constraints** - Email must be unique across contacts
+2. **Database indexes** - For efficient alphabetical sorting
+3. **Workspace archetypes** - Layout determined by signal weights
+4. **Signal weighting** - `display: detail` adds +0.2 to weight
 
-**Why DUAL_PANE_FLOW?**
+## The DUAL_PANE_FLOW Archetype
 
-The selection algorithm checks:
-- ✅ list_weight (0.6) ≥ 0.3
-- ✅ detail_weight (0.7) ≥ 0.3
-- Result: **DUAL_PANE_FLOW** archetype
+This archetype provides a master-detail interface:
 
-**Alternative Archetypes**:
-- If only contact_list: **SCANNER_TABLE** (single table)
-- If 3+ additional signals: **MONITOR_WALL** (multiple metrics)
-
-## UI Layout
-
-### Desktop
 ```
 ┌─────────────────────────────────────────┐
 │ Contacts                                │
 ├──────────────┬──────────────────────────┤
 │ Contact List │ Contact Details          │
 │              │                          │
-│ □ Alice A.   │ Alice Anderson           │
-│ ■ Bob B.     │ alice@example.com        │
-│ □ Carol C.   │ (555) 123-4567          │
-│ □ Dave D.    │                          │
-│ ...          │ Company: Acme Corp       │
+│ □ Alice A.   │ Bob Brown                │
+│ ■ Bob B.     │ bob@example.com          │
+│ □ Carol C.   │ (555) 123-4567           │
+│ ...          │                          │
+│              │ Company: Acme Corp       │
 │              │ Title: Engineer          │
-│              │                          │
-│              │ Notes:                   │
-│              │ Team lead for project X  │
 └──────────────┴──────────────────────────┘
 ```
 
-### Mobile
+### Archetype Selection
+
+The archetype is automatically selected based on signal weights:
+
+| Signal | Type | Weight | Calculation |
+|--------|------|--------|-------------|
+| `contact_list` | ITEM_LIST | 0.6 | base 0.5 + limit 0.1 |
+| `contact_detail` | DETAIL_VIEW | 0.7 | base 0.5 + detail 0.2 |
+
+**Criteria for DUAL_PANE_FLOW**:
+- List weight ≥ 0.3 (0.6 ✓)
+- Detail weight ≥ 0.3 (0.7 ✓)
+
+## Project Structure
+
 ```
-┌────────────────┐     ┌────────────────┐
-│ Contacts       │  →  │ ← Back         │
-│                │     │                │
-│ □ Alice A.     │     │ Alice Anderson │
-│ ■ Bob B.       │     │                │
-│ □ Carol C.     │     │ alice@ex...    │
-│ □ Dave D.      │     │ (555) 123-4567│
-│ ...            │     │                │
-│                │     │ Company:       │
-│                │     │ Acme Corp      │
-│                │     │                │
-│                │     │ Title:         │
-│                │     │ Engineer       │
-└────────────────┘     └────────────────┘
-  List view            Detail slides over
+contact_manager/
+├── SPEC.md              # Product specification
+├── README.md            # This file
+├── dazzle.toml          # Project configuration
+└── dsl/
+    └── app.dsl          # DAZZLE DSL definition
 ```
 
-## Surface Allocation
+## Key DSL Patterns
 
-| Surface | Capacity | Priority | Assigned Signal | Description |
-|---------|----------|----------|-----------------|-------------|
-| list    | 0.6      | 1        | contact_list    | Browsable contact list |
-| detail  | 0.8      | 2        | contact_detail  | Selected contact details |
+### Email with Unique Constraint
+```dsl
+entity Contact "Contact":
+  email: email unique required
+  # email field type provides validation
+  # unique constraint prevents duplicates
+```
 
-## Generated Components
+### Multi-Column Index
+```dsl
+entity Contact "Contact":
+  ...
+  index last_name,first_name
+  # Optimizes ORDER BY last_name, first_name
+```
 
-### Archetype Component
-- **DualPaneFlow.tsx**: Master-detail layout with responsive behavior
-  - Desktop: Side-by-side panes (30% list, 70% detail)
-  - Tablet: Adjustable split
-  - Mobile: Stacked with slide-over detail
+### Dual-Signal Workspace
+```dsl
+workspace contacts "Contacts":
+  contact_list:
+    source: Contact
+    limit: 20
+    # Creates ITEM_LIST signal (weight 0.6)
 
-### Surfaces
-- **List Pane**: Navigation sidebar with scrollable contact list
-- **Detail Pane**: Main content area with selected contact info
+  contact_detail:
+    source: Contact
+    display: detail
+    # Creates DETAIL_VIEW signal (weight 0.7)
+```
 
-## Building
+## User Stories
+
+| ID | Story | Description |
+|----|-------|-------------|
+| US-1 | Browse Contact List | Scroll and search contacts |
+| US-2 | View Contact Details | See full info in detail pane |
+| US-3 | Create New Contact | Add with required email |
+| US-4 | Edit Contact | Update any field |
+| US-5 | Favorite Contacts | Star important contacts |
+
+## Running Tests
 
 ```bash
 # Validate DSL
 dazzle validate
 
-# Generate Next.js app
-dazzle build --stack nextjs_semantic
-
-# View output
-cd build/contact-manager
-npm install
-npm run dev
+# Run API tests
+dazzle dnr test
 ```
 
-## Try It
+## Learning Path
 
-1. **Change to SCANNER_TABLE**:
-   ```dsl
-   # Remove contact_detail signal
-   # Keep only contact_list
-   ```
-   Result: Full-width table view
+**Previous**: `simple_task` (Beginner) - Entity basics, CRUD surfaces
 
-2. **Change to MONITOR_WALL**:
-   ```dsl
-   # Add more signals (recent contacts, favorites, etc.)
-   ```
-   Result: Grid layout with multiple metrics
-
-3. **Force archetype**:
-   ```dsl
-   workspace contacts:
-     engine_hint: "scanner_table"  # Override to table view
-   ```
+**Next**: `support_tickets` (Intermediate) - Entity relationships, refs
 
 ## Key Learnings
 
-1. **display: detail is essential** for DUAL_PANE_FLOW
-   - Creates DETAIL_VIEW signal with +0.2 weight
-   - Without it, algorithm selects different archetype
+1. **`display: detail` is essential** for DUAL_PANE_FLOW
+   - Without it, different archetype selected
 
-2. **Both signals must be significant**
-   - list_weight ≥ 0.3 AND detail_weight ≥ 0.3
-   - Ensures balanced master-detail interface
+2. **Signal weights drive layout**
+   - Each signal type has base weight
+   - Modifiers like `limit`, `display` adjust weight
+   - Archetype selected based on weight thresholds
 
-3. **Responsive by default**
-   - Desktop: Side-by-side
-   - Mobile: Stacked with transitions
-   - No custom CSS needed
+3. **Indexes improve performance**
+   - Multi-column indexes for sorting
+   - Unique indexes for constraints
+
+## Customization Ideas
+
+Try modifying this example:
+
+1. Add a `category` enum (personal, work, family)
+2. Create a favorites-only workspace region
+3. Add an attention signal for contacts without phone numbers
+4. Change to SCANNER_TABLE by removing `contact_detail`
 
 ## Screenshots
-
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
 
 ### List View
 ![List View](screenshots/list_view.png)
@@ -168,8 +166,6 @@ npm run dev
 ### Create Form
 ![Create Form](screenshots/create_form.png)
 
-## References
+---
 
-- Archetype Guide: [docs/ARCHETYPE_SELECTION.md](../../docs/ARCHETYPE_SELECTION.md)
-- DSL Reference: [docs/DAZZLE_DSL_REFERENCE_0_1.md](../../docs/DAZZLE_DSL_REFERENCE_0_1.md)
-- Tests: [tests/integration/test_archetype_examples.py](../../tests/integration/test_archetype_examples.py)
+*Part of the DAZZLE Examples collection. See `/examples/README.md` for the full learning path.*

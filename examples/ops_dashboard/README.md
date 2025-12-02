@@ -1,16 +1,46 @@
-# Operations Dashboard Example
+# Operations Dashboard
 
-This example demonstrates the **COMMAND_CENTER** archetype - a dense, expert-focused dashboard designed for operations monitoring and incident response.
+> **Complexity**: Intermediate+ | **Entities**: 2 | **DSL Lines**: ~125
 
-## Archetype: COMMAND_CENTER
+A real-time operations monitoring dashboard demonstrating the **COMMAND_CENTER** archetype with personas and engine hints. This example builds on `support_tickets` by introducing expert user personas and dense information layouts.
 
-The Command Center archetype is optimized for:
-- **Expert users** who need comprehensive system visibility
-- **Real-time monitoring** with critical alert handling
-- **High information density** without overwhelming the user
-- **Quick actions** for immediate response
+## Quick Start
 
-### Layout Structure
+```bash
+cd examples/ops_dashboard
+dazzle dnr serve
+```
+
+- **UI**: http://localhost:3000
+- **API**: http://localhost:8000/docs
+
+## What This Example Demonstrates
+
+### DSL Features
+
+| Feature | Usage |
+|---------|-------|
+| **Personas** | `persona ops_engineer` with proficiency and session style |
+| **Engine Hints** | `engine_hint: "command_center"` forces archetype |
+| **Aggregations** | `count(System)`, `avg(response_time_ms)` |
+| **Persona-Scoped UX** | `for ops_engineer: scope: all` |
+| **Filtered Signals** | `filter: acknowledged = false` |
+
+### Building on support_tickets
+
+This example adds:
+1. **Personas** - User proficiency levels and session styles
+2. **Engine hints** - Override automatic archetype selection
+3. **Aggregate metrics** - KPI signals from entity data
+4. **Expert UX patterns** - Dense interfaces for power users
+
+## The COMMAND_CENTER Archetype
+
+This archetype is optimized for expert users who need:
+- High information density
+- Real-time monitoring
+- Quick alert response
+- Multi-system visibility
 
 ```
 +------------------------------------------------------------------+
@@ -28,138 +58,130 @@ The Command Center archetype is optimized for:
 +------------------------------------------------------------------+
 ```
 
-### Surfaces
+## Project Structure
 
-| Surface | Capacity | Priority | Purpose |
-|---------|----------|----------|---------|
-| `header` | 0.4 | 3 | Critical alerts and status indicators |
-| `main_grid` | 1.5 | 1 | Dense grid of metrics and charts |
-| `left_rail` | 0.6 | 2 | Quick actions and navigation |
-| `right_rail` | 0.6 | 2 | Contextual information and tools |
-
-## Features Demonstrated
-
-### Real-Time Alerts
-- Critical alert banner with acknowledgment
-- Severity-based styling (low, medium, high, critical)
-- Alert filtering by acknowledged status
-
-### System Monitoring
-- Health status indicators (healthy, degraded, critical, offline)
-- Response time tracking
-- Error rate monitoring
-- CPU/memory usage
-
-### Expert UX
-- Dense information layout
-- Keyboard shortcuts hint
-- Quick action sidebar
-- Contextual details panel
-
-## Running the Example
-
-```bash
-# Navigate to example
-cd examples/ops_dashboard
-
-# Validate the DSL
-dazzle validate
-
-# View layout plan
-dazzle layout-plan -w command_center
-
-# Generate Next.js app
-dazzle build --stack nextjs_semantic
-
-# Run the generated app
-cd build/nextjs_semantic/ops-dashboard
-npm install
-npm run dev
+```
+ops_dashboard/
+├── SPEC.md              # Product specification
+├── README.md            # This file
+├── dazzle.toml          # Project configuration
+└── dsl/
+    └── app.dsl          # DAZZLE DSL definition
 ```
 
-## DSL Highlights
+## Key DSL Patterns
 
-### Engine Hint
-
-The `engine_hint` forces selection of COMMAND_CENTER archetype:
-
-```dsl
-workspace command_center "Command Center":
-  purpose: "Real-time operations monitoring"
-  engine_hint: "command_center"
-```
-
-### Expert Persona
-
+### Persona Definition
 ```dsl
 persona ops_engineer "Operations Engineer":
+  goals:
+    - "Monitor system health in real-time"
+    - "Respond quickly to alerts"
   proficiency_level: expert
   session_style: deep_work
 ```
 
-### Multiple Data Regions
-
+### Engine Hint for Archetype
 ```dsl
 workspace command_center "Command Center":
-  # Alert feed
-  active_alerts:
-    source: Alert
-    filter: acknowledged = false
-    sort: severity desc, triggered_at desc
-    limit: 20
-  
-  # System status grid
-  system_status:
-    source: System
-    sort: status asc, name asc
-  
-  # Aggregate health metrics
-  health_summary:
-    source: System
-    aggregate:
-      total_systems: count(System)
-      healthy_count: count(System WHERE status = 'healthy')
-      critical_count: count(System WHERE status = 'critical')
+  purpose: "Real-time operations monitoring"
+  engine_hint: "command_center"
+  # Forces COMMAND_CENTER archetype regardless of signal weights
 ```
+
+### Aggregate Metrics
+```dsl
+health_summary:
+  source: System
+  aggregate:
+    total_systems: count(System)
+    healthy_count: count(System WHERE status = 'healthy')
+    critical_count: count(System WHERE status = 'critical')
+    avg_response_time: avg(response_time_ms)
+```
+
+### Persona-Scoped UX
+```dsl
+ux:
+  for ops_engineer:
+    scope: all
+    purpose: "Full visibility into all systems and alerts"
+```
+
+## User Stories
+
+| ID | Story | Key Feature |
+|----|-------|-------------|
+| US-1 | Monitor system health | Status grid, color coding |
+| US-2 | Respond to alerts | Alert feed, acknowledgment |
+| US-3 | View system details | Drill-down to metrics |
+| US-4 | View health summary | KPI aggregations |
+
+## Running Tests
+
+```bash
+# Validate DSL
+dazzle validate
+
+# Run API tests
+dazzle dnr test
+```
+
+## Learning Path
+
+**Previous**: `support_tickets` (Intermediate) - Entity relationships, refs
+
+**Next**: `fieldtest_hub` (Advanced) - Complex domain, access rules, persona scoping
+
+## Key Learnings
+
+1. **Personas define user context**
+   - `proficiency_level` affects UI complexity
+   - `session_style` affects information density
+   - Used in persona-scoped UX blocks
+
+2. **Engine hints override auto-selection**
+   - Normally archetype is selected from signal weights
+   - `engine_hint` forces specific archetype
+
+3. **Aggregations create KPI signals**
+   - `aggregate:` block with count/avg/sum functions
+   - Creates health_summary signal type
+
+4. **Expert UX is dense but organized**
+   - Multiple signals visible simultaneously
+   - Quick actions without confirmation dialogs
+   - Keyboard shortcuts expected
+
+## Workspace Signals
+
+| Signal | Type | Weight | Purpose |
+|--------|------|--------|---------|
+| `active_alerts` | Item List | 0.80 | Unacknowledged alerts |
+| `system_status` | Table | 0.50 | All systems with status |
+| `health_summary` | KPI | 0.70 | Aggregate health metrics |
 
 ## When to Use COMMAND_CENTER
 
 **Use when**:
-- Users are experts who need dense information
+- Users are experts needing dense information
 - Real-time monitoring is critical
 - Multiple alert streams need attention
-- Quick response actions are required
-- Users have large screens (desktop-focused)
+- Desktop is primary platform
 
 **Avoid when**:
 - Users are novice or casual
-- Information needs are simple
 - Mobile is primary platform
 - Glance-based usage (use FOCUS_METRIC instead)
 
-## Layout Plan Output
+## Screenshots
 
-```
-Workspace: command_center
-============================================================
-Label: Command Center
-Archetype: command_center
-Attention Budget: 1.0
+### Command Center
+![Command Center](screenshots/dashboard.png)
 
-Attention Signals:
-  - active_alerts (item_list) Weight: 0.80
-  - system_status (table) Weight: 0.50
-  - health_summary (kpi) Weight: 0.70
+### Alert List
+![Alert List](screenshots/alert_list.png)
 
-Surface Allocation:
-  - main_grid: active_alerts, health_summary
-  - left_rail: system_status
-  - right_rail: (none)
-  - header: (none)
-```
+---
 
-## Files
-
-- `dazzle.toml` - Project configuration
-- `dsl/app.dsl` - DSL specification with entities, workspace, and surfaces
-- `README.md` - This file
+*Part of the DAZZLE Examples collection. See `/examples/README.md` for the full learning path.*

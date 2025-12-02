@@ -95,6 +95,9 @@ class TokenType(Enum):
     # Access Control Keywords
     ANONYMOUS = "anonymous"
     PERMISSIONS = "permissions"
+    ACCESS = "access"
+    READ = "read"
+    WRITE = "write"
 
     # UX Semantic Layer Keywords
     UX = "ux"
@@ -324,6 +327,9 @@ KEYWORDS = {
     "authenticated",
     "anonymous",
     "permissions",
+    "access",
+    "read",
+    "write",
     "user_role",
     "fixtures",
     "view",

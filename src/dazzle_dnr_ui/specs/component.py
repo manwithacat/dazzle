@@ -64,7 +64,7 @@ class PropsSchema(BaseModel):
 
 
 # =============================================================================
-# Component Categories
+# Component Categories and Roles
 # =============================================================================
 
 
@@ -74,6 +74,18 @@ class ComponentCategory(str):
     PRIMITIVE = "primitive"  # Built-in primitive (Page, Card, DataTable, etc.)
     PATTERN = "pattern"  # Built-in pattern (FilterableTable, CRUDPage, etc.)
     CUSTOM = "custom"  # User-defined component
+
+
+class ComponentRole(str):
+    """
+    Component roles define behavioral intent (v0.5.0).
+
+    - PRESENTATIONAL: Purely visual, no state management, renders props only
+    - CONTAINER: Manages state, fetches data, orchestrates child components
+    """
+
+    PRESENTATIONAL = "presentational"  # Pure rendering, no side effects
+    CONTAINER = "container"  # State management, data fetching, orchestration
 
 
 # =============================================================================
@@ -120,6 +132,10 @@ class ComponentSpec(BaseModel):
     name: str = Field(description="Component name")
     description: str | None = Field(default=None, description="Component description")
     category: str = Field(default=ComponentCategory.CUSTOM, description="Component category")
+    role: str | None = Field(
+        default=None,
+        description="Component role (presentational or container). None means auto-inferred.",
+    )
     props_schema: PropsSchema = Field(default_factory=PropsSchema, description="Props schema")
     view: ViewNode | None = Field(default=None, description="View tree (None for primitives)")
     state: list[StateSpec] = Field(default_factory=list, description="Component state declarations")
@@ -157,6 +173,40 @@ class ComponentSpec(BaseModel):
     def is_custom(self) -> bool:
         """Check if this is a custom component."""
         return self.category == ComponentCategory.CUSTOM
+
+    @property
+    def is_presentational(self) -> bool:
+        """
+        Check if this is a presentational component.
+
+        Returns True if explicitly marked as presentational, or if inferred
+        (no state, no impure actions, view-only).
+        """
+        if self.role == ComponentRole.PRESENTATIONAL:
+            return True
+        if self.role is None:
+            # Auto-infer: presentational if no state and no impure actions
+            return len(self.state) == 0 and all(
+                action.effect is None for action in self.actions
+            )
+        return False
+
+    @property
+    def is_container(self) -> bool:
+        """
+        Check if this is a container component.
+
+        Returns True if explicitly marked as container, or if inferred
+        (has state or impure actions).
+        """
+        if self.role == ComponentRole.CONTAINER:
+            return True
+        if self.role is None:
+            # Auto-infer: container if has state or impure actions
+            return len(self.state) > 0 or any(
+                action.effect is not None for action in self.actions
+            )
+        return False
 
     def get_action(self, name: str) -> ActionSpec | None:
         """Get action by name."""

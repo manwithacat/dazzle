@@ -1,215 +1,330 @@
 # Simple Task Manager - Product Specification
 
-**Project Type**: Personal Productivity Tool
-**Target Users**: Individual users who need to track their tasks
-**Deployment**: Single-user web application
+> **Document Status**: Refined specification ready for DSL conversion
+> **Complexity Level**: Beginner
+> **DSL Features Demonstrated**: Entity basics, CRUD surfaces, workspaces, attention signals
 
 ---
 
-## Project Overview
+## Vision Statement
 
-I need a simple task management application where I can keep track of my to-do items. Nothing fancy - just a straightforward way to create tasks, mark their status, and set priorities. I want to be able to see all my tasks at a glance, view details when needed, and mark tasks as complete when I finish them.
-
-The app should be easy to deploy and run on platforms like Heroku or Railway without complex setup. I don't need multi-user features or team collaboration - this is just for my personal use.
+A personal task management tool that helps individuals track their to-do items with clear priorities and status tracking. The app provides an at-a-glance dashboard for managing daily work without the complexity of team collaboration features.
 
 ---
 
-## Core Features
+## User Personas
 
-### What I Need to Track
-
-For each task, I want to store:
-- **Title** (required) - A short name for the task (e.g., "Buy groceries", "Fix the bug")
-- **Description** (optional) - More details about what needs to be done
-- **Status** - Where the task is in my workflow: "To Do", "In Progress", or "Done"
-- **Priority** - How important it is: Low, Medium, or High
-- **Timestamps** - When I created the task and when I last updated it
-
-### User Stories
-
-**As a user, I want to:**
-
-1. **View all my tasks**
-   - See a list of all tasks with their title, status, and priority
-   - Quickly scan what needs to be done
-   - Have the most recent tasks appear first
-
-2. **Create new tasks**
-   - Enter a title (required)
-   - Optionally add a description
-   - Set an initial priority (defaults to Medium)
-   - Task starts in "To Do" status automatically
-
-3. **View task details**
-   - Click on a task to see all information
-   - See the full description
-   - Check when it was created and last updated
-
-4. **Edit existing tasks**
-   - Update the title and description
-   - Change the status (move from To Do → In Progress → Done)
-   - Adjust the priority
-
-5. **Delete tasks**
-   - Remove tasks I no longer need
-   - Get a confirmation before deleting to prevent accidents
+### Primary: Solo Professional
+- **Role**: Individual contributor (developer, designer, freelancer)
+- **Need**: Quick capture and tracking of work items
+- **Pain Point**: Existing tools are too complex or team-focused
+- **Goal**: Zero-friction task management that "just works"
 
 ---
 
-## Data Model
+## Domain Model
 
-### Task Object
+### Entity: Task
 
-| Field | Type | Required | Default | Notes |
-|-------|------|----------|---------|-------|
-| ID | UUID | Yes | Auto-generated | Unique identifier |
-| Title | Text (max 200 chars) | Yes | - | Short description |
-| Description | Long text | No | - | Detailed information |
-| Status | Choice | Yes | "To Do" | Options: To Do, In Progress, Done |
-| Priority | Choice | Yes | Medium | Options: Low, Medium, High |
-| Created At | Timestamp | Yes | Auto | When task was created |
-| Updated At | Timestamp | Yes | Auto | Last modification time |
+A discrete unit of work to be completed.
 
----
+| Field | Type | Required | Default | Business Rules |
+|-------|------|----------|---------|----------------|
+| `id` | UUID | Yes | Auto | Immutable primary key |
+| `title` | String(200) | Yes | - | Short, actionable description |
+| `description` | Text | No | - | Extended details, notes, context |
+| `status` | Enum | Yes | `todo` | Workflow state: `todo` → `in_progress` → `done` |
+| `priority` | Enum | Yes | `medium` | Urgency level: `low`, `medium`, `high` |
+| `due_date` | Date | No | - | Target completion date |
+| `assigned_to` | String(100) | No | - | Person responsible (free text) |
+| `created_at` | DateTime | Yes | Auto | Immutable creation timestamp |
+| `updated_at` | DateTime | Yes | Auto | Last modification timestamp |
 
-## User Interface
-
-### Pages I Need
-
-1. **Task List Page** (Home/Main page)
-   - Table showing: Title, Status, Priority
-   - "Create New Task" button at the top
-   - Actions for each task: View, Edit, Delete
-   - Most recent tasks shown first
-
-2. **Task Detail Page**
-   - Display all fields in a readable format
-   - Show full description
-   - Show creation and update timestamps
-   - Buttons: Edit, Delete, Back to List
-
-3. **Create Task Form**
-   - Fields: Title (required), Description (optional), Priority
-   - Status automatically set to "To Do"
-   - Save button returns to task list
-
-4. **Edit Task Form**
-   - Fields: Title, Description, Status, Priority
-   - Save button returns to task list
-   - Cancel option to go back without saving
-
-5. **Delete Confirmation**
-   - "Are you sure?" message
-   - Shows task title being deleted
-   - Confirm and Cancel buttons
+**Validation Rules**:
+- Title must not be empty
+- Status transitions: Any status can move to any other (flexible workflow)
+- Due date must be a valid date (no time component)
 
 ---
 
-## What the System Provides Automatically
+## User Interface Specification
 
-*These features are built into the generated application - you don't need to ask for them!*
+### Surface: Task List (Primary View)
 
-### Admin Dashboard
-A powerful admin interface is automatically generated with:
-- Browse all tasks in a data table
-- Search and filter capabilities
-- Bulk actions (delete multiple items)
-- Direct database editing
-- Data export
-- **Access**: Available in the navigation bar and home page
+**Purpose**: View and manage all tasks at a glance
 
-### Home Page
-A central hub that shows:
-- Quick access to all your resources (Tasks)
-- Links to create new items
-- Admin dashboard access
-- System status
+**Mode**: List with table layout
 
-### Navigation
-Automatic navigation menu with:
-- Links to all your main pages (Task List, etc.)
-- Admin interface link
-- Mobile-responsive hamburger menu
+| Column | Source | Behavior |
+|--------|--------|----------|
+| Title | `task.title` | Primary identifier, clickable to detail |
+| Status | `task.status` | Visual badge (color-coded) |
+| Priority | `task.priority` | Visual badge (color-coded) |
+| Due Date | `task.due_date` | Formatted date, highlight if overdue |
+| Assigned To | `task.assigned_to` | Text |
 
-### Data Persistence
-- SQLite database (included)
-- Automatic migrations when you change fields
-- Data backup capabilities via admin
+**Interactions**:
+- **Sort**: By creation date (newest first), sortable by any column
+- **Filter**: By status, by priority
+- **Search**: Title, description, assigned_to fields
+- **Actions**: View detail, Edit, Delete (with confirmation)
 
-### Deployment Support
-- One-click deployment configs for Heroku, Railway, Vercel
-- Environment variable management
-- Production-ready settings
+**Empty State**: "No tasks yet. Create your first task to get started!"
+
+**Attention Signals**:
+1. **Warning** (orange): Task is overdue (`due_date < today AND status != done`)
+   - Message: "Overdue task"
+2. **Notice** (blue): High priority task not started (`priority = high AND status = todo`)
+   - Message: "High priority - needs attention"
 
 ---
 
-## Technical Requirements
+### Surface: Task Detail (Read-only View)
 
-### Must Have
-- Works on desktop and mobile browsers
-- Fast page loads
-- Data persists when I close the browser
-- Simple deployment (one-click if possible)
+**Purpose**: View complete task information
 
-### Nice to Have
-- Basic styling (doesn't need to be fancy)
-- Admin interface for data management
-- Pagination if I have lots of tasks
+**Mode**: Single record view
 
-### Out of Scope (for now)
-- Task sharing or collaboration
-- Categories or tags
-- File attachments
-- Mobile apps
+**Fields Displayed**:
+- Title (heading)
+- Description (full text, markdown supported)
+- Status (badge)
+- Priority (badge)
+- Due Date (formatted)
+- Assigned To (text)
+- Created (relative timestamp: "2 days ago")
+- Updated (relative timestamp)
 
-### Included Features
-- User authentication (login/logout)
-- Due dates for tasks
-- Search functionality (title, description)
-- Filter by status and priority
+**Actions**: Edit, Delete, Back to List
 
 ---
 
-## Example Scenarios
+### Surface: Create Task (Form)
 
-### Creating My First Task
-1. Open the app - see empty task list
-2. Click "Create New Task"
-3. Enter: "Buy milk" (title)
+**Purpose**: Add a new task to track
+
+**Mode**: Create form
+
+**Fields**:
+| Field | Input Type | Required | Default |
+|-------|------------|----------|---------|
+| Title | Text input | Yes | - |
+| Description | Textarea | No | - |
+| Priority | Dropdown | No | Medium |
+| Due Date | Date picker | No | - |
+| Assigned To | Text input | No | - |
+
+**Note**: Status is automatically set to `todo` and not shown in form.
+
+**Actions**: Save (returns to list), Cancel
+
+---
+
+### Surface: Edit Task (Form)
+
+**Purpose**: Update task details and status
+
+**Mode**: Edit form
+
+**Fields**: Same as Create, plus:
+| Field | Input Type | Required |
+|-------|------------|----------|
+| Status | Dropdown | Yes |
+
+**Actions**: Save, Cancel, Delete
+
+---
+
+## Workspace Specification
+
+### Workspace: Task Dashboard
+
+**Purpose**: Overview of all tasks with key metrics and filtered views
+
+**Layout**: Command center with metrics header + multiple data regions
+
+**Regions**:
+
+#### Metrics Bar
+| Metric | Calculation | Display |
+|--------|-------------|---------|
+| Total | `count(Task)` | Number |
+| To Do | `count(Task where status = todo)` | Number + badge |
+| In Progress | `count(Task where status = in_progress)` | Number + badge |
+| Done | `count(Task where status = done)` | Number + badge |
+
+#### Overdue Tasks
+- **Source**: Task
+- **Filter**: `due_date < today AND status != done`
+- **Sort**: `due_date ASC` (most overdue first)
+- **Limit**: 5 items
+- **Empty**: "No overdue tasks!"
+- **Action**: Click → Edit Task
+
+#### High Priority
+- **Source**: Task
+- **Filter**: `priority = high AND status != done`
+- **Sort**: `due_date ASC`
+- **Limit**: 5 items
+- **Empty**: "No high priority tasks pending"
+- **Action**: Click → Edit Task
+
+#### Recent Activity
+- **Source**: Task
+- **Sort**: `created_at DESC`
+- **Limit**: 10 items
+- **Action**: Click → Task Detail
+
+---
+
+### Workspace: My Work
+
+**Purpose**: Personal task view organized by workflow stage
+
+**Layout**: Three-column kanban-style view
+
+**Regions**:
+
+#### In Progress
+- **Filter**: `status = in_progress`
+- **Sort**: `priority DESC, due_date ASC`
+- **Limit**: 10 items
+- **Empty**: "No tasks in progress"
+
+#### To Do
+- **Filter**: `status = todo`
+- **Sort**: `priority DESC, due_date ASC`
+- **Limit**: 10 items
+- **Empty**: "No pending tasks"
+
+#### Recently Completed
+- **Filter**: `status = done`
+- **Sort**: `updated_at DESC`
+- **Limit**: 5 items
+- **Empty**: "No completed tasks yet"
+
+---
+
+## User Stories & Acceptance Criteria
+
+### US-1: Create a Task
+**As a** user
+**I want to** quickly create a new task
+**So that** I can capture work items before I forget them
+
+**Acceptance Criteria**:
+- [ ] Can access "Create Task" from task list
+- [ ] Only title is required
+- [ ] Priority defaults to Medium
+- [ ] Status automatically set to "To Do"
+- [ ] After save, return to task list showing new task
+- [ ] Task appears at top of list (sorted by created_at DESC)
+
+**Test Flow**:
+```
+1. Navigate to task list
+2. Click "Create Task" button
+3. Enter title: "Buy groceries"
 4. Select priority: High
 5. Click Save
-6. Return to list - see my new task with status "To Do"
-
-### Completing a Task
-1. Find task in list: "Buy milk"
-2. Click Edit
-3. Change status from "To Do" to "Done"
-4. Click Save
-5. Return to list - see task marked as Done
-
-### Managing Multiple Tasks
-1. Create several tasks
-2. See them all in the list
-3. Quickly identify high priority items
-4. Track what's in progress vs. done
+6. Verify: Redirected to task list
+7. Verify: "Buy groceries" appears in list with status "To Do"
+```
 
 ---
 
-## Success Criteria
+### US-2: View Task Details
+**As a** user
+**I want to** see all information about a task
+**So that** I can understand the full context
 
-This app is successful if:
-- I can create a task in under 10 seconds
-- I can see my entire task list at a glance
-- I never lose my task data
-- The app "just works" without configuration
-- I can deploy it for free on a cloud platform
+**Acceptance Criteria**:
+- [ ] Click task title in list → opens detail view
+- [ ] All fields displayed with labels
+- [ ] Timestamps shown in readable format
+- [ ] Can navigate back to list
+- [ ] Can edit or delete from detail view
 
 ---
 
-## Notes for Developer
+### US-3: Update Task Status
+**As a** user
+**I want to** change a task's status
+**So that** I can track my progress
 
-- Keep it simple - I'd rather have it working quickly than have lots of features
-- Use sensible defaults (Medium priority, To Do status)
-- Make the status and priority dropdowns easy to use
-- Timestamps should be automatic - I don't want to enter them manually
-- Use standard web technologies that are easy to maintain
+**Acceptance Criteria**:
+- [ ] Can change status via Edit form
+- [ ] Status change updates `updated_at` timestamp
+- [ ] Task moves to correct section in "My Work" workspace
+
+**Test Flow**:
+```
+1. Navigate to task list
+2. Find task "Buy groceries"
+3. Click Edit
+4. Change status from "To Do" to "In Progress"
+5. Click Save
+6. Navigate to "My Work" workspace
+7. Verify: Task appears in "In Progress" section
+```
+
+---
+
+### US-4: Track Overdue Tasks
+**As a** user
+**I want to** see which tasks are overdue
+**So that** I can prioritize catching up
+
+**Acceptance Criteria**:
+- [ ] Overdue tasks shown in dashboard "Overdue Tasks" region
+- [ ] Overdue tasks have warning indicator in task list
+- [ ] Completed tasks never shown as overdue (even if past due date)
+
+---
+
+### US-5: Delete a Task
+**As a** user
+**I want to** remove tasks I no longer need
+**So that** my list stays clean
+
+**Acceptance Criteria**:
+- [ ] Delete button available in task detail and edit views
+- [ ] Confirmation required before deletion
+- [ ] After deletion, return to task list
+- [ ] Deleted task no longer appears anywhere
+
+---
+
+## Technical Notes
+
+### DSL Features Demonstrated
+- **Entity**: Single entity with various field types (uuid, str, text, enum, date, datetime)
+- **Field modifiers**: `required`, `pk`, `auto_add`, `auto_update`, default values
+- **Surfaces**: All four CRUD modes (list, view, create, edit)
+- **UX block**: purpose, sort, filter, search, empty, attention signals
+- **Workspaces**: Multiple regions with aggregations, filters, and limits
+- **Attention signals**: Warning and notice levels with conditional expressions
+
+### Out of Scope (Beginner Example)
+- Multi-user authentication
+- Task categories/tags
+- File attachments
+- Recurring tasks
+- Task dependencies
+- Comments/activity log
+- Email notifications
+
+---
+
+## Success Metrics
+
+| Metric | Target | Measurement |
+|--------|--------|-------------|
+| Task creation time | < 10 seconds | Time from click "Create" to saved |
+| Page load time | < 2 seconds | Initial list render |
+| Mobile usability | Responsive | Works on 375px width |
+| E2E test pass rate | 100% | All user stories validated |
+
+---
+
+*This specification is designed to be converted to DAZZLE DSL. See `dsl/app.dsl` for the implementation.*

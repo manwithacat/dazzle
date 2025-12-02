@@ -1,157 +1,166 @@
 # Support Ticket System
 
-A multi-entity support ticket application demonstrating entity relationships in DAZZLE.
+> **Complexity**: Intermediate | **Entities**: 3 | **DSL Lines**: ~190
 
-## What's Included
+A multi-entity support ticket application demonstrating entity relationships and foreign key references. This example builds on `contact_manager` by introducing multiple related entities.
 
-This example demonstrates:
-- Multiple related entities (User, Ticket, Comment)
-- Foreign key relationships (`ref[Entity]`)
-- Enum fields for status and priority
-- One-to-many relationships (User -> Tickets, Ticket -> Comments)
-- Required vs optional references
+## Quick Start
+
+```bash
+cd examples/support_tickets
+dazzle dnr serve
+```
+
+- **UI**: http://localhost:3000
+- **API**: http://localhost:8000/docs
+
+## What This Example Demonstrates
+
+### DSL Features
+
+| Feature | Usage |
+|---------|-------|
+| **Foreign Key References** | `created_by: ref User required` |
+| **Optional References** | `assigned_to: ref User` (nullable) |
+| **Multi-Column Indexes** | `index status, priority` |
+| **Multiple Entities** | User, Ticket, Comment |
+| **Full CRUD for All Entities** | 12 surfaces total (4 per entity) |
+
+### Building on contact_manager
+
+This example adds:
+1. **Entity relationships** - Tickets reference Users, Comments reference Tickets
+2. **Required vs optional refs** - `created_by` is required, `assigned_to` is optional
+3. **Complex domain** - 3 entities with interconnected relationships
+4. **Database indexes** - Composite indexes for query optimization
+
+## Entity Relationship Diagram
+
+```
+User (1)
+  │
+  ├──< created_by ──< Ticket (many)
+  │                      │
+  ├──< assigned_to ──────┤
+  │                      │
+  └──< author ────< Comment (many) ───< ticket ──┘
+```
+
+**Relationships**:
+- User → Ticket: One user can create many tickets
+- User → Ticket: One user can be assigned many tickets
+- Ticket → Comment: One ticket can have many comments
+- User → Comment: One user can author many comments
 
 ## Project Structure
 
 ```
 support_tickets/
-├── dazzle.toml          # Project manifest
-├── dsl/                 # DAZZLE DSL modules
-│   └── app.dsl         # User, Ticket, and Comment entities
-└── build/              # Generated artifacts (after build)
+├── SPEC.md              # Product specification
+├── README.md            # This file
+├── dazzle.toml          # Project configuration
+└── dsl/
+    └── app.dsl          # DAZZLE DSL definition
 ```
 
-## Entity Relationships
+## Key DSL Patterns
 
-```
-User
-  └── created_by ──> Ticket (many tickets)
-  └── assigned_to ──> Ticket (many assigned tickets)
-                       └── ticket ──> Comment (many comments)
-                                      └── author ──> User
-```
-
-## Getting Started
-
-### 1. Validate the DSL
-
-```bash
-dazzle validate
-```
-
-### 2. Build the project
-
-Build with your chosen stack (selected during clone):
-
-```bash
-dazzle build
-```
-
-Or use explicit backends:
-
-```bash
-dazzle build --backends django_api,openapi,infra_docker
-```
-
-This generates artifacts in the `build/` directory.
-
-### 3. Run the Application
-
-#### With Docker (if using infra_docker backend)
-
-```bash
-cd build/infra_docker
-docker compose up -d
-```
-
-#### With Django directly (if using django_api backend)
-
-```bash
-cd build/django_api
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser  # Create admin user
-python manage.py runserver
-```
-
-API will be available at http://localhost:8000
-
-## Understanding the DSL
-
-### Foreign Key References
-
+### Required Reference (Foreign Key)
 ```dsl
 entity Ticket "Support Ticket":
-  created_by: ref User required     # Required reference
-  assigned_to: ref User             # Optional reference (can be null)
+  created_by: ref User required
+  # Every ticket must have a creator
+  # Cannot be null
 ```
 
-### Enum Fields
-
+### Optional Reference
 ```dsl
 entity Ticket "Support Ticket":
-  status: enum[open,in_progress,resolved,closed]=open
-  priority: enum[low,medium,high,critical]=medium
+  assigned_to: ref User
+  # Ticket can be unassigned
+  # Can be null
 ```
 
-### Auto Fields
-
+### Composite Index
 ```dsl
 entity Ticket "Support Ticket":
-  created_at: datetime auto_add      # Set once on creation
-  updated_at: datetime auto_update   # Updated on every save
+  ...
+  index status, priority
+  # Optimizes queries filtering by both fields
 ```
 
-## Customizing
-
-### Add a new entity
-
-Add an Attachment entity for ticket attachments:
-
-```dsl
-entity Attachment "Attachment":
-  id: uuid pk
-  ticket: ref Ticket required
-  filename: str(255) required
-  file_url: str(500) required
-  uploaded_by: ref User required
-  uploaded_at: datetime auto_add
-```
-
-### Add cascading behavior
-
-Modify relationships to specify cascade behavior:
-
+### One-to-Many via Back Reference
 ```dsl
 entity Comment "Comment":
-  ticket: ref Ticket required on_delete=cascade
-  author: ref User required on_delete=protect
+  ticket: ref Ticket required
+  author: ref User required
+  # Comment belongs to one ticket
+  # Comment authored by one user
 ```
 
-### Add a filter surface
+## User Stories
 
-Create a surface to show only high-priority open tickets:
+| ID | Story | Entities Involved |
+|----|-------|-------------------|
+| US-1 | Submit support request | User, Ticket |
+| US-2 | View ticket queue | Ticket |
+| US-3 | Assign ticket to staff | Ticket, User |
+| US-4 | Add comment to ticket | Ticket, Comment, User |
+| US-5 | Resolve and close ticket | Ticket |
 
-```dsl
-surface urgent_tickets "Urgent Tickets":
-  uses entity Ticket
-  mode: list
-  filter: status=open AND priority=critical
+## Running Tests
 
-  section main "Urgent Tickets":
-    field title "Title"
-    field created_by "Reporter"
-    field assigned_to "Assignee"
-    field created_at "Reported"
+```bash
+# Validate DSL
+dazzle validate
+
+# Run API tests
+dazzle dnr test
 ```
 
-## Next Steps
+## Learning Path
 
-- Explore the generated Django models in `build/django_api/`
-- Check the OpenAPI spec in `build/openapi/openapi.yaml`
-- Try adding more entities (tags, categories, etc.)
-- Experiment with different surface modes
-- Check `LLM_CONTEXT.md` for AI assistant guidance
+**Previous**: `contact_manager` (Beginner+) - Single entity, indexes, workspaces
+
+**Next**: `ops_dashboard` (Intermediate+) - Personas, COMMAND_CENTER archetype
+
+## Key Learnings
+
+1. **`ref` creates foreign keys**
+   - `ref Entity` creates a nullable foreign key
+   - `ref Entity required` creates a non-null foreign key
+
+2. **Entities can reference the same entity multiple times**
+   - Ticket has both `created_by` and `assigned_to` referencing User
+   - Each creates a separate relationship
+
+3. **Comments show nested relationships**
+   - Comment → Ticket → User (creator)
+   - Comment → User (author)
+   - Multi-level entity graph
+
+4. **Indexes optimize common queries**
+   - `index status, priority` for ticket queue views
+   - `index created_by` for "my tickets" queries
+
+## API Endpoints
+
+With 3 entities, DNR generates 12 CRUD endpoints:
+
+| Entity | Endpoints |
+|--------|-----------|
+| User | `GET/POST /api/users`, `GET/PUT/DELETE /api/users/{id}` |
+| Ticket | `GET/POST /api/tickets`, `GET/PUT/DELETE /api/tickets/{id}` |
+| Comment | `GET/POST /api/comments`, `GET/PUT/DELETE /api/comments/{id}` |
+
+## Customization Ideas
+
+Try modifying this example:
+
+1. Add an `Attachment` entity with `ref Ticket`
+2. Add ticket categories as a separate entity
+3. Add an attention signal for unassigned critical tickets
+4. Create a workspace for "My Assigned Tickets"
 
 ## Screenshots
 
@@ -164,9 +173,6 @@ surface urgent_tickets "Urgent Tickets":
 ### Create Form
 ![Create Form](screenshots/create_form.png)
 
-## Learn More
+---
 
-- Run `dazzle --help` to see all commands
-- Use `dazzle lint` for extended validation and suggestions
-- Try `dazzle build --diff` to preview changes
-- Run `dazzle backends` to see all available backends
+*Part of the DAZZLE Examples collection. See `/examples/README.md` for the full learning path.*

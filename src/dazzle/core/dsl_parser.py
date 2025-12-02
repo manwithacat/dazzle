@@ -173,6 +173,10 @@ class Parser:
             TokenType.ACTION,
             TokenType.ANONYMOUS,
             TokenType.PERMISSIONS,
+            # Access control keywords (v0.5.0) - can be used as enum values
+            TokenType.ACCESS,
+            TokenType.READ,
+            TokenType.WRITE,
         ):
             return self.advance()
 
@@ -505,6 +509,61 @@ class Parser:
                     if self.match(TokenType.DEDENT):
                         break
                     permission_rules.append(self._parse_permission_rule())
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
+            # Check for access: block (shorthand for read/write rules)
+            if self.match(TokenType.ACCESS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    # Parse read: or write: rule
+                    if self.match(TokenType.READ):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        condition = self.parse_condition_expr()
+                        # read: maps to visibility rule for authenticated users
+                        visibility_rules.append(
+                            ir.VisibilityRule(
+                                context=ir.AuthContext.AUTHENTICATED,
+                                condition=condition,
+                            )
+                        )
+                    elif self.match(TokenType.WRITE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        condition = self.parse_condition_expr()
+                        # write: maps to CREATE, UPDATE, DELETE permissions
+                        for op in [
+                            ir.PermissionKind.CREATE,
+                            ir.PermissionKind.UPDATE,
+                            ir.PermissionKind.DELETE,
+                        ]:
+                            permission_rules.append(
+                                ir.PermissionRule(
+                                    operation=op,
+                                    require_auth=True,
+                                    condition=condition,
+                                )
+                            )
+                    else:
+                        token = self.current_token()
+                        raise make_parse_error(
+                            f"Expected 'read' or 'write' in access block, got {token.type.value}",
+                            self.file,
+                            token.line,
+                            token.column,
+                        )
                     self.skip_newlines()
 
                 self.expect(TokenType.DEDENT)

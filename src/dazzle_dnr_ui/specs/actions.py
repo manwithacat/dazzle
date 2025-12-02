@@ -170,6 +170,23 @@ EffectSpec = FetchEffect | NavigateEffect | LogEffect | ToastEffect | CustomEffe
 
 
 # =============================================================================
+# Action Purity
+# =============================================================================
+
+
+class ActionPurity(str, Enum):
+    """
+    Action purity classification (v0.5.0).
+
+    - PURE: No side effects, only state transitions (synchronous, predictable)
+    - IMPURE: Has side effects like fetch, navigate, etc. (async, may fail)
+    """
+
+    PURE = "pure"
+    IMPURE = "impure"
+
+
+# =============================================================================
 # Actions
 # =============================================================================
 
@@ -196,6 +213,10 @@ class ActionSpec(BaseModel):
 
     name: str = Field(description="Action name")
     description: str | None = Field(default=None, description="Action description")
+    purity: ActionPurity | None = Field(
+        default=None,
+        description="Action purity (pure or impure). None means auto-inferred.",
+    )
     inputs: dict[str, str] | None = Field(
         default=None, description="Input parameters (name -> type)"
     )
@@ -206,3 +227,31 @@ class ActionSpec(BaseModel):
 
     class Config:
         frozen = True
+
+    @property
+    def is_pure(self) -> bool:
+        """
+        Check if this action is pure (no side effects).
+
+        Returns True if explicitly marked as pure, or if inferred (no effect).
+        """
+        if self.purity == ActionPurity.PURE:
+            return True
+        if self.purity is None:
+            # Auto-infer: pure if no effect
+            return self.effect is None
+        return False
+
+    @property
+    def is_impure(self) -> bool:
+        """
+        Check if this action is impure (has side effects).
+
+        Returns True if explicitly marked as impure, or if inferred (has effect).
+        """
+        if self.purity == ActionPurity.IMPURE:
+            return True
+        if self.purity is None:
+            # Auto-infer: impure if has effect
+            return self.effect is not None
+        return False
