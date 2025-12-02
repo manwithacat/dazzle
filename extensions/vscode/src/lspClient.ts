@@ -33,29 +33,24 @@ function getOutputChannel(): vscode.OutputChannel {
  * Start the LSP client and connect to the Python LSP server.
  */
 export async function startLanguageClient(context: vscode.ExtensionContext): Promise<void> {
-    const config = vscode.workspace.getConfiguration('dazzle');
-    const pythonPath = getPythonPath();
     const channel = getOutputChannel();
 
     channel.appendLine('='.repeat(60));
     channel.appendLine('Dazzle Language Server Starting...');
     channel.appendLine('This channel shows LSP messages (hover, completions, diagnostics)');
-    channel.appendLine(`Python path: ${pythonPath}`);
     channel.appendLine(`Timestamp: ${new Date().toISOString()}`);
     channel.appendLine('='.repeat(60));
 
-    // Check if LSP server is available before starting
-    channel.appendLine('Checking if DAZZLE LSP server is available...');
+    // Find a Python with dazzle installed (checks multiple candidates)
     const isAvailable = await checkLspServerAvailable();
+    const pythonPath = getPythonPath(); // Gets the cached result from checkLspServerAvailable
 
     if (!isAvailable) {
-        channel.appendLine('❌ DAZZLE LSP server not found');
-        channel.appendLine(`Tried to import: python3 -c "import dazzle.lsp"`);
         channel.appendLine('');
         channel.appendLine('To enable LSP features:');
         channel.appendLine('  1. Install dazzle: pip install dazzle');
         channel.appendLine('  2. Or for development: pip install -e /path/to/dazzle');
-        channel.appendLine('  3. Verify: python3 -c "import dazzle.lsp"');
+        channel.appendLine('  3. Or set dazzle.pythonPath in VS Code settings');
         channel.show();
 
         const action = await vscode.window.showWarningMessage(
@@ -74,7 +69,6 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         return;
     }
 
-    channel.appendLine('✅ DAZZLE LSP server is available');
     channel.appendLine('');
 
     // Server options: spawn the Python LSP server
@@ -169,71 +163,81 @@ export async function stopLanguageClient(): Promise<void> {
     }
 }
 
+// Cache the discovered Python path for the session
+let cachedPythonPath: string | null = null;
+
 /**
- * Get the Python interpreter path.
- *
- * Checks for (in order):
- * 1. dazzle.pythonPath VS Code setting
- * 2. DAZZLE_PYTHON environment variable
- * 3. Python extension's active interpreter
- * 4. Falls back to 'python3'
+ * Get candidate Python paths to try, in priority order.
  */
-function getPythonPath(): string {
-    // Check VS Code configuration first
+function getPythonCandidates(): string[] {
+    const candidates: string[] = [];
+    const seen = new Set<string>();
+
+    const addCandidate = (path: string | undefined | null) => {
+        if (path && path.trim() !== '' && !seen.has(path)) {
+            seen.add(path);
+            candidates.push(path);
+        }
+    };
+
+    // 1. Explicit configuration (highest priority)
     const config = vscode.workspace.getConfiguration('dazzle');
-    const configuredPath = config.get<string>('pythonPath');
-    if (configuredPath && configuredPath.trim() !== '') {
-        return configuredPath;
-    }
+    addCandidate(config.get<string>('pythonPath'));
 
-    // Check environment variable
-    if (process.env.DAZZLE_PYTHON) {
-        return process.env.DAZZLE_PYTHON;
-    }
+    // 2. Environment variable
+    addCandidate(process.env.DAZZLE_PYTHON);
 
-    // Try to get Python path from Python extension
+    // 3. Python extension's active interpreter
     const pythonExtension = vscode.extensions.getExtension('ms-python.python');
     if (pythonExtension && pythonExtension.isActive) {
         const pythonPath = pythonExtension.exports?.settings?.getExecutionDetails?.()?.execCommand?.[0];
-        if (pythonPath) {
-            return pythonPath;
-        }
+        addCandidate(pythonPath);
     }
 
-    // Default to python3
-    return 'python3';
+    // 4. pyenv shims (common for developers)
+    const home = process.env.HOME;
+    if (home) {
+        addCandidate(`${home}/.pyenv/shims/python3`);
+        addCandidate(`${home}/.pyenv/shims/python`);
+    }
+
+    // 5. Common virtual environment locations relative to workspace
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+        const wsRoot = workspaceFolders[0].uri.fsPath;
+        addCandidate(`${wsRoot}/.venv/bin/python`);
+        addCandidate(`${wsRoot}/venv/bin/python`);
+        addCandidate(`${wsRoot}/.venv/bin/python3`);
+        addCandidate(`${wsRoot}/venv/bin/python3`);
+    }
+
+    // 6. System Python (fallback)
+    addCandidate('python3');
+    addCandidate('python');
+
+    // 7. Common macOS/Linux paths
+    addCandidate('/usr/local/bin/python3');
+    addCandidate('/opt/homebrew/bin/python3');
+    addCandidate('/usr/bin/python3');
+
+    return candidates;
 }
 
 /**
- * Check if the DAZZLE LSP server is available.
+ * Check if a Python path can import dazzle.lsp.
  */
-export async function checkLspServerAvailable(): Promise<boolean> {
-    const pythonPath = getPythonPath();
-
+async function canImportDazzle(pythonPath: string): Promise<boolean> {
     return new Promise((resolve) => {
         const child_process = require('child_process');
-        // Use -c to check if module can be imported
         const proc = child_process.spawn(pythonPath, ['-c', 'import dazzle.lsp'], {
             stdio: 'pipe',
         });
 
-        let stderr = '';
-        proc.stderr?.on('data', (data: Buffer) => {
-            stderr += data.toString();
-        });
-
         proc.on('close', (code: number | null) => {
-            // If code is 0, module imports successfully
-            // If code is 1, check for ModuleNotFoundError
-            const available = code === 0;
-            if (!available) {
-                console.log('DAZZLE LSP not available:', stderr.substring(0, 200));
-            }
-            resolve(available);
+            resolve(code === 0);
         });
 
-        proc.on('error', (err: Error) => {
-            console.error('Error checking LSP availability:', err);
+        proc.on('error', () => {
             resolve(false);
         });
 
@@ -243,4 +247,55 @@ export async function checkLspServerAvailable(): Promise<boolean> {
             resolve(false);
         }, 2000);
     });
+}
+
+/**
+ * Find a Python interpreter that has dazzle installed.
+ *
+ * Tries multiple candidate paths and returns the first one that works.
+ * Results are cached for the session.
+ */
+async function findPythonWithDazzle(channel: vscode.OutputChannel): Promise<string | null> {
+    // Return cached result if available
+    if (cachedPythonPath !== null) {
+        return cachedPythonPath;
+    }
+
+    const candidates = getPythonCandidates();
+    channel.appendLine(`Searching for Python with dazzle.lsp installed...`);
+    channel.appendLine(`Candidates: ${candidates.slice(0, 5).join(', ')}${candidates.length > 5 ? '...' : ''}`);
+
+    for (const candidate of candidates) {
+        const hasModule = await canImportDazzle(candidate);
+        if (hasModule) {
+            channel.appendLine(`✅ Found dazzle.lsp in: ${candidate}`);
+            cachedPythonPath = candidate;
+            return candidate;
+        }
+    }
+
+    channel.appendLine(`❌ No Python with dazzle.lsp found`);
+    return null;
+}
+
+/**
+ * Get the Python interpreter path (for backwards compatibility).
+ * Returns the first candidate, use findPythonWithDazzle() for smart detection.
+ */
+function getPythonPath(): string {
+    if (cachedPythonPath) {
+        return cachedPythonPath;
+    }
+    const candidates = getPythonCandidates();
+    return candidates[0] || 'python3';
+}
+
+/**
+ * Check if the DAZZLE LSP server is available.
+ * This now uses smart detection to find a Python with dazzle installed.
+ */
+export async function checkLspServerAvailable(): Promise<boolean> {
+    const channel = getOutputChannel();
+    const pythonPath = await findPythonWithDazzle(channel);
+    return pythonPath !== null;
 }
