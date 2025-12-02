@@ -40,24 +40,66 @@ def send_jsonrpc(proc: subprocess.Popen, method: str, params: dict = None, id: i
     return json.loads(response_line)
 
 
-class TestMCPServerIntegration:
-    """Integration tests that launch the server as a subprocess."""
+def _start_mcp_server() -> subprocess.Popen:
+    """Start the MCP server as a subprocess."""
+    proc = subprocess.Popen(
+        [PYTHON_PATH, "-m", "dazzle.mcp", "--working-dir", str(PROJECT_ROOT)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,  # Line buffered
+    )
+    return proc
 
-    def start_server(self) -> subprocess.Popen:
-        """Start the MCP server as a subprocess."""
-        proc = subprocess.Popen(
-            [PYTHON_PATH, "-m", "dazzle.mcp", "--working-dir", str(PROJECT_ROOT)],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,  # Line buffered
-        )
-        return proc
+
+def _initialize_server(proc: subprocess.Popen) -> dict:
+    """Initialize MCP server and return the response."""
+    response = send_jsonrpc(
+        proc,
+        "initialize",
+        {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {"name": "test", "version": "1.0"},
+        },
+    )
+
+    # Send initialized notification
+    proc.stdin.write(
+        json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
+    )
+    proc.stdin.flush()
+
+    return response
+
+
+@pytest.mark.slow
+class TestMCPServerIntegration:
+    """Integration tests that launch the server as a subprocess.
+
+    Uses a class-scoped fixture to share one subprocess across all tests,
+    significantly reducing test overhead.
+    """
+
+    @pytest.fixture(scope="class")
+    def mcp_server(self):
+        """Start a shared MCP server subprocess for the test class."""
+        proc = _start_mcp_server()
+        _initialize_server(proc)
+        yield proc
+        proc.terminate()
+        proc.wait(timeout=5)
+
+    @pytest.fixture(scope="class")
+    def request_id_counter(self):
+        """Shared counter to ensure unique request IDs across tests."""
+        return {"id": 10}  # Start at 10 to avoid conflicts with initialization
 
     def test_server_starts_and_responds_to_initialize(self):
         """Test that server starts and responds to MCP initialize request."""
-        proc = self.start_server()
+        # This test needs its own server to test initialization
+        proc = _start_mcp_server()
         try:
             response = send_jsonrpc(
                 proc,
@@ -78,95 +120,51 @@ class TestMCPServerIntegration:
             proc.terminate()
             proc.wait(timeout=5)
 
-    def test_tools_list(self):
+    def test_tools_list(self, mcp_server, request_id_counter):
         """Test that server returns list of tools."""
-        proc = self.start_server()
-        try:
-            # First initialize
-            send_jsonrpc(
-                proc,
-                "initialize",
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            )
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(mcp_server, "tools/list", {}, id=request_id_counter["id"])
 
-            # Send initialized notification
-            proc.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-            )
-            proc.stdin.flush()
+        assert response["jsonrpc"] == "2.0"
+        assert "result" in response
+        assert "tools" in response["result"]
 
-            # List tools
-            response = send_jsonrpc(proc, "tools/list", {}, id=2)
+        tools = response["result"]["tools"]
+        tool_names = [t["name"] for t in tools]
 
-            assert response["jsonrpc"] == "2.0"
-            assert "result" in response
-            assert "tools" in response["result"]
+        # Check expected tools exist
+        assert "validate_dsl" in tool_names
+        assert "list_modules" in tool_names
+        assert "inspect_entity" in tool_names
 
-            tools = response["result"]["tools"]
-            tool_names = [t["name"] for t in tools]
-
-            # Check expected tools exist
-            assert "validate_dsl" in tool_names
-            assert "list_modules" in tool_names
-            assert "inspect_entity" in tool_names
-        finally:
-            proc.terminate()
-            proc.wait(timeout=5)
-
-    def test_tool_call_validate_dsl(self):
+    def test_tool_call_validate_dsl(self, mcp_server, request_id_counter):
         """Test calling the validate_dsl tool."""
-        proc = self.start_server()
-        try:
-            # Initialize
-            send_jsonrpc(
-                proc,
-                "initialize",
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            )
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "validate_dsl", "arguments": {}},
+            id=request_id_counter["id"],
+        )
 
-            # Send initialized notification
-            proc.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-            )
-            proc.stdin.flush()
+        assert response["jsonrpc"] == "2.0"
+        assert "result" in response
 
-            # Call tool
-            response = send_jsonrpc(
-                proc,
-                "tools/call",
-                {"name": "validate_dsl", "arguments": {}},
-                id=2,
-            )
+        # Result should contain content
+        content = response["result"]["content"]
+        assert len(content) > 0
+        assert content[0]["type"] == "text"
 
-            assert response["jsonrpc"] == "2.0"
-            assert "result" in response
-
-            # Result should contain content
-            content = response["result"]["content"]
-            assert len(content) > 0
-            assert content[0]["type"] == "text"
-
-            # Parse the JSON result
-            result_data = json.loads(content[0]["text"])
-            # Should have either status: valid or status: error
-            assert "status" in result_data
-        finally:
-            proc.terminate()
-            proc.wait(timeout=5)
+        # Parse the JSON result
+        result_data = json.loads(content[0]["text"])
+        # Should have either status: valid or status: error
+        assert "status" in result_data
 
     def test_no_stdout_corruption(self):
         """Test that no non-JSON output goes to stdout."""
-        proc = self.start_server()
+        # This test needs its own server to verify clean startup
+        proc = _start_mcp_server()
         try:
-            # Send initialize
             response = send_jsonrpc(
                 proc,
                 "initialize",
@@ -364,6 +362,7 @@ class TestMCPDevMode:
         assert "active_project" in data
         assert data["active_project"] is not None
 
+    @pytest.mark.slow
     def test_validate_all_projects_tool(self):
         """Test the validate_all_projects tool."""
         import asyncio
@@ -396,148 +395,92 @@ class TestMCPDevMode:
         assert "project" in data or "status" in data
 
 
+@pytest.mark.slow
 class TestMCPDevModeIntegration:
-    """Integration tests for dev mode via subprocess."""
+    """Integration tests for dev mode via subprocess.
 
-    def start_server(self) -> subprocess.Popen:
-        """Start the MCP server as a subprocess pointing to Dazzle root (dev mode)."""
-        proc = subprocess.Popen(
-            [PYTHON_PATH, "-m", "dazzle.mcp", "--working-dir", str(PROJECT_ROOT)],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-        )
-        return proc
+    Uses a class-scoped fixture to share one subprocess across all tests,
+    significantly reducing test overhead.
+    """
 
-    def test_dev_mode_tools_via_subprocess(self):
+    @pytest.fixture(scope="class")
+    def mcp_server(self):
+        """Start a shared MCP server subprocess for the test class."""
+        proc = _start_mcp_server()
+        _initialize_server(proc)
+        yield proc
+        proc.terminate()
+        proc.wait(timeout=5)
+
+    @pytest.fixture(scope="class")
+    def request_id_counter(self):
+        """Shared counter to ensure unique request IDs across tests."""
+        return {"id": 10}
+
+    def test_dev_mode_tools_via_subprocess(self, mcp_server, request_id_counter):
         """Test that dev mode tools are exposed via subprocess."""
-        proc = self.start_server()
-        try:
-            # Initialize
-            send_jsonrpc(
-                proc,
-                "initialize",
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            )
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(mcp_server, "tools/list", {}, id=request_id_counter["id"])
 
-            proc.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-            )
-            proc.stdin.flush()
+        tools = response["result"]["tools"]
+        tool_names = [t["name"] for t in tools]
 
-            # List tools
-            response = send_jsonrpc(proc, "tools/list", {}, id=2)
+        # Dev mode tools should be present
+        assert "list_projects" in tool_names
+        assert "select_project" in tool_names
+        assert "get_active_project" in tool_names
+        assert "validate_all_projects" in tool_names
 
-            tools = response["result"]["tools"]
-            tool_names = [t["name"] for t in tools]
-
-            # Dev mode tools should be present
-            assert "list_projects" in tool_names
-            assert "select_project" in tool_names
-            assert "get_active_project" in tool_names
-            assert "validate_all_projects" in tool_names
-
-        finally:
-            proc.terminate()
-            proc.wait(timeout=5)
-
-    def test_list_projects_via_subprocess(self):
+    def test_list_projects_via_subprocess(self, mcp_server, request_id_counter):
         """Test list_projects tool via subprocess."""
-        proc = self.start_server()
-        try:
-            # Initialize
-            send_jsonrpc(
-                proc,
-                "initialize",
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            )
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "list_projects", "arguments": {}},
+            id=request_id_counter["id"],
+        )
 
-            proc.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-            )
-            proc.stdin.flush()
+        content = response["result"]["content"]
+        data = json.loads(content[0]["text"])
 
-            # Call list_projects
-            response = send_jsonrpc(
-                proc,
-                "tools/call",
-                {"name": "list_projects", "arguments": {}},
-                id=2,
-            )
+        assert data["mode"] == "dev"
+        assert len(data["projects"]) > 0
 
-            content = response["result"]["content"]
-            data = json.loads(content[0]["text"])
-
-            assert data["mode"] == "dev"
-            assert len(data["projects"]) > 0
-
-        finally:
-            proc.terminate()
-            proc.wait(timeout=5)
-
-    def test_project_workflow_via_subprocess(self):
+    def test_project_workflow_via_subprocess(self, mcp_server, request_id_counter):
         """Test full project selection workflow via subprocess."""
-        proc = self.start_server()
-        try:
-            # Initialize
-            send_jsonrpc(
-                proc,
-                "initialize",
-                {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {},
-                    "clientInfo": {"name": "test", "version": "1.0"},
-                },
-            )
+        # 1. List projects
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "list_projects", "arguments": {}},
+            id=request_id_counter["id"],
+        )
+        projects_data = json.loads(response["result"]["content"][0]["text"])
+        project_names = [p["name"] for p in projects_data["projects"]]
 
-            proc.stdin.write(
-                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n"
-            )
-            proc.stdin.flush()
+        # 2. Select a project
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "select_project", "arguments": {"project_name": project_names[0]}},
+            id=request_id_counter["id"],
+        )
+        select_data = json.loads(response["result"]["content"][0]["text"])
+        assert select_data["status"] == "selected"
 
-            # 1. List projects
-            response = send_jsonrpc(
-                proc,
-                "tools/call",
-                {"name": "list_projects", "arguments": {}},
-                id=2,
-            )
-            projects_data = json.loads(response["result"]["content"][0]["text"])
-            project_names = [p["name"] for p in projects_data["projects"]]
-
-            # 2. Select a project
-            response = send_jsonrpc(
-                proc,
-                "tools/call",
-                {"name": "select_project", "arguments": {"project_name": project_names[0]}},
-                id=3,
-            )
-            select_data = json.loads(response["result"]["content"][0]["text"])
-            assert select_data["status"] == "selected"
-
-            # 3. Validate the selected project
-            response = send_jsonrpc(
-                proc,
-                "tools/call",
-                {"name": "validate_dsl", "arguments": {}},
-                id=4,
-            )
-            validate_data = json.loads(response["result"]["content"][0]["text"])
-            assert "status" in validate_data
-
-        finally:
-            proc.terminate()
-            proc.wait(timeout=5)
+        # 3. Validate the selected project
+        request_id_counter["id"] += 1
+        response = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "validate_dsl", "arguments": {}},
+            id=request_id_counter["id"],
+        )
+        validate_data = json.loads(response["result"]["content"][0]["text"])
+        assert "status" in validate_data
 
 
 if __name__ == "__main__":

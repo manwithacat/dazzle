@@ -93,16 +93,16 @@ addopts = [
     "--strict-markers",
     "--strict-config",
     "-ra",
-    "--cov=src/dazzle",
-    "--cov-report=term-missing",
-    "--cov-report=html",
 ]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
-    "slow: Slow tests",
+    "slow: Slow tests (subprocess spawning, full validation)",
     "e2e: End-to-end tests for DNR runtime",
 ]
+# Coverage is opt-in for faster local runs. Use: pytest --cov=src/dazzle --cov-report=term-missing
+# Fast local run: pytest -m "not slow and not e2e"
+# CI runs with coverage enabled via command line
 
 [tool.coverage.run]
 source = ["src/dazzle"]

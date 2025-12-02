@@ -168,11 +168,15 @@ class TestAuthenticateResponse:
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestRoutesIntegration:
-    """Integration tests for test routes with real server."""
+    """Integration tests for test routes with real server.
 
-    @pytest.fixture
+    Uses a class-scoped fixture to share one FastAPI app/client across all tests,
+    with automatic reset between tests to ensure isolation.
+    """
+
+    @pytest.fixture(scope="class")
     def backend_spec(self) -> BackendSpec:
-        """Create a test backend spec."""
+        """Create a test backend spec (class-scoped for reuse)."""
         from dazzle_dnr_back.specs import BackendSpec
         from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
         from dazzle_dnr_back.specs.service import DomainOperation, OperationKind, ServiceSpec
@@ -218,13 +222,15 @@ class TestTestRoutesIntegration:
             endpoints=[],
         )
 
-    @pytest.fixture
-    def test_client(self, backend_spec: BackendSpec, tmp_path) -> TestClient:
-        """Create a test client with test mode enabled."""
+    @pytest.fixture(scope="class")
+    def shared_test_client(self, backend_spec: BackendSpec, tmp_path_factory) -> TestClient:
+        """Create a shared test client for the class (reused across tests)."""
         from fastapi.testclient import TestClient
 
         from dazzle_dnr_back.runtime.server import create_app
 
+        # Use tmp_path_factory for class-scoped fixtures
+        tmp_path = tmp_path_factory.mktemp("test_routes")
         db_path = tmp_path / "test.db"
         app = create_app(
             backend_spec,
@@ -232,6 +238,13 @@ class TestTestRoutesIntegration:
             enable_test_mode=True,
         )
         return TestClient(app)
+
+    @pytest.fixture
+    def test_client(self, shared_test_client: TestClient) -> TestClient:
+        """Provide test client with automatic reset for test isolation."""
+        # Reset data before each test to ensure isolation
+        shared_test_client.post("/__test__/reset")
+        return shared_test_client
 
     def test_seed_fixtures(self, test_client: TestClient) -> None:
         """Test seeding fixtures via API."""
@@ -421,7 +434,7 @@ class TestTestRoutesIntegration:
 class TestTestModeDisabled:
     """Test that test endpoints are not available when test mode is disabled."""
 
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def backend_spec(self) -> BackendSpec:
         """Create a test backend spec."""
         from dazzle_dnr_back.specs import BackendSpec
@@ -449,13 +462,14 @@ class TestTestModeDisabled:
             endpoints=[],
         )
 
-    @pytest.fixture
-    def test_client(self, backend_spec: BackendSpec, tmp_path) -> TestClient:
+    @pytest.fixture(scope="class")
+    def test_client(self, backend_spec: BackendSpec, tmp_path_factory) -> TestClient:
         """Create a test client WITHOUT test mode enabled."""
         from fastapi.testclient import TestClient
 
         from dazzle_dnr_back.runtime.server import create_app
 
+        tmp_path = tmp_path_factory.mktemp("test_disabled")
         db_path = tmp_path / "test.db"
         app = create_app(
             backend_spec,
