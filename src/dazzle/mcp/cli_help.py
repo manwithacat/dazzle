@@ -390,7 +390,7 @@ def get_workflow_guide(workflow: str) -> dict[str, Any]:
     Returns:
         Step-by-step workflow guide
     """
-    workflows = {
+    workflows: dict[str, dict[str, Any]] = {
         "getting_started": {
             "name": "Getting Started with DAZZLE",
             "description": "Complete beginner's guide to building your first DAZZLE app",
@@ -805,7 +805,10 @@ entity Task "Task":
     workflow_normalized = workflow.lower().replace("-", "_").replace(" ", "_")
 
     if workflow_normalized in workflows:
-        return {"workflow": workflow, "found": True, **workflows[workflow_normalized]}
+        workflow_data = workflows[workflow_normalized]
+        result: dict[str, Any] = {"workflow": workflow, "found": True}
+        result.update(workflow_data)
+        return result
 
     return {
         "workflow": workflow,
