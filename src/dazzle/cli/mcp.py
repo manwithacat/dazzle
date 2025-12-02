@@ -2,6 +2,9 @@
 MCP (Model Context Protocol) CLI commands.
 
 Commands for running and managing the DAZZLE MCP server.
+
+Note: These are top-level commands (mcp, mcp-setup, mcp-check) not a subgroup.
+They are exported as individual command functions and added directly to the main app.
 """
 
 import asyncio
@@ -9,8 +12,16 @@ from pathlib import Path
 
 import typer
 
+# Create a Typer app for grouping purposes, but commands will be added
+# to main app directly since they're top-level commands
+mcp_app = typer.Typer(
+    help="MCP (Model Context Protocol) server commands.",
+    no_args_is_help=True,
+)
 
-def mcp(
+
+@mcp_app.command("run")
+def mcp_run(
     working_dir: Path = typer.Option(  # noqa: B008
         None,
         "--working-dir",
@@ -38,6 +49,7 @@ def mcp(
         raise typer.Exit(code=1)
 
 
+@mcp_app.command("setup")
 def mcp_setup(
     force: bool = typer.Option(
         False,
@@ -72,6 +84,7 @@ def mcp_setup(
         raise typer.Exit(code=1)
 
 
+@mcp_app.command("check")
 def mcp_check() -> None:
     """
     Check DAZZLE MCP server status.

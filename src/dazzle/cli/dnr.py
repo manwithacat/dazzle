@@ -4,12 +4,20 @@ DNR (Dazzle Native Runtime) CLI commands.
 Commands for generating and serving runtime apps using DNR.
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 
 from dazzle.core.errors import DazzleError, ParseError
+
+if TYPE_CHECKING:
+    from dazzle.core import ir
+    from dazzle_dnr_back.specs import BackendSpec
+    from dazzle_dnr_ui.specs import UISpec
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
@@ -264,6 +272,12 @@ def dnr_serve(
         "--test-mode",
         help="Enable test endpoints (/__test__/seed, /__test__/reset, etc.)",
     ),
+    watch: bool = typer.Option(
+        False,
+        "--watch",
+        "-w",
+        help="Enable hot reload: watch DSL files and auto-refresh browser on changes",
+    ),
     local: bool = typer.Option(
         False,
         "--local",
@@ -294,12 +308,13 @@ def dnr_serve(
 
     Runs:
     - FastAPI backend on api-port (default 8000) with SQLite persistence
-    - Vite frontend dev server on port (default 3000) with hot reload
+    - Vite frontend dev server on port (default 3000)
     - Auto-migration for schema changes
     - Interactive API docs at http://host:api-port/docs
 
     Examples:
         dazzle dnr serve                    # Split containers (default)
+        dazzle dnr serve --local --watch    # Local mode with hot reload
         dazzle dnr serve --attach           # Run Docker with log streaming
         dazzle dnr serve --local            # Run locally without Docker
         dazzle dnr serve --single-container # Legacy single-container mode
@@ -310,6 +325,10 @@ def dnr_serve(
         dazzle dnr serve --ui-only          # Static UI only (no API)
         dazzle dnr serve --db ./my.db       # Custom database path
         dazzle dnr serve --test-mode        # Enable E2E test endpoints
+
+    Hot reload (--watch):
+        Watch DSL files for changes and auto-refresh browser.
+        Currently only works in --local mode.
 
     Related commands:
         dazzle dnr stop                     # Stop the running container
@@ -328,6 +347,14 @@ def dnr_serve(
     except Exception:
         auth_enabled = False
         project_name = None
+
+    # Warn if --watch is used without --local
+    if watch and not local:
+        typer.echo(
+            "Note: --watch requires --local mode. Enabling local mode automatically.",
+            err=True,
+        )
+        local = True
 
     # Docker-first: unless --local is specified, try Docker first
     if not local and not ui_only and not backend_only:
@@ -474,6 +501,10 @@ def dnr_serve(
     if test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
 
+    # Show hot reload status
+    if watch:
+        typer.echo("  • Hot reload: ENABLED (watching DSL files)")
+
     run_combined_server(
         backend_spec=backend_spec,
         ui_spec=ui_spec,
@@ -483,6 +514,8 @@ def dnr_serve(
         enable_test_mode=test_mode,
         enable_auth=auth_enabled,
         host=host,
+        enable_watch=watch,
+        project_root=project_root,
     )
 
 
@@ -905,3 +938,328 @@ def dnr_status(
     typer.echo("  dazzle dnr logs     - View container logs")
     typer.echo("  dazzle dnr stop     - Stop the container")
     typer.echo("  dazzle dnr rebuild  - Rebuild and restart")
+
+
+@dnr_app.command("inspect")
+def dnr_inspect(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    format_output: str = typer.Option(
+        "tree",
+        "--format",
+        "-f",
+        help="Output format: tree, json, summary",
+    ),
+    entity: str | None = typer.Option(
+        None,
+        "--entity",
+        "-e",
+        help="Inspect a specific entity by name",
+    ),
+    surface: str | None = typer.Option(
+        None,
+        "--surface",
+        "-s",
+        help="Inspect a specific surface by name",
+    ),
+    workspace: str | None = typer.Option(
+        None,
+        "--workspace",
+        "-w",
+        help="Inspect a specific workspace by name",
+    ),
+    endpoints: bool = typer.Option(
+        False,
+        "--endpoints",
+        help="Show generated API endpoints",
+    ),
+    components: bool = typer.Option(
+        False,
+        "--components",
+        help="Show generated UI components",
+    ),
+) -> None:
+    """
+    Inspect the DNR app structure and generated artifacts.
+
+    Shows detailed information about entities, surfaces, workspaces,
+    API endpoints, and UI components generated from the DSL.
+
+    Examples:
+        dazzle dnr inspect                    # Full tree view
+        dazzle dnr inspect --format json      # JSON output
+        dazzle dnr inspect --format summary   # Brief summary
+        dazzle dnr inspect --entity Task      # Inspect Task entity
+        dazzle dnr inspect --surface task_list  # Inspect surface
+        dazzle dnr inspect --endpoints        # Show API endpoints
+        dazzle dnr inspect --components       # Show UI components
+    """
+    import json as json_module
+
+    manifest_path = Path(manifest).resolve()
+    project_root = manifest_path.parent
+
+    # Load and parse the project
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(project_root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+    except Exception as e:
+        typer.echo(f"Error loading project: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Import converters
+    try:
+        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_dnr_ui.converters import convert_appspec_to_ui
+
+        backend_spec = convert_appspec_to_backend(appspec)
+        ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
+    except ImportError as e:
+        typer.echo(f"DNR runtime not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Handle specific item inspection
+    if entity:
+        _inspect_entity(appspec, backend_spec, entity, format_output)
+        return
+
+    if surface:
+        _inspect_surface(appspec, ui_spec, surface, format_output)
+        return
+
+    if workspace:
+        _inspect_workspace(appspec, ui_spec, workspace, format_output)
+        return
+
+    if endpoints:
+        _inspect_endpoints(backend_spec, format_output)
+        return
+
+    if components:
+        _inspect_components(ui_spec, format_output)
+        return
+
+    # Get entities from domain
+    entities = appspec.domain.entities
+
+    # Full inspection
+    if format_output == "json":
+        output = {
+            "app": appspec.name,
+            "entities": [e.name for e in entities],
+            "surfaces": [s.name for s in appspec.surfaces],
+            "workspaces": [w.name for w in appspec.workspaces],
+            "endpoints": len(backend_spec.endpoints),
+            "components": len(ui_spec.components),
+        }
+        typer.echo(json_module.dumps(output, indent=2))
+    elif format_output == "summary":
+        typer.echo(f"App: {appspec.name}")
+        typer.echo(f"  Entities:   {len(entities)}")
+        typer.echo(f"  Surfaces:   {len(appspec.surfaces)}")
+        typer.echo(f"  Workspaces: {len(appspec.workspaces)}")
+        typer.echo(f"  Endpoints:  {len(backend_spec.endpoints)}")
+        typer.echo(f"  Components: {len(ui_spec.components)}")
+    else:  # tree format
+        typer.echo(f"📦 {appspec.name}")
+        typer.echo("│")
+
+        # Entities
+        if entities:
+            typer.echo("├── 📊 Entities")
+            for i, ent in enumerate(entities):
+                prefix = "│   └──" if i == len(entities) - 1 else "│   ├──"
+                field_count = len(ent.fields)
+                typer.echo(f"{prefix} {ent.name} ({field_count} fields)")
+
+        # Surfaces
+        if appspec.surfaces:
+            typer.echo("│")
+            typer.echo("├── 🖥️  Surfaces")
+            for i, s in enumerate(appspec.surfaces):
+                prefix = "│   └──" if i == len(appspec.surfaces) - 1 else "│   ├──"
+                entity_ref = s.entity_ref or "no entity"
+                typer.echo(f"{prefix} {s.name} ({s.mode}, {entity_ref})")
+
+        # Workspaces
+        if appspec.workspaces:
+            typer.echo("│")
+            typer.echo("├── 📁 Workspaces")
+            for i, w in enumerate(appspec.workspaces):
+                prefix = "│   └──" if i == len(appspec.workspaces) - 1 else "│   ├──"
+                region_count = len(w.regions)
+                typer.echo(f"{prefix} {w.name} ({region_count} regions)")
+
+        # Backend summary
+        typer.echo("│")
+        typer.echo(f"├── 🔧 Backend: {len(backend_spec.endpoints)} endpoints")
+
+        # UI summary
+        typer.echo("│")
+        typer.echo(f"└── 🎨 UI: {len(ui_spec.components)} components")
+
+
+def _inspect_entity(
+    appspec: ir.AppSpec,
+    backend_spec: BackendSpec,
+    entity_name: str,
+    format_output: str,
+) -> None:
+    """Inspect a specific entity."""
+    import json as json_module
+
+    entities = appspec.domain.entities
+
+    # Find entity
+    entity = next((e for e in entities if e.name == entity_name), None)
+    if not entity:
+        typer.echo(f"Entity '{entity_name}' not found", err=True)
+        typer.echo(f"Available: {', '.join(e.name for e in entities)}")
+        raise typer.Exit(code=1)
+
+    # Find related endpoints
+    related_endpoints = [
+        ep for ep in backend_spec.endpoints if entity_name.lower() in ep.path.lower()
+    ]
+
+    if format_output == "json":
+        output = {
+            "name": entity.name,
+            "title": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type),
+                    "required": f.is_required,
+                    "primary_key": f.is_primary_key,
+                }
+                for f in entity.fields
+            ],
+            "endpoints": [{"method": str(ep.method), "path": ep.path} for ep in related_endpoints],
+        }
+        typer.echo(json_module.dumps(output, indent=2))
+    else:
+        typer.echo(f"📊 Entity: {entity.name}")
+        if entity.title:
+            typer.echo(f"   Title: {entity.title}")
+        typer.echo()
+        typer.echo("   Fields:")
+        for f in entity.fields:
+            pk = " [PK]" if f.is_primary_key else ""
+            req = " (required)" if f.is_required else ""
+            typer.echo(f"   • {f.name}: {f.type}{pk}{req}")
+
+        if related_endpoints:
+            typer.echo()
+            typer.echo("   Endpoints:")
+            for ep in related_endpoints:
+                typer.echo(f"   • {ep.method:6} {ep.path}")
+
+
+def _inspect_surface(
+    appspec: ir.AppSpec,
+    ui_spec: UISpec,
+    surface_name: str,
+    format_output: str,
+) -> None:
+    """Inspect a specific surface."""
+    import json as json_module
+
+    # Find surface
+    surface = next((s for s in appspec.surfaces if s.name == surface_name), None)
+    if not surface:
+        typer.echo(f"Surface '{surface_name}' not found", err=True)
+        typer.echo(f"Available: {', '.join(s.name for s in appspec.surfaces)}")
+        raise typer.Exit(code=1)
+
+    if format_output == "json":
+        output = {
+            "name": surface.name,
+            "title": surface.title,
+            "mode": str(surface.mode),
+            "entity_ref": surface.entity_ref,
+            "sections": [
+                {"name": sec.name, "elements": len(sec.elements)} for sec in surface.sections
+            ],
+        }
+        typer.echo(json_module.dumps(output, indent=2))
+    else:
+        typer.echo(f"🖥️  Surface: {surface.name}")
+        if surface.title:
+            typer.echo(f"   Title: {surface.title}")
+        typer.echo(f"   Mode: {surface.mode}")
+        if surface.entity_ref:
+            typer.echo(f"   Entity: {surface.entity_ref}")
+        typer.echo()
+        typer.echo("   Sections:")
+        for sec in surface.sections:
+            typer.echo(f"   • {sec.name}: {len(sec.elements)} elements")
+
+
+def _inspect_workspace(
+    appspec: ir.AppSpec,
+    ui_spec: UISpec,
+    workspace_name: str,
+    format_output: str,
+) -> None:
+    """Inspect a specific workspace."""
+    import json as json_module
+
+    # Find workspace
+    workspace = next((w for w in appspec.workspaces if w.name == workspace_name), None)
+    if not workspace:
+        typer.echo(f"Workspace '{workspace_name}' not found", err=True)
+        typer.echo(f"Available: {', '.join(w.name for w in appspec.workspaces)}")
+        raise typer.Exit(code=1)
+
+    if format_output == "json":
+        output = {
+            "name": workspace.name,
+            "title": workspace.title,
+            "purpose": workspace.purpose,
+            "regions": [{"name": r.name, "source": r.source} for r in workspace.regions],
+        }
+        typer.echo(json_module.dumps(output, indent=2))
+    else:
+        typer.echo(f"📁 Workspace: {workspace.name}")
+        if workspace.title:
+            typer.echo(f"   Title: {workspace.title}")
+        if workspace.purpose:
+            typer.echo(f"   Purpose: {workspace.purpose}")
+        typer.echo()
+        typer.echo("   Regions:")
+        for r in workspace.regions:
+            typer.echo(f"   • {r.name}: {r.source}")
+
+
+def _inspect_endpoints(backend_spec: BackendSpec, format_output: str) -> None:
+    """Inspect API endpoints."""
+    import json as json_module
+
+    if format_output == "json":
+        output = [
+            {"method": str(ep.method), "path": ep.path, "name": ep.name}
+            for ep in backend_spec.endpoints
+        ]
+        typer.echo(json_module.dumps(output, indent=2))
+    else:
+        typer.echo("🔧 API Endpoints")
+        typer.echo()
+        # Group by entity/path prefix
+        for ep in sorted(backend_spec.endpoints, key=lambda e: (e.path, str(e.method))):
+            typer.echo(f"   {str(ep.method):6} {ep.path}")
+
+
+def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
+    """Inspect UI components."""
+    import json as json_module
+
+    if format_output == "json":
+        output = [{"name": c.name, "category": c.category} for c in ui_spec.components]
+        typer.echo(json_module.dumps(output, indent=2))
+    else:
+        typer.echo("🎨 UI Components")
+        typer.echo()
+        for c in ui_spec.components:
+            typer.echo(f"   • {c.name} ({c.category})")

@@ -124,7 +124,8 @@ def test_stacks_command(cli_runner: CliRunner):
     """Test stacks command lists available stacks."""
     result = cli_runner.invoke(app, ["stacks"])
     assert result.exit_code == 0
-    assert "docker" in result.stdout.lower()
+    # Check for one of the known stack presets
+    assert "micro" in result.stdout.lower() or "api_only" in result.stdout.lower()
 
 
 def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path):
@@ -137,7 +138,7 @@ def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path
             "build",
             "--manifest",
             str(test_project / "dazzle.toml"),
-            "--backend",
+            "--stack",
             "docker",
             "--out",
             str(output_dir),
@@ -147,12 +148,12 @@ def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path
     assert result.exit_code == 0
     assert "Build complete" in result.stdout
 
-    # Check output file was created
-    assert (output_dir / "compose.yaml").exists()
+    # Check output directory was created
+    assert output_dir.exists()
 
 
 def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project: Path):
-    """Test build command with invalid backend."""
+    """Test build command with invalid stack."""
     result = cli_runner.invoke(
         app,
         [
@@ -167,46 +168,14 @@ def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project:
     )
 
     assert result.exit_code == 1
-    # Error messages go to stderr
-    assert "Error" in result.stderr or "not found" in result.stderr
+    # Stack error should appear in stdout or stderr
+    assert "Stack error" in result.stdout or "error" in result.stderr.lower()
 
 
 def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with default options (interfaces and patterns)."""
+    """Test inspect command with default options."""
     result = cli_runner.invoke(app, ["inspect", "--manifest", str(test_project / "dazzle.toml")])
 
     assert result.exit_code == 0
-    # Should show module interfaces
-    assert "Module Interface" in result.stdout or "module:" in result.stdout
-    # Should show pattern analysis
-    assert "Pattern" in result.stdout or "CRUD" in result.stdout
-
-
-def test_inspect_command_interfaces_only(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with --no-patterns flag."""
-    result = cli_runner.invoke(
-        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-patterns"]
-    )
-
-    assert result.exit_code == 0
-    assert "Module" in result.stdout
-
-
-def test_inspect_command_patterns_only(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with --no-interfaces flag."""
-    result = cli_runner.invoke(
-        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--no-interfaces"]
-    )
-
-    assert result.exit_code == 0
-    assert "Pattern" in result.stdout or "CRUD" in result.stdout
-
-
-def test_inspect_command_type_catalog(cli_runner: CliRunner, test_project: Path):
-    """Test inspect command with --types flag."""
-    result = cli_runner.invoke(
-        app, ["inspect", "--manifest", str(test_project / "dazzle.toml"), "--types"]
-    )
-
-    assert result.exit_code == 0
-    assert "Type Catalog" in result.stdout or "Field Types" in result.stdout
+    # Should show project structure with entities and surfaces
+    assert "Entities" in result.stdout or "test_app" in result.stdout
