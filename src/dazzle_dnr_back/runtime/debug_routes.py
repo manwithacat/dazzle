@@ -189,9 +189,7 @@ def create_debug_routes(
                     except Exception:
                         pass
 
-                    entity_stats.append(
-                        EntityStats(name=entity.name, count=count, has_fts=has_fts)
-                    )
+                    entity_stats.append(EntityStats(name=entity.name, count=count, has_fts=has_fts))
                     total_records += count
                 except Exception:
                     entity_stats.append(EntityStats(name=entity.name, count=0))
@@ -240,19 +238,23 @@ def create_debug_routes(
         fields = []
         for field in entity.fields:
             # Convert FieldType to a string representation
-            type_str = str(field.type.scalar_type.value) if field.type.scalar_type else field.type.kind
+            type_str = (
+                str(field.type.scalar_type.value) if field.type.scalar_type else field.type.kind
+            )
             if field.type.kind == "ref" and field.type.ref_entity:
                 type_str = f"ref({field.type.ref_entity})"
             elif field.type.kind == "enum" and field.type.enum_values:
                 type_str = f"enum({', '.join(field.type.enum_values)})"
 
-            fields.append({
-                "name": field.name,
-                "type": type_str,
-                "required": field.required,
-                "unique": field.unique,
-                "indexed": field.indexed,
-            })
+            fields.append(
+                {
+                    "name": field.name,
+                    "type": type_str,
+                    "required": field.required,
+                    "unique": field.unique,
+                    "indexed": field.indexed,
+                }
+            )
 
         # Get sample data
         sample: list[dict[str, Any]] = []
@@ -291,9 +293,7 @@ def create_debug_routes(
 
         with db_manager.connection() as conn:
             # Get all tables
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
             table_names = [row[0] for row in cursor.fetchall()]
 
             for table_name in table_names:

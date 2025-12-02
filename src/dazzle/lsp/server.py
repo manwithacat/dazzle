@@ -116,7 +116,9 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
         dsl_files = discover_dsl_files(project_root, mf)
         modules = parse_modules(dsl_files)
         ls.appspec = build_appspec(modules, mf.project_root)
-        logger.info(f"Loaded project from {project_root} with {len(ls.appspec.domain.entities)} entities")
+        logger.info(
+            f"Loaded project from {project_root} with {len(ls.appspec.domain.entities)} entities"
+        )
     except Exception as e:
         logger.error(f"Error loading project: {e}")
         ls.appspec = None

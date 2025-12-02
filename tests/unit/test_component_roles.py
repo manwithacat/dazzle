@@ -4,7 +4,6 @@ Unit tests for component roles (v0.5.0 feature).
 Tests ComponentRole and role-based classification of components.
 """
 
-
 from dazzle_dnr_ui.specs.actions import (
     ActionSpec,
     FetchEffect,

@@ -506,8 +506,8 @@ def layout_plan_command(
         for ws in workspaces:
             typer.echo(f"\n📁 Workspace: {ws.name}")
             typer.echo(f"   Title: {ws.title}")
-            if ws.layout:
-                typer.echo(f"   Layout: {ws.layout}")
+            if ws.engine_hint:
+                typer.echo(f"   Layout: {ws.engine_hint}")
             if ws.regions:
                 typer.echo("   Regions:")
                 for region in ws.regions:
@@ -786,16 +786,28 @@ def analyze_spec_command(
         raise typer.Exit(code=1)
 
     try:
-        from dazzle.llm import SpecAnalyzer
+        from dazzle.llm import LLMProvider, SpecAnalyzer
 
         typer.echo(f"📄 Analyzing: {spec_file}")
         typer.echo(f"   Provider: {provider}")
 
-        analyzer = SpecAnalyzer(provider=provider)
+        # Convert provider string to enum
+        try:
+            provider_enum = LLMProvider(provider)
+        except ValueError:
+            typer.echo(
+                f"Invalid provider: {provider}. Use: anthropic, openai, claude_cli", err=True
+            )
+            raise typer.Exit(code=1)
+
+        analyzer = SpecAnalyzer(provider=provider_enum)
         spec_content = spec_path.read_text()
 
         typer.echo("\n🔍 Analyzing specification...")
-        results = analyzer.analyze(spec_content)
+        analysis = analyzer.analyze(spec_content)
+
+        # Convert to dict for helper functions
+        results = analysis.model_dump()
 
         _print_analysis_summary(results)
 

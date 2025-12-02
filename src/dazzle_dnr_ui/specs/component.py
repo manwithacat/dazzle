@@ -186,9 +186,7 @@ class ComponentSpec(BaseModel):
             return True
         if self.role is None:
             # Auto-infer: presentational if no state and no impure actions
-            return len(self.state) == 0 and all(
-                action.effect is None for action in self.actions
-            )
+            return len(self.state) == 0 and all(action.effect is None for action in self.actions)
         return False
 
     @property
@@ -203,9 +201,7 @@ class ComponentSpec(BaseModel):
             return True
         if self.role is None:
             # Auto-infer: container if has state or impure actions
-            return len(self.state) > 0 or any(
-                action.effect is not None for action in self.actions
-            )
+            return len(self.state) > 0 or any(action.effect is not None for action in self.actions)
         return False
 
     def get_action(self, name: str) -> ActionSpec | None:
