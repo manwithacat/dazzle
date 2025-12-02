@@ -344,6 +344,108 @@ entity Task:
 - Offline-first patterns
 - Cross-platform sync
 
+**Estimate**: 10-12 weeks
+
+---
+
+### v0.7.0 - GraphQL BFF Layer (Q4 2026)
+
+**Focus**: API aggregation and external service facade
+
+**Spec Document**: `dev_docs/DNR-Back-GraphQL-Spec-v1.md`
+
+**Planned Features**:
+
+#### GraphQL BFF/Facade Pattern
+- GraphQL server integration (Strawberry/Ariadne)
+- External API adapter interface
+- Unified schema over multiple data sources
+- Error normalization across external APIs
+
+#### Multi-Tenant Context
+```python
+@dataclass
+class GraphQLContext:
+    tenant_id: str
+    user_id: str
+    roles: list[str]
+    request_id: str
+```
+
+#### CLI Integration
+```bash
+dazzle dnr serve --graphql    # Enable GraphQL endpoint
+dazzle dnr inspect --schema   # View generated schema
+```
+
+**Use Case**: Aggregate HMRC, banking APIs, and internal services into clean graph for frontend consumption.
+
+**Estimate**: 4-6 weeks
+
+---
+
+### v0.8.0 - Full GraphQL Builder (Q1 2027)
+
+**Focus**: Auto-generate GraphQL from BackendSpec
+
+**Planned Features**:
+- Schema generation from EntitySpec → GraphQL types
+- ServiceSpec → Query/Mutation mapping
+- Automatic resolver scaffolding
+- Input type generation
+
+**Estimate**: 6-8 weeks
+
+---
+
+### v1.0.0 - Dazzle Orchestrator Control Plane (Q2 2027)
+
+**Focus**: Hosted control plane for production app management
+
+**Spec Document**: `dev_docs/orchestrator-control-plane-spec-v1.md`
+
+This is a **major version** representing the shift from CLI tool to hosted platform.
+
+#### Architecture
+```
+┌─────────────────────────────────────────┐
+│            CONTROL PLANE                │
+│  Dazzle Server + Dazzle-DB + Worker     │
+└───────────────────┬─────────────────────┘
+                    │ manages
+┌───────────────────▼─────────────────────┐
+│              DATA PLANE                 │
+│       App (FastAPI) + App DB            │
+└─────────────────────────────────────────┘
+```
+
+#### Core Domain Models
+- **SpecVersion**: Immutable DSL/AppSpec snapshots
+- **AppSpecDiff**: Semantic differences between versions
+- **MigrationPlan**: Proposed execution plan (DB + code + deploy)
+- **MigrationRun**: Execution instance with logs/status
+- **Deployment**: Current/historical deployment state per environment
+
+#### Founder Web UI
+- Dashboard with environment status
+- Spec Editor (structured + raw DSL)
+- Diff & Plan View with risk assessment
+- Deployment View with rollback capability
+- Chat/Companion Pane for LLM-assisted changes
+
+#### Safe Migration Patterns
+- Backwards-compatible-first principle
+- Blue/green deployments
+- Snapshot-based recovery for destructive migrations
+- Pre/post health checks
+
+#### LLM Integration
+- Natural language → DSL changes (with validation)
+- Migration plan explanation
+- Strict safety rails on LLM output
+
+**Estimate**: 12-16 weeks
+
 ---
 
 ## Deprecated Features
@@ -375,6 +477,9 @@ For detailed phase planning, see:
 | `dev_docs/roadmap_v0_3_0.md` | v0.3.0 UI Layout Engine phases |
 | `dev_docs/roadmap_v0_3_0_phase5.md` | Phase 5 advanced archetypes |
 | `dev_docs/roadmap_v0_4_0_dnr.md` | DNR runtime architecture |
+| `dev_docs/DNR-Back-GraphQL-Spec-v1.md` | GraphQL BFF specification (v0.7.0) |
+| `dev_docs/orchestrator-control-plane-spec-v1.md` | Control plane specification (v1.0.0) |
+| `dev_docs/future_features_analysis.md` | Analysis and context for future features |
 
 ---
 
@@ -433,6 +538,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-02 (Evening)
+- Added future roadmap items v0.7.0, v0.8.0, v1.0.0
+- **v0.7.0**: GraphQL BFF Layer (Q4 2026) - API aggregation/facade pattern
+- **v0.8.0**: Full GraphQL Builder (Q1 2027) - Schema generation from BackendSpec
+- **v1.0.0**: Dazzle Orchestrator Control Plane (Q2 2027) - Hosted platform
+- Created `dev_docs/future_features_analysis.md` with implementation context
+- Updated roadmap files table with spec documents
 
 ### 2025-12-02
 - **v0.4.0 COMPLETE**: All DNR Production Ready features delivered
