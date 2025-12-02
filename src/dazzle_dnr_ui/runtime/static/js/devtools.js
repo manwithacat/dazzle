@@ -36,6 +36,17 @@ import { setActionLogger } from './actions.js';
  * @typedef {'state'|'network'|'actions'} DevToolsTab
  */
 
+/**
+ * @typedef {Object} ActionLogEntry
+ * @property {string} id - Unique entry ID
+ * @property {number} timestamp - Unix timestamp
+ * @property {string} name - Action name
+ * @property {any} payload - Action payload
+ * @property {Object<string, any>} [stateBefore] - State snapshot before action
+ * @property {Object<string, any>} [stateAfter] - State snapshot after action
+ * @property {Object<string, {before: any, after: any}>} [diff] - State changes
+ */
+
 // =============================================================================
 // State
 // =============================================================================
@@ -49,11 +60,16 @@ const [activeTab, setActiveTab] = createSignal(/** @type {DevToolsTab} */ ('stat
 const initialRequests = [];
 const [networkRequests, setNetworkRequests] = createSignal(initialRequests);
 
-/** @type {string[]} */
+/** @type {ActionLogEntry[]} */
 const initialActions = [];
 const [actionLog, setActionLog] = createSignal(initialActions);
 
+/** @type {string|null} */
+let expandedActionId = null;
+const [selectedActionId, setSelectedActionId] = createSignal(/** @type {string|null} */ (null));
+
 let requestCounter = 0;
+let actionCounter = 0;
 
 // =============================================================================
 // Network Request Interceptor
@@ -129,15 +145,111 @@ function interceptNetworkRequests() {
 // =============================================================================
 
 /**
- * Log an action dispatch.
+ * Get a snapshot of all state stores.
+ * @returns {Object<string, any>}
+ */
+function getStateSnapshot() {
+  /** @type {Object<string, any>} */
+  const snapshot = {};
+  const scopes = ['local', 'workspace', 'app', 'session'];
+
+  for (const scope of scopes) {
+    const store = stateStores[/** @type {keyof typeof stateStores} */ (scope)];
+    if (store.size > 0) {
+      snapshot[scope] = {};
+      for (const [key, [getter]] of store.entries()) {
+        try {
+          const value = getter();
+          // Deep clone to avoid reference issues
+          snapshot[scope][key] = JSON.parse(JSON.stringify(value));
+        } catch {
+          snapshot[scope][key] = '[unserializable]';
+        }
+      }
+    }
+  }
+  return snapshot;
+}
+
+/**
+ * Compute diff between two state snapshots.
+ * @param {Object<string, any>} before
+ * @param {Object<string, any>} after
+ * @returns {Object<string, {before: any, after: any}>}
+ */
+function computeStateDiff(before, after) {
+  /** @type {Object<string, {before: any, after: any}>} */
+  const diff = {};
+
+  // Check all keys in both objects
+  const allScopes = new Set([...Object.keys(before), ...Object.keys(after)]);
+
+  for (const scope of allScopes) {
+    const beforeScope = before[scope] || {};
+    const afterScope = after[scope] || {};
+    const allKeys = new Set([...Object.keys(beforeScope), ...Object.keys(afterScope)]);
+
+    for (const key of allKeys) {
+      const path = `${scope}.${key}`;
+      const beforeVal = beforeScope[key];
+      const afterVal = afterScope[key];
+
+      // Compare JSON representations
+      const beforeJson = JSON.stringify(beforeVal);
+      const afterJson = JSON.stringify(afterVal);
+
+      if (beforeJson !== afterJson) {
+        diff[path] = { before: beforeVal, after: afterVal };
+      }
+    }
+  }
+
+  return diff;
+}
+
+/** @type {Object<string, any>|null} */
+let pendingStateBefore = null;
+
+/**
+ * Log an action dispatch with state diff tracking.
  * @param {string} actionName - Name of the action
  * @param {any} payload - Action payload
  */
 export function logAction(actionName, payload) {
-  const timestamp = new Date().toISOString().slice(11, 23);
-  const entry = `[${timestamp}] ${actionName}: ${JSON.stringify(payload).slice(0, 100)}`;
-  const currentLog = actionLog();
-  setActionLog([entry, ...currentLog].slice(0, 100)); // Keep last 100
+  const id = `action-${++actionCounter}`;
+  const timestamp = Date.now();
+
+  // Capture state before (should be called before action executes)
+  const stateBefore = pendingStateBefore || getStateSnapshot();
+  pendingStateBefore = null;
+
+  // Schedule state after capture (after microtask queue clears)
+  setTimeout(() => {
+    const stateAfter = getStateSnapshot();
+    const diff = computeStateDiff(stateBefore, stateAfter);
+
+    /** @type {ActionLogEntry} */
+    const entry = {
+      id,
+      timestamp,
+      name: actionName,
+      payload,
+      stateBefore,
+      stateAfter,
+      diff
+    };
+
+    const currentLog = actionLog();
+    setActionLog([entry, ...currentLog].slice(0, 100)); // Keep last 100
+  }, 0);
+}
+
+/**
+ * Call before dispatching an action to capture pre-action state.
+ * This allows more accurate state diffing.
+ */
+export function capturePreActionState() {
+  pendingStateBefore = getStateSnapshot();
 }
 
 // =============================================================================
@@ -250,8 +362,85 @@ function createDevToolsPanel() {
       .dnr-network-status.pending { color: #dcdcaa; }
       .dnr-network-time { width: 60px; text-align: right; color: #808080; }
       .dnr-action-row {
+        padding: 6px 8px;
+        border-bottom: 1px solid #3c3c3c;
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+      .dnr-action-row:hover { background: #2d2d2d; }
+      .dnr-action-row.expanded { background: #2d2d2d; }
+      .dnr-action-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .dnr-action-time {
+        color: #808080;
+        font-size: 10px;
+        min-width: 70px;
+      }
+      .dnr-action-name {
+        color: #dcdcaa;
+        font-weight: bold;
+      }
+      .dnr-action-payload {
+        color: #808080;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .dnr-action-diff-badge {
+        background: #007acc;
+        color: white;
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+      }
+      .dnr-action-diff-badge.no-changes {
+        background: #4d4d4d;
+      }
+      .dnr-action-details {
+        display: none;
+        padding: 8px;
+        background: #1a1a1a;
+        border-radius: 4px;
+        margin-top: 8px;
+      }
+      .dnr-action-row.expanded .dnr-action-details {
+        display: block;
+      }
+      .dnr-diff-section {
+        margin-bottom: 8px;
+      }
+      .dnr-diff-title {
+        color: #569cd6;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+      .dnr-diff-row {
+        display: flex;
         padding: 2px 0;
-        font-family: monospace;
+        font-size: 11px;
+      }
+      .dnr-diff-path {
+        color: #9cdcfe;
+        min-width: 150px;
+      }
+      .dnr-diff-before {
+        color: #f14c4c;
+        background: rgba(241, 76, 76, 0.1);
+        padding: 0 4px;
+        margin-right: 4px;
+      }
+      .dnr-diff-after {
+        color: #4ec9b0;
+        background: rgba(78, 201, 176, 0.1);
+        padding: 0 4px;
+      }
+      .dnr-diff-arrow {
+        color: #808080;
+        margin: 0 4px;
       }
       .dnr-devtools-hint {
         color: #808080;
@@ -389,18 +578,102 @@ function renderNetworkTab() {
 }
 
 /**
- * Render the actions tab.
+ * Format a timestamp for display.
+ * @param {number} timestamp - Unix timestamp in ms
+ * @returns {string}
+ */
+function formatActionTime(timestamp) {
+  const date = new Date(timestamp);
+  // Get time with milliseconds
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const ms = String(date.getMilliseconds()).padStart(3, '0');
+  return `${hours}:${minutes}:${seconds}.${ms}`;
+}
+
+/**
+ * Format a short preview of a value.
+ * @param {any} value
+ * @returns {string}
+ */
+function formatShortValue(value) {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  const str = JSON.stringify(value);
+  if (str.length > 50) return str.slice(0, 47) + '...';
+  return str;
+}
+
+/**
+ * Render the state diff for an action.
+ * @param {ActionLogEntry} action
+ * @returns {string}
+ */
+function renderActionDiff(action) {
+  const diff = action.diff || {};
+  const diffKeys = Object.keys(diff);
+
+  if (diffKeys.length === 0) {
+    return '<div class="dnr-devtools-hint">No state changes</div>';
+  }
+
+  let html = '<div class="dnr-diff-section"><div class="dnr-diff-title">State Changes</div>';
+
+  for (const path of diffKeys) {
+    const { before, after } = diff[path];
+    html += `<div class="dnr-diff-row">
+      <span class="dnr-diff-path">${escapeHtml(path)}</span>
+      <span class="dnr-diff-before">${escapeHtml(formatShortValue(before))}</span>
+      <span class="dnr-diff-arrow">→</span>
+      <span class="dnr-diff-after">${escapeHtml(formatShortValue(after))}</span>
+    </div>`;
+  }
+
+  html += '</div>';
+
+  // Add payload details
+  if (action.payload && Object.keys(action.payload).length > 0) {
+    html += `<div class="dnr-diff-section">
+      <div class="dnr-diff-title">Payload</div>
+      <div class="dnr-devtools-tree">${formatValue(action.payload)}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
+/**
+ * Render the actions tab with expandable entries.
  * @returns {string}
  */
 function renderActionsTab() {
   const actions = actionLog();
+  const selected = selectedActionId();
 
   if (actions.length === 0) {
     return '<div class="dnr-devtools-hint">No actions dispatched yet. Action dispatches will appear here.</div>';
   }
 
   return actions
-    .map((a) => `<div class="dnr-action-row">${escapeHtml(a)}</div>`)
+    .map((action) => {
+      const isExpanded = action.id === selected;
+      const diffCount = Object.keys(action.diff || {}).length;
+      const diffBadgeClass = diffCount > 0 ? '' : 'no-changes';
+      const payloadPreview = formatShortValue(action.payload);
+
+      return `<div class="dnr-action-row ${isExpanded ? 'expanded' : ''}" data-action-id="${action.id}">
+        <div class="dnr-action-header">
+          <span class="dnr-action-time">${formatActionTime(action.timestamp)}</span>
+          <span class="dnr-action-name">${escapeHtml(action.name)}</span>
+          <span class="dnr-action-payload">${escapeHtml(payloadPreview)}</span>
+          <span class="dnr-action-diff-badge ${diffBadgeClass}">${diffCount} change${diffCount !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="dnr-action-details">
+          ${renderActionDiff(action)}
+        </div>
+      </div>`;
+    })
     .join('');
 }
 
@@ -465,6 +738,23 @@ export function initDevTools() {
     closeBtn.addEventListener('click', () => setIsOpen(false));
   }
 
+  // Action row click handler (event delegation)
+  const content = document.getElementById('dnr-devtools-content');
+  if (content) {
+    content.addEventListener('click', (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      const actionRow = target.closest('.dnr-action-row');
+      if (actionRow) {
+        const actionId = actionRow.getAttribute('data-action-id');
+        if (actionId) {
+          // Toggle selection
+          const current = selectedActionId();
+          setSelectedActionId(current === actionId ? null : actionId);
+        }
+      }
+    });
+  }
+
   // Keyboard shortcut: Ctrl+Shift+D
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && e.key === 'D') {
@@ -492,6 +782,11 @@ export function initDevTools() {
 
   createEffect(() => {
     actionLog(); // Subscribe to action changes
+    if (isOpen() && activeTab() === 'actions') updateContent();
+  });
+
+  createEffect(() => {
+    selectedActionId(); // Subscribe to selection changes
     if (isOpen() && activeTab() === 'actions') updateContent();
   });
 
@@ -525,4 +820,4 @@ export function closeDevTools() {
 }
 
 // Export state for external access
-export { isOpen, networkRequests, actionLog };
+export { isOpen, networkRequests, actionLog, selectedActionId };
