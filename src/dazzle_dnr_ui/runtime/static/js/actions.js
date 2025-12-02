@@ -164,7 +164,7 @@ export async function executeEffect(effect, context) {
 
         // Map to appropriate API call based on method
         if (method === 'GET' || effect.operation === 'list') {
-          result = await apiClient.list(entity, inputs);
+          result = await apiClient.list(entity, /** @type {Record<string, string>} */ (inputs || {}));
         } else if (effect.operation === 'read' && inputs.id) {
           result = await apiClient.read(entity, inputs.id);
         } else if (method === 'POST' || effect.operation === 'create') {
@@ -289,11 +289,11 @@ registerAction('select', ({ item, target }) => {
   return item;
 });
 
-registerAction('toggle', ({ path, scope = 'workspace' }) => {
+registerAction('toggle', ({ path, scope = /** @type {import('./types.js').StateScope} */ ('workspace') }) => {
   updateState(scope, path, current => !current);
 });
 
-registerAction('reset', ({ path, scope = 'workspace', initial = null }) => {
+registerAction('reset', ({ path, scope = /** @type {import('./types.js').StateScope} */ ('workspace'), initial = null }) => {
   setState(scope, path, initial);
 });
 

@@ -97,4 +97,15 @@ export default DNR;
 // Attach to window for non-module usage
 if (typeof window !== 'undefined') {
   window.DNR = DNR;
+
+  // Auto-initialize devtools in development mode
+  // Check for DNR dev server (hot reload endpoint exists)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Initialize devtools when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDevTools);
+    } else {
+      initDevTools();
+    }
+  }
 }
