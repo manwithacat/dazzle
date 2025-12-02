@@ -1,8 +1,8 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-11-28
-**Current Version**: v0.3.0 (in development)
-**Status**: DNR is primary runtime, legacy stacks deprecated
+**Last Updated**: 2025-12-02
+**Current Version**: v0.4.0
+**Status**: DNR is primary runtime with full deployment tooling
 
 ---
 
@@ -54,10 +54,9 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
 
 ---
 
-### v0.3.0 - DNR & Layout Engine (Current) 🔄 IN PROGRESS
+### v0.3.0 - DNR & Layout Engine ✅ COMPLETE
 
-**Status**: Phase 2 Horizontal COMPLETE, Phase 5 in progress
-**Target Release**: December 2025
+**Released**: November 2025
 
 **Major Pivot**: This release introduces **Dazzle Native Runtime (DNR)** as the primary way to run DAZZLE applications, deprecating legacy code generation stacks.
 
@@ -253,49 +252,48 @@ Tests are generated from the same AppSpec that generates the app. Tests operate 
 
 ---
 
-### v0.3.3 - DNR Developer Experience (February 2026)
+### v0.3.3 - DNR Developer Experience ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: Make development delightful
 
-**Planned Features**:
+**Delivered**:
 
 #### Hot Reload & Dev Tools
-- DSL file watching with instant reload
-- Browser dev tools panel
-- State inspector
-- Network request viewer
+- [x] DSL file watching with instant reload (`dazzle dnr serve --watch`)
+- [x] Browser dev tools panel with state/action inspection
+- [x] State inspector with real-time updates
+- [x] Action log with state diff visualization
 
 #### Debugging & Visualization
-- `dazzle dnr inspect` command
-- Action log viewer
-- State diff visualization
-- Layout plan visualizer in browser
-
-**Estimate**: 4-6 weeks
+- [x] `dazzle dnr inspect` command for spec inspection
+- [x] `dazzle dnr inspect --live` for running server inspection
+- [x] `/_dnr/*` debug endpoints (health, stats, entity details)
 
 ---
 
-### v0.4.0 - DNR Production Ready (March 2026)
+### v0.4.0 - DNR Production Ready ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: Production deployment and testing
 
-**Planned Features**:
+**Delivered**:
 
 #### Testing & Validation
-- DSL `test` blocks with spec-based testing
-- Playwright integration for UI tests
-- API contract testing
-- Performance benchmarks
-- Accessibility checks
+- [x] `dazzle dnr test` command for API contract testing
+- [x] `--benchmark` option for performance testing
+- [x] `--a11y` option for WCAG accessibility testing
+- [x] Playwright harness integration
 
 #### Deployment & Distribution
-- `dazzle dnr build` for production bundles
-- Docker image generation
-- Environment configuration
-- Database migrations for production
-- Health monitoring endpoints
-
-**Estimate**: 6-8 weeks
+- [x] `dazzle dnr build` for production bundles
+- [x] Multi-stage Dockerfile generation
+- [x] docker-compose.yml for local deployment
+- [x] Environment configuration (.env.example templates)
+- [x] `dazzle dnr migrate` for database migrations
+- [x] Kubernetes-style health probes (`/_dnr/live`, `/_dnr/ready`)
 
 ---
 
@@ -382,7 +380,7 @@ For detailed phase planning, see:
 
 ## Success Metrics
 
-### v0.3.0 Success Criteria
+### v0.4.0 Success Criteria ✅ ALL MET
 
 - [x] `dazzle dnr serve` starts a real app with persistence
 - [x] CRUD operations work end-to-end
@@ -390,9 +388,12 @@ For detailed phase planning, see:
 - [x] File uploads and rich text work
 - [x] Real-time updates in browser
 - [x] 5 layout archetypes implemented
-- [x] All example projects demonstrate archetypes
-- [ ] Version bump to 0.3.0
-- [ ] Release announcement
+- [x] Hot reload with `--watch` flag
+- [x] Dev tools panel in browser
+- [x] `dazzle dnr test` with contract/benchmark/a11y testing
+- [x] `dazzle dnr build` produces Docker-ready bundles
+- [x] `dazzle dnr migrate` for production database updates
+- [x] Kubernetes health probes (`/_dnr/live`, `/_dnr/ready`)
 
 ### Overall Health Metrics
 
@@ -426,12 +427,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 **Document Owner**: Claude + James
-**Last Review**: 2025-11-28
-**Next Review**: December 2025 (post v0.3.0 release)
+**Last Review**: 2025-12-02
+**Next Review**: Q1 2026 (planning v0.5.0)
 
 ---
 
 ## Changelog
+
+### 2025-12-02
+- **v0.4.0 COMPLETE**: All DNR Production Ready features delivered
+- Marked v0.3.3 (Developer Experience) as complete
+- Marked v0.4.0 (Production Ready) as complete
+- Updated current version to v0.4.0
+- New features: `dazzle dnr build`, `dazzle dnr migrate`, `dazzle dnr test`
+- Health probes: `/_dnr/live`, `/_dnr/ready`
+- Updated success criteria for v0.4.0
 
 ### 2025-11-28
 - **MAJOR REWRITE**: Aligned roadmap with actual development reality
