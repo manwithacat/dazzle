@@ -54,8 +54,8 @@ jobs:
             # Single example specified
             echo "matrix={\"example\":[\"${{ github.event.inputs.example }}\"]}" >> $GITHUB_OUTPUT
           else
-            # All examples
-            EXAMPLES=$(ls -d examples/*/ | xargs -I{} basename {} | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            # All examples (excluding _archive and other underscore-prefixed dirs)
+            EXAMPLES=$(ls -d examples/*/ | xargs -I{} basename {} | grep -v '^_' | jq -R -s -c 'split("\n") | map(select(length > 0))')
             echo "matrix={\"example\":$EXAMPLES}" >> $GITHUB_OUTPUT
           fi
 

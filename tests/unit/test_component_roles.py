@@ -4,7 +4,6 @@ Unit tests for component roles (v0.5.0 feature).
 Tests ComponentRole and role-based classification of components.
 """
 
-import pytest
 
 from dazzle_dnr_ui.specs.actions import (
     ActionSpec,
@@ -17,8 +16,8 @@ from dazzle_dnr_ui.specs.component import (
     ComponentCategory,
     ComponentRole,
     ComponentSpec,
-    PropsSchema,
     PropFieldSpec,
+    PropsSchema,
 )
 from dazzle_dnr_ui.specs.state import StateScope, StateSpec
 

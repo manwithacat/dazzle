@@ -9,14 +9,12 @@ from pathlib import Path
 import pytest
 
 from dazzle.core.dsl_parser import parse_dsl
+from dazzle.core.errors import ParseError
 from dazzle.core.ir import (
-    AccessSpec,
     AuthContext,
     ComparisonOperator,
     LogicalOperator,
     PermissionKind,
-    PermissionRule,
-    VisibilityRule,
 )
 
 
@@ -231,5 +229,5 @@ entity Task "Task":
     read:
     write: owner_id = current_user
 """
-        with pytest.raises(Exception):
+        with pytest.raises(ParseError):
             parse_dsl(dsl, Path("test.dsl"))

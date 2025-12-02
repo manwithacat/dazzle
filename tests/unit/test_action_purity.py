@@ -4,7 +4,6 @@ Unit tests for action purity (v0.5.0 feature).
 Tests ActionPurity enum and purity-based action classification.
 """
 
-import pytest
 
 from dazzle_dnr_ui.specs.actions import (
     ActionPurity,
