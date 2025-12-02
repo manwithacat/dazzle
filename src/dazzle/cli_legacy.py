@@ -14,7 +14,7 @@ from pathlib import Path
 import typer
 
 # Version is defined here as the single source of truth
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def get_version() -> str:

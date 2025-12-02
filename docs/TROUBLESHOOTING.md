@@ -760,7 +760,7 @@ brew upgrade dazzle
 pipx upgrade dazzle
 
 # Verify accessibility features
-dazzle --version  # Should be >= v0.3.0
+dazzle --version  # Should be >= v0.4.0
 ```
 
 **Verify** generated components include:
@@ -893,5 +893,5 @@ When reporting issues, include:
 ---
 
 **Last Updated**: 2025-11-27
-**DAZZLE Version**: 0.3.0
+**DAZZLE Version**: 0.4.0
 **Applies To**: Semantic UI Layout Engine (Phase 4)

@@ -250,4 +250,4 @@ kill -9 <PID>
 
 ---
 
-**Version**: 0.3.0 | **Last Updated**: November 2025
+**Version**: 0.4.0 | **Last Updated**: December 2025

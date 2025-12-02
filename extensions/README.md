@@ -20,14 +20,14 @@ Full-featured Visual Studio Code extension with Language Server Protocol (LSP) s
 - ✅ Automatic LSP server detection
 - ✅ Graceful degradation when LSP unavailable
 
-**Status**: ✅ Complete (v0.3.0)
+**Status**: ✅ Complete (v0.4.0)
 
 **Installation**: See [vscode/README.md](vscode/README.md)
 
 **Quick Start**:
 ```bash
 # Development installation (symlink)
-ln -s /path/to/dazzle/extensions/vscode ~/.vscode/extensions/dazzle-dsl-0.3.0
+ln -s /path/to/dazzle/extensions/vscode ~/.vscode/extensions/dazzle-dsl-0.4.0
 
 # Reload VSCode
 # Open a .dsl file

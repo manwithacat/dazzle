@@ -69,7 +69,7 @@ AppSpec (Dazzle IR)
 ## Requirements
 
 - Python 3.11+
-- Dazzle 0.3.0+
+- Dazzle 0.4.0+
 
 Optional:
 - FastAPI + Uvicorn (for `dazzle dnr serve`)

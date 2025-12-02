@@ -63,7 +63,7 @@ class DazzleLanguageServer(LanguageServer):
 
 
 # Create server instance
-server = DazzleLanguageServer("dazzle-lsp", "v0.3.0")
+server = DazzleLanguageServer("dazzle-lsp", "v0.4.0")
 
 
 @server.feature(INITIALIZE)

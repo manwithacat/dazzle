@@ -4,7 +4,7 @@ Get a working application from your Dazzle DSL in under 5 minutes.
 
 ## Prerequisites
 
-- Dazzle 0.3.0+ installed
+- Dazzle 0.4.0+ installed
 - A Dazzle project with `dazzle.toml`
 
 ## Step 1: Check Your Setup
