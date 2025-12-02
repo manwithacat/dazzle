@@ -4,7 +4,7 @@ Combined DNR Server - runs both backend and frontend.
 Provides a unified development server that:
 1. Runs FastAPI backend on port 8000
 2. Runs UI dev server on port 3000 with API proxy
-3. Handles hot reload for both
+3. Handles hot reload for both (when enabled with --watch)
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from __future__ import annotations
 import http.server
 import socketserver
 import threading
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -22,6 +23,7 @@ from dazzle_dnr_ui.specs import UISpec
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
+    from dazzle_dnr_ui.runtime.hot_reload import HotReloadManager
 
 
 # =============================================================================
@@ -38,6 +40,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     generator: JSGenerator | None = None
     backend_url: str = "http://127.0.0.1:8000"
     test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
+    hot_reload_manager: HotReloadManager | None = None  # For hot reload support
 
     def do_GET(self) -> None:
         """Handle GET requests."""
@@ -178,26 +181,37 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         self._send_response(html, "text/html")
 
+    def _get_generator(self) -> JSGenerator | None:
+        """Get the current generator, checking hot reload manager for updates."""
+        if self.hot_reload_manager:
+            _, ui_spec = self.hot_reload_manager.get_specs()
+            if ui_spec:
+                return JSGenerator(ui_spec)
+        return self.generator
+
     def _serve_runtime(self) -> None:
         """Serve the runtime JavaScript."""
-        if not self.generator:
+        generator = self._get_generator()
+        if not generator:
             self.send_error(500, "No UISpec loaded")
             return
-        self._send_response(self.generator.generate_runtime(), "application/javascript")
+        self._send_response(generator.generate_runtime(), "application/javascript")
 
     def _serve_app(self) -> None:
         """Serve the application JavaScript."""
-        if not self.generator:
+        generator = self._get_generator()
+        if not generator:
             self.send_error(500, "No UISpec loaded")
             return
-        self._send_response(self.generator.generate_app_js(), "application/javascript")
+        self._send_response(generator.generate_app_js(), "application/javascript")
 
     def _serve_spec(self) -> None:
         """Serve the UISpec as JSON."""
-        if not self.generator:
+        generator = self._get_generator()
+        if not generator:
             self.send_error(500, "No UISpec loaded")
             return
-        self._send_response(self.generator.generate_spec_json(), "application/json")
+        self._send_response(generator.generate_spec_json(), "application/json")
 
     def _serve_hot_reload(self) -> None:
         """Serve hot reload SSE endpoint."""
@@ -207,15 +221,30 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
 
+        # Register with hot reload manager if available
+        reload_event = None
+        if self.hot_reload_manager:
+            reload_event = self.hot_reload_manager.register_sse_client()
+
         try:
             while True:
-                import time
+                # Check if reload was triggered
+                if reload_event and reload_event.is_set():
+                    self.wfile.write(b"data: reload\n\n")
+                    self.wfile.flush()
+                    reload_event.clear()
+                else:
+                    # Send keepalive
+                    self.wfile.write(b": keepalive\n\n")
+                    self.wfile.flush()
 
-                time.sleep(1)
-                self.wfile.write(b": keepalive\n\n")
-                self.wfile.flush()
+                time.sleep(0.5)
         except (BrokenPipeError, ConnectionResetError):
             pass
+        finally:
+            # Unregister from hot reload manager
+            if self.hot_reload_manager and reload_event:
+                self.hot_reload_manager.unregister_sse_client(reload_event)
 
     def _send_response(self, content: str, content_type: str) -> None:
         """Send HTTP response."""
@@ -260,6 +289,8 @@ class DNRCombinedServer:
         db_path: str | Path | None = None,
         enable_test_mode: bool = False,
         enable_auth: bool = False,
+        enable_watch: bool = False,
+        project_root: Path | None = None,
     ):
         """
         Initialize the combined server.
@@ -274,6 +305,8 @@ class DNRCombinedServer:
             db_path: Path to SQLite database
             enable_test_mode: Enable test endpoints (/__test__/*)
             enable_auth: Enable authentication endpoints (/auth/*)
+            enable_watch: Enable hot reload file watching
+            project_root: Project root directory (required for hot reload)
         """
         self.backend_spec = backend_spec
         self.ui_spec = ui_spec
@@ -284,9 +317,12 @@ class DNRCombinedServer:
         self.db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
         self.enable_test_mode = enable_test_mode
         self.enable_auth = enable_auth
+        self.enable_watch = enable_watch
+        self.project_root = project_root or Path.cwd()
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
+        self._hot_reload_manager: HotReloadManager | None = None
 
     def start(self) -> None:
         """
@@ -299,11 +335,35 @@ class DNRCombinedServer:
         print("=" * 60)
         print()
 
+        # Initialize hot reload if enabled
+        if self.enable_watch:
+            self._start_hot_reload()
+
         # Start backend in background thread
         self._start_backend()
 
         # Start frontend (blocking)
         self._start_frontend()
+
+    def _start_hot_reload(self) -> None:
+        """Initialize and start hot reload file watching."""
+        from dazzle_dnr_ui.runtime.hot_reload import (
+            HotReloadManager,
+            create_reload_callback,
+        )
+
+        reload_callback = create_reload_callback(self.project_root)
+        self._hot_reload_manager = HotReloadManager(
+            project_root=self.project_root,
+            on_reload=reload_callback,
+        )
+
+        # Set initial specs
+        self._hot_reload_manager.set_specs(self.backend_spec, self.ui_spec)
+
+        # Start watching
+        self._hot_reload_manager.start()
+        print("[DNR] Hot reload: ENABLED (watching DSL files)")
 
     def _start_backend(self) -> None:
         """Start the FastAPI backend in a background thread."""
@@ -362,10 +422,16 @@ class DNRCombinedServer:
         DNRCombinedHandler.generator = JSGenerator(self.ui_spec)
         DNRCombinedHandler.backend_url = f"http://{self.backend_host}:{self.backend_port}"
         DNRCombinedHandler.test_mode = self.enable_test_mode
+        DNRCombinedHandler.hot_reload_manager = self._hot_reload_manager
 
-        # Create server
+        # Create server with threading for concurrent SSE connections
         socketserver.TCPServer.allow_reuse_address = True
-        self._frontend_server = socketserver.TCPServer(
+
+        # Use ThreadingTCPServer for concurrent hot reload connections
+        class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+            daemon_threads = True
+
+        self._frontend_server = ThreadingTCPServer(
             (self.frontend_host, self.frontend_port),
             DNRCombinedHandler,
         )
@@ -381,6 +447,8 @@ class DNRCombinedServer:
         except KeyboardInterrupt:
             print("\n[DNR] Shutting down...")
         finally:
+            if self._hot_reload_manager:
+                self._hot_reload_manager.stop()
             self._frontend_server.shutdown()
 
     def stop(self) -> None:
@@ -403,6 +471,8 @@ def run_combined_server(
     enable_test_mode: bool = False,
     enable_auth: bool = False,
     host: str = "127.0.0.1",
+    enable_watch: bool = False,
+    project_root: Path | None = None,
 ) -> None:
     """
     Run a combined DNR development server.
@@ -416,6 +486,8 @@ def run_combined_server(
         enable_test_mode: Enable test endpoints (/__test__/*)
         enable_auth: Enable authentication endpoints (/auth/*)
         host: Host to bind both servers to
+        enable_watch: Enable hot reload file watching
+        project_root: Project root directory (for hot reload)
     """
     server = DNRCombinedServer(
         backend_spec=backend_spec,
@@ -427,6 +499,8 @@ def run_combined_server(
         db_path=db_path,
         enable_test_mode=enable_test_mode,
         enable_auth=enable_auth,
+        enable_watch=enable_watch,
+        project_root=project_root,
     )
     server.start()
 

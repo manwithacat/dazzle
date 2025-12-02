@@ -32,6 +32,7 @@ import { registerComponent, getComponent } from './components.js';
 import { registerAction, dispatch, executeAction, executeEffect } from './actions.js';
 import { applyTheme } from './theme.js';
 import { createApp } from './app.js';
+import { initDevTools, toggleDevTools, openDevTools, closeDevTools } from './devtools.js';
 
 // =============================================================================
 // Global Export (IIFE version for non-module browsers)
@@ -78,7 +79,15 @@ const DNR = {
   applyTheme,
 
   // App
-  createApp
+  createApp,
+
+  // DevTools
+  devtools: {
+    init: initDevTools,
+    toggle: toggleDevTools,
+    open: openDevTools,
+    close: closeDevTools
+  }
 };
 
 // Export for both module and global contexts

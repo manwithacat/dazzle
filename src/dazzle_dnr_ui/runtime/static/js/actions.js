@@ -1,6 +1,9 @@
+// @ts-check
 /**
  * DNR-UI Actions & Effects - Action execution system
  * Part of the Dazzle Native Runtime
+ *
+ * @module actions
  */
 
 import { batch } from './signals.js';
@@ -8,6 +11,17 @@ import { setState, updateState, setGlobalLoading, setGlobalError } from './state
 import { resolveBinding } from './bindings.js';
 import { apiClient } from './api-client.js';
 import { showToast } from './toast.js';
+
+/** @type {((name: string, payload: any) => void) | null} */
+let actionLogger = null;
+
+/**
+ * Set a function to log action dispatches (used by devtools).
+ * @param {(name: string, payload: any) => void} logger
+ */
+export function setActionLogger(logger) {
+  actionLogger = logger;
+}
 
 // =============================================================================
 // Action Registry
@@ -19,7 +33,18 @@ export function registerAction(name, handler) {
   actionRegistry.set(name, handler);
 }
 
+/**
+ * Dispatch an action by name.
+ * @param {string} actionName - Name of the action to dispatch
+ * @param {Object} [payload={}] - Action payload
+ * @returns {any}
+ */
 export function dispatch(actionName, payload = {}) {
+  // Log to devtools if available
+  if (actionLogger) {
+    actionLogger(actionName, payload);
+  }
+
   const handler = actionRegistry.get(actionName);
   if (handler) {
     return handler(payload);
