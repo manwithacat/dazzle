@@ -50,12 +50,12 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
 
     if (!isAvailable) {
         channel.appendLine('❌ DAZZLE LSP server not found');
-        channel.appendLine(`Tried to import: python3 -c "import dazzle.lsp.server"`);
+        channel.appendLine(`Tried to import: python3 -c "import dazzle.lsp"`);
         channel.appendLine('');
         channel.appendLine('To enable LSP features:');
         channel.appendLine('  1. Install dazzle: pip install dazzle');
         channel.appendLine('  2. Or for development: pip install -e /path/to/dazzle');
-        channel.appendLine('  3. Verify: python3 -c "import dazzle.lsp.server"');
+        channel.appendLine('  3. Verify: python3 -c "import dazzle.lsp"');
         channel.show();
 
         const action = await vscode.window.showWarningMessage(
@@ -78,9 +78,10 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
     channel.appendLine('');
 
     // Server options: spawn the Python LSP server
+    // Note: Use 'dazzle.lsp' (not 'dazzle.lsp.server') to avoid double module loading
     const serverOptions: ServerOptions = {
         command: pythonPath,
-        args: ['-m', 'dazzle.lsp.server'],
+        args: ['-m', 'dazzle.lsp'],
         transport: TransportKind.stdio,
         options: {
             env: {
@@ -91,7 +92,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext): Pro
         }
     };
 
-    channel.appendLine(`Starting LSP server: ${pythonPath} -m dazzle.lsp.server`);
+    channel.appendLine(`Starting LSP server: ${pythonPath} -m dazzle.lsp`);
 
     // Client options: configure which files to watch
     const clientOptions: LanguageClientOptions = {
@@ -212,7 +213,7 @@ export async function checkLspServerAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
         const child_process = require('child_process');
         // Use -c to check if module can be imported
-        const proc = child_process.spawn(pythonPath, ['-c', 'import dazzle.lsp.server'], {
+        const proc = child_process.spawn(pythonPath, ['-c', 'import dazzle.lsp'], {
             stdio: 'pipe',
         });
 
