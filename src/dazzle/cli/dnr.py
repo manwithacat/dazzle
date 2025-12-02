@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 
@@ -977,12 +977,26 @@ def dnr_inspect(
         "--components",
         help="Show generated UI components",
     ),
+    live: bool = typer.Option(
+        False,
+        "--live",
+        "-l",
+        help="Query a running DNR server for runtime state (entity counts, uptime, etc.)",
+    ),
+    api_url: str = typer.Option(
+        "http://localhost:8000",
+        "--api-url",
+        help="URL of running DNR API server (for --live mode)",
+    ),
 ) -> None:
     """
     Inspect the DNR app structure and generated artifacts.
 
     Shows detailed information about entities, surfaces, workspaces,
     API endpoints, and UI components generated from the DSL.
+
+    Use --live to query a running server for runtime statistics like
+    entity counts, uptime, and database state.
 
     Examples:
         dazzle dnr inspect                    # Full tree view
@@ -992,8 +1006,15 @@ def dnr_inspect(
         dazzle dnr inspect --surface task_list  # Inspect surface
         dazzle dnr inspect --endpoints        # Show API endpoints
         dazzle dnr inspect --components       # Show UI components
+        dazzle dnr inspect --live             # Query running server
+        dazzle dnr inspect --live --entity Task  # Live entity details
     """
     import json as json_module
+
+    # Handle live mode - query running server
+    if live:
+        _inspect_live(api_url, format_output, entity)
+        return
 
     manifest_path = Path(manifest).resolve()
     project_root = manifest_path.parent
@@ -1263,3 +1284,122 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
         typer.echo()
         for c in ui_spec.components:
             typer.echo(f"   • {c.name} ({c.category})")
+
+
+def _inspect_live(api_url: str, format_output: str, entity_name: str | None = None) -> None:
+    """Query running DNR server for runtime state."""
+    import json as json_module
+    import urllib.error
+    import urllib.request
+
+    def fetch_json(endpoint: str) -> dict[str, Any] | None:
+        """Fetch JSON from API endpoint."""
+        url = f"{api_url.rstrip('/')}{endpoint}"
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                result: dict[str, Any] = json_module.loads(response.read().decode())
+                return result
+        except urllib.error.URLError as e:
+            typer.echo(f"Error connecting to {url}: {e}", err=True)
+            return None
+        except Exception as e:
+            typer.echo(f"Error fetching {endpoint}: {e}", err=True)
+            return None
+
+    # If entity specified, get entity details
+    if entity_name:
+        data = fetch_json(f"/_dnr/entity/{entity_name}")
+        if not data:
+            raise typer.Exit(code=1)
+
+        if "error" in data:
+            typer.echo(f"Error: {data['error']}", err=True)
+            raise typer.Exit(code=1)
+
+        if format_output == "json":
+            typer.echo(json_module.dumps(data, indent=2, default=str))
+        else:
+            typer.echo(f"📊 Entity: {data['name']} (live)")
+            if data.get("label"):
+                typer.echo(f"   Label: {data['label']}")
+            if data.get("description"):
+                typer.echo(f"   Description: {data['description']}")
+            typer.echo(f"   Records: {data.get('count', 0)}")
+            typer.echo()
+            typer.echo("   Fields:")
+            for f in data.get("fields", []):
+                req = " (required)" if f.get("required") else ""
+                unique = " [unique]" if f.get("unique") else ""
+                indexed = " [indexed]" if f.get("indexed") else ""
+                typer.echo(f"   • {f['name']}: {f['type']}{req}{unique}{indexed}")
+
+            if data.get("sample"):
+                typer.echo()
+                typer.echo(f"   Sample data ({len(data['sample'])} records):")
+                for row in data["sample"][:3]:  # Show max 3
+                    # Show a compact view of the row
+                    preview = ", ".join(f"{k}={v!r}" for k, v in list(row.items())[:4])
+                    if len(row) > 4:
+                        preview += ", ..."
+                    typer.echo(f"   • {preview}")
+        return
+
+    # Get overall stats
+    stats = fetch_json("/_dnr/stats")
+    health = fetch_json("/_dnr/health")
+    spec = fetch_json("/_dnr/spec")
+
+    if not stats:
+        typer.echo("Could not connect to DNR server", err=True)
+        typer.echo(f"Tried: {api_url}/_dnr/stats")
+        typer.echo()
+        typer.echo("Make sure the server is running:")
+        typer.echo("  dazzle dnr serve")
+        raise typer.Exit(code=1)
+
+    if format_output == "json":
+        output = {
+            "stats": stats,
+            "health": health,
+            "spec": spec,
+        }
+        typer.echo(json_module.dumps(output, indent=2, default=str))
+    elif format_output == "summary":
+        typer.echo(f"App: {stats.get('app_name', 'Unknown')}")
+        typer.echo(f"  Status:       {health.get('status', 'unknown') if health else 'unknown'}")
+        typer.echo(f"  Uptime:       {_format_uptime(stats.get('uptime_seconds', 0))}")
+        typer.echo(f"  Total records: {stats.get('total_records', 0)}")
+        typer.echo(f"  Entities:     {len(stats.get('entities', []))}")
+    else:  # tree format
+        status_emoji = "✅" if health and health.get("status") == "ok" else "⚠️"
+        typer.echo(f"📦 {stats.get('app_name', 'Unknown')} (live)")
+        typer.echo(f"│  {status_emoji} Status: {health.get('status', 'unknown') if health else 'unknown'}")
+        typer.echo(f"│  ⏱️  Uptime: {_format_uptime(stats.get('uptime_seconds', 0))}")
+        typer.echo("│")
+
+        # Show entities with record counts
+        entities = stats.get("entities", [])
+        if entities:
+            typer.echo("├── 📊 Entities (with record counts)")
+            for i, ent in enumerate(entities):
+                prefix = "│   └──" if i == len(entities) - 1 else "│   ├──"
+                fts_badge = " 🔍" if ent.get("has_fts") else ""
+                typer.echo(f"{prefix} {ent['name']}: {ent['count']} records{fts_badge}")
+
+        # Show database info
+        typer.echo("│")
+        typer.echo(f"└── 💾 Total records: {stats.get('total_records', 0)}")
+
+
+def _format_uptime(seconds: float) -> str:
+    """Format uptime seconds into a human-readable string."""
+    if seconds < 60:
+        return f"{int(seconds)}s"
+    elif seconds < 3600:
+        mins = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{mins}m {secs}s"
+    else:
+        hours = int(seconds // 3600)
+        mins = int((seconds % 3600) // 60)
+        return f"{hours}h {mins}m"

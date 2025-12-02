@@ -6,6 +6,7 @@ This module provides the main entry point for running a DNR-Back application.
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -105,6 +106,7 @@ class DNRBackendApp:
         self._auth_middleware: AuthMiddleware | None = None
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
+        self._start_time: datetime | None = None
 
     def build(self) -> FastAPI:
         """
@@ -229,6 +231,19 @@ class DNRBackendApp:
                 entities=self.spec.entities,
             )
             self._app.include_router(test_router)
+
+        # Initialize debug routes (always available when database is enabled)
+        if self._use_database and self._db_manager:
+            from dazzle_dnr_back.runtime.debug_routes import create_debug_routes
+
+            self._start_time = datetime.now()
+            debug_router = create_debug_routes(
+                spec=self.spec,
+                db_manager=self._db_manager,
+                entities=self.spec.entities,
+                start_time=self._start_time,
+            )
+            self._app.include_router(debug_router)
 
         # Add health check
         @self._app.get("/health", tags=["System"])
