@@ -454,7 +454,8 @@ function showLoginModal(e) {
         errorDiv.querySelector('span').textContent = error.detail || 'Authentication failed';
         errorDiv.classList.remove('hidden');
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Login error:', err);
       errorDiv.querySelector('span').textContent = 'Network error. Please try again.';
       errorDiv.classList.remove('hidden');
     }

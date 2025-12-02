@@ -64,8 +64,6 @@ const [networkRequests, setNetworkRequests] = createSignal(initialRequests);
 const initialActions = [];
 const [actionLog, setActionLog] = createSignal(initialActions);
 
-/** @type {string|null} */
-let expandedActionId = null;
 const [selectedActionId, setSelectedActionId] = createSignal(/** @type {string|null} */ (null));
 
 let requestCounter = 0;

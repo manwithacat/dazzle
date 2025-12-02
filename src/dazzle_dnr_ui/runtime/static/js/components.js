@@ -899,7 +899,7 @@ registerComponent('Modal', (props, children) => {
 
   // Focus trap and keyboard handling
   // Store reference for cleanup
-  let previousActiveElement = document.activeElement;
+  const previousActiveElement = document.activeElement;
 
   // Set up focus trap and keyboard handling after render
   setTimeout(() => {
