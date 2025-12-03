@@ -17,9 +17,10 @@ from __future__ import annotations
 import importlib.util
 import logging
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -203,9 +204,7 @@ class ServiceLoader:
         try:
             return loaded.function(**kwargs)
         except Exception as e:
-            raise ServiceInvocationError(
-                f"Service {service_id} invocation failed: {e}"
-            ) from e
+            raise ServiceInvocationError(f"Service {service_id} invocation failed: {e}") from e
 
     def has_service(self, service_id: str) -> bool:
         """Check if a service is loaded."""

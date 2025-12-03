@@ -975,9 +975,7 @@ class Parser:
             owner=owner,
         )
 
-    def _parse_domain_service_body(
-        self, name: str, title: str | None
-    ) -> ir.DomainServiceSpec:
+    def _parse_domain_service_body(self, name: str, title: str | None) -> ir.DomainServiceSpec:
         """Parse domain service body (v0.5.0).
 
         DSL syntax:

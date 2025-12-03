@@ -10,8 +10,8 @@ import pytest
 from dazzle_dnr_back.runtime.service_loader import (
     LoadedService,
     ServiceInvocationError,
-    ServiceLoadError,
     ServiceLoader,
+    ServiceLoadError,
     create_service_loader,
 )
 

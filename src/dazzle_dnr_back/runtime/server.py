@@ -16,7 +16,6 @@ from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_
 from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
 from dazzle_dnr_back.runtime.migrations import MigrationPlan, auto_migrate
-from dazzle_dnr_back.runtime.service_loader import ServiceLoader
 from dazzle_dnr_back.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
@@ -24,6 +23,7 @@ from dazzle_dnr_back.runtime.model_generator import (
 )
 from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
 from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle_dnr_back.runtime.service_loader import ServiceLoader
 from dazzle_dnr_back.specs import BackendSpec
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
