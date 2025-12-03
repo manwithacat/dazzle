@@ -133,10 +133,12 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
 - [x] Verify entity conversion to BackendSpec works
 - [x] Add to CI pipeline to prevent regressions
 
-#### MCP Server Improvements (TODO)
-- [ ] Improve MCP context for Claude engagement
-- [ ] Add getting-started workflow guidance
-- [ ] Document common DSL patterns
+#### MCP Server Improvements (COMPLETE) ✅
+- [x] Improve MCP context for Claude engagement
+- [x] Add getting-started workflow guidance
+- [x] Document common DSL patterns
+- [x] Update semantic index to v0.5.0 with extensibility concepts
+- [x] Add domain service pattern with examples
 
 #### CI/CD E2E Testing (COMPLETE)
 - [x] Remove fallback JavaScript from `js_generator.py` - single source of truth via `js_loader.py`
