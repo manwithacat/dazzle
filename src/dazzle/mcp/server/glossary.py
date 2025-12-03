@@ -4,12 +4,12 @@ DAZZLE glossary content.
 This module contains the static glossary text for DAZZLE terminology.
 """
 
-GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art (v0.2)
+GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art (v0.5)
 
-**Version**: 0.2.0
-**Date**: 2025-11-25
+**Version**: 0.5.0
+**Date**: 2025-12-03
 
-This glossary defines DAZZLE DSL v0.2 concepts including the new UX Semantic Layer.
+This glossary defines DAZZLE DSL v0.5 concepts including the UX Semantic Layer and Anti-Turing Extensibility Model.
 
 ## Core Concepts
 
@@ -227,6 +227,59 @@ Persona variants controlling scope and capabilities:
 - Manager: department/team scope
 - Member: own records only
 
+## Extensibility (v0.5)
+
+### Domain Service (NEW in v0.5)
+Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model.
+
+**Kinds**:
+- `domain_logic` - Business calculations (tax, pricing)
+- `validation` - Complex validation rules
+- `integration` - External API calls
+- `workflow` - Multi-step processes
+
+**Example:**
+```dsl
+service calculate_vat "Calculate VAT":
+  kind: domain_logic
+  input:
+    invoice_id: uuid required
+    country_code: str(2)
+  output:
+    vat_amount: decimal(10,2)
+    breakdown: json
+  guarantees:
+    - "Must not mutate the invoice record"
+  stub: python
+```
+
+### Stub (NEW in v0.5)
+Turing-complete implementation of a domain service. Auto-generated from DSL with typed function signatures.
+
+**Commands:**
+- `dazzle stubs generate` - Generate stub files
+- `dazzle stubs list` - List services and implementation status
+
+### Three-Layer Architecture (NEW in v0.5)
+DAZZLE's separation of concerns:
+1. **DSL Layer** - Declarative definitions (Anti-Turing: no arbitrary computation)
+2. **Kernel Layer** - DNR runtime (CRUD, auth, routing)
+3. **Stub Layer** - Custom business logic (Turing-complete)
+
+### Access Rules (NEW in v0.5)
+Inline access control rules on entities defining read/write permissions.
+
+**Example:**
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+  access:
+    read: owner = current_user or shared = true
+    write: owner = current_user
+```
+
 ## Best Practices
 
 1. **Entity names** - Use singular nouns (Task, not Tasks)
@@ -236,14 +289,16 @@ Persona variants controlling scope and capabilities:
 5. **Field names** - Use snake_case (first_name, not firstName)
 6. **Enum values** - Use lowercase with underscores (in_progress, not InProgress)
 7. **Purpose statements** - Single line, explain WHY not WHAT
+8. **Domain services** - Use for complex calculations, external APIs, multi-step workflows
 
 ## See Also
 
 - DAZZLE DSL Quick Reference - Syntax examples
-- DAZZLE DSL Reference v0.2 - Complete specification
+- DAZZLE DSL Reference v0.5 - Complete specification
+- DAZZLE Extensibility Guide - Stubs and custom logic
 """
 
 
 def get_glossary() -> str:
-    """Return DAZZLE v0.2 glossary of terms."""
+    """Return DAZZLE v0.5 glossary of terms."""
     return GLOSSARY_TEXT

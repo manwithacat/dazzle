@@ -245,6 +245,46 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
         ],
     },
     # =========================================================================
+    # Stubs (v0.5.0)
+    # =========================================================================
+    "stubs generate": {
+        "category": "Stubs",
+        "description": "Generate Python/TypeScript stub files from domain service definitions.",
+        "syntax": "dazzle stubs generate [OPTIONS]",
+        "options": {
+            "--service": "Generate stub for specific service only",
+            "--language": "Override stub language (python, typescript)",
+            "--output-dir": "Output directory (default: stubs/)",
+            "--force": "Overwrite existing stub files",
+        },
+        "examples": [
+            "dazzle stubs generate              # Generate all stubs",
+            "dazzle stubs generate --service calculate_vat",
+            "dazzle stubs generate --force      # Regenerate all",
+        ],
+        "creates": [
+            "stubs/<service_name>.py - Python stub with typed signature",
+            "stubs/<service_name>.ts - TypeScript stub with interfaces",
+        ],
+        "notes": [
+            "Stubs have auto-generated headers with service contracts",
+            "Implement the function body - don't modify the header",
+            "Run after adding/changing domain services in DSL",
+        ],
+    },
+    "stubs list": {
+        "category": "Stubs",
+        "description": "List all domain services and their stub implementation status.",
+        "syntax": "dazzle stubs list",
+        "examples": ["dazzle stubs list"],
+        "output": {
+            "service_name": "Name of the domain service",
+            "kind": "Service kind (domain_logic, validation, integration, workflow)",
+            "stub_language": "Target language (python, typescript)",
+            "status": "implemented | not_implemented | missing",
+        },
+    },
+    # =========================================================================
     # MCP Server
     # =========================================================================
     "mcp": {
@@ -765,6 +805,81 @@ entity Task "Task":
                 "warning": "Needs attention soon (yellow/orange)",
                 "notice": "Worth noting (blue)",
                 "info": "Informational only (gray)",
+            },
+        },
+        "add_domain_service": {
+            "name": "Add a Domain Service",
+            "description": "Create custom business logic with DSL declaration and Python stub",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Add service declaration to DSL",
+                    "file": "dsl/app.dsl",
+                    "example": """service calculate_discount "Calculate Order Discount":
+  kind: domain_logic
+  input:
+    order_id: uuid required
+    coupon_code: str(20)
+  output:
+    discount_amount: decimal(10,2)
+    discount_type: str(20)
+    applied_rules: json
+  guarantees:
+    - "Must not modify order record"
+    - "Must validate coupon exists before applying"
+  stub: python""",
+                },
+                {
+                    "step": 2,
+                    "action": "Validate DSL",
+                    "command": "dazzle validate",
+                    "notes": "Ensure service declaration is syntactically correct",
+                },
+                {
+                    "step": 3,
+                    "action": "Generate stub file",
+                    "command": "dazzle stubs generate --service calculate_discount",
+                    "creates": "stubs/calculate_discount.py",
+                },
+                {
+                    "step": 4,
+                    "action": "Implement the stub",
+                    "file": "stubs/calculate_discount.py",
+                    "example": """def calculate_discount(order_id: str, coupon_code: str | None = None) -> CalculateDiscountResult:
+    order = db.get_order(order_id)
+
+    # Check for valid coupon
+    if coupon_code:
+        coupon = db.get_coupon(coupon_code)
+        if coupon and coupon.is_valid:
+            return {
+                "discount_amount": order.total * coupon.discount_percent,
+                "discount_type": "coupon",
+                "applied_rules": {"coupon": coupon_code, "percent": coupon.discount_percent}
+            }
+
+    # Apply default volume discount
+    if order.total >= 100:
+        return {
+            "discount_amount": order.total * 0.10,
+            "discount_type": "volume",
+            "applied_rules": {"rule": "10% off orders over $100"}
+        }
+
+    return {"discount_amount": 0, "discount_type": "none", "applied_rules": {}}""",
+                },
+                {
+                    "step": 5,
+                    "action": "Restart app",
+                    "command": "dazzle dnr serve",
+                    "notes": "DNR discovers and loads stubs automatically",
+                },
+            ],
+            "service_kinds": {
+                "domain_logic": "Business calculations (tax, pricing, scoring)",
+                "validation": "Complex validation across fields/entities",
+                "integration": "External API calls (payment, email, SMS)",
+                "workflow": "Multi-step processes (approvals, fulfillment)",
             },
         },
         "troubleshoot": {

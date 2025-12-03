@@ -10,13 +10,13 @@ from typing import Any
 
 def get_semantic_index() -> dict[str, Any]:
     """
-    Get the complete semantic index for DAZZLE DSL v0.2.
+    Get the complete semantic index for DAZZLE DSL v0.5.
 
     Returns a structured dictionary mapping concepts to their definitions,
     syntax, examples, and related concepts.
     """
     return {
-        "version": "0.2.0",
+        "version": "0.5.0",
         "concepts": {
             # ================================================================
             # Core Constructs
@@ -517,6 +517,139 @@ Content-Type: application/json
                 ],
                 "related": ["e2e_testing", "flowspec"],
             },
+            # ================================================================
+            # Extensibility (v0.5)
+            # ================================================================
+            "domain_service": {
+                "category": "Extensibility (v0.5)",
+                "definition": "Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model.",
+                "syntax": """service <name> "<Title>":
+  kind: <domain_logic|validation|integration|workflow>
+  input:
+    <field_name>: <type> [required]
+    ...
+  output:
+    <field_name>: <type>
+    ...
+  guarantees:
+    - "<contract guarantee>"
+  stub: <python|typescript>""",
+                "example": """service calculate_vat "Calculate VAT":
+  kind: domain_logic
+  input:
+    invoice_id: uuid required
+    country_code: str(2)
+  output:
+    vat_amount: decimal(10,2)
+    breakdown: json
+  guarantees:
+    - "Must not mutate the invoice record"
+    - "Must raise domain error if config incomplete"
+  stub: python""",
+                "kinds": {
+                    "domain_logic": "Business calculations (VAT, pricing, discounts)",
+                    "validation": "Complex validation rules across fields/entities",
+                    "integration": "External API calls (payment, email, SMS)",
+                    "workflow": "Multi-step processes (order fulfillment, approvals)",
+                },
+                "related": ["stub", "three_layer_architecture"],
+                "v0_5_changes": "NEW in v0.5",
+                "commands": {
+                    "generate_stubs": "dazzle stubs generate",
+                    "list_services": "dazzle stubs list",
+                },
+            },
+            "stub": {
+                "category": "Extensibility (v0.5)",
+                "definition": "Turing-complete implementation of a domain service. Stubs are auto-generated from DSL with typed function signatures.",
+                "languages": ["python", "typescript"],
+                "location": "stubs/ directory in project root",
+                "example": """# stubs/calculate_vat.py (auto-generated header)
+# === AUTO-GENERATED HEADER - DO NOT MODIFY ===
+# Service ID: calculate_vat
+# Kind: domain_logic
+# Input: invoice_id (uuid required), country_code (str(2) optional)
+# Output: vat_amount (decimal), breakdown (json)
+# ============================================
+
+from typing import TypedDict
+
+class CalculateVatResult(TypedDict):
+    vat_amount: float
+    breakdown: dict
+
+def calculate_vat(invoice_id: str, country_code: str | None = None) -> CalculateVatResult:
+    # Your implementation here
+    invoice = get_invoice(invoice_id)
+    vat_rate = get_vat_rate(country_code or invoice.country)
+    return {
+        "vat_amount": invoice.total * vat_rate,
+        "breakdown": {"rate": vat_rate, "country": country_code}
+    }""",
+                "related": ["domain_service", "three_layer_architecture"],
+                "v0_5_changes": "NEW in v0.5",
+            },
+            "three_layer_architecture": {
+                "category": "Extensibility (v0.5)",
+                "definition": "DAZZLE's separation of concerns: DSL (declarative) → Kernel (runtime) → Stubs (custom code). The DSL is Anti-Turing (no arbitrary computation) while stubs allow full programming.",
+                "layers": {
+                    "dsl_layer": "Declarative definitions - entities, surfaces, services. Anti-Turing: cannot express arbitrary computation.",
+                    "kernel_layer": "DNR runtime - CRUD, auth, routing, state management. Platform-managed behavior.",
+                    "stub_layer": "Custom business logic - Turing-complete Python/TypeScript implementations.",
+                },
+                "rationale": [
+                    "Predictability: DSL behavior is fully analyzable",
+                    "Safety: No runtime errors from DSL-level code",
+                    "Tooling: Complete static analysis and validation",
+                    "Flexibility: Full programming power in stubs when needed",
+                ],
+                "related": ["domain_service", "stub"],
+                "v0_5_changes": "NEW in v0.5",
+            },
+            "access_rules": {
+                "category": "Extensibility (v0.5)",
+                "definition": "Inline access control rules on entities defining read/write permissions.",
+                "syntax": """entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+  access:
+    read: owner = current_user or shared = true
+    write: owner = current_user""",
+                "rules": {
+                    "read": "Controls who can view records (maps to visibility rule)",
+                    "write": "Controls who can create/update/delete records (maps to permission rules)",
+                },
+                "expressions": [
+                    "owner = current_user",
+                    "shared = true",
+                    "role = admin",
+                    "department = current_user.department",
+                ],
+                "related": ["entity", "persona"],
+                "v0_5_changes": "NEW in v0.5",
+            },
+            "action_purity": {
+                "category": "Extensibility (v0.5)",
+                "definition": "Classification of actions as pure (no side effects) or impure (has side effects like fetch, navigate, etc.).",
+                "syntax": """actions:
+  toggleFilter: pure    # Only affects local state
+  saveTask: impure      # Has side effect (API call)""",
+                "inference": "Purity is auto-inferred from action effects. Explicit annotation overrides inference.",
+                "related": ["component_role"],
+                "v0_5_changes": "NEW in v0.5",
+            },
+            "component_role": {
+                "category": "Extensibility (v0.5)",
+                "definition": "Classification of components as presentational (no state/impure actions) or container (has state or impure actions).",
+                "roles": {
+                    "presentational": "Pure rendering - no state, no side effects",
+                    "container": "Stateful - manages state or performs side effects",
+                },
+                "inference": "Role is auto-inferred from component definition. Explicit annotation overrides inference.",
+                "related": ["action_purity"],
+                "v0_5_changes": "NEW in v0.5",
+            },
         },
         # ================================================================
         # Common Patterns with Copy-Paste Examples
@@ -817,6 +950,63 @@ surface order_list "Orders":
     attention notice:
       when: status = new and created_at > today
       message: "New order today" """,
+            },
+            "domain_service_pattern": {
+                "name": "Domain Service Pattern",
+                "description": "Custom business logic with DSL declaration and stub implementation",
+                "v0_5_feature": True,
+                "components": [
+                    "DSL service declaration with kind, input, output",
+                    "Guarantees documenting contracts",
+                    "Python/TypeScript stub implementation",
+                ],
+                "example": """# DSL declaration in app.dsl
+entity Invoice "Invoice":
+  id: uuid pk
+  total: decimal(10,2) required
+  country: str(2) required
+  vat_amount: decimal(10,2) optional
+
+service calculate_vat "Calculate VAT for Invoice":
+  kind: domain_logic
+  input:
+    invoice_id: uuid required
+    country_code: str(2)
+  output:
+    vat_amount: decimal(10,2)
+    breakdown: json
+  guarantees:
+    - "Must not mutate the invoice record"
+    - "Must raise domain error if config incomplete"
+  stub: python
+
+# Generate stub file:
+# $ dazzle stubs generate --service calculate_vat
+
+# Implement in stubs/calculate_vat.py:
+def calculate_vat(invoice_id: str, country_code: str | None = None) -> CalculateVatResult:
+    invoice = db.get_invoice(invoice_id)
+    country = country_code or invoice.country
+
+    # VAT rates by country
+    rates = {"GB": 0.20, "DE": 0.19, "FR": 0.20, "US": 0.0}
+    rate = rates.get(country, 0.0)
+
+    return {
+        "vat_amount": float(invoice.total) * rate,
+        "breakdown": {
+            "rate": rate,
+            "country": country,
+            "net": float(invoice.total),
+            "gross": float(invoice.total) * (1 + rate)
+        }
+    }""",
+                "use_cases": [
+                    "Complex calculations (pricing, tax, discounts)",
+                    "External API integration (payment, email)",
+                    "Multi-step workflows (approval processes)",
+                    "Cross-entity validation rules",
+                ],
             },
         },
         # ================================================================
