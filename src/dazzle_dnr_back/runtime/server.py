@@ -16,6 +16,7 @@ from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_
 from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
 from dazzle_dnr_back.runtime.migrations import MigrationPlan, auto_migrate
+from dazzle_dnr_back.runtime.service_loader import ServiceLoader
 from dazzle_dnr_back.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
@@ -67,6 +68,7 @@ class DNRBackendApp:
         files_path: str | Path | None = None,
         files_db_path: str | Path | None = None,
         enable_test_mode: bool = False,
+        services_dir: str | Path | None = None,
     ):
         """
         Initialize the backend application.
@@ -81,6 +83,7 @@ class DNRBackendApp:
             files_path: Path for file storage (default: .dazzle/uploads)
             files_db_path: Path to file metadata database (default: .dazzle/files.db)
             enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
+            services_dir: Path to domain service stubs directory (default: services/)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -96,6 +99,7 @@ class DNRBackendApp:
         self._files_path = Path(files_path) if files_path else Path(".dazzle/uploads")
         self._files_db_path = Path(files_db_path) if files_db_path else Path(".dazzle/files.db")
         self._enable_test_mode = enable_test_mode
+        self._services_dir = Path(services_dir) if services_dir else Path("services")
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -107,6 +111,7 @@ class DNRBackendApp:
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
+        self._service_loader: ServiceLoader | None = None
 
     def build(self) -> FastAPI:
         """
@@ -245,6 +250,45 @@ class DNRBackendApp:
             )
             self._app.include_router(debug_router)
 
+        # Load domain service stubs
+        self._service_loader = ServiceLoader(services_dir=self._services_dir)
+        try:
+            self._service_loader.load_services()
+        except Exception:
+            # Services are optional - log but don't fail startup
+            pass
+
+        # Add domain service routes if any services loaded
+        if self._service_loader and self._service_loader.services:
+            service_loader = self._service_loader  # Capture for closure
+
+            @self._app.get("/_dnr/services", tags=["System"])
+            async def list_domain_services() -> dict[str, Any]:
+                """List loaded domain service stubs."""
+                services = []
+                for service_id, loaded in service_loader.services.items():
+                    services.append(
+                        {
+                            "id": service_id,
+                            "module_path": str(loaded.module_path),
+                            "has_result_type": loaded.result_type is not None,
+                        }
+                    )
+                return {"services": services, "count": len(services)}
+
+            @self._app.post("/_dnr/services/{service_id}/invoke", tags=["System"])
+            async def invoke_domain_service(
+                service_id: str, payload: dict[str, Any] | None = None
+            ) -> dict[str, Any]:
+                """Invoke a domain service stub."""
+                if not service_loader.has_service(service_id):
+                    return {"error": f"Service not found: {service_id}"}
+                try:
+                    result = service_loader.invoke(service_id, **(payload or {}))
+                    return {"result": result}
+                except Exception as e:
+                    return {"error": str(e)}
+
         # Add health check
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:
@@ -341,6 +385,11 @@ class DNRBackendApp:
         """Get repository instances."""
         return self._repositories
 
+    @property
+    def service_loader(self) -> ServiceLoader | None:
+        """Get the domain service loader (None if not initialized)."""
+        return self._service_loader
+
 
 # =============================================================================
 # Convenience Functions
@@ -357,6 +406,7 @@ def create_app(
     files_path: str | Path | None = None,
     files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    services_dir: str | Path | None = None,
 ) -> FastAPI:
     """
     Create a FastAPI application from a BackendSpec.
@@ -373,6 +423,7 @@ def create_app(
         files_path: Path for file storage (default: .dazzle/uploads)
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
+        services_dir: Path to domain service stubs directory (default: services/)
 
     Returns:
         FastAPI application
@@ -393,6 +444,7 @@ def create_app(
         files_path=files_path,
         files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
+        services_dir=services_dir,
     )
     return builder.build()
 
@@ -410,6 +462,7 @@ def run_app(
     files_path: str | Path | None = None,
     files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    services_dir: str | Path | None = None,
 ) -> None:
     """
     Run a DNR-Back application.
@@ -427,6 +480,7 @@ def run_app(
         files_path: Path for file storage (default: .dazzle/uploads)
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
+        services_dir: Path to domain service stubs directory (default: services/)
 
     Example:
         >>> from dazzle_dnr_back.specs import BackendSpec
@@ -448,6 +502,7 @@ def run_app(
         files_path=files_path,
         files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
+        services_dir=services_dir,
     )
     uvicorn.run(app, host=host, port=port, reload=reload)
 
