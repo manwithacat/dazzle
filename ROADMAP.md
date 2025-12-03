@@ -412,10 +412,21 @@ dazzle dnr serve --graphql    # Enable GraphQL endpoint at /graphql
 - [x] 14 Strawberry-dependent tests (skipped when not installed)
 - [x] All 582 unit tests passing
 
+#### CLI Inspection (COMPLETE) ✅
+- [x] `dazzle dnr inspect --schema` command - Generate GraphQL SDL from BackendSpec
+
+#### External API Adapters (COMPLETE) ✅
+- [x] **BaseExternalAdapter**: Abstract base class for wrapping external REST APIs
+  - Retry logic with exponential backoff
+  - Rate limiting
+  - Support for httpx, aiohttp, and urllib fallback
+- [x] **Error Normalization**: Unified error model across external APIs
+  - `NormalizedError` with category, severity, user/developer messages
+  - `normalize_error()` for consistent error handling
+  - HMRC-specific error mapping
+- [x] **53 unit tests** for adapter interface and error normalization
+
 #### Remaining Work
-- [ ] External API adapter interface
-- [ ] Error normalization across external APIs
-- [ ] `dazzle dnr inspect --schema` command
 - [ ] Integration tests with real GraphQL queries
 
 **Use Case**: Aggregate HMRC, banking APIs, and internal services into clean graph for frontend consumption.
