@@ -1,6 +1,6 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-02
+**Last Updated**: 2025-12-03
 **Current Version**: v0.5.0
 **Status**: DNR is primary runtime with full deployment tooling
 
@@ -344,7 +344,32 @@ actions:
 - Explicit purity overrides inference
 - 14 unit tests in `test_action_purity.py`
 
-**Test Results**: 530 tests pass (35 new tests, no regressions)
+#### Anti-Turing Extensibility Model (COMPLETE) ✅
+```dsl
+service calculate_vat "Calculate VAT":
+  kind: domain_logic
+  input:
+    invoice_id: uuid required
+    country_code: str(2)
+  output:
+    vat_amount: decimal(10,2)
+    breakdown: json
+  guarantees:
+    - "Must not mutate the invoice record"
+  stub: python
+```
+- **Three-Layer Architecture**: DSL Layer (declarative) → Kernel Layer (DNR) → Stub Layer (Turing-complete)
+- **Domain Service DSL**: `service` declarations with `kind`, `input`, `output`, `guarantees`, `stub`
+- **Service Kinds**: domain_logic, validation, integration, workflow
+- **Stub Generation**: `dazzle stubs generate` creates typed Python/TypeScript stubs
+- **ServiceLoader**: Runtime discovery and invocation of stub implementations
+- **EBNF Grammar Update**: Restricted function calls to aggregate functions only
+- IR types: DomainServiceKind, StubLanguage, ServiceFieldSpec, DomainServiceSpec
+- 14 unit tests in `test_domain_service_parsing.py`
+- 17 unit tests in `test_service_loader.py`
+- Documentation: `docs/EXTENSIBILITY.md`
+
+**Test Results**: 601 tests pass (71+ new tests, no regressions)
 
 ---
 
@@ -564,6 +589,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-03 (Anti-Turing Extensibility)
+- **Anti-Turing Extensibility Model**: Three-layer architecture complete
+- Domain Service DSL: `service` with `kind`, `input`, `output`, `guarantees`, `stub`
+- Service Kinds: domain_logic, validation, integration, workflow
+- ServiceLoader: Runtime discovery of Python stubs
+- Stub Generation: `dazzle stubs generate` command
+- EBNF Grammar: Restricted to aggregate functions only
+- 71+ new tests (14 domain service + 17 service loader + others)
+- 601 total tests passing
+- Documentation: `docs/EXTENSIBILITY.md`
 
 ### 2025-12-02 (v0.5.0 Release)
 - **v0.5.0 COMPLETE**: All Advanced DSL Features delivered
