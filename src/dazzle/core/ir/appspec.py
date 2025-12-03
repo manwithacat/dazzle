@@ -18,7 +18,7 @@ from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
-from .services import APISpec
+from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
@@ -40,6 +40,7 @@ class AppSpec(BaseModel):
         workspaces: List of workspace specifications
         experiences: List of experience specifications
         apis: List of external API specifications
+        domain_services: List of domain service specifications (v0.5.0)
         foreign_models: List of foreign model specifications
         integrations: List of integration specifications
         tests: API-focused test specifications
@@ -57,6 +58,7 @@ class AppSpec(BaseModel):
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension (old)
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     apis: list[APISpec] = Field(default_factory=list)
+    domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)
@@ -97,6 +99,13 @@ class AppSpec(BaseModel):
         for api in self.apis:
             if api.name == name:
                 return api
+        return None
+
+    def get_domain_service(self, name: str) -> DomainServiceSpec | None:
+        """Get domain service by name."""
+        for service in self.domain_services:
+            if service.name == name:
+                return service
         return None
 
     def get_test(self, name: str) -> TestSpec | None:

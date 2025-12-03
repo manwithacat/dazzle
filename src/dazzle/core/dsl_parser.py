@@ -873,8 +873,12 @@ class Parser:
                 token.column,
             )
 
-    def parse_service(self) -> ir.APISpec:
-        """Parse service declaration (external API)."""
+    def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
+        """Parse service declaration (external API or domain service).
+
+        External APIs have: spec, auth_profile, owner
+        Domain services have: kind, input, output, guarantees, stub
+        """
         self.expect(TokenType.SERVICE)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -887,6 +891,17 @@ class Parser:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
+        # Peek at first directive to determine service type
+        self.skip_newlines()
+        if self.match(TokenType.KIND):
+            # Domain service (v0.5.0)
+            return self._parse_domain_service_body(name, title)
+        else:
+            # External API (original behavior)
+            return self._parse_external_api_body(name, title)
+
+    def _parse_external_api_body(self, name: str, title: str | None) -> ir.APISpec:
+        """Parse external API service body."""
         spec_url = None
         spec_inline = None
         auth_profile = None
@@ -959,6 +974,171 @@ class Parser:
             auth_profile=auth_profile,
             owner=owner,
         )
+
+    def _parse_domain_service_body(
+        self, name: str, title: str | None
+    ) -> ir.DomainServiceSpec:
+        """Parse domain service body (v0.5.0).
+
+        DSL syntax:
+            service calculate_vat "Calculate VAT":
+              kind: domain_logic
+
+              input:
+                invoice_id: uuid required
+
+              output:
+                vat_amount: money
+                breakdown: json
+
+              guarantees:
+                - "Must not mutate the invoice record."
+
+              stub: python
+        """
+        kind = ir.DomainServiceKind.DOMAIN_LOGIC
+        inputs: list[ir.ServiceFieldSpec] = []
+        outputs: list[ir.ServiceFieldSpec] = []
+        guarantees: list[str] = []
+        stub_language = ir.StubLanguage.PYTHON
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # kind: domain_logic | validation | integration | workflow
+            if self.match(TokenType.KIND):
+                self.advance()
+                self.expect(TokenType.COLON)
+                # Use expect_identifier_or_keyword since 'integration' is a keyword
+                kind_token = self.expect_identifier_or_keyword()
+                kind = ir.DomainServiceKind(kind_token.value)
+                self.skip_newlines()
+
+            # input:
+            elif self.match(TokenType.INPUT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                inputs = self._parse_service_fields()
+                self.expect(TokenType.DEDENT)
+
+            # output:
+            elif self.match(TokenType.OUTPUT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                outputs = self._parse_service_fields()
+                self.expect(TokenType.DEDENT)
+
+            # guarantees:
+            elif self.match(TokenType.GUARANTEES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                guarantees = self._parse_guarantee_list()
+                self.expect(TokenType.DEDENT)
+
+            # stub: python | typescript
+            elif self.match(TokenType.STUB):
+                self.advance()
+                self.expect(TokenType.COLON)
+                lang_token = self.expect(TokenType.IDENTIFIER)
+                stub_language = ir.StubLanguage(lang_token.value)
+                self.skip_newlines()
+
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.DomainServiceSpec(
+            name=name,
+            title=title,
+            kind=kind,
+            inputs=inputs,
+            outputs=outputs,
+            guarantees=guarantees,
+            stub_language=stub_language,
+        )
+
+    def _parse_service_fields(self) -> list[ir.ServiceFieldSpec]:
+        """Parse service input/output fields.
+
+        Format:
+            field_name: type_name [required]
+        """
+        fields: list[ir.ServiceFieldSpec] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # field_name: type_name [required]
+            field_name = self.expect(TokenType.IDENTIFIER).value
+            self.expect(TokenType.COLON)
+
+            # Parse type - could be identifier or type with params like decimal(10,2)
+            type_name = self.expect(TokenType.IDENTIFIER).value
+
+            # Check for type parameters like (10,2) or (200)
+            if self.match(TokenType.LPAREN):
+                self.advance()
+                params = []
+                params.append(self.expect(TokenType.NUMBER).value)
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    params.append(self.expect(TokenType.NUMBER).value)
+                self.expect(TokenType.RPAREN)
+                type_name = f"{type_name}({','.join(params)})"
+
+            # Check for required modifier
+            required = False
+            if self.match(TokenType.IDENTIFIER):
+                if self.current_token().value == "required":
+                    self.advance()
+                    required = True
+
+            fields.append(
+                ir.ServiceFieldSpec(
+                    name=field_name,
+                    type_name=type_name,
+                    required=required,
+                )
+            )
+            self.skip_newlines()
+
+        return fields
+
+    def _parse_guarantee_list(self) -> list[str]:
+        """Parse guarantee list (strings prefixed with dash).
+
+        Format:
+            - "Guarantee text here"
+            - "Another guarantee"
+        """
+        guarantees: list[str] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # - "guarantee text"
+            if self.match(TokenType.MINUS):
+                self.advance()
+                guarantee_text = self.expect(TokenType.STRING).value
+                guarantees.append(guarantee_text)
+                self.skip_newlines()
+            else:
+                break
+
+        return guarantees
 
     def parse_experience(self) -> ir.ExperienceSpec:
         """Parse experience declaration."""
@@ -3151,6 +3331,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3164,6 +3345,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3177,6 +3359,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences + [experience],
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3184,16 +3367,31 @@ class Parser:
 
             elif self.match(TokenType.SERVICE):
                 service = self.parse_service()
-                fragment = ir.ModuleFragment(
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis + [service],
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                )
+                # Route to apis or domain_services based on type
+                if isinstance(service, ir.DomainServiceSpec):
+                    fragment = ir.ModuleFragment(
+                        entities=fragment.entities,
+                        surfaces=fragment.surfaces,
+                        workspaces=fragment.workspaces,
+                        experiences=fragment.experiences,
+                        apis=fragment.apis,
+                        domain_services=fragment.domain_services + [service],
+                        foreign_models=fragment.foreign_models,
+                        integrations=fragment.integrations,
+                        tests=fragment.tests,
+                    )
+                else:
+                    fragment = ir.ModuleFragment(
+                        entities=fragment.entities,
+                        surfaces=fragment.surfaces,
+                        workspaces=fragment.workspaces,
+                        experiences=fragment.experiences,
+                        apis=fragment.apis + [service],
+                        domain_services=fragment.domain_services,
+                        foreign_models=fragment.foreign_models,
+                        integrations=fragment.integrations,
+                        tests=fragment.tests,
+                    )
 
             elif self.match(TokenType.FOREIGN_MODEL):
                 foreign_model = self.parse_foreign_model()
@@ -3203,6 +3401,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models + [foreign_model],
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3216,6 +3415,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations + [integration],
                     tests=fragment.tests,
@@ -3229,6 +3429,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests + [test],
@@ -3242,6 +3443,7 @@ class Parser:
                     workspaces=fragment.workspaces + [workspace],
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3255,6 +3457,7 @@ class Parser:
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
                     apis=fragment.apis,
+                    domain_services=fragment.domain_services,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,

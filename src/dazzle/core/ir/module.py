@@ -16,7 +16,7 @@ from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
-from .services import APISpec
+from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
@@ -34,6 +34,7 @@ class ModuleFragment(BaseModel):
         workspaces: Workspaces defined in this module
         experiences: Experiences defined in this module
         apis: External APIs defined in this module
+        domain_services: Domain services defined in this module (v0.5.0)
         foreign_models: Foreign models defined in this module
         integrations: Integrations defined in this module
         tests: Tests defined in this module
@@ -46,6 +47,7 @@ class ModuleFragment(BaseModel):
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension
     experiences: list[ExperienceSpec] = Field(default_factory=list)
     apis: list[APISpec] = Field(default_factory=list)
+    domain_services: list[DomainServiceSpec] = Field(default_factory=list)  # v0.5.0
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)

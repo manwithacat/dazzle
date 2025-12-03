@@ -137,6 +137,12 @@ class TokenType(Enum):
     # v0.3.1 keywords
     ENGINE_HINT = "engine_hint"
 
+    # v0.5.0 Domain Service Keywords
+    INPUT = "input"
+    OUTPUT = "output"
+    GUARANTEES = "guarantees"
+    STUB = "stub"
+
     # Flow/E2E Test Keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
@@ -350,6 +356,11 @@ KEYWORDS = {
     "or",
     "asc",
     "desc",
+    # v0.5.0 Domain Service keywords
+    "input",
+    "output",
+    "guarantees",
+    "stub",
 }
 
 

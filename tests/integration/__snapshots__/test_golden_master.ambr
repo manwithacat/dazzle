@@ -93,6 +93,8 @@
         }),
       ]),
     }),
+    'domain_services': list([
+    ]),
     'e2e_flows': list([
     ]),
     'experiences': list([
