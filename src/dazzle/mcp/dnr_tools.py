@@ -242,6 +242,54 @@ def get_dnr_tools() -> list[Tool]:
                 "required": ["workspace_name", "layout_kind", "region_components", "routes"],
             },
         ),
+        # GraphQL BFF Tools (v0.6)
+        Tool(
+            name="get_graphql_schema",
+            description="Get the auto-generated GraphQL schema (SDL) from BackendSpec entities. Requires strawberry-graphql to be installed.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "format": {
+                        "type": "string",
+                        "enum": ["sdl", "info"],
+                        "description": "Output format: 'sdl' for raw schema, 'info' for structured info",
+                    }
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="list_graphql_types",
+            description="List all GraphQL types generated from BackendSpec entities with their fields.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="list_adapters",
+            description="List available external API adapter patterns and their use cases for the BFF layer.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_adapter_guide",
+            description="Get a guide for implementing an external API adapter with the BFF pattern.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "service_type": {
+                        "type": "string",
+                        "description": "Type of service (hmrc, payment, email, crm, etc.)",
+                    }
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -276,6 +324,16 @@ def handle_dnr_tool(name: str, arguments: dict[str, Any]) -> str:
         return _patch_uispec_component(arguments)
     elif name == "compose_workspace":
         return _compose_workspace(arguments)
+
+    # GraphQL BFF tools (v0.6)
+    elif name == "get_graphql_schema":
+        return _get_graphql_schema(arguments)
+    elif name == "list_graphql_types":
+        return _list_graphql_types()
+    elif name == "list_adapters":
+        return _list_adapters()
+    elif name == "get_adapter_guide":
+        return _get_adapter_guide(arguments)
 
     return json.dumps({"error": f"Unknown DNR tool: {name}"})
 
@@ -804,6 +862,375 @@ def _compose_workspace(args: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# GraphQL BFF Tool Implementations (v0.6)
+# =============================================================================
+
+
+def _get_graphql_schema(args: dict[str, Any]) -> str:
+    """Get the GraphQL schema from BackendSpec."""
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Select a project first.",
+            }
+        )
+
+    output_format = args.get("format", "sdl")
+
+    # Try to import GraphQL support
+    try:
+        from dazzle_dnr_back.graphql.integration import inspect_schema, print_schema
+        from dazzle_dnr_back.specs import BackendSpec
+
+        # Convert dict to BackendSpec if needed
+        if isinstance(spec, dict):
+            backend_spec = BackendSpec.model_validate(spec)
+        else:
+            backend_spec = spec
+
+        if output_format == "info":
+            info = inspect_schema(backend_spec)
+            return json.dumps(info, indent=2)
+        else:
+            sdl = print_schema(backend_spec)
+            return json.dumps(
+                {
+                    "status": "success",
+                    "format": "sdl",
+                    "schema": sdl,
+                },
+                indent=2,
+            )
+    except ImportError:
+        return json.dumps(
+            {
+                "status": "unavailable",
+                "message": "GraphQL support not available. Install with: pip install strawberry-graphql",
+            }
+        )
+
+
+def _list_graphql_types() -> str:
+    """List GraphQL types from BackendSpec entities."""
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Select a project first.",
+                "types": [],
+            }
+        )
+
+    entities = spec.get("entities", [])
+    types = []
+
+    for entity in entities:
+        entity_name = entity.get("name", "Unknown")
+        fields = entity.get("fields", [])
+
+        # Map entity fields to GraphQL fields
+        graphql_fields = []
+        for field in fields:
+            field_name = field.get("name", "")
+            field_type = field.get("type", "String")
+            is_required = field.get("required", False) or field.get("pk", False)
+
+            # Map DAZZLE types to GraphQL
+            graphql_type = _map_to_graphql_type(field_type)
+            if is_required:
+                graphql_type += "!"
+
+            graphql_fields.append({"name": field_name, "type": graphql_type})
+
+        types.append(
+            {
+                "name": entity_name,
+                "kind": "OBJECT",
+                "fields": graphql_fields,
+                "hasQuery": True,
+                "hasMutation": True,
+            }
+        )
+
+        # Add input type
+        types.append(
+            {
+                "name": f"{entity_name}Input",
+                "kind": "INPUT_OBJECT",
+                "fields": [f for f in graphql_fields if f["name"] != "id"],
+            }
+        )
+
+    return json.dumps(
+        {
+            "status": "success",
+            "types": types,
+            "hint": "Use get_graphql_schema for full SDL",
+        },
+        indent=2,
+    )
+
+
+def _map_to_graphql_type(dazzle_type: str) -> str:
+    """Map DAZZLE field types to GraphQL types."""
+    type_lower = dazzle_type.lower()
+    if type_lower.startswith("uuid"):
+        return "ID"
+    elif type_lower.startswith("str"):
+        return "String"
+    elif type_lower.startswith("int"):
+        return "Int"
+    elif type_lower.startswith("float") or type_lower.startswith("decimal"):
+        return "Float"
+    elif type_lower.startswith("bool"):
+        return "Boolean"
+    elif type_lower.startswith("datetime"):
+        return "DateTime"
+    elif type_lower.startswith("date"):
+        return "Date"
+    elif type_lower.startswith("json"):
+        return "JSON"
+    elif type_lower.startswith("enum"):
+        return "String"  # Enums are strings in simplified mapping
+    else:
+        return "String"
+
+
+def _list_adapters() -> str:
+    """List available adapter patterns for BFF layer."""
+    adapters = [
+        {
+            "name": "BaseExternalAdapter",
+            "category": "base",
+            "description": "Abstract base class for all external API adapters",
+            "features": [
+                "Automatic retry with exponential backoff",
+                "Rate limiting (token bucket)",
+                "Multi-HTTP-client support (httpx, aiohttp, urllib)",
+                "Request/response logging",
+                "Health check endpoint",
+            ],
+            "import": "from dazzle_dnr_back.graphql.adapters import BaseExternalAdapter",
+        },
+        {
+            "name": "AdapterResult",
+            "category": "result_type",
+            "description": "Result type for explicit success/failure handling",
+            "features": [
+                "is_success/is_failure properties",
+                "unwrap() and unwrap_or() methods",
+                "map() for transformations",
+                "No exception throwing for expected errors",
+            ],
+            "import": "from dazzle_dnr_back.graphql.adapters import AdapterResult",
+        },
+        {
+            "name": "NormalizedError",
+            "category": "error_handling",
+            "description": "Unified error format for GraphQL responses",
+            "features": [
+                "Error categories (auth, validation, rate_limit, etc.)",
+                "Severity levels (info, warning, error, critical)",
+                "User-safe messages",
+                "Developer details for debugging",
+                "GraphQL extensions format",
+            ],
+            "import": "from dazzle_dnr_back.graphql.adapters import normalize_error, NormalizedError",
+        },
+    ]
+
+    service_patterns = [
+        {
+            "name": "HMRC VAT API",
+            "type": "government",
+            "example_methods": ["get_vat_obligations", "submit_vat_return"],
+            "auth": "OAuth2 Bearer Token",
+            "rate_limit": "4 requests/second",
+        },
+        {
+            "name": "Payment Provider",
+            "type": "payment",
+            "example_methods": ["create_payment", "get_payment_status", "refund"],
+            "auth": "API Key",
+            "rate_limit": "Varies by provider",
+        },
+        {
+            "name": "Email Service",
+            "type": "communication",
+            "example_methods": ["send_email", "get_delivery_status"],
+            "auth": "API Key",
+            "rate_limit": "Provider-specific",
+        },
+        {
+            "name": "CRM Integration",
+            "type": "crm",
+            "example_methods": ["get_contact", "update_contact", "create_lead"],
+            "auth": "OAuth2 or API Key",
+            "rate_limit": "Provider-specific",
+        },
+    ]
+
+    return json.dumps(
+        {
+            "status": "success",
+            "adapters": adapters,
+            "service_patterns": service_patterns,
+            "hint": "Use get_adapter_guide with service_type for implementation details",
+        },
+        indent=2,
+    )
+
+
+def _get_adapter_guide(args: dict[str, Any]) -> str:
+    """Get implementation guide for a specific adapter type."""
+    service_type = args.get("service_type", "generic")
+
+    guides = {
+        "hmrc": {
+            "service": "HMRC VAT API",
+            "description": "UK tax authority API for VAT submissions",
+            "base_url": "https://api.service.hmrc.gov.uk",
+            "auth_type": "OAuth2 Bearer Token",
+            "rate_limit": "4 requests per second",
+            "error_codes": [
+                "INVALID_VRN",
+                "VRN_NOT_FOUND",
+                "DATE_RANGE_TOO_LARGE",
+                "FORBIDDEN",
+                "NOT_SIGNED_UP_TO_MTD",
+            ],
+            "example": '''from dazzle_dnr_back.graphql.adapters import (
+    BaseExternalAdapter,
+    AdapterConfig,
+    RetryConfig,
+    RateLimitConfig,
+    AdapterResult,
+)
+
+class HMRCAdapter(BaseExternalAdapter[AdapterConfig]):
+    """Adapter for HMRC VAT API."""
+
+    def __init__(self, bearer_token: str):
+        config = AdapterConfig(
+            base_url="https://api.service.hmrc.gov.uk",
+            timeout=30.0,
+            headers={
+                "Authorization": f"Bearer {bearer_token}",
+                "Accept": "application/vnd.hmrc.1.0+json",
+            },
+            retry=RetryConfig(max_retries=3, base_delay=1.0),
+            rate_limit=RateLimitConfig(requests_per_second=4),
+        )
+        super().__init__(config)
+
+    async def get_vat_obligations(
+        self, vrn: str, from_date: str, to_date: str
+    ) -> AdapterResult[list[dict]]:
+        """Fetch VAT obligations for a business."""
+        return await self._get(
+            f"/organisations/vat/{vrn}/obligations",
+            params={"from": from_date, "to": to_date, "status": "O"},
+        )''',
+        },
+        "payment": {
+            "service": "Payment Provider",
+            "description": "Generic payment processing integration",
+            "auth_type": "API Key",
+            "example": '''from dazzle_dnr_back.graphql.adapters import (
+    BaseExternalAdapter,
+    AdapterConfig,
+    AdapterResult,
+)
+
+class PaymentAdapter(BaseExternalAdapter[AdapterConfig]):
+    """Adapter for payment provider API."""
+
+    def __init__(self, api_key: str, sandbox: bool = True):
+        base_url = "https://sandbox.provider.com" if sandbox else "https://api.provider.com"
+        config = AdapterConfig(
+            base_url=base_url,
+            headers={"X-API-Key": api_key},
+            timeout=30.0,
+        )
+        super().__init__(config)
+
+    async def create_payment(
+        self, amount: int, currency: str, description: str
+    ) -> AdapterResult[dict]:
+        """Create a new payment."""
+        return await self._post(
+            "/payments",
+            json={"amount": amount, "currency": currency, "description": description},
+        )
+
+    async def get_payment(self, payment_id: str) -> AdapterResult[dict]:
+        """Get payment status."""
+        return await self._get(f"/payments/{payment_id}")''',
+        },
+        "generic": {
+            "service": "Generic External API",
+            "description": "Template for any external API integration",
+            "example": '''from dazzle_dnr_back.graphql.adapters import (
+    BaseExternalAdapter,
+    AdapterConfig,
+    RetryConfig,
+    AdapterResult,
+)
+
+class MyServiceAdapter(BaseExternalAdapter[AdapterConfig]):
+    """Adapter for My Service API."""
+
+    def __init__(self, api_key: str):
+        config = AdapterConfig(
+            base_url="https://api.myservice.com",
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=30.0,
+            retry=RetryConfig(max_retries=3),
+        )
+        super().__init__(config)
+
+    async def get_resource(self, id: str) -> AdapterResult[dict]:
+        """Fetch a resource by ID."""
+        return await self._get(f"/resources/{id}")
+
+    async def create_resource(self, data: dict) -> AdapterResult[dict]:
+        """Create a new resource."""
+        return await self._post("/resources", json=data)
+
+    async def update_resource(self, id: str, data: dict) -> AdapterResult[dict]:
+        """Update an existing resource."""
+        return await self._put(f"/resources/{id}", json=data)
+
+# Usage in GraphQL resolver:
+async def resolve_resource(info, id: str):
+    adapter = MyServiceAdapter(api_key=get_api_key())
+    result = await adapter.get_resource(id)
+
+    if result.is_success:
+        return result.data
+
+    # Handle error
+    normalized = normalize_error(result.error)
+    raise GraphQLError(normalized.user_message, extensions=normalized.to_graphql_extensions())''',
+        },
+    }
+
+    guide = guides.get(service_type.lower(), guides["generic"])
+
+    return json.dumps(
+        {
+            "status": "success",
+            "service_type": service_type,
+            "guide": guide,
+        },
+        indent=2,
+    )
+
+
+# =============================================================================
 # DNR Tool Names
 # =============================================================================
 
@@ -818,4 +1245,9 @@ DNR_TOOL_NAMES = [
     "create_uispec_component",
     "patch_uispec_component",
     "compose_workspace",
+    # v0.6 GraphQL BFF tools
+    "get_graphql_schema",
+    "list_graphql_types",
+    "list_adapters",
+    "get_adapter_guide",
 ]

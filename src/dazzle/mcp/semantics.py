@@ -1,8 +1,13 @@
 """
-Semantic index for DAZZLE DSL v0.2 concepts.
+Semantic index for DAZZLE DSL v0.2-v0.6 concepts.
 
 Provides structured definitions, syntax examples, and relationships
 for all DAZZLE DSL concepts to enable immediate context access for LLMs.
+
+Version history:
+- v0.2: UX Semantic Layer (personas, workspaces, attention signals)
+- v0.5: Extensibility Framework (domain services, stubs, three-layer architecture)
+- v0.6: GraphQL BFF Layer (adapters, error normalization, schema generation)
 """
 
 from typing import Any
@@ -16,7 +21,7 @@ def get_semantic_index() -> dict[str, Any]:
     syntax, examples, and related concepts.
     """
     return {
-        "version": "0.5.0",
+        "version": "0.6.0",
         "concepts": {
             # ================================================================
             # Core Constructs
@@ -1007,6 +1012,247 @@ def calculate_vat(invoice_id: str, country_code: str | None = None) -> Calculate
                     "Multi-step workflows (approval processes)",
                     "Cross-entity validation rules",
                 ],
+            },
+            # ================================================================
+            # v0.6 GraphQL BFF Layer
+            # ================================================================
+            "graphql_bff_pattern": {
+                "name": "GraphQL BFF Pattern",
+                "description": "Backend-for-Frontend using GraphQL as the API layer between UI and backend services",
+                "v0_6_feature": True,
+                "components": [
+                    "GraphQL schema generated from BackendSpec entities",
+                    "Auto-generated resolvers for CRUD operations",
+                    "External API adapters for third-party integrations",
+                    "Unified error normalization",
+                ],
+                "example": """# GraphQL schema is auto-generated from your entities:
+# entity Task → GraphQL type Task with Query/Mutation
+
+# Inspect the generated schema:
+# $ dazzle dnr inspect --schema
+
+# Mount GraphQL endpoint in your app:
+from dazzle_dnr_back.graphql import mount_graphql
+mount_graphql(app, backend_spec)
+
+# Query example:
+query {
+  tasks(status: "todo") {
+    id
+    title
+    status
+  }
+}
+
+# Mutation example:
+mutation {
+  createTask(input: {title: "New task"}) {
+    id
+    title
+  }
+}""",
+                "use_cases": [
+                    "Mobile apps needing flexible data fetching",
+                    "Complex UIs with nested data requirements",
+                    "Multi-client applications (web, mobile, desktop)",
+                    "APIs aggregating multiple external services",
+                ],
+            },
+            "external_adapter": {
+                "category": "Integration (v0.6)",
+                "definition": "Abstract base class for integrating with external APIs (HMRC, banks, payment providers, etc.) with built-in retry logic, rate limiting, and error normalization.",
+                "syntax": """from dazzle_dnr_back.graphql.adapters import (
+    BaseExternalAdapter,
+    AdapterConfig,
+    AdapterResult,
+)
+
+class MyServiceAdapter(BaseExternalAdapter[AdapterConfig]):
+    async def get_data(self, id: str) -> AdapterResult[dict]:
+        return await self._get(f"/api/data/{id}")""",
+                "example": """from dazzle_dnr_back.graphql.adapters import (
+    BaseExternalAdapter,
+    AdapterConfig,
+    RetryConfig,
+    RateLimitConfig,
+    AdapterResult,
+)
+
+class HMRCAdapter(BaseExternalAdapter[AdapterConfig]):
+    \"\"\"Adapter for HMRC VAT API.\"\"\"
+
+    def __init__(self, bearer_token: str):
+        config = AdapterConfig(
+            base_url="https://api.service.hmrc.gov.uk",
+            timeout=30.0,
+            headers={"Authorization": f"Bearer {bearer_token}"},
+            retry=RetryConfig(max_retries=3, base_delay=1.0),
+            rate_limit=RateLimitConfig(requests_per_second=4),
+        )
+        super().__init__(config)
+
+    async def get_vat_obligations(
+        self, vrn: str, from_date: str, to_date: str
+    ) -> AdapterResult[list[dict]]:
+        \"\"\"Fetch VAT obligations for a business.\"\"\"
+        return await self._get(
+            f"/organisations/vat/{vrn}/obligations",
+            params={"from": from_date, "to": to_date, "status": "O"},
+        )""",
+                "related": ["error_normalization", "adapter_result", "graphql_bff_pattern"],
+                "v0_6_changes": "NEW in v0.6",
+            },
+            "adapter_result": {
+                "category": "Integration (v0.6)",
+                "definition": "Result type for adapter operations using success/failure pattern instead of exceptions for expected errors.",
+                "syntax": """AdapterResult[T] = Success with data or Failure with error
+
+result = await adapter.get_data(id)
+if result.is_success:
+    data = result.data  # Access the data
+else:
+    error = result.error  # Handle the error""",
+                "example": """async def fetch_customer_data(customer_id: str):
+    result = await crm_adapter.get_customer(customer_id)
+
+    if result.is_success:
+        return result.data
+
+    # Handle specific error types
+    if result.error.status_code == 404:
+        return None  # Customer not found
+
+    # Re-raise unexpected errors
+    raise result.error
+
+# Or use unwrap_or for defaults:
+data = result.unwrap_or(default_data)
+
+# Or map the result:
+names = result.map(lambda data: data["name"])""",
+                "related": ["external_adapter", "error_normalization"],
+                "v0_6_changes": "NEW in v0.6",
+            },
+            "error_normalization": {
+                "category": "Integration (v0.6)",
+                "definition": "System for converting diverse external API errors into a consistent format for GraphQL responses.",
+                "syntax": """from dazzle_dnr_back.graphql.adapters import (
+    normalize_error,
+    NormalizedError,
+    ErrorCategory,
+    ErrorSeverity,
+)
+
+normalized = normalize_error(error, service_name="hmrc")""",
+                "example": """from dazzle_dnr_back.graphql.adapters import (
+    normalize_error,
+    ErrorCategory,
+    ErrorSeverity,
+)
+
+try:
+    result = await hmrc_adapter.get_vat_obligations(vrn)
+except AdapterError as e:
+    normalized = normalize_error(e, request_id="req-123")
+
+    # Access normalized error properties
+    print(normalized.code)           # "HMRC_RATE_LIMIT_EXCEEDED"
+    print(normalized.category)       # ErrorCategory.RATE_LIMIT
+    print(normalized.severity)       # ErrorSeverity.WARNING
+    print(normalized.user_message)   # "Too many requests. Please try again in 30 seconds."
+    print(normalized.retry_after)    # 30.0
+
+    # Convert to GraphQL error extensions
+    extensions = normalized.to_graphql_extensions()
+    raise GraphQLError(normalized.user_message, extensions=extensions)""",
+                "related": ["external_adapter", "adapter_result", "error_category"],
+                "v0_6_changes": "NEW in v0.6",
+            },
+            "error_category": {
+                "category": "Integration (v0.6)",
+                "definition": "High-level error categories for routing and handling decisions in the GraphQL layer.",
+                "syntax": """ErrorCategory.AUTHENTICATION  # Redirect to login
+ErrorCategory.AUTHORIZATION   # Show forbidden message
+ErrorCategory.VALIDATION      # Show field-level errors
+ErrorCategory.RATE_LIMIT      # Implement backoff
+ErrorCategory.TIMEOUT         # Retry or show timeout
+ErrorCategory.NOT_FOUND       # Show 404 message
+ErrorCategory.EXTERNAL_SERVICE # Show service unavailable
+ErrorCategory.INTERNAL        # Log and show generic error""",
+                "example": """# Use categories to route error handling:
+def handle_adapter_error(normalized: NormalizedError):
+    match normalized.category:
+        case ErrorCategory.AUTHENTICATION:
+            return redirect_to_login()
+        case ErrorCategory.RATE_LIMIT:
+            return show_retry_message(normalized.retry_after)
+        case ErrorCategory.VALIDATION:
+            return show_field_errors(normalized.field_errors)
+        case _:
+            return show_generic_error(normalized.user_message)""",
+                "related": ["error_normalization", "error_severity"],
+                "v0_6_changes": "NEW in v0.6",
+            },
+            "error_severity": {
+                "category": "Integration (v0.6)",
+                "definition": "Error severity levels for logging and alerting decisions.",
+                "syntax": """ErrorSeverity.INFO      # Expected errors (validation, not found)
+ErrorSeverity.WARNING   # Recoverable errors (rate limits, timeouts)
+ErrorSeverity.ERROR     # Unexpected errors needing attention
+ErrorSeverity.CRITICAL  # System errors requiring immediate action""",
+                "example": """# Log based on severity:
+def log_error(normalized: NormalizedError):
+    log_data = normalized.to_log_dict()
+
+    match normalized.severity:
+        case ErrorSeverity.INFO:
+            logger.info("Expected error", extra=log_data)
+        case ErrorSeverity.WARNING:
+            logger.warning("Recoverable error", extra=log_data)
+        case ErrorSeverity.ERROR:
+            logger.error("Unexpected error", extra=log_data)
+        case ErrorSeverity.CRITICAL:
+            logger.critical("System error", extra=log_data)
+            alert_on_call_team(normalized)""",
+                "related": ["error_normalization", "error_category"],
+                "v0_6_changes": "NEW in v0.6",
+            },
+            "graphql_schema_inspection": {
+                "category": "CLI (v0.6)",
+                "definition": "CLI command to inspect the auto-generated GraphQL schema from BackendSpec.",
+                "syntax": """# Display GraphQL SDL
+dazzle dnr inspect --schema
+
+# Get schema info as JSON
+dazzle dnr inspect --schema --format json""",
+                "example": """$ dazzle dnr inspect --schema
+📊 GraphQL Schema
+
+type Query {
+  task(id: ID!): Task
+  tasks(status: String, limit: Int): [Task!]!
+}
+
+type Mutation {
+  createTask(input: TaskInput!): Task!
+  updateTask(id: ID!, input: TaskInput!): Task!
+  deleteTask(id: ID!): Boolean!
+}
+
+type Task {
+  id: ID!
+  title: String!
+  status: String!
+  createdAt: DateTime!
+}
+
+input TaskInput {
+  title: String!
+  status: String
+}""",
+                "related": ["graphql_bff_pattern", "external_adapter"],
+                "v0_6_changes": "NEW in v0.6",
             },
         },
         # ================================================================
