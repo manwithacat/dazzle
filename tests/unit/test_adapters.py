@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -571,13 +572,12 @@ class TestBaseExternalAdapter:
         # Max delay cap
         assert adapter._calculate_retry_delay(10, config.retry) == 30.0
 
-    @pytest.mark.asyncio
-    async def test_health_check_default(self) -> None:
+    def test_health_check_default(self) -> None:
         """Test default health check returns True."""
         config = AdapterConfig(base_url="https://api.example.com")
         adapter = MockAdapter(config)
 
-        result = await adapter.health_check()
+        result = asyncio.run(adapter.health_check())
         assert result is True
 
     def test_process_response_success(self) -> None:
