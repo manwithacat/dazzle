@@ -109,11 +109,11 @@ DAZZLE has undergone a **strategic transformation** from a code generation toolk
 
 ---
 
-## Upcoming Releases
+## Recent Releases
 
-### v0.3.1 - Critical Bug Fixes & E2E Testing (PRIORITY)
+### v0.3.1 - Critical Bug Fixes & E2E Testing ✅ COMPLETE
 
-**Status**: 🔴 CRITICAL - Required before any other work
+**Status**: ✅ COMPLETE
 **Focus**: Fix DNR runtime bugs and prevent regressions
 
 **Background**: User testing revealed that `dazzle dnr serve` produces non-functional applications due to JavaScript generation bugs. These must be fixed immediately.
@@ -374,6 +374,8 @@ service calculate_vat "Calculate VAT":
 **Test Results**: 601 tests pass (71+ new tests, no regressions)
 
 ---
+
+## Upcoming Releases
 
 ### v0.6.0 - GraphQL BFF Layer (Q3 2026)
 
