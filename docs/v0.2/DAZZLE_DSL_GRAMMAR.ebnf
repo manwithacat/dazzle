@@ -9,6 +9,11 @@
   - Added workspace construct for composing related information needs
   - Added attention signals for data-driven priority indicators
   - Added persona variants for role-specific adaptations
+
+  v0.5.0 Anti-Turing Enforcement:
+  - Renamed function_call → aggregate_call (restricted to aggregate functions)
+  - AGGREGATE_FN explicitly enumerates allowed functions (count, sum, avg, etc.)
+  - No arbitrary function calls permitted in DSL (Turing-complete logic lives in stubs)
 *)
 
 dazzle_spec   ::= module_decl? app_decl statement* EOF ;
@@ -185,12 +190,16 @@ condition_expr ::= comparison
                  | "(" condition_expr ")" ;
 
 comparison    ::= FIELD_NAME operator value
-                | function_call operator value ;
+                | aggregate_call operator value ;
 
 operator      ::= "=" | "!=" | ">" | "<" | ">=" | "<="
                 | "in" | "not" "in" | "is" | "is" "not" ;
 
-function_call ::= IDENT "(" FIELD_NAME ")" ;
+(* v0.5.0: Restricted to aggregate functions only for Anti-Turing compliance *)
+aggregate_call ::= AGGREGATE_FN "(" FIELD_NAME ")" ;
+
+AGGREGATE_FN  ::= "count" | "sum" | "avg" | "max" | "min"
+                | "days_until" | "days_since" ;
 
 value         ::= STRING | NUMBER | IDENT | value_list ;
 
@@ -244,7 +253,7 @@ aggregate_block ::= NEWLINE INDENT metric_line+ DEDENT ;
 
 metric_line   ::= IDENT ":" aggregate_expr NEWLINE ;
 
-aggregate_expr ::= function_call
+aggregate_expr ::= aggregate_call
                  | arithmetic_expr
                  | NUMBER ;
 
