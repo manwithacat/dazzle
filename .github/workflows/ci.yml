@@ -66,6 +66,15 @@ jobs:
       run: |
         ruff format --check src/ tests/
 
+    - name: Check Anti-Turing compliance (DSL)
+      run: |
+        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
+          echo "Checking Anti-Turing compliance for $example..."
+          cd examples/$example
+          dazzle lint --anti-turing --strict
+          cd ../..
+        done
+
   js-lint:
     runs-on: ubuntu-latest
 

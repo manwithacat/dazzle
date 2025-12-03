@@ -378,9 +378,22 @@ def validate_command(
 def lint_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
     format: str = typer.Option("human", "--format", "-f", help="Output format"),
+    anti_turing: bool = typer.Option(
+        False, "--anti-turing", help="Check for Anti-Turing compliance"
+    ),
+    strict: bool = typer.Option(
+        False, "--strict", help="Fail on any violation (with --anti-turing)"
+    ),
 ) -> None:
     """
     Run extended lint checks (validate + additional warnings).
+
+    Use --anti-turing to check DSL files for forbidden constructs:
+    - Control flow keywords (if, for, while, etc.)
+    - Function definitions (def, lambda, etc.)
+    - Programming patterns (=>, ternary operators, etc.)
+
+    Use --strict with --anti-turing to fail CI on any violation.
     """
     manifest_path = Path(manifest).resolve()
     root = manifest_path.parent
@@ -388,6 +401,30 @@ def lint_command(
     try:
         mf = load_manifest(manifest_path)
         dsl_files = discover_dsl_files(root, mf)
+
+        # Anti-Turing validation (raw DSL content)
+        if anti_turing:
+            from dazzle.core.anti_turing import AntiTuringValidator
+
+            validator = AntiTuringValidator(strict=strict)
+            all_violations = []
+
+            for dsl_file in dsl_files:
+                content = dsl_file.read_text()
+                violations = validator.validate(content, str(dsl_file))
+                all_violations.extend(violations)
+
+            if all_violations:
+                typer.echo(validator.format_violations(all_violations), err=True)
+                if strict:
+                    raise typer.Exit(code=1)
+            else:
+                typer.echo("Anti-Turing validation passed.")
+
+            # If only --anti-turing, we're done
+            if not format or format == "human":
+                return
+
         modules = parse_modules(dsl_files)
         appspec = build_appspec(modules, mf.project_root)
         errors, warnings = lint_appspec(appspec, extended=True)

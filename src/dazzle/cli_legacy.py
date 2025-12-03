@@ -208,6 +208,14 @@ app.add_typer(vocab_app, name="vocab")
 
 
 # =============================================================================
+# Stubs Commands (imported from cli.stubs)
+# =============================================================================
+from dazzle.cli.stubs import stubs_app  # noqa: E402
+
+app.add_typer(stubs_app, name="stubs")
+
+
+# =============================================================================
 # MCP Commands (top-level for backward compatibility)
 # =============================================================================
 
