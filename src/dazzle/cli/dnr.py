@@ -1539,6 +1539,11 @@ def dnr_inspect(
         "--api-url",
         help="URL of running DNR API server (for --live mode)",
     ),
+    schema: bool = typer.Option(
+        False,
+        "--schema",
+        help="Generate and display GraphQL schema SDL (requires strawberry-graphql)",
+    ),
 ) -> None:
     """
     Inspect the DNR app structure and generated artifacts.
@@ -1559,6 +1564,7 @@ def dnr_inspect(
         dazzle dnr inspect --components       # Show UI components
         dazzle dnr inspect --live             # Query running server
         dazzle dnr inspect --live --entity Task  # Live entity details
+        dazzle dnr inspect --schema           # Show GraphQL schema SDL
     """
     import json as json_module
 
@@ -1606,6 +1612,10 @@ def dnr_inspect(
 
     if endpoints:
         _inspect_endpoints(backend_spec, format_output)
+        return
+
+    if schema:
+        _inspect_schema(backend_spec, format_output)
         return
 
     if components:
@@ -1835,6 +1845,30 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
         typer.echo()
         for c in ui_spec.components:
             typer.echo(f"   • {c.name} ({c.category})")
+
+
+def _inspect_schema(backend_spec: BackendSpec, format_output: str) -> None:
+    """Inspect GraphQL schema."""
+    import json as json_module
+
+    try:
+        from dazzle_dnr_back.graphql.integration import inspect_schema, print_schema
+    except ImportError:
+        typer.echo(
+            "GraphQL support not available. Install with: pip install strawberry-graphql",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    if format_output == "json":
+        info = inspect_schema(backend_spec)
+        typer.echo(json_module.dumps(info, indent=2))
+    else:
+        # Print SDL for tree/summary formats
+        typer.echo("📊 GraphQL Schema")
+        typer.echo()
+        sdl = print_schema(backend_spec)
+        typer.echo(sdl)
 
 
 def _inspect_live(api_url: str, format_output: str, entity_name: str | None = None) -> None:
