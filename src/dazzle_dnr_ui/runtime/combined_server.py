@@ -547,6 +547,7 @@ def run_backend_only(
     port: int = 8000,
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    enable_graphql: bool = False,
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -557,6 +558,7 @@ def run_backend_only(
         port: Port to bind to
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
+        enable_graphql: Enable GraphQL endpoint at /graphql
     """
     try:
         import uvicorn
@@ -579,6 +581,21 @@ def run_backend_only(
         enable_test_mode=enable_test_mode,
     )
     app = app_builder.build()
+
+    # Mount GraphQL if enabled
+    if enable_graphql:
+        try:
+            from dazzle_dnr_back.graphql import mount_graphql
+
+            mount_graphql(
+                app,
+                backend_spec,
+                services=app_builder.services,
+                repositories=app_builder.repositories,
+            )
+            print(f"[DNR] GraphQL: http://{host}:{port}/graphql")
+        except ImportError:
+            print("[DNR] Warning: GraphQL not available (install strawberry-graphql)")
 
     print(f"[DNR] Backend:  http://{host}:{port}")
     print(f"[DNR] API Docs: http://{host}:{port}/docs")

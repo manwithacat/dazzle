@@ -839,6 +839,11 @@ def dnr_serve(
         "--single-container",
         help="Use legacy single-container mode (combined frontend + backend)",
     ),
+    graphql: bool = typer.Option(
+        False,
+        "--graphql",
+        help="Enable GraphQL endpoint at /graphql (requires strawberry-graphql)",
+    ),
 ) -> None:
     """
     Serve DNR app (backend API + UI with live data).
@@ -865,6 +870,7 @@ def dnr_serve(
         dazzle dnr serve --ui-only          # Static UI only (no API)
         dazzle dnr serve --db ./my.db       # Custom database path
         dazzle dnr serve --test-mode        # Enable E2E test endpoints
+        dazzle dnr serve --graphql          # Enable GraphQL at /graphql
 
     Hot reload (--watch):
         Watch DSL files for changes and auto-refresh browser.
@@ -1002,9 +1008,13 @@ def dnr_serve(
         typer.echo(f"  • Database: {db_path}")
         if test_mode:
             typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
+        if graphql:
+            typer.echo("  • GraphQL: ENABLED (/graphql endpoint)")
         typer.echo()
         typer.echo(f"API: http://{host}:{api_port}")
         typer.echo(f"Docs: http://{host}:{api_port}/docs")
+        if graphql:
+            typer.echo(f"GraphQL: http://{host}:{api_port}/graphql")
         typer.echo()
 
         db_file = Path(db_path)
@@ -1015,6 +1025,7 @@ def dnr_serve(
             port=api_port,
             db_path=db_file,
             enable_test_mode=test_mode,
+            enable_graphql=graphql,
             host=host,
         )
         return

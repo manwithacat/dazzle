@@ -377,39 +377,48 @@ service calculate_vat "Calculate VAT":
 
 ## Upcoming Releases
 
-### v0.6.0 - GraphQL BFF Layer (Q3 2026)
+### v0.6.0 - GraphQL BFF Layer 🔄 IN PROGRESS
 
 **Focus**: API aggregation and external service facade
 
 **Spec Document**: `dev_docs/DNR-Back-GraphQL-Spec-v1.md`
 
-**Planned Features**:
+#### Core Components (COMPLETE) ✅
+- [x] **GraphQLContext**: Multi-tenant context with role-based access control
+  - `tenant_id`, `user_id`, `roles`, `request_id`, `ip_address`, `session`
+  - `require_tenant()`, `require_authenticated()`, `has_role()`, `has_any_role()`
+  - Factory functions: `create_context_from_request()`, `create_anonymous_context()`, `create_system_context()`
+- [x] **SchemaGenerator**: Generate Strawberry types from BackendSpec
+  - Entity types, input types (create/update), enum types
+  - Scalar type mapping (str, int, bool, date, datetime, uuid, etc.)
+  - SDL generation for documentation
+- [x] **ResolverGenerator**: Generate CRUD resolvers with tenant isolation
+  - Get by ID, list with pagination
+  - Create, update, delete mutations
+  - Tenant filtering from context (never from args)
+  - Service and repository delegation
+- [x] **FastAPI Integration**: Mount GraphQL on existing app
+  - `create_graphql_app()`: Standalone GraphQL FastAPI app
+  - `mount_graphql()`: Add GraphQL to existing app
+  - `create_schema()`: Generate Strawberry schema from BackendSpec
 
-#### GraphQL BFF/Facade Pattern
-- GraphQL server integration (Strawberry/Ariadne)
-- External API adapter interface
-- Unified schema over multiple data sources
-- Error normalization across external APIs
-
-#### Multi-Tenant Context
-```python
-@dataclass
-class GraphQLContext:
-    tenant_id: str
-    user_id: str
-    roles: list[str]
-    request_id: str
-```
-
-#### CLI Integration
+#### CLI Integration (COMPLETE) ✅
 ```bash
-dazzle dnr serve --graphql    # Enable GraphQL endpoint
-dazzle dnr inspect --schema   # View generated schema
+dazzle dnr serve --graphql    # Enable GraphQL endpoint at /graphql
 ```
+
+#### Unit Tests (COMPLETE) ✅
+- [x] 12 context tests (creation, permissions, roles, immutability)
+- [x] 14 Strawberry-dependent tests (skipped when not installed)
+- [x] All 582 unit tests passing
+
+#### Remaining Work
+- [ ] External API adapter interface
+- [ ] Error normalization across external APIs
+- [ ] `dazzle dnr inspect --schema` command
+- [ ] Integration tests with real GraphQL queries
 
 **Use Case**: Aggregate HMRC, banking APIs, and internal services into clean graph for frontend consumption.
-
-**Estimate**: 4-6 weeks
 
 ---
 
@@ -593,6 +602,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-03 (GraphQL BFF Layer - v0.6.0 Started)
+- **v0.6.0 IN PROGRESS**: GraphQL BFF Layer implementation begun
+- GraphQL module structure: `src/dazzle_dnr_back/graphql/`
+- GraphQLContext: Multi-tenant context with role-based access control
+- SchemaGenerator: Generate Strawberry types from BackendSpec
+- ResolverGenerator: Generate CRUD resolvers with tenant isolation
+- FastAPI Integration: `mount_graphql()`, `create_graphql_app()`
+- CLI: `--graphql` flag for `dazzle dnr serve`
+- Unit tests: 12 context tests, 14 Strawberry-dependent tests (skipped when not installed)
+- All 582 unit tests passing
 
 ### 2025-12-03 (Anti-Turing Extensibility)
 - **Anti-Turing Extensibility Model**: Three-layer architecture complete
