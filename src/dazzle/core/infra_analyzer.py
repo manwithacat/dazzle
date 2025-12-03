@@ -102,24 +102,24 @@ def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
                     requirements.needs_storage = True
                     break
 
-    # Analyze services
-    requirements.service_count = len(appspec.services)
-    if appspec.services:
-        for service in appspec.services:
-            service_type = getattr(service, "service_type", "").lower()
+    # Analyze external APIs
+    requirements.service_count = len(appspec.apis)
+    if appspec.apis:
+        for api in appspec.apis:
+            service_type = getattr(api, "spec_url", "").lower() if hasattr(api, "spec_url") else ""
 
-            # Webhook services need inbound routing
+            # Webhook APIs need inbound routing
             if "webhook" in service_type:
                 requirements.needs_webhooks = True
                 if requirements.webhook_service_names is not None:
-                    requirements.webhook_service_names.append(service.name)
+                    requirements.webhook_service_names.append(api.name)
 
-            # Async/background services need queue + workers
+            # Async/background APIs need queue + workers
             if any(keyword in service_type for keyword in ["async", "background", "queue", "job"]):
                 requirements.needs_queue = True
                 requirements.needs_workers = True
                 if requirements.async_service_names is not None:
-                    requirements.async_service_names.append(service.name)
+                    requirements.async_service_names.append(api.name)
 
     # Analyze integrations
     requirements.integration_count = len(appspec.integrations)

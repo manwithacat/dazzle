@@ -88,7 +88,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         surfaces=merged_fragment.surfaces,
         workspaces=merged_fragment.workspaces,
         experiences=merged_fragment.experiences,
-        services=merged_fragment.services,
+        apis=merged_fragment.apis,
         foreign_models=merged_fragment.foreign_models,
         integrations=merged_fragment.integrations,
         tests=merged_fragment.tests,

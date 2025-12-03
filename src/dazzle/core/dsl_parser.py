@@ -873,8 +873,8 @@ class Parser:
                 token.column,
             )
 
-    def parse_service(self) -> ir.ServiceSpec:
-        """Parse service declaration."""
+    def parse_service(self) -> ir.APISpec:
+        """Parse service declaration (external API)."""
         self.expect(TokenType.SERVICE)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -951,7 +951,7 @@ class Parser:
                 token.column,
             )
 
-        return ir.ServiceSpec(
+        return ir.APISpec(
             name=name,
             title=title,
             spec_url=spec_url,
@@ -1074,7 +1074,7 @@ class Parser:
         name = self.expect(TokenType.IDENTIFIER).value
 
         self.expect(TokenType.FROM)
-        service_ref = self.expect(TokenType.IDENTIFIER).value
+        api_ref = self.expect(TokenType.IDENTIFIER).value
 
         title = None
         if self.match(TokenType.STRING):
@@ -1158,7 +1158,7 @@ class Parser:
         return ir.ForeignModelSpec(
             name=name,
             title=title,
-            service_ref=service_ref,
+            api_ref=api_ref,
             key_fields=key_fields,
             constraints=constraints,
             fields=fields,
@@ -1178,7 +1178,7 @@ class Parser:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        service_refs = []
+        api_refs = []
         foreign_model_refs = []
         actions = []
         syncs = []
@@ -1188,17 +1188,17 @@ class Parser:
             if self.match(TokenType.DEDENT):
                 break
 
-            # uses service ServiceName[,ServiceName]
+            # uses service ServiceName[,ServiceName] (DSL keyword still "service", maps to API)
             if self.match(TokenType.USES):
                 self.advance()
 
                 if self.match(TokenType.SERVICE):
                     self.advance()
-                    service_refs.append(self.expect(TokenType.IDENTIFIER).value)
+                    api_refs.append(self.expect(TokenType.IDENTIFIER).value)
 
                     while self.match(TokenType.COMMA):
                         self.advance()
-                        service_refs.append(self.expect(TokenType.IDENTIFIER).value)
+                        api_refs.append(self.expect(TokenType.IDENTIFIER).value)
 
                     self.skip_newlines()
 
@@ -1251,7 +1251,7 @@ class Parser:
         return ir.IntegrationSpec(
             name=name,
             title=title,
-            service_refs=service_refs,
+            api_refs=api_refs,
             foreign_model_refs=foreign_model_refs,
             actions=actions,
             syncs=syncs,
@@ -3150,7 +3150,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3163,7 +3163,7 @@ class Parser:
                     surfaces=fragment.surfaces + [surface],
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3176,7 +3176,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences + [experience],
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3189,7 +3189,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services + [service],
+                    apis=fragment.apis + [service],
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3202,7 +3202,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models + [foreign_model],
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3215,7 +3215,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations + [integration],
                     tests=fragment.tests,
@@ -3228,7 +3228,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests + [test],
@@ -3241,7 +3241,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces + [workspace],
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
@@ -3254,7 +3254,7 @@ class Parser:
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
                     experiences=fragment.experiences,
-                    services=fragment.services,
+                    apis=fragment.apis,
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,

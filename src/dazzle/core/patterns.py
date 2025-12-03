@@ -145,8 +145,8 @@ def detect_integration_patterns(spec: ir.AppSpec) -> list[IntegrationPattern]:
     patterns: list[IntegrationPattern] = []
 
     for integration in spec.integrations:
-        # Get primary service (first in list, or None)
-        service_name = integration.service_refs[0] if integration.service_refs else "unknown"
+        # Get primary API (first in list, or None)
+        service_name = integration.api_refs[0] if integration.api_refs else "unknown"
 
         pattern = IntegrationPattern(
             integration_name=integration.name,

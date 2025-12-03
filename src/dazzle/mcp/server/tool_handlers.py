@@ -304,7 +304,7 @@ def validate_all_projects() -> str:
                 "modules": len(modules),
                 "entities": len(app_spec.domain.entities),
                 "surfaces": len(app_spec.surfaces),
-                "services": len(app_spec.services),
+                "apis": len(app_spec.apis),
             }
         except Exception as e:
             results[name] = {
@@ -347,7 +347,7 @@ def validate_dsl(project_root: Path) -> str:
             "modules": len(modules),
             "entities": len(app_spec.domain.entities),
             "surfaces": len(app_spec.surfaces),
-            "services": len(app_spec.services),
+            "apis": len(app_spec.apis),
         }
 
         # Add project context in dev mode

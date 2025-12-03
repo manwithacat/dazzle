@@ -102,11 +102,11 @@ from .module import (
     ModuleIR,
 )
 
-# Services
+# Services (External APIs)
 from .services import (
+    APISpec,
     AuthKind,
     AuthProfile,
-    ServiceSpec,
 )
 
 # Surfaces
@@ -198,10 +198,10 @@ __all__ = [
     "StepTransition",
     "ExperienceStep",
     "ExperienceSpec",
-    # Services
+    # Services (External APIs)
+    "APISpec",
     "AuthKind",
     "AuthProfile",
-    "ServiceSpec",
     # Foreign Models
     "ForeignConstraintKind",
     "ForeignConstraint",

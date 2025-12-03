@@ -122,7 +122,7 @@ def simplify_appspec(appspec: ir.AppSpec) -> dict[str, Any]:
         },
         "entities": {},
         "surfaces": {},
-        "services": {},
+        "apis": {},
         "experiences": {},
     }
 
@@ -148,11 +148,11 @@ def simplify_appspec(appspec: ir.AppSpec) -> dict[str, Any]:
             "entity": surface.entity_ref if hasattr(surface, "entity_ref") else None,
         }
 
-    # Service signatures
-    for service in appspec.services:
-        snapshot["services"][service.name] = {
-            "title": service.title,
-            "service_type": service.service_type if hasattr(service, "service_type") else None,
+    # API signatures (external services)
+    for api in appspec.apis:
+        snapshot["apis"][api.name] = {
+            "title": api.title,
+            "spec_url": api.spec_url if hasattr(api, "spec_url") else None,
         }
 
     # Experience signatures

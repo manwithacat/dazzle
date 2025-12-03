@@ -1,6 +1,8 @@
 # serializer version: 1
 # name: test_simple_dsl_to_ir_snapshot
   dict({
+    'apis': list([
+    ]),
     'domain': dict({
       'entities': list([
         dict({
@@ -102,8 +104,6 @@
     'integrations': list([
     ]),
     'name': 'simple_test',
-    'services': list([
-    ]),
     'surfaces': list([
       dict({
         'access': None,

@@ -256,29 +256,25 @@ def validate_services(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     errors = []
     warnings = []
 
-    for service in appspec.services:
+    for api in appspec.apis:
         # Check spec is provided
-        if not service.spec_url and not service.spec_inline:
-            errors.append(f"Service '{service.name}' has no spec (url or inline)")
+        if not api.spec_url and not api.spec_inline:
+            errors.append(f"API '{api.name}' has no spec (url or inline)")
 
         # Validate URL format if provided
-        if service.spec_url:
+        if api.spec_url:
             try:
-                parsed = urlparse(service.spec_url)
+                parsed = urlparse(api.spec_url)
                 if not parsed.scheme or not parsed.netloc:
-                    warnings.append(
-                        f"Service '{service.name}' has invalid spec URL: {service.spec_url}"
-                    )
+                    warnings.append(f"API '{api.name}' has invalid spec URL: {api.spec_url}")
             except Exception:
-                warnings.append(
-                    f"Service '{service.name}' has malformed spec URL: {service.spec_url}"
-                )
+                warnings.append(f"API '{api.name}' has malformed spec URL: {api.spec_url}")
 
         # Check auth profile
-        if service.auth_profile.kind in (ir.AuthKind.OAUTH2_LEGACY, ir.AuthKind.OAUTH2_PKCE):
-            # OAuth2 services should specify scopes
-            if "scopes" not in service.auth_profile.options:
-                warnings.append(f"Service '{service.name}' uses OAuth2 but doesn't specify scopes")
+        if api.auth_profile.kind in (ir.AuthKind.OAUTH2_LEGACY, ir.AuthKind.OAUTH2_PKCE):
+            # OAuth2 APIs should specify scopes
+            if "scopes" not in api.auth_profile.options:
+                warnings.append(f"API '{api.name}' uses OAuth2 but doesn't specify scopes")
 
     return errors, warnings
 
@@ -336,8 +332,8 @@ def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
     for integration in appspec.integrations:
         # Check that integration uses at least one service
-        if not integration.service_refs:
-            warnings.append(f"Integration '{integration.name}' doesn't use any services")
+        if not integration.api_refs:
+            warnings.append(f"Integration '{integration.name}' doesn't use any APIs")
 
         # Check that integration has actions or syncs
         if not integration.actions and not integration.syncs:

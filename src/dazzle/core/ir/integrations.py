@@ -136,13 +136,13 @@ class IntegrationSpec(BaseModel):
     """
     Specification for an integration between internal and external systems.
 
-    Integrations connect entities, surfaces, and experiences with services
+    Integrations connect entities, surfaces, and experiences with APIs
     and foreign models.
 
     Attributes:
         name: Integration identifier
         title: Human-readable title
-        service_refs: List of services used
+        api_refs: List of external APIs used
         foreign_model_refs: List of foreign models used
         actions: List of on-demand actions
         syncs: List of sync operations
@@ -150,7 +150,7 @@ class IntegrationSpec(BaseModel):
 
     name: str
     title: str | None = None
-    service_refs: list[str] = Field(default_factory=list)
+    api_refs: list[str] = Field(default_factory=list)
     foreign_model_refs: list[str] = Field(default_factory=list)
     actions: list[IntegrationAction] = Field(default_factory=list)
     syncs: list[IntegrationSync] = Field(default_factory=list)

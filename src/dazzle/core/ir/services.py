@@ -38,19 +38,19 @@ class AuthProfile(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ServiceSpec(BaseModel):
+class APISpec(BaseModel):
     """
-    Specification for an external service (API).
+    Specification for an external API service.
 
-    Services represent third-party systems that the app integrates with.
+    APIs represent third-party systems that the app integrates with.
 
     Attributes:
-        name: Service identifier
+        name: API identifier
         title: Human-readable title
-        spec_url: URL to service spec (often OpenAPI)
+        spec_url: URL to API spec (often OpenAPI)
         spec_inline: Inline spec identifier
         auth_profile: Authentication configuration
-        owner: Service owner/provider
+        owner: API owner/provider
     """
 
     name: str

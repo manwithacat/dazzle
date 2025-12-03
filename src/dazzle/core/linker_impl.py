@@ -16,7 +16,7 @@ class SymbolTable:
     """
     Symbol table for tracking all named definitions across modules.
 
-    Tracks entities, surfaces, workspaces, experiences, services, foreign models,
+    Tracks entities, surfaces, workspaces, experiences, APIs, foreign models,
     integrations, and tests to enable cross-module reference resolution.
     """
 
@@ -24,7 +24,7 @@ class SymbolTable:
     surfaces: dict[str, ir.SurfaceSpec] = field(default_factory=dict)
     workspaces: dict[str, ir.WorkspaceSpec] = field(default_factory=dict)
     experiences: dict[str, ir.ExperienceSpec] = field(default_factory=dict)
-    services: dict[str, ir.ServiceSpec] = field(default_factory=dict)
+    apis: dict[str, ir.APISpec] = field(default_factory=dict)
     foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
     integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
     tests: dict[str, ir.TestSpec] = field(default_factory=dict)
@@ -76,16 +76,16 @@ class SymbolTable:
         self.experiences[experience.name] = experience
         self.symbol_sources[experience.name] = module_name
 
-    def add_service(self, service: ir.ServiceSpec, module_name: str) -> None:
-        """Add service to symbol table, checking for duplicates."""
-        if service.name in self.services:
-            existing_module = self.symbol_sources.get(service.name, "unknown")
+    def add_api(self, api: ir.APISpec, module_name: str) -> None:
+        """Add external API to symbol table, checking for duplicates."""
+        if api.name in self.apis:
+            existing_module = self.symbol_sources.get(api.name, "unknown")
             raise LinkError(
-                f"Duplicate service '{service.name}' defined in modules "
+                f"Duplicate API '{api.name}' defined in modules "
                 f"'{existing_module}' and '{module_name}'"
             )
-        self.services[service.name] = service
-        self.symbol_sources[service.name] = module_name
+        self.apis[api.name] = api
+        self.symbol_sources[api.name] = module_name
 
     def add_foreign_model(self, foreign_model: ir.ForeignModelSpec, module_name: str) -> None:
         """Add foreign model to symbol table, checking for duplicates."""
@@ -209,9 +209,9 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         for experience in module.fragment.experiences:
             symbols.add_experience(experience, module.name)
 
-        # Add services
-        for service in module.fragment.services:
-            symbols.add_service(service, module.name)
+        # Add external APIs
+        for api in module.fragment.apis:
+            symbols.add_api(api, module.name)
 
         # Add foreign models
         for foreign_model in module.fragment.foreign_models:
@@ -310,24 +310,24 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
                         f"without importing it (add: use {target_module})"
                     )
 
-        # Check foreign model service references
+        # Check foreign model API references
         for foreign_model in module.fragment.foreign_models:
-            owner_module = symbols.symbol_sources.get(foreign_model.service_ref)
+            owner_module = symbols.symbol_sources.get(foreign_model.api_ref)
             if owner_module and owner_module not in allowed_modules:
                 errors.append(
                     f"Module '{module.name}' foreign model '{foreign_model.name}' "
-                    f"references service '{foreign_model.service_ref}' from module '{owner_module}' "
+                    f"references API '{foreign_model.api_ref}' from module '{owner_module}' "
                     f"without importing it (add: use {owner_module})"
                 )
 
         # Check integration references
         for integration in module.fragment.integrations:
-            for service_ref in integration.service_refs:
-                owner_module = symbols.symbol_sources.get(service_ref)
+            for api_ref in integration.api_refs:
+                owner_module = symbols.symbol_sources.get(api_ref)
                 if owner_module and owner_module not in allowed_modules:
                     errors.append(
                         f"Module '{module.name}' integration '{integration.name}' "
-                        f"references service '{service_ref}' from module '{owner_module}' "
+                        f"references API '{api_ref}' from module '{owner_module}' "
                         f"without importing it (add: use {owner_module})"
                     )
 
@@ -352,7 +352,7 @@ def validate_references(symbols: SymbolTable) -> list[str]:
     - Surface entity refs point to valid entities
     - Surface action outcomes point to valid targets
     - Experience step targets point to valid surfaces/integrations
-    - Service refs in foreign models and integrations are valid
+    - API refs in foreign models and integrations are valid
     - Foreign model refs in integrations are valid
 
     Args:
@@ -445,21 +445,20 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                         f"references unknown step '{transition.next_step}'"
                     )
 
-    # Validate foreign model service references
+    # Validate foreign model API references
     for fm_name, foreign_model in symbols.foreign_models.items():
-        if foreign_model.service_ref not in symbols.services:
+        if foreign_model.api_ref not in symbols.apis:
             errors.append(
-                f"Foreign model '{fm_name}' references unknown service "
-                f"'{foreign_model.service_ref}'"
+                f"Foreign model '{fm_name}' references unknown API '{foreign_model.api_ref}'"
             )
 
     # Validate integration references
     for integration_name, integration in symbols.integrations.items():
-        # Check service refs
-        for service_ref in integration.service_refs:
-            if service_ref not in symbols.services:
+        # Check API refs
+        for api_ref in integration.api_refs:
+            if api_ref not in symbols.apis:
                 errors.append(
-                    f"Integration '{integration_name}' references unknown service '{service_ref}'"
+                    f"Integration '{integration_name}' references unknown API '{api_ref}'"
                 )
 
         # Check foreign model refs
@@ -488,7 +487,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         surfaces=list(symbols.surfaces.values()),
         workspaces=list(symbols.workspaces.values()),
         experiences=list(symbols.experiences.values()),
-        services=list(symbols.services.values()),
+        apis=list(symbols.apis.values()),
         foreign_models=list(symbols.foreign_models.values()),
         integrations=list(symbols.integrations.values()),
         tests=list(symbols.tests.values()),

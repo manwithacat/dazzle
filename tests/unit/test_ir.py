@@ -179,11 +179,11 @@ def test_experience():
     print("✓ Experiences work correctly")
 
 
-def test_service():
-    """Test service specification."""
-    print("Testing services...")
+def test_api():
+    """Test external API specification."""
+    print("Testing external APIs...")
 
-    service = ir.ServiceSpec(
+    api = ir.APISpec(
         name="payment_gateway",
         title="Payment Gateway API",
         spec_url="https://api.example.com/openapi.json",
@@ -194,10 +194,10 @@ def test_service():
         owner="Payment Corp",
     )
 
-    assert service.name == "payment_gateway"
-    assert service.auth_profile.kind == ir.AuthKind.OAUTH2_PKCE
+    assert api.name == "payment_gateway"
+    assert api.auth_profile.kind == ir.AuthKind.OAUTH2_PKCE
 
-    print("✓ Services work correctly")
+    print("✓ External APIs work correctly")
 
 
 def test_foreign_model():
@@ -207,7 +207,7 @@ def test_foreign_model():
     foreign_model = ir.ForeignModelSpec(
         name="StripeCustomer",
         title="Stripe Customer",
-        service_ref="stripe_api",
+        api_ref="stripe_api",
         key_fields=["id"],
         constraints=[
             ir.ForeignConstraint(kind=ir.ForeignConstraintKind.READ_ONLY),
@@ -225,7 +225,7 @@ def test_foreign_model():
     )
 
     assert foreign_model.name == "StripeCustomer"
-    assert foreign_model.service_ref == "stripe_api"
+    assert foreign_model.api_ref == "stripe_api"
     assert "id" in foreign_model.key_fields
 
     print("✓ Foreign models work correctly")
@@ -238,7 +238,7 @@ def test_integration():
     integration = ir.IntegrationSpec(
         name="stripe_sync",
         title="Stripe Synchronization",
-        service_refs=["stripe_api"],
+        api_refs=["stripe_api"],
         foreign_model_refs=["StripeCustomer"],
         actions=[
             ir.IntegrationAction(
@@ -364,7 +364,7 @@ def main():
         test_entity()
         test_surface()
         test_experience()
-        test_service()
+        test_api()
         test_foreign_model()
         test_integration()
         test_appspec()

@@ -42,12 +42,12 @@ class ForeignModelSpec(BaseModel):
     """
     Specification for a foreign (external) data model.
 
-    Foreign models represent data owned by external services.
+    Foreign models represent data owned by external APIs.
 
     Attributes:
         name: Foreign model name
         title: Human-readable title
-        service_ref: Reference to service this model comes from
+        api_ref: Reference to API this model comes from
         key_fields: Fields that form the key
         constraints: List of constraints
         fields: List of field specifications
@@ -55,7 +55,7 @@ class ForeignModelSpec(BaseModel):
 
     name: str
     title: str | None = None
-    service_ref: str
+    api_ref: str
     key_fields: list[str]
     constraints: list[ForeignConstraint] = Field(default_factory=list)
     fields: list[FieldSpec] = Field(default_factory=list)

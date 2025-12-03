@@ -18,7 +18,7 @@ from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
-from .services import ServiceSpec
+from .services import APISpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
@@ -39,7 +39,7 @@ class AppSpec(BaseModel):
         surfaces: List of surface specifications
         workspaces: List of workspace specifications
         experiences: List of experience specifications
-        services: List of service specifications
+        apis: List of external API specifications
         foreign_models: List of foreign model specifications
         integrations: List of integration specifications
         tests: API-focused test specifications
@@ -56,7 +56,7 @@ class AppSpec(BaseModel):
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension (old)
     experiences: list[ExperienceSpec] = Field(default_factory=list)
-    services: list[ServiceSpec] = Field(default_factory=list)
+    apis: list[APISpec] = Field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = Field(default_factory=list)
     integrations: list[IntegrationSpec] = Field(default_factory=list)
     tests: list[TestSpec] = Field(default_factory=list)
@@ -92,11 +92,11 @@ class AppSpec(BaseModel):
                 return experience
         return None
 
-    def get_service(self, name: str) -> ServiceSpec | None:
-        """Get service by name."""
-        for service in self.services:
-            if service.name == name:
-                return service
+    def get_api(self, name: str) -> APISpec | None:
+        """Get external API by name."""
+        for api in self.apis:
+            if api.name == name:
+                return api
         return None
 
     def get_test(self, name: str) -> TestSpec | None:

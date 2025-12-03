@@ -233,7 +233,7 @@ def enrich_app_spec_with_layouts(app_spec: AppSpec) -> AppSpec:
         surfaces=app_spec.surfaces,
         workspaces=app_spec.workspaces,
         experiences=app_spec.experiences,
-        services=app_spec.services,
+        apis=app_spec.apis,
         foreign_models=app_spec.foreign_models,
         integrations=app_spec.integrations,
         tests=app_spec.tests,
