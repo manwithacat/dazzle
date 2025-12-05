@@ -2422,8 +2422,21 @@ def _run_api_contract_tests(
     for ep in backend_spec.endpoints:
         available_endpoints.add((ep.method.value.upper(), ep.path))
 
+    # Track created entities for ref field resolution
+    created_entities: dict[str, str] = {}
+
+    # Sort entities so that entities without refs are created first
+    # This helps with foreign key dependencies
+    def entity_has_required_refs(entity: Any) -> bool:
+        for field in entity.fields:
+            if field.type.kind == "ref" and field.required:
+                return True
+        return False
+
+    sorted_entities = sorted(backend_spec.entities, key=entity_has_required_refs)
+
     # Test each entity's CRUD endpoints (only those defined in spec)
-    for entity in backend_spec.entities:
+    for entity in sorted_entities:
         entity_name = entity.name
         # Pluralize the entity name (simple s suffix for most cases)
         plural_name = entity_name.lower() + "s"
@@ -2457,8 +2470,14 @@ def _run_api_contract_tests(
             if verbose:
                 typer.secho(f"  ✗ GET {base_path} (status: {status})", fg=typer.colors.RED)
 
+        # Check if POST endpoint is available before testing CREATE
+        if ("POST", base_path) not in available_endpoints:
+            if verbose:
+                typer.secho(f"  ⊘ POST {base_path} (not available)", fg=typer.colors.YELLOW)
+            continue  # Skip to next entity - no create means no update/delete tests
+
         # Test CREATE endpoint with minimal valid data
-        create_data = _generate_test_data(entity)
+        create_data = _generate_test_data(entity, created_entities=created_entities)
         status, response = make_request("POST", base_path, create_data)
         test_result = {
             "name": f"{entity_name}_create",
@@ -2471,6 +2490,8 @@ def _run_api_contract_tests(
         created_id = None
         if test_result["passed"] and response:
             created_id = response.get("id")
+            # Track this entity for ref fields in other entities
+            created_entities[entity_name] = created_id
             passed += 1
             if verbose:
                 typer.secho(f"  ✓ POST {base_path}", fg=typer.colors.GREEN)
@@ -2479,49 +2500,67 @@ def _run_api_contract_tests(
             if verbose:
                 typer.secho(f"  ✗ POST {base_path} (status: {status})", fg=typer.colors.RED)
 
-        # Test GET by ID (if we created one)
+        # Test GET by ID (if we created one and endpoint exists)
         if created_id:
-            status, response = make_request("GET", f"{base_path}/{created_id}")
-            test_result = {
-                "name": f"{entity_name}_get_by_id",
-                "endpoint": f"GET {base_path}/{{id}}",
-                "passed": status == 200,
-                "status_code": status,
-            }
-            tests.append(test_result)
-            if status == 200:
-                passed += 1
-                if verbose:
-                    typer.secho(f"  ✓ GET {base_path}/{{id}}", fg=typer.colors.GREEN)
-            else:
-                failed += 1
+            # Check if GET by ID endpoint is available
+            if ("GET", f"{base_path}/{{id}}") not in available_endpoints:
                 if verbose:
                     typer.secho(
-                        f"  ✗ GET {base_path}/{{id}} (status: {status})",
-                        fg=typer.colors.RED,
+                        f"  ⊘ GET {base_path}/{{id}} (not available)",
+                        fg=typer.colors.YELLOW,
                     )
+            else:
+                status, response = make_request("GET", f"{base_path}/{created_id}")
+                test_result = {
+                    "name": f"{entity_name}_get_by_id",
+                    "endpoint": f"GET {base_path}/{{id}}",
+                    "passed": status == 200,
+                    "status_code": status,
+                }
+                tests.append(test_result)
+                if status == 200:
+                    passed += 1
+                    if verbose:
+                        typer.secho(f"  ✓ GET {base_path}/{{id}}", fg=typer.colors.GREEN)
+                else:
+                    failed += 1
+                    if verbose:
+                        typer.secho(
+                            f"  ✗ GET {base_path}/{{id}} (status: {status})",
+                            fg=typer.colors.RED,
+                        )
 
-            # Test UPDATE
-            update_data = _generate_test_data(entity, update=True)
-            status, _ = make_request("PUT", f"{base_path}/{created_id}", update_data)
-            test_result = {
-                "name": f"{entity_name}_update",
-                "endpoint": f"PUT {base_path}/{{id}}",
-                "passed": status == 200,
-                "status_code": status,
-            }
-            tests.append(test_result)
-            if status == 200:
-                passed += 1
-                if verbose:
-                    typer.secho(f"  ✓ PUT {base_path}/{{id}}", fg=typer.colors.GREEN)
-            else:
-                failed += 1
+            # Check if PUT endpoint is available before testing UPDATE
+            if ("PUT", f"{base_path}/{{id}}") not in available_endpoints:
                 if verbose:
                     typer.secho(
-                        f"  ✗ PUT {base_path}/{{id}} (status: {status})",
-                        fg=typer.colors.RED,
+                        f"  ⊘ PUT {base_path}/{{id}} (not available)",
+                        fg=typer.colors.YELLOW,
                     )
+            else:
+                # Test UPDATE
+                update_data = _generate_test_data(
+                    entity, update=True, created_entities=created_entities
+                )
+                status, _ = make_request("PUT", f"{base_path}/{created_id}", update_data)
+                test_result = {
+                    "name": f"{entity_name}_update",
+                    "endpoint": f"PUT {base_path}/{{id}}",
+                    "passed": status == 200,
+                    "status_code": status,
+                }
+                tests.append(test_result)
+                if status == 200:
+                    passed += 1
+                    if verbose:
+                        typer.secho(f"  ✓ PUT {base_path}/{{id}}", fg=typer.colors.GREEN)
+                else:
+                    failed += 1
+                    if verbose:
+                        typer.secho(
+                            f"  ✗ PUT {base_path}/{{id}} (status: {status})",
+                            fg=typer.colors.RED,
+                        )
 
             # Test DELETE (only if defined in spec)
             if ("DELETE", f"{base_path}/{{id}}") in available_endpoints:
@@ -2551,11 +2590,27 @@ def _run_api_contract_tests(
 def _generate_test_data(
     entity: Any,
     update: bool = False,
+    created_entities: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Generate minimal test data for an entity."""
+    """Generate minimal test data for an entity.
+
+    Args:
+        entity: The entity spec to generate data for
+        update: If True, generate update data (different values)
+        created_entities: Dict mapping entity names to created IDs for ref fields
+
+    Returns:
+        Dict with test data for the entity
+    """
+    import uuid as uuid_module
+
     from dazzle_dnr_back.specs.entity import ScalarType
 
     data: dict[str, Any] = {}
+    created_entities = created_entities or {}
+
+    # Generate a unique suffix for this test run to avoid UNIQUE constraint violations
+    unique_suffix = uuid_module.uuid4().hex[:8]
 
     for field in entity.fields:
         # Skip auto-generated fields
@@ -2566,10 +2621,43 @@ def _generate_test_data(
         if not field.required and not update:
             continue
 
+        # Handle ref fields (foreign keys)
+        if field.type.kind == "ref":
+            ref_entity_name = field.type.ref_entity
+            if ref_entity_name and ref_entity_name in created_entities:
+                data[field.name] = created_entities[ref_entity_name]
+            else:
+                # Skip ref fields if we don't have a referenced entity
+                # This will cause validation errors but is better than crashing
+                continue
+
         # Generate appropriate test value based on type
         scalar = field.type.scalar_type
-        if scalar in (ScalarType.STR, ScalarType.TEXT, ScalarType.EMAIL, ScalarType.URL):
-            data[field.name] = f"test_{field.name}" if not update else f"updated_{field.name}"
+        max_length = getattr(field.type, "max_length", None)
+
+        if scalar in (ScalarType.STR, ScalarType.TEXT):
+            # Use unique suffix for unique fields to avoid constraint violations
+            if field.unique:
+                value = f"t_{unique_suffix}" if not update else f"u_{unique_suffix}"
+            else:
+                value = f"test_{field.name}" if not update else f"upd_{field.name}"
+            # Truncate to max_length if specified
+            if max_length and len(value) > max_length:
+                value = value[:max_length]
+            data[field.name] = value
+        elif scalar == ScalarType.EMAIL:
+            # Email fields are often unique
+            data[field.name] = (
+                f"test_{unique_suffix}@example.com"
+                if not update
+                else f"upd_{unique_suffix}@example.com"
+            )
+        elif scalar == ScalarType.URL:
+            data[field.name] = (
+                f"https://example.com/{unique_suffix}"
+                if not update
+                else f"https://example.com/upd_{unique_suffix}"
+            )
         elif scalar == ScalarType.INT:
             data[field.name] = 42 if not update else 43
         elif scalar == ScalarType.DECIMAL:
@@ -2577,9 +2665,7 @@ def _generate_test_data(
         elif scalar == ScalarType.BOOL:
             data[field.name] = True if not update else False
         elif scalar == ScalarType.UUID:
-            import uuid
-
-            data[field.name] = str(uuid.uuid4())
+            data[field.name] = str(uuid_module.uuid4())
         elif scalar == ScalarType.DATETIME:
             data[field.name] = "2024-01-01T00:00:00Z"
         elif scalar == ScalarType.DATE:

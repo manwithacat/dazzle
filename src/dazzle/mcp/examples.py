@@ -113,13 +113,52 @@ def get_example_metadata() -> dict[str, Any]:
             ],
             "v0_2_features": ["workspace", "persona"],
             "complexity": "intermediate",
-            "entities": ["Equipment", "Test", "Tester", "TestResult"],
+            "entities": [
+                "Device",
+                "Tester",
+                "IssueReport",
+                "TestSession",
+                "FirmwareRelease",
+                "Task",
+            ],
             "workspaces": ["engineering_dashboard", "tester_dashboard"],
             "ci_status": "P2",
         },
+        "ops_dashboard": {
+            "name": "ops_dashboard",
+            "path": "examples/ops_dashboard",
+            "title": "Ops Dashboard",
+            "description": "Complex monitoring with COMMAND_CENTER archetype for DevOps and system monitoring",
+            "demonstrates": [
+                "entities",
+                "relationships",
+                "surfaces",
+                "workspace",
+                "archetype_command_center",
+                "complex_monitoring",
+                "multi_entity",
+                "read_only_entities",
+            ],
+            "v0_2_features": ["workspace", "attention_signals"],
+            "complexity": "advanced",
+            "entities": ["System", "Alert"],
+            "archetype": "COMMAND_CENTER",
+            "ci_status": "P2",
+        },
+    }
+
+
+def get_archived_example_metadata() -> dict[str, Any]:
+    """
+    Get metadata about archived DAZZLE example projects.
+
+    These projects are in examples/_archive/ and are not currently maintained.
+    They remain for reference and may be restored in the future.
+    """
+    return {
         "uptime_monitor": {
             "name": "uptime_monitor",
-            "path": "examples/uptime_monitor",
+            "path": "examples/_archive/uptime_monitor",
             "title": "Uptime Monitor",
             "description": "Single dominant KPI dashboard pattern for executive dashboards and SLA monitoring",
             "demonstrates": [
@@ -134,11 +173,11 @@ def get_example_metadata() -> dict[str, Any]:
             "complexity": "intermediate",
             "entities": ["Service"],
             "archetype": "FOCUS_METRIC",
-            "ci_status": "P1",
+            "archived": True,
         },
         "inventory_scanner": {
             "name": "inventory_scanner",
-            "path": "examples/inventory_scanner",
+            "path": "examples/_archive/inventory_scanner",
             "title": "Inventory Scanner",
             "description": "Data-heavy browsing and filtering pattern for admin panels and catalog browsing",
             "demonstrates": [
@@ -152,11 +191,11 @@ def get_example_metadata() -> dict[str, Any]:
             "complexity": "intermediate",
             "entities": ["Product"],
             "archetype": "SCANNER_TABLE",
-            "ci_status": "P1",
+            "archived": True,
         },
         "email_client": {
             "name": "email_client",
-            "path": "examples/email_client",
+            "path": "examples/_archive/email_client",
             "title": "Email Client",
             "description": "Multi-signal dashboard pattern for operations dashboards and notifications",
             "demonstrates": [
@@ -171,31 +210,11 @@ def get_example_metadata() -> dict[str, Any]:
             "complexity": "intermediate",
             "entities": ["Message"],
             "archetype": "MONITOR_WALL",
-            "ci_status": "P2",
-        },
-        "ops_dashboard": {
-            "name": "ops_dashboard",
-            "path": "examples/ops_dashboard",
-            "title": "Ops Dashboard",
-            "description": "Complex monitoring with high signal count for DevOps and system monitoring",
-            "demonstrates": [
-                "entities",
-                "relationships",
-                "surfaces",
-                "workspace",
-                "archetype_command_center",
-                "complex_monitoring",
-                "multi_entity",
-            ],
-            "v0_2_features": ["workspace", "attention_signals"],
-            "complexity": "advanced",
-            "entities": ["System", "Alert"],
-            "archetype": "COMMAND_CENTER",
-            "ci_status": "P2",
+            "archived": True,
         },
         "urban_canopy": {
             "name": "urban_canopy",
-            "path": "examples/urban_canopy",
+            "path": "examples/_archive/urban_canopy",
             "title": "Urban Canopy",
             "description": "Advanced example demonstrating local vocabulary for domain-specific terminology",
             "demonstrates": [
@@ -207,11 +226,11 @@ def get_example_metadata() -> dict[str, Any]:
             ],
             "v0_2_features": ["local_vocabulary", "workspace"],
             "complexity": "advanced",
-            "ci_status": "P2",
+            "archived": True,
         },
         "archetype_showcase": {
             "name": "archetype_showcase",
-            "path": "examples/archetype_showcase",
+            "path": "examples/_archive/archetype_showcase",
             "title": "Archetype Showcase",
             "description": "Reference implementation demonstrating all available layout archetypes",
             "demonstrates": [
@@ -224,7 +243,7 @@ def get_example_metadata() -> dict[str, Any]:
             "v0_2_features": [],
             "complexity": "reference",
             "purpose": "Layout archetype reference",
-            "ci_status": "P2",
+            "archived": True,
         },
     }
 
