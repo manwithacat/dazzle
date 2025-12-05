@@ -2491,7 +2491,8 @@ def _run_api_contract_tests(
         if test_result["passed"] and response:
             created_id = response.get("id")
             # Track this entity for ref fields in other entities
-            created_entities[entity_name] = created_id
+            if created_id:
+                created_entities[entity_name] = created_id
             passed += 1
             if verbose:
                 typer.secho(f"  ✓ POST {base_path}", fg=typer.colors.GREEN)
