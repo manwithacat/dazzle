@@ -7,9 +7,10 @@ or creating a standalone GraphQL application.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from dazzle_dnr_back.graphql.context import GraphQLContext, create_context_from_request
+from dazzle_dnr_back.graphql.context import GraphQLContext
 from dazzle_dnr_back.graphql.resolver_generator import ResolverGenerator
 from dazzle_dnr_back.graphql.schema_generator import SchemaGenerator
 
@@ -33,8 +34,6 @@ except ImportError:
     FastAPI = None  # type: ignore
 
 if TYPE_CHECKING:
-    from starlette.requests import Request
-
     from dazzle_dnr_back.specs import BackendSpec
 
 
@@ -137,14 +136,14 @@ def mount_graphql(
         repositories=repositories or {},
     )
 
-    # Create context getter
-    async def get_context(request: Request) -> GraphQLContext:
-        return create_context_from_request(request)
+    # Create context getter - Strawberry expects a custom_context dict
+    async def get_context() -> dict[str, Any]:
+        # Return an empty context that will be populated by request
+        return {}
 
-    # Create router
+    # Create router without context_getter - use default behavior
     graphql_router = GraphQLRouter(
         schema,
-        context_getter=get_context,
         graphiql=enable_graphiql,
     )
 
@@ -201,8 +200,9 @@ def _create_query_type(
     """Create the Query type with all entity resolvers."""
     query_resolvers, _ = resolver_gen.generate_resolvers()
 
-    # Build class dynamically
+    # Build class dynamically with proper type annotations
     class_dict: dict[str, Any] = {}
+    annotations: dict[str, Any] = {}
 
     for entity in spec.entities:
         entity_name = entity.name
@@ -216,18 +216,25 @@ def _create_query_type(
         entity_type = schema_gen.get_type(entity_name)
 
         if get_resolver and entity_type:
-            # Single entity resolver
+            # Single entity resolver - returns Optional[EntityType]
             class_dict[entity_lower] = strawberry.field(
                 resolver=get_resolver,
                 description=f"Get {entity_name} by ID",
+                graphql_type=entity_type | None,
             )
+            annotations[entity_lower] = entity_type | None
 
         if list_resolver and entity_type:
-            # List resolver
+            # List resolver - returns List[EntityType]
             class_dict[f"{entity_lower}s"] = strawberry.field(
                 resolver=list_resolver,
                 description=f"List all {entity_name}s",
+                graphql_type=list[entity_type],
             )
+            annotations[f"{entity_lower}s"] = list[entity_type]
+
+    # Add annotations to class dict
+    class_dict["__annotations__"] = annotations
 
     # Create Query class
     Query = type("Query", (), class_dict)
@@ -240,39 +247,147 @@ def _create_mutation_type(
     schema_gen: SchemaGenerator,
 ) -> type:
     """Create the Mutation type with all entity resolvers."""
-    _, mutation_resolvers = resolver_gen.generate_resolvers()
-
     class_dict: dict[str, Any] = {}
+    annotations: dict[str, Any] = {}
 
     for entity in spec.entities:
         entity_name = entity.name
 
-        # Get resolvers
-        create_resolver = mutation_resolvers.get(f"create{entity_name}")
-        update_resolver = mutation_resolvers.get(f"update{entity_name}")
-        delete_resolver = mutation_resolvers.get(f"delete{entity_name}")
+        # Get types
+        entity_type = schema_gen.get_type(entity_name)
+        input_create_type = schema_gen.get_input_type(f"{entity_name}CreateInput")
+        input_update_type = schema_gen.get_input_type(f"{entity_name}UpdateInput")
 
-        if create_resolver:
+        if not entity_type:
+            continue
+
+        # Create resolver - use typed wrapper functions
+        repo = resolver_gen.repositories.get(entity_name)
+
+        if input_create_type:
+            create_resolver = _make_create_resolver(entity_name, repo, input_create_type)
             class_dict[f"create{entity_name}"] = strawberry.mutation(
                 resolver=create_resolver,
                 description=f"Create a new {entity_name}",
+                graphql_type=entity_type,
             )
+            annotations[f"create{entity_name}"] = entity_type
 
-        if update_resolver:
+        if input_update_type:
+            update_resolver = _make_update_resolver(entity_name, repo, input_update_type)
             class_dict[f"update{entity_name}"] = strawberry.mutation(
                 resolver=update_resolver,
                 description=f"Update an existing {entity_name}",
+                graphql_type=entity_type,
             )
+            annotations[f"update{entity_name}"] = entity_type
 
-        if delete_resolver:
-            class_dict[f"delete{entity_name}"] = strawberry.mutation(
-                resolver=delete_resolver,
-                description=f"Delete a {entity_name}",
-            )
+        delete_resolver = _make_delete_resolver(entity_name, repo)
+        class_dict[f"delete{entity_name}"] = strawberry.mutation(
+            resolver=delete_resolver,
+            description=f"Delete a {entity_name}",
+            graphql_type=bool,
+        )
+        annotations[f"delete{entity_name}"] = bool
+
+    # Add annotations to class dict
+    class_dict["__annotations__"] = annotations
 
     # Create Mutation class
     Mutation = type("Mutation", (), class_dict)
     return strawberry.type(Mutation)
+
+
+def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
+    """Create a typed resolver for creating entities."""
+
+    async def resolve_create(info: Any, input: Any) -> Any:
+        from dazzle_dnr_back.graphql.resolver_generator import _input_to_dict
+
+        ctx: GraphQLContext = info.context
+
+        # Convert input to dict
+        data = _input_to_dict(input)
+
+        # Add tenant context
+        if ctx.tenant_id:
+            data["tenant_id"] = ctx.tenant_id
+
+        if ctx.user_id:
+            data["created_by"] = ctx.user_id
+
+        if repo:
+            try:
+                return repo.create(data)
+            except Exception as e:
+                raise ValueError(f"Failed to create {entity_name}: {e}")
+
+        raise ValueError(f"No repository for {entity_name}")
+
+    # Set __annotations__ to tell Strawberry the types
+    resolve_create.__annotations__ = {"input": input_type, "return": Any}
+    return resolve_create
+
+
+def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
+    """Create a typed resolver for updating entities."""
+
+    async def resolve_update(info: Any, id: str, input: Any) -> Any:
+        from dazzle_dnr_back.graphql.resolver_generator import _input_to_dict
+
+        ctx: GraphQLContext = info.context
+
+        # Convert input to dict, excluding None values
+        data = _input_to_dict(input, exclude_none=True)
+
+        if ctx.user_id:
+            data["updated_by"] = ctx.user_id
+
+        if repo:
+            try:
+                existing = repo.get_by_id(id)
+                if not existing:
+                    raise ValueError(f"{entity_name} not found")
+                if ctx.tenant_id and hasattr(existing, "tenant_id"):
+                    if existing.tenant_id != ctx.tenant_id:
+                        raise PermissionError("Access denied")
+                return repo.update(id, data)
+            except (ValueError, PermissionError):
+                raise
+            except Exception as e:
+                raise ValueError(f"Failed to update {entity_name}: {e}")
+
+        raise ValueError(f"No repository for {entity_name}")
+
+    resolve_update.__annotations__ = {"id": str, "input": input_type, "return": Any}
+    return resolve_update
+
+
+def _make_delete_resolver(entity_name: str, repo: Any) -> Callable:
+    """Create a typed resolver for deleting entities."""
+
+    async def resolve_delete(info: Any, id: str) -> bool:
+        ctx: GraphQLContext = info.context
+
+        if repo:
+            try:
+                existing = repo.get_by_id(id)
+                if not existing:
+                    return False
+                if ctx.tenant_id and hasattr(existing, "tenant_id"):
+                    if existing.tenant_id != ctx.tenant_id:
+                        raise PermissionError("Access denied")
+                repo.delete(id)
+                return True
+            except PermissionError:
+                raise
+            except Exception:
+                return False
+
+        return False
+
+    resolve_delete.__annotations__ = {"id": str, "return": bool}
+    return resolve_delete
 
 
 def _camel_case(name: str) -> str:
