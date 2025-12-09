@@ -1,8 +1,8 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-09
-**Current Version**: v0.5.0
-**Status**: DNR is primary runtime with full deployment tooling
+**Current Version**: v0.6.0
+**Status**: DNR is primary runtime with GraphQL BFF layer
 
 ---
 
@@ -377,7 +377,9 @@ service calculate_vat "Calculate VAT":
 
 ## Upcoming Releases
 
-### v0.6.0 - GraphQL BFF Layer 🔄 IN PROGRESS
+### v0.6.0 - GraphQL BFF Layer ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: API aggregation and external service facade
 
@@ -426,8 +428,14 @@ dazzle dnr serve --graphql    # Enable GraphQL endpoint at /graphql
   - HMRC-specific error mapping
 - [x] **53 unit tests** for adapter interface and error normalization
 
-#### Remaining Work
-- [ ] Integration tests with real GraphQL queries
+#### Integration Tests (COMPLETE) ✅
+- [x] GraphQL integration tests with real queries (`tests/integration/test_graphql_integration.py`)
+  - Health check verification
+  - List queries with empty results
+  - GraphQL introspection (Task, Query, Mutation types)
+  - Query type field verification (task, tasks)
+  - Mutation type field verification (createTask, updateTask, deleteTask)
+  - Error handling for invalid syntax and unknown fields
 
 **Use Case**: Aggregate HMRC, banking APIs, and internal services into clean graph for frontend consumption.
 
@@ -741,6 +749,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-09 (v0.6.0 Complete - GraphQL BFF Layer)
+- **v0.6.0 COMPLETE**: All GraphQL BFF Layer features delivered
+- Fixed Strawberry type generation for dynamic Query/Mutation fields
+- Created typed resolver factory functions with proper `__annotations__`
+- GraphQL integration tests with 7 real query tests
+- All CI passing (687 unit tests + 7 integration tests)
+- Updated current version to v0.6.0
 
 ### 2025-12-09 (Roadmap Update - v0.7.0 & v0.8.0 Defined)
 - **v0.7.0 Redefined**: Business Logic Extraction (was "Full GraphQL Builder")
