@@ -1,6 +1,6 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-03
+**Last Updated**: 2025-12-09
 **Current Version**: v0.5.0
 **Status**: DNR is primary runtime with full deployment tooling
 
@@ -433,21 +433,148 @@ dazzle dnr serve --graphql    # Enable GraphQL endpoint at /graphql
 
 ---
 
-### v0.7.0 - Full GraphQL Builder (Q4 2026)
+### v0.7.0 - Business Logic Extraction
 
-**Focus**: Auto-generate GraphQL from BackendSpec
+**Focus**: DSL as compression boundary for semantic reasoning
 
-**Planned Features**:
-- Schema generation from EntitySpec → GraphQL types
-- ServiceSpec → Query/Mutation mapping
-- Automatic resolver scaffolding
-- Input type generation
+**Design Document**: `docs/design/BUSINESS_LOGIC_EXTRACTION.md`
+
+The DSL serves as a **compression boundary** (chokepoint) between high-value LLM reasoning and low-cost mechanical transformation. Apply LLM tokens where they're most valuable—understanding founder intent—while using deterministic code generation for everything derivable mechanically.
+
+#### Core Concept
+```
+Founder's Vision (natural language)
+        │ LLM: semantic extraction (HIGH VALUE)
+        ▼
+    DSL Specification (structured, validated)
+        │ Deterministic: parser + compiler (ZERO COST)
+        ▼
+    Generated Code (stubs, routes, schemas)
+```
+
+#### Rule Layers (in implementation order)
+
+**Layer 1: State Machines** (Phase 1)
+```dsl
+entity Ticket:
+  status: enum(open, assigned, resolved, closed)
+
+  transitions:
+    open -> assigned: requires assignee
+    assigned -> resolved: requires resolution_note
+    resolved -> closed: auto after 7 days OR manual
+```
+- Grammar extension for `transitions:` block
+- IR types for state machine representation
+- Guard code generation in service stubs
+
+**Layer 2: Computed Fields** (Phase 2)
+```dsl
+entity Order:
+  line_items: [LineItem]
+  subtotal: computed sum(line_items.amount)
+  tax: computed subtotal * 0.08
+```
+- Expression evaluation at parse time
+- Lazy vs eager computation strategies
+- Cache invalidation rules
+
+**Layer 3: Entity Invariants** (Phase 3)
+```dsl
+entity Booking:
+  start_date: datetime
+  end_date: datetime
+
+  invariant: end_date > start_date
+  invariant: duration <= 14 days
+```
+- Cross-field validation rules
+- Pre/post condition checking
+
+**Layer 4: Access Rules Enhancement** (Phase 4)
+```dsl
+entity Document:
+  access:
+    read: owner OR owner.team OR role(admin)
+    write: owner OR role(admin)
+    delete: role(admin) AND status != "published"
+```
+- Complex boolean expressions
+- Role and relationship-based access
+- Middleware/decorator generation
+
+#### Stub Expansion
+Generated stubs include:
+- Type-safe method signatures from DSL
+- Validation guards from constraints/invariants
+- Transition checks from state machines
+- TODO markers for custom logic escape hatches
+- Docstrings explaining expected behavior
+
+#### Design Principles
+- **Declarative over imperative**: Rules describe "what" not "how"
+- **Bounded expressiveness**: DSL is intentionally not Turing-complete
+- **Composable primitives**: Complex rules from simple building blocks
+- **Explicit escape hatches**: Custom code clearly marked, typed stubs generated
+
+#### Success Criteria
+- 80% of business logic expressible in DSL without escape hatches
+- Generated code readable without DSL knowledge
+- Property-based tests auto-generated from rule definitions
+- Token cost front-loaded: pay once for spec, free transformation thereafter
+
+**Estimate**: 8-10 weeks
+
+---
+
+### v0.8.0 - Bun CLI Framework
+
+**Focus**: Refactor CLI tooling to use Bun runtime
+
+#### Motivation
+- **Performance**: Bun's fast startup time improves CLI responsiveness
+- **TypeScript-first**: Native TypeScript execution without build step
+- **Unified tooling**: Single runtime for bundling, testing, and execution
+- **Modern APIs**: Built-in fetch, WebSocket, file I/O
+
+#### Migration Plan
+
+**Phase 1: CLI Shell**
+- Port `dazzle` entry point to Bun/TypeScript
+- Maintain Python core via subprocess calls
+- Immediate benefit: faster command parsing
+
+**Phase 2: DNR UI Tooling**
+- Move Vite/esbuild to Bun bundler
+- TypeScript dev server with hot reload
+- Faster `dazzle dnr serve` startup
+
+**Phase 3: Test Runner**
+- Bun test for JavaScript/TypeScript tests
+- Playwright integration via Bun
+- Parallel test execution
+
+**Phase 4: Full Migration (Optional)**
+- Evaluate Python→TypeScript for core modules
+- Keep Python for DNR backend (FastAPI)
+- TypeScript for all frontend/CLI code
+
+#### Compatibility
+- Python backend unchanged (FastAPI/SQLite)
+- DSL parser remains Python (no rewrite)
+- CLI becomes TypeScript calling Python where needed
+
+#### Success Criteria
+- `dazzle` command starts in <100ms
+- `dazzle dnr serve` hot reload <500ms
+- Zero breaking changes to user-facing CLI
+- Test suite passes with Bun runner
 
 **Estimate**: 6-8 weeks
 
 ---
 
-### v1.0.0 - Dazzle Orchestrator Control Plane (Q1 2027)
+### v1.0.0 - Dazzle Orchestrator Control Plane
 
 **Focus**: Hosted control plane for production app management
 
@@ -542,7 +669,8 @@ For detailed phase planning, see:
 | `dev_docs/roadmap_v0_3_0.md` | v0.3.0 UI Layout Engine phases |
 | `dev_docs/roadmap_v0_3_0_phase5.md` | Phase 5 advanced archetypes |
 | `dev_docs/roadmap_v0_4_0_dnr.md` | DNR runtime architecture |
-| `dev_docs/DNR-Back-GraphQL-Spec-v1.md` | GraphQL BFF specification (v0.7.0) |
+| `dev_docs/DNR-Back-GraphQL-Spec-v1.md` | GraphQL BFF specification (v0.6.0) |
+| `docs/design/BUSINESS_LOGIC_EXTRACTION.md` | Business logic extraction design (v0.7.0) |
 | `dev_docs/orchestrator-control-plane-spec-v1.md` | Control plane specification (v1.0.0) |
 | `dev_docs/future_features_analysis.md` | Analysis and context for future features |
 
@@ -613,6 +741,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-09 (Roadmap Update - v0.7.0 & v0.8.0 Defined)
+- **v0.7.0 Redefined**: Business Logic Extraction (was "Full GraphQL Builder")
+  - DSL as compression boundary for semantic reasoning
+  - State machines, computed fields, invariants, access rules
+  - Design document: `docs/design/BUSINESS_LOGIC_EXTRACTION.md`
+- **v0.8.0 Added**: Bun CLI Framework
+  - Refactor CLI tooling to use Bun runtime
+  - TypeScript-first CLI with faster startup
+  - Phased migration maintaining Python backend
 
 ### 2025-12-03 (GraphQL BFF Layer - v0.6.0 Started)
 - **v0.6.0 IN PROGRESS**: GraphQL BFF Layer implementation begun
