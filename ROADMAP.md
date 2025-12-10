@@ -1,16 +1,34 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-10
-**Current Version**: v0.7.1
-**Status**: DNR is primary runtime with LLM Cognition features
+**Current Version**: v0.7.2
+**Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 ---
 
 ## Executive Summary
 
-DAZZLE has undergone a **strategic transformation** from a code generation toolkit to a **native runtime platform**. The Dazzle Native Runtime (DNR) now runs applications directly from DSL specifications, eliminating the generate-then-deploy workflow.
+DAZZLE is a **DSL-first toolkit** that bridges human specifications and production code.
 
-**Key Shift**: DSL → Generated Code → Deploy **became** DSL → DNR Runtime → Live App
+### The Core Workflow
+
+```
+Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
+                         (one-time cost)    (zero marginal cost)
+```
+
+1. **LLM translates intent to DSL** - High-value token spend, done once
+2. **DSL is the compression boundary** - Validated, version-controlled spec
+3. **All downstream is deterministic** - Parser, IR, code gen are mechanical
+
+### Two Paths from DSL
+
+| Path | Use Case | Cost |
+|------|----------|------|
+| **DNR Runtime** | Rapid iteration, prototyping | Zero - runs directly |
+| **Ejection** | Production deployment | One-time generation |
+
+**Philosophy**: Pay LLM tokens once to get the spec right. Everything after is cheap.
 
 ---
 
@@ -537,7 +555,9 @@ Generated stubs include:
 
 ---
 
-### v0.7.1 - LLM Cognition & DSL Generation Enhancement
+### v0.7.1 - LLM Cognition & DSL Generation Enhancement ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: DSL features that improve LLM comprehension and generation quality
 
@@ -643,18 +663,22 @@ rule OrderFulfillment:
     - Notification.create(recipient: Order.customer, message: "Shipped!")
 ```
 
-#### Success Criteria
-- All P0/P1 features parse without errors
-- Example projects updated with new features
-- MCP semantic index includes all new concepts
-- 50+ new unit tests
-- Backward compatible (existing DSL unchanged)
-
-**Estimate**: 4-6 weeks
+#### Delivered (All P0/P1)
+- [x] Intent declarations on entities
+- [x] Domain and patterns semantic tags
+- [x] Archetypes with extends inheritance
+- [x] Example data blocks
+- [x] Invariant messages and codes
+- [x] Relationship semantics (has_many, has_one, embeds, belongs_to)
+- [x] Delete behaviors (cascade, restrict, nullify, readonly)
+- [x] MCP semantic index with all v0.7.1 concepts
+- [x] 5 example projects updated
 
 ---
 
-### v0.7.2 - Ejection Toolchain
+### v0.7.2 - Ejection Toolchain ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: Generate standalone code from DNR applications
 
@@ -709,14 +733,19 @@ dazzle eject --dry-run    # Preview without writing
 - **Framework Adapters**: FastAPI (initial), Django/Flask/Vue/Next.js (future)
 - **Test Generation**: Schemathesis contract tests, state machine tests, invariant tests
 
-#### Implementation Phases
-1. Foundation: Config parser, CLI, adapter registry (Week 1-2)
-2. FastAPI Backend: Models, routers, guards, validators (Week 3-4)
-3. React Frontend: Types, schemas, client, hooks (Week 5-6)
-4. Testing & CI: Contract tests, unit stubs, GitHub Actions (Week 7)
-5. Polish: OpenAPI generation, Docker, documentation (Week 8)
-
-**Estimate**: 8 weeks
+#### Delivered
+- [x] Ejection config parser (`dazzle.toml` `[ejection]` section)
+- [x] Adapter registry with pluggable generators
+- [x] FastAPI backend adapter (models, schemas, routes, guards, validators, access)
+- [x] React frontend adapter (TypeScript types, Zod schemas, TanStack Query hooks)
+- [x] Testing adapters (Schemathesis contract tests, Pytest unit tests)
+- [x] CI adapters (GitHub Actions, GitLab CI)
+- [x] OpenAPI 3.1 generation from AppSpec
+- [x] EjectionRunner orchestration
+- [x] Post-ejection verification (no Dazzle imports, no template markers)
+- [x] `.ejection.json` metadata file
+- [x] CLI: `eject run`, `eject status`, `eject adapters`, `eject openapi`, `eject verify`
+- [x] 35 unit tests
 
 ---
 
@@ -937,8 +966,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Changelog
 
-### 2025-12-10 (v0.7.1 Implemented + v0.7.2 Planned)
-- **v0.7.1 IMPLEMENTED**: LLM Cognition & DSL Generation Enhancement
+### 2025-12-10 (v0.7.1 + v0.7.2 Complete)
+- **v0.7.1 COMPLETE**: LLM Cognition & DSL Generation Enhancement
   - Intent declarations on entities (`intent: "..."`)
   - Domain and patterns semantic tags (`domain: billing`, `patterns: lifecycle, audit`)
   - Archetypes with extends inheritance (`archetype Timestamped`, `extends: Timestamped`)
@@ -948,14 +977,20 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
   - Delete behaviors (`cascade`, `restrict`, `nullify`, `readonly`)
   - Updated MCP semantic index with all v0.7.1 concepts
   - Updated glossary with LLM Cognition section
-  - All 756 tests pass
-- **v0.7.2 PLANNED**: Ejection Toolchain
-  - Design document: `docs/design/EJECTION_TOOLCHAIN_v0.7.2.md`
-  - Generate standalone FastAPI + React code from DNR applications
-  - Business logic preserved (state machines, invariants, access rules)
-  - Test generation (Schemathesis, state machine tests, invariant tests)
-  - CI template generation (GitHub Actions)
-  - Extends `dazzle.toml` with `[ejection]` section
+- **v0.7.2 COMPLETE**: Ejection Toolchain
+  - Ejection config parser for `dazzle.toml` `[ejection]` section
+  - Adapter registry with pluggable generators
+  - FastAPI backend adapter (models, schemas, routes, guards, validators, access)
+  - React frontend adapter (TypeScript types, Zod schemas, TanStack Query hooks)
+  - Testing adapters (Schemathesis contract tests, Pytest unit tests)
+  - CI adapters (GitHub Actions, GitLab CI)
+  - OpenAPI 3.1 generation from AppSpec
+  - Post-ejection verification (no Dazzle imports, no template markers)
+  - `.ejection.json` metadata file for audit trail
+  - CLI commands: `eject run`, `eject status`, `eject adapters`, `eject openapi`, `eject verify`
+  - 35 unit tests for ejection module
+- **README Updated**: New vision statement reflecting DSL as compression boundary
+- **Roadmap Simplified**: Two paths from DSL (DNR for iteration, Ejection for production)
 
 ### 2025-12-10 (v0.7.0 Complete + v0.7.1 Planned)
 - **v0.7.0 COMPLETE**: Business Logic Extraction features delivered

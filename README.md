@@ -1,12 +1,18 @@
 # DAZZLE
 
-**Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps**
+**Human Intent → Structured DSL → Deterministic Code**
 
 [![CI](https://github.com/manwithacat/dazzle/workflows/CI/badge.svg)](https://github.com/manwithacat/dazzle/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-DAZZLE is a DSL-first toolkit for designing applications from high-level specifications. Define your domain model once, run it instantly with the **Dazzle Native Runtime (DNR)**.
+DAZZLE is a DSL-first toolkit that bridges human specifications and production code. An LLM translates your intent into a structured DSL; from there, all code generation is deterministic and token-efficient.
+
+**The workflow:**
+1. **Describe** what you want in natural language
+2. **Generate** a precise DSL specification (LLM-assisted, one-time cost)
+3. **Iterate** instantly with the Dazzle Native Runtime (DNR)
+4. **Eject** to standalone FastAPI + React when ready for production
 
 ## Install
 
@@ -50,14 +56,15 @@ See [Tooling Guide](docs/TOOLING.md) for details.
 
 ## Version Status
 
-| Version | Runtime | Status |
-|---------|---------|--------|
-| **v0.2.x** (Current) | DNR + UX Semantic Layer | Active development |
-| v0.1.x | Code generation stacks | Deprecated, functional |
+| Version | Features | Status |
+|---------|----------|--------|
+| **v0.7.x** (Current) | DNR + Ejection + LLM Cognition | Active development |
+| v0.2.x-v0.6.x | DNR + UX Semantic Layer + GraphQL BFF | Stable |
+| v0.1.x | Legacy code generation stacks | Deprecated |
 
-- **DNR is the primary runtime** - Run DSL directly without code generation
-- **Legacy stacks** (`django_micro`, `express_micro`, `nextjs_semantic`) are deprecated but still functional
-- **Migration**: Optional but recommended. Legacy stacks will be removed in v1.0
+- **DNR** is for rapid iteration - run your DSL directly without code generation
+- **Ejection** generates standalone FastAPI + React when you need production deployment
+- **Legacy stacks** will be removed in v1.0
 
 ## The DSL
 
@@ -117,21 +124,27 @@ dazzle dnr info                  # Show project info
 ## Workflow
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  DSL Files  │ ──▶ │   Parser    │ ──▶ │  IR/AppSpec │ ──▶ │ DNR Runtime │
-│  (.dsl)     │     │   + Linker  │     │  (Semantic) │     │ (Live App)  │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+                                                    ┌─────────────┐
+                                               ┌──▶ │ DNR Runtime │ (rapid iteration)
+┌─────────────┐     ┌─────────────┐     ┌──────┴──┐ └─────────────┘
+│  DSL Files  │ ──▶ │   Parser    │ ──▶ │ AppSpec │
+│  (.dsl)     │     │   + Linker  │     │  (IR)   │ ┌─────────────┐
+└─────────────┘     └─────────────┘     └──────┬──┘ │  Ejection   │ (production code)
+                                               └──▶ │  Toolchain  │
+                                                    └─────────────┘
 ```
 
 1. **Parse**: DSL files are parsed into an AST
 2. **Link**: Multi-module references are resolved
 3. **AppSpec**: A semantic intermediate representation (IR) captures the full application model
-4. **Run**: DNR executes the AppSpec directly as a live application
+4. **Run or Eject**:
+   - **DNR**: Execute directly for instant iteration
+   - **Eject**: Generate standalone code for production
 
 ```bash
 dazzle validate                  # Parse + link + validate
-dazzle layout-plan               # Visualize workspace layouts
-dazzle dnr serve                 # Run the application
+dazzle dnr serve                 # Run instantly with DNR
+dazzle eject run                 # Generate standalone code
 ```
 
 ## Semantic Concepts
@@ -210,34 +223,67 @@ service github "GitHub API":
   auth_profile: oauth2_pkce scopes="read:user"
 ```
 
-## Code Generation (Optional)
+## Ejection: From Prototype to Production
 
-For custom deployments, DAZZLE provides code generation as an alternative to DNR:
-
-| Stack | Status | Output |
-|-------|--------|--------|
-| `docker` | 🚧 In Progress | Docker Compose configuration for DNR apps |
-| `base` | ✅ Available | Base builder for custom stack implementations |
-
-Legacy stacks (`openapi`, `micro`, `django_api`, `express_micro`, `nextjs_semantic`, `terraform`) are deprecated in favor of DNR.
+When your MVP is ready for production, **eject** to standalone code:
 
 ```bash
-dazzle stacks               # List available stacks
-dazzle build --stack docker # Generate Docker deployment
+dazzle eject run                    # Generate full application
+dazzle eject run --no-frontend      # Backend only
+dazzle eject run --dry-run          # Preview what will be generated
 ```
 
-### Custom Stacks
+### What Gets Generated
 
-Use the `base` builder to create your own code generation stack:
+| Component | Output |
+|-----------|--------|
+| **Backend** | FastAPI + SQLAlchemy + Pydantic |
+| **Frontend** | React + TypeScript + TanStack Query + Zod |
+| **Testing** | Schemathesis (contract) + Pytest (unit) |
+| **CI/CD** | GitHub Actions or GitLab CI |
+| **Infrastructure** | Docker Compose (dev + prod) |
 
-```python
-from dazzle.stacks.base import BaseBackend
+### Configuration
 
-class MyStack(BaseBackend):
-    def generate(self, appspec, output_dir):
-        # Transform appspec into your target format
-        ...
+Add to your `dazzle.toml`:
+
+```toml
+[ejection]
+enabled = true
+
+[ejection.backend]
+framework = "fastapi"
+
+[ejection.frontend]
+framework = "react"
+
+[ejection.output]
+directory = "generated"
 ```
+
+### Verification
+
+Ejected code is verified to be completely independent from DAZZLE:
+
+```bash
+dazzle eject verify ./generated     # Verify independence
+```
+
+The verification ensures:
+- No Dazzle imports in generated code
+- No runtime DSL/AppSpec loaders
+- No template merge markers
+- Fully standalone, deployable without DAZZLE installed
+
+### When to Eject
+
+| Use Case | Recommendation |
+|----------|----------------|
+| Rapid prototyping | Stay with DNR |
+| Frequent DSL changes | Stay with DNR |
+| Production deployment | Eject |
+| Custom infrastructure | Eject |
+| Code review/audit requirements | Eject |
 
 ## IDE Support
 
@@ -271,14 +317,16 @@ my_project/
 - [DSL Quick Reference](docs/DAZZLE_DSL_QUICK_REFERENCE.md) - Language specification
 - [DNR CLI Reference](docs/dnr/CLI.md) - Command-line interface
 - [DNR Architecture](docs/dnr/ARCHITECTURE.md) - Runtime internals
-- [Archetype Selection](docs/ARCHETYPE_SELECTION.md) - Workspace layout system
+
+### Ejection
+- [Ejection Toolchain](docs/design/EJECTION_TOOLCHAIN_v0.7.2.md) - Design specification
+- [LLM Cognition Layer](docs/design/LLM_COGNITION_DSL_v0.7.1.md) - Intent, archetypes, examples
 
 ### Tooling
 - [Tooling Guide](docs/TOOLING.md) - MCP server, IDE integration, developer tools
 - [VS Code Extension](docs/VSCODE_EXTENSION.md) - Editor support
 
 ### Advanced
-- [Custom Stacks](docs/CUSTOM_STACKS.md) - Creating code generation stacks
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
