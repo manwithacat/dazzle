@@ -46,14 +46,6 @@ class Dazzle < Formula
     end
   end
 
-  depends_on "python@3.12"
-
-  # Python dependencies for DSL parsing and runtime
-  resource "pydantic" do
-    url "https://files.pythonhosted.org/packages/source/p/pydantic/pydantic-2.9.2.tar.gz"
-    sha256 "d155cef71265d1e9807ed1c32b4c8deec042a44a50a4188b25ac67ecd81a9c0f"
-  end
-
   # pydantic-core requires Rust to build from source, so use pre-built wheels
   resource "pydantic-core" do
     on_macos do
@@ -78,72 +70,27 @@ class Dazzle < Formula
     end
   end
 
-  resource "typing-extensions" do
-    url "https://files.pythonhosted.org/packages/source/t/typing-extensions/typing_extensions-4.12.2.tar.gz"
-    sha256 "1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8"
-  end
-
-  resource "annotated-types" do
-    url "https://files.pythonhosted.org/packages/source/a/annotated-types/annotated_types-0.7.0.tar.gz"
-    sha256 "aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"
-  end
-
-  resource "typer" do
-    url "https://files.pythonhosted.org/packages/source/t/typer/typer-0.12.5.tar.gz"
-    sha256 "f592f089bedcc8ec1b974125d64851029c3b1af145f04aca64d69410f0c9b722"
-  end
-
-  resource "click" do
-    url "https://files.pythonhosted.org/packages/source/c/click/click-8.1.7.tar.gz"
-    sha256 "ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de"
-  end
-
-  resource "rich" do
-    url "https://files.pythonhosted.org/packages/source/r/rich/rich-13.9.2.tar.gz"
-    sha256 "51a2c62057461aaf7152b4d611168f93a9fc73068f8ded2790f29fe2b5366d0c"
-  end
-
-  resource "jinja2" do
-    url "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz"
-    sha256 "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"
-  end
-
-  resource "markupsafe" do
-    url "https://files.pythonhosted.org/packages/7e/99/7690b6d4034fffd95959cbe0c02de8deb3098cc577c67bb6a24fe5d7caa7/markupsafe-3.0.3.tar.gz"
-    sha256 "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698"
-  end
-
-  resource "pyyaml" do
-    url "https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz"
-    sha256 "d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"
-  end
+  depends_on "python@3.12"
 
   def install
     # Install Python package in virtualenv
     venv = virtualenv_create(libexec, "python3.12")
 
-    # Install Python dependencies
-    resources.each do |r|
-      next if r.name == "cli-binary"
+    # Install pydantic-core wheel first (requires Rust to build from source)
+    resource("pydantic-core").stage do
+      wheel = Dir["*.whl"].first
+      odie "pydantic-core wheel not found in resource" unless wheel
 
-      case r.name
-      when "pydantic-core"
-        # pydantic-core is distributed as a wheel (requires Rust to build from source)
-        r.stage do
-          wheel = Dir["*.whl"].first
-          odie "pydantic-core wheel not found in resource" unless wheel
-
-          system venv.root/"bin/python", "-m", "pip", "install",
-                 "--no-deps", "--no-compile",
-                 wheel
-        end
-      else
-        venv.pip_install r
-      end
+      system venv.root/"bin/python", "-m", "pip", "install",
+             "--no-deps", "--no-compile",
+             wheel
     end
 
-    # Install dazzle package (don't link - we provide our own CLI binary)
-    venv.pip_install buildpath
+    # Install dazzle with all optional dependencies (mcp, llm)
+    # pip will resolve transitive dependencies and use our pre-installed pydantic-core
+    system venv.root/"bin/python", "-m", "pip", "install",
+           "--no-compile",
+           "#{buildpath}[mcp,llm]"
 
     # Install the pre-compiled CLI binary
     resource("cli-binary").stage do
@@ -197,9 +144,6 @@ class Dazzle < Formula
       MCP Server (Claude Code):
         The DAZZLE MCP server has been automatically registered.
         Check status: dazzle mcp-check
-
-      For LLM features:
-        #{libexec}/bin/pip install anthropic openai
 
       Documentation:
         https://github.com/manwithacat/dazzle
