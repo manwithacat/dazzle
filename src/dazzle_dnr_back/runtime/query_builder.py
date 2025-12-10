@@ -15,6 +15,34 @@ from typing import Any
 from uuid import UUID
 
 
+# Valid SQL identifier pattern (alphanumeric and underscore, not starting with digit)
+_VALID_IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def validate_sql_identifier(name: str, context: str = "identifier") -> str:
+    """
+    Validate that a string is a safe SQL identifier.
+
+    Args:
+        name: The identifier to validate
+        context: Description of what's being validated (for error messages)
+
+    Returns:
+        The validated name
+
+    Raises:
+        ValueError: If the name contains invalid characters
+    """
+    if not name:
+        raise ValueError(f"SQL {context} cannot be empty")
+    if not _VALID_IDENTIFIER_PATTERN.match(name):
+        raise ValueError(
+            f"Invalid SQL {context} '{name}': must contain only letters, digits, "
+            "and underscores, and cannot start with a digit"
+        )
+    return name
+
+
 class FilterOperator(str, Enum):
     """Supported filter operators."""
 
@@ -261,6 +289,10 @@ class QueryBuilder:
     joins: list[str] = field(default_factory=list)
     search_query: str | None = None
     search_fields: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Validate table name on initialization."""
+        validate_sql_identifier(self.table_name, "table name")
 
     def add_filter(self, key: str, value: Any) -> QueryBuilder:
         """Add a filter condition."""

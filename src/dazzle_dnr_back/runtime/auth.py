@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 import secrets
 import sqlite3
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,6 +25,9 @@ try:
 except ImportError:
     FastAPIRequest = None  # type: ignore
     FASTAPI_AVAILABLE = False
+
+if TYPE_CHECKING:
+    from fastapi import APIRouter
 
 
 # =============================================================================
@@ -502,7 +507,7 @@ def create_auth_routes(
     auth_store: AuthStore,
     cookie_name: str = "dnr_session",
     session_expires_days: int = 7,
-):
+) -> APIRouter:
     """
     Create authentication routes for FastAPI.
 
@@ -729,7 +734,7 @@ def create_auth_dependency(
     auth_store: AuthStore,
     cookie_name: str = "dnr_session",
     require_roles: list[str] | None = None,
-):
+) -> Callable[[FastAPIRequest], Awaitable[AuthContext]]:
     """
     Create a FastAPI dependency for authentication.
 
@@ -788,7 +793,7 @@ def create_auth_dependency(
 def create_optional_auth_dependency(
     auth_store: AuthStore,
     cookie_name: str = "dnr_session",
-):
+) -> Callable[[FastAPIRequest], Awaitable[AuthContext]]:
     """
     Create a FastAPI dependency for optional authentication.
 

@@ -22,6 +22,8 @@ except ImportError:
 
 from pydantic import BaseModel
 
+from dazzle_dnr_back.runtime.query_builder import validate_sql_identifier
+
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.repository import DatabaseManager
     from dazzle_dnr_back.specs import BackendSpec
@@ -230,6 +232,12 @@ def create_debug_routes(
         Returns:
             Entity schema and sample data
         """
+        # Validate entity name before any database operations
+        try:
+            validate_sql_identifier(entity_name, "entity name")
+        except ValueError as e:
+            return {"error": str(e)}
+
         entity = next((e for e in entities if e.name == entity_name), None)
         if not entity:
             return {"error": f"Entity not found: {entity_name}"}

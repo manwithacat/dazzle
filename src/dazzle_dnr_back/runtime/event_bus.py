@@ -6,11 +6,14 @@ Provides decoupled event publishing from repositories to WebSocket broadcasts.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.websocket_manager import WebSocketManager
@@ -135,14 +138,24 @@ class EntityEventBus:
             try:
                 handler(event)
             except Exception:
-                pass  # Don't let handlers break the flow
+                logger.exception(
+                    "Sync event handler %s failed for event %s:%s",
+                    getattr(handler, "__name__", handler),
+                    event.entity_name,
+                    event.event_type.value,
+                )
 
         # Call async handlers
         for handler in self._handlers:
             try:
                 await handler(event)
             except Exception:
-                pass
+                logger.exception(
+                    "Async event handler %s failed for event %s:%s",
+                    getattr(handler, "__name__", handler),
+                    event.entity_name,
+                    event.event_type.value,
+                )
 
         # Broadcast to WebSocket
         await self._broadcast(event)
@@ -238,7 +251,12 @@ class EntityEventBus:
             try:
                 handler(event)
             except Exception:
-                pass
+                logger.exception(
+                    "Sync event handler %s failed for event %s:%s",
+                    getattr(handler, "__name__", handler),
+                    event.entity_name,
+                    event.event_type.value,
+                )
 
     def emit_created_sync(
         self,
