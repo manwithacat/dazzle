@@ -21,6 +21,7 @@ from .conditions import (
     ConditionValue,
     FunctionCall,
     LogicalOperator,
+    RoleCheck,
 )
 
 # Domain
@@ -113,6 +114,43 @@ from .services import (
     StubLanguage,
 )
 
+# State Machines (v0.7.0)
+from .state_machine import (
+    AutoTransitionSpec,
+    StateMachineSpec,
+    StateTransition,
+    TimeUnit,
+    TransitionGuard,
+    TransitionTrigger,
+)
+
+# Computed Fields
+from .computed import (
+    AggregateCall,
+    AggregateFunction,
+    ArithmeticExpr,
+    ArithmeticOperator,
+    ComputedExpr,
+    ComputedFieldSpec,
+    FieldReference,
+    LiteralValue,
+)
+
+# Invariants
+from .invariant import (
+    ComparisonExpr,
+    ComparisonOperator as InvariantComparisonOperator,
+    DurationExpr,
+    DurationUnit,
+    InvariantExpr,
+    InvariantFieldRef,
+    InvariantLiteral,
+    InvariantSpec,
+    LogicalExpr,
+    LogicalOperator as InvariantLogicalOperator,
+    NotExpr,
+)
+
 # Surfaces
 from .surfaces import (
     Outcome,
@@ -164,6 +202,7 @@ __all__ = [
     "LogicalOperator",
     "ConditionValue",
     "FunctionCall",
+    "RoleCheck",
     "Comparison",
     "ConditionExpr",
     # Domain
@@ -256,4 +295,32 @@ __all__ = [
     "ModuleIR",
     # AppSpec
     "AppSpec",
+    # State Machines
+    "TimeUnit",
+    "TransitionTrigger",
+    "TransitionGuard",
+    "AutoTransitionSpec",
+    "StateTransition",
+    "StateMachineSpec",
+    # Computed Fields
+    "AggregateFunction",
+    "ArithmeticOperator",
+    "FieldReference",
+    "AggregateCall",
+    "ArithmeticExpr",
+    "LiteralValue",
+    "ComputedExpr",
+    "ComputedFieldSpec",
+    # Invariants
+    "InvariantComparisonOperator",
+    "InvariantLogicalOperator",
+    "DurationUnit",
+    "InvariantFieldRef",
+    "InvariantLiteral",
+    "DurationExpr",
+    "ComparisonExpr",
+    "LogicalExpr",
+    "NotExpr",
+    "InvariantExpr",
+    "InvariantSpec",
 ]

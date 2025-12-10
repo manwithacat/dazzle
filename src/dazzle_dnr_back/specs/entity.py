@@ -1,13 +1,15 @@
 """
 Entity specification types for BackendSpec.
 
-Defines entities, fields, relationships, and validators.
+Defines entities, fields, relationships, validators, and access rules.
 """
 
 from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .auth import EntityAccessSpec
 
 # =============================================================================
 # Field Type System
@@ -265,8 +267,310 @@ class RelationSpec(BaseModel):
 
 
 # =============================================================================
+# State Machine Types
+# =============================================================================
+
+
+class TimeUnit(str, Enum):
+    """Time units for auto-transition delays."""
+
+    MINUTES = "minutes"
+    HOURS = "hours"
+    DAYS = "days"
+
+
+class TransitionTrigger(str, Enum):
+    """How a transition can be triggered."""
+
+    MANUAL = "manual"
+    AUTO = "auto"
+
+
+class TransitionGuardSpec(BaseModel):
+    """
+    A guard condition that must be satisfied for a transition.
+
+    Guards can be:
+    - Field requirements: requires assignee (field must be set)
+    - Role requirements: role(admin) (user must have role)
+    """
+
+    requires_field: str | None = Field(default=None, description="Field that must be set")
+    requires_role: str | None = Field(default=None, description="Role user must have")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class AutoTransitionSpec(BaseModel):
+    """
+    Specification for automatic transitions.
+
+    Example: auto after 7 days
+    """
+
+    delay_value: int = Field(description="Delay value")
+    delay_unit: TimeUnit = Field(description="Delay unit")
+    allow_manual: bool = Field(default=False, description="Allow manual trigger too")
+
+    model_config = ConfigDict(frozen=True)
+
+    @property
+    def delay_seconds(self) -> int:
+        """Get delay in seconds."""
+        if self.delay_unit == TimeUnit.MINUTES:
+            return self.delay_value * 60
+        elif self.delay_unit == TimeUnit.HOURS:
+            return self.delay_value * 3600
+        else:  # DAYS
+            return self.delay_value * 86400
+
+
+class StateTransitionSpec(BaseModel):
+    """
+    A single state transition definition.
+
+    Attributes:
+        from_state: State to transition from ("*" means any state)
+        to_state: State to transition to
+        trigger: How the transition is triggered (manual or auto)
+        guards: Conditions that must be met
+        auto_spec: Specification for automatic transitions
+    """
+
+    from_state: str = Field(description="Source state ('*' for wildcard)")
+    to_state: str = Field(description="Target state")
+    trigger: TransitionTrigger = Field(default=TransitionTrigger.MANUAL, description="Trigger type")
+    guards: list[TransitionGuardSpec] = Field(default_factory=list, description="Guard conditions")
+    auto_spec: AutoTransitionSpec | None = Field(default=None, description="Auto transition config")
+
+    model_config = ConfigDict(frozen=True)
+
+    @property
+    def is_wildcard(self) -> bool:
+        """Check if this is a wildcard transition."""
+        return self.from_state == "*"
+
+
+class StateMachineSpec(BaseModel):
+    """
+    Complete state machine specification for an entity.
+
+    Attributes:
+        status_field: Name of the field that holds the state
+        states: List of valid states
+        transitions: List of allowed state transitions
+    """
+
+    status_field: str = Field(description="Field holding the state")
+    states: list[str] = Field(default_factory=list, description="Valid states")
+    transitions: list[StateTransitionSpec] = Field(
+        default_factory=list, description="Allowed transitions"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+    def get_transitions_from(self, state: str) -> list[StateTransitionSpec]:
+        """Get all transitions from a given state."""
+        result = []
+        for t in self.transitions:
+            if t.from_state == state or t.from_state == "*":
+                result.append(t)
+        return result
+
+    def get_allowed_targets(self, from_state: str) -> set[str]:
+        """Get all states reachable from a given state."""
+        targets = set()
+        for t in self.get_transitions_from(from_state):
+            targets.add(t.to_state)
+        return targets
+
+    def is_transition_allowed(self, from_state: str, to_state: str) -> bool:
+        """Check if a transition is allowed (ignoring guards)."""
+        return to_state in self.get_allowed_targets(from_state)
+
+    def get_transition(self, from_state: str, to_state: str) -> StateTransitionSpec | None:
+        """Get the transition definition between two states."""
+        for t in self.transitions:
+            if (t.from_state == from_state or t.from_state == "*") and t.to_state == to_state:
+                return t
+        return None
+
+
+# =============================================================================
 # Entities
 # =============================================================================
+
+
+class AggregateFunctionKind(str, Enum):
+    """Supported aggregate functions for computed fields."""
+
+    COUNT = "count"
+    SUM = "sum"
+    AVG = "avg"
+    MIN = "min"
+    MAX = "max"
+    DAYS_UNTIL = "days_until"
+    DAYS_SINCE = "days_since"
+
+
+class ArithmeticOperatorKind(str, Enum):
+    """Arithmetic operators for computed expressions."""
+
+    ADD = "+"
+    SUBTRACT = "-"
+    MULTIPLY = "*"
+    DIVIDE = "/"
+
+
+class ComputedExprSpec(BaseModel):
+    """
+    Computed expression specification.
+
+    Represents a node in the expression tree for computed fields.
+    """
+
+    kind: Literal["field_ref", "aggregate", "arithmetic", "literal"] = Field(
+        description="Expression type"
+    )
+    # For field_ref: path to the field
+    path: list[str] | None = Field(default=None, description="Field path for field_ref")
+    # For aggregate: function and field
+    function: AggregateFunctionKind | None = Field(
+        default=None, description="Aggregate function"
+    )
+    field: "ComputedExprSpec | None" = Field(
+        default=None, description="Field for aggregate"
+    )
+    # For arithmetic: left, operator, right
+    left: "ComputedExprSpec | None" = Field(default=None, description="Left operand")
+    operator: ArithmeticOperatorKind | None = Field(
+        default=None, description="Arithmetic operator"
+    )
+    right: "ComputedExprSpec | None" = Field(default=None, description="Right operand")
+    # For literal: value
+    value: int | float | None = Field(default=None, description="Literal value")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ComputedFieldSpec(BaseModel):
+    """
+    Computed (derived) field specification.
+
+    Computed fields are calculated from other fields at runtime.
+
+    Examples:
+        - total: computed sum(line_items.amount)
+        - days_left: computed days_until(due_date)
+        - tax: computed subtotal * 0.1
+    """
+
+    name: str = Field(description="Field name")
+    expression: ComputedExprSpec = Field(description="Expression to compute")
+
+    model_config = ConfigDict(frozen=True)
+
+
+# Rebuild model for recursive types
+ComputedExprSpec.model_rebuild()
+
+
+# =============================================================================
+# Invariants
+# =============================================================================
+
+
+class InvariantComparisonKind(str, Enum):
+    """Comparison operators for invariant expressions."""
+
+    EQ = "=="
+    NE = "!="
+    GT = ">"
+    LT = "<"
+    GE = ">="
+    LE = "<="
+
+
+class InvariantLogicalKind(str, Enum):
+    """Logical operators for combining invariant conditions."""
+
+    AND = "and"
+    OR = "or"
+
+
+class DurationUnitKind(str, Enum):
+    """Time units for duration expressions."""
+
+    DAYS = "days"
+    HOURS = "hours"
+    MINUTES = "minutes"
+
+
+class InvariantExprSpec(BaseModel):
+    """
+    Invariant expression specification.
+
+    Represents a node in the expression tree for invariant conditions.
+    """
+
+    kind: Literal["field_ref", "literal", "duration", "comparison", "logical", "not"] = Field(
+        description="Expression type"
+    )
+    # For field_ref: path to the field
+    path: list[str] | None = Field(default=None, description="Field path for field_ref")
+    # For literal: value (string, number, or bool)
+    value: int | float | str | bool | None = Field(default=None, description="Literal value")
+    # For duration: value and unit
+    duration_value: int | None = Field(default=None, description="Duration value")
+    duration_unit: DurationUnitKind | None = Field(default=None, description="Duration unit")
+    # For comparison: left, operator, right
+    comparison_left: "InvariantExprSpec | None" = Field(
+        default=None, description="Left operand for comparison"
+    )
+    comparison_op: InvariantComparisonKind | None = Field(
+        default=None, description="Comparison operator"
+    )
+    comparison_right: "InvariantExprSpec | None" = Field(
+        default=None, description="Right operand for comparison"
+    )
+    # For logical: left, operator, right
+    logical_left: "InvariantExprSpec | None" = Field(
+        default=None, description="Left operand for logical"
+    )
+    logical_op: InvariantLogicalKind | None = Field(
+        default=None, description="Logical operator"
+    )
+    logical_right: "InvariantExprSpec | None" = Field(
+        default=None, description="Right operand for logical"
+    )
+    # For not: operand
+    not_operand: "InvariantExprSpec | None" = Field(
+        default=None, description="Operand for NOT expression"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
+class InvariantSpec(BaseModel):
+    """
+    Entity invariant specification.
+
+    Invariants are cross-field constraints that must always hold.
+
+    Examples:
+        - invariant: end_date > start_date
+        - invariant: quantity >= 0
+        - invariant: status == "active" or status == "pending"
+    """
+
+    expression: InvariantExprSpec = Field(description="Invariant condition")
+    message: str | None = Field(default=None, description="Custom error message")
+
+    model_config = ConfigDict(frozen=True)
+
+
+# Rebuild model for recursive types
+InvariantExprSpec.model_rebuild()
 
 
 class EntitySpec(BaseModel):
@@ -293,7 +597,19 @@ class EntitySpec(BaseModel):
     label: str | None = Field(default=None, description="Human-readable label")
     description: str | None = Field(default=None, description="Entity description")
     fields: list[FieldSpec] = Field(default_factory=list, description="Entity fields")
+    computed_fields: list[ComputedFieldSpec] = Field(
+        default_factory=list, description="Computed (derived) fields"
+    )
+    invariants: list[InvariantSpec] = Field(
+        default_factory=list, description="Entity invariants (cross-field constraints)"
+    )
     relations: list[RelationSpec] = Field(default_factory=list, description="Entity relationships")
+    state_machine: StateMachineSpec | None = Field(
+        default=None, description="State machine for status field transitions"
+    )
+    access: EntityAccessSpec | None = Field(
+        default=None, description="Entity access rules (visibility and permissions)"
+    )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     model_config = ConfigDict(frozen=True)

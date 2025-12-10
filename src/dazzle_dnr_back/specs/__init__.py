@@ -5,10 +5,18 @@ This module exports all backend specification types.
 """
 
 from dazzle_dnr_back.specs.auth import (
+    AccessAuthContext,
+    AccessComparisonKind,
+    AccessConditionSpec,
+    AccessLogicalKind,
+    AccessOperationKind,
     AuthRuleSpec,
+    EntityAccessSpec,
+    PermissionRuleSpec,
     PermissionSpec,
     RoleSpec,
     TenancyRuleSpec,
+    VisibilityRuleSpec,
 )
 from dazzle_dnr_back.specs.backend_spec import BackendSpec
 from dazzle_dnr_back.specs.endpoint import (
@@ -17,14 +25,29 @@ from dazzle_dnr_back.specs.endpoint import (
     RateLimitSpec,
 )
 from dazzle_dnr_back.specs.entity import (
+    AggregateFunctionKind,
+    ArithmeticOperatorKind,
+    AutoTransitionSpec,
+    ComputedExprSpec,
+    ComputedFieldSpec,
+    DurationUnitKind,
     EntitySpec,
     EnumType,
     FieldSpec,
     FieldType,
+    InvariantComparisonKind,
+    InvariantExprSpec,
+    InvariantLogicalKind,
+    InvariantSpec,
     RefType,
     RelationKind,
     RelationSpec,
     ScalarType,
+    StateMachineSpec,
+    StateTransitionSpec,
+    TimeUnit,
+    TransitionGuardSpec,
+    TransitionTrigger,
     ValidatorKind,
     ValidatorSpec,
 )
@@ -50,6 +73,24 @@ __all__ = [
     "EnumType",
     "RefType",
     "FieldType",
+    # Computed field types
+    "AggregateFunctionKind",
+    "ArithmeticOperatorKind",
+    "ComputedExprSpec",
+    "ComputedFieldSpec",
+    # Invariant types
+    "InvariantSpec",
+    "InvariantExprSpec",
+    "InvariantComparisonKind",
+    "InvariantLogicalKind",
+    "DurationUnitKind",
+    # State machine types
+    "StateMachineSpec",
+    "StateTransitionSpec",
+    "TransitionGuardSpec",
+    "AutoTransitionSpec",
+    "TimeUnit",
+    "TransitionTrigger",
     # Service types
     "ServiceSpec",
     "SchemaSpec",
@@ -67,6 +108,15 @@ __all__ = [
     "TenancyRuleSpec",
     "PermissionSpec",
     "RoleSpec",
+    # Entity access types (v0.7.0)
+    "AccessConditionSpec",
+    "AccessComparisonKind",
+    "AccessLogicalKind",
+    "AccessAuthContext",
+    "AccessOperationKind",
+    "VisibilityRuleSpec",
+    "PermissionRuleSpec",
+    "EntityAccessSpec",
     # Main spec
     "BackendSpec",
 ]

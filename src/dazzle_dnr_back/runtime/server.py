@@ -160,8 +160,15 @@ class DNRBackendApp:
             repo_factory = RepositoryFactory(self._db_manager, self._models)
             self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
+        # Extract state machines from entities
+        state_machines = {
+            entity.name: entity.state_machine
+            for entity in self.spec.entities
+            if entity.state_machine
+        }
+
         # Create services
-        factory = ServiceFactory(self._models)
+        factory = ServiceFactory(self._models, state_machines)
         self._services = factory.create_all_services(
             self.spec.services,
             self._schemas,

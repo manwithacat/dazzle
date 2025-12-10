@@ -21,6 +21,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from dazzle_dnr_back.specs.entity import (
+    ComputedFieldSpec,
     EntitySpec,
     FieldSpec,
     FieldType,
@@ -307,6 +308,9 @@ class SQLiteRepository(Generic[T]):
         # Build field type lookup for conversions
         self._field_types: dict[str, FieldType] = {f.name: f.type for f in entity_spec.fields}
 
+        # Store computed field specs for evaluation
+        self._computed_fields: list[ComputedFieldSpec] = entity_spec.computed_fields or []
+
     def _model_to_row(self, model: T) -> dict[str, Any]:
         """Convert Pydantic model to row dict for SQLite."""
         data = model.model_dump()
@@ -376,6 +380,10 @@ class SQLiteRepository(Generic[T]):
                 conn=self.db.get_persistent_connection(),
             )
             return self._convert_row_dict(row_dicts[0])
+
+        # If computed fields, return dict with computed values
+        if self._computed_fields:
+            return self._convert_row_dict(dict(row))
 
         return self._row_to_model(row)
 
@@ -500,9 +508,9 @@ class SQLiteRepository(Generic[T]):
                 conn=self.db.get_persistent_connection(),
             )
 
-        # Convert to models (or return dicts if relations included)
-        if include:
-            # Return dicts with nested data
+        # Convert to models (or return dicts if relations/computed fields included)
+        if include or self._computed_fields:
+            # Return dicts with nested data and/or computed fields
             items = [self._convert_row_dict(row) for row in row_dicts]
         else:
             items = [self._row_to_model(row) for row in rows]
@@ -514,9 +522,15 @@ class SQLiteRepository(Generic[T]):
             "page_size": page_size,
         }
 
-    def _convert_row_dict(self, row: dict[str, Any]) -> dict[str, Any]:
-        """Convert a row dict with proper type conversions."""
+    def _convert_row_dict(
+        self,
+        row: dict[str, Any],
+        related_data: dict[str, list[dict[str, Any]]] | None = None,
+    ) -> dict[str, Any]:
+        """Convert a row dict with proper type conversions and computed fields."""
         result = {}
+        collected_relations: dict[str, list[dict[str, Any]]] = {}
+
         for k, v in row.items():
             if isinstance(v, dict):
                 # Nested relation - convert recursively
@@ -524,9 +538,23 @@ class SQLiteRepository(Generic[T]):
             elif isinstance(v, list):
                 # To-many relation
                 result[k] = [self._convert_row_dict(item) for item in v]
+                # Store for computed field evaluation
+                collected_relations[k] = [dict(item) if isinstance(item, dict) else item for item in v]
             else:
                 # Regular field
                 result[k] = _sqlite_to_python(v, self._field_types.get(k))
+
+        # Add computed fields
+        if self._computed_fields:
+            from dazzle_dnr_back.runtime.computed_evaluator import (
+                evaluate_computed_fields,
+            )
+
+            # Use collected relations or provided related_data
+            rel_data = related_data if related_data is not None else collected_relations
+            computed_values = evaluate_computed_fields(result, self._computed_fields, rel_data)
+            result.update(computed_values)
+
         return result
 
     async def exists(self, id: UUID) -> bool:

@@ -50,7 +50,11 @@ entity Task "Task":
         assert vis.condition.comparison.value.literal == "current_user"
 
     def test_access_block_write_only(self):
-        """Test parsing entity with only write: rule."""
+        """Test parsing entity with only write: rule.
+
+        Note: In v0.7.0, write: only creates CREATE and UPDATE permissions.
+        Use delete: for DELETE permission.
+        """
         dsl = """
 module test
 
@@ -67,14 +71,14 @@ entity Task "Task":
 
         assert task.access is not None
         assert len(task.access.visibility) == 0
-        assert len(task.access.permissions) == 3
+        # v0.7.0: write: only creates CREATE and UPDATE (not DELETE)
+        assert len(task.access.permissions) == 2
 
-        # Check permission rules are created for all write operations
+        # Check permission rules are created for CREATE and UPDATE only
         operations = {r.operation for r in task.access.permissions}
         assert operations == {
             PermissionKind.CREATE,
             PermissionKind.UPDATE,
-            PermissionKind.DELETE,
         }
 
         # All should require auth and have the same condition
@@ -84,7 +88,10 @@ entity Task "Task":
             assert perm.condition.comparison.field == "owner_id"
 
     def test_access_block_read_and_write(self):
-        """Test parsing entity with both read: and write: rules."""
+        """Test parsing entity with both read: and write: rules.
+
+        Note: In v0.7.0, write: only creates CREATE and UPDATE permissions.
+        """
         dsl = """
 module test
 
@@ -103,7 +110,8 @@ entity Task "Task":
 
         assert task.access is not None
         assert len(task.access.visibility) == 1
-        assert len(task.access.permissions) == 3
+        # v0.7.0: write: only creates CREATE and UPDATE (not DELETE)
+        assert len(task.access.permissions) == 2
 
         # Check read rule has compound condition
         vis = task.access.visibility[0]
@@ -173,7 +181,10 @@ entity Task "Task":
         assert AuthContext.AUTHENTICATED in contexts
 
     def test_access_with_permissions_block(self):
-        """Test that access: can be combined with permissions: block."""
+        """Test that access: can be combined with permissions: block.
+
+        Note: In v0.7.0, write: only creates CREATE and UPDATE permissions.
+        """
         dsl = """
 module test
 
@@ -192,10 +203,10 @@ entity Task "Task":
         task = fragment.entities[0]
 
         assert task.access is not None
-        # Should have 4 permission rules: 1 from permissions: + 3 from access:
-        # But delete is duplicated, so it depends on implementation
-        # Currently we don't deduplicate, so we get 4
-        assert len(task.access.permissions) == 4
+        # Should have 3 permission rules:
+        # - 1 from permissions: (DELETE)
+        # - 2 from access: write: (CREATE, UPDATE)
+        assert len(task.access.permissions) == 3
 
 
 class TestAccessBlockErrors:
@@ -231,3 +242,206 @@ entity Task "Task":
 """
         with pytest.raises(ParseError):
             parse_dsl(dsl, Path("test.dsl"))
+
+
+class TestAccessRulesV070:
+    """Tests for v0.7.0 access rules enhancements."""
+
+    def test_delete_permission_separate(self):
+        """Test that delete: creates only DELETE permission."""
+        dsl = """
+module test
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+  owner_id: ref User
+
+  access:
+    read: owner_id = current_user
+    write: owner_id = current_user
+    delete: owner_id = current_user
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+
+        assert task.access is not None
+        # 1 visibility + 3 permissions (CREATE, UPDATE, DELETE)
+        assert len(task.access.visibility) == 1
+        assert len(task.access.permissions) == 3
+
+        operations = {r.operation for r in task.access.permissions}
+        assert operations == {
+            PermissionKind.CREATE,
+            PermissionKind.UPDATE,
+            PermissionKind.DELETE,
+        }
+
+    def test_delete_different_condition_from_write(self):
+        """Test delete: can have different condition than write:."""
+        dsl = """
+module test
+
+entity Document "Document":
+  id: uuid pk
+  owner_id: ref User
+  is_archived: bool=false
+
+  access:
+    write: owner_id = current_user
+    delete: owner_id = current_user and is_archived = true
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        doc = fragment.entities[0]
+
+        # Find DELETE permission
+        delete_perm = next(
+            p for p in doc.access.permissions
+            if p.operation == PermissionKind.DELETE
+        )
+        assert delete_perm.condition.operator == LogicalOperator.AND
+
+        # Find CREATE/UPDATE permissions
+        write_perms = [
+            p for p in doc.access.permissions
+            if p.operation in (PermissionKind.CREATE, PermissionKind.UPDATE)
+        ]
+        for perm in write_perms:
+            # Simple condition, no logical operator
+            assert perm.condition.comparison is not None
+            assert perm.condition.comparison.field == "owner_id"
+
+    def test_role_check_in_condition(self):
+        """Test role() function in access conditions."""
+        dsl = """
+module test
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+  access:
+    read: role(admin)
+    write: role(admin)
+    delete: role(admin)
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+
+        # Check visibility rule has role check
+        vis = task.access.visibility[0]
+        assert vis.condition.is_role_check is True
+        assert vis.condition.role_check is not None
+        assert vis.condition.role_check.role_name == "admin"
+
+        # Check permissions have role check
+        for perm in task.access.permissions:
+            assert perm.condition.is_role_check is True
+            assert perm.condition.role_check.role_name == "admin"
+
+    def test_role_check_combined_with_field_condition(self):
+        """Test role() combined with field conditions using OR."""
+        dsl = """
+module test
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+  owner_id: ref User
+
+  access:
+    read: role(admin) or owner_id = current_user
+    write: role(admin) or owner_id = current_user
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+
+        # Check visibility rule has compound OR condition
+        vis = task.access.visibility[0]
+        assert vis.condition.operator == LogicalOperator.OR
+        assert vis.condition.left.is_role_check is True
+        assert vis.condition.left.role_check.role_name == "admin"
+        assert vis.condition.right.comparison is not None
+        assert vis.condition.right.comparison.field == "owner_id"
+
+    def test_dotted_path_relationship_traversal(self):
+        """Test relationship traversal with dotted paths (owner.team)."""
+        dsl = """
+module test
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+  owner_id: ref User
+
+  access:
+    read: owner.team_id = current_team
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+
+        vis = task.access.visibility[0]
+        assert vis.condition.comparison is not None
+        assert vis.condition.comparison.field == "owner.team_id"
+        assert vis.condition.comparison.value.literal == "current_team"
+
+    def test_multi_level_dotted_path(self):
+        """Test multi-level relationship traversal."""
+        dsl = """
+module test
+
+entity Task "Task":
+  id: uuid pk
+  owner_id: ref User
+
+  access:
+    read: owner.team.organization_id = current_org
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+
+        vis = task.access.visibility[0]
+        assert vis.condition.comparison.field == "owner.team.organization_id"
+        assert vis.condition.comparison.value.literal == "current_org"
+
+    def test_role_and_combined_with_and(self):
+        """Test role() combined with conditions using AND."""
+        dsl = """
+module test
+
+entity Document "Document":
+  id: uuid pk
+  status: enum[draft,published]
+
+  access:
+    write: role(editor) and status = draft
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        doc = fragment.entities[0]
+
+        perm = doc.access.permissions[0]
+        assert perm.condition.operator == LogicalOperator.AND
+        assert perm.condition.left.is_role_check is True
+        assert perm.condition.left.role_check.role_name == "editor"
+        assert perm.condition.right.comparison.field == "status"
+        assert perm.condition.right.comparison.value.literal == "draft"
+
+    def test_multiple_roles_with_or(self):
+        """Test multiple role() checks combined with OR."""
+        dsl = """
+module test
+
+entity AdminPanel "AdminPanel":
+  id: uuid pk
+  config: str(500)
+
+  access:
+    read: role(admin) or role(superuser)
+"""
+        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        panel = fragment.entities[0]
+
+        vis = panel.access.visibility[0]
+        assert vis.condition.operator == LogicalOperator.OR
+        assert vis.condition.left.role_check.role_name == "admin"
+        assert vis.condition.right.role_check.role_name == "superuser"

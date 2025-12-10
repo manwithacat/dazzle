@@ -13,6 +13,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
+from dazzle_dnr_back.specs.entity import StateMachineSpec
 from dazzle_dnr_back.specs.service import (
     ServiceSpec,
 )
@@ -65,11 +66,13 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         create_schema: type[CreateT],
         update_schema: type[UpdateT],
         repository: "SQLiteRepository[T] | None" = None,
+        state_machine: StateMachineSpec | None = None,
     ):
         self.entity_name = entity_name
         self.model_class = model_class
         self.create_schema = create_schema
         self.update_schema = update_schema
+        self.state_machine = state_machine
 
         # Repository for SQLite persistence
         self._repository = repository
@@ -122,10 +125,49 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             return await self._repository.read(id)
         return self._store.get(id)
 
-    async def update(self, id: UUID, data: UpdateT) -> T | None:
-        """Update an existing entity."""
+    async def update(
+        self,
+        id: UUID,
+        data: UpdateT,
+        user_roles: list[str] | None = None,
+    ) -> T | None:
+        """
+        Update an existing entity.
+
+        Args:
+            id: Entity ID to update
+            data: Update data
+            user_roles: User's roles for state machine role guard checks
+
+        Returns:
+            Updated entity or None if not found
+
+        Raises:
+            TransitionError: If state machine transition is invalid
+        """
+        from dazzle_dnr_back.runtime.state_machine import (
+            validate_status_update,
+        )
+
         # Get update data, excluding None values
         update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+
+        # Read current entity for state machine validation
+        current = await self.read(id)
+        if current is None:
+            return None
+
+        # Validate state machine transition if entity has a state machine
+        if self.state_machine:
+            current_data = current.model_dump() if hasattr(current, "model_dump") else dict(current)
+            result = validate_status_update(
+                self.state_machine,
+                current_data,
+                update_data,
+                user_roles,
+            )
+            if result is not None and not result.is_valid:
+                raise result.error  # type: ignore
 
         if self._repository:
             return await self._repository.update(id, update_data)
@@ -249,14 +291,20 @@ class ServiceFactory:
     Creates appropriate service implementations based on the service specification.
     """
 
-    def __init__(self, models: dict[str, type[BaseModel]]):
+    def __init__(
+        self,
+        models: dict[str, type[BaseModel]],
+        state_machines: dict[str, StateMachineSpec] | None = None,
+    ):
         """
         Initialize the service factory.
 
         Args:
             models: Dictionary mapping entity names to Pydantic models
+            state_machines: Dictionary mapping entity names to state machine specs
         """
         self.models = models
+        self.state_machines = state_machines or {}
         self._services: dict[str, BaseService[Any]] = {}
 
     def create_service(
@@ -289,11 +337,15 @@ class ServiceFactory:
             if not update_schema:
                 update_schema = model
 
+            # Get state machine for this entity
+            state_machine = self.state_machines.get(entity_name)
+
             service: BaseService[Any] = CRUDService(
                 entity_name=entity_name,
                 model_class=model,
                 create_schema=create_schema,
                 update_schema=update_schema,
+                state_machine=state_machine,
             )
         else:
             service = CustomService(service_name=spec.name)

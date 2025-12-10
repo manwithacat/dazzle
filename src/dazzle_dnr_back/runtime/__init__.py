@@ -23,6 +23,17 @@ Example usage:
     >>> run_app(spec, port=8000)
 """
 
+from dazzle_dnr_back.runtime.access_evaluator import (
+    AccessRuntimeContext,
+    can_create,
+    can_delete,
+    can_read,
+    can_update,
+    evaluate_access_condition,
+    evaluate_permission,
+    evaluate_visibility,
+    filter_visible_records,
+)
 from dazzle_dnr_back.runtime.migrations import (
     MigrationAction,
     MigrationError,
@@ -67,6 +78,16 @@ from dazzle_dnr_back.runtime.service_generator import (
 )
 
 __all__ = [
+    # Access control (v0.7.0)
+    "AccessRuntimeContext",
+    "evaluate_access_condition",
+    "evaluate_visibility",
+    "evaluate_permission",
+    "can_read",
+    "can_create",
+    "can_update",
+    "can_delete",
+    "filter_visible_records",
     # Model generation
     "generate_entity_model",
     "generate_all_entity_models",

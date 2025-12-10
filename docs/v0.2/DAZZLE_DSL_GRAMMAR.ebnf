@@ -72,7 +72,18 @@ entity_decl   ::= "entity" ENTITY_NAME STRING? ":" NEWLINE
                     constraint_line*
                   DEDENT ;
 
-field_line    ::= FIELD_NAME ":" type_spec field_modifier* NEWLINE ;
+field_line    ::= FIELD_NAME ":" field_def NEWLINE ;
+
+field_def     ::= type_spec field_modifier*     (* Regular field *)
+                | "computed" computed_expr ;     (* Computed field *)
+
+(* Computed field expressions - restricted to aggregate functions for Anti-Turing compliance *)
+computed_expr ::= aggregate_call
+                | field_path
+                | computed_expr ("+" | "-" | "*" | "/") computed_expr
+                | "(" computed_expr ")" ;
+
+field_path    ::= FIELD_NAME ("." FIELD_NAME)* ;
 
 type_spec     ::= "str" "(" NUMBER ")"
                 | "text"

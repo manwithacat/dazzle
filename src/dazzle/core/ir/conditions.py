@@ -67,6 +67,22 @@ class FunctionCall(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class RoleCheck(BaseModel):
+    """
+    A role check in a condition expression.
+
+    Examples:
+        - role(admin)
+        - role(editor)
+
+    Used in access rules to check if user has a specific role.
+    """
+
+    role_name: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Comparison(BaseModel):
     """
     A single comparison in a condition expression.
@@ -99,9 +115,11 @@ class ConditionExpr(BaseModel):
     Examples:
         - condition_status in [SevereStress, Dead]
         - days_since(last_inspection_date) > 30 and steward is null
+        - role(admin) or owner_id = current_user
     """
 
-    comparison: Comparison | None = None  # Simple condition
+    comparison: Comparison | None = None  # Simple comparison condition
+    role_check: RoleCheck | None = None  # Role-based condition (v0.7.0)
     left: ConditionExpr | None = None  # For compound conditions
     operator: LogicalOperator | None = None  # AND/OR
     right: ConditionExpr | None = None  # For compound conditions
@@ -112,3 +130,8 @@ class ConditionExpr(BaseModel):
     def is_compound(self) -> bool:
         """Check if this is a compound (AND/OR) condition."""
         return self.operator is not None
+
+    @property
+    def is_role_check(self) -> bool:
+        """Check if this is a role check condition."""
+        return self.role_check is not None

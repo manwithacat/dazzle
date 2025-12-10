@@ -11,8 +11,11 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
 from .fields import FieldSpec
+from .invariant import InvariantSpec
+from .state_machine import StateMachineSpec
 
 
 class ConstraintKind(str, Enum):
@@ -129,15 +132,21 @@ class EntitySpec(BaseModel):
         name: Entity name (PascalCase)
         title: Human-readable title
         fields: List of field specifications
+        computed_fields: List of computed (derived) field specifications
+        invariants: List of entity invariants (cross-field constraints)
         constraints: Entity-level constraints (unique, index)
         access: Access control specification (visibility + permissions)
+        state_machine: State machine specification for status transitions (v0.7.0)
     """
 
     name: str
     title: str | None = None
     fields: list[FieldSpec]
+    computed_fields: list[ComputedFieldSpec] = Field(default_factory=list)
+    invariants: list[InvariantSpec] = Field(default_factory=list)
     constraints: list[Constraint] = Field(default_factory=list)
     access: AccessSpec | None = None
+    state_machine: StateMachineSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -155,6 +164,23 @@ class EntitySpec(BaseModel):
             if field.name == name:
                 return field
         return None
+
+    def get_computed_field(self, name: str) -> ComputedFieldSpec | None:
+        """Get computed field by name."""
+        for field in self.computed_fields:
+            if field.name == name:
+                return field
+        return None
+
+    @property
+    def has_state_machine(self) -> bool:
+        """Check if this entity has a state machine."""
+        return self.state_machine is not None
+
+    @property
+    def has_computed_fields(self) -> bool:
+        """Check if this entity has computed fields."""
+        return len(self.computed_fields) > 0
 
 
 class DomainSpec(BaseModel):

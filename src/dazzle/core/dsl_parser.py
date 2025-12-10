@@ -177,6 +177,18 @@ class Parser:
             TokenType.ACCESS,
             TokenType.READ,
             TokenType.WRITE,
+            # State Machine keywords (v0.7.0) - can be used as field names
+            TokenType.TRANSITIONS,
+            TokenType.REQUIRES,
+            TokenType.AUTO,
+            TokenType.AFTER,
+            TokenType.ROLE,
+            TokenType.MANUAL,
+            TokenType.DAYS,
+            TokenType.HOURS,
+            TokenType.MINUTES,
+            # Access control keywords - can be used in dotted path expressions
+            TokenType.OWNER,
         ):
             return self.advance()
 
@@ -450,10 +462,13 @@ class Parser:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        fields = []
-        constraints = []
+        fields: list[ir.FieldSpec] = []
+        computed_fields: list[ir.ComputedFieldSpec] = []
+        constraints: list[ir.Constraint] = []
         visibility_rules: list[ir.VisibilityRule] = []
         permission_rules: list[ir.PermissionRule] = []
+        transitions: list[ir.StateTransition] = []
+        invariants: list[ir.InvariantSpec] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -476,6 +491,15 @@ class Parser:
                     field_names.append(self.expect_identifier_or_keyword().value)
 
                 constraints.append(ir.Constraint(kind=kind, fields=field_names))
+                self.skip_newlines()
+                continue
+
+            # Check for invariant declaration
+            if self.match(TokenType.INVARIANT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                expr = self._parse_invariant_expr()
+                invariants.append(ir.InvariantSpec(expression=expr))
                 self.skip_newlines()
                 continue
 
@@ -527,7 +551,7 @@ class Parser:
                     if self.match(TokenType.DEDENT):
                         break
 
-                    # Parse read: or write: rule
+                    # Parse read:, write:, or delete: rule
                     if self.match(TokenType.READ):
                         self.advance()
                         self.expect(TokenType.COLON)
@@ -543,11 +567,10 @@ class Parser:
                         self.advance()
                         self.expect(TokenType.COLON)
                         condition = self.parse_condition_expr()
-                        # write: maps to CREATE, UPDATE, DELETE permissions
+                        # write: maps to CREATE, UPDATE permissions (not DELETE in v0.7.0)
                         for op in [
                             ir.PermissionKind.CREATE,
                             ir.PermissionKind.UPDATE,
-                            ir.PermissionKind.DELETE,
                         ]:
                             permission_rules.append(
                                 ir.PermissionRule(
@@ -556,10 +579,23 @@ class Parser:
                                     condition=condition,
                                 )
                             )
+                    elif self.match(TokenType.DELETE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        condition = self.parse_condition_expr()
+                        # delete: maps to DELETE permission only
+                        permission_rules.append(
+                            ir.PermissionRule(
+                                operation=ir.PermissionKind.DELETE,
+                                require_auth=True,
+                                condition=condition,
+                            )
+                        )
                     else:
                         token = self.current_token()
                         raise make_parse_error(
-                            f"Expected 'read' or 'write' in access block, got {token.type.value}",
+                            f"Expected 'read', 'write', or 'delete' in access block, "
+                            f"got {token.type.value}",
                             self.file,
                             token.line,
                             token.column,
@@ -570,21 +606,52 @@ class Parser:
                 self.skip_newlines()
                 continue
 
+            # Check for transitions: block (state machines)
+            if self.match(TokenType.TRANSITIONS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    transition = self._parse_state_transition()
+                    transitions.append(transition)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
             # Parse field
             field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
 
-            field_type = self.parse_type_spec()
-            modifiers, default = self.parse_field_modifiers()
-
-            fields.append(
-                ir.FieldSpec(
-                    name=field_name,
-                    type=field_type,
-                    modifiers=modifiers,
-                    default=default,
+            # Check for computed field
+            if self.match(TokenType.COMPUTED):
+                self.advance()
+                computed_expr = self._parse_computed_expr()
+                computed_fields.append(
+                    ir.ComputedFieldSpec(
+                        name=field_name,
+                        expression=computed_expr,
+                    )
                 )
-            )
+            else:
+                field_type = self.parse_type_spec()
+                modifiers, default = self.parse_field_modifiers()
+
+                fields.append(
+                    ir.FieldSpec(
+                        name=field_name,
+                        type=field_type,
+                        modifiers=modifiers,
+                        default=default,
+                    )
+                )
 
             self.skip_newlines()
 
@@ -598,12 +665,34 @@ class Parser:
                 permissions=permission_rules,
             )
 
+        # Build state machine spec if transitions were defined
+        state_machine = None
+        if transitions:
+            # Find the status field - look for enum field named 'status'
+            status_field_name = None
+            states: list[str] = []
+            for field in fields:
+                if field.name == "status" and field.type.kind == ir.FieldTypeKind.ENUM:
+                    status_field_name = field.name
+                    states = field.type.enum_values or []
+                    break
+
+            if status_field_name:
+                state_machine = ir.StateMachineSpec(
+                    status_field=status_field_name,
+                    states=states,
+                    transitions=transitions,
+                )
+
         return ir.EntitySpec(
             name=name,
             title=title,
             fields=fields,
+            computed_fields=computed_fields,
+            invariants=invariants,
             constraints=constraints,
             access=access,
+            state_machine=state_machine,
         )
 
     def _parse_visibility_rule(self) -> ir.VisibilityRule:
@@ -685,6 +774,380 @@ class Parser:
         # Otherwise, parse a condition expression (implies authenticated)
         condition = self.parse_condition_expr()
         return ir.PermissionRule(operation=operation, require_auth=True, condition=condition)
+
+    def _parse_state_transition(self) -> ir.StateTransition:
+        """
+        Parse a state transition rule.
+
+        Syntax:
+            open -> assigned: requires assignee
+            assigned -> resolved: requires resolution_note
+            resolved -> closed: auto after 7 days OR manual
+            * -> open: role(admin)
+        """
+        # Parse from_state (* for wildcard, or identifier)
+        if self.match(TokenType.STAR):
+            self.advance()
+            from_state = "*"
+        else:
+            from_state = self.expect_identifier_or_keyword().value
+
+        # Expect arrow
+        self.expect(TokenType.ARROW)
+
+        # Parse to_state
+        to_state = self.expect_identifier_or_keyword().value
+
+        # Optional colon and guards/modifiers
+        trigger = ir.TransitionTrigger.MANUAL
+        guards: list[ir.TransitionGuard] = []
+        auto_spec: ir.AutoTransitionSpec | None = None
+
+        if self.match(TokenType.COLON):
+            self.advance()
+
+            # Parse guard/trigger specifications
+            while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+                # requires field_name
+                if self.match(TokenType.REQUIRES):
+                    self.advance()
+                    field_name = self.expect_identifier_or_keyword().value
+                    guards.append(ir.TransitionGuard(requires_field=field_name))
+
+                # role(role_name)
+                elif self.match(TokenType.ROLE):
+                    self.advance()
+                    self.expect(TokenType.LPAREN)
+                    role_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.RPAREN)
+                    guards.append(ir.TransitionGuard(requires_role=role_name))
+
+                # auto after N days/hours/minutes
+                elif self.match(TokenType.AUTO):
+                    self.advance()
+                    trigger = ir.TransitionTrigger.AUTO
+
+                    if self.match(TokenType.AFTER):
+                        self.advance()
+                        # Parse delay: N days/hours/minutes
+                        delay_value = int(self.expect(TokenType.NUMBER).value)
+
+                        # Parse time unit
+                        if self.match(TokenType.DAYS):
+                            self.advance()
+                            delay_unit = ir.TimeUnit.DAYS
+                        elif self.match(TokenType.HOURS):
+                            self.advance()
+                            delay_unit = ir.TimeUnit.HOURS
+                        elif self.match(TokenType.MINUTES):
+                            self.advance()
+                            delay_unit = ir.TimeUnit.MINUTES
+                        else:
+                            # Default to days
+                            delay_unit = ir.TimeUnit.DAYS
+
+                        # Check for OR manual
+                        allow_manual = False
+                        if self.match(TokenType.OR):
+                            self.advance()
+                            if self.match(TokenType.MANUAL):
+                                self.advance()
+                                allow_manual = True
+
+                        auto_spec = ir.AutoTransitionSpec(
+                            delay_value=delay_value,
+                            delay_unit=delay_unit,
+                            allow_manual=allow_manual,
+                        )
+
+                # manual
+                elif self.match(TokenType.MANUAL):
+                    self.advance()
+                    trigger = ir.TransitionTrigger.MANUAL
+
+                # OR connector
+                elif self.match(TokenType.OR):
+                    self.advance()
+                    continue
+
+                else:
+                    # Unknown token, break
+                    break
+
+        return ir.StateTransition(
+            from_state=from_state,
+            to_state=to_state,
+            trigger=trigger,
+            guards=guards,
+            auto_spec=auto_spec,
+        )
+
+    def _parse_computed_expr(self) -> ir.ComputedExpr:
+        """
+        Parse a computed field expression.
+
+        Handles additive operators (+, -) with correct precedence.
+
+        Syntax:
+            computed_expr ::= computed_term (("+" | "-") computed_term)*
+        """
+        left = self._parse_computed_term()
+
+        while self.match(TokenType.PLUS, TokenType.MINUS):
+            op_token = self.advance()
+            if op_token.type == TokenType.PLUS:
+                operator = ir.ArithmeticOperator.ADD
+            else:
+                operator = ir.ArithmeticOperator.SUBTRACT
+
+            right = self._parse_computed_term()
+            left = ir.ArithmeticExpr(left=left, operator=operator, right=right)
+
+        return left
+
+    def _parse_computed_term(self) -> ir.ComputedExpr:
+        """
+        Parse a multiplicative computed expression.
+
+        Handles *, / with higher precedence than +, -.
+
+        Syntax:
+            computed_term ::= computed_primary (("*" | "/") computed_primary)*
+        """
+        left = self._parse_computed_primary()
+
+        while self.match(TokenType.STAR, TokenType.SLASH):
+            op_token = self.advance()
+            if op_token.type == TokenType.STAR:
+                operator = ir.ArithmeticOperator.MULTIPLY
+            else:
+                operator = ir.ArithmeticOperator.DIVIDE
+
+            right = self._parse_computed_primary()
+            left = ir.ArithmeticExpr(left=left, operator=operator, right=right)
+
+        return left
+
+    def _parse_computed_primary(self) -> ir.ComputedExpr:
+        """
+        Parse a primary computed expression.
+
+        Handles:
+            - Aggregate function calls: sum(field), count(items), days_since(date)
+            - Field references: field or relation.field
+            - Numeric literals: 1.5, 100
+            - Parenthesized expressions: (expr)
+
+        Syntax:
+            computed_primary ::= aggregate_call | field_path | NUMBER | "(" computed_expr ")"
+        """
+        # Check for parenthesized expression
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            expr = self._parse_computed_expr()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        # Check for numeric literal
+        if self.match(TokenType.NUMBER):
+            token = self.advance()
+            value = float(token.value) if "." in token.value else int(token.value)
+            return ir.LiteralValue(value=value)
+
+        # Check for aggregate function call
+        # Only treat it as a function call if followed by '('
+        # Otherwise, it's a field name that happens to match a keyword
+        aggregate_tokens = {
+            TokenType.COUNT: ir.AggregateFunction.COUNT,
+            TokenType.SUM: ir.AggregateFunction.SUM,
+            TokenType.AVG: ir.AggregateFunction.AVG,
+            TokenType.MIN: ir.AggregateFunction.MIN,
+            TokenType.MAX: ir.AggregateFunction.MAX,
+            TokenType.DAYS_UNTIL: ir.AggregateFunction.DAYS_UNTIL,
+            TokenType.DAYS_SINCE: ir.AggregateFunction.DAYS_SINCE,
+        }
+
+        for token_type, func in aggregate_tokens.items():
+            if self.match(token_type) and self.peek_token().type == TokenType.LPAREN:
+                self.advance()
+                self.expect(TokenType.LPAREN)
+                # Parse field path inside parentheses
+                field_path = self._parse_field_path()
+                self.expect(TokenType.RPAREN)
+                return ir.AggregateCall(
+                    function=func,
+                    field=ir.FieldReference(path=field_path),
+                )
+
+        # Must be a field reference (possibly with dots for relation traversal)
+        field_path = self._parse_field_path()
+        return ir.FieldReference(path=field_path)
+
+    def _parse_field_path(self) -> list[str]:
+        """
+        Parse a field path like 'field' or 'relation.field' or 'relation.subrelation.field'.
+
+        Returns a list of path components.
+        """
+        path = [self.expect_identifier_or_keyword().value]
+
+        while self.match(TokenType.DOT):
+            self.advance()
+            path.append(self.expect_identifier_or_keyword().value)
+
+        return path
+
+    # =========================================================================
+    # Invariant Expression Parsing
+    # =========================================================================
+
+    def _parse_invariant_expr(self) -> ir.InvariantExpr:
+        """
+        Parse an invariant expression with logical OR (lowest precedence).
+
+        Syntax:
+            invariant_expr ::= invariant_and ("or" invariant_and)*
+
+        Examples:
+            - end_date > start_date
+            - status == "active" or status == "pending"
+        """
+        left = self._parse_invariant_and()
+
+        while self.match(TokenType.OR):
+            self.advance()
+            right = self._parse_invariant_and()
+            left = ir.LogicalExpr(
+                left=left,
+                operator=ir.InvariantLogicalOperator.OR,
+                right=right,
+            )
+
+        return left
+
+    def _parse_invariant_and(self) -> ir.InvariantExpr:
+        """
+        Parse AND expressions (higher precedence than OR).
+
+        Syntax:
+            invariant_and ::= invariant_not ("and" invariant_not)*
+        """
+        left = self._parse_invariant_not()
+
+        while self.match(TokenType.AND):
+            self.advance()
+            right = self._parse_invariant_not()
+            left = ir.LogicalExpr(
+                left=left,
+                operator=ir.InvariantLogicalOperator.AND,
+                right=right,
+            )
+
+        return left
+
+    def _parse_invariant_not(self) -> ir.InvariantExpr:
+        """
+        Parse NOT expressions (unary negation).
+
+        Syntax:
+            invariant_not ::= "not" invariant_not | invariant_comparison
+        """
+        if self.match(TokenType.NOT):
+            self.advance()
+            operand = self._parse_invariant_not()
+            return ir.NotExpr(operand=operand)
+
+        return self._parse_invariant_comparison()
+
+    def _parse_invariant_comparison(self) -> ir.InvariantExpr:
+        """
+        Parse comparison expressions.
+
+        Syntax:
+            invariant_comparison ::= invariant_primary (comp_op invariant_primary)?
+            comp_op ::= "==" | "!=" | ">" | "<" | ">=" | "<="
+
+        Examples:
+            - end_date > start_date
+            - quantity >= 0
+            - status == "active"
+        """
+        left = self._parse_invariant_primary()
+
+        # Check for comparison operator
+        comparison_ops = {
+            TokenType.DOUBLE_EQUALS: ir.InvariantComparisonOperator.EQ,
+            TokenType.NOT_EQUALS: ir.InvariantComparisonOperator.NE,
+            TokenType.GREATER_THAN: ir.InvariantComparisonOperator.GT,
+            TokenType.LESS_THAN: ir.InvariantComparisonOperator.LT,
+            TokenType.GREATER_EQUAL: ir.InvariantComparisonOperator.GE,
+            TokenType.LESS_EQUAL: ir.InvariantComparisonOperator.LE,
+        }
+
+        for token_type, op in comparison_ops.items():
+            if self.match(token_type):
+                self.advance()
+                right = self._parse_invariant_primary()
+                return ir.ComparisonExpr(left=left, operator=op, right=right)
+
+        return left
+
+    def _parse_invariant_primary(self) -> ir.InvariantExpr:
+        """
+        Parse primary invariant expressions.
+
+        Handles:
+            - Field references: field_name or path.to.field
+            - Numeric literals: 0, 1.5, -10
+            - String literals: "active"
+            - Boolean literals: true, false
+            - Duration expressions: 14 days, 2 hours
+            - Parenthesized expressions: (expr)
+
+        Syntax:
+            invariant_primary ::= field_ref | NUMBER | STRING | BOOL | duration | "(" invariant_expr ")"
+        """
+        # Check for parenthesized expression
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            expr = self._parse_invariant_expr()
+            self.expect(TokenType.RPAREN)
+            return expr
+
+        # Check for numeric literal
+        if self.match(TokenType.NUMBER):
+            token = self.advance()
+            value = float(token.value) if "." in token.value else int(token.value)
+
+            # Check if followed by duration unit
+            duration_units = {
+                TokenType.DAYS: ir.DurationUnit.DAYS,
+                TokenType.HOURS: ir.DurationUnit.HOURS,
+                TokenType.MINUTES: ir.DurationUnit.MINUTES,
+            }
+            for unit_token, unit in duration_units.items():
+                if self.match(unit_token):
+                    self.advance()
+                    return ir.DurationExpr(value=int(value), unit=unit)
+
+            return ir.InvariantLiteral(value=value)
+
+        # Check for string literal
+        if self.match(TokenType.STRING):
+            token = self.advance()
+            return ir.InvariantLiteral(value=token.value)
+
+        # Check for boolean literals (true, false)
+        if self.match(TokenType.TRUE):
+            self.advance()
+            return ir.InvariantLiteral(value=True)
+        if self.match(TokenType.FALSE):
+            self.advance()
+            return ir.InvariantLiteral(value=False)
+
+        # Must be a field reference
+        field_path = self._parse_field_path()
+        return ir.InvariantFieldRef(path=field_path)
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
@@ -2939,13 +3402,21 @@ class Parser:
         return left
 
     def _parse_primary_condition(self) -> ir.ConditionExpr:
-        """Parse primary condition (comparison or parenthesized expr)."""
+        """Parse primary condition (comparison, role check, or parenthesized expr)."""
         # Handle parentheses
         if self.match(TokenType.LPAREN):
             self.advance()
             expr = self._parse_or_expr()
             self.expect(TokenType.RPAREN)
             return expr
+
+        # Handle role(name) - standalone role check (v0.7.0)
+        if self.match(TokenType.ROLE):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            role_name = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.RPAREN)
+            return ir.ConditionExpr(role_check=ir.RoleCheck(role_name=role_name))
 
         # Parse comparison
         comparison = self._parse_comparison()
@@ -2960,6 +3431,7 @@ class Parser:
             field in [a, b, c]
             field is null
             days_since(field) > 30
+            owner.team = current_team  (v0.7.0 - relationship traversal)
         """
         # Check for function call
         function = None
@@ -2975,10 +3447,20 @@ class Parser:
                 self.expect(TokenType.RPAREN)
                 function = ir.FunctionCall(name=name, argument=arg)
             else:
+                # Check for dotted path (owner.team) - v0.7.0
                 field = name
+                while self.match(TokenType.DOT):
+                    self.advance()
+                    next_part = self.expect_identifier_or_keyword().value
+                    field = f"{field}.{next_part}"
         else:
             # Allow keywords as field names
             field = self.expect_identifier_or_keyword().value
+            # Also check for dotted path after keyword field names
+            while self.match(TokenType.DOT):
+                self.advance()
+                next_part = self.expect_identifier_or_keyword().value
+                field = f"{field}.{next_part}"
 
         # Parse operator
         operator = self._parse_comparison_operator()

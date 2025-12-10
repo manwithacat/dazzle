@@ -143,6 +143,29 @@ class TokenType(Enum):
     GUARANTEES = "guarantees"
     STUB = "stub"
 
+    # v0.7.0 State Machine Keywords
+    TRANSITIONS = "transitions"
+    REQUIRES = "requires"
+    AUTO = "auto"
+    AFTER = "after"
+    ROLE = "role"
+    MANUAL = "manual"
+    DAYS = "days"
+    HOURS = "hours"
+    MINUTES = "minutes"
+
+    # Computed Field Keywords
+    COMPUTED = "computed"
+    SUM = "sum"
+    AVG = "avg"
+    MIN = "min"
+    MAX = "max"
+    DAYS_UNTIL = "days_until"
+    DAYS_SINCE = "days_since"
+
+    # Invariant Keywords
+    INVARIANT = "invariant"
+
     # Flow/E2E Test Keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
@@ -171,6 +194,7 @@ class TokenType(Enum):
     TAGS = "tags"
 
     # Comparison operators (for condition expressions)
+    DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="
     GREATER_THAN = ">"
     LESS_THAN = "<"
@@ -361,6 +385,26 @@ KEYWORDS = {
     "output",
     "guarantees",
     "stub",
+    # v0.7.0 State Machine keywords
+    "transitions",
+    "requires",
+    "auto",
+    "after",
+    "role",
+    "manual",
+    "days",
+    "hours",
+    "minutes",
+    # Computed Field keywords
+    "computed",
+    "sum",
+    "avg",
+    "min",
+    "max",
+    "days_until",
+    "days_since",
+    # Invariant keywords
+    "invariant",
 }
 
 
@@ -633,9 +677,13 @@ class Lexer:
                 self.tokens.append(Token(TokenType.RBRACKET, "]", token_line, token_col))
 
             elif ch == "=":
-                self.advance()
-                # Note: == would be handled here if needed, but DSL uses single =
-                self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
+                if self.peek_char() == "=":
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.DOUBLE_EQUALS, "==", token_line, token_col))
+                else:
+                    self.advance()
+                    self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
 
             elif ch == "!":
                 if self.peek_char() == "=":
