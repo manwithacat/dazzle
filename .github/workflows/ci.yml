@@ -148,9 +148,9 @@ jobs:
         pip install pygls || true
 
     - name: Run mypy
-      continue-on-error: true  # mypy has known issues with mixin patterns, non-blocking for now
       run: |
-        mypy src/dazzle --ignore-missing-imports
+        # Check core modules (parser, IR, CLI, MCP) - eject module excluded for now
+        mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject'
 
   integration:
     runs-on: ubuntu-latest

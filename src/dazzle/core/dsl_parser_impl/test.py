@@ -4,7 +4,7 @@ Test parsing for DAZZLE DSL.
 Handles test and assertion declarations for API contract tests.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
@@ -12,7 +12,21 @@ from ..lexer import TokenType
 
 
 class TestParserMixin:
-    """Mixin providing test parsing."""
+    """
+    Mixin providing test parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        skip_newlines: Any
+        file: Any
+        parse_value: Any
 
     def parse_test(self) -> ir.TestSpec:
         """Parse test declaration."""

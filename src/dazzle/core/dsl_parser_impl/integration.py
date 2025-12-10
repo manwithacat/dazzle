@@ -4,13 +4,28 @@ Integration parsing for DAZZLE DSL.
 Handles integration declarations including actions, syncs, and mappings.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
 
 class IntegrationParserMixin:
-    """Mixin providing integration parsing."""
+    """
+    Mixin providing integration parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        skip_newlines: Any
+        file: Any
 
     def parse_integration(self) -> ir.IntegrationSpec:
         """Parse integration declaration - simplified version for Stage 2."""

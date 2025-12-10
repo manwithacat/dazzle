@@ -5,13 +5,41 @@ Provides common token manipulation and utility methods used by all parser mixins
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from ..errors import make_parse_error
 from ..lexer import Token, TokenType
 
 if TYPE_CHECKING:
-    pass
+    from .. import ir
+
+
+@runtime_checkable
+class ParserProtocol(Protocol):
+    """
+    Protocol defining the interface available to parser mixins.
+
+    This allows mypy to understand that mixins will have access to
+    BaseParser methods when combined in the final Parser class.
+    """
+
+    tokens: list[Token]
+    file: Path
+    pos: int
+
+    def current_token(self) -> Token: ...
+    def peek_token(self, offset: int = 1) -> Token: ...
+    def advance(self) -> Token: ...
+    def expect(self, token_type: TokenType) -> Token: ...
+    def expect_identifier_or_keyword(self) -> Token: ...
+    def match(self, *token_types: TokenType) -> bool: ...
+    def skip_newlines(self) -> None: ...
+
+    # Methods from other mixins that may be called cross-mixin
+    def parse_type(self) -> "ir.FieldType": ...
+    def parse_condition_expr(self) -> "ir.ConditionExpr": ...
+    def parse_sort_list(self) -> list[tuple[str, str]]: ...
+    def parse_ux_block(self) -> "ir.UXSpec": ...
 
 
 class BaseParser:

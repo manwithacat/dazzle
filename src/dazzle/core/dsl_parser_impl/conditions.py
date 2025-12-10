@@ -5,7 +5,7 @@ Handles conditional expressions, comparisons, and logical operators
 used in access rules, visibility, and UX specifications.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
@@ -13,7 +13,20 @@ from ..lexer import TokenType
 
 
 class ConditionParserMixin:
-    """Mixin providing condition expression parsing."""
+    """
+    Mixin providing condition expression parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        file: Any
+        _parse_literal_value: Any
 
     def parse_condition_expr(self) -> ir.ConditionExpr:
         """

@@ -5,13 +5,37 @@ Handles entity declarations including fields, constraints, state machines,
 access rules, invariants, and LLM cognition features.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
 
 class EntityParserMixin:
-    """Mixin providing entity and archetype parsing."""
+    """
+    Mixin providing entity and archetype parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    # Type stubs for methods provided by BaseParser and other mixins
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        skip_newlines: Any
+        expect_identifier_or_keyword: Any
+        current_token: Any
+        peek_token: Any
+        file: Any
+        parse_type: Any
+        parse_condition_expr: Any
+        _is_keyword_as_identifier: Any
+        _parse_literal_value: Any
+        _parse_field_path: Any
+        parse_type_spec: Any
+        parse_field_modifiers: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""

@@ -4,13 +4,40 @@ Workspace parsing for DAZZLE DSL.
 Handles workspace declarations including regions, aggregates, and display modes.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
+if TYPE_CHECKING:
+    pass
+
+# Type alias for self in mixin methods - tells mypy this mixin
+# will be combined with a class implementing ParserProtocol
+_Self = Any  # At runtime, just Any; mypy sees the annotations
+
 
 class WorkspaceParserMixin:
-    """Mixin providing workspace parsing."""
+    """
+    Mixin providing workspace parsing.
+
+    Note: This mixin expects to be combined with BaseParser (or a class
+    implementing ParserProtocol) via multiple inheritance.
+    """
+
+    # Declare the interface this mixin expects (for documentation)
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        skip_newlines: Any
+        expect_identifier_or_keyword: Any
+        parse_condition_expr: Any
+        parse_sort_list: Any
+        parse_ux_block: Any
+        current_token: Any
+        file: Any
 
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """

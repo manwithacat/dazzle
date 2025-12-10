@@ -5,7 +5,7 @@ Handles UX block parsing including attention signals, persona variants,
 and surface-level UX specifications.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..errors import make_parse_error
@@ -13,7 +13,21 @@ from ..lexer import TokenType
 
 
 class UXParserMixin:
-    """Mixin providing UX semantic layer parsing."""
+    """
+    Mixin providing UX semantic layer parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        skip_newlines: Any
+        file: Any
+        parse_condition_expr: Any
 
     def parse_ux_block(self) -> ir.UXSpec:
         """

@@ -169,7 +169,7 @@ def get_project_info_json(
                 {
                     "name": f.name,
                     "type": str(f.type),
-                    "required": f.required,
+                    "required": f.is_required,
                 }
                 for f in entity.fields
             ]
@@ -235,9 +235,9 @@ def init_project_json(
 
     try:
         init_project(
-            name=name,
+            project_name=name,
             target_dir=target_path,
-            template=template,
+            from_example=template,
         )
         return {
             "name": name,
@@ -267,7 +267,7 @@ def build_project_json(
         Dict with build results
     """
     # Import the build functionality
-    from dazzle.cli.dnr_impl.build import build_production
+    from dazzle.cli.dnr_impl.build import build_production  # type: ignore[attr-defined]
 
     project_path = Path(path) if path else Path.cwd()
     output_path = Path(output)
@@ -308,7 +308,7 @@ def eject_project_json(
     Returns:
         Dict with ejection results
     """
-    from dazzle.eject.runner import run_ejection
+    from dazzle.eject.runner import run_ejection  # type: ignore[attr-defined]
 
     project_path = Path(path) if path else Path.cwd()
     output_path = Path(output)

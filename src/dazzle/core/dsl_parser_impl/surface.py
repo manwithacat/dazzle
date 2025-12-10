@@ -4,13 +4,29 @@ Surface parsing for DAZZLE DSL.
 Handles surface declarations including sections, actions, and outcomes.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
 
 class SurfaceParserMixin:
-    """Mixin providing surface parsing."""
+    """
+    Mixin providing surface parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        skip_newlines: Any
+        file: Any
+        parse_ux_block: Any
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""

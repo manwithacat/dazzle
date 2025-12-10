@@ -12,7 +12,7 @@ except ImportError:
     Tool = None  # type: ignore
 
 
-def get_dnr_tools() -> list:
+def get_dnr_tools() -> list[Tool]:
     """Get DNR-specific MCP tools."""
     if Tool is None:
         return []

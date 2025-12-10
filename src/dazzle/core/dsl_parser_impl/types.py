@@ -4,13 +4,28 @@ Type parsing for DAZZLE DSL.
 Handles field type specifications and field modifiers.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
 
 class TypeParserMixin:
-    """Mixin providing type and field modifier parsing."""
+    """
+    Mixin providing type and field modifier parsing.
+
+    Note: This mixin expects to be combined with BaseParser via multiple inheritance.
+    """
+
+    if TYPE_CHECKING:
+        expect: Any
+        advance: Any
+        match: Any
+        current_token: Any
+        expect_identifier_or_keyword: Any
+        file: Any
+        _is_keyword_as_identifier: Any
 
     def parse_type_spec(self) -> ir.FieldType:
         """
@@ -247,7 +262,7 @@ class TypeParserMixin:
     def _parse_literal_value(self) -> str | int | float | bool | None:
         """Parse a literal value (string, number, boolean, or null)."""
         if self.match(TokenType.STRING):
-            return self.advance().value
+            return str(self.advance().value)
         elif self.match(TokenType.NUMBER):
             num_str = self.advance().value
             if "." in num_str:
@@ -265,11 +280,11 @@ class TypeParserMixin:
                 self.advance()
                 return None
             # Treat as string value (for enum values etc)
-            return self.advance().value
+            return str(self.advance().value)
         else:
             # Allow keywords as values (e.g., enum values)
             if self._is_keyword_as_identifier():
-                return self.advance().value
+                return str(self.advance().value)
             token = self.current_token()
             raise make_parse_error(
                 f"Expected literal value, got {token.type.value}",

@@ -114,7 +114,7 @@ def get_all_component_names() -> set[str]:
     return {c["name"] for c in PRIMITIVE_COMPONENTS + PATTERN_COMPONENTS}
 
 
-def get_component_by_name(name: str) -> dict | None:
+def get_component_by_name(name: str) -> dict[str, str] | None:
     """Get a built-in component by name."""
     all_builtins = {c["name"]: c for c in PRIMITIVE_COMPONENTS + PATTERN_COMPONENTS}
     return all_builtins.get(name)
@@ -122,4 +122,4 @@ def get_component_by_name(name: str) -> dict | None:
 
 def get_valid_layout_kinds() -> set[str]:
     """Get all valid layout kind names."""
-    return {lt["kind"] for lt in LAYOUT_TYPES}
+    return {str(lt["kind"]) for lt in LAYOUT_TYPES}
