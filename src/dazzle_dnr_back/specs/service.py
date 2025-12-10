@@ -7,7 +7,7 @@ Defines domain services, operations, and business rules.
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # Schema Specifications
@@ -21,13 +21,12 @@ class SchemaFieldSpec(BaseModel):
     Simpler than entity FieldSpec - just name, type, and required flag.
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Field name")
     type: str = Field(description="Field type (str, int, bool, EntityName, etc.)")
     required: bool = Field(default=True, description="Is this field required?")
     description: str | None = Field(default=None, description="Field description")
-
-    class Config:
-        frozen = True
 
 
 class SchemaSpec(BaseModel):
@@ -43,11 +42,10 @@ class SchemaSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     fields: list[SchemaFieldSpec] = Field(default_factory=list, description="Schema fields")
     description: str | None = Field(default=None, description="Schema description")
-
-    class Config:
-        frozen = True
 
     def get_field(self, name: str) -> SchemaFieldSpec | None:
         """Get field by name."""
@@ -85,13 +83,12 @@ class DomainOperation(BaseModel):
         DomainOperation(kind=OperationKind.CUSTOM, name="calculate_total")
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: OperationKind = Field(description="Operation type")
     entity: str | None = Field(default=None, description="Target entity (for CRUD operations)")
     name: str | None = Field(default=None, description="Operation name (for custom operations)")
     description: str | None = Field(default=None, description="Operation description")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -120,12 +117,11 @@ class EffectSpec(BaseModel):
         EffectSpec(kind=EffectKind.SEND_EMAIL, config={"template": "invoice_created"})
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: EffectKind = Field(description="Effect type")
     config: dict[str, Any] = Field(default_factory=dict, description="Effect configuration")
     description: str | None = Field(default=None, description="Effect description")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -156,13 +152,12 @@ class BusinessRuleSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: RuleKind = Field(description="Rule type")
     expr: str = Field(description="Rule expression (evaluated at runtime)")
     message: str | None = Field(default=None, description="Error message if rule fails")
     description: str | None = Field(default=None, description="Rule description")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -193,6 +188,8 @@ class ServiceSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Service name")
     description: str | None = Field(default=None, description="Service description")
     inputs: SchemaSpec = Field(default_factory=SchemaSpec, description="Input schema")
@@ -203,9 +200,6 @@ class ServiceSpec(BaseModel):
         default_factory=list, description="Business rules and constraints"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     @property
     def is_crud(self) -> bool:

@@ -7,7 +7,7 @@ Defines actions, effects, transitions, and state patches.
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle_dnr_ui.specs.state import Binding
 
@@ -35,12 +35,11 @@ class PatchSpec(BaseModel):
         PatchSpec(op=PatchOp.APPEND, path="notifications", value=new_notification)
     """
 
+    model_config = ConfigDict(frozen=True)
+
     op: PatchOp = Field(description="Patch operation")
     path: str = Field(description="State path to patch")
     value: Any | None = Field(default=None, description="Value for the patch")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -59,11 +58,10 @@ class TransitionSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     target_state: str = Field(description="Target state variable")
     update: PatchSpec = Field(description="Patch to apply")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -83,6 +81,8 @@ class FetchEffect(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["fetch"] = "fetch"
     backend_service: str = Field(description="Backend service name to call")
     inputs: dict[str, Binding] | None = Field(
@@ -90,9 +90,6 @@ class FetchEffect(BaseModel):
     )
     on_success: str | None = Field(default=None, description="Action to dispatch on success")
     on_error: str | None = Field(default=None, description="Action to dispatch on error")
-
-    class Config:
-        frozen = True
 
 
 class NavigateEffect(BaseModel):
@@ -103,12 +100,11 @@ class NavigateEffect(BaseModel):
         NavigateEffect(route="/clients/:id", params={"id": StateBinding(path="selectedClient.id")})
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["navigate"] = "navigate"
     route: str = Field(description="Route path to navigate to")
     params: dict[str, Binding] | None = Field(default=None, description="Route parameters")
-
-    class Config:
-        frozen = True
 
 
 class LogEffect(BaseModel):
@@ -119,12 +115,11 @@ class LogEffect(BaseModel):
         LogEffect(message=LiteralBinding(value="User clicked button"))
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["log"] = "log"
     message: Binding = Field(description="Message to log")
     level: str = Field(default="info", description="Log level (info, warn, error)")
-
-    class Config:
-        frozen = True
 
 
 class ToastEffect(BaseModel):
@@ -138,15 +133,14 @@ class ToastEffect(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["toast"] = "toast"
     message: Binding = Field(description="Toast message")
     variant: str = Field(
         default="info", description="Toast variant (info, success, warning, error)"
     )
     duration: int | None = Field(default=3000, description="Duration in milliseconds")
-
-    class Config:
-        frozen = True
 
 
 class CustomEffect(BaseModel):
@@ -157,12 +151,11 @@ class CustomEffect(BaseModel):
         CustomEffect(name="analytics.track", config={"event": "button_click"})
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["custom"] = "custom"
     name: str = Field(description="Custom effect name")
     config: dict[str, Any] = Field(default_factory=dict, description="Effect configuration")
-
-    class Config:
-        frozen = True
 
 
 # Union type for all effects
@@ -211,6 +204,8 @@ class ActionSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Action name")
     description: str | None = Field(default=None, description="Action description")
     purity: ActionPurity | None = Field(
@@ -224,9 +219,6 @@ class ActionSpec(BaseModel):
         default_factory=list, description="State transitions to apply"
     )
     effect: EffectSpec | None = Field(default=None, description="Side effect to execute")
-
-    class Config:
-        frozen = True
 
     @property
     def is_pure(self) -> bool:

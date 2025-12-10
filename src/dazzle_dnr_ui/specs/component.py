@@ -6,7 +6,7 @@ Defines component structure and props schemas.
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from dazzle_dnr_ui.specs.actions import ActionSpec
 from dazzle_dnr_ui.specs.state import StateSpec
@@ -26,14 +26,13 @@ class PropFieldSpec(BaseModel):
         PropFieldSpec(name="items", type="list[Client]", required=False, default=[])
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Prop name")
     type: str = Field(description="Prop type (str, int, Client, list[Invoice], etc.)")
     required: bool = Field(default=False, description="Is this prop required?")
     default: Any | None = Field(default=None, description="Default value")
     description: str | None = Field(default=None, description="Prop description")
-
-    class Config:
-        frozen = True
 
 
 class PropsSchema(BaseModel):
@@ -50,10 +49,9 @@ class PropsSchema(BaseModel):
         )
     """
 
-    fields: list[PropFieldSpec] = Field(default_factory=list, description="Prop fields")
+    model_config = ConfigDict(frozen=True)
 
-    class Config:
-        frozen = True
+    fields: list[PropFieldSpec] = Field(default_factory=list, description="Prop fields")
 
     def get_field(self, name: str) -> PropFieldSpec | None:
         """Get prop field by name."""
@@ -146,8 +144,7 @@ class ComponentSpec(BaseModel):
     view_name: str | None = Field(default=None, description="Semantic view name for DOM contract")
     entity_name: str | None = Field(default=None, description="Entity name for DOM contract")
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     @field_validator("name")
     @classmethod

@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # FastAPI is optional - import for type hints and runtime
 try:
@@ -33,6 +33,8 @@ except ImportError:
 class UserRecord(BaseModel):
     """User record for authentication."""
 
+    model_config = ConfigDict(frozen=True)
+
     id: UUID = Field(default_factory=uuid4)
     email: str
     password_hash: str
@@ -43,12 +45,11 @@ class UserRecord(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    class Config:
-        frozen = True
-
 
 class SessionRecord(BaseModel):
     """Session record for authentication."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     user_id: UUID
@@ -56,9 +57,6 @@ class SessionRecord(BaseModel):
     expires_at: datetime
     ip_address: str | None = None
     user_agent: str | None = None
-
-    class Config:
-        frozen = True
 
 
 class AuthContext(BaseModel):

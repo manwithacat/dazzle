@@ -45,13 +45,12 @@ class StateTransition(BaseModel):
 class ImpliedTransition(BaseModel):
     """Represents a transition that is implied but not explicitly defined."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     from_state: str = Field(..., alias="from")
     to_state: str = Field(..., alias="to")
     reason: str
     question: str
-
-    class Config:
-        populate_by_name = True
 
 
 class StateMachine(BaseModel):

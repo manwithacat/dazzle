@@ -9,7 +9,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # Layout Specifications
@@ -28,27 +28,27 @@ class LayoutKind(str, Enum):
 class SingleColumnLayout(BaseModel):
     """Single column layout with main content."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["singleColumn"] = "singleColumn"
     main: str = Field(description="Component name for main content")
-
-    class Config:
-        frozen = True
 
 
 class TwoColumnWithHeaderLayout(BaseModel):
     """Two column layout with header."""
+
+    model_config = ConfigDict(frozen=True)
 
     kind: Literal["twoColumnWithHeader"] = "twoColumnWithHeader"
     header: str = Field(description="Component name for header")
     main: str = Field(description="Component name for main content")
     secondary: str = Field(description="Component name for secondary/sidebar")
 
-    class Config:
-        frozen = True
-
 
 class AppShellLayout(BaseModel):
     """Application shell with sidebar, header, and main content."""
+
+    model_config = ConfigDict(frozen=True)
 
     kind: Literal["appShell"] = "appShell"
     sidebar: str = Field(description="Component name for sidebar")
@@ -56,18 +56,14 @@ class AppShellLayout(BaseModel):
     header: str | None = Field(default=None, description="Component name for header (optional)")
     footer: str | None = Field(default=None, description="Component name for footer (optional)")
 
-    class Config:
-        frozen = True
-
 
 class CustomLayout(BaseModel):
     """Custom layout with named regions."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["custom"] = "custom"
     regions: dict[str, str] = Field(description="Map of region name to component name")
-
-    class Config:
-        frozen = True
 
 
 # Union type for all layouts
@@ -88,13 +84,12 @@ class RouteSpec(BaseModel):
         RouteSpec(path="/clients/:id", component="ClientDetail")
     """
 
+    model_config = ConfigDict(frozen=True)
+
     path: str = Field(description="Route path (supports :params)")
     component: str = Field(description="Component name to render")
     title: str | None = Field(default=None, description="Page title")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -124,6 +119,8 @@ class WorkspaceSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Workspace name")
     label: str | None = Field(default=None, description="Human-readable label")
     description: str | None = Field(default=None, description="Workspace description")
@@ -132,9 +129,6 @@ class WorkspaceSpec(BaseModel):
     routes: list[RouteSpec] = Field(default_factory=list, description="Route definitions")
     state: list[Any] = Field(default_factory=list, description="Workspace-level state declarations")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     def get_route(self, path: str) -> RouteSpec | None:
         """Get route by path."""

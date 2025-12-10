@@ -22,15 +22,14 @@ class PermissionSpec(BaseModel):
         PermissionSpec(name="invoice:create", description="Create invoices")
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Permission name (e.g., 'invoice:create')")
     description: str | None = Field(default=None, description="Permission description")
     resource: str | None = Field(default=None, description="Resource this permission applies to")
     actions: list[str] = Field(
         default_factory=list, description="Actions allowed (create, read, update, delete)"
     )
-
-    class Config:
-        frozen = True
 
 
 class RoleSpec(BaseModel):
@@ -42,13 +41,12 @@ class RoleSpec(BaseModel):
         RoleSpec(name="user", permissions=["invoice:read", "invoice:create"])
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Role name")
     description: str | None = Field(default=None, description="Role description")
     permissions: list[str] = Field(default_factory=list, description="Permission names")
     inherits: list[str] = Field(default_factory=list, description="Inherited roles")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -75,6 +73,8 @@ class AuthRuleSpec(BaseModel):
         AuthRuleSpec(required=False)  # Public endpoint
     """
 
+    model_config = ConfigDict(frozen=True)
+
     required: bool = Field(default=True, description="Is authentication required?")
     scheme: AuthScheme = Field(default=AuthScheme.BEARER, description="Authentication scheme")
     roles: list[str] = Field(default_factory=list, description="Required roles (any of)")
@@ -85,9 +85,6 @@ class AuthRuleSpec(BaseModel):
         default_factory=list, description="Custom auth check expressions"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     @property
     def is_public(self) -> bool:
@@ -122,6 +119,8 @@ class TenancyRuleSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     strategy: TenancyStrategy = Field(default=TenancyStrategy.NONE, description="Tenancy strategy")
     tenant_field: str | None = Field(
         default=None, description="Field name for tenant discriminator"
@@ -131,9 +130,6 @@ class TenancyRuleSpec(BaseModel):
         default=False, description="Allow cross-tenant access for superusers?"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     @property
     def is_multi_tenant(self) -> bool:

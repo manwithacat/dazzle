@@ -11,7 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 try:
     import tomllib
@@ -99,13 +99,12 @@ class CITemplate(str, Enum):
 class EjectionBackendConfig(BaseModel):
     """Backend ejection configuration."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     framework: BackendFramework = BackendFramework.FASTAPI
     models: BackendModels = BackendModels.PYDANTIC_V2
     async_handlers: bool = Field(default=True, alias="async")
     routing: BackendRouting = BackendRouting.ROUTER_MODULES
-
-    class Config:
-        populate_by_name = True
 
 
 class EjectionFrontendConfig(BaseModel):

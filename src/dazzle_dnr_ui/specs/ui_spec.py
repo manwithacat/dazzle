@@ -6,7 +6,7 @@ This is the root type that contains all UI specifications.
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle_dnr_ui.specs.component import ComponentSpec
 from dazzle_dnr_ui.specs.shell import ShellSpec
@@ -70,8 +70,7 @@ class UISpec(BaseModel):
     # Additional metadata
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     # =========================================================================
     # Query methods

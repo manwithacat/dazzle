@@ -10,7 +10,7 @@ The shell provides the chrome around workspace content:
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class NavItemSpec(BaseModel):
@@ -105,5 +105,4 @@ class ShellSpec(BaseModel):
         default_factory=list, description="Static pages (privacy, terms, etc.)"
     )
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)

@@ -6,7 +6,7 @@ Defines view trees for component rendering.
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle_dnr_ui.specs.state import Binding
 
@@ -27,16 +27,14 @@ class ElementNode(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
+
     kind: Literal["element"] = "element"
     as_: str = Field(description="Component or element name", alias="as")  # 'as' is Python keyword
     props: dict[str, Binding] = Field(
         default_factory=dict, description="Element props with bindings"
     )
     children: list["ViewNode"] = Field(default_factory=list, description="Child nodes")
-
-    class Config:
-        frozen = True
-        populate_by_name = True  # Allow both 'as' and 'as_'
 
 
 class ConditionalNode(BaseModel):
@@ -51,13 +49,12 @@ class ConditionalNode(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["conditional"] = "conditional"
     condition: Binding = Field(description="Condition binding")
     then_branch: "ViewNode" = Field(description="Node to render if true")
     else_branch: "ViewNode | None" = Field(default=None, description="Node to render if false")
-
-    class Config:
-        frozen = True
 
 
 class LoopNode(BaseModel):
@@ -73,14 +70,13 @@ class LoopNode(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["loop"] = "loop"
     items: Binding = Field(description="Array binding to iterate over")
     item_var: str = Field(description="Variable name for each item")
     key_path: str = Field(description="Path to unique key in item (for efficient re-rendering)")
     template: "ViewNode" = Field(description="Template to render for each item")
-
-    class Config:
-        frozen = True
 
 
 class SlotNode(BaseModel):
@@ -91,14 +87,13 @@ class SlotNode(BaseModel):
         SlotNode(name="header", fallback=ElementNode(as="DefaultHeader"))
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["slot"] = "slot"
     name: str = Field(description="Slot name")
     fallback: "ViewNode | None" = Field(
         default=None, description="Fallback content if slot not filled"
     )
-
-    class Config:
-        frozen = True
 
 
 class TextNode(BaseModel):
@@ -110,11 +105,10 @@ class TextNode(BaseModel):
         TextNode(content=PropBinding(path="client.name"))
     """
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["text"] = "text"
     content: Binding = Field(description="Text content binding")
-
-    class Config:
-        frozen = True
 
 
 # Union type for all view nodes

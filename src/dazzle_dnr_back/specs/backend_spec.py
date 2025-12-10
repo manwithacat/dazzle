@@ -6,7 +6,7 @@ This is the root type that contains all backend specifications.
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle_dnr_back.specs.auth import AuthRuleSpec, RoleSpec, TenancyRuleSpec
 from dazzle_dnr_back.specs.endpoint import EndpointSpec
@@ -72,8 +72,7 @@ class BackendSpec(BaseModel):
     # Additional metadata
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
-    class Config:
-        frozen = True
+    model_config = ConfigDict(frozen=True)
 
     # =========================================================================
     # Query methods

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     pass
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 class FileMetadata(BaseModel):
     """Metadata for stored files."""
+
+    model_config = ConfigDict(frozen=True)
 
     id: UUID = Field(description="Unique file identifier")
     filename: str = Field(description="Original filename")
@@ -43,9 +45,6 @@ class FileMetadata(BaseModel):
     created_at: datetime = Field(description="Upload timestamp")
     url: str = Field(description="Public URL")
     thumbnail_url: str | None = Field(default=None, description="Thumbnail URL")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================

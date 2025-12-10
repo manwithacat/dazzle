@@ -7,7 +7,7 @@ Defines state scopes and data bindings.
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # State Scopes
@@ -38,6 +38,8 @@ class StateSpec(BaseModel):
         StateSpec(name="theme", scope=StateScope.APP, initial="light", persistent=True)
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="State variable name")
     scope: StateScope = Field(description="State scope")
     initial: Any = Field(description="Initial value")
@@ -46,9 +48,6 @@ class StateSpec(BaseModel):
         description="Persist state across sessions (localStorage/sessionStorage)",
     )
     description: str | None = Field(default=None, description="State description")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -59,61 +58,55 @@ class StateSpec(BaseModel):
 class LiteralBinding(BaseModel):
     """Literal value binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["literal"] = "literal"
     value: Any = Field(description="Literal value")
-
-    class Config:
-        frozen = True
 
 
 class PropBinding(BaseModel):
     """Component prop binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["prop"] = "prop"
     path: str = Field(description="Prop path (e.g., 'client.name')")
-
-    class Config:
-        frozen = True
 
 
 class StateBinding(BaseModel):
     """Local state binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["state"] = "state"
     path: str = Field(description="State path (e.g., 'isLoading')")
-
-    class Config:
-        frozen = True
 
 
 class WorkspaceStateBinding(BaseModel):
     """Workspace state binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["workspaceState"] = "workspaceState"
     path: str = Field(description="Workspace state path (e.g., 'selectedClient.id')")
-
-    class Config:
-        frozen = True
 
 
 class AppStateBinding(BaseModel):
     """App state binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["appState"] = "appState"
     path: str = Field(description="App state path (e.g., 'currentUser.name')")
-
-    class Config:
-        frozen = True
 
 
 class DerivedBinding(BaseModel):
     """Derived/computed binding."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["derived"] = "derived"
     expr: str = Field(description="Expression to evaluate (e.g., 'count > 0')")
-
-    class Config:
-        frozen = True
 
 
 # Union type for all bindings

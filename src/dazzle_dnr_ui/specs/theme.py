@@ -6,7 +6,7 @@ Defines themes, variants, and design tokens.
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # Typography
@@ -26,6 +26,8 @@ class TextStyle(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     font_family: str | None = Field(default=None, description="Font family")
     font_size: str | None = Field(default=None, description="Font size (px, rem, em)")
     font_weight: str | None = Field(default=None, description="Font weight")
@@ -34,9 +36,6 @@ class TextStyle(BaseModel):
     text_transform: str | None = Field(
         default=None, description="Text transform (uppercase, lowercase, etc.)"
     )
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -75,6 +74,8 @@ class ThemeTokens(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     colors: dict[str, str] = Field(
         default_factory=dict, description="Color tokens (name -> hex/rgb)"
     )
@@ -91,9 +92,6 @@ class ThemeTokens(BaseModel):
         default_factory=dict, description="Shadow tokens (name -> CSS shadow)"
     )
     custom: dict[str, Any] = Field(default_factory=dict, description="Custom tokens")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -120,13 +118,12 @@ class VariantSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Variant name (e.g., 'dark', 'compact')")
     description: str | None = Field(default=None, description="Variant description")
     applies_to: str = Field(default="*", description="Selector or '*' for global application")
     tokens: ThemeTokens = Field(description="Token overrides for this variant")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -163,14 +160,13 @@ class ThemeSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Theme name")
     description: str | None = Field(default=None, description="Theme description")
     tokens: ThemeTokens = Field(description="Base design tokens")
     variants: list[VariantSpec] = Field(default_factory=list, description="Theme variants")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     def get_variant(self, name: str) -> VariantSpec | None:
         """Get variant by name."""

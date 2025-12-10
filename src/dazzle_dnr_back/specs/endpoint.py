@@ -7,7 +7,7 @@ Defines HTTP/RPC endpoint mappings for services.
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # =============================================================================
 # HTTP Method
@@ -39,12 +39,11 @@ class RateLimitSpec(BaseModel):
         RateLimitSpec(requests=100, window_seconds=60)  # 100 requests per minute
     """
 
+    model_config = ConfigDict(frozen=True)
+
     requests: int = Field(description="Number of allowed requests")
     window_seconds: int = Field(description="Time window in seconds")
     strategy: str = Field(default="sliding_window", description="Rate limiting strategy")
-
-    class Config:
-        frozen = True
 
 
 # =============================================================================
@@ -69,6 +68,8 @@ class EndpointSpec(BaseModel):
         )
     """
 
+    model_config = ConfigDict(frozen=True)
+
     name: str = Field(description="Endpoint name")
     service: str = Field(description="Service name to invoke")
     method: HttpMethod = Field(description="HTTP method")
@@ -79,9 +80,6 @@ class EndpointSpec(BaseModel):
         default=None, description="Rate limiting configuration"
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
-
-    class Config:
-        frozen = True
 
     @field_validator("path")
     @classmethod
