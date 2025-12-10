@@ -18,11 +18,11 @@ jobs:
         include:
           - os: macos-14       # Apple Silicon
             target: darwin-arm64
-          - os: macos-13       # Intel Mac
+          - os: macos-15-large  # Intel Mac (macos-13 retired)
             target: darwin-x64
           - os: ubuntu-latest  # Linux x64
             target: linux-x64
-          - os: ubuntu-24.04-arm  # Linux ARM (if available)
+          - os: ubuntu-24.04-arm  # Linux ARM
             target: linux-arm64
 
     runs-on: ${{ matrix.os }}
