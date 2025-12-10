@@ -20,7 +20,7 @@ class Dazzle < Formula
 
   # Source tarball for Python package
   url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.8.0.tar.gz"
-  sha256 "0ffa02df53b3d42c56e407fbc930059977e9c70d0d0b5aa0c398915bcdb8c3fe"
+  sha256 "b0cfcbe8ec1943a8b04df3c7bf6cab8e2f3152112c9c3145eded0d054701cb89"
 
   # Pre-compiled CLI binaries for each platform
   resource "cli-binary" do
@@ -85,17 +85,17 @@ class Dazzle < Formula
   end
 
   resource "jinja2" do
-    url "https://files.pythonhosted.org/packages/source/j/jinja2/jinja2-3.1.6.tar.gz"
-    sha256 "d25f7e2e34fcb8e63f46c43a8c2d3fdbbb5dfdf38cc7e33ee7f8f66c17ba8053"
+    url "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz"
+    sha256 "0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"
   end
 
   resource "markupsafe" do
-    url "https://files.pythonhosted.org/packages/source/m/markupsafe/markupsafe-3.0.3.tar.gz"
-    sha256 "85fcddbb7f5e3a77fa0dcb0b66e2b9a8b89e17d29f9d82a1e4dcee57b03b6c59"
+    url "https://files.pythonhosted.org/packages/7e/99/7690b6d4034fffd95959cbe0c02de8deb3098cc577c67bb6a24fe5d7caa7/markupsafe-3.0.3.tar.gz"
+    sha256 "722695808f4b6457b320fdc131280796bdceb04ab50fe1795cd540799ebe1698"
   end
 
   resource "pyyaml" do
-    url "https://files.pythonhosted.org/packages/source/p/pyyaml/PyYAML-6.0.2.tar.gz"
+    url "https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz"
     sha256 "d584d9ec91ad65861cc08d42e834324ef890a082e591037abe114850ff7bbc3e"
   end
 
