@@ -142,8 +142,8 @@ class Dazzle < Formula
       end
     end
 
-    # Install dazzle package and create bin links
-    venv.pip_install_and_link buildpath
+    # Install dazzle package (don't link - we provide our own CLI binary)
+    venv.pip_install buildpath
 
     # Install the pre-compiled CLI binary
     resource("cli-binary").stage do
