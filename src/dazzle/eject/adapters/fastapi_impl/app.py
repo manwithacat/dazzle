@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 def generate_config_module(app_name: str) -> str:
     """Generate configuration module."""
-    return dedent('''
+    return (
+        dedent('''
         """
         Application configuration.
         Generated from DSL - DO NOT EDIT.
@@ -55,10 +56,13 @@ def generate_config_module(app_name: str) -> str:
         def get_settings() -> Settings:
             """Get cached settings instance."""
             return Settings()
-    ''').format(app_name=app_name).strip()
+    ''')
+        .format(app_name=app_name)
+        .strip()
+    )
 
 
-def generate_app_module(spec: "AppSpec") -> str:
+def generate_app_module(spec: AppSpec) -> str:
     """Generate main application entry point."""
     # Collect router imports
     router_imports = []

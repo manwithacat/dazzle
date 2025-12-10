@@ -188,8 +188,7 @@ class UXParserMixin:
         else:
             token = self.current_token()
             raise make_parse_error(
-                f"Expected signal level (critical/warning/notice/info), "
-                f"got {token.type.value}",
+                f"Expected signal level (critical/warning/notice/info), got {token.type.value}",
                 self.file,
                 token.line,
                 token.column,

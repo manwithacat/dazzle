@@ -539,7 +539,9 @@ class SQLiteRepository(Generic[T]):
                 # To-many relation
                 result[k] = [self._convert_row_dict(item) for item in v]
                 # Store for computed field evaluation
-                collected_relations[k] = [dict(item) if isinstance(item, dict) else item for item in v]
+                collected_relations[k] = [
+                    dict(item) if isinstance(item, dict) else item for item in v
+                ]
             else:
                 # Regular field
                 result[k] = _sqlite_to_python(v, self._field_types.get(k))

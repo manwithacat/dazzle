@@ -11,7 +11,6 @@ from pathlib import Path
 
 from .validation import InitError
 
-
 # Directories that should be generated, not copied from templates
 # These are auto-generated from DSL and should use canonical templates
 GENERATED_DIRECTORIES = {"dnr-ui", "build"}

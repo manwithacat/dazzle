@@ -410,7 +410,7 @@ def _convert_access_condition(cond: ir.ConditionExpr) -> AccessConditionSpec:
             logical_right=_convert_access_condition(cond.right),
         )
 
-    raise ValueError(f"Invalid ConditionExpr: no comparison, role_check, or logical operator")
+    raise ValueError("Invalid ConditionExpr: no comparison, role_check, or logical operator")
 
 
 def _convert_visibility_rule(rule: ir.VisibilityRule) -> VisibilityRuleSpec:

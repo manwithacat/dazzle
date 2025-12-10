@@ -11,22 +11,21 @@ import pytest
 
 from dazzle.core.ir import (
     AppSpec,
+    ComparisonExpr,
     DomainSpec,
     EntitySpec,
+    FieldModifier,
     FieldSpec,
     FieldType,
     FieldTypeKind,
-    FieldModifier,
-    InvariantSpec,
+    InvariantComparisonOperator,
     InvariantFieldRef,
     InvariantLiteral,
-    ComparisonExpr,
-    InvariantComparisonOperator,
+    InvariantSpec,
     StateMachineSpec,
     StateTransition,
     TransitionGuard,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -166,16 +165,14 @@ def complex_appspec(
     return AppSpec(
         name="Complex App",
         title="A complex application with state machines and invariants",
-        domain=DomainSpec(
-            entities=[simple_entity, entity_with_state, entity_with_invariants]
-        ),
+        domain=DomainSpec(entities=[simple_entity, entity_with_state, entity_with_invariants]),
     )
 
 
 @pytest.fixture
 def temp_project(tmp_path: Path) -> Path:
     """Create a temporary project directory with dazzle.toml."""
-    toml_content = dedent('''
+    toml_content = dedent("""
         [project]
         name = "test-project"
 
@@ -200,9 +197,9 @@ def temp_project(tmp_path: Path) -> Path:
         [ejection.output]
         directory = "generated/"
         clean = true
-    ''')
+    """)
 
-    dsl_content = dedent('''
+    dsl_content = dedent("""
         module test
         app test "Test App"
 
@@ -210,7 +207,7 @@ def temp_project(tmp_path: Path) -> Path:
             id: uuid pk
             title: str(200) required
             completed: bool=false
-    ''')
+    """)
 
     project_dir = tmp_path / "project"
     project_dir.mkdir()
@@ -267,9 +264,9 @@ class TestEjectionConfig:
         """Test configuration enum values."""
         from dazzle.eject.config import (
             BackendFramework,
+            CITemplate,
             FrontendFramework,
             TestingContract,
-            CITemplate,
         )
 
         assert BackendFramework.FASTAPI.value == "fastapi"
@@ -654,8 +651,8 @@ class TestVerification:
 
     def test_verification_passes_clean_code(self, tmp_path: Path) -> None:
         """Test verification passes for code with no Dazzle dependencies."""
-        from dazzle.eject.runner import VerificationResult, EjectionRunner
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EjectionRunner
 
         # Create clean Python file
         py_file = tmp_path / "clean.py"
@@ -698,8 +695,8 @@ export function useUser() {
 
     def test_verification_detects_python_imports(self, tmp_path: Path) -> None:
         """Test verification detects forbidden Python imports."""
-        from dazzle.eject.runner import EjectionRunner
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EjectionRunner
 
         # Create Python file with forbidden import
         py_file = tmp_path / "bad.py"
@@ -727,8 +724,8 @@ import dazzle
 
     def test_verification_detects_js_imports(self, tmp_path: Path) -> None:
         """Test verification detects forbidden JavaScript imports."""
-        from dazzle.eject.runner import EjectionRunner
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EjectionRunner
 
         # Create JS file with forbidden import
         js_file = tmp_path / "bad.ts"
@@ -754,8 +751,8 @@ import something from 'dazzle';
 
     def test_verification_detects_template_markers(self, tmp_path: Path) -> None:
         """Test verification detects template merge markers."""
-        from dazzle.eject.runner import EjectionRunner
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EjectionRunner
 
         # Create file with template markers
         py_file = tmp_path / "marked.py"
@@ -783,8 +780,8 @@ def something():
 
     def test_verification_detects_runtime_loaders(self, tmp_path: Path) -> None:
         """Test verification detects runtime DSL/AppSpec loaders."""
-        from dazzle.eject.runner import EjectionRunner
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EjectionRunner
 
         # Create file with runtime loaders
         py_file = tmp_path / "loader.py"
@@ -811,8 +808,9 @@ data = parse_appspec(content)
     def test_ejection_metadata_generated(self, tmp_path: Path) -> None:
         """Test that .ejection.json metadata is generated."""
         import json
-        from dazzle.eject.runner import EjectionRunner, EJECTION_VERSION
+
         from dazzle.eject.config import EjectionConfig
+        from dazzle.eject.runner import EJECTION_VERSION, EjectionRunner
 
         spec = AppSpec(
             name="TestApp",

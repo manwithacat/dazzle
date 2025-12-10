@@ -19,6 +19,7 @@ def _utcnow() -> datetime:
     """Return current UTC datetime (timezone-aware)."""
     return datetime.now(UTC)
 
+
 if TYPE_CHECKING:
     from fastapi import WebSocket
 

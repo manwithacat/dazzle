@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
 
 
-def generate_openapi(spec: "AppSpec") -> dict[str, Any]:
+def generate_openapi(spec: AppSpec) -> dict[str, Any]:
     """
     Generate OpenAPI 3.1 specification from AppSpec.
 
@@ -30,9 +30,7 @@ def generate_openapi(spec: "AppSpec") -> dict[str, Any]:
             "description": spec.title or f"API for {spec.name}",
             "version": "1.0.0",
         },
-        "servers": [
-            {"url": "http://localhost:8000", "description": "Development server"}
-        ],
+        "servers": [{"url": "http://localhost:8000", "description": "Development server"}],
         "paths": {},
         "components": {
             "schemas": {},
@@ -51,15 +49,17 @@ def generate_openapi(spec: "AppSpec") -> dict[str, Any]:
     for entity in spec.domain.entities:
         _add_entity_schemas(openapi, entity)
         _add_entity_paths(openapi, entity)
-        openapi["tags"].append({
-            "name": entity.name,
-            "description": entity.title or f"Operations for {entity.name}",
-        })
+        openapi["tags"].append(
+            {
+                "name": entity.name,
+                "description": entity.title or f"Operations for {entity.name}",
+            }
+        )
 
     return openapi
 
 
-def _add_entity_schemas(openapi: dict, entity: "EntitySpec") -> None:
+def _add_entity_schemas(openapi: dict, entity: EntitySpec) -> None:
     """Add schemas for an entity (Base, Create, Update, Read)."""
     schemas = openapi["components"]["schemas"]
     entity_name = entity.name
@@ -97,7 +97,7 @@ def _add_entity_schemas(openapi: dict, entity: "EntitySpec") -> None:
 
 
 def _entity_to_schema(
-    entity: "EntitySpec",
+    entity: EntitySpec,
     include_id: bool = True,
     for_create: bool = False,
     all_optional: bool = False,
@@ -140,7 +140,7 @@ def _entity_to_schema(
     return schema
 
 
-def _field_to_schema(field: "FieldSpec", entity_name: str) -> dict[str, Any]:
+def _field_to_schema(field: FieldSpec, entity_name: str) -> dict[str, Any]:
     """Convert a field to JSON Schema property."""
     from dazzle.core.ir import FieldModifier
 
@@ -204,7 +204,7 @@ def _field_to_schema(field: "FieldSpec", entity_name: str) -> dict[str, Any]:
     return schema
 
 
-def _add_entity_paths(openapi: dict, entity: "EntitySpec") -> None:
+def _add_entity_paths(openapi: dict, entity: EntitySpec) -> None:
     """Add CRUD paths for an entity."""
     paths = openapi["paths"]
     entity_name = entity.name
@@ -366,7 +366,7 @@ def _add_entity_paths(openapi: dict, entity: "EntitySpec") -> None:
 
 def _add_transition_paths(
     openapi: dict,
-    entity: "EntitySpec",
+    entity: EntitySpec,
 ) -> None:
     """Add state transition endpoints."""
     paths = openapi["paths"]

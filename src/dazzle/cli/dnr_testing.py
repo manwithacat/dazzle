@@ -11,8 +11,9 @@ from typing import TYPE_CHECKING, Any
 import typer
 
 if TYPE_CHECKING:
-    from dazzle.core import ir
     from dazzle_dnr_back.specs.backend import BackendSpec
+
+    from dazzle.core import ir
 
 
 def run_api_contract_tests(
@@ -79,9 +80,7 @@ def run_api_contract_tests(
         else:
             failed += 1
             if verbose:
-                typer.secho(
-                    f"  ✗ GET {base_path} (status: {status})", fg=typer.colors.RED
-                )
+                typer.secho(f"  ✗ GET {base_path} (status: {status})", fg=typer.colors.RED)
 
         # Test CREATE
         create_data = generate_test_data(entity, created_entities=created_entities)
@@ -139,12 +138,8 @@ def run_api_contract_tests(
                     )
 
             # Test UPDATE
-            update_data = generate_test_data(
-                entity, update=True, created_entities=created_entities
-            )
-            status, response = make_request(
-                "PATCH", f"{base_path}/{created_id}", update_data
-            )
+            update_data = generate_test_data(entity, update=True, created_entities=created_entities)
+            status, response = make_request("PATCH", f"{base_path}/{created_id}", update_data)
             test_result = {
                 "entity": entity.name,
                 "operation": "UPDATE",
@@ -178,9 +173,7 @@ def run_api_contract_tests(
             if status in (200, 204):
                 passed += 1
                 if verbose:
-                    typer.secho(
-                        f"  ✓ DELETE {base_path}/{{id}}", fg=typer.colors.GREEN
-                    )
+                    typer.secho(f"  ✓ DELETE {base_path}/{{id}}", fg=typer.colors.GREEN)
             else:
                 failed += 1
                 if verbose:

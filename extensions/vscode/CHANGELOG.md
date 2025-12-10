@@ -2,6 +2,52 @@
 
 All notable changes to the "dazzle-dsl" extension will be documented in this file.
 
+## [0.8.0] - 2024-12-10
+
+### Major Changes
+- **50x faster CLI** - Extension now integrates with the new Bun-compiled DAZZLE CLI
+- **Complete v0.7 DSL support** - Syntax highlighting for all DSL v0.7 features
+
+### New Syntax Highlighting
+- **State machines**: `transitions:`, `->`, `requires`, `role()`, `auto after`, `manual`
+- **Computed fields**: `computed` keyword
+- **Entity metadata**: `intent:`, `domain:`, `patterns:`, `extends:`
+- **Invariants**: `invariant:`, `and`, `or`
+- **Access rules**: `access:`, `read:`, `write:`, `owner`, `tenant`
+- **Relationship semantics**: `has_many`, `has_one`, `belongs_to`, `embeds`
+- **Delete behaviors**: `cascade`, `restrict`, `nullify`, `readonly`
+- **Archetypes**: `archetype` keyword
+- **Examples block**: `examples:`
+- **UX block**: `ux:`, `purpose:`, `show:`, `filter:`, `search:`, `empty:`
+- **Attention signals**: `attention`, `critical`, `warning`, `notice`, `info`
+- **Workspaces**: `workspace` keyword
+- **Domain services**: `kind:`, `input:`, `output:`, `guarantees:`, `stub:`
+- **Flow tests**: `flow`, `navigate`, `fill`, `click`, `wait`, `assert`, `snapshot`, `expect`
+- **Aggregate functions**: `count`, `sum`, `avg`, `max`, `min`, `days_until`, `days_since`
+
+### New Commands
+- **DAZZLE: Start Dev Server** (`dazzle dev`) - Start development server with hot reload
+- **DAZZLE: Run Tests** (`dazzle test`) - Run E2E tests
+- **DAZZLE: Eject to Standalone Code** (`dazzle eject`) - Generate standalone FastAPI + React code
+
+### Changed
+- Diagnostics now use `dazzle check --json` (v0.8.0 CLI) instead of `dazzle validate --format vscode`
+- Lint command now uses `dazzle check --strict`
+- Updated Claude integration prompts for v0.8.0 CLI commands
+- JSON-based validation output parsing with backwards-compatible legacy fallback
+
+### Technical
+- Improved diagnostic error reporting with full line highlighting
+- Better error handling when CLI commands fail
+- Updated problem matcher for JSON output format
+
+## [0.5.0] - 2024-11-22
+
+### Added
+- **Claude Code integration** - Simplified workflow with clipboard-based prompts
+- Status bar item for SPEC.md detection
+- SPEC → App workflow prompts for Claude
+
 ## [0.3.0] - 2024-11-21
 
 ### Added

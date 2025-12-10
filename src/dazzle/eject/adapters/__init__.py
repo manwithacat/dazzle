@@ -9,16 +9,16 @@ Each adapter generates code for a specific target:
 """
 
 from .base import (
+    AdapterRegistry,
     BackendAdapter,
+    CIAdapter,
     FrontendAdapter,
     TestingAdapter,
-    CIAdapter,
-    AdapterRegistry,
 )
+from .ci import GitHubActionsAdapter
 from .fastapi_impl import FastAPIAdapter
 from .react import ReactAdapter
-from .testing import SchemathesisAdapter, PytestAdapter
-from .ci import GitHubActionsAdapter
+from .testing import PytestAdapter, SchemathesisAdapter
 
 __all__ = [
     # Base classes

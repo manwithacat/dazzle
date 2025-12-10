@@ -6,7 +6,6 @@ Provides JSON-serializable functions for the TypeScript CLI to call.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
@@ -64,12 +63,14 @@ def validate_project_json(
         domain_entities = app_spec.domain.entities if app_spec.domain else []
 
         # Get module info from app_spec
-        modules.append({
-            "name": app_spec.name,
-            "path": str(project_path),
-            "entities": len(domain_entities),
-            "surfaces": len(app_spec.surfaces),
-        })
+        modules.append(
+            {
+                "name": app_spec.name,
+                "path": str(project_path),
+                "entities": len(domain_entities),
+                "surfaces": len(app_spec.surfaces),
+            }
+        )
 
         # Run lint checks
         lint_results = lint_appspec(app_spec)
@@ -92,19 +93,23 @@ def validate_project_json(
         surfaces = [s.name for s in app_spec.surfaces]
 
     except DazzleError as e:
-        errors.append({
-            "file": str(e.file) if hasattr(e, "file") and e.file else "",
-            "line": e.line if hasattr(e, "line") and e.line else 0,
-            "message": str(e),
-            "code": type(e).__name__,
-        })
+        errors.append(
+            {
+                "file": str(e.file) if hasattr(e, "file") and e.file else "",
+                "line": e.line if hasattr(e, "line") and e.line else 0,
+                "message": str(e),
+                "code": type(e).__name__,
+            }
+        )
     except Exception as e:
-        errors.append({
-            "file": "",
-            "line": 0,
-            "message": str(e),
-            "code": "UNKNOWN_ERROR",
-        })
+        errors.append(
+            {
+                "file": "",
+                "line": 0,
+                "message": str(e),
+                "code": "UNKNOWN_ERROR",
+            }
+        )
 
     valid = len(errors) == 0 and (not strict or len(warnings) == 0)
 
@@ -172,7 +177,9 @@ def get_project_info_json(
                 {
                     "name": r.field_name,
                     "target": r.target_entity,
-                    "kind": r.relationship_type.value if hasattr(r.relationship_type, "value") else str(r.relationship_type),
+                    "kind": r.relationship_type.value
+                    if hasattr(r.relationship_type, "value")
+                    else str(r.relationship_type),
                 }
                 for r in getattr(entity, "relationships", [])
             ]

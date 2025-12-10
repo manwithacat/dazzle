@@ -65,7 +65,7 @@ def generate_request_context() -> str:
     ''').strip()
 
 
-def generate_entity_access_policy(entity: "EntitySpec") -> str:
+def generate_entity_access_policy(entity: EntitySpec) -> str:
     """Generate access policy for an entity."""
     name = entity.name
     snake = snake_case(name)

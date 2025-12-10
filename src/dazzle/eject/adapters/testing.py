@@ -9,16 +9,14 @@ Generates test code for ejected applications:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from dazzle.eject.generator import GeneratorResult
 
-from .base import TestingAdapter, AdapterRegistry
+from .base import AdapterRegistry, TestingAdapter
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import AppSpec, EntitySpec
-    from dazzle.eject.config import EjectionTestingConfig
+    from dazzle.core.ir import EntitySpec
 
 
 class SchemathesisAdapter(TestingAdapter):
@@ -278,7 +276,7 @@ def client(db_session):
 
         return result
 
-    def _generate_entity_test_file(self, entity: "EntitySpec") -> str:
+    def _generate_entity_test_file(self, entity: EntitySpec) -> str:
         """Generate test file for a single entity."""
         entity_lower = entity.name.lower()
 
@@ -356,8 +354,7 @@ class Test{entity.name}Validation:
 
         # Find entities with state machines
         entities_with_states = [
-            e for e in self.spec.entities
-            if any(f.field_type == "state" for f in e.fields)
+            e for e in self.spec.entities if any(f.field_type == "state" for f in e.fields)
         ]
 
         if not entities_with_states:
@@ -394,6 +391,15 @@ class Test{entity.name}Validation:
         assert can_transition is True
 ''')
 
+        test_body = (
+            "".join(test_cases)
+            if test_cases
+            else '''
+    def test_no_guards(self):
+        """Placeholder - no state machines defined."""
+        pass
+'''
+        )
         content = f'''"""
 Tests for state machine guards.
 
@@ -405,11 +411,7 @@ import pytest
 
 class TestStateGuards:
     """Test state machine transition guards."""
-{"".join(test_cases) if test_cases else '''
-    def test_no_guards(self):
-        """Placeholder - no state machines defined."""
-        pass
-'''}
+{test_body}
 '''
 
         result.add_file(
@@ -423,10 +425,7 @@ class TestStateGuards:
         result = GeneratorResult()
 
         # Find entities with invariants
-        entities_with_invariants = [
-            e for e in self.spec.entities
-            if e.invariants
-        ]
+        entities_with_invariants = [e for e in self.spec.entities if e.invariants]
 
         test_cases = []
         for entity in entities_with_invariants:
@@ -453,9 +452,18 @@ class TestStateGuards:
         errors = validator.validate(invalid_data)
         # Uncomment when implementing violation test
         # assert len(errors) > 0
-        # assert errors[0].code == "{invariant.code or 'INVARIANT_VIOLATION'}"
+        # assert errors[0].code == "{invariant.code or "INVARIANT_VIOLATION"}"
 ''')
 
+        test_body = (
+            "".join(test_cases)
+            if test_cases
+            else '''
+    def test_no_invariants(self):
+        """Placeholder - no invariants defined."""
+        pass
+'''
+        )
         content = f'''"""
 Tests for invariant validators.
 
@@ -467,11 +475,7 @@ import pytest
 
 class TestInvariantValidators:
     """Test entity invariant validators."""
-{"".join(test_cases) if test_cases else '''
-    def test_no_invariants(self):
-        """Placeholder - no invariants defined."""
-        pass
-'''}
+{test_body}
 '''
 
         result.add_file(
@@ -485,10 +489,7 @@ class TestInvariantValidators:
         result = GeneratorResult()
 
         # Find entities with access rules
-        entities_with_access = [
-            e for e in self.spec.entities
-            if e.access_rules
-        ]
+        entities_with_access = [e for e in self.spec.entities if e.access_rules]
 
         test_cases = []
         for entity in entities_with_access:
@@ -509,6 +510,15 @@ class TestInvariantValidators:
         # TODO: Assert based on expected access rules
 ''')
 
+        test_body = (
+            "".join(test_cases)
+            if test_cases
+            else '''
+    def test_no_access_rules(self):
+        """Placeholder - no access rules defined."""
+        pass
+'''
+        )
         content = f'''"""
 Tests for access control policies.
 
@@ -528,11 +538,7 @@ class RequestContext:
 
 class TestAccessPolicies:
     """Test entity access control policies."""
-{"".join(test_cases) if test_cases else '''
-    def test_no_access_rules(self):
-        """Placeholder - no access rules defined."""
-        pass
-'''}
+{test_body}
 '''
 
         result.add_file(

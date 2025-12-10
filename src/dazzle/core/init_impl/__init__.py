@@ -12,21 +12,21 @@ This package contains modular implementations for project initialization:
 
 from __future__ import annotations
 
+from .dnr_ui import generate_dnr_ui
+from .project import create_mcp_config, init_project, list_examples
+from .reset import reset_project, verify_project
+from .spec import create_spec_template
+from .templates import (
+    GENERATED_DIRECTORIES,
+    copy_template,
+    substitute_template_vars,
+)
 from .validation import (
     RESERVED_KEYWORDS,
     InitError,
     sanitize_name,
     validate_project_name,
 )
-from .templates import (
-    GENERATED_DIRECTORIES,
-    copy_template,
-    substitute_template_vars,
-)
-from .spec import create_spec_template
-from .dnr_ui import generate_dnr_ui
-from .project import create_mcp_config, init_project, list_examples
-from .reset import reset_project, verify_project
 
 __all__ = [
     # Errors

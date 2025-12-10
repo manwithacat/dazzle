@@ -25,8 +25,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dazzle.eject.adapters.base import AdapterRegistry, BackendAdapter
 from dazzle.eject.generator import GeneratorResult
-from dazzle.eject.adapters.base import BackendAdapter, AdapterRegistry
 
 from .access import AccessGenerator
 from .app import AppGenerator
@@ -35,8 +35,8 @@ from .models import ModelGenerator
 from .routers import RouterGenerator
 from .schemas import SchemaGenerator
 from .services import ServiceGenerator
+from .utils import TYPE_MAPPING, pascal_case, snake_case
 from .validators import ValidatorGenerator
-from .utils import TYPE_MAPPING, snake_case, pascal_case
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
@@ -54,9 +54,9 @@ class FastAPIAdapter(BackendAdapter):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionBackendConfig",
+        config: EjectionBackendConfig,
     ):
         super().__init__(spec, output_dir, config)
         self.backend_dir = output_dir / "backend"
@@ -64,10 +64,14 @@ class FastAPIAdapter(BackendAdapter):
         # Initialize generators
         self._model_gen = ModelGenerator(spec, output_dir, self._write_file, self._ensure_dir)
         self._schema_gen = SchemaGenerator(spec, output_dir, self._write_file, self._ensure_dir)
-        self._router_gen = RouterGenerator(spec, output_dir, config, self._write_file, self._ensure_dir)
+        self._router_gen = RouterGenerator(
+            spec, output_dir, config, self._write_file, self._ensure_dir
+        )
         self._service_gen = ServiceGenerator(spec, output_dir, self._write_file, self._ensure_dir)
         self._guard_gen = GuardGenerator(spec, output_dir, self._write_file, self._ensure_dir)
-        self._validator_gen = ValidatorGenerator(spec, output_dir, self._write_file, self._ensure_dir)
+        self._validator_gen = ValidatorGenerator(
+            spec, output_dir, self._write_file, self._ensure_dir
+        )
         self._access_gen = AccessGenerator(spec, output_dir, self._write_file, self._ensure_dir)
         self._app_gen = AppGenerator(spec, output_dir, self._write_file, self._ensure_dir)
 

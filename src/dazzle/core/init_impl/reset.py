@@ -10,8 +10,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from .validation import InitError
 from .project import list_examples
+from .validation import InitError
 
 
 def verify_project(project_dir: Path, show_diff: bool = False) -> bool:

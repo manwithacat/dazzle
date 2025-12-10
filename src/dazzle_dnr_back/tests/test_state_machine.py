@@ -1,7 +1,5 @@
 """Tests for state machine runtime validation."""
 
-import pytest
-
 from dazzle_dnr_back.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
@@ -14,7 +12,6 @@ from dazzle_dnr_back.specs.entity import (
     StateTransitionSpec,
     TimeUnit,
     TransitionGuardSpec,
-    TransitionTrigger,
 )
 
 

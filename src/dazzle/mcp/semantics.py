@@ -2035,7 +2035,14 @@ entity InvoiceItem "Invoice Line Item":
                     "Consistent cross-entity patterns",
                     "Better validation error messages",
                 ],
-                "related": ["intent", "archetype", "domain_patterns", "examples", "invariant_message", "relationships"],
+                "related": [
+                    "intent",
+                    "archetype",
+                    "domain_patterns",
+                    "examples",
+                    "invariant_message",
+                    "relationships",
+                ],
             },
             # ================================================================
             # v0.7.2 Ejection Pattern
@@ -2138,7 +2145,12 @@ generated/
                     "Custom infrastructure requirements",
                     "Migration away from DAZZLE runtime",
                 ],
-                "related": ["ejection", "ejection_config", "ejection_adapter", "openapi_generation"],
+                "related": [
+                    "ejection",
+                    "ejection_config",
+                    "ejection_adapter",
+                    "openapi_generation",
+                ],
             },
         },
         # ================================================================

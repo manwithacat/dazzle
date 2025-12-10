@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
 

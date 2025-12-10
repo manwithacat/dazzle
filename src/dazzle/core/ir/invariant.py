@@ -8,7 +8,6 @@ that must always hold true for an entity to be valid.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -142,14 +141,9 @@ class NotExpr(BaseModel):
 
 
 # Union type for invariant expressions - using forward reference string
-InvariantExpr = Union[
-    InvariantFieldRef,
-    InvariantLiteral,
-    DurationExpr,
-    ComparisonExpr,
-    LogicalExpr,
-    NotExpr,
-]
+InvariantExpr = (
+    InvariantFieldRef | InvariantLiteral | DurationExpr | ComparisonExpr | LogicalExpr | NotExpr
+)
 
 
 class InvariantSpec(BaseModel):

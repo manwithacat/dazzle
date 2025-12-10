@@ -62,6 +62,7 @@ class ServerConfig:
     enable_test_mode: bool = False
     services_dir: Path = field(default_factory=lambda: Path("services"))
 
+
 # Runtime import
 try:
     from fastapi import FastAPI as _FastAPI
@@ -141,7 +142,9 @@ class DNRBackendApp:
         self._enable_files = enable_files if enable_files is not None else config.enable_files
         self._files_path = Path(files_path) if files_path else config.files_path
         self._files_db_path = Path(files_db_path) if files_db_path else config.files_db_path
-        self._enable_test_mode = enable_test_mode if enable_test_mode is not None else config.enable_test_mode
+        self._enable_test_mode = (
+            enable_test_mode if enable_test_mode is not None else config.enable_test_mode
+        )
         self._services_dir = Path(services_dir) if services_dir else config.services_dir
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}

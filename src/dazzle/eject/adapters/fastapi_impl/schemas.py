@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import EntitySpec, FieldSpec
 
 
-def generate_entity_schemas(entity: "EntitySpec") -> str:
+def generate_entity_schemas(entity: EntitySpec) -> str:
     """Generate Pydantic schemas for an entity."""
     lines = [
         '"""',
@@ -50,7 +50,8 @@ def generate_entity_schemas(entity: "EntitySpec") -> str:
     lines.append("")
 
     writable_fields = [
-        f for f in entity.fields
+        f
+        for f in entity.fields
         if not f.is_primary_key
         and f.name not in ("created_at", "updated_at")
         and f.type.kind.value not in ("has_many", "has_one", "belongs_to")
@@ -105,8 +106,8 @@ def generate_entity_schemas(entity: "EntitySpec") -> str:
 
 
 def _generate_pydantic_field(
-    field: "FieldSpec",
-    entity: "EntitySpec",
+    field: FieldSpec,
+    entity: EntitySpec,
     optional: bool = False,
 ) -> str:
     """Generate Pydantic field definition."""
@@ -133,7 +134,7 @@ def _generate_pydantic_field(
     return f"{field.name}: {py_type}{default}"
 
 
-def _get_python_type(field: "FieldSpec", entity: "EntitySpec") -> str:
+def _get_python_type(field: FieldSpec, entity: EntitySpec) -> str:
     """Get Python type annotation for a field."""
     kind = field.type.kind.value
 

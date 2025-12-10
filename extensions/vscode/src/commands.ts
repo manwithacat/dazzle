@@ -3,16 +3,22 @@ import * as child_process from 'child_process';
 import { DazzleDiagnostics } from './diagnostics';
 
 /**
- * DAZZLE CLI Commands
+ * DAZZLE CLI Commands (v0.8.0)
  *
- * Implements VS Code commands that invoke DAZZLE CLI
+ * Implements VS Code commands that invoke the new Bun-based DAZZLE CLI.
+ *
+ * CLI Command Changes in v0.8.0:
+ * - validate -> check (with --json for machine output)
+ * - lint -> check --strict
+ * - build unchanged
+ * - new: dev, show, test, db, eject commands
  */
 
 export function registerCommands(
     context: vscode.ExtensionContext,
     diagnostics: DazzleDiagnostics
 ): void {
-    // Register validate command
+    // Register validate command (maps to 'check' in v0.8.0)
     const validateCmd = vscode.commands.registerCommand('dazzle.validate', async () => {
         const workspaceFolder = getWorkspaceFolder();
         if (!workspaceFolder) {
@@ -50,7 +56,7 @@ export function registerCommands(
         terminal.sendText(`${cliPath} build`);
     });
 
-    // Register lint command
+    // Register lint command (maps to 'check --strict' in v0.8.0)
     const lintCmd = vscode.commands.registerCommand('dazzle.lint', async () => {
         const workspaceFolder = getWorkspaceFolder();
         if (!workspaceFolder) {
@@ -66,10 +72,68 @@ export function registerCommands(
         });
 
         terminal.show();
-        terminal.sendText(`${cliPath} lint`);
+        // v0.8.0: lint is now 'check --strict'
+        terminal.sendText(`${cliPath} check --strict`);
     });
 
-    context.subscriptions.push(validateCmd, buildCmd, lintCmd);
+    // Register dev command (new in v0.8.0)
+    const devCmd = vscode.commands.registerCommand('dazzle.dev', async () => {
+        const workspaceFolder = getWorkspaceFolder();
+        if (!workspaceFolder) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('dazzle');
+        const cliPath = config.get<string>('cliPath', 'dazzle');
+
+        const terminal = vscode.window.createTerminal({
+            name: 'DAZZLE Dev Server',
+            cwd: workspaceFolder.uri.fsPath
+        });
+
+        terminal.show();
+        terminal.sendText(`${cliPath} dev`);
+    });
+
+    // Register test command (new in v0.8.0)
+    const testCmd = vscode.commands.registerCommand('dazzle.test', async () => {
+        const workspaceFolder = getWorkspaceFolder();
+        if (!workspaceFolder) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('dazzle');
+        const cliPath = config.get<string>('cliPath', 'dazzle');
+
+        const terminal = vscode.window.createTerminal({
+            name: 'DAZZLE Test',
+            cwd: workspaceFolder.uri.fsPath
+        });
+
+        terminal.show();
+        terminal.sendText(`${cliPath} test`);
+    });
+
+    // Register eject command (new in v0.8.0)
+    const ejectCmd = vscode.commands.registerCommand('dazzle.eject', async () => {
+        const workspaceFolder = getWorkspaceFolder();
+        if (!workspaceFolder) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('dazzle');
+        const cliPath = config.get<string>('cliPath', 'dazzle');
+
+        const terminal = vscode.window.createTerminal({
+            name: 'DAZZLE Eject',
+            cwd: workspaceFolder.uri.fsPath
+        });
+
+        terminal.show();
+        terminal.sendText(`${cliPath} eject`);
+    });
+
+    context.subscriptions.push(validateCmd, buildCmd, lintCmd, devCmd, testCmd, ejectCmd);
 }
 
 /**

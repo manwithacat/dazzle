@@ -63,7 +63,7 @@ def generate_base_model() -> str:
     ''').strip()
 
 
-def generate_entity_model(entity: "EntitySpec") -> str:
+def generate_entity_model(entity: EntitySpec) -> str:
     """Generate SQLAlchemy model for an entity."""
     lines = [
         '"""',
@@ -94,19 +94,17 @@ def generate_entity_model(entity: "EntitySpec") -> str:
             lines.append("")
 
     # Generate model class
-    has_timestamps = any(
-        f.name in ("created_at", "updated_at") for f in entity.fields
-    )
+    has_timestamps = any(f.name in ("created_at", "updated_at") for f in entity.fields)
     mixins = ", TimestampMixin" if has_timestamps else ""
 
     # Add intent as docstring if present
     if entity.intent:
-        lines.append(f'class {entity.name}(Base{mixins}):')
-        lines.append(f'    """')
-        lines.append(f'    {entity.intent}')
-        lines.append(f'    """')
+        lines.append(f"class {entity.name}(Base{mixins}):")
+        lines.append('    """')
+        lines.append(f"    {entity.intent}")
+        lines.append('    """')
     else:
-        lines.append(f'class {entity.name}(Base{mixins}):')
+        lines.append(f"class {entity.name}(Base{mixins}):")
         lines.append(f'    """{entity.title or entity.name} entity."""')
 
     lines.append(f'    __tablename__ = "{snake_case(entity.name)}s"')
@@ -125,13 +123,13 @@ def generate_entity_model(entity: "EntitySpec") -> str:
     return "\n".join(lines)
 
 
-def _generate_column(field: "FieldSpec", entity: "EntitySpec") -> str:
+def _generate_column(field: FieldSpec, entity: EntitySpec) -> str:
     """Generate SQLAlchemy column definition."""
     kind = field.type.kind.value
 
     # Handle primary key
     if field.is_primary_key:
-        return f'{field.name} = Column(PGUUID(as_uuid=True), primary_key=True)'
+        return f"{field.name} = Column(PGUUID(as_uuid=True), primary_key=True)"
 
     # Handle relationships
     if kind == "ref":
@@ -153,15 +151,15 @@ def _generate_column(field: "FieldSpec", entity: "EntitySpec") -> str:
     if kind == "enum":
         enum_name = f"{entity.name}{pascal_case(field.name)}"
         nullable = "False" if field.is_required else "True"
-        default = f', default={enum_name}.{field.default.upper()}' if field.default else ""
-        return f'{field.name} = Column(SQLEnum({enum_name}), nullable={nullable}{default})'
+        default = f", default={enum_name}.{field.default.upper()}" if field.default else ""
+        return f"{field.name} = Column(SQLEnum({enum_name}), nullable={nullable}{default})"
 
     # Handle basic types
     col_type = get_column_type(field.type)
     nullable = "False" if field.is_required else "True"
     default = f", default={repr(field.default)}" if field.default is not None else ""
 
-    return f'{field.name} = Column({col_type}, nullable={nullable}{default})'
+    return f"{field.name} = Column({col_type}, nullable={nullable}{default})"
 
 
 class ModelGenerator:
@@ -194,9 +192,7 @@ class ModelGenerator:
             model_path = models_dir / f"{snake_case(entity.name)}.py"
             self._write_file(model_path, model_content)
             result.add_file(model_path)
-            imports.append(
-                f"from .{snake_case(entity.name)} import {entity.name}"
-            )
+            imports.append(f"from .{snake_case(entity.name)} import {entity.name}")
 
         # Generate __init__.py
         init_content = "\n".join(imports) + "\n"

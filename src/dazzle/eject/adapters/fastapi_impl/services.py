@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import EntitySpec
 
 
-def generate_entity_service(entity: "EntitySpec") -> str:
+def generate_entity_service(entity: EntitySpec) -> str:
     """Generate service class for an entity."""
     name = entity.name
     snake = snake_case(name)
@@ -28,12 +28,22 @@ def generate_entity_service(entity: "EntitySpec") -> str:
     has_invariants = len(entity.invariants) > 0
     has_access = entity.access is not None
 
-    guard_import = f"\nfrom ..guards.{snake}_transitions import {name}TransitionGuard" if has_state_machine else ""
-    validator_import = f"\nfrom ..validators.{snake}_invariants import {name}InvariantValidator" if has_invariants else ""
+    guard_import = (
+        f"\nfrom ..guards.{snake}_transitions import {name}TransitionGuard"
+        if has_state_machine
+        else ""
+    )
+    validator_import = (
+        f"\nfrom ..validators.{snake}_invariants import {name}InvariantValidator"
+        if has_invariants
+        else ""
+    )
     access_import = f"\nfrom ..access.policies import {name}AccessPolicy" if has_access else ""
 
     guard_init = f"\n        self.guard = {name}TransitionGuard()" if has_state_machine else ""
-    validator_init = f"\n        self.validator = {name}InvariantValidator()" if has_invariants else ""
+    validator_init = (
+        f"\n        self.validator = {name}InvariantValidator()" if has_invariants else ""
+    )
     access_init = f"\n        self.access = {name}AccessPolicy()" if has_access else ""
 
     validate_call = "\n        self.validator.validate(entity)" if has_invariants else ""
@@ -153,9 +163,7 @@ class ServiceGenerator:
             self._write_file(service_path, service_content)
             result.add_file(service_path)
 
-            imports.append(
-                f"from .{snake_case(entity.name)} import {entity.name}Service"
-            )
+            imports.append(f"from .{snake_case(entity.name)} import {entity.name}Service")
 
         # Generate __init__.py
         init_content = "\n".join(imports) + "\n"

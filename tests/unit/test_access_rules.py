@@ -296,14 +296,14 @@ entity Document "Document":
 
         # Find DELETE permission
         delete_perm = next(
-            p for p in doc.access.permissions
-            if p.operation == PermissionKind.DELETE
+            p for p in doc.access.permissions if p.operation == PermissionKind.DELETE
         )
         assert delete_perm.condition.operator == LogicalOperator.AND
 
         # Find CREATE/UPDATE permissions
         write_perms = [
-            p for p in doc.access.permissions
+            p
+            for p in doc.access.permissions
             if p.operation in (PermissionKind.CREATE, PermissionKind.UPDATE)
         ]
         for perm in write_perms:

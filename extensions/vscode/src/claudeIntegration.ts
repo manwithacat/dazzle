@@ -20,7 +20,7 @@ const CLAUDE_EXTENSION_IDS = [
 ];
 
 /**
- * Pre-crafted prompts for common workflows
+ * Pre-crafted prompts for common workflows (v0.8.0 CLI)
  */
 const PROMPTS = {
     analyzeSpec: (specPath: string) => `I have a SPEC.md file in this DAZZLE project.
@@ -28,32 +28,33 @@ const PROMPTS = {
 Please help me transform this specification into a working application:
 
 1. Read ${specPath}
-2. Run: dazzle analyze-spec ${specPath} --no-interactive --generate-dsl
-3. Run: dazzle validate
-4. Run: dazzle build --stack micro
-5. Show me how to run the generated application
+2. Run: dazzle check --json (to validate the DSL is correct)
+3. Run: dazzle dev (to start the development server)
+4. Show me the UI at http://localhost:3000 and API at http://localhost:8000/docs
 
 Proceed automatically and report any issues you encounter.`,
 
     validateAndFix: `Please validate this DAZZLE project and fix any errors:
 
-1. Run: dazzle validate
-2. Fix any validation errors you find
-3. Run: dazzle validate again to confirm
+1. Run: dazzle check --json
+2. Fix any validation errors you find in the DSL files
+3. Run: dazzle check --json again to confirm
 4. Summarize what was fixed`,
 
     build: (stack: string = 'micro') => `Please build this DAZZLE project:
 
-1. Run: dazzle validate
-2. Run: dazzle build --stack ${stack}
-3. Show me the generated files
+1. Run: dazzle check --json
+2. Run: dazzle build
+3. Show me the generated files in ./dist
 4. Explain how to run the application`,
 
     init: `Please help me initialize a new DAZZLE project:
 
-1. Run: dazzle init
-2. Show me the project structure
-3. Guide me on next steps to define my application`
+1. Run: dazzle new my-app
+2. cd my-app
+3. Run: dazzle check --json (to verify the project)
+4. Run: dazzle dev (to start the development server)
+5. Show me the project structure and next steps`
 };
 
 /**

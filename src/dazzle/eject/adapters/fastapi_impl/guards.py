@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from dazzle.core.ir import EntitySpec
 
 
-def generate_entity_guards(entity: "EntitySpec") -> str:
+def generate_entity_guards(entity: EntitySpec) -> str:
     """Generate state machine guards for an entity."""
     name = entity.name
     snake = snake_case(name)

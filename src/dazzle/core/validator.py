@@ -70,7 +70,10 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"Entity '{entity.name}' field '{field.name}' has decimal type "
                         f"but missing precision/scale"
                     )
-                elif field.type.precision < DECIMAL_PRECISION_MIN or field.type.precision > DECIMAL_PRECISION_MAX:
+                elif (
+                    field.type.precision < DECIMAL_PRECISION_MIN
+                    or field.type.precision > DECIMAL_PRECISION_MAX
+                ):
                     warnings.append(
                         f"Entity '{entity.name}' field '{field.name}' has unusual "
                         f"decimal precision: {field.type.precision}"

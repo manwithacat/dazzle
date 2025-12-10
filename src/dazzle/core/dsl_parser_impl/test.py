@@ -223,8 +223,7 @@ class TestParserMixin:
                             created_value = False
                         else:
                             raise make_parse_error(
-                                f"Expected true or false, "
-                                f"got {self.current_token().type.value}",
+                                f"Expected true or false, got {self.current_token().type.value}",
                                 self.file,
                                 self.current_token().line,
                                 self.current_token().column,

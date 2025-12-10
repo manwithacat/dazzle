@@ -19,7 +19,6 @@ from pathlib import Path
 
 from .. import ir
 from ..lexer import tokenize
-
 from .base import BaseParser
 from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin

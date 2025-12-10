@@ -18,7 +18,7 @@ For code generation, use:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import typer
 
@@ -544,8 +544,6 @@ def layout_plan_command(
         raise typer.Exit(code=1)
 
 
-
-
 def analyze_spec_command(
     spec_file: str = typer.Argument("SPEC.md", help="Specification file to analyze"),
     output: str | None = typer.Option(None, "--output", "-o", help="Output DSL file"),
@@ -855,9 +853,7 @@ def example_command(
         console.print()
         console.print(Text("When ready for production:", style="bold"))
         console.print(Text("  dazzle eject run", style="cyan"))
-        console.print(
-            Text("  # Generates standalone FastAPI + React code", style="bright_black")
-        )
+        console.print(Text("  # Generates standalone FastAPI + React code", style="bright_black"))
 
         console.print()
         print_divider("=")

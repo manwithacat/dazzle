@@ -298,7 +298,6 @@ class TestFileMetadataStore:
 
     def test_save_and_get(self, metadata_store):
         """Test saving and retrieving metadata."""
-        from datetime import datetime
 
         metadata = FileMetadata(
             id=uuid4(),
@@ -325,7 +324,6 @@ class TestFileMetadataStore:
 
     def test_delete(self, metadata_store):
         """Test deleting metadata."""
-        from datetime import datetime
 
         metadata = FileMetadata(
             id=uuid4(),
@@ -346,7 +344,6 @@ class TestFileMetadataStore:
 
     def test_get_by_entity(self, metadata_store):
         """Test getting files by entity."""
-        from datetime import datetime
 
         # Save multiple files for same entity
         for i in range(3):
@@ -390,7 +387,6 @@ class TestFileMetadataStore:
 
     def test_update_entity_association(self, metadata_store):
         """Test updating entity association."""
-        from datetime import datetime
 
         metadata = FileMetadata(
             id=uuid4(),

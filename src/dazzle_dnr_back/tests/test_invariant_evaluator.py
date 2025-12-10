@@ -33,9 +33,7 @@ class TestFieldReferenceEvaluation:
     def test_nested_field_ref(self) -> None:
         """Test evaluating a nested field reference."""
         expr = InvariantExprSpec(kind="field_ref", path=["address", "city"])
-        result = evaluate_invariant_expr(
-            expr, {"address": {"city": "New York", "zip": "10001"}}
-        )
+        result = evaluate_invariant_expr(expr, {"address": {"city": "New York", "zip": "10001"}})
         assert result == "New York"
 
     def test_missing_field_ref(self) -> None:
@@ -209,12 +207,18 @@ class TestComparisonEvaluation:
             comparison_op=InvariantComparisonKind.GT,
             comparison_right=InvariantExprSpec(kind="field_ref", path=["start_date"]),
         )
-        assert evaluate_invariant_expr(
-            expr, {"start_date": date(2024, 1, 1), "end_date": date(2024, 1, 15)}
-        ) is True
-        assert evaluate_invariant_expr(
-            expr, {"start_date": date(2024, 1, 15), "end_date": date(2024, 1, 1)}
-        ) is False
+        assert (
+            evaluate_invariant_expr(
+                expr, {"start_date": date(2024, 1, 1), "end_date": date(2024, 1, 15)}
+            )
+            is True
+        )
+        assert (
+            evaluate_invariant_expr(
+                expr, {"start_date": date(2024, 1, 15), "end_date": date(2024, 1, 1)}
+            )
+            is False
+        )
 
 
 class TestDateComparisons:

@@ -486,14 +486,15 @@ def eject_verify(
     Examples:
         dazzle eject verify ./generated
     """
-    from dazzle.eject.runner import (
-        VerificationResult,
-        FORBIDDEN_PYTHON_IMPORTS,
-        FORBIDDEN_JS_IMPORTS,
-        FORBIDDEN_TEMPLATE_MARKERS,
-        FORBIDDEN_RUNTIME_LOADERS,
-    )
     import re
+
+    from dazzle.eject.runner import (
+        FORBIDDEN_JS_IMPORTS,
+        FORBIDDEN_PYTHON_IMPORTS,
+        FORBIDDEN_RUNTIME_LOADERS,
+        FORBIDDEN_TEMPLATE_MARKERS,
+        VerificationResult,
+    )
 
     output_path = output_dir.resolve()
 
@@ -520,12 +521,14 @@ def eject_verify(
 
         for pattern in FORBIDDEN_PYTHON_IMPORTS:
             for match in re.finditer(pattern, content, re.MULTILINE):
-                line_num = content[:match.start()].count("\n") + 1
-                result.add_error(f"{rel_path}:{line_num}: Forbidden import: {match.group().strip()}")
+                line_num = content[: match.start()].count("\n") + 1
+                result.add_error(
+                    f"{rel_path}:{line_num}: Forbidden import: {match.group().strip()}"
+                )
 
         for pattern in FORBIDDEN_RUNTIME_LOADERS:
             for match in re.finditer(pattern, content):
-                line_num = content[:match.start()].count("\n") + 1
+                line_num = content[: match.start()].count("\n") + 1
                 result.add_error(f"{rel_path}:{line_num}: Runtime loader: {match.group()}")
 
     # Scan JS/TS files
@@ -544,8 +547,10 @@ def eject_verify(
 
         for pattern in FORBIDDEN_JS_IMPORTS:
             for match in re.finditer(pattern, content):
-                line_num = content[:match.start()].count("\n") + 1
-                result.add_error(f"{rel_path}:{line_num}: Forbidden import: {match.group().strip()}")
+                line_num = content[: match.start()].count("\n") + 1
+                result.add_error(
+                    f"{rel_path}:{line_num}: Forbidden import: {match.group().strip()}"
+                )
 
     # Scan for template markers
     all_files = []
@@ -562,7 +567,7 @@ def eject_verify(
 
         for pattern in FORBIDDEN_TEMPLATE_MARKERS:
             for match in re.finditer(pattern, content, re.IGNORECASE):
-                line_num = content[:match.start()].count("\n") + 1
+                line_num = content[: match.start()].count("\n") + 1
                 result.add_error(f"{rel_path}:{line_num}: Template marker: {match.group()}")
 
     typer.echo("")

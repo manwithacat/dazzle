@@ -46,7 +46,7 @@ def pascal_case(name: str) -> str:
     return "".join(word.capitalize() for word in name.split("_"))
 
 
-def get_column_type(field_type: "FieldType") -> str:
+def get_column_type(field_type: FieldType) -> str:
     """Get SQLAlchemy column type."""
     kind = field_type.kind.value
 

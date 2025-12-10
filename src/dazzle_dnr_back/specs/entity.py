@@ -435,17 +435,11 @@ class ComputedExprSpec(BaseModel):
     # For field_ref: path to the field
     path: list[str] | None = Field(default=None, description="Field path for field_ref")
     # For aggregate: function and field
-    function: AggregateFunctionKind | None = Field(
-        default=None, description="Aggregate function"
-    )
-    field: "ComputedExprSpec | None" = Field(
-        default=None, description="Field for aggregate"
-    )
+    function: AggregateFunctionKind | None = Field(default=None, description="Aggregate function")
+    field: "ComputedExprSpec | None" = Field(default=None, description="Field for aggregate")
     # For arithmetic: left, operator, right
     left: "ComputedExprSpec | None" = Field(default=None, description="Left operand")
-    operator: ArithmeticOperatorKind | None = Field(
-        default=None, description="Arithmetic operator"
-    )
+    operator: ArithmeticOperatorKind | None = Field(default=None, description="Arithmetic operator")
     right: "ComputedExprSpec | None" = Field(default=None, description="Right operand")
     # For literal: value
     value: int | float | None = Field(default=None, description="Literal value")
@@ -537,9 +531,7 @@ class InvariantExprSpec(BaseModel):
     logical_left: "InvariantExprSpec | None" = Field(
         default=None, description="Left operand for logical"
     )
-    logical_op: InvariantLogicalKind | None = Field(
-        default=None, description="Logical operator"
-    )
+    logical_op: InvariantLogicalKind | None = Field(default=None, description="Logical operator")
     logical_right: "InvariantExprSpec | None" = Field(
         default=None, description="Right operand for logical"
     )

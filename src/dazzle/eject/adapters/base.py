@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec
     from dazzle.eject.config import (
         EjectionBackendConfig,
+        EjectionCIConfig,
         EjectionFrontendConfig,
         EjectionTestingConfig,
-        EjectionCIConfig,
     )
 
 
@@ -38,9 +38,9 @@ class BackendAdapter(Generator, ABC):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionBackendConfig",
+        config: EjectionBackendConfig,
     ):
         super().__init__(spec, output_dir)
         self.config = config
@@ -122,9 +122,9 @@ class FrontendAdapter(Generator, ABC):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionFrontendConfig",
+        config: EjectionFrontendConfig,
     ):
         super().__init__(spec, output_dir)
         self.config = config
@@ -181,9 +181,9 @@ class TestingAdapter(Generator, ABC):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionTestingConfig",
+        config: EjectionTestingConfig,
     ):
         super().__init__(spec, output_dir)
         self.config = config
@@ -201,9 +201,9 @@ class CIAdapter(Generator, ABC):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionCIConfig",
+        config: EjectionCIConfig,
     ):
         super().__init__(spec, output_dir)
         self.config = config

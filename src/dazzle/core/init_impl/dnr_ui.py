@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 def generate_dnr_ui(
     project_dir: Path,
-    log: "Callable[[str], None] | None" = None,
+    log: Callable[[str], None] | None = None,
 ) -> bool:
     """
     Generate DNR UI artifacts from the project's DSL.

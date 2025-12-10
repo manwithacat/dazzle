@@ -12,7 +12,8 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 
 from dazzle.eject.generator import GeneratorResult
-from .base import FrontendAdapter, AdapterRegistry
+
+from .base import AdapterRegistry, FrontendAdapter
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
@@ -42,9 +43,9 @@ class ReactAdapter(FrontendAdapter):
 
     def __init__(
         self,
-        spec: "AppSpec",
+        spec: AppSpec,
         output_dir: Path,
-        config: "EjectionFrontendConfig",
+        config: EjectionFrontendConfig,
     ):
         super().__init__(spec, output_dir, config)
         self.frontend_dir = output_dir / "frontend"
@@ -120,7 +121,7 @@ class ReactAdapter(FrontendAdapter):
         """Generate tsconfig.json."""
         result = GeneratorResult()
 
-        content = dedent('''
+        content = dedent("""
             {
               "compilerOptions": {
                 "target": "ES2020",
@@ -141,7 +142,7 @@ class ReactAdapter(FrontendAdapter):
               },
               "include": ["src"]
             }
-        ''').strip()
+        """).strip()
 
         path = self.frontend_dir / "tsconfig.json"
         self._write_file(path, content)
@@ -172,7 +173,7 @@ class ReactAdapter(FrontendAdapter):
 
         return result
 
-    def _generate_entity_types(self, entity: "EntitySpec") -> list[str]:
+    def _generate_entity_types(self, entity: EntitySpec) -> list[str]:
         """Generate TypeScript types for an entity."""
         name = entity.name
         lines = []
@@ -222,7 +223,7 @@ class ReactAdapter(FrontendAdapter):
 
         return lines
 
-    def _is_create_field(self, field: "FieldSpec") -> bool:
+    def _is_create_field(self, field: FieldSpec) -> bool:
         """Check if field should be in create schema."""
         if field.is_primary_key:
             return False
@@ -232,7 +233,7 @@ class ReactAdapter(FrontendAdapter):
             return False
         return True
 
-    def _get_ts_type(self, field: "FieldSpec", entity: "EntitySpec") -> str:
+    def _get_ts_type(self, field: FieldSpec, entity: EntitySpec) -> str:
         """Get TypeScript type for a field."""
         kind = field.type.kind.value
 
@@ -271,7 +272,7 @@ class ReactAdapter(FrontendAdapter):
 
         return result
 
-    def _generate_entity_schemas(self, entity: "EntitySpec") -> list[str]:
+    def _generate_entity_schemas(self, entity: EntitySpec) -> list[str]:
         """Generate Zod schemas for an entity."""
         name = entity.name
         lines = []
@@ -315,8 +316,8 @@ class ReactAdapter(FrontendAdapter):
 
     def _get_zod_type(
         self,
-        field: "FieldSpec",
-        entity: "EntitySpec",
+        field: FieldSpec,
+        entity: EntitySpec,
         for_create: bool = False,
     ) -> str:
         """Get Zod schema type for a field."""
@@ -374,7 +375,7 @@ class ReactAdapter(FrontendAdapter):
 
         for entity in self.spec.domain.entities:
             name = entity.name
-            snake = self._snake_case(name)
+            # snake case reserved for future use in API client generation
             entity_imports.append(f"  {name},")
             entity_imports.append(f"  {name}Create,")
             entity_imports.append(f"  {name}Update,")
@@ -384,7 +385,7 @@ class ReactAdapter(FrontendAdapter):
         imports_str = "\n".join(entity_imports)
         methods_str = "\n\n".join(entity_methods)
 
-        content = dedent(f'''
+        content = dedent(f"""
             /**
              * HTTP client with runtime validation.
              * Generated from DSL - DO NOT EDIT.
@@ -442,7 +443,7 @@ class ReactAdapter(FrontendAdapter):
             }};
 
             export {{ APIError }};
-        ''').strip()
+        """).strip()
 
         path = self.api_dir / "client.ts"
         self._write_file(path, content)
@@ -450,12 +451,12 @@ class ReactAdapter(FrontendAdapter):
 
         return result
 
-    def _generate_client_methods(self, entity: "EntitySpec") -> str:
+    def _generate_client_methods(self, entity: EntitySpec) -> str:
         """Generate client methods for an entity."""
         name = entity.name
         snake = self._snake_case(name)
 
-        return dedent(f'''
+        return dedent(f"""
             const {snake}sClient = {{
               async list(params?: {{ skip?: number; limit?: number }}): Promise<{name}[]> {{
                 const query = new URLSearchParams();
@@ -495,7 +496,7 @@ class ReactAdapter(FrontendAdapter):
                 }});
               }},
             }}
-        ''').strip()
+        """).strip()
 
     def generate_hooks(self) -> GeneratorResult:
         """Generate TanStack Query hooks."""
@@ -531,7 +532,7 @@ class ReactAdapter(FrontendAdapter):
 
         return result
 
-    def _generate_entity_hooks(self, entity: "EntitySpec") -> list[str]:
+    def _generate_entity_hooks(self, entity: EntitySpec) -> list[str]:
         """Generate TanStack Query hooks for an entity."""
         name = entity.name
         snake = self._snake_case(name)
@@ -634,7 +635,7 @@ class ReactAdapter(FrontendAdapter):
 
         return result
 
-    def _generate_entity_validation(self, entity: "EntitySpec") -> list[str]:
+    def _generate_entity_validation(self, entity: EntitySpec) -> list[str]:
         """Generate client-side validators for an entity."""
         name = entity.name
 
@@ -645,19 +646,21 @@ class ReactAdapter(FrontendAdapter):
         ]
 
         for i, inv in enumerate(entity.invariants):
-            message = inv.message or "Validation failed"
+            _message = inv.message or "Validation failed"  # Reserved for future use
             code = inv.code or f"{name.upper()}_INVARIANT_{i}"
             lines.append(f"  // Invariant {i + 1}")
             lines.append(f"  // TODO: Implement client-side check for: {code}")
             lines.append("")
 
-        lines.extend([
-            "  return {",
-            "    valid: errors.length === 0,",
-            "    errors,",
-            "  };",
-            "}",
-        ])
+        lines.extend(
+            [
+                "  return {",
+                "    valid: errors.length === 0,",
+                "    errors,",
+                "  };",
+                "}",
+            ]
+        )
 
         return lines
 

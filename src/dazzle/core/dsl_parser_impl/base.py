@@ -11,7 +11,7 @@ from ..errors import make_parse_error
 from ..lexer import Token, TokenType
 
 if TYPE_CHECKING:
-    from .. import ir
+    pass
 
 
 class BaseParser:

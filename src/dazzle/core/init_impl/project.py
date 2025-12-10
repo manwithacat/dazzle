@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..llm_context import create_llm_instrumentation
-from .validation import InitError, sanitize_name
-from .templates import copy_template
-from .spec import create_spec_template
 from .dnr_ui import generate_dnr_ui
+from .spec import create_spec_template
+from .templates import copy_template
+from .validation import InitError, sanitize_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -78,7 +78,7 @@ def init_project(
     no_git: bool = False,
     stack_name: str | None = None,
     allow_existing: bool = False,
-    progress_callback: "Callable[[str], None] | None" = None,
+    progress_callback: Callable[[str], None] | None = None,
 ) -> None:
     """
     Initialize a new DAZZLE project.
@@ -194,7 +194,7 @@ def init_project(
         log("Skipping git initialization (--no-git)")
 
 
-def _init_git_repository(target_dir: Path, log: "Callable[[str], None]") -> None:
+def _init_git_repository(target_dir: Path, log: Callable[[str], None]) -> None:
     """
     Initialize git repository in project directory.
 

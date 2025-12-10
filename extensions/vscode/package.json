@@ -1,8 +1,8 @@
 {
   "name": "dazzle-dsl",
   "displayName": "DAZZLE DSL",
-  "description": "Language support for DAZZLE DSL - DSL-first application development",
-  "version": "0.5.0",
+  "description": "Language support for DAZZLE DSL - DSL-first application development with 50x faster CLI",
+  "version": "0.8.0",
   "publisher": "dazzle",
   "repository": {
     "type": "git",
@@ -23,16 +23,8 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onLanguage:dazzle-dsl",
     "workspaceContains:dazzle.toml",
-    "workspaceContains:**/*.dsl",
-    "onCommand:dazzle.validate",
-    "onCommand:dazzle.build",
-    "onCommand:dazzle.lint",
-    "onCommand:dazzle.askClaudeToAnalyze",
-    "onCommand:dazzle.askClaudeToFix",
-    "onCommand:dazzle.askClaudeToBuild",
-    "onCommand:dazzle.askClaudeToInit"
+    "workspaceContains:**/*.dsl"
   ],
   "contributes": {
     "languages": [
@@ -108,31 +100,53 @@
     "commands": [
       {
         "command": "dazzle.validate",
-        "title": "DAZZLE: Validate Project"
+        "title": "DAZZLE: Validate Project",
+        "category": "DAZZLE"
       },
       {
         "command": "dazzle.build",
-        "title": "DAZZLE: Build Project"
+        "title": "DAZZLE: Build Project",
+        "category": "DAZZLE"
       },
       {
         "command": "dazzle.lint",
-        "title": "DAZZLE: Lint Project"
+        "title": "DAZZLE: Lint Project (Strict Check)",
+        "category": "DAZZLE"
+      },
+      {
+        "command": "dazzle.dev",
+        "title": "DAZZLE: Start Dev Server",
+        "category": "DAZZLE"
+      },
+      {
+        "command": "dazzle.test",
+        "title": "DAZZLE: Run Tests",
+        "category": "DAZZLE"
+      },
+      {
+        "command": "dazzle.eject",
+        "title": "DAZZLE: Eject to Standalone Code",
+        "category": "DAZZLE"
       },
       {
         "command": "dazzle.askClaudeToAnalyze",
-        "title": "DAZZLE: Ask Claude to Analyze SPEC"
+        "title": "DAZZLE: Ask Claude to Analyze SPEC",
+        "category": "DAZZLE + Claude"
       },
       {
         "command": "dazzle.askClaudeToFix",
-        "title": "DAZZLE: Ask Claude to Validate & Fix"
+        "title": "DAZZLE: Ask Claude to Validate & Fix",
+        "category": "DAZZLE + Claude"
       },
       {
         "command": "dazzle.askClaudeToBuild",
-        "title": "DAZZLE: Ask Claude to Build"
+        "title": "DAZZLE: Ask Claude to Build",
+        "category": "DAZZLE + Claude"
       },
       {
         "command": "dazzle.askClaudeToInit",
-        "title": "DAZZLE: Ask Claude to Initialize Project"
+        "title": "DAZZLE: Ask Claude to Initialize Project",
+        "category": "DAZZLE + Claude"
       }
     ],
     "problemMatchers": [

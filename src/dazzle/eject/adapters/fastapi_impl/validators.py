@@ -18,18 +18,19 @@ if TYPE_CHECKING:
     from dazzle.core.ir import EntitySpec, InvariantSpec
 
 
-def invariant_to_python(inv: "InvariantSpec", entity: "EntitySpec") -> str:
+def invariant_to_python(inv: InvariantSpec, entity: EntitySpec) -> str:
     """Convert invariant expression to Python code."""
     # This is a simplified implementation
     # A full implementation would properly parse the invariant expression
-    expr = inv.expression
+    _expr = inv.expression  # Reserved for future implementation
+    _entity_name = entity.name  # Reserved for future implementation
 
     # For now, return a placeholder that shows the structure
     # In production, this would properly convert the IR expression to Python
-    return f"True  # TODO: Implement invariant check"
+    return "True  # TODO: Implement invariant check"
 
 
-def generate_entity_validators(entity: "EntitySpec") -> str:
+def generate_entity_validators(entity: EntitySpec) -> str:
     """Generate invariant validators for an entity."""
     name = entity.name
     snake = snake_case(name)

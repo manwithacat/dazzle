@@ -9,6 +9,8 @@
     { "include": "#app-declaration" },
     { "include": "#entity-declaration" },
     { "include": "#surface-declaration" },
+    { "include": "#transitions" },
+    { "include": "#aggregate-functions" },
     { "include": "#field-declaration" },
     { "include": "#strings" },
     { "include": "#numbers" },
@@ -29,19 +31,55 @@
       "patterns": [
         {
           "name": "keyword.control.dazzle",
-          "match": "\\b(module|use|uses|from|import|as)\\b"
+          "match": "\\b(module|use|uses|from|import|as|when|on|if|else)\\b"
         },
         {
           "name": "keyword.declaration.dazzle",
-          "match": "\\b(app|entity|surface|experience|service|foreign_model|integration)\\b"
+          "match": "\\b(app|entity|surface|experience|service|foreign_model|integration|workspace|archetype|flow)\\b"
         },
         {
-          "name": "keyword.other.dazzle",
-          "match": "\\b(section|action|step|field|constraint|key|mode|sync|when|call|map|with|on|submitted|owner|spec|auth_profile)\\b"
+          "name": "keyword.other.block.dazzle",
+          "match": "\\b(section|action|step|field|constraint|key|mode|sync|call|map|with|spec|auth_profile|transitions|invariant|access|examples|ux|input|output|guarantees|stub)\\b"
+        },
+        {
+          "name": "keyword.other.metadata.dazzle",
+          "match": "\\b(intent|domain|patterns|extends|purpose|kind)\\b"
+        },
+        {
+          "name": "keyword.other.ux.dazzle",
+          "match": "\\b(show|hide|filter|search|sort|empty|limit|display|scope|action_primary|read_only|show_aggregate|for)\\b"
+        },
+        {
+          "name": "keyword.other.attention.dazzle",
+          "match": "\\b(attention|critical|warning|notice|info|message|code)\\b"
+        },
+        {
+          "name": "keyword.other.flow.dazzle",
+          "match": "\\b(navigate|fill|click|wait|assert|snapshot|expect|visible|hidden|enabled|disabled|text|value|count|priority)\\b"
+        },
+        {
+          "name": "keyword.other.transition.dazzle",
+          "match": "\\b(requires|role|auto|after|manual|minutes|hours|days)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.dazzle",
+          "match": "\\b(and|or|not|is|in)\\b"
         },
         {
           "name": "storage.modifier.dazzle",
-          "match": "\\b(required|unique|pk|auto_add|auto_update|on_delete|cascade|protect|set_null)\\b"
+          "match": "\\b(required|optional|unique|pk|auto_add|auto_update|on_delete|cascade|protect|set_null|restrict|nullify|readonly)\\b"
+        },
+        {
+          "name": "storage.modifier.access.dazzle",
+          "match": "\\b(read|write|owner|tenant)\\b"
+        },
+        {
+          "name": "keyword.other.service.dazzle",
+          "match": "\\b(domain_logic|validation|workflow|python|typescript|scheduled|event_driven)\\b"
+        },
+        {
+          "name": "keyword.control.event.dazzle",
+          "match": "\\b(submitted|success|failure|start|at)\\b"
         }
       ]
     },
@@ -71,7 +109,7 @@
     "entity-declaration": {
       "patterns": [
         {
-          "match": "\\b(entity|surface|experience|service)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+(\"[^\"]*\")\\s*:",
+          "match": "\\b(entity|surface|experience|service|workspace|archetype|flow|integration|foreign_model)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\"[^\"]*\")?\\s*:",
           "captures": {
             "1": { "name": "keyword.declaration.dazzle" },
             "2": { "name": "entity.name.type.class.dazzle" },
@@ -83,16 +121,75 @@
     "surface-declaration": {
       "patterns": [
         {
-          "match": "\\b(mode)\\s*:\\s*(list|view|create|edit|delete)",
+          "match": "\\b(mode)\\s*:\\s*(list|view|create|edit|delete|custom)",
           "captures": {
-            "1": { "name": "keyword.other.dazzle" },
+            "1": { "name": "keyword.other.block.dazzle" },
             "2": { "name": "constant.language.mode.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(display)\\s*:\\s*(list|grid|timeline|map)",
+          "captures": {
+            "1": { "name": "keyword.other.ux.dazzle" },
+            "2": { "name": "constant.language.display.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(kind)\\s*:\\s*(surface|process|integration|domain_logic|validation|workflow)",
+          "captures": {
+            "1": { "name": "keyword.other.metadata.dazzle" },
+            "2": { "name": "constant.language.kind.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(stub)\\s*:\\s*(python|typescript)",
+          "captures": {
+            "1": { "name": "keyword.other.block.dazzle" },
+            "2": { "name": "constant.language.stub.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(priority)\\s*:\\s*(critical|high|medium|low)",
+          "captures": {
+            "1": { "name": "keyword.other.flow.dazzle" },
+            "2": { "name": "constant.language.priority.dazzle" }
+          }
+        }
+      ]
+    },
+    "transitions": {
+      "patterns": [
+        {
+          "name": "keyword.operator.transition.dazzle",
+          "match": "->|<->|<-"
+        },
+        {
+          "match": "(\\*)\\s*->",
+          "captures": {
+            "1": { "name": "constant.language.wildcard.dazzle" }
+          }
+        }
+      ]
+    },
+    "aggregate-functions": {
+      "patterns": [
+        {
+          "match": "\\b(count|sum|avg|max|min|days_until|days_since)\\s*\\(",
+          "captures": {
+            "1": { "name": "support.function.aggregate.dazzle" }
           }
         }
       ]
     },
     "field-declaration": {
       "patterns": [
+        {
+          "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*(computed)\\b",
+          "captures": {
+            "1": { "name": "variable.other.property.dazzle" },
+            "2": { "name": "storage.type.computed.dazzle" }
+          }
+        },
         {
           "match": "^\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*:\\s*",
           "captures": {
@@ -105,13 +202,12 @@
       "patterns": [
         {
           "name": "support.type.primitive.dazzle",
-          "match": "\\b(uuid|str|int|float|bool|date|datetime|time|text|json|decimal)\\b"
+          "match": "\\b(uuid|str|int|float|bool|date|datetime|time|text|json|decimal|email)\\b"
         },
         {
-          "name": "support.type.reference.dazzle",
-          "match": "\\b(ref)\\s+([A-Z][a-zA-Z0-9_]*)",
+          "match": "\\b(ref|has_many|has_one|belongs_to|embeds)\\s+([A-Z][a-zA-Z0-9_]*)",
           "captures": {
-            "1": { "name": "keyword.other.dazzle" },
+            "1": { "name": "keyword.other.relationship.dazzle" },
             "2": { "name": "entity.name.type.dazzle" }
           }
         },
@@ -128,6 +224,14 @@
           "captures": {
             "1": { "name": "support.type.primitive.dazzle" },
             "2": { "name": "constant.numeric.dazzle" }
+          }
+        },
+        {
+          "match": "\\b(decimal)\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)",
+          "captures": {
+            "1": { "name": "support.type.primitive.dazzle" },
+            "2": { "name": "constant.numeric.dazzle" },
+            "3": { "name": "constant.numeric.dazzle" }
           }
         }
       ]
@@ -173,17 +277,25 @@
           "match": "="
         },
         {
-          "name": "keyword.operator.arrow.dazzle",
-          "match": "->"
+          "name": "keyword.operator.comparison.dazzle",
+          "match": "!=|>=|<=|>|<"
         },
         {
           "name": "punctuation.separator.dazzle",
           "match": "[,:]"
+        },
+        {
+          "name": "punctuation.bracket.dazzle",
+          "match": "[\\[\\]{}()]"
         }
       ]
     },
     "identifiers": {
       "patterns": [
+        {
+          "name": "constant.language.boolean.dazzle",
+          "match": "\\b(true|false|all)\\b"
+        },
         {
           "name": "entity.name.type.class.dazzle",
           "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"

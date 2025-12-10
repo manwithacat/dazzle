@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from dazzle.eject.config import EjectionBackendConfig
 
 
-def generate_entity_router(entity: "EntitySpec", config: "EjectionBackendConfig") -> str:
+def generate_entity_router(entity: EntitySpec, config: EjectionBackendConfig) -> str:
     """Generate FastAPI router for an entity."""
     name = entity.name
     snake = snake_case(name)
