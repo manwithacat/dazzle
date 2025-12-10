@@ -24,17 +24,54 @@ dazzle mcp-check
 
 ### Available MCP Tools
 
+**Core Tools:**
+
 | Tool | Purpose |
 |------|---------|
 | `validate_dsl` | Parse and validate DSL files |
-| `build` | Generate code from DSL |
+| `list_modules` | List project modules |
 | `inspect_entity` | Examine entity definitions |
 | `inspect_surface` | Examine surface definitions |
-| `list_modules` | List project modules |
 | `analyze_patterns` | Detect CRUD and integration patterns |
 | `lint_project` | Extended validation with style checks |
 | `lookup_concept` | Look up DSL concepts and syntax |
 | `find_examples` | Search example projects by features |
+| `get_workflow_guide` | Get step-by-step workflow guides |
+| `get_cli_help` | Get CLI command help and examples |
+
+**DNR Backend Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `list_dnr_entities` | List entities in BackendSpec |
+| `get_dnr_entity` | Get detailed EntitySpec |
+| `list_backend_services` | List available backend services |
+| `get_backend_service_spec` | Get full ServiceSpec JSON |
+
+**DNR UI Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `list_dnr_components` | List UI components (primitives/patterns) |
+| `get_dnr_component_spec` | Get ComponentSpec details |
+| `list_workspace_layouts` | List available layout types |
+| `create_uispec_component` | Create new ComponentSpec |
+| `patch_uispec_component` | Modify existing ComponentSpec |
+| `compose_workspace` | Wire components into workspace layout |
+
+**GraphQL Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `get_graphql_schema` | Get generated GraphQL SDL |
+| `list_graphql_types` | List GraphQL types from BackendSpec |
+
+**External API Tools:**
+
+| Tool | Purpose |
+|------|---------|
+| `list_adapters` | List external API adapter patterns |
+| `get_adapter_guide` | Get adapter implementation guide |
 
 ### Usage Examples
 
