@@ -4,7 +4,7 @@ Tests for authentication runtime.
 Tests user management, sessions, and auth endpoints.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -218,7 +218,7 @@ class TestSessions:
 
         assert isinstance(session, SessionRecord)
         assert session.user_id == test_user.id
-        assert session.expires_at > datetime.utcnow()
+        assert session.expires_at > datetime.now(UTC)
         assert len(session.id) > 20  # URL-safe token
 
     def test_create_session_with_metadata(self, auth_store, test_user):

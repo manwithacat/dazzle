@@ -25,7 +25,7 @@ def generate_base_model() -> str:
         Base model with common functionality.
         Generated from DSL - DO NOT EDIT.
         """
-        from datetime import datetime
+        from datetime import UTC, datetime
         from uuid import UUID, uuid4
 
         from sqlalchemy import Column, DateTime, String
@@ -35,14 +35,19 @@ def generate_base_model() -> str:
         Base = declarative_base()
 
 
+        def _utcnow() -> datetime:
+            """Return current UTC datetime (timezone-aware)."""
+            return datetime.now(UTC)
+
+
         class TimestampMixin:
             """Mixin for created_at and updated_at fields."""
 
-            created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+            created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
             updated_at = Column(
-                DateTime,
-                default=datetime.utcnow,
-                onupdate=datetime.utcnow,
+                DateTime(timezone=True),
+                default=_utcnow,
+                onupdate=_utcnow,
                 nullable=False,
             )
 

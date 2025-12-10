@@ -10,9 +10,14 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
+
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 if TYPE_CHECKING:
     from fastapi import WebSocket
@@ -100,13 +105,13 @@ class Connection:
     user_id: str | None = None
     user_name: str | None = None
     subscriptions: set[str] = field(default_factory=set)
-    connected_at: datetime = field(default_factory=datetime.utcnow)
-    last_heartbeat: datetime = field(default_factory=datetime.utcnow)
+    connected_at: datetime = field(default_factory=_utcnow)
+    last_heartbeat: datetime = field(default_factory=_utcnow)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def update_heartbeat(self) -> None:
         """Update the last heartbeat time."""
-        self.last_heartbeat = datetime.utcnow()
+        self.last_heartbeat = datetime.now(UTC)
 
 
 # =============================================================================
@@ -534,7 +539,7 @@ class WebSocketManager:
         Returns:
             List of disconnected connection IDs
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         stale_connections = []
 
         for connection_id, connection in list(self._connections.items()):

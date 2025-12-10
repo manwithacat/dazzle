@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -448,7 +448,7 @@ class MigrationHistory:
             conn.execute(
                 sql,
                 (
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     step.action.value,
                     step.table,
                     step.column,

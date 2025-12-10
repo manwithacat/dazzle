@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -40,8 +40,8 @@ class UserRecord(BaseModel):
     is_active: bool = True
     is_superuser: bool = False
     roles: list[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     class Config:
         frozen = True
@@ -52,7 +52,7 @@ class SessionRecord(BaseModel):
 
     id: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
     user_id: UUID
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime
     ip_address: str | None = None
     user_agent: str | None = None
@@ -289,7 +289,7 @@ class AuthStore:
                 SET password_hash = ?, updated_at = ?
                 WHERE id = ?
                 """,
-                (hash_password(new_password), datetime.utcnow().isoformat(), str(user_id)),
+                (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
             )
             conn.commit()
             return cursor.rowcount > 0
@@ -319,7 +319,7 @@ class AuthStore:
         """
         session = SessionRecord(
             user_id=user.id,
-            expires_at=datetime.utcnow() + expires_in,
+            expires_at=datetime.now(UTC) + expires_in,
             ip_address=ip_address,
             user_agent=user_agent,
         )
@@ -372,7 +372,7 @@ class AuthStore:
             return AuthContext()
 
         # Check expiration
-        if session.expires_at < datetime.utcnow():
+        if session.expires_at < datetime.now(UTC):
             self.delete_session(session_id)
             return AuthContext()
 
@@ -409,7 +409,7 @@ class AuthStore:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 "DELETE FROM sessions WHERE expires_at < ?",
-                (datetime.utcnow().isoformat(),),
+                (datetime.now(UTC).isoformat(),),
             )
             conn.commit()
             return cursor.rowcount

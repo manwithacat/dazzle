@@ -7,8 +7,13 @@ Tracks which users are viewing which resources for collaboration awareness.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.websocket_manager import (
@@ -29,8 +34,8 @@ class PresenceEntry:
     user_name: str | None
     resource: str
     connection_id: str
-    joined_at: datetime = field(default_factory=datetime.utcnow)
-    last_seen: datetime = field(default_factory=datetime.utcnow)
+    joined_at: datetime = field(default_factory=_utcnow)
+    last_seen: datetime = field(default_factory=_utcnow)
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -46,7 +51,7 @@ class PresenceEntry:
 
     def update_heartbeat(self) -> None:
         """Update the last seen time."""
-        self.last_seen = datetime.utcnow()
+        self.last_seen = datetime.now(UTC)
 
 
 # =============================================================================
@@ -332,7 +337,7 @@ class PresenceTracker:
         Returns:
             List of (resource, user_id) pairs that were removed
         """
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         stale = []
 
         for resource, entries in list(self._entries.items()):

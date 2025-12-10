@@ -11,7 +11,7 @@ import re
 import sqlite3
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO
 from uuid import UUID, uuid4
@@ -202,7 +202,7 @@ class LocalStorageBackend(StorageBackend):
             size=len(content),
             storage_key=storage_key,
             storage_backend=self.name,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url=url,
         )
 
@@ -343,7 +343,7 @@ class S3StorageBackend(StorageBackend):
             size=len(content),
             storage_key=storage_key,
             storage_backend=self.name,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url=url,
         )
 
@@ -579,7 +579,7 @@ class FileMetadataStore:
                     entity_name,
                     entity_id,
                     field_name,
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                     str(file_id),
                 ),
             )

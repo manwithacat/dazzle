@@ -7,7 +7,7 @@ These models represent the structured output from LLM analysis of natural langua
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QuestionPriority(str, Enum):
@@ -31,6 +31,8 @@ class BusinessRuleType(str, Enum):
 class StateTransition(BaseModel):
     """Represents a state machine transition."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     from_state: str = Field(..., alias="from")
     to_state: str = Field(..., alias="to")
     trigger: str
@@ -38,9 +40,6 @@ class StateTransition(BaseModel):
     side_effects: list[str] = Field(default_factory=list)
     conditions: list[str] = Field(default_factory=list)
     who_can_trigger: str | None = None
-
-    class Config:
-        populate_by_name = True
 
 
 class ImpliedTransition(BaseModel):

@@ -179,7 +179,7 @@ def verify_password_simple(password: str, password_hash: str) -> bool:
 
 if AUTH_ENABLED:
     import secrets as auth_secrets
-    from datetime import datetime, timedelta
+    from datetime import UTC, datetime, timedelta
     from pydantic import BaseModel as PydanticBaseModel
 
     class LoginRequest(PydanticBaseModel):
@@ -205,7 +205,7 @@ if AUTH_ENABLED:
             "password_hash": hash_password_simple(data.password),
             "display_name": data.display_name or data.email.split("@")[0],
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         AUTH_USERS[data.email] = user
 
@@ -214,7 +214,7 @@ if AUTH_ENABLED:
         session = {
             "user_id": user_id,
             "token": session_token,
-            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
         }
         AUTH_SESSIONS[session_token] = session
 
@@ -248,7 +248,7 @@ if AUTH_ENABLED:
         session = {
             "user_id": user["id"],
             "token": session_token,
-            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
         }
         AUTH_SESSIONS[session_token] = session
 
@@ -286,7 +286,7 @@ if AUTH_ENABLED:
 
         session = AUTH_SESSIONS[session_token]
         # Check expiry
-        if datetime.fromisoformat(session["expires_at"]) < datetime.utcnow():
+        if datetime.fromisoformat(session["expires_at"]) < datetime.now(UTC):
             del AUTH_SESSIONS[session_token]
             raise HTTPException(status_code=401, detail="Session expired")
 
@@ -349,7 +349,7 @@ if TEST_MODE:
         async def test_create_user(request: Request):
             """Create a test user with optional persona."""
             import uuid
-            from datetime import datetime
+            from datetime import UTC, datetime
             data = await request.json()
 
             email = data.get("email")
@@ -379,7 +379,7 @@ if TEST_MODE:
                 "display_name": display_name or email.split("@")[0],
                 "persona": persona,
                 "is_active": True,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
             AUTH_USERS[email] = user
 
@@ -395,7 +395,7 @@ if TEST_MODE:
         async def test_authenticate(request: Request):
             """Authenticate for testing (creates session without password check)."""
             import uuid
-            from datetime import datetime, timedelta
+            from datetime import UTC, datetime, timedelta
             import secrets as test_secrets
 
             data = await request.json()
@@ -412,7 +412,7 @@ if TEST_MODE:
                     "display_name": email.split("@")[0] if email else f"test_{role or 'user'}",
                     "persona": role,
                     "is_active": True,
-                    "created_at": datetime.utcnow().isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
                 AUTH_USERS[email] = user
             else:
@@ -423,7 +423,7 @@ if TEST_MODE:
             session = {
                 "user_id": user["id"],
                 "token": session_token,
-                "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+                "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
             }
             AUTH_SESSIONS[session_token] = session
 

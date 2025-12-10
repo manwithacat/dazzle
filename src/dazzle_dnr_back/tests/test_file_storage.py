@@ -4,6 +4,7 @@ Tests for file storage system.
 Tests local storage, metadata store, validation, and file service.
 """
 
+from datetime import UTC, datetime
 from io import BytesIO
 from uuid import UUID, uuid4
 
@@ -306,7 +307,7 @@ class TestFileMetadataStore:
             size=100,
             storage_key="2025/11/28/abc_test.txt",
             storage_backend="local",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url="/files/2025/11/28/abc_test.txt",
         )
 
@@ -333,7 +334,7 @@ class TestFileMetadataStore:
             size=100,
             storage_key="test.txt",
             storage_backend="local",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url="/files/test.txt",
         )
 
@@ -359,7 +360,7 @@ class TestFileMetadataStore:
                 entity_name="Task",
                 entity_id="task-123",
                 field_name="attachment",
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(UTC),
                 url=f"/files/file{i}.txt",
             )
             metadata_store.save(metadata)
@@ -374,7 +375,7 @@ class TestFileMetadataStore:
             storage_backend="local",
             entity_name="Task",
             entity_id="task-456",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url="/files/other.txt",
         )
         metadata_store.save(other_metadata)
@@ -398,7 +399,7 @@ class TestFileMetadataStore:
             size=100,
             storage_key="test.txt",
             storage_backend="local",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
             url="/files/test.txt",
         )
         metadata_store.save(metadata)

@@ -10,7 +10,7 @@ Tracks:
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -242,7 +242,7 @@ def save_state(
 
         # Create state
         state = BuildState(
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(UTC).isoformat() + "Z",
             backend=backend,
             output_dir=output_dir_str,
             dsl_file_hashes=dsl_hashes,

@@ -4,7 +4,7 @@ Tests for WebSocket manager.
 Tests connection management, channel subscriptions, and message routing.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -482,7 +482,7 @@ class TestStaleCleanup:
 
         # Manually set heartbeat to past
         conn = ws_manager.get_connection(connection_id)
-        conn.last_heartbeat = datetime.utcnow() - timedelta(seconds=120)
+        conn.last_heartbeat = datetime.now(UTC) - timedelta(seconds=120)
 
         stale = await ws_manager.cleanup_stale_connections()
 

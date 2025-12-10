@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -83,7 +83,7 @@ def register_auth_routes(app: FastAPI) -> None:
             "password_hash": hash_password(data.password),
             "display_name": data.display_name or data.email.split("@")[0],
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         AUTH_USERS[data.email] = user
 
@@ -92,7 +92,7 @@ def register_auth_routes(app: FastAPI) -> None:
         session = {
             "user_id": user_id,
             "token": session_token,
-            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
         }
         AUTH_SESSIONS[session_token] = session
 
@@ -131,7 +131,7 @@ def register_auth_routes(app: FastAPI) -> None:
         session = {
             "user_id": user["id"],
             "token": session_token,
-            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
         }
         AUTH_SESSIONS[session_token] = session
 
@@ -174,7 +174,7 @@ def register_auth_routes(app: FastAPI) -> None:
 
         session = AUTH_SESSIONS[session_token]
         # Check expiry
-        if datetime.fromisoformat(session["expires_at"]) < datetime.utcnow():
+        if datetime.fromisoformat(session["expires_at"]) < datetime.now(UTC):
             del AUTH_SESSIONS[session_token]
             raise HTTPException(status_code=401, detail="Session expired")
 

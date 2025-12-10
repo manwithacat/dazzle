@@ -5,7 +5,7 @@ Enables apps to define reusable patterns (macros/aliases) that expand to core DS
 This module provides the schema and utilities for managing vocabulary entries.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -118,7 +118,7 @@ class VocabEntry(BaseModel):
         """
         new_metadata = self.metadata.copy()
         new_metadata["usage_count"] = self.usage_count + 1
-        new_metadata["last_used_at"] = datetime.utcnow().isoformat()
+        new_metadata["last_used_at"] = datetime.now(UTC).isoformat()
 
         return VocabEntry(
             id=self.id,

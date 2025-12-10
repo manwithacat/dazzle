@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
@@ -100,7 +100,7 @@ def _register_auth_test_routes(app: FastAPI) -> None:
             "display_name": display_name or email.split("@")[0],
             "persona": persona,
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         AUTH_USERS[email] = user
 
@@ -129,7 +129,7 @@ def _register_auth_test_routes(app: FastAPI) -> None:
                 "display_name": email.split("@")[0] if email else f"test_{role or 'user'}",
                 "persona": role,
                 "is_active": True,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
             AUTH_USERS[email] = user
         else:
@@ -140,7 +140,7 @@ def _register_auth_test_routes(app: FastAPI) -> None:
         session = {
             "user_id": user["id"],
             "token": session_token,
-            "expires_at": (datetime.utcnow() + timedelta(days=7)).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=7)).isoformat(),
         }
         AUTH_SESSIONS[session_token] = session
 

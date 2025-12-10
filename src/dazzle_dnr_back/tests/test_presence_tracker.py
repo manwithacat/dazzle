@@ -4,7 +4,7 @@ Tests for presence tracker.
 Tests presence join/leave, heartbeat, and cleanup.
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -316,7 +316,7 @@ class TestStaleCleanup:
 
         # Manually set last_seen to past
         entry = tracker.get_entry("workspace/tasks", "user_123")
-        entry.last_seen = datetime.utcnow() - timedelta(seconds=60)
+        entry.last_seen = datetime.now(UTC) - timedelta(seconds=60)
 
         removed = await tracker.cleanup_stale()
 
