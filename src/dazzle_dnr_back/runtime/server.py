@@ -6,11 +6,43 @@ This module provides the main entry point for running a DNR-Back application.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
+
+
+# =============================================================================
+# Server Configuration
+# =============================================================================
+
+
+@dataclass
+class ServerConfig:
+    """
+    Configuration for DNRBackendApp.
+
+    Groups all initialization options into a single object for cleaner APIs.
+    """
+
+    # Database settings
+    db_path: Path = field(default_factory=lambda: Path(".dazzle/data.db"))
+    use_database: bool = True
+
+    # Authentication settings
+    enable_auth: bool = False
+    auth_db_path: Path = field(default_factory=lambda: Path(".dazzle/auth.db"))
+
+    # File upload settings
+    enable_files: bool = False
+    files_path: Path = field(default_factory=lambda: Path(".dazzle/uploads"))
+    files_db_path: Path = field(default_factory=lambda: Path(".dazzle/files.db"))
+
+    # Development/testing settings
+    enable_test_mode: bool = False
+    services_dir: Path = field(default_factory=lambda: Path("services"))
 
 from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
 from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
@@ -60,14 +92,17 @@ class DNRBackendApp:
     def __init__(
         self,
         spec: BackendSpec,
+        config: ServerConfig | None = None,
+        *,
+        # Legacy parameters for backwards compatibility
         db_path: str | Path | None = None,
-        use_database: bool = True,
-        enable_auth: bool = False,
+        use_database: bool | None = None,
+        enable_auth: bool | None = None,
         auth_db_path: str | Path | None = None,
-        enable_files: bool = False,
+        enable_files: bool | None = None,
         files_path: str | Path | None = None,
         files_db_path: str | Path | None = None,
-        enable_test_mode: bool = False,
+        enable_test_mode: bool | None = None,
         services_dir: str | Path | None = None,
     ):
         """
@@ -75,6 +110,9 @@ class DNRBackendApp:
 
         Args:
             spec: Backend specification
+            config: Server configuration object (preferred)
+
+            Legacy parameters (use config instead):
             db_path: Path to SQLite database (default: .dazzle/data.db)
             use_database: Whether to use SQLite persistence (default: True)
             enable_auth: Whether to enable authentication (default: False)
@@ -90,16 +128,21 @@ class DNRBackendApp:
                 "FastAPI is not installed. Install with: pip install fastapi uvicorn"
             )
 
+        # Use config if provided, otherwise build from legacy parameters
+        if config is None:
+            config = ServerConfig()
+
+        # Override config with any explicit legacy parameters
         self.spec = spec
-        self._db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
-        self._use_database = use_database
-        self._enable_auth = enable_auth
-        self._auth_db_path = Path(auth_db_path) if auth_db_path else Path(".dazzle/auth.db")
-        self._enable_files = enable_files
-        self._files_path = Path(files_path) if files_path else Path(".dazzle/uploads")
-        self._files_db_path = Path(files_db_path) if files_db_path else Path(".dazzle/files.db")
-        self._enable_test_mode = enable_test_mode
-        self._services_dir = Path(services_dir) if services_dir else Path("services")
+        self._db_path = Path(db_path) if db_path else config.db_path
+        self._use_database = use_database if use_database is not None else config.use_database
+        self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
+        self._auth_db_path = Path(auth_db_path) if auth_db_path else config.auth_db_path
+        self._enable_files = enable_files if enable_files is not None else config.enable_files
+        self._files_path = Path(files_path) if files_path else config.files_path
+        self._files_db_path = Path(files_db_path) if files_db_path else config.files_db_path
+        self._enable_test_mode = enable_test_mode if enable_test_mode is not None else config.enable_test_mode
+        self._services_dir = Path(services_dir) if services_dir else config.services_dir
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
