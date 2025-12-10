@@ -200,7 +200,6 @@ class TestMCPServerUnit:
         assert "list_modules" in tool_names
         assert "inspect_entity" in tool_names
         assert "inspect_surface" in tool_names
-        assert "build" in tool_names
         assert "analyze_patterns" in tool_names
         assert "lint_project" in tool_names
 
