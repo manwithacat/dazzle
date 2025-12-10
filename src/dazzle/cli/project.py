@@ -24,7 +24,7 @@ import typer
 
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.init import InitError, init_project, list_examples
+from dazzle.core.init_impl import InitError, init_project, list_examples
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
@@ -761,7 +761,7 @@ def example_command(
             console.print()
             print_step(1, 3, "Resetting project...")
 
-            from dazzle.core.init import reset_project
+            from dazzle.core.init_impl import reset_project
 
             try:
                 result = reset_project(target_dir, from_example=name)
@@ -822,7 +822,7 @@ def example_command(
     try:
         # Verify project setup
         print_step(2, 3, "Verifying project setup...")
-        from dazzle.core.init import verify_project
+        from dazzle.core.init_impl import verify_project
 
         if not verify_project(target_dir):
             print_warning("DSL validation errors detected")

@@ -41,7 +41,7 @@ def generate_dnr_ui(
 
     try:
         # Import required modules
-        from dazzle.core.dsl_parser import parse_dsl
+        from dazzle.core.dsl_parser_impl import parse_dsl
         from dazzle.core.ir import ModuleIR
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest

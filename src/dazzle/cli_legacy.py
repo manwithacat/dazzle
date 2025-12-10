@@ -323,7 +323,7 @@ def mcp_check() -> None:
 # =============================================================================
 # DNR (Dazzle Native Runtime) Commands
 # =============================================================================
-from dazzle.cli.dnr import dnr_app  # noqa: E402
+from dazzle.cli.dnr_impl import dnr_app  # noqa: E402
 
 app.add_typer(dnr_app, name="dnr")
 

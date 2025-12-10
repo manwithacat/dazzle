@@ -8,7 +8,7 @@ import json
 
 import pytest
 
-from dazzle.mcp.dnr_tools import (
+from dazzle.mcp.dnr_tools_impl import (
     DNR_TOOL_NAMES,
     LAYOUT_TYPES,
     PATTERN_COMPONENTS,

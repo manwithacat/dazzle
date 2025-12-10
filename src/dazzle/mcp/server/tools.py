@@ -172,7 +172,7 @@ def get_project_tools() -> list[Tool]:
 
 def get_all_tools() -> list[Tool]:
     """Get all available tools based on current mode."""
-    from dazzle.mcp.dnr_tools import get_dnr_tools
+    from dazzle.mcp.dnr_tools_impl import get_dnr_tools
 
     tools = []
 

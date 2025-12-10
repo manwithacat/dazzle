@@ -18,7 +18,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
-from dazzle.mcp.dnr_tools import set_backend_spec
+from dazzle.mcp.dnr_tools_impl import set_backend_spec
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.semantics import lookup_concept
 

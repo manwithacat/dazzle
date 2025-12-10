@@ -15,7 +15,7 @@ from .base import (
     CIAdapter,
     AdapterRegistry,
 )
-from .fastapi import FastAPIAdapter
+from .fastapi_impl import FastAPIAdapter
 from .react import ReactAdapter
 from .testing import SchemathesisAdapter, PytestAdapter
 from .ci import GitHubActionsAdapter

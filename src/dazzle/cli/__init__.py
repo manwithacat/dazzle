@@ -21,7 +21,7 @@ lazily in main() to avoid circular imports.
 import typer
 
 # Sub-apps - each is self-contained with no cli_legacy dependency
-from dazzle.cli.dnr import dnr_app
+from dazzle.cli.dnr_impl import dnr_app
 from dazzle.cli.e2e import e2e_app
 from dazzle.cli.mcp import mcp_app
 from dazzle.cli.testing import test_app

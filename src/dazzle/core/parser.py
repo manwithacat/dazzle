@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from . import ir
-from .dsl_parser import parse_dsl
+from .dsl_parser_impl import parse_dsl
 from .expander import VocabExpander
 from .vocab import load_manifest
 

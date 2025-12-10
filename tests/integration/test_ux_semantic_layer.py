@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.core.dsl_parser import parse_dsl
+from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 

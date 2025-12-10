@@ -10,7 +10,7 @@ from .errors import (
     ParseError,
     ValidationError,
 )
-from .init import InitError, init_project, list_examples
+from .init_impl import InitError, init_project, list_examples
 from .linker import build_appspec
 from .lint import lint_appspec
 from .parser import parse_modules

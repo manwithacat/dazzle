@@ -3,7 +3,7 @@
 
 from pathlib import Path
 
-from dazzle.core.dsl_parser import parse_dsl
+from dazzle.core.dsl_parser_impl import parse_dsl
 
 # Test entity parsing
 test_dsl = """

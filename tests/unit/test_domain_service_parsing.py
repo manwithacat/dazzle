@@ -6,7 +6,7 @@ Tests the parsing of domain service declarations in DSL files.
 
 from pathlib import Path
 
-from dazzle.core.dsl_parser import parse_dsl
+from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     DomainServiceKind,
     StubLanguage,

@@ -22,7 +22,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 from pydantic import AnyUrl
 
-from dazzle.mcp.dnr_tools import DNR_TOOL_NAMES, handle_dnr_tool
+from dazzle.mcp.dnr_tools_impl import DNR_TOOL_NAMES, handle_dnr_tool
 from dazzle.mcp.examples import get_example_metadata
 from dazzle.mcp.resources import create_resources
 from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
