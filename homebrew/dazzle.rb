@@ -103,10 +103,15 @@ class Dazzle < Formula
     # Install Python package in virtualenv
     venv = virtualenv_create(libexec, "python3.12")
 
-    # Install from src/ directory
-    cd "src" do
-      venv.pip_install buildpath/"src"
+    # Install Python dependencies first
+    resources.each do |r|
+      next if r.name == "cli-binary"
+
+      venv.pip_install r
     end
+
+    # Install dazzle package from root (pyproject.toml is at root level)
+    venv.pip_install buildpath
 
     # Install the pre-compiled CLI binary
     resource("cli-binary").stage do
