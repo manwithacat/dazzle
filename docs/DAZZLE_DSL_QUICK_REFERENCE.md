@@ -11,8 +11,9 @@
 3. [Surface Modes](#surface-modes)
 4. [Relationships](#relationships)
 5. [Common Patterns](#common-patterns)
-6. [Reserved Keywords](#reserved-keywords)
-7. [Gotchas & Solutions](#gotchas--solutions)
+6. [Business Logic (v0.7.0+)](#business-logic-v070)
+7. [Reserved Keywords](#reserved-keywords)
+8. [Gotchas & Solutions](#gotchas--solutions)
 
 ---
 
@@ -314,7 +315,11 @@ entity MyEntity:
   deleted_by: ref User optional
 ```
 
-### Access Control Pattern (v0.5.0+)
+## Business Logic (v0.7.0+)
+
+These features enable declarative business rules directly in the DSL.
+
+### Access Control Pattern (v0.7.0+)
 
 ```dsl
 # Inline access rules for read/write permissions
@@ -330,6 +335,66 @@ entity Task:
 
 # read: maps to visibility rules (who can see records)
 # write: maps to create/update/delete permissions
+```
+
+### State Machine Pattern (v0.7.0+)
+
+```dsl
+entity Ticket:
+  id: uuid pk
+  status: enum[open,in_progress,resolved,closed]=open
+  assigned_to: ref User
+  resolution: text
+
+  # Define allowed state transitions
+  transitions:
+    open -> in_progress: requires assigned_to
+    in_progress -> resolved: requires resolution
+    in_progress -> open
+    resolved -> closed
+    closed -> open: role(manager)
+    * -> closed: role(admin)  # Admin can close from any state
+
+# Transition guards:
+# - requires field: field must be non-null
+# - role(name): user must have role
+# - * (wildcard): from any state
+```
+
+### Computed Fields Pattern (v0.7.0+)
+
+```dsl
+entity Task:
+  id: uuid pk
+  created_at: datetime auto_add
+  due_date: date
+
+  # Computed field: derived from other fields
+  days_overdue: computed days_since(due_date)
+
+# Supported functions:
+# - days_since(datetime_field): days since the field's value
+# - sum(related.field): sum of related records
+# - count(related): count of related records
+```
+
+### Invariant Pattern (v0.7.0+)
+
+```dsl
+entity Booking:
+  id: uuid pk
+  start_date: datetime required
+  end_date: datetime required
+  priority: enum[low,medium,high]=medium
+  due_date: date
+
+  # Cross-field validation rules
+  invariant: end_date > start_date
+  invariant: priority != high or due_date != null
+
+# Use = for equality (not ==)
+# Logical operators: and, or, not
+# Comparison operators: =, !=, >, <, >=, <=
 ```
 
 ---
@@ -466,6 +531,25 @@ dazzle init testing_tool
 # ⏳ Planned for v0.2
 # For now: Use manual Django template customization
 ```
+
+### 9. Equality Operator in Business Logic (v0.7.0+)
+
+**Problem**: Using `==` instead of `=` for equality comparisons
+
+**Solution**: Use single `=` for all equality checks in invariants and access rules
+```dsl
+# ✗ WRONG (will work but not recommended)
+invariant: status == resolved or resolution != null
+
+# ✓ CORRECT
+invariant: status = resolved or resolution != null
+
+# Access rules use single = as well
+access:
+  read: owner_id = current_user or is_public = true
+```
+
+**Note**: The parser accepts both `=` and `==` for backward compatibility, but `=` is the canonical form for consistency.
 
 ---
 
@@ -663,6 +747,6 @@ entity User:
 
 ---
 
-**Last Updated**: 2025-11-23
-**DAZZLE Version**: 0.1.0
+**Last Updated**: 2025-12-10
+**DAZZLE Version**: 0.7.0
 **Found an error?** Open an issue with the example that didn't work!

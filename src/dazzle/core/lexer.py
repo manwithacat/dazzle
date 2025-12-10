@@ -165,6 +165,27 @@ class TokenType(Enum):
 
     # Invariant Keywords
     INVARIANT = "invariant"
+    CODE = "code"
+
+    # v0.7.1 LLM Cognition Keywords
+    INTENT = "intent"
+    EXAMPLES = "examples"
+    DOMAIN = "domain"
+    PATTERNS = "patterns"
+    EXTENDS = "extends"
+    ARCHETYPE = "archetype"
+    HAS_MANY = "has_many"
+    HAS_ONE = "has_one"
+    EMBEDS = "embeds"
+    BELONGS_TO = "belongs_to"
+    CASCADE = "cascade"
+    RESTRICT = "restrict"
+    NULLIFY = "nullify"
+    READONLY = "readonly"
+    DENY = "deny"
+    SCENARIOS = "scenarios"
+    GIVEN = "given"
+    THEN = "then"
 
     # Flow/E2E Test Keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
@@ -405,6 +426,26 @@ KEYWORDS = {
     "days_since",
     # Invariant keywords
     "invariant",
+    "code",
+    # v0.7.1 LLM Cognition keywords
+    "intent",
+    "examples",
+    "domain",
+    "patterns",
+    "extends",
+    "archetype",
+    "has_many",
+    "has_one",
+    "embeds",
+    "belongs_to",
+    "cascade",
+    "restrict",
+    "nullify",
+    "readonly",
+    "deny",
+    "scenarios",
+    "given",
+    "then",
 }
 
 

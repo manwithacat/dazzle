@@ -1,12 +1,16 @@
 # DAZZLE Operations Dashboard - COMMAND_CENTER Archetype Example
-# Demonstrates dense expert interface for operations monitoring
+# Demonstrates v0.7.0 Business Logic Features:
+# - State machine for system status lifecycle
+# - Invariants for metric validation
+# - Access rules for operator roles
+# - Dense expert interface for operations monitoring
 
 module ops_dashboard.core
 
 app ops_dashboard "Operations Dashboard"
 
 # =============================================================================
-# Entities
+# Entities with v0.7.0 Business Logic
 # =============================================================================
 
 entity System "System":
@@ -21,6 +25,27 @@ entity System "System":
   last_check: datetime auto_update
   created_at: datetime auto_add
 
+  # State machine: system status transitions
+  transitions:
+    healthy -> degraded
+    healthy -> critical
+    degraded -> healthy
+    degraded -> critical
+    critical -> degraded
+    critical -> offline
+    offline -> healthy: role(admin)
+    * -> offline: role(admin)
+
+  # Invariants: metrics must be within valid ranges
+  invariant: cpu_usage >= 0 and cpu_usage <= 100
+  invariant: memory_usage >= 0 and memory_usage <= 100
+  invariant: error_rate >= 0 and error_rate <= 100
+
+  # Access: only operators and admins can modify
+  access:
+    read: role(operator) or role(admin)
+    write: role(admin)
+
 entity Alert "Alert":
   id: uuid pk
   system: ref System required
@@ -29,6 +54,17 @@ entity Alert "Alert":
   triggered_at: datetime auto_add
   acknowledged: bool = false
   acknowledged_by: str(200)
+
+  # Computed field: hours since alert was triggered
+  hours_open: computed days_since(triggered_at)
+
+  # Invariant: acknowledged alerts must have acknowledger
+  invariant: acknowledged = false or acknowledged_by != null
+
+  # Access: operators can acknowledge, admins can modify
+  access:
+    read: role(operator) or role(admin)
+    write: role(operator) or role(admin)
 
 # =============================================================================
 # Persona

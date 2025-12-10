@@ -1,11 +1,15 @@
 # DAZZLE Simple Task Manager
-# A minimal example demonstrating DAZZLE DSL basics with v0.2 features
+# Demonstrates v0.7.0 Business Logic Features:
+# - State machine for status transitions
+# - Computed fields for derived data
+# - Invariants for data integrity
+# - Access rules for visibility control
 
 module simple_task.core
 
 app simple_task "Simple Task Manager"
 
-# Core entity with common patterns
+# Core entity with v0.7.0 business logic features
 entity Task "Task":
   id: uuid pk
   title: str(200) required
@@ -16,6 +20,24 @@ entity Task "Task":
   assigned_to: str(100)
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  # Computed field: days until/past due date
+  days_overdue: computed days_since(due_date)
+
+  # State machine: defines allowed status transitions
+  transitions:
+    todo -> in_progress: requires assigned_to
+    in_progress -> done
+    in_progress -> todo
+    done -> todo: role(admin)
+
+  # Invariant: high priority tasks must have a due date
+  invariant: priority != high or due_date != null
+
+  # Access control (commented for open access in example)
+  # access:
+  #   read: owner_id = current_user or role(admin)
+  #   write: owner_id = current_user
 
 # List view - the main task overview
 surface task_list "Task List":

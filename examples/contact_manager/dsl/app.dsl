@@ -1,11 +1,14 @@
 # DAZZLE Contact Manager
-# Demonstrates DUAL_PANE_FLOW archetype with list + detail pattern
+# Demonstrates v0.7.0 Features + DUAL_PANE_FLOW archetype:
+# - Computed fields for derived display values
+# - Invariants for data integrity
+# - Business logic expressed declaratively
 
 module contact_manager.core
 
 app contact_manager "Contact Manager"
 
-# Entity for contact information
+# Entity for contact information with v0.7.0 business logic
 entity Contact "Contact":
   id: uuid pk
   first_name: str(100) required
@@ -18,6 +21,9 @@ entity Contact "Contact":
   is_favorite: bool=false
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  # Invariant: contacts must have either email or phone
+  invariant: email != null or phone != null
 
   index email
   index last_name,first_name

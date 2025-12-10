@@ -7,10 +7,26 @@ Types are organized into logical submodules for maintainability.
 All types are re-exported from this package for backward compatibility.
 """
 
+# Archetypes (v0.7.1)
 # Fields
 # App Specification
 from .appspec import (
     AppSpec,
+)
+from .archetype import (
+    ArchetypeSpec,
+)
+
+# Computed Fields
+from .computed import (
+    AggregateCall,
+    AggregateFunction,
+    ArithmeticExpr,
+    ArithmeticOperator,
+    ComputedExpr,
+    ComputedFieldSpec,
+    FieldReference,
+    LiteralValue,
 )
 
 # Conditions
@@ -32,6 +48,7 @@ from .domain import (
     ConstraintKind,
     DomainSpec,
     EntitySpec,
+    ExampleRecord,
     PermissionKind,
     PermissionRule,
     VisibilityRule,
@@ -65,6 +82,7 @@ from .fields import (
     FieldSpec,
     FieldType,
     FieldTypeKind,
+    RelationshipBehavior,
 )
 
 # Foreign Models
@@ -83,6 +101,25 @@ from .integrations import (
     MappingRule,
     MatchRule,
     SyncMode,
+)
+
+# Invariants
+from .invariant import (
+    ComparisonExpr,
+    DurationExpr,
+    DurationUnit,
+    InvariantExpr,
+    InvariantFieldRef,
+    InvariantLiteral,
+    InvariantSpec,
+    LogicalExpr,
+    NotExpr,
+)
+from .invariant import (
+    ComparisonOperator as InvariantComparisonOperator,
+)
+from .invariant import (
+    LogicalOperator as InvariantLogicalOperator,
 )
 
 # Layout Engine
@@ -122,33 +159,6 @@ from .state_machine import (
     TimeUnit,
     TransitionGuard,
     TransitionTrigger,
-)
-
-# Computed Fields
-from .computed import (
-    AggregateCall,
-    AggregateFunction,
-    ArithmeticExpr,
-    ArithmeticOperator,
-    ComputedExpr,
-    ComputedFieldSpec,
-    FieldReference,
-    LiteralValue,
-)
-
-# Invariants
-from .invariant import (
-    ComparisonExpr,
-    ComparisonOperator as InvariantComparisonOperator,
-    DurationExpr,
-    DurationUnit,
-    InvariantExpr,
-    InvariantFieldRef,
-    InvariantLiteral,
-    InvariantSpec,
-    LogicalExpr,
-    LogicalOperator as InvariantLogicalOperator,
-    NotExpr,
 )
 
 # Surfaces
@@ -192,11 +202,14 @@ from .workspaces import (
 )
 
 __all__ = [
+    # Archetypes (v0.7.1)
+    "ArchetypeSpec",
     # Fields
     "FieldTypeKind",
     "FieldType",
     "FieldModifier",
     "FieldSpec",
+    "RelationshipBehavior",
     # Conditions
     "ComparisonOperator",
     "LogicalOperator",
@@ -213,6 +226,7 @@ __all__ = [
     "PermissionKind",
     "PermissionRule",
     "AccessSpec",
+    "ExampleRecord",
     "EntitySpec",
     "DomainSpec",
     # UX

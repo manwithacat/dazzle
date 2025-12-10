@@ -189,6 +189,26 @@ class Parser:
             TokenType.MINUTES,
             # Access control keywords - can be used in dotted path expressions
             TokenType.OWNER,
+            # v0.7.1 LLM Cognition keywords - can be used as field names
+            TokenType.INTENT,
+            TokenType.EXAMPLES,
+            TokenType.DOMAIN,
+            TokenType.PATTERNS,
+            TokenType.EXTENDS,
+            TokenType.ARCHETYPE,
+            TokenType.HAS_MANY,
+            TokenType.HAS_ONE,
+            TokenType.EMBEDS,
+            TokenType.BELONGS_TO,
+            TokenType.CASCADE,
+            TokenType.RESTRICT,
+            TokenType.NULLIFY,
+            TokenType.READONLY,
+            TokenType.DENY,
+            TokenType.SCENARIOS,
+            TokenType.GIVEN,
+            TokenType.THEN,
+            TokenType.CODE,
         ):
             return self.advance()
 
@@ -377,6 +397,42 @@ class Parser:
             entity_name = self.expect(TokenType.IDENTIFIER).value
             return ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=entity_name)
 
+        # v0.7.1: has_many EntityName [cascade|restrict|nullify] [readonly]
+        elif token.type == TokenType.HAS_MANY:
+            self.advance()
+            entity_name = self.expect(TokenType.IDENTIFIER).value
+            behavior, readonly = self._parse_relationship_modifiers()
+            return ir.FieldType(
+                kind=ir.FieldTypeKind.HAS_MANY,
+                ref_entity=entity_name,
+                relationship_behavior=behavior,
+                readonly=readonly,
+            )
+
+        # v0.7.1: has_one EntityName [cascade|restrict] [readonly]
+        elif token.type == TokenType.HAS_ONE:
+            self.advance()
+            entity_name = self.expect(TokenType.IDENTIFIER).value
+            behavior, readonly = self._parse_relationship_modifiers()
+            return ir.FieldType(
+                kind=ir.FieldTypeKind.HAS_ONE,
+                ref_entity=entity_name,
+                relationship_behavior=behavior,
+                readonly=readonly,
+            )
+
+        # v0.7.1: embeds EntityName
+        elif token.type == TokenType.EMBEDS:
+            self.advance()
+            entity_name = self.expect(TokenType.IDENTIFIER).value
+            return ir.FieldType(kind=ir.FieldTypeKind.EMBEDS, ref_entity=entity_name)
+
+        # v0.7.1: belongs_to EntityName
+        elif token.type == TokenType.BELONGS_TO:
+            self.advance()
+            entity_name = self.expect(TokenType.IDENTIFIER).value
+            return ir.FieldType(kind=ir.FieldTypeKind.BELONGS_TO, ref_entity=entity_name)
+
         else:
             raise make_parse_error(
                 f"Unknown type: {token.value}",
@@ -384,6 +440,31 @@ class Parser:
                 token.line,
                 token.column,
             )
+
+    def _parse_relationship_modifiers(
+        self,
+    ) -> tuple[ir.RelationshipBehavior | None, bool]:
+        """Parse optional relationship modifiers (cascade, restrict, nullify, readonly)."""
+        behavior: ir.RelationshipBehavior | None = None
+        readonly = False
+
+        # Check for behavior modifier
+        if self.match(TokenType.CASCADE):
+            self.advance()
+            behavior = ir.RelationshipBehavior.CASCADE
+        elif self.match(TokenType.RESTRICT):
+            self.advance()
+            behavior = ir.RelationshipBehavior.RESTRICT
+        elif self.match(TokenType.NULLIFY):
+            self.advance()
+            behavior = ir.RelationshipBehavior.NULLIFY
+
+        # Check for readonly modifier
+        if self.match(TokenType.READONLY):
+            self.advance()
+            readonly = True
+
+        return behavior, readonly
 
     def parse_field_modifiers(
         self,
@@ -462,6 +543,13 @@ class Parser:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
+        # v0.7.1: New fields for LLM cognition
+        intent: str | None = None
+        domain: str | None = None
+        patterns: list[str] = []
+        extends: list[str] = []
+        examples: list[ir.ExampleRecord] = []
+
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
         constraints: list[ir.Constraint] = []
@@ -474,6 +562,63 @@ class Parser:
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
+
+            # v0.7.1: Check for intent: declaration
+            if self.match(TokenType.INTENT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                intent = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+                continue
+
+            # v0.7.1: Check for domain: declaration
+            if self.match(TokenType.DOMAIN):
+                self.advance()
+                self.expect(TokenType.COLON)
+                domain = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+                continue
+
+            # v0.7.1: Check for patterns: declaration
+            if self.match(TokenType.PATTERNS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                patterns = [self.expect_identifier_or_keyword().value]
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    patterns.append(self.expect_identifier_or_keyword().value)
+                self.skip_newlines()
+                continue
+
+            # v0.7.1: Check for extends: declaration
+            if self.match(TokenType.EXTENDS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                extends = [self.expect(TokenType.IDENTIFIER).value]
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    extends.append(self.expect(TokenType.IDENTIFIER).value)
+                self.skip_newlines()
+                continue
+
+            # v0.7.1: Check for examples: block
+            if self.match(TokenType.EXAMPLES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    example = self._parse_example_record()
+                    examples.append(example)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
 
             # Check for constraints
             if self.match(TokenType.UNIQUE, TokenType.INDEX):
@@ -494,13 +639,42 @@ class Parser:
                 self.skip_newlines()
                 continue
 
-            # Check for invariant declaration
+            # Check for invariant declaration (with optional message/code)
             if self.match(TokenType.INVARIANT):
                 self.advance()
                 self.expect(TokenType.COLON)
                 expr = self._parse_invariant_expr()
-                invariants.append(ir.InvariantSpec(expression=expr))
                 self.skip_newlines()
+
+                # v0.7.1: Check for optional message: and code: on next lines
+                inv_message: str | None = None
+                inv_code: str | None = None
+
+                # Check for indented message/code block
+                if self.match(TokenType.INDENT):
+                    self.advance()
+                    while not self.match(TokenType.DEDENT):
+                        self.skip_newlines()
+                        if self.match(TokenType.DEDENT):
+                            break
+                        if self.match(TokenType.MESSAGE):
+                            self.advance()
+                            self.expect(TokenType.COLON)
+                            inv_message = self.expect(TokenType.STRING).value
+                        elif self.match(TokenType.CODE):
+                            self.advance()
+                            self.expect(TokenType.COLON)
+                            inv_code = self.expect_identifier_or_keyword().value
+                        else:
+                            # Not message or code, break out
+                            break
+                        self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        self.advance()
+
+                invariants.append(
+                    ir.InvariantSpec(expression=expr, message=inv_message, code=inv_code)
+                )
                 continue
 
             # Check for visible: block
@@ -687,12 +861,17 @@ class Parser:
         return ir.EntitySpec(
             name=name,
             title=title,
+            intent=intent,
+            domain=domain,
+            patterns=patterns,
+            extends=extends,
             fields=fields,
             computed_fields=computed_fields,
             invariants=invariants,
             constraints=constraints,
             access=access,
             state_machine=state_machine,
+            examples=examples,
         )
 
     def _parse_visibility_rule(self) -> ir.VisibilityRule:
@@ -998,6 +1177,172 @@ class Parser:
         return path
 
     # =========================================================================
+    # Archetype Parsing (v0.7.1)
+    # =========================================================================
+
+    def parse_archetype(self) -> ir.ArchetypeSpec:
+        """
+        Parse archetype declaration.
+
+        Syntax:
+            archetype <ArchetypeName>:
+              field1: type
+              field2: type
+              [computed fields]
+              [invariants]
+        """
+        self.expect(TokenType.ARCHETYPE)
+
+        name = self.expect(TokenType.IDENTIFIER).value
+
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        fields: list[ir.FieldSpec] = []
+        computed_fields: list[ir.ComputedFieldSpec] = []
+        invariants: list[ir.InvariantSpec] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # Check for invariant declaration
+            if self.match(TokenType.INVARIANT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                expr = self._parse_invariant_expr()
+                invariants.append(ir.InvariantSpec(expression=expr))
+                self.skip_newlines()
+                continue
+
+            # Parse field
+            field_name = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+
+            # Check for computed field
+            if self.match(TokenType.COMPUTED):
+                self.advance()
+                computed_expr = self._parse_computed_expr()
+                computed_fields.append(
+                    ir.ComputedFieldSpec(
+                        name=field_name,
+                        expression=computed_expr,
+                    )
+                )
+            else:
+                field_type = self.parse_type_spec()
+                modifiers, default = self.parse_field_modifiers()
+
+                fields.append(
+                    ir.FieldSpec(
+                        name=field_name,
+                        type=field_type,
+                        modifiers=modifiers,
+                        default=default,
+                    )
+                )
+
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.ArchetypeSpec(
+            name=name,
+            fields=fields,
+            computed_fields=computed_fields,
+            invariants=invariants,
+        )
+
+    # =========================================================================
+    # Example Record Parsing (v0.7.1)
+    # =========================================================================
+
+    def _parse_example_record(self) -> ir.ExampleRecord:
+        """
+        Parse an example record in the examples: block.
+
+        Syntax:
+            - {field1: value1, field2: value2, ...}
+
+        Values can be:
+            - strings (quoted)
+            - numbers (int or float)
+            - booleans (true/false)
+            - null
+        """
+        self.expect(TokenType.MINUS)
+
+        # Expect opening brace (we'll use LBRACKET for { since lexer might not have LBRACE)
+        # Actually, let's check if we have a brace-like syntax or use a simpler approach
+        # For now, parse key:value pairs until newline
+
+        values: dict[str, str | int | float | bool | None] = {}
+
+        # Check for { syntax
+        if self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier():
+            # No braces, just key: value pairs on the line
+            while True:
+                key = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.COLON)
+                value = self._parse_literal_value()
+                values[key] = value
+
+                if self.match(TokenType.COMMA):
+                    self.advance()
+                else:
+                    break
+
+        return ir.ExampleRecord(values=values)
+
+    def _parse_literal_value(self) -> str | int | float | bool | None:
+        """Parse a literal value (string, number, boolean, or null)."""
+        if self.match(TokenType.STRING):
+            return self.advance().value
+        elif self.match(TokenType.NUMBER):
+            num_str = self.advance().value
+            if "." in num_str:
+                return float(num_str)
+            return int(num_str)
+        elif self.match(TokenType.TRUE):
+            self.advance()
+            return True
+        elif self.match(TokenType.FALSE):
+            self.advance()
+            return False
+        elif self.match(TokenType.IDENTIFIER):
+            val = self.current_token().value
+            if val == "null" or val == "None":
+                self.advance()
+                return None
+            # Treat as string value (for enum values etc)
+            return self.advance().value
+        else:
+            # Allow keywords as values (e.g., enum values)
+            if self._is_keyword_as_identifier():
+                return self.advance().value
+            token = self.current_token()
+            raise make_parse_error(
+                f"Expected literal value, got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+    def _is_keyword_as_identifier(self) -> bool:
+        """Check if current token is a keyword that can be used as identifier."""
+        return self.current_token().type in (
+            TokenType.TRUE,
+            TokenType.FALSE,
+            TokenType.CRITICAL,
+            TokenType.WARNING,
+            TokenType.NOTICE,
+            TokenType.INFO,
+            # Add more as needed
+        )
+
+    # =========================================================================
     # Invariant Expression Parsing
     # =========================================================================
 
@@ -1065,17 +1410,23 @@ class Parser:
 
         Syntax:
             invariant_comparison ::= invariant_primary (comp_op invariant_primary)?
-            comp_op ::= "==" | "!=" | ">" | "<" | ">=" | "<="
+            comp_op ::= "=" | "==" | "!=" | ">" | "<" | ">=" | "<="
+
+        Note: Both "=" and "==" are accepted for equality to maintain consistency
+        with access rule syntax. This makes the DSL more LLM-friendly.
 
         Examples:
             - end_date > start_date
             - quantity >= 0
-            - status == "active"
+            - status = "active"
+            - status == "active"  (also valid)
         """
         left = self._parse_invariant_primary()
 
         # Check for comparison operator
+        # Note: Both EQUALS (=) and DOUBLE_EQUALS (==) map to EQ for consistency
         comparison_ops = {
+            TokenType.EQUALS: ir.InvariantComparisonOperator.EQ,
             TokenType.DOUBLE_EQUALS: ir.InvariantComparisonOperator.EQ,
             TokenType.NOT_EQUALS: ir.InvariantComparisonOperator.NE,
             TokenType.GREATER_THAN: ir.InvariantComparisonOperator.GT,
@@ -3550,33 +3901,6 @@ class Parser:
         value = self._parse_literal_value()
         return ir.ConditionValue(literal=value)
 
-    def _parse_literal_value(self) -> str | int | float | bool | None:
-        """Parse a literal value (string, number, bool, null, or identifier)."""
-        token = self.current_token()
-
-        if self.match(TokenType.STRING):
-            return self.advance().value
-        elif self.match(TokenType.NUMBER):
-            val = self.advance().value
-            if "." in val:
-                return float(val)
-            return int(val)
-        elif self.match(TokenType.TRUE):
-            self.advance()
-            return True
-        elif self.match(TokenType.FALSE):
-            self.advance()
-            return False
-        elif token.value == "null":
-            self.advance()
-            return None
-        elif self.match(TokenType.IDENTIFIER):
-            # Enum value or variable reference
-            return self.advance().value
-        else:
-            # Try to accept keywords as values (like enum values)
-            return self.expect_identifier_or_keyword().value
-
     # =========================================================================
     # Workspace Parsing
     # =========================================================================
@@ -3803,9 +4127,28 @@ class Parser:
         while not self.match(TokenType.EOF):
             self.skip_newlines()
 
-            if self.match(TokenType.ENTITY):
+            # v0.7.1: Check for archetype declaration
+            if self.match(TokenType.ARCHETYPE):
+                archetype = self.parse_archetype()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes + [archetype],
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                )
+
+            elif self.match(TokenType.ENTITY):
                 entity = self.parse_entity()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities + [entity],
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3815,11 +4158,14 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.SURFACE):
                 surface = self.parse_surface()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces + [surface],
                     workspaces=fragment.workspaces,
@@ -3829,11 +4175,14 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.EXPERIENCE):
                 experience = self.parse_experience()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3843,6 +4192,8 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.SERVICE):
@@ -3850,6 +4201,7 @@ class Parser:
                 # Route to apis or domain_services based on type
                 if isinstance(service, ir.DomainServiceSpec):
                     fragment = ir.ModuleFragment(
+                        archetypes=fragment.archetypes,
                         entities=fragment.entities,
                         surfaces=fragment.surfaces,
                         workspaces=fragment.workspaces,
@@ -3859,9 +4211,12 @@ class Parser:
                         foreign_models=fragment.foreign_models,
                         integrations=fragment.integrations,
                         tests=fragment.tests,
+                        e2e_flows=fragment.e2e_flows,
+                        fixtures=fragment.fixtures,
                     )
                 else:
                     fragment = ir.ModuleFragment(
+                        archetypes=fragment.archetypes,
                         entities=fragment.entities,
                         surfaces=fragment.surfaces,
                         workspaces=fragment.workspaces,
@@ -3871,11 +4226,14 @@ class Parser:
                         foreign_models=fragment.foreign_models,
                         integrations=fragment.integrations,
                         tests=fragment.tests,
+                        e2e_flows=fragment.e2e_flows,
+                        fixtures=fragment.fixtures,
                     )
 
             elif self.match(TokenType.FOREIGN_MODEL):
                 foreign_model = self.parse_foreign_model()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3885,11 +4243,14 @@ class Parser:
                     foreign_models=fragment.foreign_models + [foreign_model],
                     integrations=fragment.integrations,
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.INTEGRATION):
                 integration = self.parse_integration()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3899,11 +4260,14 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations + [integration],
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.TEST):
                 test = self.parse_test()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3913,11 +4277,14 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests + [test],
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.WORKSPACE):
                 workspace = self.parse_workspace()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces + [workspace],
@@ -3927,11 +4294,14 @@ class Parser:
                     foreign_models=fragment.foreign_models,
                     integrations=fragment.integrations,
                     tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
                 )
 
             elif self.match(TokenType.FLOW):
                 flow = self.parse_flow()
                 fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
                     entities=fragment.entities,
                     surfaces=fragment.surfaces,
                     workspaces=fragment.workspaces,
@@ -3942,6 +4312,7 @@ class Parser:
                     integrations=fragment.integrations,
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows + [flow],
+                    fixtures=fragment.fixtures,
                 )
 
             else:

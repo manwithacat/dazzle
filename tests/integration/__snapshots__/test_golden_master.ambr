@@ -3,6 +3,8 @@
   dict({
     'apis': list([
     ]),
+    'archetypes': list([
+    ]),
     'domain': dict({
       'entities': list([
         dict({
@@ -10,6 +12,11 @@
           'computed_fields': list([
           ]),
           'constraints': list([
+          ]),
+          'domain': None,
+          'examples': list([
+          ]),
+          'extends': list([
           ]),
           'fields': list([
             dict({
@@ -23,7 +30,9 @@
                 'kind': <FieldTypeKind.UUID: 'uuid'>,
                 'max_length': None,
                 'precision': None,
+                'readonly': False,
                 'ref_entity': None,
+                'relationship_behavior': None,
                 'scale': None,
               }),
             }),
@@ -38,7 +47,9 @@
                 'kind': <FieldTypeKind.STR: 'str'>,
                 'max_length': 200,
                 'precision': None,
+                'readonly': False,
                 'ref_entity': None,
+                'relationship_behavior': None,
                 'scale': None,
               }),
             }),
@@ -52,7 +63,9 @@
                 'kind': <FieldTypeKind.TEXT: 'text'>,
                 'max_length': None,
                 'precision': None,
+                'readonly': False,
                 'ref_entity': None,
+                'relationship_behavior': None,
                 'scale': None,
               }),
             }),
@@ -70,7 +83,9 @@
                 'kind': <FieldTypeKind.ENUM: 'enum'>,
                 'max_length': None,
                 'precision': None,
+                'readonly': False,
                 'ref_entity': None,
+                'relationship_behavior': None,
                 'scale': None,
               }),
             }),
@@ -85,14 +100,19 @@
                 'kind': <FieldTypeKind.DATETIME: 'datetime'>,
                 'max_length': None,
                 'precision': None,
+                'readonly': False,
                 'ref_entity': None,
+                'relationship_behavior': None,
                 'scale': None,
               }),
             }),
           ]),
+          'intent': None,
           'invariants': list([
           ]),
           'name': 'Task',
+          'patterns': list([
+          ]),
           'state_machine': None,
           'title': 'Task',
         }),

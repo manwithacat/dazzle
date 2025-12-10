@@ -11,6 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .archetype import ArchetypeSpec
 from .domain import DomainSpec, EntitySpec
 from .e2e import FixtureSpec, FlowPriority, FlowSpec
 from .experiences import ExperienceSpec
@@ -35,6 +36,7 @@ class AppSpec(BaseModel):
         name: Application name
         title: Human-readable title
         version: Version string
+        archetypes: List of archetype specifications (v0.7.1)
         domain: Domain specification (entities)
         surfaces: List of surface specifications
         workspaces: List of workspace specifications
@@ -53,6 +55,7 @@ class AppSpec(BaseModel):
     name: str
     title: str | None = None
     version: str = "0.1.0"
+    archetypes: list[ArchetypeSpec] = Field(default_factory=list)  # v0.7.1
     domain: DomainSpec
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension (old)
@@ -72,6 +75,13 @@ class AppSpec(BaseModel):
     def get_entity(self, name: str) -> EntitySpec | None:
         """Get entity by name."""
         return self.domain.get_entity(name)
+
+    def get_archetype(self, name: str) -> ArchetypeSpec | None:
+        """Get archetype by name."""
+        for archetype in self.archetypes:
+            if archetype.name == name:
+                return archetype
+        return None
 
     def get_surface(self, name: str) -> SurfaceSpec | None:
         """Get surface by name."""

@@ -4,27 +4,61 @@ DAZZLE glossary content.
 This module contains the static glossary text for DAZZLE terminology.
 """
 
-GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art (v0.5)
+GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art (v0.7.2)
 
-**Version**: 0.5.0
-**Date**: 2025-12-03
+**Version**: 0.7.2
+**Date**: 2025-12-10
 
-This glossary defines DAZZLE DSL v0.5 concepts including the UX Semantic Layer and Anti-Turing Extensibility Model.
+This glossary defines DAZZLE DSL v0.7.2 concepts including the Ejection Toolchain (standalone code generation), LLM Cognition features (intent, archetypes, examples, relationship semantics), Business Logic features (state machines, invariants, computed fields), and the UX Semantic Layer.
 
 ## Core Concepts
 
 ### Entity
-A domain model representing a business concept (User, Task, Device, etc.). Similar to a database table but defined at the semantic level. Entities have fields with types, constraints, and relationships.
+A domain model representing a business concept (User, Task, Device, etc.). Similar to a database table but defined at the semantic level. Entities have fields with types, constraints, relationships, and business logic.
 
-**Version**: Unchanged from v0.1
+**Version**: Enhanced in v0.7 with state machines, invariants, computed fields, and access rules. Enhanced in v0.7.1 with intent, domain/patterns, archetypes, examples, and relationship semantics.
 
-**Example:**
+**Example (v0.7.1 with LLM cognition features):**
 ```dsl
-entity Task "Task":
+entity Ticket "Support Ticket":
+  intent: "Track and resolve customer issues through structured workflow"
+  domain: support
+  patterns: lifecycle, assignment, audit
+  extends: Timestamped, Auditable
+
   id: uuid pk
   title: str(200) required
-  status: enum[todo,in_progress,done]=todo
-  created_at: datetime auto_add
+  status: enum[open,in_progress,resolved,closed]=open
+  priority: enum[low,medium,high]=medium
+  assigned_to: ref User
+  resolution: text
+  created_by: ref User required
+  comments: has_many Comment cascade
+
+  # Computed field: derived value
+  days_open: computed days_since(created_at)
+
+  # State machine: allowed status transitions
+  transitions:
+    open -> in_progress: requires assigned_to
+    in_progress -> resolved: requires resolution
+    resolved -> closed
+    closed -> open: role(manager)
+
+  # Invariants with messages
+  invariant: status != resolved or resolution != null
+    message: "Resolution is required before closing ticket"
+    code: TICKET_NEEDS_RESOLUTION
+
+  # Access rules
+  access:
+    read: created_by = current_user or role(agent) or role(manager)
+    write: role(agent) or role(manager)
+
+  # Example data
+  examples:
+    {title: "Login page error", status: open, priority: high}
+    {title: "Password reset issue", status: in_progress, priority: medium}
 ```
 
 ### Surface
@@ -227,6 +261,118 @@ Persona variants controlling scope and capabilities:
 - Manager: department/team scope
 - Member: own records only
 
+## Business Logic (v0.7)
+
+### State Machine (NEW in v0.7)
+Define allowed status/state transitions with optional guards. Prevents invalid state changes and documents workflow rules.
+
+**Syntax:**
+```dsl
+transitions:
+  from_state -> to_state
+  from_state -> to_state: requires field_name
+  from_state -> to_state: role(role_name)
+  * -> to_state: role(admin)  # wildcard: from any state
+```
+
+**Guards:**
+- `requires field_name` - Field must be non-null before transition
+- `role(name)` - User must have the specified role
+- No guard - Transition always allowed
+
+**Example:**
+```dsl
+entity Task "Task":
+  status: enum[todo,in_progress,done]=todo
+  assigned_to: ref User
+
+  transitions:
+    todo -> in_progress: requires assigned_to
+    in_progress -> done
+    in_progress -> todo
+    done -> todo: role(admin)  # Only admin can reopen
+```
+
+### Computed Field (NEW in v0.7)
+Derived values calculated from other fields. Computed at query time, not stored.
+
+**Syntax:**
+```dsl
+field_name: computed expression
+```
+
+**Functions:**
+- `days_since(datetime_field)` - Days since the field's value
+- `sum(related.field)` - Sum of related records
+- `count(related)` - Count of related records
+
+**Example:**
+```dsl
+entity Ticket "Ticket":
+  created_at: datetime auto_add
+  due_date: date
+
+  days_open: computed days_since(created_at)
+  days_until_due: computed days_since(due_date)
+```
+
+### Invariant (NEW in v0.7)
+Cross-field validation rules that must always hold. Enforced on create and update.
+
+**Syntax:**
+```dsl
+invariant: condition
+```
+
+**Operators:**
+- Comparison: `=`, `!=`, `>`, `<`, `>=`, `<=`
+- Logical: `and`, `or`, `not`
+- Null check: `field != null`, `field = null`
+
+**IMPORTANT:** Use single `=` for equality (not `==`) for consistency with access rules.
+
+**Example:**
+```dsl
+entity Booking "Booking":
+  start_date: datetime required
+  end_date: datetime required
+  priority: enum[low,medium,high]=medium
+  due_date: date
+
+  # End must be after start
+  invariant: end_date > start_date
+
+  # High priority bookings must have a due date
+  invariant: priority != high or due_date != null
+```
+
+### Access Rules (Enhanced in v0.7)
+Inline access control rules defining read/write permissions.
+
+**Syntax:**
+```dsl
+access:
+  read: condition
+  write: condition
+```
+
+**Expressions:**
+- `field = current_user` - Field matches logged-in user
+- `role(name)` - User has the specified role
+- `field = value` - Field equals literal value
+- Combine with `and`, `or`
+
+**Example:**
+```dsl
+entity Document "Document":
+  owner: ref User required
+  is_public: bool = false
+
+  access:
+    read: owner = current_user or is_public = true or role(admin)
+    write: owner = current_user or role(admin)
+```
+
 ## Extensibility (v0.5)
 
 ### Domain Service (NEW in v0.5)
@@ -280,6 +426,134 @@ entity Task "Task":
     write: owner = current_user
 ```
 
+## LLM Cognition (v0.7.1)
+
+### Intent (NEW in v0.7.1)
+A single-line declaration explaining WHY an entity exists in the domain. Helps LLMs understand the semantic purpose of data structures.
+
+**Syntax:**
+```dsl
+intent: "explanation of entity purpose"
+```
+
+**Example:**
+```dsl
+entity Invoice "Invoice":
+  intent: "Represent a finalized billing request from vendor to customer"
+```
+
+### Archetype (NEW in v0.7.1)
+Reusable template defining common field patterns. Entities can extend archetypes to inherit fields, computed fields, and invariants.
+
+**Syntax:**
+```dsl
+archetype ArchetypeName:
+  field_name: type modifiers
+  ...
+
+entity EntityName "Title":
+  extends: Archetype1, Archetype2
+```
+
+**Example:**
+```dsl
+archetype Timestamped:
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+archetype Auditable:
+  created_by: ref User
+  updated_by: ref User
+
+entity Document "Document":
+  extends: Timestamped, Auditable
+  id: uuid pk
+  title: str(200) required
+```
+
+### Domain and Patterns (NEW in v0.7.1)
+Semantic tags that classify entities by domain area and behavioral patterns.
+
+**Syntax:**
+```dsl
+domain: tag
+patterns: tag1, tag2, tag3
+```
+
+**Common domains:** identity, billing, commerce, support, content, analytics
+**Common patterns:** lifecycle, audit, workflow, aggregate_root, lookup, line_items
+
+**Example:**
+```dsl
+entity Invoice "Invoice":
+  domain: billing
+  patterns: lifecycle, line_items, audit
+```
+
+### Examples Block (NEW in v0.7.1)
+Inline example records demonstrating valid data for an entity.
+
+**Syntax:**
+```dsl
+examples:
+  {field: value, field: value, ...}
+  {field: value, field: value, ...}
+```
+
+**Example:**
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[todo,in_progress,done]=todo
+
+  examples:
+    {title: "Write documentation", status: todo}
+    {title: "Fix login bug", status: in_progress}
+```
+
+### Relationship Semantics (NEW in v0.7.1)
+Ownership relationships between entities with delete behaviors.
+
+**Types:**
+- `has_many Entity` - Parent owns multiple children
+- `has_one Entity` - Parent owns exactly one child
+- `embeds Entity` - Value object embedded in parent
+- `belongs_to Entity` - Child side of relationship
+
+**Behaviors:**
+- `cascade` - Delete children when parent deleted
+- `restrict` - Prevent parent deletion if children exist
+- `nullify` - Set FK to null on parent delete
+- `readonly` - Cannot modify children through this relationship
+
+**Example:**
+```dsl
+entity Order "Order":
+  items: has_many OrderItem cascade
+  shipping_address: embeds Address
+
+entity OrderItem "Order Item":
+  order: belongs_to Order
+```
+
+### Invariant Message and Code (NEW in v0.7.1)
+Human-readable error message and machine-readable error code for invariant violations.
+
+**Syntax:**
+```dsl
+invariant: condition
+  message: "User-friendly error message"
+  code: ERROR_CODE
+```
+
+**Example:**
+```dsl
+invariant: end_date > start_date
+  message: "End date must be after start date"
+  code: BOOKING_INVALID_DATE_RANGE
+```
+
 ## Best Practices
 
 1. **Entity names** - Use singular nouns (Task, not Tasks)
@@ -290,15 +564,90 @@ entity Task "Task":
 6. **Enum values** - Use lowercase with underscores (in_progress, not InProgress)
 7. **Purpose statements** - Single line, explain WHY not WHAT
 8. **Domain services** - Use for complex calculations, external APIs, multi-step workflows
+9. **Intent declarations** - Explain WHY the entity exists (v0.7.1)
+10. **Archetypes** - Use for cross-cutting concerns (timestamps, audit, soft delete) (v0.7.1)
+11. **Examples** - Include 2-3 representative records per entity (v0.7.1)
+
+## Ejection Toolchain (v0.7.2)
+
+### Ejection (NEW in v0.7.2)
+Path from DNR runtime to standalone generated code when projects outgrow the native runtime or have deployment constraints.
+
+**Commands:**
+```bash
+dazzle eject run                    # Full ejection
+dazzle eject run --no-frontend      # Backend only
+dazzle eject run --dry-run          # Preview changes
+dazzle eject status                 # Check configuration
+dazzle eject adapters               # List available adapters
+dazzle eject openapi -o api.yaml    # Generate OpenAPI spec
+```
+
+**Configuration (dazzle.toml):**
+```toml
+[ejection]
+enabled = true
+
+[ejection.backend]
+framework = "fastapi"
+models = "sqlalchemy"
+
+[ejection.frontend]
+framework = "react"
+api_client = "tanstack_query"
+
+[ejection.testing]
+contract = "schemathesis"
+unit = "pytest"
+
+[ejection.ci]
+template = "github_actions"
+
+[ejection.output]
+directory = "generated"
+```
+
+### Ejection Adapters (NEW in v0.7.2)
+Pluggable generators for different targets:
+- **Backend**: FastAPI with SQLAlchemy models
+- **Frontend**: React with TanStack Query
+- **Testing**: Schemathesis (contract), Pytest (unit)
+- **CI**: GitHub Actions, GitLab CI
+
+### OpenAPI Generation (NEW in v0.7.2)
+Generates OpenAPI 3.1 specification from AppSpec including:
+- Entity schemas (Base, Create, Update, Read, List)
+- CRUD endpoints with proper HTTP methods
+- State transition action endpoints
+- Enum schemas for enum fields
+
+**Example:**
+```bash
+dazzle eject openapi -o openapi.yaml
+dazzle eject openapi -f json
+```
+
+### When to Eject
+- Custom deployment requirements (Kubernetes, serverless)
+- Code review/audit requirements for compliance
+- Performance optimization (precompiled code)
+- Migration away from DAZZLE runtime
+
+### When NOT to Eject
+- Rapid prototyping - use DNR for instant iteration
+- Standard deployments - DNR handles most cases
+- Frequent DSL changes - ejected code becomes stale
 
 ## See Also
 
 - DAZZLE DSL Quick Reference - Syntax examples
-- DAZZLE DSL Reference v0.5 - Complete specification
+- DAZZLE DSL Reference v0.7 - Complete specification
 - DAZZLE Extensibility Guide - Stubs and custom logic
+- Business Logic Extraction - Design philosophy for v0.7 features
+- Ejection Toolchain Guide - Standalone code generation (v0.7.2)
 """
 
 
 def get_glossary() -> str:
-    """Return DAZZLE v0.5 glossary of terms."""
+    """Return DAZZLE v0.7.2 glossary of terms."""
     return GLOSSARY_TEXT

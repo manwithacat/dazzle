@@ -1,8 +1,8 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-09
-**Current Version**: v0.6.0
-**Status**: DNR is primary runtime with GraphQL BFF layer
+**Last Updated**: 2025-12-10
+**Current Version**: v0.7.1
+**Status**: DNR is primary runtime with LLM Cognition features
 
 ---
 
@@ -375,7 +375,7 @@ service calculate_vat "Calculate VAT":
 
 ---
 
-## Upcoming Releases
+## Recent Releases (Continued)
 
 ### v0.6.0 - GraphQL BFF Layer ✅ COMPLETE
 
@@ -441,7 +441,9 @@ dazzle dnr serve --graphql    # Enable GraphQL endpoint at /graphql
 
 ---
 
-### v0.7.0 - Business Logic Extraction
+### v0.7.0 - Business Logic Extraction ✅ COMPLETE
+
+**Released**: December 2025
 
 **Focus**: DSL as compression boundary for semantic reasoning
 
@@ -532,6 +534,189 @@ Generated stubs include:
 - Token cost front-loaded: pay once for spec, free transformation thereafter
 
 **Estimate**: 8-10 weeks
+
+---
+
+### v0.7.1 - LLM Cognition & DSL Generation Enhancement
+
+**Focus**: DSL features that improve LLM comprehension and generation quality
+
+**Design Document**: `docs/design/LLM_COGNITION_DSL_v0.7.1.md`
+
+The core insight: LLMs reason better from **purpose → implementation** than from structure alone. These features make semantic intent explicit at every level of the DSL.
+
+#### P0 Features (High Impact, Low Effort)
+
+**Intent Declarations**
+```dsl
+entity Order "Order":
+  intent: "Track customer purchases through fulfillment lifecycle"
+  # LLM validates fields against stated purpose
+```
+
+**Example Data**
+```dsl
+entity Priority "Priority":
+  level: enum[low,medium,high,critical]
+
+  examples:
+    - {level: low, label: "Nice to have", color: "#22c55e"}
+    - {level: critical, label: "Production down", color: "#ef4444"}
+```
+
+**Validation Messages**
+```dsl
+invariant: end_date > start_date
+  message: "Check-out must be after check-in"
+  code: INVALID_DATE_RANGE
+```
+
+#### P1 Features (Medium Effort)
+
+**Domain Hints / Semantic Tags**
+```dsl
+entity Invoice "Invoice":
+  domain: financial
+  patterns: audit_trail, lifecycle, soft_delete
+```
+
+**Archetypes (Template Inheritance)**
+```dsl
+archetype Auditable:
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+  created_by: ref User
+
+entity Invoice "Invoice":
+  extends: Auditable
+```
+
+**Relationship Semantics**
+```dsl
+entity Order "Order":
+  customer: ref Customer required          # Reference
+  items: has_many OrderItem cascade        # Owned, delete together
+  shipping_address: embeds Address         # Embedded value
+```
+
+#### P2 Features (Higher Effort)
+
+**Negative Constraints (Anti-patterns)**
+```dsl
+entity User "User":
+  manager: ref User
+
+  deny:
+    - self_reference(manager)     # user.manager != user
+    - circular_ref(manager, 3)    # No deep circular chains
+```
+
+**Scenario Definitions**
+```dsl
+scenarios:
+  happy_path:
+    given: {status: open, assignee: null}
+    when: assign(user_1)
+    then: {status: assigned, assignee: user_1}
+
+  blocked_transition:
+    given: {status: open}
+    when: resolve()
+    then: error(REQUIRES_ASSIGNEE)
+```
+
+**Derivation Chains**
+```dsl
+deadline: computed created_at + hours(sla_hours)
+is_overdue: computed now() > deadline and status != closed
+urgency: computed case(is_overdue -> "p1", default -> priority)
+```
+
+#### P3 Features (Future)
+
+**Cross-Entity Rules**
+```dsl
+rule OrderFulfillment:
+  when: Order.status changes to shipped
+  then:
+    - Inventory.quantity -= Order.items.quantity
+    - Notification.create(recipient: Order.customer, message: "Shipped!")
+```
+
+#### Success Criteria
+- All P0/P1 features parse without errors
+- Example projects updated with new features
+- MCP semantic index includes all new concepts
+- 50+ new unit tests
+- Backward compatible (existing DSL unchanged)
+
+**Estimate**: 4-6 weeks
+
+---
+
+### v0.7.2 - Ejection Toolchain
+
+**Focus**: Generate standalone code from DNR applications
+
+**Design Document**: `docs/design/EJECTION_TOOLCHAIN_v0.7.2.md`
+
+The Ejection Toolchain provides a path from DNR runtime to standalone generated code when projects outgrow the native runtime or have deployment constraints requiring traditional application structure.
+
+#### Core Concept
+```
+DNR Runtime (default)     →     Ejected Code (optional)
+─────────────────────────────────────────────────────────
+Fast iteration                  Full customization
+Zero config                     Framework-specific
+Live from DSL                   Traditional deployment
+```
+
+#### When to Eject
+- Deploying to infrastructure that can't run Docker/DNR
+- Needing deep integration with framework-specific features
+- Performance profiling reveals DNR overhead is unacceptable
+- Compliance requires auditable, version-controlled application code
+
+#### Configuration (extends dazzle.toml)
+```toml
+[ejection]
+enabled = true
+
+[ejection.backend]
+framework = "fastapi"
+models = "pydantic-v2"
+
+[ejection.frontend]
+framework = "react"
+api_client = "zod-fetch"
+
+[ejection.testing]
+contract = "schemathesis"
+```
+
+#### CLI Commands
+```bash
+dazzle eject              # Generate standalone code
+dazzle eject --backend    # Backend only
+dazzle eject --frontend   # Frontend only
+dazzle eject --dry-run    # Preview without writing
+```
+
+#### Key Features
+- **AppSpec as Source**: Generate directly from AppSpec, not OpenAPI intermediate
+- **Business Logic Included**: State machines, invariants, access rules all generated
+- **DNR Component Reuse**: Optional import of DNR components for consistency
+- **Framework Adapters**: FastAPI (initial), Django/Flask/Vue/Next.js (future)
+- **Test Generation**: Schemathesis contract tests, state machine tests, invariant tests
+
+#### Implementation Phases
+1. Foundation: Config parser, CLI, adapter registry (Week 1-2)
+2. FastAPI Backend: Models, routers, guards, validators (Week 3-4)
+3. React Frontend: Types, schemas, client, hooks (Week 5-6)
+4. Testing & CI: Contract tests, unit stubs, GitHub Actions (Week 7)
+5. Polish: OpenAPI generation, Docker, documentation (Week 8)
+
+**Estimate**: 8 weeks
 
 ---
 
@@ -680,6 +865,8 @@ For detailed phase planning, see:
 | `dev_docs/DNR-Back-GraphQL-Spec-v1.md` | GraphQL BFF specification (v0.6.0) |
 | `docs/design/BUSINESS_LOGIC_EXTRACTION.md` | Business logic extraction design (v0.7.0) |
 | `dev_docs/orchestrator-control-plane-spec-v1.md` | Control plane specification (v1.0.0) |
+| `docs/design/LLM_COGNITION_DSL_v0.7.1.md` | LLM Cognition DSL features (v0.7.1) |
+| `docs/design/EJECTION_TOOLCHAIN_v0.7.2.md` | Ejection Toolchain specification (v0.7.2) |
 | `dev_docs/future_features_analysis.md` | Analysis and context for future features |
 
 ---
@@ -749,6 +936,43 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-10 (v0.7.1 Implemented + v0.7.2 Planned)
+- **v0.7.1 IMPLEMENTED**: LLM Cognition & DSL Generation Enhancement
+  - Intent declarations on entities (`intent: "..."`)
+  - Domain and patterns semantic tags (`domain: billing`, `patterns: lifecycle, audit`)
+  - Archetypes with extends inheritance (`archetype Timestamped`, `extends: Timestamped`)
+  - Example data blocks (`examples: [{...}]`)
+  - Invariant messages and codes (`message: "...", code: ERROR_CODE`)
+  - Relationship semantics (`has_many`, `has_one`, `embeds`, `belongs_to`)
+  - Delete behaviors (`cascade`, `restrict`, `nullify`, `readonly`)
+  - Updated MCP semantic index with all v0.7.1 concepts
+  - Updated glossary with LLM Cognition section
+  - All 756 tests pass
+- **v0.7.2 PLANNED**: Ejection Toolchain
+  - Design document: `docs/design/EJECTION_TOOLCHAIN_v0.7.2.md`
+  - Generate standalone FastAPI + React code from DNR applications
+  - Business logic preserved (state machines, invariants, access rules)
+  - Test generation (Schemathesis, state machine tests, invariant tests)
+  - CI template generation (GitHub Actions)
+  - Extends `dazzle.toml` with `[ejection]` section
+
+### 2025-12-10 (v0.7.0 Complete + v0.7.1 Planned)
+- **v0.7.0 COMPLETE**: Business Logic Extraction features delivered
+  - State machines for entity lifecycle
+  - Computed fields for derived values
+  - Invariants for data integrity
+  - Access rules for visibility/permissions
+  - All 5 example projects upgraded with v0.7 features
+  - 756 tests passing
+- **v0.7.1 PLANNED**: LLM Cognition & DSL Generation Enhancement
+  - Design document: `docs/design/LLM_COGNITION_DSL_v0.7.1.md`
+  - P0: Intent declarations, example data, validation messages
+  - P1: Domain tags, archetypes, relationship semantics
+  - P2: Anti-patterns, scenarios, derivation chains
+  - P3: Cross-entity rules
+  - Focus: Make semantic intent explicit for better LLM generation
+- Updated current version to v0.7.0
 
 ### 2025-12-09 (v0.6.0 Complete - GraphQL BFF Layer)
 - **v0.6.0 COMPLETE**: All GraphQL BFF Layer features delivered

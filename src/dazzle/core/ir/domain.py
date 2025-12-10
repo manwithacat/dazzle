@@ -122,6 +122,23 @@ class AccessSpec(BaseModel):
         return None
 
 
+class ExampleRecord(BaseModel):
+    """
+    Example data record for an entity.
+
+    Used for LLM cognition - concrete examples help LLMs understand
+    the intended data format and valid values.
+
+    v0.7.1: Added for LLM cognition
+    """
+
+    values: dict[str, str | int | float | bool | None] = Field(
+        description="Field name to value mapping"
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -131,22 +148,32 @@ class EntitySpec(BaseModel):
     Attributes:
         name: Entity name (PascalCase)
         title: Human-readable title
+        intent: Purpose statement for LLM cognition (v0.7.1)
+        domain: Domain classification tag (v0.7.1)
+        patterns: Pattern tags for auto-generation hints (v0.7.1)
+        extends: Archetype names this entity inherits from (v0.7.1)
         fields: List of field specifications
         computed_fields: List of computed (derived) field specifications
         invariants: List of entity invariants (cross-field constraints)
         constraints: Entity-level constraints (unique, index)
         access: Access control specification (visibility + permissions)
         state_machine: State machine specification for status transitions (v0.7.0)
+        examples: Example data records for LLM cognition (v0.7.1)
     """
 
     name: str
     title: str | None = None
+    intent: str | None = None
+    domain: str | None = None
+    patterns: list[str] = Field(default_factory=list)
+    extends: list[str] = Field(default_factory=list)
     fields: list[FieldSpec]
     computed_fields: list[ComputedFieldSpec] = Field(default_factory=list)
     invariants: list[InvariantSpec] = Field(default_factory=list)
     constraints: list[Constraint] = Field(default_factory=list)
     access: AccessSpec | None = None
     state_machine: StateMachineSpec | None = None
+    examples: list[ExampleRecord] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

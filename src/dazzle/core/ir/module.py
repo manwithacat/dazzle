@@ -11,6 +11,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .archetype import ArchetypeSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
@@ -29,6 +30,7 @@ class ModuleFragment(BaseModel):
     This is the output of parsing a single DSL file.
 
     Attributes:
+        archetypes: Archetypes defined in this module (v0.7.1)
         entities: Entities defined in this module
         surfaces: Surfaces defined in this module
         workspaces: Workspaces defined in this module
@@ -42,6 +44,7 @@ class ModuleFragment(BaseModel):
         fixtures: Test fixtures defined in this module
     """
 
+    archetypes: list[ArchetypeSpec] = Field(default_factory=list)  # v0.7.1
     entities: list[EntitySpec] = Field(default_factory=list)
     surfaces: list[SurfaceSpec] = Field(default_factory=list)
     workspaces: list[WorkspaceSpec] = Field(default_factory=list)  # UX extension

@@ -1,9 +1,45 @@
 # DAZZLE - FieldTest Hub
 # Distributed beta testing platform for hardware field testing
+# Demonstrates v0.7.0 Business Logic Features:
+# - State machines for device and issue lifecycle
+# - Computed fields for metrics
+# - Invariants for data validation
+# - Access rules for role-based control
 
 module fieldtest_hub.core
 
 app fieldtest_hub "FieldTest Hub"
+
+# =============================================================================
+# PERSONAS
+# =============================================================================
+
+persona engineer "Engineer":
+  goals:
+    - "Monitor all devices and issues"
+    - "Manage firmware releases"
+    - "Coordinate testers"
+  proficiency_level: expert
+  session_style: deep_work
+
+persona tester "Field Tester":
+  goals:
+    - "Report issues from the field"
+    - "Log test sessions"
+    - "Track assigned devices"
+  proficiency_level: intermediate
+  session_style: task_based
+
+persona manager "Manager":
+  goals:
+    - "Track overall product quality"
+    - "Monitor critical issues"
+  proficiency_level: intermediate
+  session_style: quick_check
+
+# =============================================================================
+# ENTITIES WITH v0.7 BUSINESS LOGIC
+# =============================================================================
 
 # Entity: Device
 entity Device "Device":
@@ -13,22 +49,51 @@ entity Device "Device":
   batch_number: str(100) required
   serial_number: str(100) required unique
   firmware_version: str(50)
-  status: enum[active,recalled,prototype,retired]=active
+  status: enum[prototype,active,recalled,retired]=prototype
   assigned_tester_id: uuid
   deployed_at: datetime
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
+  # State machine: device lifecycle
+  transitions:
+    prototype -> active: requires firmware_version
+    active -> recalled
+    active -> retired
+    recalled -> active: role(engineer)
+    retired -> prototype: role(engineer)
+
+  # Access: engineers can modify, testers can view assigned
+  access:
+    read: role(engineer) or role(manager) or assigned_tester_id = current_user
+    write: role(engineer)
+
+  index batch_number
+  index status
+  index assigned_tester_id
+
 # Entity: Tester
 entity Tester "Tester":
   id: uuid pk
   name: str(200) required
+  email: str(255) required unique
   location: str(200) required
   skill_level: enum[casual,enthusiast,engineer]=casual
   joined_at: datetime auto_add
   active: bool=true
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  # Invariant: testers must have valid email
+  invariant: email != null
+
+  # Access: engineers can manage testers
+  access:
+    read: role(engineer) or role(manager) or id = current_user
+    write: role(engineer)
+
+  index email
+  index location
 
 # Entity: IssueReport
 entity IssueReport "Issue Report":
@@ -42,9 +107,36 @@ entity IssueReport "Issue Report":
   photo_url: str(500)
   reported_at: datetime auto_add
   status: enum[open,triaged,in_progress,fixed,verified,closed]=open
+  resolution: text
   firmware_version: str(50)
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  # Computed field: days since issue was reported
+  days_open: computed days_since(reported_at)
+
+  # State machine: issue lifecycle
+  transitions:
+    open -> triaged
+    triaged -> in_progress
+    in_progress -> fixed: requires resolution
+    fixed -> verified
+    fixed -> in_progress
+    verified -> closed
+    closed -> open: role(engineer)
+
+  # Invariant: fixed issues must have resolution
+  invariant: status != fixed or resolution != null
+  invariant: status != closed or resolution != null
+
+  # Access: testers see own issues, engineers see all
+  access:
+    read: reported_by_id = current_user or role(engineer) or role(manager)
+    write: role(engineer)
+
+  index device_id
+  index severity, status
+  index reported_by_id
 
 # Entity: TestSession
 entity TestSession "Test Session":
@@ -59,6 +151,18 @@ entity TestSession "Test Session":
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
+  # Invariant: duration must be positive
+  invariant: duration_minutes > 0
+
+  # Access: testers see own sessions
+  access:
+    read: tester_id = current_user or role(engineer) or role(manager)
+    write: tester_id = current_user or role(engineer)
+
+  index device_id
+  index tester_id
+  index logged_at
+
 # Entity: FirmwareRelease
 entity FirmwareRelease "Firmware Release":
   id: uuid pk
@@ -70,6 +174,23 @@ entity FirmwareRelease "Firmware Release":
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
+  # State machine: firmware lifecycle
+  transitions:
+    draft -> released: requires release_notes
+    released -> deprecated
+    deprecated -> draft: role(engineer)
+
+  # Invariant: released firmware must have release notes
+  invariant: status != released or release_notes != null
+
+  # Access: only engineers can manage firmware
+  access:
+    read: role(engineer) or role(manager) or role(tester)
+    write: role(engineer)
+
+  index status
+  index version
+
 # Entity: Task
 entity Task "Task":
   id: uuid pk
@@ -80,6 +201,33 @@ entity Task "Task":
   notes: text
   created_at: datetime auto_add
   updated_at: datetime auto_update
+
+  # Computed field: days since task was created
+  days_open: computed days_since(created_at)
+
+  # State machine: task lifecycle
+  transitions:
+    open -> in_progress: requires assigned_to_id
+    in_progress -> completed
+    in_progress -> open
+    completed -> open: role(engineer)
+    * -> cancelled: role(engineer)
+
+  # Invariant: in_progress tasks must be assigned
+  invariant: status != in_progress or assigned_to_id != null
+
+  # Access: engineers can manage all tasks
+  access:
+    read: role(engineer) or role(manager) or assigned_to_id = current_user
+    write: role(engineer) or assigned_to_id = current_user
+
+  index status
+  index assigned_to_id
+  index created_by_id
+
+# =============================================================================
+# SURFACES
+# =============================================================================
 
 # Surface: Device Dashboard
 surface device_list "Device Dashboard":
@@ -96,7 +244,6 @@ surface device_list "Device Dashboard":
 
   ux:
     purpose: "Monitor all field devices with status indicators"
-    show: name, model, batch_number, firmware_version, status
     sort: batch_number asc, status asc
     filter: batch_number, firmware_version, status, assigned_tester_id
     search: name, model, serial_number
@@ -120,7 +267,6 @@ surface device_list "Device Dashboard":
     for tester:
       scope: assigned_tester_id = current_user
       purpose: "Your assigned devices"
-      show: name, model, firmware_version, status
 
 # Surface: Device Detail
 surface device_detail "Device Detail":
@@ -196,6 +342,7 @@ surface tester_list "Tester Directory":
 
   section main "Testers":
     field name "Name"
+    field email "Email"
     field location "Location"
     field skill_level "Skill Level"
     field active "Active"
@@ -203,10 +350,9 @@ surface tester_list "Tester Directory":
 
   ux:
     purpose: "Manage field testers and device assignments"
-    show: name, location, skill_level, active
     sort: name asc
     filter: location, skill_level, active
-    search: name, location
+    search: name, email, location
     empty: "No testers registered yet. Add testers to begin field testing!"
 
     attention notice:
@@ -225,6 +371,7 @@ surface tester_detail "Tester Detail":
 
   section main "Tester Information":
     field name "Name"
+    field email "Email"
     field location "Location"
     field skill_level "Skill Level"
     field active "Active"
@@ -244,6 +391,7 @@ surface tester_create "Register Tester":
 
   section main "New Tester":
     field name "Name"
+    field email "Email"
     field location "Location"
     field skill_level "Skill Level"
     field active "Active"
@@ -262,6 +410,7 @@ surface tester_edit "Edit Tester":
 
   section main "Edit Tester":
     field name "Name"
+    field email "Email"
     field location "Location"
     field skill_level "Skill Level"
     field active "Active"
@@ -287,7 +436,6 @@ surface issue_report_list "Issue Board":
 
   ux:
     purpose: "Track and triage field issues with Kanban workflow"
-    show: device_id, category, severity, status, reported_at
     sort: severity desc, reported_at desc
     filter: category, severity, status, firmware_version, device_id
     search: description, steps_to_reproduce
@@ -301,11 +449,6 @@ surface issue_report_list "Issue Board":
     attention warning:
       when: severity = high and status = open
       message: "High severity issue"
-      action: issue_report_detail
-
-    attention notice:
-      when: status = in_progress and days_since(updated_at) > 3
-      message: "Stalled for 3+ days"
       action: issue_report_detail
 
     for engineer:
@@ -333,6 +476,7 @@ surface issue_report_detail "Issue Detail":
     field photo_url "Photo/Video"
     field firmware_version "Firmware Version"
     field status "Status"
+    field resolution "Resolution"
     field reported_at "Reported At"
 
   ux:
@@ -380,6 +524,7 @@ surface issue_report_edit "Update Issue":
     field steps_to_reproduce "Steps to Reproduce"
     field photo_url "Photo/Video URL"
     field status "Status"
+    field resolution "Resolution"
 
   ux:
     purpose: "Update issue status and details"
@@ -405,7 +550,6 @@ surface test_session_list "Test Sessions":
 
   ux:
     purpose: "Track field testing sessions and usage patterns"
-    show: device_id, tester_id, duration_minutes, environment, logged_at
     sort: logged_at desc
     filter: device_id, tester_id, environment
     search: notes
@@ -453,7 +597,6 @@ surface firmware_release_list "Firmware Releases":
 
   ux:
     purpose: "Track firmware versions and release history"
-    show: version, status, release_date, applies_to_batch
     sort: release_date desc
     filter: status, applies_to_batch
     search: version, release_notes
@@ -506,6 +649,24 @@ surface firmware_release_create "Create Firmware Release":
       defaults:
         status: draft
 
+# Surface: Firmware Release Edit
+surface firmware_release_edit "Edit Firmware Release":
+  uses entity FirmwareRelease
+  mode: edit
+
+  section main "Edit Firmware Release":
+    field version "Version"
+    field release_notes "Release Notes"
+    field release_date "Release Date"
+    field status "Status"
+    field applies_to_batch "Applies to Batch"
+
+  ux:
+    purpose: "Update firmware release"
+
+    for engineer:
+      scope: all
+
 # Surface: Task List
 surface task_list "Tasks":
   uses entity Task
@@ -519,16 +680,10 @@ surface task_list "Tasks":
 
   ux:
     purpose: "Track debugging and maintenance tasks"
-    show: type, status, assigned_to_id, created_at
     sort: status asc, created_at desc
     filter: type, status, assigned_to_id
     search: notes
     empty: "No tasks yet."
-
-    attention warning:
-      when: status = open and days_since(created_at) > 7
-      message: "Unassigned for 7+ days"
-      action: task_detail
 
     for engineer:
       scope: all
@@ -589,6 +744,10 @@ surface task_edit "Edit Task":
 
     for engineer:
       scope: all
+
+# =============================================================================
+# WORKSPACES
+# =============================================================================
 
 # Workspace: Engineering Dashboard
 workspace engineering_dashboard "Engineering Dashboard":

@@ -163,12 +163,21 @@ class InvariantSpec(BaseModel):
         - invariant: end_date > start_date
         - invariant: quantity >= 0
         - invariant: status != "deleted" or deleted_at is not None
+
+    v0.7.1: Added message and code for LLM cognition
+        - invariant: end_date > start_date
+            message: "Check-out must be after check-in"
+            code: INVALID_DATE_RANGE
     """
 
     expression: InvariantExpr = Field(description="The invariant condition")
     message: str | None = Field(
         default=None,
         description="Custom error message when invariant is violated",
+    )
+    code: str | None = Field(
+        default=None,
+        description="Error code for API responses and i18n",
     )
 
     model_config = ConfigDict(frozen=True)

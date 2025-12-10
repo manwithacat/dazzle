@@ -1,11 +1,15 @@
 # DAZZLE Support Ticket System
-# Demonstrates multi-entity relationships and CRUD patterns
+# Demonstrates v0.7.0 Business Logic Features:
+# - State machine for ticket lifecycle
+# - Computed fields for metrics
+# - Invariants for data validation
+# - Role-based access control
 
 module support_tickets.core
 
 app support_tickets "Support Tickets"
 
-# User entity
+# User entity with role-based access
 entity User "User":
   id: uuid pk
   email: str(255) required unique
@@ -14,7 +18,10 @@ entity User "User":
   is_active: bool = true
   created_at: datetime auto_add
 
-# Ticket entity with relationships
+  # Invariant: users must have valid role
+  invariant: role != null
+
+# Ticket entity with full v0.7.0 business logic
 entity Ticket "Support Ticket":
   id: uuid pk
   ticket_number: str(20) unique
@@ -30,11 +37,32 @@ entity Ticket "Support Ticket":
   updated_at: datetime auto_update
   resolved_at: datetime
 
+  # Computed field: days since ticket was opened
+  days_open: computed days_since(created_at)
+
+  # State machine: ticket status transitions
+  transitions:
+    open -> in_progress: requires assigned_to
+    in_progress -> resolved: requires resolution
+    in_progress -> open
+    resolved -> closed
+    resolved -> in_progress
+    closed -> open: role(manager)
+
+  # Invariants for data integrity
+  invariant: status != resolved or resolution != null
+  invariant: status != closed or resolution != null
+
+  # Access control: customers see own tickets, agents see all
+  access:
+    read: created_by = current_user or role(agent) or role(manager)
+    write: role(agent) or role(manager)
+
   index status, priority
   index created_by
   index assigned_to
 
-# Comment entity
+# Comment entity with internal note support
 entity Comment "Comment":
   id: uuid pk
   ticket: ref Ticket required
@@ -42,6 +70,11 @@ entity Comment "Comment":
   content: text required
   is_internal: bool = false
   created_at: datetime auto_add
+
+  # Access: internal comments only visible to agents/managers
+  access:
+    read: is_internal = false or role(agent) or role(manager)
+    write: role(agent) or role(manager)
 
 # ============================================================================
 # USER SURFACES
