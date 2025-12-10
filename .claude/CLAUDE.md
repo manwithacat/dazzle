@@ -23,7 +23,7 @@ DSL Files → Parser → IR (AppSpec) → DNR Runtime (live app)
 | `src/dazzle/core/` | Parser, IR, linker, validation |
 | `src/dazzle_dnr_back/` | FastAPI runtime |
 | `src/dazzle_dnr_ui/` | JavaScript UI runtime |
-| `src/dazzle/stacks/base/` | Base builder for code generation |
+| `src/dazzle/eject/` | Ejection adapters for production deployment |
 
 ## LLM-First Style Guide
 
@@ -98,14 +98,13 @@ surface task_list "Tasks":
 3. Implement parser in `src/dazzle/core/dsl_parser.py`
 4. Add tests in `tests/unit/test_parser.py`
 
-### Custom Code Generation
-```python
-from dazzle.stacks.base import BaseBackend
+### Production Deployment
+```bash
+# Eject to standalone FastAPI + React code
+dazzle eject run
 
-class MyStack(BaseBackend):
-    def generate(self, spec, output_dir, artifacts=None):
-        # Transform spec into your target format
-        ...
+# Check available adapters
+dazzle eject adapters
 ```
 
 ## Examples
@@ -127,4 +126,4 @@ Use MCP tools for DSL semantics; this file for codebase conventions.
 - Experiences support basic flows only
 
 ---
-**Version**: 0.4.0 | **Python**: 3.11+ | **Status**: Production Ready
+**Version**: 0.5.0 | **Python**: 3.11+ | **Status**: Production Ready

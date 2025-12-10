@@ -88,21 +88,6 @@ def get_project_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="build",
-            description="Build artifacts for specified stacks. NOTE: For most cases, use 'dazzle dnr serve' instead - DNR is the primary runtime and doesn't require code generation.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "stacks": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Stack names to build. Use 'docker' for Docker Compose or 'base' for custom stacks. Legacy stacks (django_micro_modular, express_micro) are deprecated.",
-                    }
-                },
-                "required": [],
-            },
-        ),
-        Tool(
             name="analyze_patterns",
             description="Analyze the project for CRUD and integration patterns",
             inputSchema={"type": "object", "properties": {}, "required": []},

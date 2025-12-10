@@ -446,36 +446,6 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def build_project(project_root: Path, args: dict[str, Any]) -> str:
-    """Build artifacts for specified stacks."""
-    stacks = args.get("stacks", ["django_micro_modular"])
-
-    try:
-        from dazzle.stacks import get_backend
-
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
-
-        results = {}
-        output_dir = project_root / "build"
-        output_dir.mkdir(exist_ok=True)
-
-        for stack_name in stacks:
-            try:
-                stack = get_backend(stack_name)
-                stack_output = output_dir / stack_name
-                stack.generate(app_spec, stack_output)
-                results[stack_name] = f"Built successfully in {stack_output}"
-            except Exception as e:
-                results[stack_name] = f"Error: {str(e)}"
-
-        return json.dumps(results, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
-
-
 def analyze_patterns(project_root: Path) -> str:
     """Analyze the project for patterns."""
     try:

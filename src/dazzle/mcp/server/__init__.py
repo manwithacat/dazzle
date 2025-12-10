@@ -38,7 +38,6 @@ from .state import (
 )
 from .tool_handlers import (
     analyze_patterns,
-    build_project,
     find_examples_handler,
     get_active_project_info,
     get_cli_help_handler,
@@ -144,8 +143,6 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = inspect_entity(project_path, arguments)
             elif name == "inspect_surface":
                 result = inspect_surface(project_path, arguments)
-            elif name == "build":
-                result = build_project(project_path, arguments)
             elif name == "analyze_patterns":
                 result = analyze_patterns(project_path)
             elif name == "lint_project":

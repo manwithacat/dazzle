@@ -167,26 +167,17 @@ backends/openapi/
 └── paths.py            # Path/endpoint generation
 ```
 
-### Stack System (`backends/stacks.py`)
+### Ejection System (`eject/`)
 
-Coordinates multiple backends:
+For production deployment, the ejection toolchain generates standalone code:
 
 ```python
-from dazzle.backends.stacks import Stack, get_stack
+from dazzle.eject import EjectionRunner, EjectionConfig
 
-# Define stack
-django_stack = Stack(
-    name="django_api",
-    backends=["django", "openapi"],
-    config={
-        "django": {"db": "postgresql"},
-        "openapi": {"format": "yaml"}
-    }
-)
-
-# Use stack
-stack = get_stack("django_api")
-stack.build(appspec, output_dir)
+# Run ejection with configured adapters
+config = EjectionConfig.from_toml("dazzle.toml")
+runner = EjectionRunner(config, appspec)
+result = runner.run()
 ```
 
 ## LSP Server

@@ -107,14 +107,14 @@ status: enum[todo,done] default:"todo"  # ✗ Use = and no quotes
 
 ## Surface Modes
 
-### Supported Modes (v0.1.0)
+### Supported Modes
 
-| Mode | Description | Use Case | Stack Support |
-|------|-------------|----------|---------------|
-| `list` | Table view | Browse records | All stacks |
-| `view` | Detail view | View single record | All stacks |
-| `create` | Creation form | Add new record | All stacks |
-| `edit` | Edit form | Modify record | All stacks |
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `list` | Table view | Browse records |
+| `view` | Detail view | View single record |
+| `create` | Creation form | Add new record |
+| `edit` | Edit form | Modify record |
 
 ### Planned/Unsupported Modes
 

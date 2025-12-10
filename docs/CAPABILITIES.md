@@ -261,28 +261,23 @@ dazzle test list
 
 ---
 
-## Code Generation (Optional)
+## Ejection (Production Deployment)
 
-For custom deployments, code generation is available as an alternative to DNR:
+When ready for production, the ejection toolchain generates standalone code:
 
-| Stack | Status | Description |
-|-------|--------|-------------|
-| `base` | ✅ Active | Base builder for custom stacks |
-| `docker` | ✅ Active | Docker Compose for DNR apps |
+```bash
+dazzle eject run
+```
 
-### Legacy Stacks (Deprecated)
+| Adapter | Type | Description |
+|---------|------|-------------|
+| `fastapi` | Backend | FastAPI with SQLAlchemy models, Pydantic schemas |
+| `react` | Frontend | React with TypeScript, TanStack Query, Zod |
+| `schemathesis` | Testing | Contract tests from OpenAPI |
+| `pytest` | Testing | Unit tests for backend |
+| `github_actions` | CI | CI/CD pipeline |
 
-The following stacks are deprecated in favor of DNR:
-
-| Stack | Status | Migration |
-|-------|--------|-----------|
-| `django_micro_modular` | ⚠️ Deprecated | Use DNR |
-| `django_api` | ⚠️ Deprecated | Use DNR |
-| `express_micro` | ⚠️ Deprecated | Use DNR |
-| `openapi` | ⚠️ Deprecated | Use `dazzle dnr build-api` |
-| `terraform` | ⚠️ Deprecated | Manual infrastructure |
-
-**Legacy stacks will be removed in v1.0**.
+See [Ejection Toolchain](design/EJECTION_TOOLCHAIN_v0.7.2.md) for details.
 
 ---
 
@@ -326,7 +321,7 @@ dazzle mcp-check
 - `validate_dsl` - Validate DSL files
 - `inspect_entity` - Inspect entity definitions
 - `analyze_patterns` - Detect CRUD patterns
-- `build` - Generate code (optional)
+- `lookup_concept` - DSL concept documentation
 
 ---
 

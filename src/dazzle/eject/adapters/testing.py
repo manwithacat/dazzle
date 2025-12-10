@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dazzle.stacks.base.generator import GeneratorResult
+from dazzle.eject.generator import GeneratorResult
 
 from .base import TestingAdapter, AdapterRegistry
 

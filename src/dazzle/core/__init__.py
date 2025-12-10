@@ -1,4 +1,4 @@
-"""Core DAZZLE functionality: IR, parser, linker, validator, project initialization, incremental builds, stacks."""
+"""Core DAZZLE functionality: IR, parser, linker, validator, project initialization, incremental builds."""
 
 from . import ir
 from .changes import ChangeSet, detect_changes
@@ -14,15 +14,7 @@ from .init import InitError, init_project, list_examples
 from .linker import build_appspec
 from .lint import lint_appspec
 from .parser import parse_modules
-from .stacks import (
-    StackError,
-    StackPreset,
-    get_stack_description,
-    get_stack_preset,
-    list_stack_presets,
-    resolve_stack_backends,
-    validate_stack_backends,
-)
+from .project import load_project, load_project_with_manifest
 from .state import (
     BuildState,
     StateError,
@@ -43,6 +35,8 @@ __all__ = [
     "parse_modules",
     "build_appspec",
     "lint_appspec",
+    "load_project",
+    "load_project_with_manifest",
     "init_project",
     "list_examples",
     "InitError",
@@ -54,11 +48,4 @@ __all__ = [
     "compute_dsl_hashes",
     "ChangeSet",
     "detect_changes",
-    "StackError",
-    "StackPreset",
-    "get_stack_preset",
-    "list_stack_presets",
-    "resolve_stack_backends",
-    "validate_stack_backends",
-    "get_stack_description",
 ]

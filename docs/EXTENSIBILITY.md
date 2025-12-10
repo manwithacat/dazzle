@@ -208,30 +208,28 @@ class WebhookSpec(BaseModel):
     events: list[str]
 ```
 
-### Custom Code Generation
+### Ejection for Production Deployment
 
-For deployment targets not supported by DNR:
+When you're ready to deploy to production without the DNR runtime, use the ejection toolchain:
 
-```python
-from dazzle.stacks.base import BaseBackend
+```bash
+# Generate standalone FastAPI backend + React frontend
+dazzle eject run
 
-class FlaskBackend(BaseBackend):
-    """Generate Flask application from DAZZLE spec."""
+# Check available adapters
+dazzle eject adapters
 
-    def generate(self, appspec, output_dir, artifacts=None):
-        for entity in appspec.domain.entities:
-            self._generate_model(entity, output_dir)
-
-        for service in appspec.domain_services:
-            self._generate_service_route(service, output_dir)
+# Verify generated code is independent
+dazzle eject verify
 ```
 
-Register in `pyproject.toml`:
+The ejection toolchain generates production-ready code:
+- **Backend**: FastAPI with SQLAlchemy models, Pydantic schemas, full CRUD routes
+- **Frontend**: React with TypeScript types, TanStack Query hooks, Zod validation
+- **Tests**: Schemathesis contract tests, pytest unit tests
+- **CI**: GitHub Actions or GitLab CI pipelines
 
-```toml
-[project.entry-points."dazzle.stacks"]
-flask = "mypackage.flask_stack:FlaskBackend"
-```
+See [Ejection Toolchain](design/EJECTION_TOOLCHAIN_v0.7.2.md) for details.
 
 ## Best Practices
 
@@ -252,7 +250,7 @@ flask = "mypackage.flask_stack:FlaskBackend"
 | Extension Point | Method | Use Case |
 |-----------------|--------|----------|
 | Domain services | DSL + Stubs | Custom business logic |
-| Custom stacks | Python backend | New deployment targets |
+| Ejection adapters | Python generators | Production deployment |
 | MCP tools | TypeScript/Python | IDE integration |
 | CLI commands | Click plugins | Custom workflows |
 
@@ -260,5 +258,5 @@ flask = "mypackage.flask_stack:FlaskBackend"
 
 - [Domain Service IR](v0.1/DAZZLE_IR.md)
 - [Stub Generator Source](../src/dazzle/stubs/generator.py)
-- [Custom Stacks Guide](CUSTOM_STACKS.md)
+- [Ejection Toolchain](design/EJECTION_TOOLCHAIN_v0.7.2.md)
 - [DNR Architecture](dnr/ARCHITECTURE.md)

@@ -21,10 +21,12 @@ from .config import (
     EjectionOutputConfig,
     load_ejection_config,
 )
+from .generator import Generator, GeneratorResult, CompositeGenerator
 from .runner import EjectionRunner, EjectionResult, VerificationResult, EJECTION_VERSION
 from .openapi import generate_openapi, openapi_to_json, openapi_to_yaml
 
 __all__ = [
+    # Config
     "EjectionConfig",
     "EjectionBackendConfig",
     "EjectionFrontendConfig",
@@ -32,10 +34,16 @@ __all__ = [
     "EjectionCIConfig",
     "EjectionOutputConfig",
     "load_ejection_config",
+    # Generator
+    "Generator",
+    "GeneratorResult",
+    "CompositeGenerator",
+    # Runner
     "EjectionRunner",
     "EjectionResult",
     "VerificationResult",
     "EJECTION_VERSION",
+    # OpenAPI
     "generate_openapi",
     "openapi_to_json",
     "openapi_to_yaml",

@@ -345,7 +345,7 @@ All backend adapters implement the existing `Generator` interface:
 ```python
 # src/dazzle/eject/adapters/base.py
 from abc import ABC, abstractmethod
-from dazzle.stacks.base.generator import Generator, GeneratorResult
+from dazzle.eject.generator import Generator, GeneratorResult
 from dazzle.core.ir import AppSpec
 
 class BackendAdapter(Generator, ABC):

@@ -1,17 +1,14 @@
 """
-Base generator classes for modular code generation.
+Base generator classes for ejection code generation.
 
-Generators are responsible for creating specific artifacts:
-- ModelsGenerator: Database models
-- ViewsGenerator: View/controller logic
-- TemplatesGenerator: HTML templates
-- etc.
+Generators are responsible for creating specific artifacts during ejection:
+- Backend adapters generate FastAPI models, routes, etc.
+- Frontend adapters generate React components, hooks, etc.
 
 Each generator focuses on one aspect, making them easier to:
 - Understand
 - Test
 - Modify
-- Reuse across backends
 """
 
 from abc import ABC, abstractmethod
@@ -19,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ...core import ir
+from dazzle.core import ir
 
 
 @dataclass

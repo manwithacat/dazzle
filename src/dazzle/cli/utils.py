@@ -72,12 +72,14 @@ def version_callback(value: bool) -> None:
         except ImportError:
             pass
 
-        # Check available stacks
-        available_stacks = []
+        # Check ejection adapters
+        ejection_adapters = []
         try:
-            from dazzle.stacks import list_backends
+            from dazzle.eject.adapters import AdapterRegistry
 
-            available_stacks = sorted(list_backends())
+            ejection_adapters = sorted(
+                AdapterRegistry.list_backends() + AdapterRegistry.list_frontends()
+            )
         except Exception:
             pass
 
@@ -119,12 +121,12 @@ def version_callback(value: bool) -> None:
             f"  LLM Support:   {'✓ Available (' + ', '.join(llm_providers) + ')' if llm_available else '✗ Not available (install with: pip install dazzle[llm])'}"
         )
         typer.echo("")
-        if available_stacks:
-            typer.echo("Available Stacks:")
-            for stack in available_stacks:
-                typer.echo(f"  - {stack}")
+        if ejection_adapters:
+            typer.echo("Ejection Adapters:")
+            for adapter in ejection_adapters:
+                typer.echo(f"  - {adapter}")
         else:
-            typer.echo("Available Stacks: None")
+            typer.echo("Ejection Adapters: None")
 
         raise typer.Exit()
 

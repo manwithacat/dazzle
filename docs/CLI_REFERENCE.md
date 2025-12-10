@@ -15,7 +15,7 @@ Complete reference for all DAZZLE command-line commands.
 | `dazzle validate` | Parse and validate DSL |
 | `dazzle lint` | Extended lint checks |
 | `dazzle dnr serve` | Run the application |
-| `dazzle build` | Generate code (optional) |
+| `dazzle eject run` | Generate standalone code |
 | `dazzle test run` | Run E2E tests |
 
 ---
@@ -463,63 +463,66 @@ dazzle e2e clean
 
 ---
 
-## Code Generation (Optional)
+## Ejection (Production Deployment)
 
-### build
+### eject run
 
-Generate code from AppSpec using a stack.
-
-```bash
-# Use default stack
-dazzle build
-
-# Specific stack
-dazzle build --stack docker
-
-# Custom output directory
-dazzle build -o ./output
-
-# Incremental build
-dazzle build --incremental
-
-# Show changes without building
-dazzle build --diff
-
-# Force full rebuild
-dazzle build --force
-```
-
-**Options**:
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--manifest, -m` | Path to dazzle.toml | `dazzle.toml` |
-| `--stack, -s` | Stack to use | From manifest or `micro` |
-| `--out, -o` | Output directory | `./build` |
-| `--incremental, -i` | Incremental build | |
-| `--force` | Force full rebuild | |
-| `--diff` | Show changes only | |
-
-**Note**: `--backend` and `--backends` flags are deprecated. Use `--stack`.
-
-### stacks
-
-List available stacks.
+Generate standalone production code from your DAZZLE project.
 
 ```bash
-dazzle stacks
+# Generate with all default adapters
+dazzle eject run
+
+# Verify independence after ejection
+dazzle eject run --verify
+
+# Dry run (show what would be generated)
+dazzle eject run --dry-run
 ```
 
-**Available stacks**:
+### eject status
 
-| Stack | Status | Description |
-|-------|--------|-------------|
-| `base` | Active | Base builder for custom stacks |
-| `docker` | Active | Docker Compose for DNR |
-| `django_micro_modular` | Deprecated | Django web app |
-| `django_api` | Deprecated | Django REST API |
-| `express_micro` | Deprecated | Express.js app |
-| `openapi` | Deprecated | OpenAPI spec |
+Check ejection configuration and status.
+
+```bash
+dazzle eject status
+```
+
+### eject adapters
+
+List available ejection adapters.
+
+```bash
+dazzle eject adapters
+```
+
+**Available adapters**:
+
+| Adapter | Type | Description |
+|---------|------|-------------|
+| `fastapi` | Backend | FastAPI with SQLAlchemy |
+| `react` | Frontend | React with TanStack Query |
+| `schemathesis` | Testing | Contract testing |
+| `pytest` | Testing | Unit tests |
+| `github_actions` | CI | GitHub Actions workflow |
+| `gitlab_ci` | CI | GitLab CI pipeline |
+
+### eject openapi
+
+Generate OpenAPI 3.1 spec from AppSpec.
+
+```bash
+dazzle eject openapi
+dazzle eject openapi -o api-spec.json
+```
+
+### eject verify
+
+Verify ejected code is independent of DAZZLE.
+
+```bash
+dazzle eject verify
+```
 
 ---
 
@@ -580,19 +583,17 @@ dazzle vocab remove <term>
 
 ---
 
-## Deprecated Commands
+## Removed Commands
 
-### infra
+The following commands were removed in v0.5.0:
 
-**Deprecated**: Use `dazzle build --stack` instead.
+| Command | Replacement |
+|---------|-------------|
+| `dazzle build` | Use `dazzle eject run` for production code |
+| `dazzle stacks` | Use `dazzle eject adapters` |
+| `dazzle infra` | Use `dazzle eject run` |
 
-```bash
-# Old way
-dazzle infra docker
-
-# New way
-dazzle build --stack docker
-```
+For development, use `dazzle dnr serve` which runs DSL directly without code generation.
 
 ---
 

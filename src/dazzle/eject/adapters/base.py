@@ -1,8 +1,7 @@
 """
 Base adapter classes for ejection.
 
-All adapters extend the existing Generator interface from
-dazzle.stacks.base.generator to maintain consistency.
+All adapters extend the Generator interface from dazzle.eject.generator.
 """
 
 from __future__ import annotations
@@ -11,7 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dazzle.stacks.base.generator import Generator, GeneratorResult
+from dazzle.eject.generator import Generator, GeneratorResult
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec

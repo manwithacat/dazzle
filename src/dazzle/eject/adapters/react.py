@@ -11,7 +11,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING
 
-from dazzle.stacks.base.generator import GeneratorResult
+from dazzle.eject.generator import GeneratorResult
 from .base import FrontendAdapter, AdapterRegistry
 
 if TYPE_CHECKING:

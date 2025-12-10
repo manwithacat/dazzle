@@ -7,11 +7,10 @@ import pytest
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.parser import parse_modules
-from dazzle.stacks.docker import DockerStack
 
 
-def test_full_pipeline_dsl_to_docker(tmp_path: Path):
-    """Test complete pipeline: DSL → Parse → Link → Validate → Generate."""
+def test_full_pipeline_dsl_to_appspec(tmp_path: Path):
+    """Test complete pipeline: DSL → Parse → Link → Validate."""
 
     # Step 1: Create DSL file
     dsl_file = tmp_path / "app.dsl"
@@ -91,15 +90,6 @@ surface post_create "Create Post":
     assert len(appspec.surfaces) == 2
     surface_names = {s.name for s in appspec.surfaces}
     assert surface_names == {"user_list", "post_create"}
-
-    # Step 6: Generate Docker
-    backend = DockerStack()
-    output_dir = tmp_path / "output"
-    backend.generate(appspec, output_dir)
-
-    # Verify output
-    assert (output_dir / "compose.yaml").exists()
-    assert (output_dir / "Dockerfile").exists()
 
 
 def test_multi_module_project(tmp_path: Path):

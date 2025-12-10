@@ -15,7 +15,7 @@ from pathlib import Path
 from textwrap import dedent, indent
 from typing import TYPE_CHECKING
 
-from dazzle.stacks.base.generator import GeneratorResult
+from dazzle.eject.generator import GeneratorResult
 from .base import BackendAdapter, AdapterRegistry
 
 if TYPE_CHECKING:

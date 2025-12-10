@@ -40,46 +40,26 @@ After the grace period:
 
 ## Current Deprecations
 
-### Code Generation Stacks
-
-| Stack | Deprecated | Removal | Migration |
-|-------|------------|---------|-----------|
-| `django_micro_modular` | v0.2.0 | v1.0.0 | Use DNR runtime |
-| `django_api` | v0.2.0 | v1.0.0 | Use DNR runtime |
-| `express_micro` | v0.2.0 | v1.0.0 | Use DNR runtime |
-| `nextjs_semantic` | v0.2.0 | v1.0.0 | Use DNR runtime |
-| `openapi` | v0.2.0 | v1.0.0 | Use `dazzle dnr build-api` |
-| `terraform` | v0.2.0 | v1.0.0 | Manual infrastructure |
-
-**Why**: The Dazzle Native Runtime (DNR) provides a superior development experience - run DSL directly without code generation. Legacy stacks required maintaining multiple code generators for different frameworks.
-
-**Migration**:
-```bash
-# Before (legacy)
-dazzle build --stack django_micro_modular
-cd build && python manage.py runserver
-
-# After (DNR)
-dazzle dnr serve
-```
-
-### CLI Flags
-
-| Flag | Deprecated | Removal | Migration |
-|------|------------|---------|-----------|
-| `--backend` | v0.2.0 | v1.0.0 | Use `--stack` |
-| `--backends` | v0.2.0 | v1.0.0 | Use `--stack` |
-| `--single-container` | v0.2.0 | v1.0.0 | No longer needed |
-
-### Commands
-
-| Command | Deprecated | Removal | Migration |
-|---------|------------|---------|-----------|
-| `dazzle infra` | v0.2.0 | v1.0.0 | Use `dazzle build --stack docker` |
+No active deprecations. All previously deprecated features have been removed.
 
 ---
 
 ## Completed Deprecations
+
+### Removed in v0.5.0
+
+| Item | Description | Replaced By |
+|------|-------------|-------------|
+| `dazzle build` command | Legacy code generation | `dazzle eject run` |
+| `dazzle stacks` command | Stack listing | `dazzle eject adapters` |
+| `dazzle infra` command | Infrastructure generation | `dazzle eject run` |
+| `dazzle.stacks` module | Stack infrastructure | `dazzle.eject` module |
+| `--backend`, `--backends` flags | Legacy build flags | Removed |
+| `django_micro_modular` stack | Django code generation | DNR or ejection |
+| `django_api` stack | Django REST generation | DNR or ejection |
+| `express_micro` stack | Express.js generation | DNR or ejection |
+| `nextjs_semantic` stack | Next.js generation | DNR or ejection |
+| `openapi` stack | OpenAPI generation | `dazzle eject openapi` |
 
 ### Removed in v0.2.0
 
@@ -93,20 +73,13 @@ dazzle dnr serve
 
 ## How to Check for Deprecations
 
-### CLI Warnings
+### CLI
 
-Deprecated features emit warnings:
-```bash
-$ dazzle build --backend django_micro_modular
-Warning: --backend is deprecated, use --stack instead
-Warning: Stack 'django_micro_modular' is deprecated. Use 'dazzle dnr serve' instead.
-```
-
-### Validation
+Run any deprecated command to see migration guidance:
 
 ```bash
-dazzle validate --strict  # Fails on deprecated usage
-dazzle lint               # Reports deprecation warnings
+$ dazzle validate  # Will report any deprecated DSL syntax
+$ dazzle lint      # Reports warnings including deprecations
 ```
 
 ---

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dazzle.stacks.base.generator import GeneratorResult
+from dazzle.eject.generator import GeneratorResult
 
 from .adapters import AdapterRegistry
 from .config import EjectionConfig, load_ejection_config

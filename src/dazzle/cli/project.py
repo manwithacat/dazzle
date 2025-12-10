@@ -1,31 +1,27 @@
 """
 Project commands for DAZZLE CLI.
 
-Commands for creating, validating, and building DAZZLE projects:
+Commands for creating, validating, and working with DAZZLE projects:
 - init: Initialize a new project
 - validate: Parse and validate DSL
 - lint: Extended validation checks
 - inspect: Inspect entities and surfaces
 - layout-plan: Preview layout changes
-- stacks: List available stacks
-- build: Generate code from specs
-- infra: Infrastructure commands
 - analyze-spec: LLM-powered spec analysis
 - example: Create project from example
 
-NOTE: This file contains helper functions and simplified command stubs.
-The actual command implementations are still in cli_legacy.py.
-This file is prepared for a future migration of project commands.
+For code generation, use:
+- dazzle dnr serve: Run your DSL directly (rapid iteration)
+- dazzle eject run: Generate standalone FastAPI + React (production)
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import typer
 
-from dazzle.core.changes import ChangeSet, detect_changes
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.init import InitError, init_project, list_examples
@@ -33,8 +29,6 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core.stacks import BUILTIN_STACKS
-from dazzle.core.state import compute_dsl_hashes, load_state, save_state
 
 if TYPE_CHECKING:
     pass
@@ -43,11 +37,6 @@ if TYPE_CHECKING:
 # =============================================================================
 # Helper Functions
 # =============================================================================
-
-
-def _get_available_stacks() -> list[str]:
-    """Get list of available stack preset names."""
-    return list(BUILTIN_STACKS.keys())
 
 
 def _is_directory_empty(directory: Path) -> bool:
@@ -555,257 +544,6 @@ def layout_plan_command(
         raise typer.Exit(code=1)
 
 
-def stacks_command() -> None:
-    """
-    List available stack presets.
-    """
-    stacks = _get_available_stacks()
-
-    if not stacks:
-        typer.echo("No stack presets available.")
-        return
-
-    typer.echo("Available stack presets:\n")
-    for stack in sorted(stacks):
-        typer.echo(f"  • {stack}")
-
-    typer.echo("\nUse: dazzle build --stack <name>")
-
-
-def build_command(
-    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    stack: str | None = typer.Option(
-        None,
-        "--stack",
-        "-s",
-        help="Stack preset or comma-separated list (e.g., 'micro' or 'django_api,nextjs')",
-    ),
-    backend: str | None = typer.Option(
-        None, "--backend", "-b", help="DEPRECATED: Use --stack instead"
-    ),
-    backends: str | None = typer.Option(None, "--backends", help="DEPRECATED: Use --stack instead"),
-    out: str = typer.Option("./build", "--out", "-o", help="Output directory"),
-    incremental: bool = typer.Option(
-        False, "--incremental", "-i", help="Incremental build (only regenerate changed parts)"
-    ),
-    force: bool = typer.Option(False, "--force", help="Force full rebuild (ignore previous state)"),
-    diff: bool = typer.Option(False, "--diff", help="Show what would change without building"),
-) -> None:
-    """
-    Generate artifacts from the merged AppSpec using a stack.
-
-    Operates in CURRENT directory (must contain dazzle.toml).
-
-    A stack can be a preset name (like 'micro', 'django_next') or a custom
-    comma-separated list of stack implementations.
-
-    By default, uses the stack defined in dazzle.toml or falls back to 'micro'.
-
-    Examples:
-        dazzle build                                    # Use default stack (micro)
-        dazzle build --stack django_next                # Use preset stack
-        dazzle build --stack openapi                    # Single-implementation stack
-        dazzle build --stack django_api,nextjs,docker   # Custom stack
-        dazzle build --incremental                      # Incremental build
-        dazzle build --diff                             # Show changes without building
-    """
-
-    from dazzle.core.errors import BackendError
-    from dazzle.core.stacks import StackError, resolve_stack_backends, validate_stack_backends
-    from dazzle.stacks import get_backend
-
-    # Use manifest path to determine root directory
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
-
-        # Validate before building
-        errors, warnings = lint_appspec(appspec)
-        if errors:
-            typer.echo("Cannot build; spec has validation errors:", err=True)
-            for err in errors:
-                typer.echo(f"ERROR: {err}", err=True)
-            raise typer.Exit(code=1)
-
-        if warnings:
-            typer.echo("Build warnings:", err=False)
-            for warn in warnings:
-                typer.echo(f"WARNING: {warn}", err=False)
-            typer.echo()
-
-        # Resolve which stack implementations to build
-        backend_list = []
-
-        # Show deprecation warnings for old flags
-        if backends or backend:
-            typer.echo("--backend and --backends are deprecated. Use --stack instead.", err=True)
-            typer.echo("   Example: dazzle build --stack openapi", err=True)
-            typer.echo()
-
-        # Priority: --stack > --backends (deprecated) > --backend (deprecated) > manifest stack > default
-        if stack:
-            # Stack flag: can be preset name OR comma-separated list
-            backend_list = resolve_stack_backends(stack, None)
-        elif backends:
-            # DEPRECATED: Explicit comma-separated backend list
-            backend_list = [b.strip() for b in backends.split(",")]
-        elif backend:
-            # DEPRECATED: Legacy single backend flag
-            backend_list = [backend]
-        elif mf.stack and mf.stack.backends:
-            # Stack from manifest (explicit backend list)
-            backend_list = mf.stack.backends
-            typer.echo(f"Using stack '{mf.stack.name}' from manifest")
-        elif mf.stack and mf.stack.name:
-            # Check for DNR - it's a runtime, not a code generator
-            if mf.stack.name.lower() == "dnr":
-                typer.echo("This project uses DNR (Dazzle Native Runtime).")
-                typer.echo("")
-                typer.echo("DNR runs your DSL directly without code generation.")
-                typer.echo("To run your app, use:")
-                typer.echo("")
-                typer.echo("  dazzle dnr serve")
-                typer.echo("")
-                typer.echo("To generate code for a specific stack, specify --stack:")
-                typer.echo("  dazzle build --stack micro")
-                typer.echo("  dazzle build --stack base")
-                return
-            # Stack name in manifest, resolve to preset
-            backend_list = resolve_stack_backends(mf.stack.name, None)
-            typer.echo(f"Using stack preset '{mf.stack.name}'")
-        else:
-            # Default to 'micro' stack (django_micro_modular)
-            backend_list = ["django_micro_modular"]
-            typer.echo("Using default stack: 'micro'")
-
-        # Validate all backends exist
-        validate_stack_backends(backend_list)
-
-        # Handle --diff flag for change detection
-        if diff:
-            prev_state = load_state(root)
-            if prev_state:
-                current_hashes = compute_dsl_hashes(dsl_files, root)
-                diff_changeset = detect_changes(prev_state, appspec, current_hashes)
-
-                if diff_changeset.is_empty():
-                    typer.echo("No changes detected since last build.")
-                else:
-                    typer.echo("Changes detected:")
-                    typer.echo(diff_changeset.summary())
-                    typer.echo("\nRun without --diff to apply changes.")
-            else:
-                typer.echo("No previous build state found. This would be a full build.")
-            return
-
-        # Build each backend in order
-        base_output_dir = Path(out).resolve()
-        artifacts: dict[str, Any] = {}  # Shared artifacts between backends
-
-        for backend_name in backend_list:
-            typer.echo(f"\n{'=' * 60}")
-            typer.echo(f"Building backend: {backend_name}")
-            typer.echo(f"{'=' * 60}\n")
-
-            # Get backend implementation
-            backend_impl = get_backend(backend_name)
-
-            # Determine output directory
-            if len(backend_list) == 1:
-                # Single backend: output directly to out dir
-                output_dir = base_output_dir
-            else:
-                # Multiple backends: create subdirectory per backend
-                output_dir = base_output_dir / backend_name
-
-            output_dir.mkdir(parents=True, exist_ok=True)
-
-            # Check for previous state and handle incremental builds
-            prev_state = None if force else load_state(root)
-            changeset: ChangeSet | None = None
-
-            if prev_state and incremental:
-                current_hashes = compute_dsl_hashes(dsl_files, root)
-                changeset = detect_changes(prev_state, appspec, current_hashes)
-
-                if changeset.is_empty():
-                    typer.echo(f"  No changes detected for {backend_name}, skipping...")
-                    continue
-
-                typer.echo("  Changes detected:")
-                typer.echo(changeset.summary())
-
-                if changeset.requires_full_rebuild():
-                    typer.echo("  Changes require full rebuild")
-                    incremental = False
-
-            # Validate backend config
-            backend_impl.validate_config()
-
-            # Check incremental support
-            capabilities = backend_impl.get_capabilities()
-            if incremental and not capabilities.supports_incremental:
-                typer.echo(f"  Backend '{backend_name}' does not support incremental builds")
-                incremental = False
-
-            # Generate artifacts
-            try:
-                if incremental and changeset:
-                    typer.echo("  Generating incrementally...")
-                    if hasattr(backend_impl, "generate_incremental"):
-                        backend_impl.generate_incremental(appspec, output_dir, changeset)
-                    else:
-                        backend_impl.generate(appspec, output_dir)
-                else:
-                    typer.echo("  Generating...")
-                    backend_impl.generate(appspec, output_dir, artifacts=artifacts)
-
-                # Save state for incremental builds
-                save_state(root, backend_name, output_dir, dsl_files, appspec)
-
-                # Collect artifacts from this backend (for next backends to use)
-                if hasattr(backend_impl, "get_artifacts"):
-                    artifacts[backend_name] = backend_impl.get_artifacts(output_dir)
-
-                typer.echo(f"  {backend_name} -> {output_dir}")
-
-            except BackendError as e:
-                typer.echo(f"  Backend error: {e}", err=True)
-                raise typer.Exit(code=1)
-
-        typer.echo(f"\n{'=' * 60}")
-        typer.echo(f"Build complete: {', '.join(backend_list)}")
-        typer.echo(f"{'=' * 60}")
-
-    except StackError as e:
-        typer.echo(f"Stack error: {e}", err=True)
-        raise typer.Exit(code=1)
-    except BackendError as e:
-        typer.echo(f"Backend error: {e}", err=True)
-        raise typer.Exit(code=1)
-    except Exception as e:
-        import traceback
-
-        typer.echo(f"Unexpected error during build: {e}", err=True)
-        traceback.print_exc()
-        raise typer.Exit(code=1)
-
-
-def infra_command(
-    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    target: str = typer.Option("docker", "--target", "-t", help="Infrastructure target"),
-) -> None:
-    """
-    Generate infrastructure configuration.
-    """
-    typer.echo(f"Infrastructure generation for target: {target}")
-    typer.echo("(This feature is under development)")
 
 
 def analyze_spec_command(
@@ -869,9 +607,6 @@ def example_command(
     name: str | None = typer.Argument(
         None, help="Example name (e.g., 'simple_task', 'support_tickets')"
     ),
-    stack: str | None = typer.Option(
-        None, "--stack", "-s", help="Stack preset to use (e.g., 'micro', 'nextjs_onebox')"
-    ),
     path: str | None = typer.Option(
         None, "--path", "-p", help="Directory to create (default: ./<example-name>)"
     ),
@@ -882,42 +617,28 @@ def example_command(
         help="Reset existing directory: overwrite source files, delete build artifacts, preserve user files",
     ),
     list_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
-    list_stacks: bool = typer.Option(False, "--list-stacks", help="List available stack presets"),
-    no_build: bool = typer.Option(False, "--no-build", help="Skip automatic build after creation"),
 ) -> None:
     """
-    Create a new project from a built-in example with interactive selection.
+    Create a new project from a built-in example.
 
     Creates a NEW directory (default: ./<example-name>).
 
     This command provides an interactive way to explore and use DAZZLE examples.
-    It creates a complete project directory with DSL files, ready for LLM-driven
-    development.
+    It creates a complete project directory with DSL files, ready for development.
 
-    Interactive modes:
-        dazzle example                        # Interactive selection with arrow keys
-        dazzle example simple_task            # Select stack for simple_task
-        dazzle example simple_task --stack nextjs_onebox  # Direct creation
+    After creation, run your app with DNR (Dazzle Native Runtime):
+        cd <project-name>
+        dazzle dnr serve
 
-    List options:
-        dazzle example --list                 # List available examples
-        dazzle example --list-stacks          # List available stack presets
-
-    Reset mode (--reset):
-        Resets an existing directory to match the example template:
-        - Overwrites DSL source files with example versions
-        - Deletes build/ directory (generated artifacts)
-        - Deletes .dazzle/ directory (build state)
-        - Preserves user-created files not in the example
-        - Preserves .git/, .vscode/, .env files
+    When ready for production, use the ejection toolchain:
+        dazzle eject run
 
     Examples:
-        dazzle example                               # Interactive mode
-        dazzle example simple_task                   # Select stack for example
-        dazzle example simple_task --stack micro     # Create with specific stack
+        dazzle example                        # Interactive selection
+        dazzle example simple_task            # Create simple_task example
         dazzle example simple_task --path ./my-app   # Create in custom directory
-        dazzle example simple_task --reset           # Reset existing project
-        dazzle example --no-build                    # Skip automatic build
+        dazzle example simple_task --reset    # Reset existing project
+        dazzle example --list                 # List available examples
     """
     from rich.text import Text
 
@@ -934,44 +655,6 @@ def example_command(
         print_warning,
         select_interactive,
     )
-    from dazzle.core.stacks import get_stack_preset
-
-    # List stacks
-    if list_stacks:
-        stacks = _get_available_stacks()
-        if not stacks:
-            print_error("No stack presets available.")
-            return
-
-        print_header("Available Stack Presets", "Choose a technology stack for your project")
-
-        stack_options = []
-        for stack_name in stacks:
-            preset = get_stack_preset(stack_name)
-            desc = preset.description if preset else ""
-            badge = ""
-            if stack_name == "nextjs_onebox":
-                badge = "NEW"
-            elif stack_name == "micro":
-                badge = "RECOMMENDED"
-
-            stack_options.append(
-                SelectOption(
-                    value=stack_name,
-                    label=stack_name,
-                    description=desc,
-                    badge=badge,
-                )
-            )
-
-        display_options_table(stack_options, show_numbers=True)
-
-        console.print(
-            Text("Usage: ", style="bright_black")
-            + Text("dazzle example <name> --stack <stack-name>", style="cyan")
-        )
-        console.print()
-        return
 
     # Get available examples
     examples_list = list_examples()
@@ -1032,11 +715,11 @@ def example_command(
         )
         console.print(
             Text("  dazzle example <name>                   ", style="cyan")
-            + Text("# Select stack for example", style="bright_black")
+            + Text("# Create from example", style="bright_black")
         )
         console.print(
-            Text("  dazzle example <name> --stack <stack>   ", style="cyan")
-            + Text("# Direct creation", style="bright_black")
+            Text("  dazzle example <name> --path ./my-app   ", style="cyan")
+            + Text("# Custom directory", style="bright_black")
         )
         console.print()
         return
@@ -1064,57 +747,6 @@ def example_command(
         console.print(Text(f"Available: {', '.join(examples_list)}", style="bright_black"))
         raise typer.Exit(code=1)
 
-    # Interactive stack selection
-    if stack is None:
-        stacks = _get_available_stacks()
-        if not stacks:
-            print_error("No compatible stack presets available.")
-            raise typer.Exit(code=1)
-
-        stack_options = []
-        for stack_name in stacks:
-            preset = get_stack_preset(stack_name)
-            desc = preset.description if preset else ""
-
-            badge = ""
-            if stack_name == "nextjs_onebox":
-                badge = "NEW"
-            elif stack_name == "micro":
-                badge = "RECOMMENDED"
-
-            stack_options.append(
-                SelectOption(
-                    value=stack_name,
-                    label=stack_name,
-                    description=desc,
-                    badge=badge,
-                )
-            )
-
-        stack = select_interactive(
-            stack_options,
-            title="Select a Stack",
-            subtitle="Choose the technology stack for your project",
-        )
-
-        if stack is None:
-            print_info("Selection cancelled.")
-            return
-
-        print_success(f"Selected stack: {stack}")
-        console.print()
-
-    # Validate stack
-    preset = get_stack_preset(stack)
-    if not preset:
-        print_error(f"Stack '{stack}' not found.")
-        console.print(
-            Text(
-                "Use 'dazzle example --list-stacks' to see available stacks.", style="bright_black"
-            )
-        )
-        raise typer.Exit(code=1)
-
     # Determine target directory
     if path is None:
         path = f"./{name}"
@@ -1127,7 +759,7 @@ def example_command(
             # Reset mode: smart overwrite
             print_divider()
             console.print()
-            print_step(1, 4, "Resetting project...")
+            print_step(1, 3, "Resetting project...")
 
             from dazzle.core.init import reset_project
 
@@ -1150,25 +782,6 @@ def example_command(
                 print_error(f"Reset failed: {e}")
                 raise typer.Exit(code=1)
 
-            # Update dazzle.toml with stack configuration
-            manifest_path = target_dir / "dazzle.toml"
-            if manifest_path.exists():
-                manifest_content = manifest_path.read_text()
-                if "[stack]" not in manifest_content:
-                    stack_section = f'\n[stack]\nname = "{stack}"\n'
-                    manifest_path.write_text(manifest_content + stack_section)
-                else:
-                    import re
-
-                    manifest_content = re.sub(
-                        r'name = "[^"]*"',
-                        f'name = "{stack}"',
-                        manifest_content,
-                        count=1,
-                        flags=re.MULTILINE,
-                    )
-                    manifest_path.write_text(manifest_content)
-
         else:
             print_error(f"Directory '{target_dir}' already exists.")
             console.print(
@@ -1185,32 +798,13 @@ def example_command(
             # Create project
             print_divider()
             console.print()
-            print_step(1, 4, "Creating project structure...")
+            print_step(1, 3, "Creating project structure...")
 
             init_project(
                 target_dir=target_dir,
                 project_name=name,
                 from_example=name,
             )
-
-            # Update dazzle.toml with stack configuration
-            manifest_path = target_dir / "dazzle.toml"
-            if manifest_path.exists():
-                manifest_content = manifest_path.read_text()
-                if "[stack]" not in manifest_content:
-                    stack_section = f'\n[stack]\nname = "{stack}"\n'
-                    manifest_path.write_text(manifest_content + stack_section)
-                else:
-                    import re
-
-                    manifest_content = re.sub(
-                        r'name = "[^"]*"',
-                        f'name = "{stack}"',
-                        manifest_content,
-                        count=1,
-                        flags=re.MULTILINE,
-                    )
-                    manifest_path.write_text(manifest_content)
 
             print_success(f"Project created: {target_dir}")
             print_success("Initialized git repository")
@@ -1227,7 +821,7 @@ def example_command(
     # Common post-processing for both reset and create modes
     try:
         # Verify project setup
-        print_step(2, 4, "Verifying project setup...")
+        print_step(2, 3, "Verifying project setup...")
         from dazzle.core.init import verify_project
 
         if not verify_project(target_dir):
@@ -1243,81 +837,27 @@ def example_command(
         print_success("Verification passed")
         console.print()
 
-        # Build the project
-        if not no_build:
-            print_step(3, 4, "Building project...")
-            import subprocess
-
-            build_result = subprocess.run(
-                ["python3", "-m", "dazzle.cli", "build"],
-                cwd=target_dir,
-                capture_output=True,
-                text=True,
-            )
-
-            if build_result.returncode == 0:
-                print_success("Build complete")
-            else:
-                print_warning("Build failed")
-                if build_result.stderr:
-                    console.print(Text(build_result.stderr, style="red"))
-                console.print(
-                    Text("You can build manually with 'dazzle build'", style="bright_black")
-                )
-        else:
-            print_step(3, 4, "Skipping build (--no-build)")
-
-        console.print()
-
         # Print next steps
-        print_step(4, 4, "Ready!")
+        print_step(3, 3, "Ready!")
         console.print()
 
         print_divider("=")
         print_header("Next Steps")
 
         console.print(Text(f"  cd {path}", style="cyan bold"))
+        console.print(Text("  dazzle dnr serve", style="cyan bold"))
+        console.print()
+        console.print(Text("This will start:", style="bright_black"))
+        console.print(Text("  • Backend API at http://localhost:8000", style="bright_black"))
+        console.print(Text("  • Frontend UI at http://localhost:3000", style="bright_black"))
+        console.print(Text("  • API docs at http://localhost:8000/docs", style="bright_black"))
 
-        if no_build:
-            console.print(Text("  dazzle build", style="cyan"))
-
-        # Stack-specific instructions
-        if "nextjs_onebox" in preset.backends:
-            console.print()
-            console.print(Text("Next.js Application:", style="bold green"))
-            console.print(Text("  cd build/<project-name>", style="cyan"))
-            console.print(Text("  npm install", style="cyan"))
-            console.print(Text("  npm run db:generate", style="cyan"))
-            console.print(Text("  npm run db:push", style="cyan"))
-            console.print(Text("  npm run dev", style="cyan"))
-
-        if "django_micro_modular" in preset.backends:
-            console.print()
-            console.print(Text("Django Application:", style="bold green"))
-            console.print(Text("  cd build/<project-name>", style="cyan"))
-            console.print(Text("  source .venv/bin/activate", style="cyan"))
-            console.print(Text("  python manage.py runserver", style="cyan"))
-            console.print(
-                Text("\nAdmin credentials: See .admin_credentials file", style="bright_black")
-            )
-
-        if "express_micro" in preset.backends:
-            console.print()
-            console.print(Text("Express Application:", style="bold green"))
-            console.print(Text("  cd build/<project-name>", style="cyan"))
-            console.print(Text("  npm install", style="cyan"))
-            console.print(Text("  npm start", style="cyan"))
-
-        if "openapi" in preset.backends:
-            console.print()
-            console.print(Text("OpenAPI spec:", style="bold"))
-            console.print(Text("  View: build/openapi/openapi.yaml", style="cyan"))
-
-        if "docker" in preset.backends:
-            console.print()
-            console.print(Text("Docker:", style="bold"))
-            console.print(Text("  cd build/docker", style="cyan"))
-            console.print(Text("  docker compose up -d", style="cyan"))
+        console.print()
+        console.print(Text("When ready for production:", style="bold"))
+        console.print(Text("  dazzle eject run", style="cyan"))
+        console.print(
+            Text("  # Generates standalone FastAPI + React code", style="bright_black")
+        )
 
         console.print()
         print_divider("=")
@@ -1336,7 +876,6 @@ def example_command(
 # Export all command functions
 __all__ = [
     # Helper functions
-    "_get_available_stacks",
     "_is_directory_empty",
     "_print_human_diagnostics",
     "_print_vscode_diagnostics",
@@ -1350,9 +889,6 @@ __all__ = [
     "lint_command",
     "inspect_command",
     "layout_plan_command",
-    "stacks_command",
-    "build_command",
-    "infra_command",
     "analyze_spec_command",
     "example_command",
 ]

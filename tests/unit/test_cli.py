@@ -120,58 +120,6 @@ def test_lint_command(cli_runner: CliRunner, test_project: Path):
     assert result.exit_code == 0 or "WARNING" in result.stdout
 
 
-def test_stacks_command(cli_runner: CliRunner):
-    """Test stacks command lists available stacks."""
-    result = cli_runner.invoke(app, ["stacks"])
-    assert result.exit_code == 0
-    # Check for one of the known stack presets
-    assert "micro" in result.stdout.lower() or "api_only" in result.stdout.lower()
-
-
-def test_build_command(cli_runner: CliRunner, test_project: Path, tmp_path: Path):
-    """Test build command generates output."""
-    output_dir = tmp_path / "output"
-
-    result = cli_runner.invoke(
-        app,
-        [
-            "build",
-            "--manifest",
-            str(test_project / "dazzle.toml"),
-            "--stack",
-            "docker",
-            "--out",
-            str(output_dir),
-        ],
-    )
-
-    assert result.exit_code == 0
-    assert "Build complete" in result.stdout
-
-    # Check output directory was created
-    assert output_dir.exists()
-
-
-def test_build_command_with_invalid_backend(cli_runner: CliRunner, test_project: Path):
-    """Test build command with invalid stack."""
-    result = cli_runner.invoke(
-        app,
-        [
-            "build",
-            "--manifest",
-            str(test_project / "dazzle.toml"),
-            "--stack",
-            "nonexistent",
-            "--out",
-            "/tmp/output",
-        ],
-    )
-
-    assert result.exit_code == 1
-    # Stack error should appear in stdout or stderr
-    assert "Stack error" in result.stdout or "error" in result.stderr.lower()
-
-
 def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
     """Test inspect command with default options."""
     result = cli_runner.invoke(app, ["inspect", "--manifest", str(test_project / "dazzle.toml")])
