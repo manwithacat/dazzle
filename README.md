@@ -58,13 +58,12 @@ See [Tooling Guide](docs/TOOLING.md) for details.
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v0.7.x** (Current) | DNR + Ejection + LLM Cognition | Active development |
-| v0.2.x-v0.6.x | DNR + UX Semantic Layer + GraphQL BFF | Stable |
-| v0.1.x | Legacy code generation stacks | Deprecated |
+| **v0.8.x** (Current) | New Bun CLI + DNR + Ejection | Active development |
+| v0.7.x | LLM Cognition Layer + State Machines | Stable |
+| v0.1.x-v0.6.x | Legacy versions | Deprecated |
 
 - **DNR** is for rapid iteration - run your DSL directly without code generation
 - **Ejection** generates standalone FastAPI + React when you need production deployment
-- **Legacy stacks** will be removed in v1.0
 
 ## The DSL
 
@@ -97,7 +96,7 @@ surface task_list "Tasks":
 cd examples/simple_task
 
 # Start the app
-dazzle dnr serve
+dazzle dev
 
 # Open http://localhost:3000 for the UI
 # Open http://localhost:8000/docs for the API
@@ -115,10 +114,10 @@ DNR is the primary way to run DAZZLE applications:
 - **OpenAPI Docs**: Automatic Swagger UI at `/docs`
 
 ```bash
-dazzle dnr serve                 # Start the app
-dazzle dnr build-ui              # Build static UI assets
-dazzle dnr build-api             # Generate API spec
-dazzle dnr info                  # Show project info
+dazzle dev                       # Start the app
+dazzle check                     # Validate DSL files
+dazzle show                      # Show project info
+dazzle build                     # Build for production
 ```
 
 ## Workflow
@@ -142,9 +141,9 @@ dazzle dnr info                  # Show project info
    - **Eject**: Generate standalone code for production
 
 ```bash
-dazzle validate                  # Parse + link + validate
-dazzle dnr serve                 # Run instantly with DNR
-dazzle eject run                 # Generate standalone code
+dazzle check                     # Parse + link + validate
+dazzle dev                       # Run instantly with DNR
+dazzle eject                     # Generate standalone code
 ```
 
 ## Semantic Concepts
@@ -228,9 +227,9 @@ service github "GitHub API":
 When your MVP is ready for production, **eject** to standalone code:
 
 ```bash
-dazzle eject run                    # Generate full application
-dazzle eject run --no-frontend      # Backend only
-dazzle eject run --dry-run          # Preview what will be generated
+dazzle eject                        # Generate full application
+dazzle eject --backend-only         # Backend only
+dazzle eject --dry-run              # Preview what will be generated
 ```
 
 ### What Gets Generated

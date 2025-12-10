@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-10
-**Current Version**: v0.7.2
+**Current Version**: v0.8.0
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 ---
@@ -749,50 +749,46 @@ dazzle eject --dry-run    # Preview without writing
 
 ---
 
-### v0.8.0 - Bun CLI Framework
+### v0.8.0 - Bun CLI Framework ✅ COMPLETE
 
-**Focus**: Refactor CLI tooling to use Bun runtime
+**Released**: December 2025
 
-#### Motivation
-- **Performance**: Bun's fast startup time improves CLI responsiveness
-- **TypeScript-first**: Native TypeScript execution without build step
-- **Unified tooling**: Single runtime for bundling, testing, and execution
-- **Modern APIs**: Built-in fetch, WebSocket, file I/O
+**Focus**: Complete CLI rewrite using Bun for 50x faster startup
 
-#### Migration Plan
+#### Delivered
 
-**Phase 1: CLI Shell**
-- Port `dazzle` entry point to Bun/TypeScript
-- Maintain Python core via subprocess calls
-- Immediate benefit: faster command parsing
+**New CLI Architecture**:
+- Bun-compiled binary (57MB, single file)
+- 20ms startup (vs 1000ms+ Python CLI)
+- JSON-first output for LLM integration
+- `__agent_hint` fields in errors for AI remediation
 
-**Phase 2: DNR UI Tooling**
-- Move Vite/esbuild to Bun bundler
-- TypeScript dev server with hot reload
-- Faster `dazzle dnr serve` startup
+**New Commands**:
+| Old Command | New Command |
+|-------------|-------------|
+| `dazzle init` | `dazzle new` |
+| `dazzle dnr serve` | `dazzle dev` |
+| `dazzle validate` | `dazzle check` |
+| `dazzle inspect` | `dazzle show` |
+| `dazzle dnr test` | `dazzle test` |
+| `dazzle eject run` | `dazzle eject` |
+| `dazzle dnr migrate` | `dazzle db` |
 
-**Phase 3: Test Runner**
-- Bun test for JavaScript/TypeScript tests
-- Playwright integration via Bun
-- Parallel test execution
+**Distribution**:
+- GitHub Releases with 4 platform binaries (darwin-arm64, darwin-x64, linux-arm64, linux-x64)
+- Homebrew tap updated (`brew install manwithacat/tap/dazzle`)
+- VS Code extension v0.8.0 with new command mappings
 
-**Phase 4: Full Migration (Optional)**
-- Evaluate Python→TypeScript for core modules
-- Keep Python for DNR backend (FastAPI)
-- TypeScript for all frontend/CLI code
+**Technical Details**:
+- TypeScript CLI compiled with `bun build --compile`
+- Python bridge for DSL parsing via subprocess
+- `python -m dazzle` invocation for CI compatibility
+- Cross-compilation from ARM to x64 in GitHub Actions
 
 #### Compatibility
 - Python backend unchanged (FastAPI/SQLite)
 - DSL parser remains Python (no rewrite)
-- CLI becomes TypeScript calling Python where needed
-
-#### Success Criteria
-- `dazzle` command starts in <100ms
-- `dazzle dnr serve` hot reload <500ms
-- Zero breaking changes to user-facing CLI
-- Test suite passes with Bun runner
-
-**Estimate**: 6-8 weeks
+- All Python tests continue to pass
 
 ---
 
