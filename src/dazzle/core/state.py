@@ -14,6 +14,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+# Buffer size for file hashing (8 KB)
+_HASH_BUFFER_SIZE = 8192
+
 from . import ir
 from .errors import DazzleError
 
@@ -64,7 +67,7 @@ def compute_file_hash(file_path: Path) -> str:
     try:
         sha256 = hashlib.sha256()
         with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
+            for chunk in iter(lambda: f.read(_HASH_BUFFER_SIZE), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
     except Exception as e:

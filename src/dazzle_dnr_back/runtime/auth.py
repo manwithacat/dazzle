@@ -75,6 +75,7 @@ class AuthContext(BaseModel):
 
     @property
     def user_id(self) -> UUID | None:
+        """Get the authenticated user's ID, or None if not authenticated."""
         return self.user.id if self.user else None
 
 

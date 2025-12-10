@@ -21,6 +21,11 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Time conversion constants
+SECONDS_PER_MINUTE = 60
+SECONDS_PER_HOUR = 3600
+SECONDS_PER_DAY = 86400
+
 
 class TimeUnit(str, Enum):
     """Time units for auto-transition delays."""
@@ -87,11 +92,11 @@ class AutoTransitionSpec(BaseModel):
     def delay_seconds(self) -> int:
         """Get delay in seconds."""
         if self.delay_unit == TimeUnit.MINUTES:
-            return self.delay_value * 60
+            return self.delay_value * SECONDS_PER_MINUTE
         elif self.delay_unit == TimeUnit.HOURS:
-            return self.delay_value * 3600
+            return self.delay_value * SECONDS_PER_HOUR
         else:  # DAYS
-            return self.delay_value * 86400
+            return self.delay_value * SECONDS_PER_DAY
 
 
 class StateTransition(BaseModel):

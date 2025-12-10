@@ -9,6 +9,18 @@ from urllib.parse import urlparse
 
 from . import ir
 
+# =============================================================================
+# Validation Constants
+# =============================================================================
+
+# Decimal type limits (based on common database limits)
+DECIMAL_PRECISION_MIN = 1
+DECIMAL_PRECISION_MAX = 65
+
+# String field limits
+STRING_MAX_LENGTH_MIN = 1
+STRING_MAX_LENGTH_WARN_THRESHOLD = 10000  # Suggest TEXT type above this
+
 
 def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
@@ -58,7 +70,7 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"Entity '{entity.name}' field '{field.name}' has decimal type "
                         f"but missing precision/scale"
                     )
-                elif field.type.precision < 1 or field.type.precision > 65:
+                elif field.type.precision < DECIMAL_PRECISION_MIN or field.type.precision > DECIMAL_PRECISION_MAX:
                     warnings.append(
                         f"Entity '{entity.name}' field '{field.name}' has unusual "
                         f"decimal precision: {field.type.precision}"
@@ -76,12 +88,12 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"Entity '{entity.name}' field '{field.name}' has str type "
                         f"but no max_length"
                     )
-                elif field.type.max_length < 1:
+                elif field.type.max_length < STRING_MAX_LENGTH_MIN:
                     errors.append(
                         f"Entity '{entity.name}' field '{field.name}' has invalid "
                         f"max_length: {field.type.max_length}"
                     )
-                elif field.type.max_length > 10000:
+                elif field.type.max_length > STRING_MAX_LENGTH_WARN_THRESHOLD:
                     warnings.append(
                         f"Entity '{entity.name}' field '{field.name}' has very large "
                         f"max_length: {field.type.max_length}. Consider using 'text' type."
@@ -511,6 +523,7 @@ def _validate_condition_fields(
     entity_field_names = {f.name for f in entity.fields}
 
     def check_comparison(comparison: ir.Comparison) -> None:
+        """Validate field references in a comparison expression."""
         if comparison.field and comparison.field not in entity_field_names:
             errors.append(
                 f"{context} references non-existent field '{comparison.field}' "
@@ -523,6 +536,7 @@ def _validate_condition_fields(
             )
 
     def check_condition(cond: ir.ConditionExpr) -> None:
+        """Recursively validate a condition expression tree."""
         if cond.comparison:
             check_comparison(cond.comparison)
         elif cond.is_compound:

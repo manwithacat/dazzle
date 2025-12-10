@@ -190,6 +190,13 @@ class StackConfig:
 
 @dataclass
 class ProjectManifest:
+    """
+    Project manifest loaded from dazzle.toml.
+
+    Contains project metadata, module paths, and optional infrastructure,
+    stack, shell, and authentication configuration.
+    """
+
     name: str
     version: str
     project_root: str
