@@ -204,3 +204,121 @@ def get_project_info_json(
         "workspaces": workspaces,
         "services": services,
     }
+
+
+def init_project_json(
+    name: str,
+    template: str = "simple_task",
+    path: str | None = None,
+) -> dict[str, Any]:
+    """
+    Initialize a new DAZZLE project.
+
+    Args:
+        name: Project name
+        template: Template to use
+        path: Target path
+
+    Returns:
+        Dict with project info
+    """
+    from dazzle.core import init_project
+
+    target_path = Path(path) if path else Path.cwd() / name
+
+    try:
+        init_project(
+            name=name,
+            target_dir=target_path,
+            template=template,
+        )
+        return {
+            "name": name,
+            "path": str(target_path),
+            "template": template,
+        }
+    except Exception as e:
+        raise RuntimeError(f"Failed to create project: {e}") from e
+
+
+def build_project_json(
+    path: str | None = None,
+    output: str = "./dist",
+    docker: bool = True,
+    graphql: bool = False,
+) -> dict[str, Any]:
+    """
+    Build project for production.
+
+    Args:
+        path: Project path
+        output: Output directory
+        docker: Generate Dockerfile
+        graphql: Include GraphQL
+
+    Returns:
+        Dict with build results
+    """
+    # Import the build functionality
+    from dazzle.cli.dnr_impl.build import build_production
+
+    project_path = Path(path) if path else Path.cwd()
+    output_path = Path(output)
+
+    try:
+        result = build_production(
+            project_path=project_path,
+            output_path=output_path,
+            include_docker=docker,
+            include_graphql=graphql,
+        )
+        return {
+            "output_path": str(output_path),
+            "files": result.get("files", []),
+            "docker": docker,
+        }
+    except Exception as e:
+        raise RuntimeError(f"Build failed: {e}") from e
+
+
+def eject_project_json(
+    path: str | None = None,
+    output: str = "./ejected",
+    backend: str = "fastapi",
+    frontend: str = "react",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """
+    Eject project to standalone code.
+
+    Args:
+        path: Project path
+        output: Output directory
+        backend: Backend framework
+        frontend: Frontend framework
+        dry_run: Preview only
+
+    Returns:
+        Dict with ejection results
+    """
+    from dazzle.eject.runner import run_ejection
+
+    project_path = Path(path) if path else Path.cwd()
+    output_path = Path(output)
+
+    try:
+        result = run_ejection(
+            project_path=project_path,
+            output_path=output_path,
+            backend=backend if backend != "none" else None,
+            frontend=frontend if frontend != "none" else None,
+            dry_run=dry_run,
+        )
+        return {
+            "output_path": str(output_path),
+            "backend_files": result.get("backend_files", []),
+            "frontend_files": result.get("frontend_files", []),
+            "total_files": result.get("total_files", 0),
+        }
+    except Exception as e:
+        raise RuntimeError(f"Ejection failed: {e}") from e

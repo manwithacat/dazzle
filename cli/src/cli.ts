@@ -11,7 +11,7 @@ import { callPython } from './lib/python'
 import { findConfigPath, loadConfig, getProjectRoot } from './lib/config'
 
 // Import commands
-import { check, dev, show, version } from './commands'
+import { check, dev, show, version, new_, build, test, db, eject } from './commands'
 
 // Command registry
 const commands: Record<string, Command> = {
@@ -19,6 +19,11 @@ const commands: Record<string, Command> = {
   dev,
   show,
   version,
+  new: new_,
+  build,
+  test,
+  db,
+  eject,
 }
 
 // Global options schema
@@ -139,9 +144,14 @@ dazzle - Fast, LLM-friendly CLI for DAZZLE projects
 Usage: dazzle <command> [options]
 
 Commands:
+  new        Create a new project
   dev        Start development server
+  build      Build for production
   check      Validate DSL files
   show       Inspect project structure
+  test       Run E2E tests
+  db         Database operations
+  eject      Generate standalone code
   version    Show version info
 
 Global Options:
@@ -151,10 +161,12 @@ Global Options:
   --quiet, -q    Suppress output
 
 Examples:
+  dazzle new my-app             # Create new project
   dazzle dev                    # Start dev server
   dazzle check                  # Validate project
   dazzle show entities          # List entities
-  dazzle show --name Task       # Inspect Task entity
+  dazzle build                  # Build for production
+  dazzle eject                  # Generate standalone code
 
 Run 'dazzle <command> --help' for command-specific help.
 `)
