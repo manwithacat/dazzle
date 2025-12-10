@@ -122,15 +122,28 @@ class Dazzle < Formula
     # Install Python package in virtualenv
     venv = virtualenv_create(libexec, "python3.12")
 
-    # Install Python dependencies first
+    # Install Python dependencies
     resources.each do |r|
       next if r.name == "cli-binary"
 
-      venv.pip_install r
+      case r.name
+      when "pydantic-core"
+        # pydantic-core is distributed as a wheel (requires Rust to build from source)
+        r.stage do
+          wheel = Dir["*.whl"].first
+          odie "pydantic-core wheel not found in resource" unless wheel
+
+          system venv.root/"bin/python", "-m", "pip", "install",
+                 "--no-deps", "--no-compile",
+                 wheel
+        end
+      else
+        venv.pip_install r
+      end
     end
 
-    # Install dazzle package from root (pyproject.toml is at root level)
-    venv.pip_install buildpath
+    # Install dazzle package and create bin links
+    venv.pip_install_and_link buildpath
 
     # Install the pre-compiled CLI binary
     resource("cli-binary").stage do
