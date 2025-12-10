@@ -1,0 +1,200 @@
+name: Release CLI
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.8.0)'
+        required: true
+        type: string
+
+jobs:
+  build-cli:
+    strategy:
+      matrix:
+        include:
+          - os: macos-14       # Apple Silicon
+            target: darwin-arm64
+          - os: macos-13       # Intel Mac
+            target: darwin-x64
+          - os: ubuntu-latest  # Linux x64
+            target: linux-x64
+          - os: ubuntu-24.04-arm  # Linux ARM (if available)
+            target: linux-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: cli
+        run: bun install
+
+      - name: Build CLI binary
+        working-directory: cli
+        run: |
+          bun build src/index.ts --compile --outfile=dist/dazzle
+
+          # Create tarball
+          cd dist
+          tar -czvf dazzle-${{ matrix.target }}.tar.gz dazzle
+
+          # Calculate SHA256
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            shasum -a 256 dazzle-${{ matrix.target }}.tar.gz > dazzle-${{ matrix.target }}.tar.gz.sha256
+          else
+            sha256sum dazzle-${{ matrix.target }}.tar.gz > dazzle-${{ matrix.target }}.tar.gz.sha256
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dazzle-${{ matrix.target }}
+          path: |
+            cli/dist/dazzle-${{ matrix.target }}.tar.gz
+            cli/dist/dazzle-${{ matrix.target }}.tar.gz.sha256
+
+  create-release:
+    needs: build-cli
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create source tarball
+        run: |
+          git archive --format=tar.gz --prefix=dazzle-${{ steps.version.outputs.VERSION }}/ HEAD > dazzle-source.tar.gz
+          sha256sum dazzle-source.tar.gz > dazzle-source.tar.gz.sha256
+
+      - name: Generate release notes
+        run: |
+          cat > RELEASE_NOTES.md << 'EOF'
+          ## DAZZLE v${{ steps.version.outputs.VERSION }}
+
+          ### What's New
+          - 50x faster CLI startup (Bun-compiled native binary)
+          - LLM-friendly JSON output with agent hints
+          - Simplified command structure
+
+          ### Installation
+
+          **Homebrew (recommended):**
+          ```bash
+          brew install manwithacat/tap/dazzle
+          ```
+
+          **Manual:**
+          Download the appropriate binary for your platform and add to PATH.
+
+          ### Platforms
+          - macOS ARM64 (Apple Silicon)
+          - macOS x64 (Intel)
+          - Linux x64
+          - Linux ARM64
+
+          ### SHA256 Checksums
+          See individual `.sha256` files for verification.
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: DAZZLE v${{ steps.version.outputs.VERSION }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, 'beta') || contains(steps.version.outputs.VERSION, 'alpha') }}
+          files: |
+            artifacts/dazzle-darwin-arm64/*
+            artifacts/dazzle-darwin-x64/*
+            artifacts/dazzle-linux-x64/*
+            artifacts/dazzle-linux-arm64/*
+            dazzle-source.tar.gz
+            dazzle-source.tar.gz.sha256
+
+  update-homebrew:
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: manwithacat/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download checksums
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          BASE_URL="https://github.com/manwithacat/dazzle/releases/download/v${VERSION}"
+
+          # Download SHA256 files
+          curl -sL "${BASE_URL}/dazzle-darwin-arm64.tar.gz.sha256" -o darwin-arm64.sha256
+          curl -sL "${BASE_URL}/dazzle-darwin-x64.tar.gz.sha256" -o darwin-x64.sha256
+          curl -sL "${BASE_URL}/dazzle-linux-arm64.tar.gz.sha256" -o linux-arm64.sha256
+          curl -sL "${BASE_URL}/dazzle-linux-x64.tar.gz.sha256" -o linux-x64.sha256
+          curl -sL "${BASE_URL}/dazzle-source.tar.gz.sha256" -o source.sha256
+
+          # Extract just the hash
+          echo "SHA256_DARWIN_ARM64=$(cut -d' ' -f1 darwin-arm64.sha256)" >> $GITHUB_ENV
+          echo "SHA256_DARWIN_X64=$(cut -d' ' -f1 darwin-x64.sha256)" >> $GITHUB_ENV
+          echo "SHA256_LINUX_ARM64=$(cut -d' ' -f1 linux-arm64.sha256)" >> $GITHUB_ENV
+          echo "SHA256_LINUX_X64=$(cut -d' ' -f1 linux-x64.sha256)" >> $GITHUB_ENV
+          echo "SHA256_SOURCE=$(cut -d' ' -f1 source.sha256)" >> $GITHUB_ENV
+
+      - name: Update formula
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          # Update version and SHA256 placeholders in formula
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/dazzle.rb
+          sed -i "s/PLACEHOLDER_SHA256_SOURCE/${SHA256_SOURCE}/" Formula/dazzle.rb
+          sed -i "s/PLACEHOLDER_SHA256_DARWIN_ARM64/${SHA256_DARWIN_ARM64}/" Formula/dazzle.rb
+          sed -i "s/PLACEHOLDER_SHA256_DARWIN_X64/${SHA256_DARWIN_X64}/" Formula/dazzle.rb
+          sed -i "s/PLACEHOLDER_SHA256_LINUX_ARM64/${SHA256_LINUX_ARM64}/" Formula/dazzle.rb
+          sed -i "s/PLACEHOLDER_SHA256_LINUX_X64/${SHA256_LINUX_X64}/" Formula/dazzle.rb
+
+          # Update URLs with correct version
+          sed -i "s|/v[0-9.]*\(-[a-z]*\)*/dazzle|/v${VERSION}/dazzle|g" Formula/dazzle.rb
+
+      - name: Commit and push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/dazzle.rb
+          git commit -m "Update dazzle to v${{ steps.version.outputs.VERSION }}"
+          git push

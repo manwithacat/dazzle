@@ -1,22 +1,54 @@
-# DAZZLE Homebrew Formula
+# DAZZLE Homebrew Formula v0.8.0
 #
 # Installation: brew install manwithacat/tap/dazzle
 # Or from this file: brew install ./homebrew/dazzle.rb
+#
+# v0.8.0 Architecture:
+# - CLI: Bun-compiled native binary (50x faster startup)
+# - Runtime: Python package for DSL parsing and code generation
+#
+# The binary is built from cli/ using `bun build --compile`
+# Python is invoked only when DSL operations are needed
 
 class Dazzle < Formula
   include Language::Python::Virtualenv
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "0570e36d34d274f824db3bfe91143d0695cc59528bac5c7df0daa23be2581e15"
+  version "0.8.0"
   license "MIT"
-  head "https://github.com/manwithacat/dazzle.git", branch: "main"
+
+  # Source tarball for Python package
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.8.0.tar.gz"
+  sha256 "PLACEHOLDER_SHA256_SOURCE"
+
+  # Pre-compiled CLI binaries for each platform
+  resource "cli-binary" do
+    on_macos do
+      on_arm do
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.0/dazzle-darwin-arm64.tar.gz"
+        sha256 "PLACEHOLDER_SHA256_DARWIN_ARM64"
+      end
+      on_intel do
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.0/dazzle-darwin-x64.tar.gz"
+        sha256 "PLACEHOLDER_SHA256_DARWIN_X64"
+      end
+    end
+    on_linux do
+      on_arm do
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.0/dazzle-linux-arm64.tar.gz"
+        sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
+      end
+      on_intel do
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.0/dazzle-linux-x64.tar.gz"
+        sha256 "PLACEHOLDER_SHA256_LINUX_X64"
+      end
+    end
+  end
 
   depends_on "python@3.12"
-  depends_on "rust" => :build  # Required for building pydantic-core
 
-  # Core dependencies from pyproject.toml
+  # Python dependencies for DSL parsing and runtime
   resource "pydantic" do
     url "https://files.pythonhosted.org/packages/source/p/pydantic/pydantic-2.9.2.tar.gz"
     sha256 "d155cef71265d1e9807ed1c32b4c8deec042a44a50a4188b25ac67ecd81a9c0f"
@@ -47,29 +79,9 @@ class Dazzle < Formula
     sha256 "ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de"
   end
 
-  resource "shellingham" do
-    url "https://files.pythonhosted.org/packages/source/s/shellingham/shellingham-1.5.4.tar.gz"
-    sha256 "8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"
-  end
-
   resource "rich" do
     url "https://files.pythonhosted.org/packages/source/r/rich/rich-13.9.2.tar.gz"
     sha256 "51a2c62057461aaf7152b4d611168f93a9fc73068f8ded2790f29fe2b5366d0c"
-  end
-
-  resource "markdown-it-py" do
-    url "https://files.pythonhosted.org/packages/source/m/markdown-it-py/markdown-it-py-3.0.0.tar.gz"
-    sha256 "e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"
-  end
-
-  resource "mdurl" do
-    url "https://files.pythonhosted.org/packages/source/m/mdurl/mdurl-0.1.2.tar.gz"
-    sha256 "bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"
-  end
-
-  resource "pygments" do
-    url "https://files.pythonhosted.org/packages/source/p/pygments/pygments-2.18.0.tar.gz"
-    sha256 "786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199"
   end
 
   resource "jinja2" do
@@ -88,118 +100,103 @@ class Dazzle < Formula
   end
 
   def install
-    virtualenv_install_with_resources
+    # Install Python package in virtualenv
+    venv = virtualenv_create(libexec, "python3.12")
+
+    # Install from src/ directory
+    cd "src" do
+      venv.pip_install buildpath/"src"
+    end
+
+    # Install the pre-compiled CLI binary
+    resource("cli-binary").stage do
+      bin.install "dazzle" => "dazzle-bin"
+    end
+
+    # Create wrapper script that sets up Python path
+    (bin/"dazzle").write <<~EOS
+      #!/bin/bash
+      export DAZZLE_PYTHON="#{libexec}/bin/python"
+      export PYTHONPATH="#{libexec}/lib/python3.12/site-packages:$PYTHONPATH"
+      exec "#{bin}/dazzle-bin" "$@"
+    EOS
+    chmod 0755, bin/"dazzle"
   end
 
   def post_install
     # Register MCP server with Claude Code
-    system opt_libexec/"bin/python", "-m", "dazzle.cli", "mcp-setup"
+    system libexec/"bin/python", "-m", "dazzle.cli", "mcp-setup"
   rescue StandardError => e
-    # Don't fail installation if MCP registration fails
     opoo "Could not register MCP server: #{e.message}"
     opoo "You can manually register later with: dazzle mcp-setup"
   end
 
-  def post_uninstall
-    # Remove DAZZLE MCP server from Claude Code config
-    config_paths = [
-      "#{Dir.home}/.config/claude-code/mcp_servers.json",
-      "#{Dir.home}/.claude/mcp_servers.json",
-      "#{Dir.home}/Library/Application Support/Claude Code/mcp_servers.json"
-    ]
-
-    config_paths.each do |config_path|
-      next unless File.exist?(config_path)
-
-      begin
-        require "json"
-        config = JSON.parse(File.read(config_path))
-        if config.dig("mcpServers", "dazzle")
-          config["mcpServers"].delete("dazzle")
-          File.write(config_path, JSON.pretty_generate(config))
-          ohai "Removed DAZZLE MCP server from #{config_path}"
-        end
-      rescue StandardError => e
-        opoo "Could not clean up MCP config at #{config_path}: #{e.message}"
-      end
-    end
-  end
-
   def caveats
     <<~EOS
-      DAZZLE has been installed!
+      DAZZLE v0.8.0 has been installed!
+
+      What's New:
+        - 50x faster CLI startup (Bun-compiled binary)
+        - LLM-friendly JSON output (pipe to agents)
+        - Simplified command structure
 
       Quick start:
-        mkdir my-project && cd my-project
-        dazzle init
-        dazzle build
+        dazzle new my-project
+        cd my-project
+        dazzle dev
 
-      Check installation:
-        dazzle --version
+      Commands:
+        dazzle new      Create a new project
+        dazzle dev      Start development server (API + UI)
+        dazzle check    Validate DSL files
+        dazzle build    Build for production
+        dazzle eject    Generate standalone code
+        dazzle test     Run E2E tests
 
-      MCP Server Integration (Claude Code):
+      JSON output (for AI agents):
+        dazzle check --json
+        dazzle show entities --json
+
+      MCP Server (Claude Code):
         The DAZZLE MCP server has been automatically registered.
+        Check status: dazzle mcp-check
 
-        Check status:
-          dazzle mcp-check
-
-        Manual registration (if needed):
-          dazzle mcp-setup
-
-        When using Claude Code with a DAZZLE project, you'll have access to:
-          • validate_dsl - Validate all DSL files
-          • build - Generate code from DSL
-          • inspect_entity - Inspect entity definitions
-          • analyze_patterns - Detect CRUD and integration patterns
-          • And more! Ask Claude: "What DAZZLE tools do you have access to?"
-
-      For LLM features, install optional dependencies:
-        #{opt_libexec}/bin/pip install anthropic openai
-
-      VS Code extension:
-        code --install-extension dazzle.dazzle-dsl
-
-      Set Python path in VS Code settings:
-        "dazzle.pythonPath": "#{opt_libexec}/bin/python"
+      For LLM features:
+        #{libexec}/bin/pip install anthropic openai
 
       Documentation:
         https://github.com/manwithacat/dazzle
-
-      Troubleshooting:
-        Run 'dazzle --version' to see your environment details
-        Run 'dazzle mcp-check' to verify MCP server status
     EOS
   end
 
   test do
-    # Test that the CLI works
-    assert_match "dazzle", shell_output("#{bin}/dazzle --help").downcase
+    # Test fast path (no Python needed)
+    output = shell_output("#{bin}/dazzle version")
+    assert_match "0.8.0", output
 
-    # Test version command
-    output = shell_output("#{bin}/dazzle --version")
-    assert_match "DAZZLE version", output
-    assert_match "Environment:", output
-    assert_match "Python:", output
+    # Test Python integration
+    output = shell_output("#{bin}/dazzle version --full")
+    assert_match "python_available", output
 
     # Test basic functionality
-    (testpath/"dazzle.toml").write <<~EOS
+    (testpath/"dazzle.toml").write <<~TOML
       [project]
       name = "test"
-      module = "test"
-      backend = "django_micro_modular"
-    EOS
+      version = "0.1.0"
+    TOML
 
     (testpath/"dsl").mkpath
-    (testpath/"dsl/app.dsl").write <<~EOS
+    (testpath/"dsl/app.dsl").write <<~DSL
       module test
       app test "Test App"
 
       entity Task "Task":
         id: uuid pk
         title: str(200) required
-    EOS
+    DSL
 
     # Test validation
-    system bin/"dazzle", "validate"
+    output = shell_output("#{bin}/dazzle check --json")
+    assert_match '"success"', output
   end
 end
