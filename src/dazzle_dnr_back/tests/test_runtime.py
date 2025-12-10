@@ -7,8 +7,6 @@ from uuid import uuid4
 import pytest
 from pydantic import BaseModel
 
-pytestmark = pytest.mark.asyncio(loop_scope="function")
-
 from dazzle_dnr_back.runtime.model_generator import (  # noqa: E402
     generate_all_entity_models,
     generate_create_schema,

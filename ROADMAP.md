@@ -959,8 +959,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 **Document Owner**: Claude + James
-**Last Review**: 2025-12-02
-**Next Review**: Q2 2026 (planning v0.6.0)
+**Last Review**: 2025-12-10
+**Next Review**: Q1 2026 (planning v0.8.0)
 
 ---
 
