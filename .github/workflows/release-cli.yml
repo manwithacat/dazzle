@@ -16,10 +16,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-14       # Apple Silicon
+          - os: macos-14       # Apple Silicon (also builds x64 via cross-compile)
             target: darwin-arm64
-          - os: macos-15-large  # Intel Mac (macos-13 retired)
-            target: darwin-x64
           - os: ubuntu-latest  # Linux x64
             target: linux-x64
           - os: ubuntu-24.04-arm  # Linux ARM
@@ -55,6 +53,18 @@ jobs:
             sha256sum dazzle-${{ matrix.target }}.tar.gz > dazzle-${{ matrix.target }}.tar.gz.sha256
           fi
 
+      # On macOS ARM, also build for x64 (cross-compile)
+      - name: Build CLI binary (x64 cross-compile)
+        if: matrix.target == 'darwin-arm64'
+        working-directory: cli
+        run: |
+          bun build src/index.ts --compile --target=bun-darwin-x64 --outfile=dist/dazzle-x64
+
+          cd dist
+          mv dazzle-x64 dazzle
+          tar -czvf dazzle-darwin-x64.tar.gz dazzle
+          shasum -a 256 dazzle-darwin-x64.tar.gz > dazzle-darwin-x64.tar.gz.sha256
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -62,6 +72,15 @@ jobs:
           path: |
             cli/dist/dazzle-${{ matrix.target }}.tar.gz
             cli/dist/dazzle-${{ matrix.target }}.tar.gz.sha256
+
+      - name: Upload x64 artifact (cross-compiled)
+        if: matrix.target == 'darwin-arm64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dazzle-darwin-x64
+          path: |
+            cli/dist/dazzle-darwin-x64.tar.gz
+            cli/dist/dazzle-darwin-x64.tar.gz.sha256
 
   create-release:
     needs: build-cli
