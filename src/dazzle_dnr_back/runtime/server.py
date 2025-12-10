@@ -13,6 +13,24 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
+from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
+from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
+from dazzle_dnr_back.runtime.migrations import MigrationPlan, auto_migrate
+from dazzle_dnr_back.runtime.model_generator import (
+    generate_all_entity_models,
+    generate_create_schema,
+    generate_update_schema,
+)
+from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
+from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
+from dazzle_dnr_back.runtime.service_loader import ServiceLoader
+from dazzle_dnr_back.specs import BackendSpec
+
+# FastAPI is optional - use TYPE_CHECKING for type hints
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 
 # =============================================================================
 # Server Configuration
@@ -43,24 +61,6 @@ class ServerConfig:
     # Development/testing settings
     enable_test_mode: bool = False
     services_dir: Path = field(default_factory=lambda: Path("services"))
-
-from dazzle_dnr_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
-from dazzle_dnr_back.runtime.file_routes import create_file_routes, create_static_file_routes
-from dazzle_dnr_back.runtime.file_storage import FileService, create_local_file_service
-from dazzle_dnr_back.runtime.migrations import MigrationPlan, auto_migrate
-from dazzle_dnr_back.runtime.model_generator import (
-    generate_all_entity_models,
-    generate_create_schema,
-    generate_update_schema,
-)
-from dazzle_dnr_back.runtime.repository import DatabaseManager, RepositoryFactory
-from dazzle_dnr_back.runtime.service_generator import CRUDService, ServiceFactory
-from dazzle_dnr_back.runtime.service_loader import ServiceLoader
-from dazzle_dnr_back.specs import BackendSpec
-
-# FastAPI is optional - use TYPE_CHECKING for type hints
-if TYPE_CHECKING:
-    from fastapi import FastAPI
 
 # Runtime import
 try:

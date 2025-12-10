@@ -14,7 +14,6 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-
 # Valid SQL identifier pattern (alphanumeric and underscore, not starting with digit)
 _VALID_IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 

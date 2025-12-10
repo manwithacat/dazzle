@@ -14,11 +14,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-# Buffer size for file hashing (8 KB)
-_HASH_BUFFER_SIZE = 8192
-
 from . import ir
 from .errors import DazzleError
+
+# Buffer size for file hashing (8 KB)
+_HASH_BUFFER_SIZE = 8192
 
 
 class StateError(DazzleError):
