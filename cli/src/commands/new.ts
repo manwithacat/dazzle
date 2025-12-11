@@ -35,8 +35,15 @@ Available templates:
 
   async run(args, ctx) {
     const startTime = Date.now()
-    const projectName = args.name || 'my-dazzle-app'
-    const targetPath = args.path ? `${args.path}/${projectName}` : `./${projectName}`
+    // Positional argument comes in as 'path' from CLI parser
+    // If user provides a name positionally (dazzle new myapp), use that as project name
+    // If user provides --path explicitly, that overrides the destination
+    const projectName = args.name || args.path || 'my-dazzle-app'
+    // When path is used as positional name, create project directly in ./name
+    // When --path is explicit alongside --name, create name inside path
+    const targetPath = args.name && args.path
+      ? `${args.path}/${args.name}`
+      : `./${projectName}`
 
     // Check if directory already exists
     const dir = Bun.file(targetPath)
@@ -80,7 +87,7 @@ Available templates:
         path: targetPath,
         template: args.template,
         next_steps: [
-          `cd ${projectName}`,
+          `cd ${targetPath.startsWith('./') ? targetPath.slice(2) : targetPath}`,
           'dazzle dev',
         ],
       },
