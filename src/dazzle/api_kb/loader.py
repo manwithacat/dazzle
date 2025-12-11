@@ -121,9 +121,14 @@ class ApiPack:
         return "\n".join(lines)
 
     def generate_service_dsl(self) -> str:
-        """Generate DSL service block for this pack."""
+        """Generate DSL service block for this pack.
+
+        Note: The parser requires spec: and auth_profile: directives.
+        Uses inline spec with pack reference for traceability.
+        """
         lines = [f'service {self.name.replace("_", "")} "{self.provider}":']
-        lines.append(f'  pack: {self.name}')
+        # Use inline spec with pack name for documentation
+        lines.append(f'  spec: inline "pack:{self.name}"')
         if self.auth:
             lines.append(f'  auth_profile: {self.auth.to_dsl_auth_profile()}')
         if self.docs_url:
