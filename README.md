@@ -163,6 +163,7 @@ Complete reference: [docs/reference/](docs/reference/)
 | Construct | Purpose |
 |-----------|---------|
 | `entity` | Domain models with typed fields and relationships |
+| `archetype` | Reusable field templates (e.g., `Timestamped`, `Auditable`) |
 | `foreign_model` | External API data structures |
 
 **Entity Field Types**: `str(N)`, `text`, `int`, `decimal(P,S)`, `bool`, `date`, `datetime`, `uuid`, `email`, `enum[...]`
@@ -170,6 +171,11 @@ Complete reference: [docs/reference/](docs/reference/)
 **Relationship Types**: `ref`, `has_many`, `has_one`, `belongs_to`, `embeds`
 
 **Field Modifiers**: `required`, `optional`, `pk`, `unique`, `unique?`, `auto_add`, `auto_update`, `=default`
+
+**Entity Metadata** (LLM cognition hints):
+- `intent:` - Semantic purpose description
+- `domain:` - Business domain tag (e.g., `crm`, `support`, `identity`)
+- `patterns:` - Behavioral patterns (e.g., `lifecycle`, `audit`, `searchable`)
 
 ### UI Layer
 
@@ -182,6 +188,13 @@ Complete reference: [docs/reference/](docs/reference/)
 **Surface Elements**: `section`, `field`, `action`
 
 **Workspace Elements**: `source`, `filter`, `sort`, `limit`, `display`, `aggregate`, `group_by`
+
+**Workspace Stages**: `stage: "..."` selects a layout archetype:
+- `focus_metric` - Single KPI with supporting context
+- `scanner_table` - Filterable data table with bulk actions
+- `dual_pane_flow` - Master-detail split view
+- `monitor_wall` - Grid of status cards
+- `command_center` - Multi-region operational dashboard
 
 ### Services & Integrations
 

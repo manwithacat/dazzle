@@ -1,15 +1,20 @@
 # DAZZLE Contact Manager
-# Demonstrates v0.7.0 Features + DUAL_PANE_FLOW stage:
-# - Computed fields for derived display values
+# Demonstrates v0.7.1+ LLM Cognition Features:
+# - Intent declarations for semantic clarity
+# - Domain/pattern tags for classification
 # - Invariants for data integrity
-# - Business logic expressed declaratively
+# - Workspace with dual_pane_flow stage
 
 module contact_manager.core
 
 app contact_manager "Contact Manager"
 
-# Entity for contact information with v0.7.0 business logic
+# Entity for contact information with LLM cognition metadata
 entity Contact "Contact":
+  intent: "Store professional and personal contact information for relationship management"
+  domain: crm
+  patterns: profile, searchable
+
   id: uuid pk
   first_name: str(100) required
   last_name: str(100) required
@@ -103,9 +108,9 @@ surface contact_edit "Edit Contact":
     purpose: "Update contact information"
 
 # Workspace with list + detail pattern
-# Demonstrates DUAL_PANE_FLOW stage selection
 workspace contacts "Contacts":
   purpose: "Browse contacts and view details"
+  stage: "dual_pane_flow"
 
   # List signal - browsable contact list
   contact_list:

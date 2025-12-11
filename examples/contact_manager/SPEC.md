@@ -2,7 +2,7 @@
 
 > **Document Status**: Refined specification ready for DSL conversion
 > **Complexity Level**: Beginner+
-> **DSL Features Demonstrated**: DUAL_PANE_FLOW archetype, signal weighting, list+detail pattern, indexes
+> **DSL Features Demonstrated**: dual_pane_flow stage, intent declaration, domain/pattern tags, indexes
 
 ---
 
@@ -66,7 +66,7 @@ The application uses a **master-detail** pattern:
 
 **Purpose**: Browse contacts and view details without navigation
 
-**Layout**: Split-pane interface (DUAL_PANE_FLOW archetype)
+**Layout**: Split-pane interface (`stage: "dual_pane_flow"`)
 
 #### Left Pane: Contact List
 | Column | Source | Behavior |

@@ -1,16 +1,40 @@
 # DAZZLE Support Ticket System
-# Demonstrates v0.7.0 Business Logic Features:
+# Demonstrates v0.7.1+ LLM Cognition Features:
+# - Entity archetypes for reusable patterns
+# - Intent declarations for semantic clarity
+# - Domain/pattern tags for classification
 # - State machine for ticket lifecycle
 # - Computed fields for metrics
-# - Invariants for data validation
+# - Invariants with error messages
 # - Role-based access control
+# - Workspace with scanner_table stage
 
 module support_tickets.core
 
 app support_tickets "Support Tickets"
 
+# =============================================================================
+# ARCHETYPES - Reusable entity patterns
+# =============================================================================
+
+archetype Timestamped:
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+archetype Auditable:
+  created_by: ref User
+  updated_by: ref User
+
+# =============================================================================
+# ENTITIES
+# =============================================================================
+
 # User entity with role-based access
 entity User "User":
+  intent: "Authenticate users and define their access level for ticket operations"
+  domain: identity
+  patterns: authentication, authorization
+
   id: uuid pk
   email: str(255) required unique
   name: str(200) required
@@ -21,8 +45,14 @@ entity User "User":
   # Invariant: users must have valid role
   invariant: role != null
 
-# Ticket entity with full v0.7.0 business logic
+# Ticket entity with full business logic
 entity Ticket "Support Ticket":
+  # Note: extends archetype field merging is planned but not yet implemented
+  # extends: Timestamped
+  intent: "Track customer issues through resolution with SLA awareness"
+  domain: support
+  patterns: lifecycle, workflow, audit
+
   id: uuid pk
   ticket_number: str(20) unique
   title: str(200) required
@@ -64,6 +94,10 @@ entity Ticket "Support Ticket":
 
 # Comment entity with internal note support
 entity Comment "Comment":
+  intent: "Enable threaded communication on tickets with internal notes for agents"
+  domain: support
+  patterns: audit, messaging
+
   id: uuid pk
   ticket: ref Ticket required
   author: ref User required
@@ -221,3 +255,49 @@ surface comment_edit "Edit Comment":
   section main "Edit Comment":
     field content "Comment"
     field is_internal "Internal"
+
+# =============================================================================
+# WORKSPACES - Composed views with stages
+# =============================================================================
+
+workspace ticket_queue "Ticket Queue":
+  purpose: "Agent workspace for managing incoming support tickets"
+  stage: "scanner_table"
+
+  queue_metrics:
+    source: Ticket
+    display: summary
+    aggregate:
+      total_open: count(Ticket where status = open)
+      in_progress: count(Ticket where status = in_progress)
+      critical: count(Ticket where priority = critical and status != closed)
+
+  ticket_table:
+    source: Ticket
+    filter: status != closed
+    sort: priority desc, created_at asc
+    display: list
+    action: ticket_edit
+    empty: "No open tickets"
+
+workspace agent_dashboard "Agent Dashboard":
+  purpose: "Personal dashboard for support agents"
+  stage: "dual_pane_flow"
+
+  my_assigned:
+    source: Ticket
+    filter: assigned_to = current_user and status = in_progress
+    sort: priority desc
+    limit: 10
+    display: list
+    action: ticket_edit
+    empty: "No tickets assigned to you"
+
+  pending_resolution:
+    source: Ticket
+    filter: assigned_to = current_user and status = resolved
+    sort: updated_at desc
+    limit: 5
+    display: list
+    action: ticket_detail
+    empty: "No tickets pending closure"
