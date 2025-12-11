@@ -66,6 +66,47 @@ def get_active_project_path() -> Path | None:
     return None
 
 
+def resolve_project_path(project_path: str | None = None) -> Path:
+    """
+    Resolve the project path from various sources.
+
+    Priority:
+    1. Explicit project_path parameter (if provided and valid)
+    2. Active project path (in dev mode)
+    3. Server's project root
+
+    Args:
+        project_path: Optional explicit path from tool arguments
+
+    Returns:
+        Resolved Path to the project directory
+
+    Raises:
+        ValueError: If the resolved path doesn't exist or isn't a valid project
+    """
+    # If explicit path provided, use it
+    if project_path:
+        path = Path(project_path).resolve()
+        if not path.exists():
+            raise ValueError(f"Project path does not exist: {path}")
+        if not path.is_dir():
+            raise ValueError(f"Project path is not a directory: {path}")
+        # Check for dazzle.toml to confirm it's a valid project
+        if not (path / "dazzle.toml").exists():
+            raise ValueError(
+                f"Not a valid Dazzle project (no dazzle.toml found): {path}"
+            )
+        return path
+
+    # Try active project path
+    active_path = get_active_project_path()
+    if active_path:
+        return active_path
+
+    # Fall back to project root
+    return _project_root
+
+
 # ============================================================================
 # Dev Mode Detection
 # ============================================================================

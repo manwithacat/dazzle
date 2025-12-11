@@ -344,8 +344,9 @@ def validate_dsl(project_root: Path) -> str:
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
-        result = {
+        result: dict[str, Any] = {
             "status": "valid",
+            "project_path": str(project_root),
             "modules": len(modules),
             "entities": len(app_spec.domain.entities),
             "surfaces": len(app_spec.surfaces),
@@ -355,11 +356,13 @@ def validate_dsl(project_root: Path) -> str:
         # Add project context in dev mode
         if is_dev_mode():
             result["project"] = get_active_project()
-            result["path"] = str(project_root)
 
         return json.dumps(result, indent=2)
     except Exception as e:
-        return json.dumps({"status": "error", "error": str(e)}, indent=2)
+        return json.dumps(
+            {"status": "error", "project_path": str(project_root), "error": str(e)},
+            indent=2,
+        )
 
 
 def list_modules(project_root: Path) -> str:
@@ -376,9 +379,13 @@ def list_modules(project_root: Path) -> str:
                 "dependencies": module.uses,
             }
 
-        return json.dumps(modules, indent=2)
+        return json.dumps(
+            {"project_path": str(project_root), "modules": modules}, indent=2
+        )
     except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return json.dumps(
+            {"project_path": str(project_root), "error": str(e)}, indent=2
+        )
 
 
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:

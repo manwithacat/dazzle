@@ -34,6 +34,7 @@ from .state import (
     get_project_root,
     init_dev_mode,
     is_dev_mode,
+    resolve_project_path,
     set_project_root,
 )
 from .tool_handlers import (
@@ -135,7 +136,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     elif name in DNR_TOOL_NAMES:
         result = handle_dnr_tool(name, arguments)
 
-    # Project tools - require active project in dev mode
+    # Project tools - support explicit project_path or fall back to active project
     elif name in (
         "validate_dsl",
         "list_modules",
@@ -145,14 +146,21 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "analyze_patterns",
         "lint_project",
     ):
-        project_path = get_active_project_path()
+        # Try to resolve project path from arguments or state
+        explicit_path = arguments.get("project_path") if arguments else None
+        try:
+            project_path = resolve_project_path(explicit_path)
+        except ValueError as e:
+            result = json.dumps({"error": str(e)})
+            return [TextContent(type="text", text=result)]
 
         if project_path is None:
             if is_dev_mode():
                 result = json.dumps(
                     {
-                        "error": "No project selected. Use 'list_projects' to see available projects and 'select_project' to choose one.",
+                        "error": "No project selected. Use 'list_projects' to see available projects, 'select_project' to choose one, or pass 'project_path' directly.",
                         "available_projects": list(get_available_projects().keys()),
+                        "hint": "You can also pass project_path='/path/to/your/project' to any project tool.",
                     }
                 )
             else:
@@ -160,6 +168,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                     {
                         "error": "No dazzle.toml found in project root",
                         "project_root": str(get_project_root()),
+                        "hint": "Pass project_path='/path/to/your/project' to specify a different project.",
                     }
                 )
         else:

@@ -46,18 +46,35 @@ def get_dev_mode_tools() -> list[Tool]:
     ]
 
 
+# Common schema for project_path parameter - allows agents to specify which project to operate on
+PROJECT_PATH_SCHEMA = {
+    "project_path": {
+        "type": "string",
+        "description": "Optional: Absolute path to the project directory. If omitted, uses the active project in dev mode or the MCP server's working directory.",
+    }
+}
+
+
 def get_project_tools() -> list[Tool]:
     """Get tools that operate on a project."""
     return [
         Tool(
             name="validate_dsl",
-            description="Validate all DSL files in the DAZZLE project",
-            inputSchema={"type": "object", "properties": {}, "required": []},
+            description="Validate all DSL files in a DAZZLE project. Pass project_path if you're working on a project outside the Dazzle examples directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
         ),
         Tool(
             name="list_modules",
-            description="List all modules in the DAZZLE project",
-            inputSchema={"type": "object", "properties": {}, "required": []},
+            description="List all modules in a DAZZLE project. Pass project_path if you're working on a project outside the Dazzle examples directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
         ),
         Tool(
             name="inspect_entity",
@@ -68,7 +85,8 @@ def get_project_tools() -> list[Tool]:
                     "entity_name": {
                         "type": "string",
                         "description": "Name of the entity to inspect",
-                    }
+                    },
+                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["entity_name"],
             },
@@ -82,26 +100,32 @@ def get_project_tools() -> list[Tool]:
                     "surface_name": {
                         "type": "string",
                         "description": "Name of the surface to inspect",
-                    }
+                    },
+                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["surface_name"],
             },
         ),
         Tool(
             name="analyze_patterns",
-            description="Analyze the project for CRUD and integration patterns",
-            inputSchema={"type": "object", "properties": {}, "required": []},
+            description="Analyze a project for CRUD and integration patterns. Pass project_path if you're working on a project outside the Dazzle examples directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
         ),
         Tool(
             name="lint_project",
-            description="Run linting on the DAZZLE project",
+            description="Run linting on a DAZZLE project. Pass project_path if you're working on a project outside the Dazzle examples directory.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "extended": {
                         "type": "boolean",
                         "description": "Run extended checks",
-                    }
+                    },
+                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": [],
             },
