@@ -13,9 +13,9 @@ const DevArgs = z.object({
   port: z.number().default(3000).describe('UI server port'),
   'api-port': z.number().default(8000).describe('API server port'),
   host: z.string().default('localhost').describe('Host to bind to'),
-  watch: z.boolean().default(true).describe('Watch for file changes'),
+  watch: z.boolean().default(true).describe('Watch for file changes (local mode only)'),
   local: z.boolean().default(true).describe('Run locally without Docker (default)'),
-  docker: z.boolean().default(false).describe('Run in Docker container'),
+  docker: z.boolean().default(false).describe('Run in Docker container (requires Docker)'),
   'test-mode': z.boolean().default(false).describe('Enable test endpoints'),
   graphql: z.boolean().default(false).describe('Enable GraphQL endpoint'),
 })
@@ -60,14 +60,18 @@ With --graphql, enables /graphql endpoint.
     if (args.port !== 3000) cliArgs.push('--port', String(args.port))
     if (args['api-port'] !== 8000) cliArgs.push('--api-port', String(args['api-port']))
     if (args.host !== 'localhost') cliArgs.push('--host', args.host)
-    // Python dnr serve defaults watch=False, so pass --watch if enabled
-    if (args.watch) cliArgs.push('--watch')
+
     // Handle local vs docker mode
     // --docker overrides --local (they're mutually exclusive)
+    // Note: --watch forces local mode in Python, so don't pass it with --docker
     if (args.docker) {
-      // Don't pass --local, let Python use Docker
-    } else if (args.local) {
+      // Don't pass --local or --watch, let Python use Docker
+      // Docker mode has its own hot reload via volume mounts
+    } else {
+      // Local mode (default)
       cliArgs.push('--local')
+      // Python dnr serve defaults watch=False, so pass --watch if enabled
+      if (args.watch) cliArgs.push('--watch')
     }
     if (args['test-mode']) cliArgs.push('--test-mode')
     if (args.graphql) cliArgs.push('--graphql')
