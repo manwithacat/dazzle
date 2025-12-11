@@ -107,6 +107,20 @@ class RegenerateRequest(BaseModel):
     entity_counts: dict[str, int] | None = None
 
 
+class FrontendLogRequest(BaseModel):
+    """Frontend log entry from the browser."""
+
+    level: str = "info"  # error, warn, info, debug
+    message: str
+    source: str | None = None
+    line: int | None = None
+    column: int | None = None
+    stack: str | None = None
+    url: str | None = None
+    user_agent: str | None = None
+    extra: dict[str, Any] | None = None
+
+
 class DazzleBarState(BaseModel):
     """Complete Dazzle Bar state."""
 
@@ -598,6 +612,84 @@ def create_control_plane_routes(
             ],
             "note": "Full route inspection requires app context",
         }
+
+    # -------------------------------------------------------------------------
+    # Logging Endpoints (v0.8.11)
+    # -------------------------------------------------------------------------
+
+    @router.post("/log")
+    async def log_frontend_message(request: FrontendLogRequest) -> dict[str, str]:
+        """
+        Log a message from the frontend.
+
+        This endpoint captures frontend errors, warnings, and info messages
+        and writes them to the JSONL log file for LLM agent monitoring.
+
+        The log file at .dazzle/logs/dnr.log is JSONL format - each line
+        is a complete JSON object that LLM agents can parse.
+        """
+        from dazzle_dnr_back.runtime.logging import log_frontend_entry
+
+        log_frontend_entry(
+            level=request.level,
+            message=request.message,
+            source=request.source,
+            line=request.line,
+            column=request.column,
+            stack=request.stack,
+            url=request.url,
+            user_agent=request.user_agent,
+            extra=request.extra,
+        )
+
+        return {"status": "logged"}
+
+    @router.get("/logs")
+    async def get_logs(count: int = 50, level: str | None = None) -> dict[str, Any]:
+        """
+        Get recent log entries for LLM agent inspection.
+
+        Returns JSONL entries as a list for easy processing.
+        LLM agents can use this to understand recent activity and errors.
+
+        Args:
+            count: Number of recent entries (default 50)
+            level: Filter by level (ERROR, WARNING, INFO, DEBUG)
+        """
+        from dazzle_dnr_back.runtime.logging import get_log_file, get_recent_logs
+
+        entries = get_recent_logs(count=count, level=level)
+
+        return {
+            "count": len(entries),
+            "log_file": str(get_log_file()),
+            "entries": entries,
+        }
+
+    @router.get("/logs/errors")
+    async def get_error_summary_endpoint() -> dict[str, Any]:
+        """
+        Get error summary for LLM agent diagnosis.
+
+        Returns a structured summary of errors grouped by component,
+        with recent errors for context. Designed for LLM agents to
+        quickly understand what's going wrong.
+        """
+        from dazzle_dnr_back.runtime.logging import get_error_summary
+
+        return get_error_summary()
+
+    @router.delete("/logs")
+    async def clear_logs_endpoint() -> dict[str, Any]:
+        """
+        Clear all log files.
+
+        Useful for starting fresh when debugging.
+        """
+        from dazzle_dnr_back.runtime.logging import clear_logs
+
+        count = clear_logs()
+        return {"status": "cleared", "files_deleted": count}
 
     return router
 

@@ -32,7 +32,7 @@ import {
 async function autoInit() {
   // Check if control plane is available by making a test request
   try {
-    const response = await fetch('/dazzle/dev/state', { method: 'HEAD' });
+    const response = await fetch('/dazzle/dev/state');
     if (response.ok) {
       // Control plane is available, initialize the bar
       initDazzleBar();

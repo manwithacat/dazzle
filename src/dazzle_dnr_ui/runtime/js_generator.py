@@ -187,6 +187,8 @@ class JSGenerator:
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
   <!-- Tailwind Browser - minimal utilities for layout -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- DAZZLE semantic + polish layer -->
+  <link rel="stylesheet" href="/styles/dnr.css">
 </head>
 <body class="bg-base-200 min-h-screen">
   <div id="app"></div>

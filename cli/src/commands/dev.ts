@@ -10,10 +10,11 @@ import { success, error, ErrorHints } from '../lib/output'
 import { getPythonPath } from '../lib/python'
 
 const DevArgs = z.object({
-  port: z.number().default(8000).describe('API server port'),
-  'ui-port': z.number().default(3000).describe('UI server port'),
+  port: z.number().default(3000).describe('UI server port'),
+  'api-port': z.number().default(8000).describe('API server port'),
   host: z.string().default('localhost').describe('Host to bind to'),
   watch: z.boolean().default(true).describe('Watch for file changes'),
+  local: z.boolean().default(true).describe('Run locally without Docker (default)'),
   docker: z.boolean().default(false).describe('Run in Docker container'),
   'test-mode': z.boolean().default(false).describe('Enable test endpoints'),
   graphql: z.boolean().default(false).describe('Enable GraphQL endpoint'),
@@ -26,17 +27,18 @@ export const dev: CommandDefinition<typeof DevArgs> = {
 Starts the Dazzle Native Runtime (DNR) development server with hot reload.
 
 The server runs both the API backend and UI frontend:
-- API: http://localhost:8000 (or --port)
-- UI:  http://localhost:3000 (or --ui-port)
+- UI:  http://localhost:3000 (or --port)
+- API: http://localhost:8000 (or --api-port)
 - Docs: http://localhost:8000/docs
 
-With --docker, runs in a containerized environment.
+By default runs locally (--local). Use --docker for containerized mode.
 With --test-mode, enables /__test__/* endpoints for E2E testing.
 With --graphql, enables /graphql endpoint.
 `,
   examples: [
     'dazzle dev',
-    'dazzle dev --port 9000',
+    'dazzle dev --port 4000',
+    'dazzle dev --api-port 9000',
     'dazzle dev --docker',
     'dazzle dev --test-mode --graphql',
   ],
@@ -55,11 +57,18 @@ With --graphql, enables /graphql endpoint.
     // Build command arguments for Python CLI
     const cliArgs = ['dnr', 'serve']
 
-    if (args.port !== 8000) cliArgs.push('--port', String(args.port))
-    if (args['ui-port'] !== 3000) cliArgs.push('--ui-port', String(args['ui-port']))
+    if (args.port !== 3000) cliArgs.push('--port', String(args.port))
+    if (args['api-port'] !== 8000) cliArgs.push('--api-port', String(args['api-port']))
     if (args.host !== 'localhost') cliArgs.push('--host', args.host)
-    if (!args.watch) cliArgs.push('--no-watch')
-    if (args.docker) cliArgs.push('--docker')
+    // Python dnr serve defaults watch=False, so pass --watch if enabled
+    if (args.watch) cliArgs.push('--watch')
+    // Handle local vs docker mode
+    // --docker overrides --local (they're mutually exclusive)
+    if (args.docker) {
+      // Don't pass --local, let Python use Docker
+    } else if (args.local) {
+      cliArgs.push('--local')
+    }
     if (args['test-mode']) cliArgs.push('--test-mode')
     if (args.graphql) cliArgs.push('--graphql')
 
@@ -69,9 +78,9 @@ With --graphql, enables /graphql endpoint.
     const python = await getPythonPath()
 
     console.log(`Starting development server...`)
-    console.log(`  API: http://${args.host}:${args.port}`)
-    console.log(`  UI:  http://${args.host}:${args['ui-port']}`)
-    console.log(`  Docs: http://${args.host}:${args.port}/docs`)
+    console.log(`  UI:  http://${args.host}:${args.port}`)
+    console.log(`  API: http://${args.host}:${args['api-port']}`)
+    console.log(`  Docs: http://${args.host}:${args['api-port']}/docs`)
     console.log()
 
     const proc = Bun.spawn([python, '-m', 'dazzle', ...cliArgs], {

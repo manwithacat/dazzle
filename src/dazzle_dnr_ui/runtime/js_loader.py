@@ -411,6 +411,15 @@ def _strip_imports_and_exports(source: str) -> str:
     """
     import re
 
+    # Remove multi-line import blocks: import { ... } from '...';
+    source = re.sub(r"import\s*\{[^}]*\}\s*from\s*['\"][^'\"]+['\"];?", "", source, flags=re.DOTALL)
+
+    # Remove single-line imports: import foo from '...';
+    source = re.sub(r"import\s+\w+\s+from\s*['\"][^'\"]+['\"];?", "", source)
+
+    # Remove side-effect imports: import '...';
+    source = re.sub(r"import\s*['\"][^'\"]+['\"];?", "", source)
+
     # Remove multi-line export blocks: export { ... };
     source = re.sub(r"export\s*\{[^}]*\}\s*;?", "", source, flags=re.DOTALL)
 
@@ -419,7 +428,7 @@ def _strip_imports_and_exports(source: str) -> str:
 
     for line in lines:
         stripped = line.strip()
-        # Skip import statements
+        # Skip any remaining import statements (single line)
         if stripped.startswith("import "):
             continue
         # Convert export statements to regular declarations

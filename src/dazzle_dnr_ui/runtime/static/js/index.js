@@ -33,6 +33,7 @@ import { registerAction, dispatch, executeAction, executeEffect } from './action
 import { applyTheme } from './theme.js';
 import { createApp } from './app.js';
 import { initDevTools, toggleDevTools, openDevTools, closeDevTools } from './devtools.js';
+import { logger, initLogger, logError, logWarning, logInfo, logDebug } from './logger.js';
 
 // =============================================================================
 // Global Export (IIFE version for non-module browsers)
@@ -87,7 +88,14 @@ const DNR = {
     toggle: toggleDevTools,
     open: openDevTools,
     close: closeDevTools
-  }
+  },
+
+  // Logger
+  logger,
+  logError,
+  logWarning,
+  logInfo,
+  logDebug
 };
 
 // Export for both module and global contexts
@@ -98,9 +106,12 @@ export default DNR;
 if (typeof window !== 'undefined') {
   window.DNR = DNR;
 
-  // Auto-initialize devtools in development mode
+  // Auto-initialize devtools and logger in development mode
   // Check for DNR dev server (hot reload endpoint exists)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Initialize logger immediately to capture early errors
+    initLogger();
+
     // Initialize devtools when DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initDevTools);

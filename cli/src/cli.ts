@@ -222,6 +222,12 @@ export async function run(argv: string[] = process.argv.slice(2)): Promise<void>
     process.exit(1)
   }
 
+  // Check for --help after command (e.g., `dazzle dev --help`)
+  if (args.help) {
+    showHelp(command)
+    process.exit(0)
+  }
+
   // Create context
   const ctx = await createContext(globalOpts)
 

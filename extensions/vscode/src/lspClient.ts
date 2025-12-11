@@ -167,6 +167,75 @@ export async function stopLanguageClient(): Promise<void> {
 let cachedPythonPath: string | null = null;
 
 /**
+ * Try to get Python path from the dazzle CLI (works for Homebrew users).
+ * Returns null if dazzle CLI is not available or doesn't report Python path.
+ */
+function getPythonFromDazzleCli(): string | null {
+    try {
+        const child_process = require('child_process');
+        const fs = require('fs');
+
+        // Try to find dazzle CLI
+        const dazzlePaths = [
+            '/opt/homebrew/bin/dazzle',
+            '/usr/local/bin/dazzle',
+        ];
+
+        for (const dazzlePath of dazzlePaths) {
+            if (!fs.existsSync(dazzlePath)) {
+                continue;
+            }
+
+            // Read the wrapper script to extract DAZZLE_PYTHON
+            const content = fs.readFileSync(dazzlePath, 'utf8');
+            const match = content.match(/export DAZZLE_PYTHON="([^"]+)"/);
+            if (match && match[1]) {
+                const pythonPath = match[1];
+                if (fs.existsSync(pythonPath)) {
+                    return pythonPath;
+                }
+            }
+        }
+    } catch {
+        // Ignore errors - this is just a discovery mechanism
+    }
+    return null;
+}
+
+/**
+ * Find Homebrew Cellar dazzle Python paths.
+ * Homebrew installs Python virtualenv at /opt/homebrew/Cellar/dazzle/VERSION/libexec/bin/python
+ */
+function getHomebrewDazzlePythonPaths(): string[] {
+    const paths: string[] = [];
+    try {
+        const fs = require('fs');
+        const cellarPaths = [
+            '/opt/homebrew/Cellar/dazzle',  // Apple Silicon
+            '/usr/local/Cellar/dazzle',      // Intel Mac
+        ];
+
+        for (const cellarPath of cellarPaths) {
+            if (!fs.existsSync(cellarPath)) {
+                continue;
+            }
+
+            // List version directories
+            const versions = fs.readdirSync(cellarPath);
+            for (const version of versions) {
+                const pythonPath = `${cellarPath}/${version}/libexec/bin/python`;
+                if (fs.existsSync(pythonPath)) {
+                    paths.push(pythonPath);
+                }
+            }
+        }
+    } catch {
+        // Ignore errors - directory might not exist
+    }
+    return paths;
+}
+
+/**
  * Get candidate Python paths to try, in priority order.
  */
 function getPythonCandidates(): string[] {
@@ -187,21 +256,30 @@ function getPythonCandidates(): string[] {
     // 2. Environment variable
     addCandidate(process.env.DAZZLE_PYTHON);
 
-    // 3. Python extension's active interpreter
+    // 3. Homebrew dazzle wrapper script (extracts DAZZLE_PYTHON from wrapper)
+    // This is the most reliable way to find Python for Homebrew users
+    addCandidate(getPythonFromDazzleCli());
+
+    // 4. Homebrew Cellar paths (direct lookup for Apple Silicon and Intel Macs)
+    for (const homebrewPath of getHomebrewDazzlePythonPaths()) {
+        addCandidate(homebrewPath);
+    }
+
+    // 5. Python extension's active interpreter
     const pythonExtension = vscode.extensions.getExtension('ms-python.python');
     if (pythonExtension && pythonExtension.isActive) {
         const pythonPath = pythonExtension.exports?.settings?.getExecutionDetails?.()?.execCommand?.[0];
         addCandidate(pythonPath);
     }
 
-    // 4. pyenv shims (common for developers)
+    // 6. pyenv shims (common for developers)
     const home = process.env.HOME;
     if (home) {
         addCandidate(`${home}/.pyenv/shims/python3`);
         addCandidate(`${home}/.pyenv/shims/python`);
     }
 
-    // 5. Common virtual environment locations relative to workspace
+    // 7. Common virtual environment locations relative to workspace
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
         const wsRoot = workspaceFolders[0].uri.fsPath;
@@ -211,11 +289,11 @@ function getPythonCandidates(): string[] {
         addCandidate(`${wsRoot}/venv/bin/python3`);
     }
 
-    // 6. System Python (fallback)
+    // 8. System Python (fallback)
     addCandidate('python3');
     addCandidate('python');
 
-    // 7. Common macOS/Linux paths
+    // 9. Common macOS/Linux paths
     addCandidate('/usr/local/bin/python3');
     addCandidate('/opt/homebrew/bin/python3');
     addCandidate('/usr/bin/python3');

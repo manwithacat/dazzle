@@ -1,23 +1,41 @@
-# DAZZLE Simple Task Manager
-# Demonstrates v0.7.0 Business Logic Features:
-# - State machine for status transitions
-# - Computed fields for derived data
-# - Invariants for data integrity
-# - Access rules for visibility control
+# DAZZLE Team Task Manager
+# Demonstrates v0.8.5+ Features:
+# - Personas for role-based views
+# - Scenarios for demo state switching
+# - Relationships between entities
+# - Business logic: state machines, invariants, access rules
 
 module simple_task.core
 
-app simple_task "Simple Task Manager"
+app simple_task "Team Task Manager"
 
-# Core entity with v0.7.0 business logic features
+# =============================================================================
+# User Entity - team members who can be assigned tasks
+# =============================================================================
+
+entity User "Team Member":
+  id: uuid pk
+  email: str(200) unique required
+  name: str(100) required
+  role: enum[admin,manager,member]=member
+  department: str(50)
+  avatar_url: str(500)
+  is_active: bool=true
+  created_at: datetime auto_add
+
+# =============================================================================
+# Task Entity - with proper user relationships
+# =============================================================================
+
 entity Task "Task":
   id: uuid pk
   title: str(200) required
   description: text
-  status: enum[todo,in_progress,done]=todo
-  priority: enum[low,medium,high]=medium
+  status: enum[todo,in_progress,review,done]=todo
+  priority: enum[low,medium,high,urgent]=medium
   due_date: date
-  assigned_to: str(100)
+  assigned_to: ref User
+  created_by: ref User
   created_at: datetime auto_add
   updated_at: datetime auto_update
 
@@ -27,19 +45,107 @@ entity Task "Task":
   # State machine: defines allowed status transitions
   transitions:
     todo -> in_progress: requires assigned_to
-    in_progress -> done
+    in_progress -> review
     in_progress -> todo
+    review -> done
+    review -> in_progress
     done -> todo: role(admin)
 
-  # Invariant: high priority tasks must have a due date
-  invariant: priority != high or due_date != null
+  # Invariant: urgent tasks must have a due date
+  invariant: priority != urgent or due_date != null
 
-  # Access control (commented for open access in example)
-  # access:
-  #   read: owner_id = current_user or role(admin)
-  #   write: owner_id = current_user
+  # Access control
+  access:
+    read: role(admin) or role(manager) or assigned_to = current_user or created_by = current_user
+    write: role(admin) or role(manager) or assigned_to = current_user
 
-# List view - the main task overview
+# =============================================================================
+# Personas - role-based variants for the UI
+# =============================================================================
+
+persona admin "Administrator":
+  description: "Full system access for task and user management"
+  goals: "Manage all tasks", "Configure team settings", "View analytics"
+  proficiency: expert
+  default_workspace: admin_dashboard
+  default_route: "/admin"
+
+persona manager "Team Manager":
+  description: "Oversee team tasks and assignments"
+  goals: "Assign tasks to team", "Track team progress", "Review completed work"
+  proficiency: intermediate
+  default_workspace: team_overview
+  default_route: "/team"
+
+persona member "Team Member":
+  description: "Work on assigned tasks"
+  goals: "Complete assigned tasks", "Update task status", "Request help"
+  proficiency: novice
+  default_workspace: my_work
+  default_route: "/my-work"
+
+# =============================================================================
+# Scenarios - demo states for the Dazzle Bar
+# =============================================================================
+
+scenario empty "Empty State":
+  description: "Fresh install with no data - test onboarding flows"
+
+  for persona admin:
+    start_route: "/admin"
+
+  for persona manager:
+    start_route: "/team"
+
+  for persona member:
+    start_route: "/my-work"
+
+scenario busy_sprint "Active Sprint":
+  description: "Mid-sprint with tasks in various states"
+
+  for persona admin:
+    start_route: "/admin"
+
+  for persona manager:
+    start_route: "/team"
+
+  for persona member:
+    start_route: "/my-work"
+
+  demo:
+    User:
+      - email: "admin@example.com", name: "Alice Admin", role: admin, department: "Engineering"
+      - email: "manager@example.com", name: "Bob Manager", role: manager, department: "Engineering"
+      - email: "dev1@example.com", name: "Carol Developer", role: member, department: "Engineering"
+      - email: "dev2@example.com", name: "Dave Developer", role: member, department: "Engineering"
+      - email: "design@example.com", name: "Eve Designer", role: member, department: "Design"
+
+    Task:
+      - title: "Implement user authentication", status: done, priority: high
+      - title: "Design dashboard mockups", status: review, priority: medium
+      - title: "Write API documentation", status: in_progress, priority: medium
+      - title: "Fix login bug", status: in_progress, priority: urgent
+      - title: "Add dark mode support", status: todo, priority: low
+      - title: "Performance optimization", status: todo, priority: high
+      - title: "Database migration", status: todo, priority: urgent
+
+scenario overdue_crisis "Overdue Tasks":
+  description: "Several overdue tasks needing attention"
+
+  for persona admin:
+    start_route: "/admin"
+
+  for persona manager:
+    start_route: "/team"
+
+  for persona member:
+    start_route: "/my-work"
+
+# =============================================================================
+# Surfaces - UI views for entities
+# =============================================================================
+
+# Task List - main overview
 surface task_list "Task List":
   uses entity Task
   mode: list
@@ -52,10 +158,10 @@ surface task_list "Task List":
     field assigned_to "Assigned To"
 
   ux:
-    purpose: "View and manage all tasks at a glance"
+    purpose: "View and manage all tasks"
     sort: created_at desc
-    filter: status, priority
-    search: title, description, assigned_to
+    filter: status, priority, assigned_to
+    search: title, description
     empty: "No tasks yet. Create your first task!"
 
     attention warning:
@@ -63,10 +169,23 @@ surface task_list "Task List":
       message: "Overdue task"
 
     attention notice:
-      when: priority = high and status = todo
-      message: "High priority - needs attention"
+      when: priority = urgent and status = todo
+      message: "Urgent - needs immediate attention"
 
-# Detail view - individual task
+    for admin:
+      scope: all
+      purpose: "Manage all tasks across the team"
+
+    for manager:
+      scope: all
+      purpose: "Review and assign team tasks"
+      action_primary: task_create
+
+    for member:
+      scope: assigned_to = current_user or created_by = current_user
+      purpose: "View your assigned and created tasks"
+
+# Task Detail
 surface task_detail "Task Detail":
   uses entity Task
   mode: view
@@ -78,13 +197,14 @@ surface task_detail "Task Detail":
     field priority "Priority"
     field due_date "Due Date"
     field assigned_to "Assigned To"
+    field created_by "Created By"
     field created_at "Created"
     field updated_at "Updated"
 
   ux:
     purpose: "View complete task information"
 
-# Create form
+# Task Create Form
 surface task_create "Create Task":
   uses entity Task
   mode: create
@@ -94,12 +214,22 @@ surface task_create "Create Task":
     field description "Description"
     field priority "Priority"
     field due_date "Due Date"
-    field assigned_to "Assigned To"
+    field assigned_to "Assign To"
 
   ux:
-    purpose: "Add a new task to track"
+    purpose: "Create a new task"
 
-# Edit form
+    for admin:
+      purpose: "Create and assign task to any team member"
+
+    for manager:
+      purpose: "Create task and assign to your team"
+
+    for member:
+      purpose: "Create a task for yourself"
+      hide: assigned_to
+
+# Task Edit Form
 surface task_edit "Edit Task":
   uses entity Task
   mode: edit
@@ -115,67 +245,156 @@ surface task_edit "Edit Task":
   ux:
     purpose: "Update task details and status"
 
-# Workspaces - compose regions for user-centric views
-workspace dashboard "Task Dashboard":
-  purpose: "Overview of all tasks with key metrics"
+# User List (admin only)
+surface user_list "Team Members":
+  uses entity User
+  mode: list
+
+  section main "Team":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
+
+  ux:
+    purpose: "Manage team members"
+
+    for admin:
+      scope: all
+      purpose: "Full team management"
+      action_primary: user_create
+
+    for manager:
+      scope: all
+      purpose: "View team members"
+      read_only: true
+
+# User Create (admin only)
+surface user_create "Add Team Member":
+  uses entity User
+  mode: create
+
+  section main "New Team Member":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field department "Department"
+
+  ux:
+    purpose: "Add a new team member"
+
+# =============================================================================
+# Workspaces - role-based dashboards
+# =============================================================================
+
+workspace admin_dashboard "Admin Dashboard":
+  purpose: "System-wide overview and management"
 
   metrics:
     source: Task
     aggregate:
-      total: count(Task)
+      total_tasks: count(Task)
       todo: count(Task where status = todo)
       in_progress: count(Task where status = in_progress)
+      in_review: count(Task where status = review)
       done: count(Task where status = done)
 
-  overdue:
+  team_metrics:
+    source: User
+    aggregate:
+      total_users: count(User)
+      active_users: count(User where is_active = true)
+
+  urgent_tasks:
+    source: Task
+    filter: priority = urgent and status != done
+    sort: due_date asc
+    limit: 5
+    display: list
+    action: task_edit
+    empty: "No urgent tasks"
+
+  overdue_tasks:
     source: Task
     filter: due_date < today and status != done
     sort: due_date asc
     limit: 5
     display: list
     action: task_edit
-    empty: "No overdue tasks!"
+    empty: "No overdue tasks"
 
-  high_priority:
+workspace team_overview "Team Overview":
+  purpose: "Monitor team progress and workload"
+
+  metrics:
     source: Task
-    filter: priority = high and status != done
-    sort: due_date asc
-    limit: 5
+    aggregate:
+      total: count(Task)
+      in_progress: count(Task where status = in_progress)
+      in_review: count(Task where status = review)
+      completed_today: count(Task where status = done and updated_at >= today)
+
+  needs_review:
+    source: Task
+    filter: status = review
+    sort: updated_at asc
+    limit: 10
     display: list
     action: task_edit
-    empty: "No high priority tasks pending"
+    empty: "No tasks awaiting review"
 
-  recent:
+  team_workload:
     source: Task
-    sort: created_at desc
+    filter: status = in_progress
+    sort: priority desc, due_date asc
     limit: 10
     display: list
     action: task_detail
+    empty: "No tasks in progress"
+
+  unassigned:
+    source: Task
+    filter: assigned_to = null and status = todo
+    sort: priority desc
+    limit: 5
+    display: list
+    action: task_edit
+    empty: "All tasks are assigned"
 
 workspace my_work "My Work":
   purpose: "Personal task view for assigned work"
 
   my_in_progress:
     source: Task
-    filter: status = in_progress
+    filter: status = in_progress and assigned_to = current_user
     sort: priority desc, due_date asc
     limit: 10
     display: list
     action: task_edit
-    empty: "No tasks in progress"
+    empty: "No tasks in progress - pick one from your backlog!"
 
   my_todo:
     source: Task
-    filter: status = todo
+    filter: status = todo and assigned_to = current_user
     sort: priority desc, due_date asc
     limit: 10
     display: list
     action: task_edit
-    empty: "No pending tasks"
+    empty: "No pending tasks - ask your manager for work"
+
+  my_in_review:
+    source: Task
+    filter: status = review and assigned_to = current_user
+    sort: updated_at desc
+    limit: 5
+    display: list
+    action: task_detail
+    empty: "No tasks in review"
 
   my_completed:
     source: Task
-    filter: status = done
+    filter: status = done and assigned_to = current_user
     sort: updated_at desc
     limit: 5
     display: list

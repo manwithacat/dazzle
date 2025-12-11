@@ -279,7 +279,7 @@ def create_reload_callback(
             from dazzle.core.linker import build_appspec
             from dazzle.core.manifest import load_manifest
             from dazzle.core.parser import parse_modules
-            from dazzle.validation.lint import lint_appspec
+            from dazzle.core.lint import lint_appspec
             from dazzle_dnr_back.converters import convert_appspec_to_backend
             from dazzle_dnr_ui.converters import convert_appspec_to_ui
 
@@ -293,11 +293,11 @@ def create_reload_callback(
             # Link modules
             app_spec = build_appspec(modules, manifest.project_root)
 
-            # Validate
-            result = lint_appspec(app_spec)
-            if result.errors:
-                for error in result.errors:
-                    print(f"[DNR] Validation error: {error.message}")
+            # Validate - lint_appspec returns (errors, warnings) tuple
+            errors, warnings = lint_appspec(app_spec)
+            if errors:
+                for error in errors:
+                    print(f"[DNR] Validation error: {error}")
                 return None
 
             # Generate specs

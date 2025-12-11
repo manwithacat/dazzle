@@ -1,4 +1,4 @@
-# DAZZLE Homebrew Formula v0.8.10
+# DAZZLE Homebrew Formula v0.8.11
 #
 # Installation: brew install manwithacat/tap/dazzle
 # Or from this file: brew install ./homebrew/dazzle.rb
@@ -15,32 +15,32 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.8.10"
+  version "0.8.11"
   license "MIT"
 
   # Source tarball for Python package
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.8.10.tar.gz"
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.8.11.tar.gz"
   sha256 "PLACEHOLDER_SHA256_SOURCE"
 
   # Pre-compiled CLI binaries for each platform
   resource "cli-binary" do
     on_macos do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.10/dazzle-darwin-arm64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.11/dazzle-darwin-arm64.tar.gz"
         sha256 "PLACEHOLDER_SHA256_DARWIN_ARM64"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.10/dazzle-darwin-x64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.11/dazzle-darwin-x64.tar.gz"
         sha256 "PLACEHOLDER_SHA256_DARWIN_X64"
       end
     end
     on_linux do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.10/dazzle-linux-arm64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.11/dazzle-linux-arm64.tar.gz"
         sha256 "PLACEHOLDER_SHA256_LINUX_ARM64"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.10/dazzle-linux-x64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.8.11/dazzle-linux-x64.tar.gz"
         sha256 "PLACEHOLDER_SHA256_LINUX_X64"
       end
     end
@@ -91,11 +91,11 @@ class Dazzle < Formula
              wheel
     end
 
-    # Install dazzle with all optional dependencies (mcp, llm)
+    # Install dazzle with all optional dependencies (mcp, llm, lsp)
     # pip will resolve transitive dependencies and use our pre-installed pydantic-core
     system venv.root/"bin/python", "-m", "pip", "install",
            "--no-compile",
-           "#{buildpath}[mcp,llm]"
+           "#{buildpath}[mcp,llm,lsp]"
 
     # Install the pre-compiled CLI binary
     resource("cli-binary").stage do
@@ -122,7 +122,7 @@ class Dazzle < Formula
 
   def caveats
     <<~EOS
-      DAZZLE v0.8.10 has been installed!
+      DAZZLE v0.8.11 has been installed!
 
       What's New:
         - 50x faster CLI startup (Bun-compiled binary)
@@ -158,7 +158,7 @@ class Dazzle < Formula
   test do
     # Test fast path (no Python needed)
     output = shell_output("#{bin}/dazzle version")
-    assert_match "0.8.10", output
+    assert_match "0.8.11", output
 
     # Test Python integration
     output = shell_output("#{bin}/dazzle version --full")

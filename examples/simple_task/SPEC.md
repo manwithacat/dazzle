@@ -1,58 +1,116 @@
-# Simple Task Manager - Product Specification
+# Team Task Manager - Product Specification
 
 > **Document Status**: Refined specification ready for DSL conversion
-> **Complexity Level**: Beginner
-> **DSL Features Demonstrated**: Entity basics, CRUD surfaces, workspaces, attention signals
+> **Complexity Level**: Intermediate
+> **DSL Features Demonstrated**: Multi-entity relationships, personas, scenarios, access control, state machines
 
 ---
 
 ## Vision Statement
 
-A personal task management tool that helps individuals track their to-do items with clear priorities and status tracking. The app provides an at-a-glance dashboard for managing daily work without the complexity of team collaboration features.
+A team task management tool that enables collaboration between administrators, managers, and team members. The app provides role-based dashboards, task assignment workflows, and proper access control to ensure the right people see the right information.
 
 ---
 
 ## User Personas
 
-### Primary: Solo Professional
-- **Role**: Individual contributor (developer, designer, freelancer)
-- **Need**: Quick capture and tracking of work items
-- **Pain Point**: Existing tools are too complex or team-focused
-- **Goal**: Zero-friction task management that "just works"
+### Administrator
+- **Role**: System administrator with full access
+- **Need**: Manage all tasks and team members across the organization
+- **Goals**: Configure team settings, view analytics, ensure data integrity
+- **Proficiency**: Expert user comfortable with all features
+
+### Team Manager
+- **Role**: Department or project lead
+- **Need**: Oversee team tasks and assignments
+- **Goals**: Assign work, track team progress, review completed tasks
+- **Proficiency**: Intermediate user focused on team coordination
+
+### Team Member
+- **Role**: Individual contributor
+- **Need**: Work on assigned tasks and track personal progress
+- **Goals**: Complete assigned work, update status, request help when blocked
+- **Proficiency**: Novice user needing streamlined workflows
 
 ---
 
 ## Domain Model
 
+### Entity: User (Team Member)
+
+Represents a team member who can be assigned tasks.
+
+| Field | Type | Required | Default | Business Rules |
+|-------|------|----------|---------|----------------|
+| `id` | UUID | Yes | Auto | Immutable primary key |
+| `email` | String(200) | Yes | - | Unique, valid email format |
+| `name` | String(100) | Yes | - | Display name |
+| `role` | Enum | Yes | `member` | Access level: `admin`, `manager`, `member` |
+| `department` | String(50) | No | - | Organizational unit |
+| `avatar_url` | String(500) | No | - | Profile image URL |
+| `is_active` | Boolean | Yes | `true` | Account status |
+| `created_at` | DateTime | Yes | Auto | Immutable creation timestamp |
+
 ### Entity: Task
 
-A discrete unit of work to be completed.
+A discrete unit of work to be completed by a team member.
 
 | Field | Type | Required | Default | Business Rules |
 |-------|------|----------|---------|----------------|
 | `id` | UUID | Yes | Auto | Immutable primary key |
 | `title` | String(200) | Yes | - | Short, actionable description |
 | `description` | Text | No | - | Extended details, notes, context |
-| `status` | Enum | Yes | `todo` | Workflow state: `todo` → `in_progress` → `done` |
-| `priority` | Enum | Yes | `medium` | Urgency level: `low`, `medium`, `high` |
+| `status` | Enum | Yes | `todo` | Workflow: `todo` → `in_progress` → `review` → `done` |
+| `priority` | Enum | Yes | `medium` | Urgency: `low`, `medium`, `high`, `urgent` |
 | `due_date` | Date | No | - | Target completion date |
-| `assigned_to` | String(100) | No | - | Person responsible (free text) |
+| `assigned_to` | Ref(User) | No | - | Team member responsible for task |
+| `created_by` | Ref(User) | No | - | Team member who created the task |
 | `created_at` | DateTime | Yes | Auto | Immutable creation timestamp |
 | `updated_at` | DateTime | Yes | Auto | Last modification timestamp |
 
-**Validation Rules**:
-- Title must not be empty
-- Status transitions: Any status can move to any other (flexible workflow)
-- Due date must be a valid date (no time component)
+**State Machine (Status Transitions)**:
+- `todo` → `in_progress`: Requires `assigned_to` to be set
+- `in_progress` → `review`: Task ready for review
+- `in_progress` → `todo`: Send back to backlog
+- `review` → `done`: Approved and complete
+- `review` → `in_progress`: Needs more work
+- `done` → `todo`: Reopen (admin only)
+
+**Invariants**:
+- Urgent priority tasks must have a due date
+
+**Access Control**:
+- **Read**: Admin, Manager, or task is assigned to/created by current user
+- **Write**: Admin, Manager, or task is assigned to current user
+
+---
+
+## Demo Scenarios
+
+### Scenario: Empty State
+**Purpose**: Test onboarding flows with no data
+- Admin starts at `/admin`
+- Manager starts at `/team`
+- Member starts at `/my-work`
+
+### Scenario: Active Sprint
+**Purpose**: Mid-sprint with tasks in various states
+- Pre-populated with 5 team members and 7 tasks
+- Mix of todo, in_progress, review, and done tasks
+- Various priority levels to demonstrate attention signals
+
+### Scenario: Overdue Crisis
+**Purpose**: Test overdue task handling
+- Several tasks with past due dates
+- Tests warning indicators and overdue filtering
 
 ---
 
 ## User Interface Specification
 
-### Surface: Task List (Primary View)
+### Surface: Task List
 
-**Purpose**: View and manage all tasks at a glance
-
+**Purpose**: View and manage all tasks
 **Mode**: List with table layout
 
 | Column | Source | Behavior |
@@ -61,269 +119,95 @@ A discrete unit of work to be completed.
 | Status | `task.status` | Visual badge (color-coded) |
 | Priority | `task.priority` | Visual badge (color-coded) |
 | Due Date | `task.due_date` | Formatted date, highlight if overdue |
-| Assigned To | `task.assigned_to` | Text |
+| Assigned To | `task.assigned_to.name` | User name with avatar |
 
-**Interactions**:
-- **Sort**: By creation date (newest first), sortable by any column
-- **Filter**: By status, by priority
-- **Search**: Title, description, assigned_to fields
-- **Actions**: View detail, Edit, Delete (with confirmation)
-
-**Empty State**: "No tasks yet. Create your first task to get started!"
+**Persona Variants**:
+- **Admin**: Sees all tasks, full management
+- **Manager**: Sees all tasks, can assign to team
+- **Member**: Sees only tasks assigned to or created by self
 
 **Attention Signals**:
-1. **Warning** (orange): Task is overdue (`due_date < today AND status != done`)
-   - Message: "Overdue task"
-2. **Notice** (blue): High priority task not started (`priority = high AND status = todo`)
-   - Message: "High priority - needs attention"
+1. **Warning**: Task is overdue (`due_date < today AND status != done`)
+2. **Notice**: Urgent task not started (`priority = urgent AND status = todo`)
 
 ---
 
-### Surface: Task Detail (Read-only View)
+### Surface: Task Create
 
-**Purpose**: View complete task information
-
-**Mode**: Single record view
-
-**Fields Displayed**:
-- Title (heading)
-- Description (full text, markdown supported)
-- Status (badge)
-- Priority (badge)
-- Due Date (formatted)
-- Assigned To (text)
-- Created (relative timestamp: "2 days ago")
-- Updated (relative timestamp)
-
-**Actions**: Edit, Delete, Back to List
-
----
-
-### Surface: Create Task (Form)
-
-**Purpose**: Add a new task to track
-
+**Purpose**: Create a new task
 **Mode**: Create form
 
-**Fields**:
-| Field | Input Type | Required | Default |
-|-------|------------|----------|---------|
-| Title | Text input | Yes | - |
-| Description | Textarea | No | - |
-| Priority | Dropdown | No | Medium |
-| Due Date | Date picker | No | - |
-| Assigned To | Text input | No | - |
-
-**Note**: Status is automatically set to `todo` and not shown in form.
-
-**Actions**: Save (returns to list), Cancel
+**Persona Variants**:
+- **Admin/Manager**: Can assign to any team member
+- **Member**: `assigned_to` field hidden (auto-assigned to self)
 
 ---
 
-### Surface: Edit Task (Form)
+### Surface: Team Members
 
-**Purpose**: Update task details and status
+**Purpose**: Manage team members (admin-focused)
+**Mode**: List with table layout
 
-**Mode**: Edit form
-
-**Fields**: Same as Create, plus:
-| Field | Input Type | Required |
-|-------|------------|----------|
-| Status | Dropdown | Yes |
-
-**Actions**: Save, Cancel, Delete
+**Persona Variants**:
+- **Admin**: Full team management, can create new members
+- **Manager**: Read-only view of team members
 
 ---
 
 ## Workspace Specification
 
-### Workspace: Task Dashboard
+### Workspace: Admin Dashboard
 
-**Purpose**: Overview of all tasks with key metrics and filtered views
-
-**Layout**: Command center with metrics header + multiple data regions
+**Purpose**: System-wide overview and management
 
 **Regions**:
+- **Metrics**: Total tasks, by status (todo/in_progress/review/done)
+- **Team Metrics**: Total users, active users
+- **Urgent Tasks**: Priority = urgent, not done
+- **Overdue Tasks**: Past due date, not done
 
-#### Metrics Bar
-| Metric | Calculation | Display |
-|--------|-------------|---------|
-| Total | `count(Task)` | Number |
-| To Do | `count(Task where status = todo)` | Number + badge |
-| In Progress | `count(Task where status = in_progress)` | Number + badge |
-| Done | `count(Task where status = done)` | Number + badge |
+---
 
-#### Overdue Tasks
-- **Source**: Task
-- **Filter**: `due_date < today AND status != done`
-- **Sort**: `due_date ASC` (most overdue first)
-- **Limit**: 5 items
-- **Empty**: "No overdue tasks!"
-- **Action**: Click → Edit Task
+### Workspace: Team Overview
 
-#### High Priority
-- **Source**: Task
-- **Filter**: `priority = high AND status != done`
-- **Sort**: `due_date ASC`
-- **Limit**: 5 items
-- **Empty**: "No high priority tasks pending"
-- **Action**: Click → Edit Task
+**Purpose**: Monitor team progress and workload
 
-#### Recent Activity
-- **Source**: Task
-- **Sort**: `created_at DESC`
-- **Limit**: 10 items
-- **Action**: Click → Task Detail
+**Regions**:
+- **Metrics**: Total tasks, in progress, in review, completed today
+- **Needs Review**: Tasks awaiting approval
+- **Team Workload**: Currently in-progress tasks
+- **Unassigned**: Tasks needing assignment
 
 ---
 
 ### Workspace: My Work
 
-**Purpose**: Personal task view organized by workflow stage
-
-**Layout**: Three-column kanban-style view
+**Purpose**: Personal task view for individual contributors
 
 **Regions**:
-
-#### In Progress
-- **Filter**: `status = in_progress`
-- **Sort**: `priority DESC, due_date ASC`
-- **Limit**: 10 items
-- **Empty**: "No tasks in progress"
-
-#### To Do
-- **Filter**: `status = todo`
-- **Sort**: `priority DESC, due_date ASC`
-- **Limit**: 10 items
-- **Empty**: "No pending tasks"
-
-#### Recently Completed
-- **Filter**: `status = done`
-- **Sort**: `updated_at DESC`
-- **Limit**: 5 items
-- **Empty**: "No completed tasks yet"
-
----
-
-## User Stories & Acceptance Criteria
-
-### US-1: Create a Task
-**As a** user
-**I want to** quickly create a new task
-**So that** I can capture work items before I forget them
-
-**Acceptance Criteria**:
-- [ ] Can access "Create Task" from task list
-- [ ] Only title is required
-- [ ] Priority defaults to Medium
-- [ ] Status automatically set to "To Do"
-- [ ] After save, return to task list showing new task
-- [ ] Task appears at top of list (sorted by created_at DESC)
-
-**Test Flow**:
-```
-1. Navigate to task list
-2. Click "Create Task" button
-3. Enter title: "Buy groceries"
-4. Select priority: High
-5. Click Save
-6. Verify: Redirected to task list
-7. Verify: "Buy groceries" appears in list with status "To Do"
-```
-
----
-
-### US-2: View Task Details
-**As a** user
-**I want to** see all information about a task
-**So that** I can understand the full context
-
-**Acceptance Criteria**:
-- [ ] Click task title in list → opens detail view
-- [ ] All fields displayed with labels
-- [ ] Timestamps shown in readable format
-- [ ] Can navigate back to list
-- [ ] Can edit or delete from detail view
-
----
-
-### US-3: Update Task Status
-**As a** user
-**I want to** change a task's status
-**So that** I can track my progress
-
-**Acceptance Criteria**:
-- [ ] Can change status via Edit form
-- [ ] Status change updates `updated_at` timestamp
-- [ ] Task moves to correct section in "My Work" workspace
-
-**Test Flow**:
-```
-1. Navigate to task list
-2. Find task "Buy groceries"
-3. Click Edit
-4. Change status from "To Do" to "In Progress"
-5. Click Save
-6. Navigate to "My Work" workspace
-7. Verify: Task appears in "In Progress" section
-```
-
----
-
-### US-4: Track Overdue Tasks
-**As a** user
-**I want to** see which tasks are overdue
-**So that** I can prioritize catching up
-
-**Acceptance Criteria**:
-- [ ] Overdue tasks shown in dashboard "Overdue Tasks" region
-- [ ] Overdue tasks have warning indicator in task list
-- [ ] Completed tasks never shown as overdue (even if past due date)
-
----
-
-### US-5: Delete a Task
-**As a** user
-**I want to** remove tasks I no longer need
-**So that** my list stays clean
-
-**Acceptance Criteria**:
-- [ ] Delete button available in task detail and edit views
-- [ ] Confirmation required before deletion
-- [ ] After deletion, return to task list
-- [ ] Deleted task no longer appears anywhere
+- **My In Progress**: Current work items
+- **My To Do**: Upcoming tasks
+- **My In Review**: Awaiting approval
+- **My Completed**: Recent accomplishments
 
 ---
 
 ## Technical Notes
 
 ### DSL Features Demonstrated
-- **Entity**: Single entity with various field types (uuid, str, text, enum, date, datetime)
-- **Field modifiers**: `required`, `pk`, `auto_add`, `auto_update`, default values
-- **Surfaces**: All four CRUD modes (list, view, create, edit)
-- **UX block**: purpose, sort, filter, search, empty, attention signals
-- **Workspaces**: Multiple regions with aggregations, filters, and limits
-- **Attention signals**: Warning and notice levels with conditional expressions
+- **Multi-entity relationships**: `ref User` for assigned_to/created_by
+- **Personas**: Role-based UI variants (admin, manager, member)
+- **Scenarios**: Demo data states for testing
+- **State machine**: Controlled status transitions
+- **Invariants**: Business rule enforcement
+- **Access control**: Row-level security based on user role
+- **Attention signals**: Visual alerts for overdue/urgent tasks
 
-### Out of Scope (Beginner Example)
-- Multi-user authentication
-- Task categories/tags
-- File attachments
-- Recurring tasks
-- Task dependencies
-- Comments/activity log
-- Email notifications
-
----
-
-## Success Metrics
-
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| Task creation time | < 10 seconds | Time from click "Create" to saved |
-| Page load time | < 2 seconds | Initial list render |
-| Mobile usability | Responsive | Works on 375px width |
-| E2E test pass rate | 100% | All user stories validated |
+### Dazzle Bar Integration
+The development environment includes the Dazzle Bar overlay for:
+- Switching between personas to test role-based views
+- Loading different scenarios to test data states
+- Resetting/regenerating demo data
 
 ---
 

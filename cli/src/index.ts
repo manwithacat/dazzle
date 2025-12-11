@@ -7,4 +7,5 @@
 
 import { run } from './cli'
 
-run()
+// Must await the async run() to prevent early exit
+await run()

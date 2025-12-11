@@ -92,6 +92,8 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         foreign_models=merged_fragment.foreign_models,
         integrations=merged_fragment.integrations,
         tests=merged_fragment.tests,
+        personas=merged_fragment.personas,  # v0.8.5 Dazzle Bar
+        scenarios=merged_fragment.scenarios,  # v0.8.5 Dazzle Bar
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

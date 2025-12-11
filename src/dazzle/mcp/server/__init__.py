@@ -41,6 +41,7 @@ from .tool_handlers import (
     find_examples_handler,
     get_active_project_info,
     get_cli_help_handler,
+    get_dnr_logs_handler,
     get_entities,
     get_mcp_status_handler,
     get_surfaces,
@@ -110,6 +111,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     # Internal/development tools
     elif name == "get_mcp_status":
         result = get_mcp_status_handler(arguments)
+    elif name == "get_dnr_logs":
+        result = get_dnr_logs_handler(arguments)
 
     # DNR tools (always available)
     elif name in DNR_TOOL_NAMES:

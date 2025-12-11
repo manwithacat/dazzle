@@ -28,6 +28,8 @@ class SymbolTable:
     foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
     integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
     tests: dict[str, ir.TestSpec] = field(default_factory=dict)
+    personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)  # v0.8.5
+    scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)  # v0.8.5
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -119,6 +121,28 @@ class SymbolTable:
             )
         self.tests[test.name] = test
         self.symbol_sources[test.name] = module_name
+
+    def add_persona(self, persona: ir.PersonaSpec, module_name: str) -> None:
+        """Add persona to symbol table, checking for duplicates (v0.8.5)."""
+        if persona.id in self.personas:
+            existing_module = self.symbol_sources.get(persona.id, "unknown")
+            raise LinkError(
+                f"Duplicate persona '{persona.id}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.personas[persona.id] = persona
+        self.symbol_sources[persona.id] = module_name
+
+    def add_scenario(self, scenario: ir.ScenarioSpec, module_name: str) -> None:
+        """Add scenario to symbol table, checking for duplicates (v0.8.5)."""
+        if scenario.id in self.scenarios:
+            existing_module = self.symbol_sources.get(scenario.id, "unknown")
+            raise LinkError(
+                f"Duplicate scenario '{scenario.id}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.scenarios[scenario.id] = scenario
+        self.symbol_sources[scenario.id] = module_name
 
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
@@ -224,6 +248,14 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add tests
         for test in module.fragment.tests:
             symbols.add_test(test, module.name)
+
+        # Add personas (v0.8.5)
+        for persona in module.fragment.personas:
+            symbols.add_persona(persona, module.name)
+
+        # Add scenarios (v0.8.5)
+        for scenario in module.fragment.scenarios:
+            symbols.add_scenario(scenario, module.name)
 
     return symbols
 
@@ -491,4 +523,6 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         foreign_models=list(symbols.foreign_models.values()),
         integrations=list(symbols.integrations.values()),
         tests=list(symbols.tests.values()),
+        personas=list(symbols.personas.values()),  # v0.8.5
+        scenarios=list(symbols.scenarios.values()),  # v0.8.5
     )

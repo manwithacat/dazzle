@@ -25,6 +25,7 @@ from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 
 from .state import (
     get_active_project,
+    get_active_project_path,
     get_available_projects,
     get_project_root,
     is_dev_mode,
@@ -639,6 +640,85 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         result["available_projects"] = list(get_available_projects().keys())
 
     return json.dumps(result, indent=2)
+
+
+# ============================================================================
+# DNR Logging Tools
+# ============================================================================
+
+
+def get_dnr_logs_handler(args: dict[str, Any]) -> str:
+    """Get DNR runtime logs for debugging."""
+    count = args.get("count", 50)
+    level = args.get("level")
+    errors_only = args.get("errors_only", False)
+
+    # Get project path
+    project_path = get_active_project_path() or get_project_root()
+    log_dir = project_path / ".dazzle" / "logs"
+    log_file = log_dir / "dnr.log"
+
+    result: dict[str, Any] = {
+        "log_file": str(log_file),
+        "project": str(project_path),
+    }
+
+    if not log_file.exists():
+        result["status"] = "no_logs"
+        result["message"] = (
+            "No log file found. Start the DNR server with `dazzle dnr serve` to generate logs."
+        )
+        result["hint"] = f"Log file will be created at: {log_file}"
+        return json.dumps(result, indent=2)
+
+    try:
+        entries: list[dict[str, Any]] = []
+        with open(log_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                    if level and entry.get("level") != level.upper():
+                        continue
+                    entries.append(entry)
+                except json.JSONDecodeError:
+                    continue
+
+        if errors_only:
+            # Return error summary
+            errors = [e for e in entries if e.get("level") == "ERROR"]
+            warnings = [e for e in entries if e.get("level") == "WARNING"]
+
+            # Group by component
+            by_component: dict[str, list[dict[str, Any]]] = {}
+            for error in errors:
+                comp = error.get("component", "unknown")
+                if comp not in by_component:
+                    by_component[comp] = []
+                by_component[comp].append(error)
+
+            result["status"] = "error_summary"
+            result["total_entries"] = len(entries)
+            result["error_count"] = len(errors)
+            result["warning_count"] = len(warnings)
+            result["errors_by_component"] = {k: len(v) for k, v in by_component.items()}
+            result["recent_errors"] = errors[-10:]  # Last 10 errors
+        else:
+            # Return recent logs
+            recent = entries[-count:] if count < len(entries) else entries
+            result["status"] = "ok"
+            result["total_entries"] = len(entries)
+            result["returned"] = len(recent)
+            result["entries"] = recent
+
+        return json.dumps(result, indent=2)
+
+    except OSError as e:
+        result["status"] = "error"
+        result["error"] = str(e)
+        return json.dumps(result, indent=2)
 
 
 # ============================================================================

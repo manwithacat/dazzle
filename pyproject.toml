@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.8.10"
+version = "0.8.11"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -48,6 +48,10 @@ llm = [
 ]
 mcp = [
     "mcp>=1.0.0",
+]
+lsp = [
+    "pygls>=1.0.0",
+    "lsprotocol>=2023.0.0",
 ]
 dev = [
     "pytest>=7.4",

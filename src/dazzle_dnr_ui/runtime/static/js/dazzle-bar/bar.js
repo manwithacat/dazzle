@@ -264,6 +264,104 @@ const barStyles = `
   body.dazzle-bar-active {
     padding-top: ${BAR_HEIGHT}px !important;
   }
+
+  /* =========================================================================
+     Responsive Styles - Small Viewports
+     ========================================================================= */
+
+  @media (max-width: 768px) {
+    #${BAR_ID} {
+      padding: 0 8px;
+      gap: 8px;
+    }
+
+    #${BAR_ID} .dazzle-logo span:not(.dazzle-logo-icon) {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-label {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-select {
+      min-width: 100px;
+      font-size: 11px;
+      padding: 4px 6px;
+    }
+
+    #${BAR_ID} .dazzle-btn-text {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-btn {
+      padding: 4px 8px;
+    }
+
+    #${BAR_ID} .dazzle-status .dazzle-status-text {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-divider:nth-of-type(2),
+    #${BAR_ID} .dazzle-divider:nth-of-type(3) {
+      display: none;
+    }
+  }
+
+  @media (max-width: 540px) {
+    #${BAR_ID} {
+      flex-wrap: wrap;
+      height: auto;
+      min-height: ${BAR_HEIGHT}px;
+      padding: 6px 8px;
+      gap: 6px;
+    }
+
+    body.dazzle-bar-active {
+      padding-top: 72px !important;
+    }
+
+    #${BAR_ID} .dazzle-section {
+      gap: 4px;
+    }
+
+    #${BAR_ID} .dazzle-select {
+      min-width: 80px;
+    }
+
+    #${BAR_ID} .dazzle-spacer {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-divider {
+      display: none;
+    }
+
+    /* Move action buttons to second row */
+    #${BAR_ID} .dazzle-section:nth-of-type(3) {
+      order: 10;
+    }
+
+    #${BAR_ID} .dazzle-section:nth-of-type(4) {
+      order: 11;
+    }
+
+    /* Hide less essential buttons */
+    #${BAR_ID} #dazzle-regenerate-btn,
+    #${BAR_ID} #dazzle-export-btn {
+      display: none;
+    }
+  }
+
+  @media (max-width: 380px) {
+    #${BAR_ID} #dazzle-feedback-btn {
+      display: none;
+    }
+
+    #${BAR_ID} .dazzle-select {
+      min-width: 70px;
+      font-size: 10px;
+    }
+  }
 `;
 
 // =============================================================================
@@ -304,10 +402,10 @@ function createBarElement() {
 
     <div class="dazzle-section">
       <button class="dazzle-btn danger" id="dazzle-reset-btn" title="Reset all data">
-        <span>&#x21bb;</span> Reset
+        <span class="dazzle-btn-icon">&#x21bb;</span><span class="dazzle-btn-text">Reset</span>
       </button>
       <button class="dazzle-btn" id="dazzle-regenerate-btn" title="Regenerate demo data">
-        <span>&#x2699;</span> Regenerate
+        <span class="dazzle-btn-icon">&#x2699;</span><span class="dazzle-btn-text">Regen</span>
       </button>
     </div>
 
@@ -315,10 +413,10 @@ function createBarElement() {
 
     <div class="dazzle-section">
       <button class="dazzle-btn primary" id="dazzle-feedback-btn">
-        <span>&#x1F4AC;</span> Feedback
+        <span class="dazzle-btn-icon">&#x1F4AC;</span><span class="dazzle-btn-text">Feedback</span>
       </button>
       <button class="dazzle-btn" id="dazzle-export-btn" title="Export session to GitHub issue">
-        <span>&#x1F4E4;</span> Export
+        <span class="dazzle-btn-icon">&#x1F4E4;</span><span class="dazzle-btn-text">Export</span>
       </button>
     </div>
 
@@ -326,7 +424,7 @@ function createBarElement() {
 
     <div class="dazzle-status">
       <span class="dazzle-status-dot" id="dazzle-status-dot"></span>
-      <span id="dazzle-status-text">Dev Mode</span>
+      <span class="dazzle-status-text" id="dazzle-status-text">Dev Mode</span>
     </div>
 
     <button class="dazzle-toggle" id="dazzle-hide-btn" title="Hide bar (Cmd+Shift+D)">

@@ -10,7 +10,9 @@ Provides a unified development server that:
 from __future__ import annotations
 
 import http.server
+import os
 import socketserver
+import sys
 import threading
 import time
 import urllib.error
@@ -24,6 +26,50 @@ from dazzle_dnr_ui.specs import UISpec
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
     from dazzle_dnr_ui.runtime.hot_reload import HotReloadManager
+
+
+# =============================================================================
+# Terminal Utilities
+# =============================================================================
+
+
+def _supports_hyperlinks() -> bool:
+    """
+    Check if the terminal likely supports OSC 8 hyperlinks.
+
+    We check for:
+    1. NO_COLOR not set (respect user preference)
+    2. TERM is set (indicates a terminal environment)
+    3. Not running in dumb terminal
+    """
+    if os.environ.get("NO_COLOR"):
+        return False
+
+    term = os.environ.get("TERM", "")
+    if not term or term == "dumb":
+        return False
+
+    # Most modern terminals support OSC 8: iTerm2, Terminal.app, VS Code, etc.
+    return True
+
+
+def _clickable_url(url: str, label: str | None = None) -> str:
+    """
+    Create a clickable hyperlink for terminal emulators that support OSC 8.
+
+    Uses the OSC 8 escape sequence format:
+    \\e]8;;URL\\e\\\\LABEL\\e]8;;\\e\\\\
+
+    Falls back to plain text if NO_COLOR is set or TERM is not set.
+    """
+    if not _supports_hyperlinks():
+        return label or url
+
+    # OSC 8 hyperlink format
+    # \x1b]8;; starts the hyperlink, \x1b\\ (or \x07) ends parameters
+    # Then the visible text, then \x1b]8;;\x1b\\ to close
+    display = label or url
+    return f"\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\"
 
 
 # =============================================================================
@@ -43,6 +89,14 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
     dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
 
+    def handle(self) -> None:
+        """Handle request, suppressing connection reset errors from browser."""
+        try:
+            super().handle()
+        except ConnectionResetError:
+            # Browser closed connection early - common with prefetch/cancelled requests
+            pass
+
     def do_GET(self) -> None:
         """Handle GET requests."""
         path = self.path.split("?")[0]
@@ -58,6 +112,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/dazzle-bar.js":
             # Serve Dazzle Bar JavaScript (v0.8.5)
             self._serve_dazzle_bar()
+        elif path == "/styles/dnr.css":
+            # Serve bundled CSS (v0.8.11)
+            self._serve_css()
         elif path == "/dnr-runtime.js":
             self._serve_runtime()
         elif path == "/app.js":
@@ -251,6 +308,16 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Failed to load Dazzle Bar: {e}")
 
+    def _serve_css(self) -> None:
+        """Serve the bundled CSS (v0.8.11)."""
+        try:
+            from dazzle_dnr_ui.runtime.vite_generator import _get_bundled_css
+
+            css_content = _get_bundled_css()
+            self._send_response(css_content, "text/css")
+        except Exception as e:
+            self.send_error(500, f"Failed to load CSS: {e}")
+
     def _serve_hot_reload(self) -> None:
         """Serve hot reload SSE endpoint."""
         self.send_response(200)
@@ -374,6 +441,15 @@ class DNRCombinedServer:
 
         The backend runs in a background thread, frontend blocks.
         """
+        # Initialize logging (JSONL format for LLM agents)
+        try:
+            from dazzle_dnr_back.runtime.logging import setup_logging
+
+            log_dir = self.db_path.parent / "logs"
+            setup_logging(log_dir=log_dir)
+        except ImportError:
+            pass  # Logging module not available
+
         print("\n" + "=" * 60)
         print("  DAZZLE NATIVE RUNTIME (DNR)")
         print("=" * 60)
@@ -449,14 +525,23 @@ class DNRCombinedServer:
                 server.run()
             except ImportError:
                 print("[DNR] Warning: uvicorn not available, backend disabled")
+            except OSError as e:
+                if e.errno == 48 or "address already in use" in str(e).lower():
+                    print(f"\n[DNR] ERROR: Backend port {self.backend_port} is already in use.")
+                    print(f"[DNR] Stop the other process or use --api-port to specify a different port.")
+                    print(f"[DNR] Hint: lsof -i :{self.backend_port} | grep LISTEN")
+                else:
+                    print(f"[DNR] Backend error: {e}")
             except Exception as e:
                 print(f"[DNR] Backend error: {e}")
 
         self._backend_thread = threading.Thread(target=run_backend, daemon=True)
         self._backend_thread.start()
 
-        print(f"[DNR] Backend:  http://{self.backend_host}:{self.backend_port}")
-        print(f"[DNR] API Docs: http://{self.backend_host}:{self.backend_port}/docs")
+        backend_url = f"http://{self.backend_host}:{self.backend_port}"
+        docs_url = f"{backend_url}/docs"
+        print(f"[DNR] Backend:  {_clickable_url(backend_url)}")
+        print(f"[DNR] API Docs: {_clickable_url(docs_url)}")
         print(f"[DNR] Database: {self.db_path}")
         if self.enable_test_mode:
             print("[DNR] Test endpoints: /__test__/* (enabled)")
@@ -480,12 +565,21 @@ class DNRCombinedServer:
         class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
             daemon_threads = True
 
-        self._frontend_server = ThreadingTCPServer(
-            (self.frontend_host, self.frontend_port),
-            DNRCombinedHandler,
-        )
+        try:
+            self._frontend_server = ThreadingTCPServer(
+                (self.frontend_host, self.frontend_port),
+                DNRCombinedHandler,
+            )
+        except OSError as e:
+            if e.errno == 48 or "address already in use" in str(e).lower():
+                print(f"\n[DNR] ERROR: Port {self.frontend_port} is already in use.")
+                print(f"[DNR] Stop the other process or use --port to specify a different port.")
+                print(f"[DNR] Hint: lsof -i :{self.frontend_port} | grep LISTEN")
+                raise SystemExit(1)
+            raise
 
-        print(f"[DNR] Frontend: http://{self.frontend_host}:{self.frontend_port}")
+        frontend_url = f"http://{self.frontend_host}:{self.frontend_port}"
+        print(f"[DNR] Frontend: {_clickable_url(frontend_url)}")
         print()
         print("Press Ctrl+C to stop")
         print("-" * 60)
@@ -581,10 +675,19 @@ def run_frontend_only(
     DNRCombinedHandler.backend_url = backend_url
 
     socketserver.TCPServer.allow_reuse_address = True
-    server = socketserver.TCPServer((host, port), DNRCombinedHandler)
+    try:
+        server = socketserver.TCPServer((host, port), DNRCombinedHandler)
+    except OSError as e:
+        if e.errno == 48 or "address already in use" in str(e).lower():
+            print(f"\n[DNR-UI] ERROR: Port {port} is already in use.")
+            print(f"[DNR-UI] Stop the other process or use --port to specify a different port.")
+            print(f"[DNR-UI] Hint: lsof -i :{port} | grep LISTEN")
+            raise SystemExit(1)
+        raise
 
-    print(f"[DNR-UI] Frontend server: http://{host}:{port}")
-    print(f"[DNR-UI] Backend proxy:   {backend_url}")
+    frontend_url = f"http://{host}:{port}"
+    print(f"[DNR-UI] Frontend server: {_clickable_url(frontend_url)}")
+    print(f"[DNR-UI] Backend proxy:   {_clickable_url(backend_url)}")
     print("[DNR-UI] Press Ctrl+C to stop")
     print()
 
@@ -648,12 +751,15 @@ def run_backend_only(
                 services=app_builder.services,
                 repositories=app_builder.repositories,
             )
-            print(f"[DNR] GraphQL: http://{host}:{port}/graphql")
+            graphql_url = f"http://{host}:{port}/graphql"
+            print(f"[DNR] GraphQL: {_clickable_url(graphql_url)}")
         except ImportError:
             print("[DNR] Warning: GraphQL not available (install strawberry-graphql)")
 
-    print(f"[DNR] Backend:  http://{host}:{port}")
-    print(f"[DNR] API Docs: http://{host}:{port}/docs")
+    backend_url = f"http://{host}:{port}"
+    docs_url = f"{backend_url}/docs"
+    print(f"[DNR] Backend:  {_clickable_url(backend_url)}")
+    print(f"[DNR] API Docs: {_clickable_url(docs_url)}")
     print(f"[DNR] Database: {db_path}")
     if enable_test_mode:
         print("[DNR] Test endpoints: /__test__/* (enabled)")
@@ -666,3 +772,10 @@ def run_backend_only(
         uvicorn.run(app, host=host, port=port, log_level="info")
     except KeyboardInterrupt:
         print("\n[DNR] Shutting down...")
+    except OSError as e:
+        if e.errno == 48 or "address already in use" in str(e).lower():
+            print(f"\n[DNR] ERROR: Port {port} is already in use.")
+            print(f"[DNR] Stop the other process or use --api-port to specify a different port.")
+            print(f"[DNR] Hint: lsof -i :{port} | grep LISTEN")
+        else:
+            raise

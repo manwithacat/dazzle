@@ -210,6 +210,45 @@ def get_internal_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="get_dnr_logs",
+            description="""Get DNR runtime logs for debugging. Dazzle apps write logs to .dazzle/logs/dnr.log in JSONL format.
+
+LOG FILE LOCATION: {project_dir}/.dazzle/logs/dnr.log
+
+Each line is a complete JSON object with fields:
+- timestamp: ISO 8601 format
+- level: DEBUG, INFO, WARNING, ERROR
+- component: API, UI, Bar, DNR
+- message: The log message
+- context: Additional structured data (optional)
+
+Use this tool to:
+- Monitor the running app for errors
+- Debug frontend/backend issues
+- Get error summaries for diagnosis
+
+The logs are designed for LLM agent consumption - you can tail the log file directly or use this tool.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of recent log entries to return (default: 50)",
+                    },
+                    "level": {
+                        "type": "string",
+                        "enum": ["DEBUG", "INFO", "WARNING", "ERROR"],
+                        "description": "Filter by log level (optional)",
+                    },
+                    "errors_only": {
+                        "type": "boolean",
+                        "description": "If true, return error summary instead of recent logs",
+                    },
+                },
+                "required": [],
+            },
+        ),
     ]
 
 

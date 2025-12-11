@@ -266,14 +266,14 @@ def build_project_json(
     Returns:
         Dict with build results
     """
-    from dazzle.core import load_project_with_manifest
     from dazzle.cli.dnr_impl.docker import (
-        generate_dockerfile,
         generate_docker_compose,
+        generate_dockerfile,
         generate_env_template,
         generate_production_main,
         generate_requirements,
     )
+    from dazzle.core import load_project_with_manifest
 
     project_path = Path(path) if path else Path.cwd()
     output_path = Path(output)
@@ -384,6 +384,7 @@ def eject_project_json(
         else:
             # Create minimal config
             from dazzle.eject.config import EjectionConfig
+
             config = EjectionConfig()
 
         # Override output directory
@@ -515,9 +516,10 @@ def db_seed_json(
         app_spec, manifest = load_project_with_manifest(project_path)
 
         try:
+            from dazzle_dnr_back.runtime.seeder import seed_demo_data
+
             from dazzle_dnr_back.converters import convert_appspec_to_backend
             from dazzle_dnr_back.runtime.repository import DatabaseManager
-            from dazzle_dnr_back.runtime.seeder import seed_demo_data
         except ImportError as e:
             raise RuntimeError(f"DNR backend not available: {e}") from e
 
