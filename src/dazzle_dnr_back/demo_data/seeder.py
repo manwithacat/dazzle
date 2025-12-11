@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
     from dazzle_dnr_back.runtime.repository import DatabaseManager, SQLiteRepository
     from dazzle_dnr_back.specs import BackendSpec
-    from dazzle_dnr_back.specs.entity import EntitySpec
 
 
 class DemoDataSeeder:

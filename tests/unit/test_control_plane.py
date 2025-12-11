@@ -6,7 +6,6 @@ Tests the /dazzle/dev/* endpoints for the Dazzle Bar developer overlay.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest

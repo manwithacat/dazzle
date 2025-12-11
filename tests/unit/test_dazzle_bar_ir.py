@@ -2,15 +2,13 @@
 
 from pathlib import Path
 
-import pytest
-
+from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     DemoFixture,
     PersonaScenarioEntry,
     PersonaSpec,
     ScenarioSpec,
 )
-from dazzle.core.dsl_parser_impl import parse_dsl
 
 
 class TestPersonaSpec:

@@ -63,7 +63,6 @@ class DemoDataGenerator:
         Returns:
             Generated value
         """
-        from dazzle_dnr_back.specs.entity import ScalarType
 
         field_type = field.type
 
@@ -103,7 +102,6 @@ class DemoDataGenerator:
         Returns:
             Generated value or None if no hint matched
         """
-        from dazzle_dnr_back.specs.entity import ScalarType
 
         if not self.faker:
             return None

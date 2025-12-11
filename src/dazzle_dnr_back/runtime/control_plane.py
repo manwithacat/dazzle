@@ -150,10 +150,10 @@ class FeedbackLogger:
         entry = f"""---
 ## [{timestamp}] Feedback #{feedback_id}
 
-**Persona**: {feedback.persona_id or 'N/A'}
-**Scenario**: {feedback.scenario_id or 'N/A'}
-**Route**: `{feedback.route or 'N/A'}`
-**Category**: {feedback.category or 'General'}
+**Persona**: {feedback.persona_id or "N/A"}
+**Scenario**: {feedback.scenario_id or "N/A"}
+**Route**: `{feedback.route or "N/A"}`
+**Category**: {feedback.category or "General"}
 
 ### Message
 > {feedback.message}
@@ -394,9 +394,9 @@ def create_control_plane_routes(
             return {"status": "skipped", "reason": "No database configured"}
 
         # Import demo data generator
-        from dazzle_dnr_back.demo_data import DemoDataGenerator
-
         import uuid
+
+        from dazzle_dnr_back.demo_data import DemoDataGenerator
 
         # First reset
         with db_manager.connection() as conn:
@@ -501,12 +501,14 @@ def create_control_plane_routes(
 
         if request.export_format == "github_issue":
             # Generate GitHub issue
-            title = f"[Dazzle Feedback] Session Export - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            title = (
+                f"[Dazzle Feedback] Session Export - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            )
             body = f"""## Dazzle Bar Session Export
 
-**Persona**: {state['current_persona'] or 'None'}
-**Scenario**: {state['current_scenario'] or 'None'}
-**Timestamp**: {export_data['timestamp']}
+**Persona**: {state["current_persona"] or "None"}
+**Scenario**: {state["current_scenario"] or "None"}
+**Timestamp**: {export_data["timestamp"]}
 
 ---
 
@@ -514,7 +516,7 @@ def create_control_plane_routes(
             if request.include_feedback and "feedback" in export_data:
                 body += f"""### Feedback Log
 
-{export_data['feedback']}
+{export_data["feedback"]}
 
 """
 
