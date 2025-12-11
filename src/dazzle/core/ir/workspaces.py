@@ -23,6 +23,8 @@ class DisplayMode(str, Enum):
     TIMELINE = "timeline"
     MAP = "map"
     DETAIL = "detail"  # v0.3.1: Single item detail view
+    SUMMARY = "summary"  # v0.9.5: Metrics/KPI summary cards
+    METRICS = "metrics"  # v0.9.5: Alias for summary
 
 
 class WorkspaceRegion(BaseModel):
@@ -34,7 +36,7 @@ class WorkspaceRegion(BaseModel):
 
     Attributes:
         name: Region identifier
-        source: Entity or surface name to source data from
+        source: Entity or surface name to source data from (optional for aggregate-only regions)
         filter: Optional filter expression
         sort: Optional sort specification
         limit: Maximum records to display
@@ -43,10 +45,12 @@ class WorkspaceRegion(BaseModel):
         empty_message: Message when no data
         group_by: Field to group data by for aggregation
         aggregates: Named aggregate expressions
+
+    v0.9.5: source is now optional for aggregate-only metric regions
     """
 
     name: str
-    source: str  # Entity or surface name
+    source: str | None = None  # Entity or surface name (optional for aggregate-only)
     filter: ConditionExpr | None = None
     sort: list[SortSpec] = Field(default_factory=list)
     limit: int | None = Field(None, ge=1, le=1000)

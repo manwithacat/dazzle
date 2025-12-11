@@ -226,10 +226,12 @@ class WorkspaceParserMixin:
 
         self.expect(TokenType.DEDENT)
 
-        if source is None:
+        # v0.9.5: Allow aggregate-only regions without source
+        # Traditional regions require source, but pure metric regions don't
+        if source is None and not aggregates:
             token = self.current_token()
             raise make_parse_error(
-                f"Workspace region '{name}' requires 'source:'",
+                f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
                 self.file,
                 token.line,
                 token.column,
