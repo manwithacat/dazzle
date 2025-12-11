@@ -142,11 +142,13 @@ def lookup_inference(
             break
         phrase = mapping.get("phrase", "").lower()
         if phrase in query_lower or any(w in phrase for w in query_words):
-            all_suggestions.append({
-                "type": "syntax",
-                "phrase": mapping.get("phrase"),
-                "use": mapping.get("maps_to"),
-            })
+            all_suggestions.append(
+                {
+                    "type": "syntax",
+                    "phrase": mapping.get("phrase"),
+                    "use": mapping.get("maps_to"),
+                }
+            )
             matches += 1
 
     # Search domain entities - pre-built entity templates
@@ -200,7 +202,9 @@ def lookup_inference(
 
     # Add hint if no matches
     if not all_suggestions:
-        results["hint"] = "No patterns matched. Try keywords like: upload, person, status, assigned, created by"
+        results["hint"] = (
+            "No patterns matched. Try keywords like: upload, person, status, assigned, created by"
+        )
 
     return results
 
@@ -278,9 +282,15 @@ def get_pattern_by_id(pattern_id: str) -> dict[str, Any] | None:
     kb = _load_inference_kb()
 
     # Search all pattern categories
-    for category in ["field_patterns", "entity_archetypes", "relationship_patterns",
-                     "surface_inference", "workspace_inference", "domain_entities",
-                     "workflow_templates"]:
+    for category in [
+        "field_patterns",
+        "entity_archetypes",
+        "relationship_patterns",
+        "surface_inference",
+        "workspace_inference",
+        "domain_entities",
+        "workflow_templates",
+    ]:
         for pattern in kb.get(category, []):
             if pattern.get("id") == pattern_id:
                 return {

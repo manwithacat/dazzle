@@ -19,9 +19,7 @@ from dazzle.core.ir import (
 )
 
 
-def select_stage(
-    workspace: WorkspaceLayout, persona: PersonaLayout | None = None
-) -> Stage:
+def select_stage(workspace: WorkspaceLayout, persona: PersonaLayout | None = None) -> Stage:
     """
     Select layout stage based on workspace characteristics.
 
@@ -360,9 +358,7 @@ def explain_stage_selection(
         )
     else:
         scores.append(
-            StageScore(
-                Stage.MONITOR_WALL, 0.5, f"Default fallback ({signal_count} signals)"
-            )
+            StageScore(Stage.MONITOR_WALL, 0.5, f"Default fallback ({signal_count} signals)")
         )
 
     # Sort by score descending

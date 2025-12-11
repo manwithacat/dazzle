@@ -264,7 +264,7 @@ def main():
         output_dir = docs_examples_dir / example_name / "screenshots"
 
         # Start server
-        print(f"  Starting DNR server...")
+        print("  Starting DNR server...")
         server_proc = subprocess.Popen(
             ["dazzle", "dnr", "serve", "--test-mode"],
             cwd=str(example_path),
@@ -280,11 +280,11 @@ def main():
 
             # Seed data
             if config.get("seed"):
-                print(f"  Seeding test data...")
+                print("  Seeding test data...")
                 seed_data(config["seed"])
 
             # Capture screenshots
-            print(f"  Capturing screenshots...")
+            print("  Capturing screenshots...")
             screenshots = capture_screenshots(example_name, config, output_dir)
             print(f"  Captured {len(screenshots)} screenshots")
 

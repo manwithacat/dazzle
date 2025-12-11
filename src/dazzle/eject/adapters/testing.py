@@ -353,9 +353,7 @@ class Test{entity.name}Validation:
         result = GeneratorResult()
 
         # Find entities with state machines
-        entities_with_states = [
-            e for e in self.spec.domain.entities if e.has_state_machine
-        ]
+        entities_with_states = [e for e in self.spec.domain.entities if e.has_state_machine]
 
         test_cases = []
         for entity in entities_with_states:

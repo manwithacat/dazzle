@@ -32,8 +32,9 @@ def show_version():
 
 def lookup_term(term: str):
     """Test looking up a concept."""
-    from dazzle.mcp.semantics import lookup_concept
     import json
+
+    from dazzle.mcp.semantics import lookup_concept
 
     result = lookup_concept(term)
     print(json.dumps(result, indent=2))

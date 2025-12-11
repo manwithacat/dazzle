@@ -5,8 +5,6 @@ Tests validation of entities, surfaces, experiences, services, and UX specs
 for semantic correctness.
 """
 
-import pytest
-
 from dazzle.core import ir
 from dazzle.core.validator import (
     extended_lint,
@@ -16,9 +14,7 @@ from dazzle.core.validator import (
     validate_integrations,
     validate_services,
     validate_surfaces,
-    validate_ux_specs,
 )
-
 
 # =============================================================================
 # Entity Validation Tests

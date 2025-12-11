@@ -156,9 +156,7 @@ def _calculate_surface_load(surface: MutableSurface, all_signals: list[LayoutSig
     return total
 
 
-def _finalize_surfaces(
-    surfaces: list[MutableSurface], stage: Stage
-) -> list[LayoutSurface]:
+def _finalize_surfaces(surfaces: list[MutableSurface], stage: Stage) -> list[LayoutSurface]:
     """Convert mutable surface dicts to immutable LayoutSurface instances."""
     return [
         LayoutSurface(

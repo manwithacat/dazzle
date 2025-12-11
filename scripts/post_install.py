@@ -58,7 +58,7 @@ def main() -> int:
             return 1
 
     except ImportError as e:
-        print(f"Error: DAZZLE not found. Is it installed?")
+        print("Error: DAZZLE not found. Is it installed?")
         print(f"Details: {e}")
         print()
         print("Install DAZZLE first:")

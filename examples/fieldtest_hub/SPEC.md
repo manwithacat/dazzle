@@ -1,8 +1,8 @@
 
 # FieldTest Hub – Product Specification
 
-**Project Type**: Distributed beta testing + product quality platform  
-**Target Users**: Hardware founders, product managers, QA engineers, beta testers  
+**Project Type**: Distributed beta testing + product quality platform
+**Target Users**: Hardware founders, product managers, QA engineers, beta testers
 **Deployment**: Multi-tenant app for startups and hardware teams
 
 ---

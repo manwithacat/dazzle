@@ -66,6 +66,11 @@ jobs:
       run: |
         ruff format --check src/ tests/
 
+    - name: Run bandit security check
+      run: |
+        pip install bandit[toml]
+        bandit -c pyproject.toml -r src/
+
     - name: Check DSL files (strict mode)
       run: |
         for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do

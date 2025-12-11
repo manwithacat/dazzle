@@ -84,19 +84,19 @@ persona ops_engineer "Operations Engineer":
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
   stage: "command_center"
-  
+
   # Alert Feed - Shows active alerts
   active_alerts:
     source: Alert
     filter: acknowledged = false
     sort: severity desc, triggered_at desc
     limit: 20
-  
+
   # System Status Grid
   system_status:
     source: System
     sort: status asc, name asc
-  
+
   # Health Summary
   health_summary:
     source: System
@@ -118,7 +118,7 @@ workspace command_center "Command Center":
 surface system_list "Systems":
   uses entity System
   mode: list
-  
+
   section main "Monitored Systems":
     field name "Name"
     field service_type "Type"
@@ -129,7 +129,7 @@ surface system_list "Systems":
 surface system_detail "System Detail":
   uses entity System
   mode: view
-  
+
   section main "System Details":
     field name "Name"
     field service_type "Type"
@@ -143,7 +143,7 @@ surface system_detail "System Detail":
 surface alert_list "Alerts":
   uses entity Alert
   mode: list
-  
+
   section main "Active Alerts":
     field system "System"
     field severity "Severity"
@@ -154,7 +154,7 @@ surface alert_list "Alerts":
 surface alert_ack "Acknowledge Alert":
   uses entity Alert
   mode: edit
-  
+
   section main "Acknowledge":
     field acknowledged "Acknowledged"
     field acknowledged_by "Acknowledged By"

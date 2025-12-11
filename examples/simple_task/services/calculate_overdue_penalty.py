@@ -11,7 +11,6 @@
 #   - Returns 0 if task is not overdue.
 # ==========================================================================
 
-from datetime import date
 from typing import TypedDict
 
 

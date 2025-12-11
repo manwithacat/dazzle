@@ -63,11 +63,29 @@ repos:
         exclude: \.test\.js$
         pass_filenames: true
 
+      - id: js-typecheck
+        name: js-typecheck
+        entry: npm run typecheck
+        language: system
+        files: ^src/dazzle_dnr_ui/runtime/static/js/.*\.js$
+        pass_filenames: false
+
       - id: js-tests
         name: js-tests
         entry: npx vitest run
         language: system
         files: ^src/dazzle_dnr_ui/runtime/static/js/.*\.js$
         pass_filenames: false
+
+  # DSL validation
+  - repo: local
+    hooks:
+      - id: dsl-validate
+        name: dsl-validate
+        entry: bash -c 'exit_code=0; for f in "$@"; do dir=$(dirname "$f"); while [ "$dir" != "." ] && [ ! -f "$dir/dsl/app.dsl" ]; do dir=$(dirname "$dir"); done; if [ -f "$dir/dsl/app.dsl" ]; then (cd "$dir" && python -m dazzle validate) || exit_code=1; fi; done; exit $exit_code' --
+        language: system
+        files: \.dsl$
+        exclude: (templates/|_archive/)
+        pass_filenames: true
 
 # Configuration for specific hooks can be added to pyproject.toml

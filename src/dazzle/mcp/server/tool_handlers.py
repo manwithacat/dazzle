@@ -574,10 +574,12 @@ def lookup_inference_handler(args: dict[str, Any]) -> str:
 
     query = args.get("query")
     if not query:
-        return json.dumps({
-            "error": "Either 'query' parameter or 'list_all: true' is required",
-            "hint": "Use 'query' with keywords from your SPEC, or 'list_all: true' to see trigger keywords",
-        })
+        return json.dumps(
+            {
+                "error": "Either 'query' parameter or 'list_all: true' is required",
+                "hint": "Use 'query' with keywords from your SPEC, or 'list_all: true' to see trigger keywords",
+            }
+        )
 
     detail = args.get("detail", "minimal")
     if detail not in ("minimal", "full"):

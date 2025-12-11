@@ -77,7 +77,7 @@ class ReactAdapter(FrontendAdapter):
         """Generate package.json."""
         result = GeneratorResult()
 
-        content = dedent(f'''
+        content = dedent(f"""
             {{
               "name": "{self.spec.name}-frontend",
               "version": "{self.spec.version}",
@@ -109,7 +109,7 @@ class ReactAdapter(FrontendAdapter):
                 "@typescript-eslint/parser": "^6.13.0"
               }}
             }}
-        ''').strip()
+        """).strip()
 
         path = self.frontend_dir / "package.json"
         self._write_file(path, content)
