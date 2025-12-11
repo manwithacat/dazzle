@@ -9,6 +9,9 @@ recursive-include src/dazzle py.typed *.pyi
 # Include templates
 recursive-include src/dazzle/templates *.dsl *.toml *.md .gitignore
 
+# Include DNR runtime static files (JS, CSS)
+recursive-include src/dazzle_dnr_ui/runtime/static *.js *.css
+
 # Include test data but not test code
 recursive-include tests/fixtures *.dsl *.toml
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.8.8"
+version = "0.8.9"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -84,6 +84,8 @@ namespaces = false
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
 "dazzle.examples" = ["**/*"]
+# DNR UI runtime static files (JS, CSS)
+"dazzle_dnr_ui.runtime.static" = ["**/*.js", "**/*.css"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

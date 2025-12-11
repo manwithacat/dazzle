@@ -81,11 +81,18 @@ Output includes:
     )
 
     if (!result.success) {
-      return error(
-        'BUILD_FAILED',
-        result.error || 'Build failed',
-        'Check the build logs for details'
-      )
+      // Extract actionable hint from error message
+      const errorMsg = result.error || 'Build failed'
+      let hint = 'Run `dazzle check` to validate the project'
+
+      // Provide specific hints for common errors
+      if (errorMsg.includes('Static file not found')) {
+        hint = 'This may be a packaging issue. Try reinstalling: pip install --force-reinstall dazzle'
+      } else if (errorMsg.includes('ImportError') || errorMsg.includes('ModuleNotFoundError')) {
+        hint = 'Missing dependency. Ensure dazzle_dnr_ui is installed: pip install dazzle[dnr]'
+      }
+
+      return error('BUILD_FAILED', errorMsg, hint)
     }
 
     progress({ type: 'progress', step: 3, total: 4, message: 'Building frontend...' }, ctx.output)
