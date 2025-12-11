@@ -72,7 +72,7 @@ class WorkspaceParserMixin:
         self.expect(TokenType.INDENT)
 
         purpose = None
-        engine_hint = None
+        stage = None
         regions: list[ir.WorkspaceRegion] = []
         ux_spec = None
 
@@ -88,11 +88,12 @@ class WorkspaceParserMixin:
                 purpose = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
-            # engine_hint: "archetype_name" (v0.3.1)
-            elif self.match(TokenType.ENGINE_HINT):
+            # stage: "stage_name" (v0.8.0) - preferred
+            # engine_hint: "archetype_name" (v0.3.1) - deprecated, use stage instead
+            elif self.match(TokenType.STAGE) or self.match(TokenType.ENGINE_HINT):
                 self.advance()
                 self.expect(TokenType.COLON)
-                engine_hint = self.expect(TokenType.STRING).value
+                stage = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
             # ux: (optional workspace-level UX)
@@ -113,7 +114,7 @@ class WorkspaceParserMixin:
             name=name,
             title=title,
             purpose=purpose,
-            engine_hint=engine_hint,
+            stage=stage,
             regions=regions,
             ux=ux_spec,
         )

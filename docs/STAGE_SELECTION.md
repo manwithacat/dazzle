@@ -1,14 +1,14 @@
-# Archetype Selection Guide
+# Stage Selection Guide
 
-This guide explains how DAZZLE's semantic UI layout engine selects the optimal archetype for each workspace based on its attention signals.
+This guide explains how DAZZLE's semantic UI layout engine selects the optimal stage for each workspace based on its attention signals.
 
 ## Table of Contents
 - [Overview](#overview)
-- [The 5 Archetypes](#the-5-archetypes)
+- [The 5 Stages](#the-5-stages)
 - [Selection Algorithm](#selection-algorithm)
 - [Signal Weight Calculation](#signal-weight-calculation)
 - [Examples](#examples)
-- [Forcing an Archetype](#forcing-an-archetype)
+- [Forcing an Stage](#forcing-an-stage)
 - [Debugging Selection](#debugging-selection)
 - [Common Patterns](#common-patterns)
 
@@ -16,16 +16,16 @@ This guide explains how DAZZLE's semantic UI layout engine selects the optimal a
 
 ## Overview
 
-The archetype selection algorithm analyzes your workspace's **attention signals** to determine the best UI pattern. Each signal has:
+The stage selection algorithm analyzes your workspace's **attention signals** to determine the best UI pattern. Each signal has:
 - **Kind**: KPI, TABLE, ITEM_LIST, CHART, DETAIL_VIEW, etc.
 - **Weight**: Calculated based on features (filters, aggregates, limits)
 - **Priority**: Implicit ranking based on kind and weight
 
-The algorithm selects the archetype that best matches your signal composition.
+The algorithm selects the stage that best matches your signal composition.
 
 ---
 
-## The 5 Archetypes
+## The 5 Stages
 
 ### 1. FOCUS_METRIC
 **Purpose**: Single dominant metric with minimal context
@@ -147,7 +147,7 @@ The algorithm selects the archetype that best matches your signal composition.
 
 ## Selection Algorithm
 
-The archetype is selected using this priority-based decision tree:
+The stage is selected using this priority-based decision tree:
 
 ```
 1. Check for dominant KPI
@@ -168,36 +168,36 @@ The archetype is selected using this priority-based decision tree:
 ```
 
 ### Selection Code
-Location: `src/dazzle/ui/layout_engine/select_archetype.py`
+Location: `src/dazzle/ui/layout_engine/select_stage.py`
 
 ```python
-def select_archetype(layout: WorkspaceLayout) -> LayoutArchetype:
-    """Select optimal archetype based on attention signals."""
+def select_stage(layout: WorkspaceLayout) -> Stage:
+    """Select optimal stage based on attention signals."""
 
     # Calculate signal weights by kind
     weights = calculate_signal_weights(layout.attention_signals)
 
     # Priority 1: Dominant KPI
     if weights['kpi'] >= 0.7:
-        return LayoutArchetype.FOCUS_METRIC
+        return Stage.FOCUS_METRIC
 
     # Priority 2: Dominant table
     if weights['table'] >= 0.6:
-        return LayoutArchetype.SCANNER_TABLE
+        return Stage.SCANNER_TABLE
 
     # Priority 3: List + detail
     if weights['list'] >= 0.3 and weights['detail'] >= 0.3:
-        return LayoutArchetype.DUAL_PANE_FLOW
+        return Stage.DUAL_PANE_FLOW
 
     # Priority 4: Signal count
     signal_count = len(layout.attention_signals)
     if signal_count >= 9:
-        return LayoutArchetype.COMMAND_CENTER
+        return Stage.COMMAND_CENTER
     if 3 <= signal_count <= 8:
-        return LayoutArchetype.MONITOR_WALL
+        return Stage.MONITOR_WALL
 
     # Default
-    return LayoutArchetype.MONITOR_WALL
+    return Stage.MONITOR_WALL
 ```
 
 ---
@@ -413,14 +413,14 @@ workspace operations "Operations Center":
 
 ---
 
-## Forcing an Archetype
+## Forcing an Stage
 
-You can override automatic selection using `engine_hint`:
+You can override automatic selection using `stage`:
 
 ```dsl
 workspace dashboard "Dashboard":
   purpose: "Custom layout"
-  engine_hint: "dual_pane_flow"  # Force specific archetype
+  stage: "dual_pane_flow"  # Force specific stage
 
   # Your signals...
 ```
@@ -437,20 +437,20 @@ workspace dashboard "Dashboard":
 - Experimentation with different layouts
 - Override when algorithm selects wrong pattern
 
-**Location**: `src/dazzle/core/ir.py:WorkspaceSpec.engine_hint`
+**Location**: `src/dazzle/core/ir.py:WorkspaceSpec.stage`
 
 ---
 
 ## Debugging Selection
 
-### View Selected Archetype
+### View Selected Stage
 
-Use the generated workspace page to see the selected archetype:
+Use the generated workspace page to see the selected stage:
 
 ```typescript
 // src/app/workspace-name/page.tsx
 const layoutPlan: LayoutPlan = {
-  archetype: LayoutArchetype.FOCUS_METRIC,  // ← Selected archetype
+  stage: Stage.FOCUS_METRIC,  // ← Selected stage
   surfaces: [...],
   // ...
 };
@@ -474,10 +474,10 @@ for signal in layout.attention_signals:
 Run the selection algorithm manually:
 
 ```python
-from dazzle.ui.layout_engine.select_archetype import select_archetype
+from dazzle.ui.layout_engine.select_stage import select_stage
 
-archetype = select_archetype(layout)
-print(f"Selected: {archetype.value}")
+stage = select_stage(layout)
+print(f"Selected: {stage.value}")
 ```
 
 ### Common Issues
@@ -492,7 +492,7 @@ print(f"Selected: {archetype.value}")
 
 **Issue**: Expected SCANNER_TABLE but got MONITOR_WALL
 **Cause**: Table weight < 0.6 or multiple signals
-**Fix**: Ensure single table with filters/limit, or use `engine_hint`
+**Fix**: Ensure single table with filters/limit, or use `stage`
 
 ---
 
@@ -561,11 +561,11 @@ workspace control:
 
 **Key Takeaways**:
 - Signal weight is calculated from features (filters, aggregates, limits)
-- Archetype selection is deterministic and priority-based
-- Use `engine_hint` to override when needed
-- Test with different signal compositions to explore archetypes
+- Stage selection is deterministic and priority-based
+- Use `stage` to override when needed
+- Test with different signal compositions to explore stages
 
 **References**:
-- Code: `src/dazzle/ui/layout_engine/select_archetype.py`
+- Code: `src/dazzle/ui/layout_engine/select_stage.py`
 - Examples: `examples/` directory
-- Tests: `tests/integration/test_archetype_examples.py`
+- Tests: `tests/integration/test_stage_examples.py`

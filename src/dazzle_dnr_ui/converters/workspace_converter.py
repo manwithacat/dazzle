@@ -74,8 +74,8 @@ def _infer_layout_from_workspace(
     """
     regions = workspace.regions
 
-    # If engine_hint is specified, use it to guide layout selection
-    hint = workspace.engine_hint
+    # If stage is specified, use it to guide layout selection
+    hint = workspace.stage
 
     # Find the main component to use from surfaces
     main_component = _get_default_list_component(surfaces, surface_component_map) or "Page"

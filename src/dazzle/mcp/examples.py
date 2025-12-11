@@ -42,7 +42,7 @@ def get_example_metadata() -> dict[str, Any]:
             "name": "contact_manager",
             "path": "examples/contact_manager",
             "title": "Contact Manager",
-            "description": "Multi-entity CRUD with DUAL_PANE_FLOW archetype - list + detail pattern",
+            "description": "Multi-entity CRUD with DUAL_PANE_FLOW stage - list + detail pattern",
             "demonstrates": [
                 "entities",
                 "surfaces",
@@ -53,7 +53,7 @@ def get_example_metadata() -> dict[str, Any]:
             "v0_2_features": [],
             "complexity": "beginner",
             "entities": ["Contact"],
-            "archetype": "DUAL_PANE_FLOW",
+            "stage": "dual_pane_flow",
             "ci_status": "P0",
         },
         "support_tickets": {
@@ -172,7 +172,7 @@ def get_archived_example_metadata() -> dict[str, Any]:
             "v0_2_features": ["workspace", "aggregates"],
             "complexity": "intermediate",
             "entities": ["Service"],
-            "archetype": "FOCUS_METRIC",
+            "stage": "focus_metric",
             "archived": True,
         },
         "inventory_scanner": {

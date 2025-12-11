@@ -146,12 +146,12 @@ class TestArchetypeSelection:
         # With 6 diverse signals and expert persona → COMMAND_CENTER
         assert archetype == LayoutArchetype.COMMAND_CENTER
 
-    def test_select_respects_engine_hint(self):
-        """Test that engine_hint is respected."""
+    def test_select_respects_stage(self):
+        """Test that stage is respected."""
         workspace = WorkspaceLayout(
             id="test",
             label="Test",
-            engine_hint="scanner_table",
+            stage="scanner_table",
             attention_signals=[
                 LayoutSignal(
                     id="kpi1",
@@ -416,7 +416,7 @@ class TestLayoutPlanBuilder:
 
         assert plan.workspace_id == "dashboard"
         assert plan.persona_id is None
-        assert plan.archetype == LayoutArchetype.FOCUS_METRIC
+        assert plan.stage == LayoutArchetype.FOCUS_METRIC
         assert len(plan.surfaces) > 0
         assert len(plan.over_budget_signals) == 0
 
@@ -496,7 +496,7 @@ class TestLayoutPlanBuilder:
         assert "signal_count" in plan.metadata
         assert "total_attention_weight" in plan.metadata
         assert "attention_budget" in plan.metadata
-        assert "archetype_name" in plan.metadata
+        assert "stage_name" in plan.metadata
 
         assert plan.metadata["signal_count"] == 1
         assert plan.metadata["total_attention_weight"] == 0.7
@@ -530,7 +530,7 @@ class TestLayoutPlanBuilder:
 
         # All plans should be identical
         for i in range(1, len(plans)):
-            assert plans[0].archetype == plans[i].archetype
+            assert plans[0].stage == plans[i].stage
             assert len(plans[0].surfaces) == len(plans[i].surfaces)
             assert plans[0].over_budget_signals == plans[i].over_budget_signals
             # Check surface assignments match

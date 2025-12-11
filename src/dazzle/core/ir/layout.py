@@ -117,8 +117,8 @@ class WorkspaceLayout(BaseModel):
         persona_targets: List of persona IDs this workspace is optimized for
         attention_budget: Total attention capacity (1.0 = normal, >1.0 = dense)
         time_horizon: Temporal focus of workspace
-        engine_hint: Optional archetype hint (e.g., "scanner_table")
-        engine_options: Archetype-specific customization options
+        stage: Layout stage hint (e.g., "scanner_table", "dual_pane_flow")
+        stage_options: Stage-specific customization options
             - hero_height: "tall" | "medium" | "compact" (for FOCUS_METRIC)
             - context_columns: int (for FOCUS_METRIC)
             - show_empty_slots: bool
@@ -133,8 +133,8 @@ class WorkspaceLayout(BaseModel):
     persona_targets: list[str] = Field(default_factory=list)
     attention_budget: float = Field(default=1.0, ge=0.0, le=1.5)
     time_horizon: str = "daily"  # realtime, daily, archival
-    engine_hint: str | None = None
-    engine_options: dict[str, Any] = Field(default_factory=dict)
+    stage: str | None = None  # v0.8.0: Renamed from engine_hint
+    stage_options: dict[str, Any] = Field(default_factory=dict)
     attention_signals: list[LayoutSignal] = Field(default_factory=list)
 
     @field_validator("time_horizon")
@@ -188,12 +188,20 @@ class PersonaLayout(BaseModel):
         return v
 
 
-class LayoutArchetype(str, Enum):
+class Stage(str, Enum):
     """
-    Named layout patterns with specific compositional rules.
+    Named layout stages with specific compositional rules.
 
-    Each archetype defines a specific way to organize attention signals
-    into a coherent UI structure.
+    Each stage defines a specific way to organize attention signals
+    into a coherent UI structure. Stages are like theater stages -
+    they provide a layout where your UI components perform.
+
+    Available stages:
+    - FOCUS_METRIC: Spotlight stage - one hero KPI with supporting context
+    - SCANNER_TABLE: Open stage - data-heavy table with filters
+    - DUAL_PANE_FLOW: Split stage - list on one side, detail on the other
+    - MONITOR_WALL: Gallery stage - multiple displays arranged in grid
+    - COMMAND_CENTER: Control room stage - dense expert interface
     """
 
     FOCUS_METRIC = "focus_metric"  # Single dominant KPI/metric
@@ -203,16 +211,20 @@ class LayoutArchetype(str, Enum):
     COMMAND_CENTER = "command_center"  # Dense, expert-focused dashboard
 
 
+# Backward compatibility alias
+LayoutArchetype = Stage
+
+
 class LayoutSurface(BaseModel):
     """
     Named region within a layout where signals are rendered.
 
-    Surfaces are the building blocks of layout archetypes. Each surface
+    Surfaces are the building blocks of layout stages. Each surface
     has a specific purpose and capacity constraints.
 
     Attributes:
         id: Surface identifier (e.g., "primary", "sidebar", "toolbar")
-        archetype: Parent archetype
+        stage: Parent stage
         capacity: Maximum attention weight this surface can hold
         priority: Surface priority for signal allocation
         assigned_signals: List of signal IDs assigned to this surface
@@ -222,7 +234,7 @@ class LayoutSurface(BaseModel):
     model_config = {"frozen": True}
 
     id: str
-    archetype: LayoutArchetype
+    stage: Stage
     capacity: float = Field(default=1.0, ge=0.0)
     priority: int = Field(default=1, ge=1)
     assigned_signals: list[str] = Field(default_factory=list)
@@ -234,13 +246,13 @@ class LayoutPlan(BaseModel):
     Deterministic output of the layout engine.
 
     The layout plan specifies exactly how a workspace should be rendered,
-    including which archetype to use, where each signal appears, and
+    including which stage to use, where each signal appears, and
     any warnings about over-budget situations.
 
     Attributes:
         workspace_id: Source workspace identifier
         persona_id: Target persona identifier (if persona-specific)
-        archetype: Selected layout archetype
+        stage: Selected layout stage
         surfaces: List of surfaces with assigned signals
         over_budget_signals: Signal IDs that couldn't fit
         warnings: Layout warnings (e.g., attention budget exceeded)
@@ -251,7 +263,7 @@ class LayoutPlan(BaseModel):
 
     workspace_id: str
     persona_id: str | None = None
-    archetype: LayoutArchetype
+    stage: Stage
     surfaces: list[LayoutSurface] = Field(default_factory=list)
     over_budget_signals: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

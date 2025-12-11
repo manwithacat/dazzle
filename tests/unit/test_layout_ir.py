@@ -203,7 +203,7 @@ class TestWorkspaceLayout:
         assert workspace.persona_targets == []
         assert workspace.attention_budget == 1.0  # default
         assert workspace.time_horizon == "daily"  # default
-        assert workspace.engine_hint is None
+        assert workspace.stage is None
         assert workspace.attention_signals == []
 
     def test_workspace_layout_with_signals(self):
@@ -224,14 +224,14 @@ class TestWorkspaceLayout:
             persona_targets=["admin", "manager"],
             attention_budget=1.2,
             time_horizon="realtime",
-            engine_hint="monitor_wall",
+            stage="monitor_wall",
             attention_signals=signals,
         )
 
         assert workspace.persona_targets == ["admin", "manager"]
         assert workspace.attention_budget == 1.2
         assert workspace.time_horizon == "realtime"
-        assert workspace.engine_hint == "monitor_wall"
+        assert workspace.stage == "monitor_wall"
         assert len(workspace.attention_signals) == 2
 
     def test_attention_budget_validation(self):
@@ -328,10 +328,10 @@ class TestLayoutSurface:
 
     def test_layout_surface_creation(self):
         """Test creating a basic layout surface."""
-        surface = LayoutSurface(id="primary", archetype=LayoutArchetype.SCANNER_TABLE)
+        surface = LayoutSurface(id="primary", stage=LayoutArchetype.SCANNER_TABLE)
 
         assert surface.id == "primary"
-        assert surface.archetype == LayoutArchetype.SCANNER_TABLE
+        assert surface.stage == LayoutArchetype.SCANNER_TABLE
         assert surface.capacity == 1.0  # default
         assert surface.priority == 1  # default
         assert surface.assigned_signals == []
@@ -341,7 +341,7 @@ class TestLayoutSurface:
         """Test surface with assigned signals."""
         surface = LayoutSurface(
             id="sidebar",
-            archetype=LayoutArchetype.MONITOR_WALL,
+            stage=LayoutArchetype.MONITOR_WALL,
             capacity=0.5,
             priority=2,
             assigned_signals=["signal1", "signal2"],
@@ -356,26 +356,26 @@ class TestLayoutSurface:
     def test_capacity_validation(self):
         """Test capacity must be >= 0.0."""
         # Valid capacities
-        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
-        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
+        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=0.0)
+        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=2.0)
 
         # Invalid capacity
         with pytest.raises(ValidationError):
-            LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
+            LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, capacity=-0.1)
 
     def test_priority_validation(self):
         """Test priority must be >= 1."""
         # Valid priorities
-        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, priority=1)
-        LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, priority=10)
+        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=1)
+        LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=10)
 
         # Invalid priority
         with pytest.raises(ValidationError):
-            LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC, priority=0)
+            LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC, priority=0)
 
     def test_immutability(self):
         """Test that LayoutSurface is immutable."""
-        surface = LayoutSurface(id="test", archetype=LayoutArchetype.FOCUS_METRIC)
+        surface = LayoutSurface(id="test", stage=LayoutArchetype.FOCUS_METRIC)
 
         with pytest.raises((ValidationError, AttributeError)):
             surface.capacity = 2.0
@@ -386,11 +386,11 @@ class TestLayoutPlan:
 
     def test_layout_plan_creation(self):
         """Test creating a basic layout plan."""
-        plan = LayoutPlan(workspace_id="dashboard", archetype=LayoutArchetype.MONITOR_WALL)
+        plan = LayoutPlan(workspace_id="dashboard", stage=LayoutArchetype.MONITOR_WALL)
 
         assert plan.workspace_id == "dashboard"
         assert plan.persona_id is None
-        assert plan.archetype == LayoutArchetype.MONITOR_WALL
+        assert plan.stage == LayoutArchetype.MONITOR_WALL
         assert plan.surfaces == []
         assert plan.over_budget_signals == []
         assert plan.warnings == []
@@ -401,12 +401,12 @@ class TestLayoutPlan:
         surfaces = [
             LayoutSurface(
                 id="primary",
-                archetype=LayoutArchetype.MONITOR_WALL,
+                stage=LayoutArchetype.MONITOR_WALL,
                 assigned_signals=["signal1"],
             ),
             LayoutSurface(
                 id="sidebar",
-                archetype=LayoutArchetype.MONITOR_WALL,
+                stage=LayoutArchetype.MONITOR_WALL,
                 assigned_signals=["signal2"],
             ),
         ]
@@ -414,7 +414,7 @@ class TestLayoutPlan:
         plan = LayoutPlan(
             workspace_id="dashboard",
             persona_id="admin",
-            archetype=LayoutArchetype.MONITOR_WALL,
+            stage=LayoutArchetype.MONITOR_WALL,
             surfaces=surfaces,
             over_budget_signals=["signal3"],
             warnings=["Attention budget exceeded by 0.2"],
@@ -429,10 +429,10 @@ class TestLayoutPlan:
 
     def test_immutability(self):
         """Test that LayoutPlan is immutable."""
-        plan = LayoutPlan(workspace_id="test", archetype=LayoutArchetype.FOCUS_METRIC)
+        plan = LayoutPlan(workspace_id="test", stage=LayoutArchetype.FOCUS_METRIC)
 
         with pytest.raises((ValidationError, AttributeError)):
-            plan.archetype = LayoutArchetype.SCANNER_TABLE
+            plan.stage = LayoutArchetype.SCANNER_TABLE
 
 
 class TestLayoutArchetype:

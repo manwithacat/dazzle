@@ -7,7 +7,7 @@ and priority rules. This is the core of the layout planning process.
 
 from typing import TypedDict
 
-from dazzle.core.ir import LayoutArchetype, LayoutSignal, LayoutSurface, WorkspaceLayout
+from dazzle.core.ir import LayoutSignal, LayoutSurface, Stage, WorkspaceLayout
 from dazzle.ui.layout_engine.archetypes import ArchetypeDefinition
 
 
@@ -102,7 +102,7 @@ def _create_empty_surfaces(archetype_def: ArchetypeDefinition) -> list[LayoutSur
     return [
         LayoutSurface(
             id=surface_def.id,
-            archetype=archetype_def.archetype,
+            stage=archetype_def.archetype,
             capacity=surface_def.capacity,
             priority=surface_def.priority,
             assigned_signals=[],
@@ -157,13 +157,13 @@ def _calculate_surface_load(surface: MutableSurface, all_signals: list[LayoutSig
 
 
 def _finalize_surfaces(
-    surfaces: list[MutableSurface], archetype: LayoutArchetype
+    surfaces: list[MutableSurface], stage: Stage
 ) -> list[LayoutSurface]:
     """Convert mutable surface dicts to immutable LayoutSurface instances."""
     return [
         LayoutSurface(
             id=s["id"],
-            archetype=archetype,
+            stage=stage,
             capacity=s["capacity"],
             priority=s["priority"],
             assigned_signals=s["assigned_signals"],

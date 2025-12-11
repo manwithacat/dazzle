@@ -20,7 +20,8 @@ from dazzle.core.patterns import detect_crud_patterns, detect_integration_patter
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.dnr_tools_impl import set_backend_spec
 from dazzle.mcp.examples import search_examples
-from dazzle.mcp.semantics import lookup_concept
+from dazzle.mcp.inference import list_all_patterns, lookup_inference
+from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 
 from .state import (
     get_active_project,
@@ -560,6 +561,81 @@ def get_workflow_guide_handler(args: dict[str, Any]) -> str:
         return json.dumps({"error": "workflow parameter required"})
 
     result = get_workflow_guide(workflow)
+    return json.dumps(result, indent=2)
+
+
+def lookup_inference_handler(args: dict[str, Any]) -> str:
+    """Search the inference knowledge base for DSL generation patterns."""
+    list_all = args.get("list_all", False)
+
+    if list_all:
+        result = list_all_patterns()
+        return json.dumps(result, indent=2)
+
+    query = args.get("query")
+    if not query:
+        return json.dumps({
+            "error": "Either 'query' parameter or 'list_all: true' is required",
+            "hint": "Use 'query' with keywords from your SPEC, or 'list_all: true' to see trigger keywords",
+        })
+
+    detail = args.get("detail", "minimal")
+    if detail not in ("minimal", "full"):
+        detail = "minimal"
+
+    result = lookup_inference(query, detail=detail)
+    return json.dumps(result, indent=2)
+
+
+# ============================================================================
+# Internal/Development Tools
+# ============================================================================
+
+
+def get_mcp_status_handler(args: dict[str, Any]) -> str:
+    """Get MCP server status and optionally reload modules."""
+    import importlib
+
+    reload_requested = args.get("reload", False)
+    result: dict[str, Any] = {
+        "mode": "dev" if is_dev_mode() else "normal",
+        "project_root": str(get_project_root()),
+    }
+
+    # Get current version info
+    version_info = get_mcp_version()
+    result["semantics_version"] = version_info
+
+    if reload_requested:
+        if not is_dev_mode():
+            result["reload"] = "skipped - only available in dev mode"
+        else:
+            # Reload the semantics module to pick up code changes
+            try:
+                import dazzle.mcp.semantics as semantics_module
+
+                importlib.reload(semantics_module)
+
+                # Re-import the functions we need
+                from dazzle.mcp.semantics import get_mcp_version as new_get_version
+
+                new_version_info = new_get_version()
+                result["reload"] = "success"
+                result["new_semantics_version"] = new_version_info
+
+                # Update lookup_concept to use reloaded module
+                # This requires updating the global reference
+                global lookup_concept
+                from dazzle.mcp.semantics import lookup_concept
+
+            except Exception as e:
+                result["reload"] = f"failed: {e}"
+
+    # Add active project info in dev mode
+    if is_dev_mode():
+        result["active_project"] = get_active_project()
+        result["available_projects"] = list(get_available_projects().keys())
+
     return json.dumps(result, indent=2)
 
 

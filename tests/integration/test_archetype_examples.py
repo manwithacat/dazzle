@@ -58,8 +58,8 @@ class TestOpsDashboardArchetype:
         layout = convert_workspace_to_layout(workspace_spec)
         plan = build_layout_plan(layout)
 
-        # Should select COMMAND_CENTER due to engine_hint
-        assert plan.archetype.value == "command_center"
+        # Should select COMMAND_CENTER due to stage
+        assert plan.stage.value == "command_center"
 
         # Verify it has the expected surfaces
         surface_ids = [s.id for s in plan.surfaces]
@@ -98,7 +98,7 @@ class TestDeterministicGeneration:
         plan2 = build_layout_plan(layout2)
 
         # Archetypes should match
-        assert plan1.archetype == plan2.archetype
+        assert plan1.stage == plan2.stage
 
         # Surface count should match
         assert len(plan1.surfaces) == len(plan2.surfaces)
@@ -106,5 +106,5 @@ class TestDeterministicGeneration:
         # Surface allocations should match
         for surf1, surf2 in zip(plan1.surfaces, plan2.surfaces, strict=True):
             assert surf1.id == surf2.id
-            assert surf1.archetype == surf2.archetype
+            assert surf1.stage == surf2.stage
             assert surf1.assigned_signals == surf2.assigned_signals

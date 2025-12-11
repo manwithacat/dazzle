@@ -42,6 +42,7 @@ from .tool_handlers import (
     get_active_project_info,
     get_cli_help_handler,
     get_entities,
+    get_mcp_status_handler,
     get_surfaces,
     get_workflow_guide_handler,
     inspect_entity,
@@ -50,6 +51,7 @@ from .tool_handlers import (
     list_modules,
     list_projects,
     lookup_concept_handler,
+    lookup_inference_handler,
     select_project,
     validate_all_projects,
     validate_dsl,
@@ -102,6 +104,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = get_cli_help_handler(arguments)
     elif name == "get_workflow_guide":
         result = get_workflow_guide_handler(arguments)
+    elif name == "lookup_inference":
+        result = lookup_inference_handler(arguments)
+
+    # Internal/development tools
+    elif name == "get_mcp_status":
+        result = get_mcp_status_handler(arguments)
 
     # DNR tools (always available)
     elif name in DNR_TOOL_NAMES:

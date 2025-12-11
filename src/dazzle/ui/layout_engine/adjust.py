@@ -59,7 +59,7 @@ def adjust_attention_for_persona(
         persona_targets=workspace.persona_targets,
         attention_budget=adjusted_budget,
         time_horizon=workspace.time_horizon,
-        engine_hint=workspace.engine_hint,
+        stage=workspace.stage,
         attention_signals=adjusted_signals,
     )
 

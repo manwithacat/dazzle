@@ -135,7 +135,8 @@ class TokenType(Enum):
     WHERE = "where"
 
     # v0.3.1 keywords
-    ENGINE_HINT = "engine_hint"
+    ENGINE_HINT = "engine_hint"  # Deprecated: use STAGE instead
+    STAGE = "stage"  # v0.8.0: Workspace layout stage (replaces engine_hint)
 
     # v0.5.0 Domain Service Keywords
     INPUT = "input"
@@ -363,7 +364,8 @@ KEYWORDS = {
     "group_by",
     "where",
     # v0.3.1 keywords
-    "engine_hint",
+    "engine_hint",  # Deprecated: use stage instead
+    "stage",
     # Flow/E2E Test keywords (v0.3.2)
     # Note: 'priority', 'high', 'medium', 'low' are NOT keywords
     # because they're commonly used as enum values or field names

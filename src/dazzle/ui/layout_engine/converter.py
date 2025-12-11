@@ -50,9 +50,9 @@ def convert_workspace_to_layout(workspace: WorkspaceSpec) -> WorkspaceLayout:
     # Extract attention signals from regions
     attention_signals = _extract_attention_signals_from_regions(workspace)
 
-    # Extract layout hints from workspace (v0.3.1: engine_hint support)
+    # Extract layout hints from workspace (v0.8.0: stage support)
     attention_budget = 1.0
-    engine_hint = workspace.engine_hint  # Direct from DSL
+    stage = workspace.stage  # Direct from DSL
 
     if workspace.ux:
         # Check for attention signals in UX spec (convert DSL AttentionSignal to LayoutSignal)
@@ -75,7 +75,7 @@ def convert_workspace_to_layout(workspace: WorkspaceSpec) -> WorkspaceLayout:
         persona_targets=[],  # TODO: Extract from UX persona variants
         attention_budget=attention_budget,
         time_horizon="daily",  # Default, could infer from purpose
-        engine_hint=engine_hint,
+        stage=stage,
         attention_signals=attention_signals,
     )
 

@@ -532,8 +532,8 @@ def layout_plan_command(
         for ws in workspaces:
             typer.echo(f"\n📁 Workspace: {ws.name}")
             typer.echo(f"   Title: {ws.title}")
-            if ws.engine_hint:
-                typer.echo(f"   Layout: {ws.engine_hint}")
+            if ws.stage:
+                typer.echo(f"   Stage: {ws.stage}")
             if ws.regions:
                 typer.echo("   Regions:")
                 for region in ws.regions:

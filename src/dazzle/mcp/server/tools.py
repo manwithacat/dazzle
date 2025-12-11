@@ -167,6 +167,49 @@ def get_project_tools() -> list[Tool]:
                 "required": ["workflow"],
             },
         ),
+        Tool(
+            name="lookup_inference",
+            description="Search for DSL generation hints from SPEC keywords. Returns compact suggestions: fields to add, archetypes to apply, syntax mappings. Use when converting SPEC to DSL.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Keywords from SPEC (e.g., 'photo upload', 'created by', 'tester person', 'status fixed')",
+                    },
+                    "detail": {
+                        "type": "string",
+                        "enum": ["minimal", "full"],
+                        "description": "minimal (default): just suggestions. full: include code examples",
+                    },
+                    "list_all": {
+                        "type": "boolean",
+                        "description": "List available trigger keywords instead of searching",
+                    },
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
+def get_internal_tools() -> list[Tool]:
+    """Get internal/development tools for MCP management."""
+    return [
+        Tool(
+            name="get_mcp_status",
+            description="Get MCP server status including semantic index version. Use to verify the server is using the latest code. In dev mode, can reload modules.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "reload": {
+                        "type": "boolean",
+                        "description": "If true, reload the semantics module to pick up code changes (dev mode only)",
+                    }
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -185,5 +228,8 @@ def get_all_tools() -> list[Tool]:
 
     # Add DNR tools (always available)
     tools.extend(get_dnr_tools())
+
+    # Add internal tools (always available, but some features dev-only)
+    tools.extend(get_internal_tools())
 
     return tools

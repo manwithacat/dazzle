@@ -1,5 +1,5 @@
 # DAZZLE Contact Manager
-# Demonstrates v0.7.0 Features + DUAL_PANE_FLOW archetype:
+# Demonstrates v0.7.0 Features + DUAL_PANE_FLOW stage:
 # - Computed fields for derived display values
 # - Invariants for data integrity
 # - Business logic expressed declaratively
@@ -103,7 +103,7 @@ surface contact_edit "Edit Contact":
     purpose: "Update contact information"
 
 # Workspace with list + detail pattern
-# Demonstrates DUAL_PANE_FLOW archetype selection
+# Demonstrates DUAL_PANE_FLOW stage selection
 workspace contacts "Contacts":
   purpose: "Browse contacts and view details"
 
@@ -123,10 +123,10 @@ workspace contacts "Contacts":
     action: contact_edit
     # Weight: 0.5 (base) + 0.2 (detail) = 0.7 (DETAIL_VIEW)
 
-# Archetype Selection:
+# Stage Selection:
 # - list_weight = 0.6 >= 0.3 ✓
 # - detail_weight = 0.7 >= 0.3 ✓
-# → DUAL_PANE_FLOW archetype selected
+# → DUAL_PANE_FLOW stage selected
 #
 # Layout:
 # Desktop: Side-by-side list and detail panes

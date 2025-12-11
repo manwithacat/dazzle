@@ -125,11 +125,12 @@ from .invariant import (
 # Layout Engine
 from .layout import (
     AttentionSignalKind,
-    LayoutArchetype,
+    LayoutArchetype,  # Backward compat alias for Stage
     LayoutPlan,
     LayoutSignal,
     LayoutSurface,
     PersonaLayout,
+    Stage,
     UXLayouts,
     WorkspaceLayout,
 )
@@ -300,7 +301,8 @@ __all__ = [
     "LayoutSignal",
     "WorkspaceLayout",
     "PersonaLayout",
-    "LayoutArchetype",
+    "Stage",
+    "LayoutArchetype",  # Backward compat alias for Stage
     "LayoutSurface",
     "LayoutPlan",
     "UXLayouts",

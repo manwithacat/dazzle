@@ -1,5 +1,5 @@
 """
-Semantic index for DAZZLE DSL v0.2-v0.7.2 concepts.
+Semantic index for DAZZLE DSL v0.2-v0.8.1 concepts.
 
 Provides structured definitions, syntax examples, and relationships
 for all DAZZLE DSL concepts to enable immediate context access for LLMs.
@@ -11,20 +11,36 @@ Version history:
 - v0.7: Business Logic (state machines, invariants, computed fields, access rules)
 - v0.7.1: LLM Cognition (intent, examples, archetypes, relationship semantics)
 - v0.7.2: Ejection Toolchain (standalone code generation, OpenAPI, adapters)
+- v0.8: Workspace Stages (focus_metric, scanner_table, dual_pane_flow, monitor_wall, command_center)
+- v0.8.1: MCP Improvements (aliases, index, section, defaults concepts)
 """
 
 from typing import Any
 
+# MCP Semantic Index version - increment when making changes
+# This allows runtime version checking without full server restart
+MCP_SEMANTICS_VERSION = "0.8.1"
+MCP_SEMANTICS_BUILD = 2  # Increment for each change within a version
+
+
+def get_mcp_version() -> dict[str, Any]:
+    """Get MCP semantic index version information."""
+    return {
+        "version": MCP_SEMANTICS_VERSION,
+        "build": MCP_SEMANTICS_BUILD,
+        "full_version": f"{MCP_SEMANTICS_VERSION}.{MCP_SEMANTICS_BUILD}",
+    }
+
 
 def get_semantic_index() -> dict[str, Any]:
     """
-    Get the complete semantic index for DAZZLE DSL v0.5.
+    Get the complete semantic index for DAZZLE DSL v0.8.1.
 
     Returns a structured dictionary mapping concepts to their definitions,
     syntax, examples, and related concepts.
     """
     return {
-        "version": "0.7.2",
+        "version": "0.8.1",
         "concepts": {
             # ================================================================
             # Core Constructs
@@ -176,8 +192,72 @@ def get_semantic_index() -> dict[str, Any]:
     aggregate:
       total: count(Task)
       done: count(Task where status = done)""",
-                "related": ["persona", "regions", "aggregates", "display_modes"],
+                "related": ["persona", "regions", "aggregates", "display_modes", "stage"],
                 "v0_2_changes": "NEW in v0.2",
+            },
+            "stage": {
+                "category": "Core Construct (v0.8)",
+                "definition": "Layout stage that defines how a workspace's UI components are arranged. Stages are like theater stages - they provide a layout where your UI components perform. Select a stage to control the visual presentation of your workspace.",
+                "syntax": """workspace <name> "<Title>":
+  purpose: "<intent>"
+  stage: "<stage_name>"  # Optional: auto-selected if omitted
+
+# Available stages:
+# - focus_metric: Spotlight - one hero KPI with supporting context
+# - scanner_table: Open stage - data-heavy table with filters
+# - dual_pane_flow: Split stage - list on one side, detail on the other
+# - monitor_wall: Gallery - multiple displays arranged in grid
+# - command_center: Control room - dense expert interface""",
+                "example": """# Explicit stage selection
+workspace ops_center "Operations Center":
+  purpose: "Real-time monitoring and incident response"
+  stage: "command_center"
+
+  alerts:
+    source: Alert
+    filter: is_active = true
+    sort: severity desc
+
+  services:
+    source: Service
+    aggregate:
+      healthy: count(Service where status = healthy)
+
+# Auto-selected stage (DUAL_PANE_FLOW)
+workspace contacts "Contact Manager":
+  purpose: "Browse and view contact details"
+
+  contact_list:
+    source: Contact
+    display: list
+    limit: 20
+
+  contact_detail:
+    source: Contact
+    display: detail""",
+                "stages": {
+                    "focus_metric": "Single hero KPI with supporting data. Use when one metric is the primary focus.",
+                    "scanner_table": "Dense data table with filters. Use for data-heavy views where scanning is primary.",
+                    "dual_pane_flow": "List + detail side by side. Use when users browse a list and view details.",
+                    "monitor_wall": "Grid of moderate-importance metrics. Use for dashboards monitoring multiple metrics.",
+                    "command_center": "Dense expert interface. Use for operations centers and expert users.",
+                },
+                "selection_rules": [
+                    "If stage is specified, that stage is used",
+                    "If workspace has one dominant KPI signal (weight > 0.7), FOCUS_METRIC is selected",
+                    "If workspace has strong table presence (weight > 0.6), SCANNER_TABLE is selected",
+                    "If workspace has list + detail signals, DUAL_PANE_FLOW is selected",
+                    "If workspace has 5+ signals for expert persona, COMMAND_CENTER is selected",
+                    "Otherwise MONITOR_WALL is the default for multiple signals",
+                ],
+                "related": ["workspace", "persona", "attention_signals"],
+                "v0_8_changes": "NEW in v0.8 - replaces engine_hint",
+                "best_practices": [
+                    "Let auto-selection work for most cases",
+                    "Use explicit stage: for ops dashboards (command_center) or specific layouts",
+                    "Match stage to user needs: novices prefer simpler stages, experts prefer command_center",
+                    "Consider persona when choosing stage - same workspace can use different stages per persona",
+                ],
             },
             # ================================================================
             # UX Semantic Layer (v0.2)
@@ -499,6 +579,146 @@ entity Customer "Customer":
                 "related": ["entity", "field_types", "archetype"],
                 "v0_2_changes": "No changes from v0.1",
                 "v0_7_1_changes": "Added has_many, has_one, embeds, belongs_to with cascade/restrict/nullify/readonly behaviors",
+            },
+            "index": {
+                "category": "Entity Performance",
+                "definition": "Database index for query optimization. Improves performance for filtered and sorted queries. Can be single-column or composite (multi-column).",
+                "syntax": """# Single column index
+index <field_name>
+
+# Composite index (multi-column)
+index <field1>, <field2>, ...
+
+# Place at end of entity definition after fields""",
+                "example": """entity Contact "Contact":
+  id: uuid pk
+  email: email unique required
+  first_name: str(100)
+  last_name: str(100)
+  status: enum[active,inactive]=active
+  created_at: datetime auto_add
+
+  # Single column index for status filtering
+  index status
+
+  # Composite index for name sorting
+  index last_name, first_name
+
+  # Index for date-based queries
+  index created_at""",
+                "best_practices": [
+                    "Index fields used frequently in filters (WHERE clauses)",
+                    "Index fields used in ORDER BY clauses",
+                    "Use composite indexes for multi-column sorts/filters",
+                    "Unique fields are automatically indexed",
+                    "Primary keys are automatically indexed",
+                    "Don't over-index - each index has write overhead",
+                ],
+                "related": ["entity", "field_types"],
+                "v0_7_changes": "Enhanced documentation in v0.7",
+            },
+            "section": {
+                "category": "Surface Layout",
+                "definition": "Groups fields within a surface for visual organization. Sections provide logical grouping and can have display labels. Use to organize complex forms and detail views.",
+                "syntax": """section <section_name> ["Display Label"]:
+  field <field_name> ["Field Label"]
+  field <field_name>
+  ...""",
+                "example": """surface contact_detail "Contact Details":
+  uses entity Contact
+  mode: view
+
+  section main "Contact Information":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email Address"
+    field phone "Phone"
+
+  section address "Address":
+    field street
+    field city
+    field state
+    field zip_code "ZIP Code"
+
+  section meta "Record Info":
+    field created_at "Created"
+    field updated_at "Last Updated"
+    field created_by "Created By"
+
+surface contact_edit "Edit Contact":
+  uses entity Contact
+  mode: edit
+
+  section main:
+    field first_name
+    field last_name
+    field email
+
+  section address:
+    field street
+    field city
+    field state
+    field zip_code""",
+                "best_practices": [
+                    "Use descriptive section names (main, address, meta)",
+                    "Group related fields together logically",
+                    "Use display labels for user-facing section headers",
+                    "Keep forms focused - don't show all fields in edit mode",
+                    "Use 'main' section for primary/required fields",
+                ],
+                "related": ["surface", "field", "surface_modes"],
+                "v0_1_feature": True,
+            },
+            "defaults": {
+                "category": "UX Semantic Layer (v0.2)",
+                "definition": "Default field values for a persona in create/edit forms. Pre-populates fields based on the user's role or context.",
+                "syntax": """ux:
+  for <persona_name>:
+    defaults:
+      <field>: <value>
+      <field>: current_user
+      <field>: current_user.<attribute>""",
+                "example": """surface ticket_create "New Ticket":
+  uses entity Ticket
+  mode: create
+
+  section main:
+    field title
+    field description
+    field priority
+
+  ux:
+    purpose: "Create new support ticket"
+
+    for customer:
+      defaults:
+        created_by: current_user
+        status: open
+        priority: medium
+
+    for agent:
+      defaults:
+        created_by: current_user
+        status: open
+        assigned_to: current_user
+
+surface order_create "New Order":
+  uses entity Order
+  mode: create
+
+  ux:
+    for sales_rep:
+      defaults:
+        created_by: current_user
+        status: draft
+        region: current_user.region""",
+                "values": {
+                    "<literal>": "Static value (e.g., open, medium, draft)",
+                    "current_user": "The logged-in user's ID",
+                    "current_user.<attr>": "Attribute of logged-in user (e.g., current_user.department)",
+                },
+                "related": ["persona", "ux_block", "surface"],
+                "v0_2_changes": "NEW in v0.2",
             },
             # ================================================================
             # Authentication (DNR Runtime)
@@ -2286,6 +2506,16 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
 
     # Normalize term
     term_normalized = term.lower().replace(" ", "_").replace("-", "_")
+
+    # Alias mapping for common term variations
+    aliases = {
+        "transitions": "state_machine",
+        "transition": "state_machine",
+        "access": "access_rules",
+        "computed": "computed_field",
+        "computed_fields": "computed_field",
+    }
+    term_normalized = aliases.get(term_normalized, term_normalized)
 
     # Direct lookup in concepts
     if term_normalized in index["concepts"]:

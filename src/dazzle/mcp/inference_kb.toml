@@ -1,0 +1,1667 @@
+# DAZZLE Inference Knowledge Base
+#
+# This file contains patterns and heuristics to help LLMs generate
+# more complete DSL from natural language specifications.
+#
+# Version: 0.2.0
+#
+# Structure:
+# - field_patterns: Suggest fields based on SPEC language
+# - entity_archetypes: Common entity patterns (Person, Order, etc.)
+# - domain_entities: Pre-defined entities for common verticals
+# - workflow_templates: Reusable state machines
+# - relationship_patterns: How entities relate
+# - spec_language: Direct phrase-to-DSL mappings
+
+[meta]
+version = "0.2.0"
+description = "Comprehensive patterns for DSL generation from natural language specifications"
+
+# =============================================================================
+# FIELD INFERENCE PATTERNS
+# =============================================================================
+# These patterns suggest fields that should be added based on SPEC language
+
+[[field_patterns]]
+id = "status_resolution"
+name = "Status Resolution Field"
+triggers = ["fixed", "resolved", "closed", "completed"]
+context = "enum field with workflow states"
+suggests = "resolution: text"
+rationale = "Workflow states like 'fixed' or 'resolved' typically require an explanation of how the issue was addressed"
+example = """
+# SPEC says: Status - Open, In Progress, Fixed, Closed
+# Add resolution field:
+status: enum[open,in_progress,fixed,closed]=open
+resolution: text  # Required when status is fixed/closed
+invariant: status != fixed or resolution != null
+"""
+
+[[field_patterns]]
+id = "person_email"
+name = "Person Contact Email"
+triggers = ["user", "tester", "employee", "customer", "member", "agent", "person", "staff"]
+context = "entity representing a person"
+suggests = "email: str(255) unique"
+rationale = "Person entities typically need contact information for notifications and identification"
+example = """
+# Entity representing a person should have email:
+entity Tester "Tester":
+  id: uuid pk
+  name: str(200) required
+  email: str(255) required unique  # For notifications and login
+"""
+
+[[field_patterns]]
+id = "upload_url"
+name = "File Upload URL"
+triggers = ["upload", "attachment", "photo", "image", "file", "document", "video", "media"]
+context = "SPEC mentions file uploads"
+suggests = "<name>_url: str(500)"
+rationale = "File uploads are stored as URLs pointing to object storage (S3, etc), not as binary data"
+example = """
+# SPEC says: Photo/Video - optional upload
+# Add URL field:
+photo_url: str(500)  # URL to uploaded file in object storage
+"""
+
+[[field_patterns]]
+id = "created_by_fk"
+name = "Created By Foreign Key"
+triggers = ["created by", "submitted by", "reported by", "opened by", "requested by"]
+context = "SPEC mentions who created/submitted something"
+suggests = "created_by_id: uuid required"
+rationale = "Phrases like 'Created By <Role>' indicate a foreign key to track attribution"
+example = """
+# SPEC says: Created By - Engineer or Manager
+# Add foreign key:
+created_by_id: uuid required  # FK to User/Employee entity
+"""
+
+[[field_patterns]]
+id = "assigned_to_fk"
+name = "Assigned To Foreign Key"
+triggers = ["assigned to", "owned by", "responsible for", "handled by", "managed by"]
+context = "SPEC mentions assignment or ownership"
+suggests = "assigned_to_id: uuid"
+rationale = "Assignment language indicates a foreign key relationship to a person entity"
+example = """
+# SPEC says: Assigned To - optional Tester or Engineer
+# Add nullable foreign key:
+assigned_to_id: uuid  # Nullable - can be unassigned
+"""
+
+[[field_patterns]]
+id = "linked_entity_fk"
+name = "Linked Entity Foreign Key"
+triggers = ["linked to", "related to", "associated with", "belongs to", "part of"]
+context = "SPEC mentions relationship between entities"
+suggests = "<entity>_id: uuid required"
+rationale = "Relationship language indicates a foreign key to another entity"
+example = """
+# SPEC says: Device (required) - linked to device
+# Add foreign key:
+device_id: uuid required  # FK to Device entity
+"""
+
+[[field_patterns]]
+id = "timestamp_auto"
+name = "Automatic Timestamps"
+triggers = ["timestamp", "when", "at what time", "logged at", "recorded at"]
+context = "SPEC mentions automatic time tracking"
+suggests = "datetime auto_add"
+rationale = "Timestamps are typically auto-generated, not manually entered"
+example = """
+# SPEC says: Reported At - timestamp
+# Add auto timestamp:
+reported_at: datetime auto_add  # Auto-set on creation
+"""
+
+[[field_patterns]]
+id = "duration_numeric"
+name = "Duration as Integer"
+triggers = ["duration", "length of time", "how long", "minutes", "hours"]
+context = "SPEC mentions time duration"
+suggests = "duration_minutes: int"
+rationale = "Durations are stored as integers (usually minutes) for easy calculation"
+example = """
+# SPEC says: Duration - in minutes/hours
+# Add integer field:
+duration_minutes: int  # Store in minutes for consistency
+"""
+
+[[field_patterns]]
+id = "boolean_active"
+name = "Active/Inactive Boolean"
+triggers = ["active", "inactive", "enabled", "disabled", "yes/no", "on/off"]
+context = "SPEC mentions binary state"
+suggests = "active: bool=true"
+rationale = "Binary states like Active/Inactive map to boolean fields with sensible defaults"
+example = """
+# SPEC says: Active - Yes/No
+# Add boolean with default:
+active: bool=true  # Default to active
+"""
+
+[[field_patterns]]
+id = "notes_optional"
+name = "Optional Notes Field"
+triggers = ["notes", "comments", "remarks", "description", "details", "optional text"]
+context = "SPEC mentions optional freeform text"
+suggests = "notes: text"
+rationale = "Notes fields are typically optional text without length limits"
+example = """
+# SPEC says: Notes - optional
+# Add text field:
+notes: text  # Optional by default
+"""
+
+# -----------------------------------------------------------------------------
+# Money/Currency Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "money_price"
+name = "Price/Amount Field"
+triggers = ["price", "cost", "amount", "fee", "total", "subtotal", "revenue", "payment", "charge", "rate"]
+context = "SPEC mentions monetary values"
+suggests = "decimal(10,2)"
+rationale = "Monetary values use decimal with 2 decimal places for cents/pence precision"
+example = """
+# SPEC says: Price - product cost
+# Add decimal field:
+price: decimal(10,2) required
+subtotal: decimal(10,2)
+tax_amount: decimal(10,2)
+total: decimal(10,2) required
+"""
+
+[[field_patterns]]
+id = "currency_code"
+name = "Currency Code Field"
+triggers = ["currency", "multi-currency", "foreign currency"]
+context = "SPEC mentions multiple currencies"
+suggests = "currency: str(3)=USD"
+rationale = "Currency codes follow ISO 4217 (3 letters: USD, EUR, GBP)"
+example = """
+# SPEC says: Support multiple currencies
+# Add currency field:
+currency: str(3)=USD  # ISO 4217 code
+amount: decimal(10,2) required
+"""
+
+# -----------------------------------------------------------------------------
+# Address/Location Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "address_full"
+name = "Full Address Fields"
+triggers = ["address", "shipping address", "billing address", "mailing address", "location"]
+context = "SPEC mentions address or location"
+suggests = "street, city, state, postal_code, country"
+rationale = "Addresses typically need multiple fields for proper formatting and filtering"
+example = """
+# SPEC says: Customer address
+# Add address fields:
+street: str(255)
+city: str(100)
+state: str(100)
+postal_code: str(20)
+country: str(100)=USA
+"""
+
+[[field_patterns]]
+id = "coordinates"
+name = "Geographic Coordinates"
+triggers = ["coordinates", "latitude", "longitude", "geo", "map location", "GPS"]
+context = "SPEC mentions geographic coordinates"
+suggests = "latitude: decimal(10,7), longitude: decimal(10,7)"
+rationale = "Geographic coordinates need high precision for accurate mapping"
+example = """
+# SPEC says: Store location coordinates
+# Add coordinate fields:
+latitude: decimal(10,7)
+longitude: decimal(10,7)
+"""
+
+# -----------------------------------------------------------------------------
+# Contact Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "phone_number"
+name = "Phone Number Field"
+triggers = ["phone", "mobile", "telephone", "contact number", "cell", "landline"]
+context = "SPEC mentions phone contact"
+suggests = "phone: str(20)"
+rationale = "Phone numbers stored as strings to preserve formatting and international codes"
+example = """
+# SPEC says: Customer phone number
+# Add phone field:
+phone: str(20)  # Includes country code: +1-555-123-4567
+"""
+
+[[field_patterns]]
+id = "website_url"
+name = "Website/URL Field"
+triggers = ["website", "url", "link", "homepage", "web address"]
+context = "SPEC mentions web links"
+suggests = "website: str(500)"
+rationale = "URLs can be long; use str(500) to accommodate query parameters"
+example = """
+# SPEC says: Company website
+# Add URL field:
+website: str(500)
+"""
+
+# -----------------------------------------------------------------------------
+# Rating/Review Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "star_rating"
+name = "Star Rating Field"
+triggers = ["rating", "score", "stars", "review score", "out of 5"]
+context = "SPEC mentions ratings or reviews"
+suggests = "rating: int with invariant"
+rationale = "Ratings are typically 1-5 integers with validation"
+example = """
+# SPEC says: Product rating (1-5 stars)
+# Add rating field with validation:
+rating: int required
+invariant: rating >= 1 and rating <= 5
+"""
+
+[[field_patterns]]
+id = "percentage"
+name = "Percentage Field"
+triggers = ["percentage", "percent", "rate", "discount", "tax rate", "completion"]
+context = "SPEC mentions percentages"
+suggests = "decimal(5,2) with invariant"
+rationale = "Percentages are decimals 0-100 with validation"
+example = """
+# SPEC says: Discount percentage
+# Add percentage field:
+discount_percent: decimal(5,2)
+invariant: discount_percent >= 0 and discount_percent <= 100
+"""
+
+# -----------------------------------------------------------------------------
+# Quantity/Count Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "quantity_stock"
+name = "Quantity/Stock Field"
+triggers = ["quantity", "count", "stock", "available", "remaining", "inventory", "units"]
+context = "SPEC mentions quantities or inventory"
+suggests = "int with non-negative invariant"
+rationale = "Quantities are non-negative integers"
+example = """
+# SPEC says: Stock quantity
+# Add quantity field:
+quantity: int required
+invariant: quantity >= 0
+"""
+
+[[field_patterns]]
+id = "order_number"
+name = "Order/Reference Number"
+triggers = ["order number", "reference number", "tracking number", "invoice number", "confirmation"]
+context = "SPEC mentions reference numbers"
+suggests = "str(50) unique"
+rationale = "Reference numbers are unique identifiers, often with prefixes like ORD-001"
+example = """
+# SPEC says: Order number
+# Add reference field:
+order_number: str(50) required unique
+"""
+
+# -----------------------------------------------------------------------------
+# Scheduling/Time Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "scheduled_datetime"
+name = "Scheduled Date/Time"
+triggers = ["scheduled", "appointment", "booking", "reservation", "meeting time", "event date"]
+context = "SPEC mentions scheduling"
+suggests = "scheduled_at: datetime"
+rationale = "Scheduled times are user-entered datetimes (not auto-generated)"
+example = """
+# SPEC says: Appointment time
+# Add scheduling fields:
+scheduled_at: datetime required
+duration_minutes: int
+"""
+
+[[field_patterns]]
+id = "date_range"
+name = "Date Range Fields"
+triggers = ["start date", "end date", "from/to", "date range", "period", "validity"]
+context = "SPEC mentions date ranges"
+suggests = "start_date: date, end_date: date"
+rationale = "Date ranges need both start and end with optional validation"
+example = """
+# SPEC says: Contract validity period
+# Add date range:
+start_date: date required
+end_date: date
+invariant: end_date = null or end_date >= start_date
+"""
+
+[[field_patterns]]
+id = "due_date"
+name = "Due Date Field"
+triggers = ["due date", "deadline", "due by", "expires", "expiration"]
+context = "SPEC mentions deadlines"
+suggests = "due_date: date or datetime"
+rationale = "Due dates track when something needs to be completed"
+example = """
+# SPEC says: Payment due date
+# Add due date field:
+due_date: date required
+"""
+
+# -----------------------------------------------------------------------------
+# Priority/Severity Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "priority_level"
+name = "Priority/Urgency Field"
+triggers = ["priority", "urgency", "importance", "criticality"]
+context = "SPEC mentions priority levels"
+suggests = "enum[low,medium,high,critical]"
+rationale = "Priority levels help with triage and sorting"
+example = """
+# SPEC says: Task priority
+# Add priority enum:
+priority: enum[low,medium,high,critical]=medium
+"""
+
+[[field_patterns]]
+id = "severity_level"
+name = "Severity Level Field"
+triggers = ["severity", "impact", "level of impact"]
+context = "SPEC mentions severity"
+suggests = "enum[low,medium,high,critical]"
+rationale = "Severity indicates impact level, often used with priority"
+example = """
+# SPEC says: Issue severity
+# Add severity enum:
+severity: enum[low,medium,high,critical]=medium
+"""
+
+# -----------------------------------------------------------------------------
+# Category/Type Fields
+# -----------------------------------------------------------------------------
+
+[[field_patterns]]
+id = "category_type"
+name = "Category/Type Field"
+triggers = ["category", "type", "kind", "classification", "group"]
+context = "SPEC mentions categorization"
+suggests = "enum field or str for dynamic categories"
+rationale = "Categories help organize and filter items"
+example = """
+# SPEC says: Product category
+# For fixed categories, use enum:
+category: enum[electronics,clothing,food,other]=other
+
+# For dynamic categories, use string or FK:
+category: str(100)
+"""
+
+[[field_patterns]]
+id = "tags_labels"
+name = "Tags/Labels Field"
+triggers = ["tags", "labels", "keywords"]
+context = "SPEC mentions tagging"
+suggests = "text (comma-separated) or junction table"
+rationale = "Tags are often stored as comma-separated text for simplicity"
+example = """
+# SPEC says: Article tags
+# Simple approach - comma-separated:
+tags: text  # "tech, news, featured"
+
+# Better approach - use a Tag entity with junction table
+"""
+
+# =============================================================================
+# ENTITY ARCHETYPES
+# =============================================================================
+# These archetypes suggest common patterns for entity types
+
+[[entity_archetypes]]
+id = "trackable_item"
+name = "Trackable Item"
+description = "An entity that moves through a workflow with status tracking"
+indicators = ["status", "workflow", "lifecycle", "states", "track"]
+common_fields = [
+    "status: enum[...]=initial_state",
+    "created_at: datetime auto_add",
+    "updated_at: datetime auto_update",
+    "created_by_id: uuid",
+]
+common_features = ["transitions (state machine)", "invariants", "indexes on status"]
+example = """
+entity Ticket "Support Ticket":
+  id: uuid pk
+  title: str(200) required
+  status: enum[open,in_progress,resolved,closed]=open
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  transitions:
+    open -> in_progress
+    in_progress -> resolved
+    resolved -> closed
+"""
+
+[[entity_archetypes]]
+id = "person"
+name = "Person Entity"
+description = "An entity representing a human user, employee, customer, etc."
+indicators = ["user", "person", "employee", "customer", "tester", "agent", "member"]
+common_fields = [
+    "name: str(200) required",
+    "email: str(255) required unique",
+    "active: bool=true",
+    "created_at: datetime auto_add",
+]
+common_features = ["access rules for self-service (id = current_user)", "indexes on email"]
+example = """
+entity Tester "Tester":
+  id: uuid pk
+  name: str(200) required
+  email: str(255) required unique
+  active: bool=true
+  created_at: datetime auto_add
+
+  access:
+    read: role(admin) or id = current_user
+    write: role(admin)
+"""
+
+[[entity_archetypes]]
+id = "workflow_item"
+name = "Workflow Item"
+description = "An entity with a multi-stage workflow that requires resolution"
+indicators = ["open", "closed", "fixed", "resolved", "triaged", "verified"]
+common_fields = [
+    "status: enum[...]=open",
+    "resolution: text",
+    "assigned_to_id: uuid",
+]
+common_features = [
+    "transitions with guards",
+    "invariant: resolution required when closed",
+    "computed: days_open",
+]
+example = """
+entity Issue "Issue":
+  status: enum[open,triaged,in_progress,fixed,verified,closed]=open
+  resolution: text
+  assigned_to_id: uuid
+  created_at: datetime auto_add
+
+  days_open: computed days_since(created_at)
+
+  transitions:
+    open -> triaged
+    triaged -> in_progress: requires assigned_to_id
+    in_progress -> fixed: requires resolution
+    fixed -> verified
+    verified -> closed
+
+  invariant: status != fixed or resolution != null
+"""
+
+[[entity_archetypes]]
+id = "audit_record"
+name = "Audit Record"
+description = "An entity that logs events or sessions"
+indicators = ["log", "session", "event", "record", "history", "audit"]
+common_fields = [
+    "logged_at: datetime auto_add",
+    "actor_id: uuid required",
+    "notes: text",
+]
+common_features = ["typically read-only after creation", "indexes on logged_at"]
+example = """
+entity TestSession "Test Session":
+  id: uuid pk
+  device_id: uuid required
+  tester_id: uuid required
+  logged_at: datetime auto_add
+  duration_minutes: int
+  notes: text
+
+  invariant: duration_minutes > 0
+
+  index device_id
+  index tester_id
+  index logged_at
+"""
+
+[[entity_archetypes]]
+id = "versioned_release"
+name = "Versioned Release"
+description = "An entity representing software versions, firmware, or releases"
+indicators = ["version", "release", "firmware", "software", "build"]
+common_fields = [
+    "version: str(50) required unique",
+    "release_notes: text",
+    "release_date: datetime",
+    "status: enum[draft,released,deprecated]=draft",
+]
+common_features = ["transitions for release lifecycle", "invariant: release_notes required when released"]
+example = """
+entity FirmwareRelease "Firmware Release":
+  id: uuid pk
+  version: str(50) required unique
+  release_notes: text
+  release_date: datetime
+  status: enum[draft,released,deprecated]=draft
+
+  transitions:
+    draft -> released: requires release_notes
+    released -> deprecated
+
+  invariant: status != released or release_notes != null
+"""
+
+# =============================================================================
+# RELATIONSHIP PATTERNS
+# =============================================================================
+# These patterns help identify relationships from SPEC language
+
+[[relationship_patterns]]
+id = "one_to_many"
+name = "One-to-Many Relationship"
+triggers = ["has many", "can have multiple", "one X has many Y", "X contains Y"]
+suggests = "Add foreign key on child: parent_id: uuid required"
+rationale = "One-to-many relationships require a FK on the 'many' side pointing to the 'one' side"
+example = """
+# SPEC says: A Device can have many Issue Reports
+# On IssueReport entity:
+device_id: uuid required  # FK to Device
+"""
+
+[[relationship_patterns]]
+id = "many_to_one"
+name = "Many-to-One Reference"
+triggers = ["belongs to", "is owned by", "is part of", "references"]
+suggests = "Add foreign key: <parent>_id: uuid [required]"
+rationale = "Many-to-one relationships are the inverse of one-to-many"
+example = """
+# SPEC says: Issue Report belongs to a Device
+# On IssueReport entity:
+device_id: uuid required
+"""
+
+[[relationship_patterns]]
+id = "optional_assignment"
+name = "Optional Assignment"
+triggers = ["can be assigned", "optionally assigned", "may be owned by"]
+suggests = "Add nullable FK: assigned_<role>_id: uuid"
+rationale = "Optional assignments use nullable foreign keys to allow unassigned state"
+example = """
+# SPEC says: Assigned Tester - optional link
+# On Device entity:
+assigned_tester_id: uuid  # Nullable - device can be unassigned
+"""
+
+# =============================================================================
+# SPEC LANGUAGE MAPPINGS
+# =============================================================================
+# Direct mappings from SPEC phrases to DSL constructs
+
+[[spec_language]]
+phrase = "required"
+maps_to = "required modifier"
+example = "name: str(200) required"
+
+[[spec_language]]
+phrase = "optional"
+maps_to = "no modifier (fields are optional by default)"
+example = "notes: text"
+
+[[spec_language]]
+phrase = "unique"
+maps_to = "unique modifier"
+example = "serial_number: str(100) required unique"
+
+[[spec_language]]
+phrase = "auto-generated"
+maps_to = "uuid pk or auto_add"
+example = "id: uuid pk"
+
+[[spec_language]]
+phrase = "timestamp"
+maps_to = "datetime with auto_add"
+example = "created_at: datetime auto_add"
+
+[[spec_language]]
+phrase = "yes/no"
+maps_to = "bool field"
+example = "active: bool=true"
+
+[[spec_language]]
+phrase = "dropdown"
+maps_to = "enum field"
+example = "status: enum[open,closed]=open"
+
+[[spec_language]]
+phrase = "list of options"
+maps_to = "enum field with values"
+example = "category: enum[a,b,c]=a"
+
+[[spec_language]]
+phrase = "free text"
+maps_to = "text field"
+example = "description: text"
+
+[[spec_language]]
+phrase = "short text"
+maps_to = "str(N) field"
+example = "title: str(200) required"
+
+[[spec_language]]
+phrase = "number"
+maps_to = "int or decimal field"
+example = "quantity: int"
+
+[[spec_language]]
+phrase = "decimal"
+maps_to = "decimal(precision, scale)"
+example = "temperature: decimal(5,2)"
+
+[[spec_language]]
+phrase = "link to"
+maps_to = "uuid foreign key"
+example = "device_id: uuid required"
+
+# =============================================================================
+# SURFACE INFERENCE
+# =============================================================================
+# Patterns for inferring surfaces from SPEC
+
+[[surface_inference]]
+id = "crud_pattern"
+name = "CRUD Surface Set"
+triggers = ["manage", "create", "edit", "view", "list", "dashboard"]
+suggests = [
+    "<entity>_list - mode: list",
+    "<entity>_detail - mode: view",
+    "<entity>_create - mode: create",
+    "<entity>_edit - mode: edit",
+]
+rationale = "Most entities need full CRUD operations for management"
+
+[[surface_inference]]
+id = "readonly_list"
+name = "Read-Only List"
+triggers = ["view only", "read only", "display", "show", "report"]
+suggests = ["<entity>_list - mode: list with read_only: true"]
+rationale = "Some entities are only viewed, not edited directly"
+
+[[surface_inference]]
+id = "quick_entry"
+name = "Quick Entry Form"
+triggers = ["quick", "fast", "rapid", "simple form", "capture"]
+suggests = ["<entity>_create with minimal fields"]
+rationale = "Quick entry forms show only essential fields for fast data capture"
+
+# =============================================================================
+# WORKSPACE INFERENCE
+# =============================================================================
+# Patterns for inferring workspaces from SPEC
+
+[[workspace_inference]]
+id = "role_dashboard"
+name = "Role-Based Dashboard"
+triggers = ["dashboard for", "view for", "portal for", "<role> sees"]
+suggests = "workspace <role>_dashboard with persona-specific regions"
+rationale = "Different user roles typically need different dashboard views"
+example = """
+# SPEC says: Engineers see all devices and issues
+workspace engineering_dashboard "Engineering Dashboard":
+  purpose: "Comprehensive oversight for engineers"
+
+  all_issues:
+    source: Issue
+    sort: severity desc
+    action: issue_detail
+
+  ux:
+    for engineer:
+      scope: all
+"""
+
+[[workspace_inference]]
+id = "status_overview"
+name = "Status Overview Dashboard"
+triggers = ["overview", "summary", "metrics", "KPIs", "at a glance"]
+suggests = "workspace with metrics aggregate region"
+rationale = "Overview dashboards aggregate data into high-level metrics"
+example = """
+workspace overview "Overview":
+  metrics:
+    source: Issue
+    aggregate:
+      total: count(Issue)
+      critical: count(Issue where severity = critical)
+      open: count(Issue where status = open)
+"""
+
+# =============================================================================
+# DOMAIN-SPECIFIC ENTITY TEMPLATES
+# =============================================================================
+# Pre-built entity patterns for common business verticals
+
+# -----------------------------------------------------------------------------
+# E-commerce Domain
+# -----------------------------------------------------------------------------
+
+[[domain_entities]]
+id = "ecommerce_product"
+domain = "e-commerce"
+name = "Product"
+description = "A product or item for sale"
+triggers = ["product", "item", "goods", "merchandise", "SKU"]
+fields = [
+    "id: uuid pk",
+    "name: str(200) required",
+    "description: text",
+    "sku: str(50) required unique",
+    "price: decimal(10,2) required",
+    "compare_at_price: decimal(10,2)",
+    "cost: decimal(10,2)",
+    "quantity: int=0",
+    "category: str(100)",
+    "image_url: str(500)",
+    "active: bool=true",
+    "created_at: datetime auto_add",
+    "updated_at: datetime auto_update",
+]
+features = ["invariant: quantity >= 0", "invariant: price > 0", "index sku", "index category"]
+example = """
+entity Product "Product":
+  id: uuid pk
+  name: str(200) required
+  description: text
+  sku: str(50) required unique
+  price: decimal(10,2) required
+  compare_at_price: decimal(10,2)
+  cost: decimal(10,2)
+  quantity: int=0
+  category: str(100)
+  image_url: str(500)
+  active: bool=true
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  invariant: quantity >= 0
+  invariant: price > 0
+
+  index sku
+  index category
+  index active
+"""
+
+[[domain_entities]]
+id = "ecommerce_order"
+domain = "e-commerce"
+name = "Order"
+description = "A customer order containing line items"
+triggers = ["order", "purchase", "transaction", "sale", "checkout"]
+fields = [
+    "id: uuid pk",
+    "order_number: str(50) required unique",
+    "customer_id: uuid required",
+    "status: enum[pending,confirmed,processing,shipped,delivered,cancelled]=pending",
+    "subtotal: decimal(10,2) required",
+    "tax_amount: decimal(10,2)",
+    "shipping_amount: decimal(10,2)",
+    "discount_amount: decimal(10,2)",
+    "total: decimal(10,2) required",
+    "currency: str(3)=USD",
+    "shipping_address: text",
+    "notes: text",
+    "ordered_at: datetime auto_add",
+    "shipped_at: datetime",
+    "delivered_at: datetime",
+]
+features = ["transitions for order lifecycle", "computed: total = subtotal + tax - discount + shipping"]
+example = """
+entity Order "Order":
+  id: uuid pk
+  order_number: str(50) required unique
+  customer_id: uuid required
+  status: enum[pending,confirmed,processing,shipped,delivered,cancelled]=pending
+  subtotal: decimal(10,2) required
+  tax_amount: decimal(10,2)
+  shipping_amount: decimal(10,2)
+  discount_amount: decimal(10,2)
+  total: decimal(10,2) required
+  currency: str(3)=USD
+  shipping_street: str(255)
+  shipping_city: str(100)
+  shipping_state: str(100)
+  shipping_postal_code: str(20)
+  shipping_country: str(100)
+  notes: text
+  ordered_at: datetime auto_add
+  shipped_at: datetime
+  delivered_at: datetime
+
+  transitions:
+    pending -> confirmed
+    confirmed -> processing
+    processing -> shipped: requires shipped_at
+    shipped -> delivered: requires delivered_at
+    pending -> cancelled
+    confirmed -> cancelled
+
+  index customer_id
+  index status
+  index order_number
+"""
+
+[[domain_entities]]
+id = "ecommerce_order_item"
+domain = "e-commerce"
+name = "Order Item"
+description = "A line item within an order"
+triggers = ["order item", "line item", "order line", "cart item"]
+fields = [
+    "id: uuid pk",
+    "order_id: uuid required",
+    "product_id: uuid required",
+    "quantity: int required",
+    "unit_price: decimal(10,2) required",
+    "total: decimal(10,2) required",
+]
+features = ["invariant: quantity > 0", "computed: total = quantity * unit_price"]
+example = """
+entity OrderItem "Order Item":
+  id: uuid pk
+  order_id: uuid required
+  product_id: uuid required
+  product_name: str(200)  # Snapshot at time of order
+  quantity: int required
+  unit_price: decimal(10,2) required
+  total: decimal(10,2) required
+
+  invariant: quantity > 0
+
+  index order_id
+  index product_id
+"""
+
+[[domain_entities]]
+id = "ecommerce_customer"
+domain = "e-commerce"
+name = "Customer"
+description = "A customer who can place orders"
+triggers = ["customer", "buyer", "shopper", "client"]
+fields = [
+    "id: uuid pk",
+    "email: str(255) required unique",
+    "name: str(200) required",
+    "phone: str(20)",
+    "billing_street: str(255)",
+    "billing_city: str(100)",
+    "billing_state: str(100)",
+    "billing_postal_code: str(20)",
+    "billing_country: str(100)",
+    "created_at: datetime auto_add",
+]
+features = ["index email", "access rules for self-service"]
+example = """
+entity Customer "Customer":
+  id: uuid pk
+  email: str(255) required unique
+  name: str(200) required
+  phone: str(20)
+  billing_street: str(255)
+  billing_city: str(100)
+  billing_state: str(100)
+  billing_postal_code: str(20)
+  billing_country: str(100)
+  created_at: datetime auto_add
+
+  access:
+    read: role(admin) or id = current_user
+    write: role(admin) or id = current_user
+
+  index email
+"""
+
+[[domain_entities]]
+id = "ecommerce_review"
+domain = "e-commerce"
+name = "Review"
+description = "A product review with rating"
+triggers = ["review", "rating", "feedback", "testimonial"]
+fields = [
+    "id: uuid pk",
+    "product_id: uuid required",
+    "customer_id: uuid required",
+    "rating: int required",
+    "title: str(200)",
+    "comment: text",
+    "verified_purchase: bool=false",
+    "created_at: datetime auto_add",
+]
+features = ["invariant: rating >= 1 and rating <= 5"]
+example = """
+entity Review "Review":
+  id: uuid pk
+  product_id: uuid required
+  customer_id: uuid required
+  rating: int required
+  title: str(200)
+  comment: text
+  verified_purchase: bool=false
+  created_at: datetime auto_add
+
+  invariant: rating >= 1 and rating <= 5
+
+  index product_id
+  index customer_id
+  index rating
+"""
+
+# -----------------------------------------------------------------------------
+# SaaS/Subscription Domain
+# -----------------------------------------------------------------------------
+
+[[domain_entities]]
+id = "saas_organization"
+domain = "saas"
+name = "Organization"
+description = "A tenant/company in a multi-tenant SaaS app"
+triggers = ["organization", "company", "tenant", "account", "workspace"]
+fields = [
+    "id: uuid pk",
+    "name: str(200) required",
+    "slug: str(100) required unique",
+    "plan: enum[free,starter,pro,enterprise]=free",
+    "billing_email: str(255)",
+    "owner_id: uuid required",
+    "active: bool=true",
+    "created_at: datetime auto_add",
+]
+features = ["index slug", "access rules for members"]
+example = """
+entity Organization "Organization":
+  id: uuid pk
+  name: str(200) required
+  slug: str(100) required unique
+  plan: enum[free,starter,pro,enterprise]=free
+  billing_email: str(255)
+  owner_id: uuid required
+  active: bool=true
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  access:
+    read: role(admin) or organization_id = current_user.organization_id
+    write: role(admin) or owner_id = current_user
+
+  index slug
+  index owner_id
+"""
+
+[[domain_entities]]
+id = "saas_subscription"
+domain = "saas"
+name = "Subscription"
+description = "A recurring subscription for billing"
+triggers = ["subscription", "plan", "billing", "recurring"]
+fields = [
+    "id: uuid pk",
+    "organization_id: uuid required",
+    "plan: enum[free,starter,pro,enterprise]=free",
+    "status: enum[trialing,active,past_due,cancelled,paused]=trialing",
+    "amount: decimal(10,2)",
+    "currency: str(3)=USD",
+    "interval: enum[monthly,yearly]=monthly",
+    "trial_ends_at: datetime",
+    "current_period_start: date",
+    "current_period_end: date",
+    "cancelled_at: datetime",
+    "created_at: datetime auto_add",
+]
+features = ["transitions for subscription lifecycle"]
+example = """
+entity Subscription "Subscription":
+  id: uuid pk
+  organization_id: uuid required
+  plan: enum[free,starter,pro,enterprise]=free
+  status: enum[trialing,active,past_due,cancelled,paused]=trialing
+  amount: decimal(10,2)
+  currency: str(3)=USD
+  interval: enum[monthly,yearly]=monthly
+  trial_ends_at: datetime
+  current_period_start: date
+  current_period_end: date
+  cancelled_at: datetime
+  created_at: datetime auto_add
+
+  transitions:
+    trialing -> active
+    trialing -> cancelled
+    active -> past_due
+    active -> paused
+    active -> cancelled
+    past_due -> active
+    past_due -> cancelled
+    paused -> active
+    paused -> cancelled
+
+  index organization_id
+  index status
+"""
+
+[[domain_entities]]
+id = "saas_invoice"
+domain = "saas"
+name = "Invoice"
+description = "A billing invoice"
+triggers = ["invoice", "bill", "statement"]
+fields = [
+    "id: uuid pk",
+    "invoice_number: str(50) required unique",
+    "organization_id: uuid required",
+    "subscription_id: uuid",
+    "status: enum[draft,sent,paid,overdue,cancelled]=draft",
+    "amount: decimal(10,2) required",
+    "tax_amount: decimal(10,2)",
+    "total: decimal(10,2) required",
+    "currency: str(3)=USD",
+    "due_date: date required",
+    "paid_at: datetime",
+    "created_at: datetime auto_add",
+]
+features = ["transitions for payment status", "invariant: paid requires paid_at"]
+example = """
+entity Invoice "Invoice":
+  id: uuid pk
+  invoice_number: str(50) required unique
+  organization_id: uuid required
+  subscription_id: uuid
+  status: enum[draft,sent,paid,overdue,cancelled]=draft
+  amount: decimal(10,2) required
+  tax_amount: decimal(10,2)
+  total: decimal(10,2) required
+  currency: str(3)=USD
+  due_date: date required
+  paid_at: datetime
+  created_at: datetime auto_add
+
+  transitions:
+    draft -> sent
+    sent -> paid: requires paid_at
+    sent -> overdue
+    overdue -> paid: requires paid_at
+    draft -> cancelled
+    sent -> cancelled
+
+  invariant: status != paid or paid_at != null
+
+  index organization_id
+  index status
+  index invoice_number
+"""
+
+# -----------------------------------------------------------------------------
+# Healthcare Domain
+# -----------------------------------------------------------------------------
+
+[[domain_entities]]
+id = "healthcare_patient"
+domain = "healthcare"
+name = "Patient"
+description = "A patient in a healthcare system"
+triggers = ["patient", "client", "health record"]
+fields = [
+    "id: uuid pk",
+    "medical_record_number: str(50) required unique",
+    "first_name: str(100) required",
+    "last_name: str(100) required",
+    "date_of_birth: date required",
+    "gender: enum[male,female,other,prefer_not_to_say]",
+    "email: str(255)",
+    "phone: str(20)",
+    "address: text",
+    "emergency_contact_name: str(200)",
+    "emergency_contact_phone: str(20)",
+    "insurance_provider: str(200)",
+    "insurance_id: str(100)",
+    "active: bool=true",
+    "created_at: datetime auto_add",
+]
+features = ["index medical_record_number", "access rules for HIPAA compliance"]
+example = """
+entity Patient "Patient":
+  id: uuid pk
+  medical_record_number: str(50) required unique
+  first_name: str(100) required
+  last_name: str(100) required
+  date_of_birth: date required
+  gender: enum[male,female,other,prefer_not_to_say]
+  email: str(255)
+  phone: str(20)
+  address: text
+  emergency_contact_name: str(200)
+  emergency_contact_phone: str(20)
+  insurance_provider: str(200)
+  insurance_id: str(100)
+  active: bool=true
+  created_at: datetime auto_add
+
+  access:
+    read: role(provider) or role(admin) or id = current_user
+    write: role(provider) or role(admin)
+
+  index medical_record_number
+  index last_name
+"""
+
+[[domain_entities]]
+id = "healthcare_appointment"
+domain = "healthcare"
+name = "Appointment"
+description = "A scheduled appointment"
+triggers = ["appointment", "visit", "consultation", "booking"]
+fields = [
+    "id: uuid pk",
+    "patient_id: uuid required",
+    "provider_id: uuid required",
+    "scheduled_at: datetime required",
+    "duration_minutes: int=30",
+    "type: enum[checkup,followup,consultation,procedure,emergency]=checkup",
+    "status: enum[scheduled,confirmed,checked_in,in_progress,completed,cancelled,no_show]=scheduled",
+    "notes: text",
+    "created_at: datetime auto_add",
+]
+features = ["transitions for appointment status", "invariant: duration_minutes > 0"]
+example = """
+entity Appointment "Appointment":
+  id: uuid pk
+  patient_id: uuid required
+  provider_id: uuid required
+  scheduled_at: datetime required
+  duration_minutes: int=30
+  type: enum[checkup,followup,consultation,procedure,emergency]=checkup
+  status: enum[scheduled,confirmed,checked_in,in_progress,completed,cancelled,no_show]=scheduled
+  notes: text
+  created_at: datetime auto_add
+
+  transitions:
+    scheduled -> confirmed
+    scheduled -> cancelled
+    confirmed -> checked_in
+    confirmed -> cancelled
+    confirmed -> no_show
+    checked_in -> in_progress
+    in_progress -> completed
+
+  invariant: duration_minutes > 0
+
+  index patient_id
+  index provider_id
+  index scheduled_at
+  index status
+"""
+
+# -----------------------------------------------------------------------------
+# HR/Workforce Domain
+# -----------------------------------------------------------------------------
+
+[[domain_entities]]
+id = "hr_employee"
+domain = "hr"
+name = "Employee"
+description = "An employee in the organization"
+triggers = ["employee", "staff", "team member", "worker"]
+fields = [
+    "id: uuid pk",
+    "employee_number: str(50) required unique",
+    "email: str(255) required unique",
+    "first_name: str(100) required",
+    "last_name: str(100) required",
+    "title: str(200)",
+    "department: str(100)",
+    "manager_id: uuid",
+    "hire_date: date required",
+    "termination_date: date",
+    "status: enum[active,on_leave,terminated]=active",
+    "salary: decimal(10,2)",
+    "created_at: datetime auto_add",
+]
+features = ["self-referential manager relationship", "access rules"]
+example = """
+entity Employee "Employee":
+  id: uuid pk
+  employee_number: str(50) required unique
+  email: str(255) required unique
+  first_name: str(100) required
+  last_name: str(100) required
+  title: str(200)
+  department: str(100)
+  manager_id: uuid  # Self-referential FK
+  hire_date: date required
+  termination_date: date
+  status: enum[active,on_leave,terminated]=active
+  salary: decimal(10,2)
+  created_at: datetime auto_add
+
+  access:
+    read: role(hr) or role(manager) or id = current_user
+    write: role(hr)
+
+  index email
+  index department
+  index manager_id
+  index status
+"""
+
+[[domain_entities]]
+id = "hr_job_posting"
+domain = "hr"
+name = "Job Posting"
+description = "An open job position"
+triggers = ["job posting", "job opening", "position", "vacancy", "job listing"]
+fields = [
+    "id: uuid pk",
+    "title: str(200) required",
+    "department: str(100)",
+    "description: text required",
+    "requirements: text",
+    "salary_min: decimal(10,2)",
+    "salary_max: decimal(10,2)",
+    "location: str(200)",
+    "remote: enum[onsite,hybrid,remote]=onsite",
+    "status: enum[draft,open,paused,closed,filled]=draft",
+    "hiring_manager_id: uuid",
+    "posted_at: datetime",
+    "closes_at: datetime",
+    "created_at: datetime auto_add",
+]
+features = ["transitions for posting lifecycle"]
+example = """
+entity JobPosting "Job Posting":
+  id: uuid pk
+  title: str(200) required
+  department: str(100)
+  description: text required
+  requirements: text
+  salary_min: decimal(10,2)
+  salary_max: decimal(10,2)
+  location: str(200)
+  remote: enum[onsite,hybrid,remote]=onsite
+  status: enum[draft,open,paused,closed,filled]=draft
+  hiring_manager_id: uuid
+  posted_at: datetime
+  closes_at: datetime
+  created_at: datetime auto_add
+
+  transitions:
+    draft -> open: requires posted_at
+    open -> paused
+    paused -> open
+    open -> closed
+    open -> filled
+    paused -> closed
+
+  index status
+  index department
+"""
+
+[[domain_entities]]
+id = "hr_applicant"
+domain = "hr"
+name = "Applicant"
+description = "A job applicant"
+triggers = ["applicant", "candidate", "job seeker"]
+fields = [
+    "id: uuid pk",
+    "job_posting_id: uuid required",
+    "email: str(255) required",
+    "first_name: str(100) required",
+    "last_name: str(100) required",
+    "phone: str(20)",
+    "resume_url: str(500)",
+    "cover_letter: text",
+    "status: enum[applied,screening,interview,offer,hired,rejected,withdrawn]=applied",
+    "source: str(100)",
+    "applied_at: datetime auto_add",
+]
+features = ["transitions for hiring pipeline"]
+example = """
+entity Applicant "Applicant":
+  id: uuid pk
+  job_posting_id: uuid required
+  email: str(255) required
+  first_name: str(100) required
+  last_name: str(100) required
+  phone: str(20)
+  resume_url: str(500)
+  cover_letter: text
+  status: enum[applied,screening,interview,offer,hired,rejected,withdrawn]=applied
+  source: str(100)
+  applied_at: datetime auto_add
+
+  transitions:
+    applied -> screening
+    applied -> rejected
+    screening -> interview
+    screening -> rejected
+    interview -> offer
+    interview -> rejected
+    offer -> hired
+    offer -> rejected
+    * -> withdrawn
+
+  index job_posting_id
+  index status
+  index email
+"""
+
+# -----------------------------------------------------------------------------
+# Logistics/Inventory Domain
+# -----------------------------------------------------------------------------
+
+[[domain_entities]]
+id = "logistics_shipment"
+domain = "logistics"
+name = "Shipment"
+description = "A package or shipment being delivered"
+triggers = ["shipment", "package", "delivery", "parcel", "freight"]
+fields = [
+    "id: uuid pk",
+    "tracking_number: str(100) required unique",
+    "order_id: uuid",
+    "carrier: str(100)",
+    "status: enum[pending,picked_up,in_transit,out_for_delivery,delivered,returned,lost]=pending",
+    "origin_address: text",
+    "destination_address: text required",
+    "weight: decimal(10,2)",
+    "dimensions: str(100)",
+    "shipped_at: datetime",
+    "estimated_delivery: datetime",
+    "delivered_at: datetime",
+    "created_at: datetime auto_add",
+]
+features = ["transitions for delivery status"]
+example = """
+entity Shipment "Shipment":
+  id: uuid pk
+  tracking_number: str(100) required unique
+  order_id: uuid
+  carrier: str(100)
+  status: enum[pending,picked_up,in_transit,out_for_delivery,delivered,returned,lost]=pending
+  origin_address: text
+  destination_address: text required
+  weight: decimal(10,2)
+  dimensions: str(100)
+  shipped_at: datetime
+  estimated_delivery: datetime
+  delivered_at: datetime
+  created_at: datetime auto_add
+
+  transitions:
+    pending -> picked_up: requires shipped_at
+    picked_up -> in_transit
+    in_transit -> out_for_delivery
+    out_for_delivery -> delivered: requires delivered_at
+    in_transit -> returned
+    out_for_delivery -> returned
+    * -> lost: role(admin)
+
+  index tracking_number
+  index order_id
+  index status
+"""
+
+[[domain_entities]]
+id = "logistics_inventory_item"
+domain = "logistics"
+name = "Inventory Item"
+description = "A tracked inventory item with stock levels"
+triggers = ["inventory", "stock item", "warehouse item"]
+fields = [
+    "id: uuid pk",
+    "sku: str(50) required unique",
+    "name: str(200) required",
+    "quantity: int=0",
+    "reserved: int=0",
+    "available: int=0",
+    "reorder_point: int=10",
+    "warehouse_id: uuid",
+    "location: str(100)",
+    "last_counted_at: datetime",
+    "created_at: datetime auto_add",
+]
+features = ["computed: available = quantity - reserved", "invariant: quantity >= 0"]
+example = """
+entity InventoryItem "Inventory Item":
+  id: uuid pk
+  sku: str(50) required unique
+  name: str(200) required
+  quantity: int=0
+  reserved: int=0
+  reorder_point: int=10
+  warehouse_id: uuid
+  location: str(100)
+  last_counted_at: datetime
+  created_at: datetime auto_add
+
+  available: computed quantity - reserved
+
+  invariant: quantity >= 0
+  invariant: reserved >= 0
+  invariant: reserved <= quantity
+
+  index sku
+  index warehouse_id
+"""
+
+# =============================================================================
+# WORKFLOW TEMPLATES
+# =============================================================================
+# Pre-defined state machines for common business workflows
+
+[[workflow_templates]]
+id = "order_lifecycle"
+name = "Order Lifecycle"
+description = "Standard e-commerce order workflow"
+triggers = ["order", "purchase", "transaction"]
+states = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"]
+initial_state = "pending"
+transitions = """
+transitions:
+  pending -> confirmed
+  confirmed -> processing
+  processing -> shipped: requires shipped_at
+  shipped -> delivered: requires delivered_at
+  pending -> cancelled
+  confirmed -> cancelled
+  delivered -> refunded: role(admin)
+"""
+
+[[workflow_templates]]
+id = "support_ticket"
+name = "Support Ticket Lifecycle"
+description = "Customer support ticket workflow"
+triggers = ["ticket", "support", "help desk", "issue"]
+states = ["open", "in_progress", "waiting_on_customer", "escalated", "resolved", "closed"]
+initial_state = "open"
+transitions = """
+transitions:
+  open -> in_progress: requires assigned_to_id
+  in_progress -> waiting_on_customer
+  waiting_on_customer -> in_progress
+  in_progress -> escalated
+  escalated -> in_progress
+  in_progress -> resolved: requires resolution
+  waiting_on_customer -> resolved
+  resolved -> closed
+  resolved -> open  # Reopen if customer disputes
+  closed -> open: role(admin)
+"""
+
+[[workflow_templates]]
+id = "content_publishing"
+name = "Content Publishing Lifecycle"
+description = "Editorial content workflow"
+triggers = ["article", "post", "content", "blog", "publishing"]
+states = ["draft", "review", "approved", "published", "archived"]
+initial_state = "draft"
+transitions = """
+transitions:
+  draft -> review
+  review -> approved: role(editor)
+  review -> draft  # Send back for revisions
+  approved -> published: requires published_at
+  published -> archived
+  archived -> draft: role(admin)
+"""
+
+[[workflow_templates]]
+id = "hiring_pipeline"
+name = "Hiring Pipeline"
+description = "Candidate hiring workflow"
+triggers = ["applicant", "candidate", "hiring", "recruitment"]
+states = ["applied", "screening", "interview", "offer", "hired", "rejected", "withdrawn"]
+initial_state = "applied"
+transitions = """
+transitions:
+  applied -> screening
+  applied -> rejected
+  screening -> interview
+  screening -> rejected
+  interview -> offer
+  interview -> rejected
+  offer -> hired
+  offer -> rejected
+  * -> withdrawn  # Candidate can withdraw at any point
+"""
+
+[[workflow_templates]]
+id = "invoice_payment"
+name = "Invoice Payment Lifecycle"
+description = "Invoice and payment workflow"
+triggers = ["invoice", "bill", "payment"]
+states = ["draft", "sent", "paid", "overdue", "cancelled", "refunded"]
+initial_state = "draft"
+transitions = """
+transitions:
+  draft -> sent
+  sent -> paid: requires paid_at
+  sent -> overdue
+  overdue -> paid: requires paid_at
+  draft -> cancelled
+  sent -> cancelled
+  paid -> refunded: role(admin)
+"""
+
+[[workflow_templates]]
+id = "subscription_lifecycle"
+name = "Subscription Lifecycle"
+description = "SaaS subscription workflow"
+triggers = ["subscription", "plan", "billing"]
+states = ["trialing", "active", "past_due", "paused", "cancelled"]
+initial_state = "trialing"
+transitions = """
+transitions:
+  trialing -> active
+  trialing -> cancelled
+  active -> past_due
+  active -> paused
+  active -> cancelled
+  past_due -> active
+  past_due -> cancelled
+  paused -> active
+  paused -> cancelled
+"""
+
+[[workflow_templates]]
+id = "project_task"
+name = "Project Task Lifecycle"
+description = "Task/issue tracking workflow"
+triggers = ["task", "todo", "issue", "work item"]
+states = ["backlog", "todo", "in_progress", "review", "done", "cancelled"]
+initial_state = "backlog"
+transitions = """
+transitions:
+  backlog -> todo
+  todo -> in_progress: requires assigned_to_id
+  in_progress -> review
+  in_progress -> todo  # Blocked, move back
+  review -> done
+  review -> in_progress  # Needs more work
+  backlog -> cancelled
+  todo -> cancelled
+  in_progress -> cancelled
+"""
+
+# =============================================================================
+# ADDITIONAL RELATIONSHIP PATTERNS
+# =============================================================================
+
+[[relationship_patterns]]
+id = "self_referential"
+name = "Self-Referential (Hierarchy)"
+triggers = ["reports to", "parent", "manager", "supervisor", "hierarchy", "tree"]
+suggests = "Add nullable FK to same entity: parent_id: uuid"
+rationale = "Self-referential relationships model hierarchies like org charts or category trees"
+example = """
+# SPEC says: Employee reports to a Manager
+# On Employee entity:
+manager_id: uuid  # Nullable FK to Employee (self)
+
+# SPEC says: Category has subcategories
+# On Category entity:
+parent_id: uuid  # Nullable FK to Category (self)
+"""
+
+[[relationship_patterns]]
+id = "junction_many_to_many"
+name = "Many-to-Many Junction"
+triggers = ["many to many", "can have multiple", "multiple X can have multiple Y", "tags"]
+suggests = "Create junction entity with two required FKs"
+rationale = "Many-to-many relationships require a junction table"
+example = """
+# SPEC says: Products can have multiple Tags, Tags can be on multiple Products
+# Create junction entity:
+entity ProductTag "Product Tag":
+  id: uuid pk
+  product_id: uuid required
+  tag_id: uuid required
+
+  index product_id
+  index tag_id
+"""
+
+[[relationship_patterns]]
+id = "polymorphic_owner"
+name = "Polymorphic Ownership"
+triggers = ["can belong to X or Y", "owner can be", "polymorphic", "attachable"]
+suggests = "owner_type: enum[...] + owner_id: uuid"
+rationale = "Polymorphic relationships use a type discriminator with the FK"
+example = """
+# SPEC says: Comment can belong to Post or Photo
+# On Comment entity:
+commentable_type: enum[post,photo] required
+commentable_id: uuid required
+
+# Query comments for a specific post:
+# filter: commentable_type = post and commentable_id = <post_id>
+"""

@@ -864,3 +864,751 @@ data = parse_appspec(content)
         # Simulate verification
         result.verified = True
         assert result.verified is True
+
+
+# =============================================================================
+# Testing Adapter Tests
+# =============================================================================
+
+
+class TestSchemathesisAdapter:
+    """Test Schemathesis contract testing adapter."""
+
+    def test_generate_returns_result(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that generate returns a GeneratorResult."""
+        from dazzle.eject.adapters import SchemathesisAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = SchemathesisAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result is not None
+        assert result.success
+
+    def test_generate_conftest(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test conftest.py generation for Schemathesis."""
+        from dazzle.eject.adapters import SchemathesisAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = SchemathesisAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_conftest()
+
+        assert result.success
+        conftest_path = tmp_path / "tests" / "contract" / "conftest.py"
+        assert conftest_path in result.files_created
+        assert conftest_path.exists()
+
+        content = conftest_path.read_text()
+        assert "pytest" in content
+        assert "schemathesis" in content
+        assert "TestClient" in content
+        assert "openapi_schema" in content
+
+    def test_generate_contract_tests(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test contract test file generation."""
+        from dazzle.eject.adapters import SchemathesisAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = SchemathesisAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_contract_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "contract" / "test_contract.py"
+        assert test_path in result.files_created
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        assert "schemathesis" in content
+        assert "test_api_contract" in content
+        assert "test_task_api" in content.lower()  # Entity-specific test
+        assert "validate_response" in content
+
+    def test_generate_includes_all_entities(
+        self,
+        complex_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that contract tests are generated for all entities."""
+        from dazzle.eject.adapters import SchemathesisAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = SchemathesisAdapter(complex_appspec, tmp_path, config)
+
+        result = adapter._generate_contract_tests()
+
+        test_path = tmp_path / "tests" / "contract" / "test_contract.py"
+        content = test_path.read_text()
+
+        # Should have tests for all entities
+        assert "test_task_api" in content.lower()
+        assert "test_order_api" in content.lower()
+        assert "test_account_api" in content.lower()
+
+
+class TestPytestAdapter:
+    """Test Pytest unit testing adapter."""
+
+    def test_generate_returns_result(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that generate returns a GeneratorResult."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result is not None
+        assert result.success
+
+    def test_generate_conftest(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test conftest.py generation for pytest."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_conftest()
+
+        assert result.success
+        conftest_path = tmp_path / "tests" / "unit" / "conftest.py"
+        assert conftest_path in result.files_created
+        assert conftest_path.exists()
+
+        content = conftest_path.read_text()
+        assert "pytest" in content
+        assert "sqlalchemy" in content
+        assert "db_session" in content
+        assert "TestClient" in content
+
+    def test_generate_conftest_entity_fixtures(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that conftest includes fixtures for each entity."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_conftest()
+
+        conftest_path = tmp_path / "tests" / "unit" / "conftest.py"
+        content = conftest_path.read_text()
+
+        # Should have entity-specific fixtures
+        assert "task_data" in content.lower()
+        assert "task_instance" in content.lower()
+
+    def test_generate_entity_tests(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test CRUD test generation for entities."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_entity_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_task.py"
+        assert test_path in result.files_created
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        assert "TestTaskCRUD" in content
+        assert "test_create_task" in content
+        assert "test_get_task" in content
+        assert "test_list_tasks" in content
+        assert "test_update_task" in content
+        assert "test_delete_task" in content
+        assert "test_get_task_not_found" in content
+        assert "TestTaskValidation" in content
+
+    def test_generate_entity_tests_multiple_entities(
+        self,
+        complex_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test CRUD test generation for multiple entities."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(complex_appspec, tmp_path, config)
+
+        result = adapter._generate_entity_tests()
+
+        # Should create test files for each entity
+        assert (tmp_path / "tests" / "unit" / "test_task.py").exists()
+        assert (tmp_path / "tests" / "unit" / "test_order.py").exists()
+        assert (tmp_path / "tests" / "unit" / "test_account.py").exists()
+
+    def test_generate_guard_tests_with_state_machine(
+        self,
+        entity_with_state: EntitySpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test guard test generation for entities with state machines."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        spec = AppSpec(
+            name="Test",
+            domain=DomainSpec(entities=[entity_with_state]),
+        )
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(spec, tmp_path, config)
+
+        result = adapter._generate_guard_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_guards.py"
+        assert test_path in result.files_created
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        assert "TestStateGuards" in content
+        # Should have transition tests
+        assert "draft" in content.lower() or "pending" in content.lower()
+
+    def test_generate_guard_tests_without_state_machine(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test guard test generation when no state machines exist."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_guard_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_guards.py"
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        # Should have placeholder test
+        assert "test_no_guards" in content or "TestStateGuards" in content
+
+    def test_generate_validator_tests_with_invariants(
+        self,
+        entity_with_invariants: EntitySpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test validator test generation for entities with invariants."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        spec = AppSpec(
+            name="Test",
+            domain=DomainSpec(entities=[entity_with_invariants]),
+        )
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(spec, tmp_path, config)
+
+        result = adapter._generate_validator_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_validators.py"
+        assert test_path in result.files_created
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        assert "TestInvariantValidators" in content
+        assert "AccountValidator" in content
+        assert "NEGATIVE_BALANCE" in content
+
+    def test_generate_validator_tests_without_invariants(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test validator test generation when no invariants exist."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_validator_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_validators.py"
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        # Should have placeholder test
+        assert "test_no_invariants" in content or "TestInvariantValidators" in content
+
+    def test_generate_access_tests_without_access_rules(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test access test generation when no access rules exist."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_access_tests()
+
+        assert result.success
+        test_path = tmp_path / "tests" / "unit" / "test_access.py"
+        assert test_path.exists()
+
+        content = test_path.read_text()
+        assert "TestAccessPolicies" in content
+        assert "RequestContext" in content
+        # Should have placeholder test
+        assert "test_no_access_rules" in content
+
+    def test_full_generate_creates_all_files(
+        self,
+        complex_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that full generate creates all expected test files."""
+        from dazzle.eject.adapters import PytestAdapter
+        from dazzle.eject.config import EjectionTestingConfig
+
+        config = EjectionTestingConfig()
+        adapter = PytestAdapter(complex_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result.success
+
+        # Check all expected files exist
+        expected_files = [
+            "tests/unit/conftest.py",
+            "tests/unit/test_task.py",
+            "tests/unit/test_order.py",
+            "tests/unit/test_account.py",
+            "tests/unit/test_guards.py",
+            "tests/unit/test_validators.py",
+            "tests/unit/test_access.py",
+        ]
+
+        for file_path in expected_files:
+            full_path = tmp_path / file_path
+            assert full_path.exists(), f"Expected {file_path} to exist"
+
+
+class TestGeneratorResult:
+    """Test GeneratorResult helper class."""
+
+    def test_add_file_without_content(self, tmp_path: Path) -> None:
+        """Test add_file records path without writing."""
+        from dazzle.eject.generator import GeneratorResult
+
+        result = GeneratorResult()
+        test_path = tmp_path / "test.py"
+
+        result.add_file(test_path)
+
+        assert test_path in result.files_created
+        assert not test_path.exists()  # File not written
+
+    def test_add_file_with_content(self, tmp_path: Path) -> None:
+        """Test add_file writes content and records path."""
+        from dazzle.eject.generator import GeneratorResult
+
+        result = GeneratorResult()
+        test_path = tmp_path / "test.py"
+        content = "print('hello')"
+
+        result.add_file(test_path, content)
+
+        assert test_path in result.files_created
+        assert test_path.exists()
+        assert test_path.read_text() == content
+
+    def test_add_file_creates_parent_directories(self, tmp_path: Path) -> None:
+        """Test add_file creates parent directories when writing."""
+        from dazzle.eject.generator import GeneratorResult
+
+        result = GeneratorResult()
+        test_path = tmp_path / "deep" / "nested" / "dir" / "test.py"
+        content = "# test"
+
+        result.add_file(test_path, content)
+
+        assert test_path.exists()
+        assert test_path.read_text() == content
+
+
+# =============================================================================
+# CI Adapter Tests
+# =============================================================================
+
+
+class TestGitHubActionsAdapter:
+    """Test GitHub Actions CI adapter."""
+
+    def test_generate_returns_result(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that generate returns a GeneratorResult."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result is not None
+        assert result.success
+
+    def test_generate_ci_workflow(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test main CI workflow generation."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_ci_workflow()
+
+        assert result.success
+        ci_path = tmp_path / ".github" / "workflows" / "ci.yml"
+        assert ci_path in result.files_created
+        assert ci_path.exists()
+
+        content = ci_path.read_text()
+        assert "name: CI" in content
+        assert "lint:" in content
+        assert "typecheck:" in content
+        assert "test:" in content
+        assert "ruff" in content
+        assert "mypy" in content
+        assert "pytest" in content
+
+    def test_generate_contract_workflow(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test contract testing workflow generation."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_contract_workflow()
+
+        assert result.success
+        contract_path = tmp_path / ".github" / "workflows" / "contract.yml"
+        assert contract_path in result.files_created
+        assert contract_path.exists()
+
+        content = contract_path.read_text()
+        assert "name: Contract Tests" in content
+        assert "schemathesis" in content
+        assert "openapi.json" in content
+
+    def test_generate_docker_workflow(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test Docker build workflow generation."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_docker_workflow()
+
+        assert result.success
+        docker_path = tmp_path / ".github" / "workflows" / "docker.yml"
+        assert docker_path in result.files_created
+        assert docker_path.exists()
+
+        content = docker_path.read_text()
+        assert "name: Docker Build" in content
+        assert "docker/build-push-action" in content
+        assert "ghcr.io" in content
+
+    def test_generate_deploy_workflow(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test deployment workflow generation."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_deploy_workflow()
+
+        assert result.success
+        deploy_path = tmp_path / ".github" / "workflows" / "deploy.yml"
+        assert deploy_path in result.files_created
+        assert deploy_path.exists()
+
+        content = deploy_path.read_text()
+        assert "name: Deploy" in content
+        assert "staging" in content.lower()
+        assert "production" in content.lower()
+        assert "environment:" in content
+
+    def test_generate_dependabot(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test Dependabot configuration generation."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_dependabot()
+
+        assert result.success
+        dependabot_path = tmp_path / ".github" / "dependabot.yml"
+        assert dependabot_path in result.files_created
+        assert dependabot_path.exists()
+
+        content = dependabot_path.read_text()
+        assert "version: 2" in content
+        assert "package-ecosystem" in content
+        assert "pip" in content
+        assert "npm" in content
+        assert "github-actions" in content
+        assert "docker" in content
+
+    def test_full_generate_creates_all_files(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that full generate creates all expected workflow files."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result.success
+
+        expected_files = [
+            ".github/workflows/ci.yml",
+            ".github/workflows/contract.yml",
+            ".github/workflows/docker.yml",
+            ".github/workflows/deploy.yml",
+            ".github/dependabot.yml",
+        ]
+
+        for file_path in expected_files:
+            full_path = tmp_path / file_path
+            assert full_path.exists(), f"Expected {file_path} to exist"
+
+    def test_workflow_includes_app_name(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that workflows include the application name."""
+        from dazzle.eject.adapters import GitHubActionsAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter._generate_ci_workflow()
+
+        ci_path = tmp_path / ".github" / "workflows" / "ci.yml"
+        content = ci_path.read_text()
+
+        # Should mention the app name
+        assert simple_appspec.name in content or "Test App" in content
+
+
+class TestGitLabCIAdapter:
+    """Test GitLab CI adapter."""
+
+    def test_generate_returns_result(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test that generate returns a GeneratorResult."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result is not None
+        assert result.success
+
+    def test_generate_gitlab_ci_file(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test GitLab CI configuration file generation."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        assert result.success
+        gitlab_path = tmp_path / ".gitlab-ci.yml"
+        assert gitlab_path in result.files_created
+        assert gitlab_path.exists()
+
+        content = gitlab_path.read_text()
+        assert "stages:" in content
+        assert "lint" in content
+        assert "test" in content
+        assert "build" in content
+        assert "deploy" in content
+
+    def test_gitlab_ci_has_lint_jobs(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test GitLab CI includes lint jobs."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        gitlab_path = tmp_path / ".gitlab-ci.yml"
+        content = gitlab_path.read_text()
+
+        assert "lint:python:" in content
+        assert "lint:frontend:" in content
+        assert "typecheck:python:" in content
+        assert "ruff" in content
+        assert "mypy" in content
+
+    def test_gitlab_ci_has_test_jobs(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test GitLab CI includes test jobs."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        gitlab_path = tmp_path / ".gitlab-ci.yml"
+        content = gitlab_path.read_text()
+
+        assert "test:unit:" in content
+        assert "test:contract:" in content
+        assert "pytest" in content
+        assert "schemathesis" in content
+
+    def test_gitlab_ci_has_build_jobs(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test GitLab CI includes build jobs."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        gitlab_path = tmp_path / ".gitlab-ci.yml"
+        content = gitlab_path.read_text()
+
+        assert "build:backend:" in content
+        assert "build:frontend:" in content
+        assert "docker" in content.lower()
+
+    def test_gitlab_ci_has_deploy_jobs(
+        self,
+        simple_appspec: AppSpec,
+        tmp_path: Path,
+    ) -> None:
+        """Test GitLab CI includes deploy jobs."""
+        from dazzle.eject.adapters.ci import GitLabCIAdapter
+        from dazzle.eject.config import EjectionCIConfig
+
+        config = EjectionCIConfig()
+        adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
+
+        result = adapter.generate()
+
+        gitlab_path = tmp_path / ".gitlab-ci.yml"
+        content = gitlab_path.read_text()
+
+        assert "deploy:staging:" in content
+        assert "deploy:production:" in content
+        assert "environment:" in content
+        assert "when: manual" in content

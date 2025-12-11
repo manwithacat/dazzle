@@ -1,9 +1,9 @@
-# DAZZLE Operations Dashboard - COMMAND_CENTER Archetype Example
+# DAZZLE Operations Dashboard - COMMAND_CENTER Stage Example
 # Demonstrates v0.7.0 Business Logic Features:
 # - State machine for system status lifecycle
 # - Invariants for metric validation
 # - Access rules for operator roles
-# - Dense expert interface for operations monitoring
+# - COMMAND_CENTER stage for dense expert interface
 
 module ops_dashboard.core
 
@@ -78,12 +78,12 @@ persona ops_engineer "Operations Engineer":
   session_style: deep_work
 
 # =============================================================================
-# Workspace - COMMAND_CENTER
+# Workspace - COMMAND_CENTER Stage
 # =============================================================================
 
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
-  engine_hint: "command_center"
+  stage: "command_center"
   
   # Alert Feed - Shows active alerts
   active_alerts:

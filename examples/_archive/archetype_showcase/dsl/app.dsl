@@ -1,12 +1,12 @@
-# DAZZLE Archetype Showcase
-# Demonstrates all five DNR layout archetypes
+# DAZZLE Stage Showcase
+# Demonstrates all five DNR layout stages
 
-module archetype_showcase.core
+module stage_showcase.core
 
-app archetype_showcase "Archetype Showcase"
+app stage_showcase "Stage Showcase"
 
 # =============================================================================
-# Entities for demonstrating all archetypes
+# Entities for demonstrating all stages
 # =============================================================================
 
 entity Metric "System Metric":
@@ -60,8 +60,8 @@ entity Service "Monitored Service":
 # =============================================================================
 
 workspace focus_metric_demo "Focus Metric Demo":
-  purpose: "Demonstrates FOCUS_METRIC archetype - single dominant KPI"
-  engine_hint: "focus_metric"
+  purpose: "Demonstrates FOCUS_METRIC stage - single dominant KPI"
+  stage: "focus_metric"
 
   hero:
     source: Metric
@@ -81,8 +81,8 @@ workspace focus_metric_demo "Focus Metric Demo":
 # =============================================================================
 
 workspace scanner_table_demo "Scanner Table Demo":
-  purpose: "Demonstrates SCANNER_TABLE archetype - dense table view"
-  engine_hint: "scanner_table"
+  purpose: "Demonstrates SCANNER_TABLE stage - dense table view"
+  stage: "scanner_table"
 
   inventory:
     source: Item
@@ -99,8 +99,8 @@ workspace scanner_table_demo "Scanner Table Demo":
 # =============================================================================
 
 workspace dual_pane_demo "Dual Pane Demo":
-  purpose: "Demonstrates DUAL_PANE_FLOW archetype - list + detail"
-  engine_hint: "dual_pane_flow"
+  purpose: "Demonstrates DUAL_PANE_FLOW stage - list + detail"
+  stage: "dual_pane_flow"
 
   task_list:
     source: Task
@@ -118,8 +118,8 @@ workspace dual_pane_demo "Dual Pane Demo":
 # =============================================================================
 
 workspace monitor_wall_demo "Monitor Wall Demo":
-  purpose: "Demonstrates MONITOR_WALL archetype - grid of metrics"
-  engine_hint: "monitor_wall"
+  purpose: "Demonstrates MONITOR_WALL stage - grid of metrics"
+  stage: "monitor_wall"
 
   services:
     source: Service
@@ -149,8 +149,8 @@ workspace monitor_wall_demo "Monitor Wall Demo":
 # =============================================================================
 
 workspace command_center_demo "Command Center Demo":
-  purpose: "Demonstrates COMMAND_CENTER archetype - expert dashboard"
-  engine_hint: "command_center"
+  purpose: "Demonstrates COMMAND_CENTER stage - expert dashboard"
+  stage: "command_center"
 
   critical_alerts:
     source: Alert

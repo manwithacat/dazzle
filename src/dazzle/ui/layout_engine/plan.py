@@ -1,17 +1,17 @@
 """
 Layout plan assembly.
 
-Main orchestrator that combines archetype selection, surface allocation,
+Main orchestrator that combines stage selection, surface allocation,
 and persona adjustments to produce complete layout plans.
 """
 
 from typing import Any
 
-from dazzle.core.ir import LayoutArchetype, LayoutPlan, PersonaLayout, WorkspaceLayout
+from dazzle.core.ir import LayoutPlan, PersonaLayout, Stage, WorkspaceLayout
 from dazzle.ui.layout_engine.adjust import adjust_attention_for_persona
 from dazzle.ui.layout_engine.allocate import assign_signals_to_surfaces
 from dazzle.ui.layout_engine.archetypes import ArchetypeDefinition, get_archetype_definition
-from dazzle.ui.layout_engine.select_archetype import select_archetype
+from dazzle.ui.layout_engine.select_archetype import select_stage
 
 
 def build_layout_plan(
@@ -22,7 +22,7 @@ def build_layout_plan(
 
     This is the main entry point for the layout engine. It orchestrates:
     1. Persona-aware adjustments (if persona provided)
-    2. Archetype selection
+    2. Stage selection
     3. Surface allocation
     4. Warning generation (over-budget, etc.)
 
@@ -44,7 +44,7 @@ def build_layout_plan(
         ...     ]
         ... )
         >>> plan = build_layout_plan(workspace)
-        >>> plan.archetype.value
+        >>> plan.stage.value
         'focus_metric'
         >>> len(plan.surfaces) > 0
         True
@@ -55,9 +55,9 @@ def build_layout_plan(
     else:
         adjusted_workspace = workspace
 
-    # Step 2: Select archetype
-    archetype = select_archetype(adjusted_workspace, persona)
-    archetype_def = get_archetype_definition(archetype)
+    # Step 2: Select stage
+    stage = select_stage(adjusted_workspace, persona)
+    archetype_def = get_archetype_definition(stage)
 
     # Step 3: Allocate signals to surfaces
     surfaces, over_budget_signals = assign_signals_to_surfaces(adjusted_workspace, archetype_def)
@@ -72,7 +72,7 @@ def build_layout_plan(
     # Step 5: Build metadata
     metadata = _build_metadata(
         workspace=adjusted_workspace,
-        archetype=archetype,
+        stage=stage,
         archetype_def=archetype_def,
     )
 
@@ -80,7 +80,7 @@ def build_layout_plan(
     return LayoutPlan(
         workspace_id=workspace.id,
         persona_id=persona.id if persona else None,
-        archetype=archetype,
+        stage=stage,
         surfaces=surfaces,
         over_budget_signals=over_budget_signals,
         warnings=warnings,
@@ -137,14 +137,14 @@ def _generate_warnings(
 
 
 def _build_metadata(
-    workspace: WorkspaceLayout, archetype: LayoutArchetype, archetype_def: ArchetypeDefinition
+    workspace: WorkspaceLayout, stage: Stage, archetype_def: ArchetypeDefinition
 ) -> dict[str, Any]:
     """Build metadata for debugging and logging."""
     return {
         "signal_count": len(workspace.attention_signals),
         "total_attention_weight": sum(s.attention_weight for s in workspace.attention_signals),
         "attention_budget": workspace.attention_budget,
-        "archetype_name": archetype_def.name,
+        "stage_name": archetype_def.name,
         "surface_count": len(archetype_def.surfaces),
         "time_horizon": workspace.time_horizon,
     }

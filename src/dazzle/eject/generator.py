@@ -41,8 +41,15 @@ class GeneratorResult:
         """Whether generation succeeded (no errors)."""
         return len(self.errors) == 0
 
-    def add_file(self, path: Path) -> None:
-        """Record a file that was created."""
+    def add_file(self, path: Path, content: str | None = None) -> None:
+        """
+        Record a file that was created.
+
+        If content is provided, the file is also written to disk.
+        """
+        if content is not None:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
         self.files_created.append(path)
 
     def add_artifact(self, key: str, value: Any) -> None:

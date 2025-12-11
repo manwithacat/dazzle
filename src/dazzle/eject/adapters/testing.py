@@ -79,7 +79,7 @@ schema = schemathesis.from_asgi("/openapi.json", app)
         result = GeneratorResult()
 
         test_cases = []
-        for entity in self.spec.entities:
+        for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             test_cases.append(f'''
 @schema.parametrize()
@@ -178,7 +178,7 @@ class PytestAdapter(TestingAdapter):
         result = GeneratorResult()
 
         entity_fixtures = []
-        for entity in self.spec.entities:
+        for entity in self.spec.domain.entities:
             entity_lower = entity.name.lower()
             entity_fixtures.append(f'''
 @pytest.fixture
@@ -267,7 +267,7 @@ def client(db_session):
         """Generate CRUD tests for each entity."""
         result = GeneratorResult()
 
-        for entity in self.spec.entities:
+        for entity in self.spec.domain.entities:
             content = self._generate_entity_test_file(entity)
             result.add_file(
                 self.output_dir / "tests" / "unit" / f"test_{entity.name.lower()}.py",
@@ -354,21 +354,15 @@ class Test{entity.name}Validation:
 
         # Find entities with state machines
         entities_with_states = [
-            e for e in self.spec.entities if any(f.field_type == "state" for f in e.fields)
+            e for e in self.spec.domain.entities if e.has_state_machine
         ]
-
-        if not entities_with_states:
-            return result
 
         test_cases = []
         for entity in entities_with_states:
             entity_lower = entity.name.lower()
-            state_field = next(
-                (f for f in entity.fields if f.field_type == "state"),
-                None,
-            )
-            if state_field and state_field.transitions:
-                for transition in state_field.transitions:
+            state_machine = entity.state_machine
+            if state_machine and state_machine.transitions:
+                for transition in state_machine.transitions:
                     from_state = transition.from_state
                     to_state = transition.to_state
                     test_cases.append(f'''
@@ -425,16 +419,16 @@ class TestStateGuards:
         result = GeneratorResult()
 
         # Find entities with invariants
-        entities_with_invariants = [e for e in self.spec.entities if e.invariants]
+        entities_with_invariants = [e for e in self.spec.domain.entities if e.invariants]
 
         test_cases = []
         for entity in entities_with_invariants:
             entity_lower = entity.name.lower()
-            for invariant in entity.invariants:
-                test_name = invariant.name or f"{entity_lower}_invariant"
+            for idx, invariant in enumerate(entity.invariants):
+                test_name = invariant.code or f"{entity_lower}_invariant_{idx}"
                 test_cases.append(f'''
     def test_{test_name}(self, {entity_lower}_data):
-        """Test invariant: {invariant.condition}"""
+        """Test invariant: {invariant.expression}"""
         from app.validators import {entity.name}Validator
 
         validator = {entity.name}Validator()
@@ -443,7 +437,7 @@ class TestStateGuards:
         assert len(errors) == 0
 
     def test_{test_name}_violation(self, {entity_lower}_data):
-        """Test invariant violation: {invariant.condition}"""
+        """Test invariant violation: {invariant.expression}"""
         from app.validators import {entity.name}Validator
 
         validator = {entity.name}Validator()
@@ -488,16 +482,18 @@ class TestInvariantValidators:
         """Generate tests for access control policies."""
         result = GeneratorResult()
 
-        # Find entities with access rules
-        entities_with_access = [e for e in self.spec.entities if e.access_rules]
+        # Find entities with access control
+        entities_with_access = [e for e in self.spec.domain.entities if e.access is not None]
 
         test_cases = []
         for entity in entities_with_access:
             entity_lower = entity.name.lower()
-            for rule in entity.access_rules:
-                test_cases.append(f'''
-    def test_{entity_lower}_{rule.operation}_access(self):
-        """Test {rule.operation} access for {entity.name}."""
+            access_spec = entity.access
+            if access_spec:
+                for rule in access_spec.permissions:
+                    test_cases.append(f'''
+    def test_{entity_lower}_{rule.operation.value}_access(self):
+        """Test {rule.operation.value} access for {entity.name}."""
         from app.access import {entity.name}AccessPolicy
 
         policy = {entity.name}AccessPolicy()
@@ -506,7 +502,7 @@ class TestInvariantValidators:
             roles=["user"],
         )
         # Test with valid context
-        can_access = policy.can_{rule.operation}(context)
+        can_access = policy.can_{rule.operation.value}(context)
         # TODO: Assert based on expected access rules
 ''')
 
