@@ -570,7 +570,7 @@ def db_reset_json(
 
         # Create fresh database with schema
         db_manager = DatabaseManager(db_path)
-        db_manager.initialize_schema(backend_spec.entities)
+        db_manager.initialize_schema(backend_spec.entities)  # type: ignore[attr-defined]
 
         return {
             "reset": True,
@@ -644,7 +644,7 @@ def run_tests_json(
 
         # Try to import test runner
         try:
-            from dazzle.testing import TestRunner
+            from dazzle.testing import TestRunner  # type: ignore[attr-defined]
         except ImportError:
             # Testing module may not be available
             return {
