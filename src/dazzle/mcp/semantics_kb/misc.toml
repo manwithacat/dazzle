@@ -1,0 +1,115 @@
+# Misc Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "misc"
+concept_count = 4
+
+[concepts.authentication]
+category = "DNR Runtime"
+definition = "Session-based authentication system in DNR. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project."
+example = '''
+# In DSL, use personas to define role-based access:
+ux:
+  for admin:
+    scope: all
+  for member:
+    scope: owner = current_user
+
+# API login:
+POST /auth/login
+Content-Type: application/json
+{"username": "admin", "password": "secret"}
+
+# Response sets session cookie automatically
+'''
+related = ["persona", "scope"]
+
+[concepts.index]
+category = "Entity Performance"
+definition = "Database index for query optimization. Improves performance for filtered and sorted queries. Can be single-column or composite (multi-column)."
+syntax = '''
+# Single column index
+index <field_name>
+
+# Composite index (multi-column)
+index <field1>, <field2>, ...
+
+# Place at end of entity definition after fields
+'''
+example = '''
+entity Contact "Contact":
+  id: uuid pk
+  email: email unique required
+  first_name: str(100)
+  last_name: str(100)
+  status: enum[active,inactive]=active
+  created_at: datetime auto_add
+
+  # Single column index for status filtering
+  index status
+
+  # Composite index for name sorting
+  index last_name, first_name
+
+  # Index for date-based queries
+  index created_at
+'''
+related = ["entity", "field_types"]
+v0_7_changes = "Enhanced documentation in v0.7"
+best_practices = ["Index fields used frequently in filters (WHERE clauses)", "Index fields used in ORDER BY clauses", "Use composite indexes for multi-column sorts/filters", "Unique fields are automatically indexed", "Primary keys are automatically indexed", "Don't over-index - each index has write overhead"]
+
+[concepts.section]
+category = "Surface Layout"
+definition = "Groups fields within a surface for visual organization. Sections provide logical grouping and can have display labels. Use to organize complex forms and detail views."
+syntax = '''
+section <section_name> ["Display Label"]:
+  field <field_name> ["Field Label"]
+  field <field_name>
+  ...
+'''
+example = '''
+surface contact_detail "Contact Details":
+  uses entity Contact
+  mode: view
+
+  section main "Contact Information":
+    field first_name "First Name"
+    field last_name "Last Name"
+    field email "Email Address"
+    field phone "Phone"
+
+  section address "Address":
+    field street
+    field city
+    field state
+    field zip_code "ZIP Code"
+
+  section meta "Record Info":
+    field created_at "Created"
+    field updated_at "Last Updated"
+    field created_by "Created By"
+
+surface contact_edit "Edit Contact":
+  uses entity Contact
+  mode: edit
+
+  section main:
+    field first_name
+    field last_name
+    field email
+
+  section address:
+    field street
+    field city
+    field state
+    field zip_code
+'''
+related = ["surface", "field", "surface_modes"]
+best_practices = ["Use descriptive section names (main, address, meta)", "Group related fields together logically", "Use display labels for user-facing section headers", "Keep forms focused - don't show all fields in edit mode", "Use 'main' section for primary/required fields"]
+
+[concepts.surface_modes]
+category = "Surface System"
+definition = "Interaction modes for surfaces."
+related = ["surface"]
+v0_2_changes = "No changes from v0.1"

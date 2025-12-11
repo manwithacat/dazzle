@@ -214,14 +214,7 @@ class BaseParser:
 
     def _is_keyword_as_identifier(self) -> bool:
         """Check if current token is a keyword that can be used as identifier."""
-        return self.current_token().type in (
-            TokenType.TRUE,
-            TokenType.FALSE,
-            TokenType.CRITICAL,
-            TokenType.WARNING,
-            TokenType.NOTICE,
-            TokenType.INFO,
-        )
+        return self.current_token().type in KEYWORD_AS_IDENTIFIER_TYPES
 
 
 # Keywords that can be used as identifiers in certain contexts
@@ -400,4 +393,30 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.REGEX,
     # Field types that are also keywords
     TokenType.URL,
+    # Commonly needed as enum values (v0.9.1)
+    TokenType.SUBMITTED,
+    TokenType.OPERATION,
+    TokenType.KEY,
+    TokenType.START,
+    TokenType.ON,
+    TokenType.AT,
+    TokenType.SPEC,
+    TokenType.INLINE,
+    TokenType.MAPPING,
+    TokenType.RULES,
+    TokenType.SCHEDULED,
+    TokenType.EVENT_DRIVEN,
+    TokenType.FOREIGN,
+    TokenType.INPUT,
+    TokenType.OUTPUT,
+    TokenType.GUARANTEES,
+    TokenType.STUB,
+    TokenType.INVARIANT,
+    TokenType.COMPUTED,
+    TokenType.SUM,
+    TokenType.AVG,
+    TokenType.MIN,
+    TokenType.MAX,
+    TokenType.DAYS_UNTIL,
+    TokenType.DAYS_SINCE,
 )

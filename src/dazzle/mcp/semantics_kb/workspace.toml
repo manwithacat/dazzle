@@ -1,0 +1,32 @@
+# Workspace Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "workspace"
+concept_count = 3
+
+[concepts.aggregates]
+category = "Workspace Component (v0.2)"
+definition = "Computed metrics and aggregate functions for workspace regions."
+syntax = '''
+aggregate:
+  total: count(Task)
+  completed: count(Task where status = done)
+  completion_rate: count(Task where status = done) * 100 / count(Task)
+  avg_duration: avg(Task.duration_days)
+'''
+related = ["regions", "workspace"]
+v0_2_changes = "NEW in v0.2"
+
+[concepts.display_modes]
+category = "Workspace Component (v0.2)"
+definition = "Visualization modes for workspace regions."
+syntax = "display: <list|grid|timeline|map>"
+related = ["regions", "workspace"]
+v0_2_changes = "NEW in v0.2"
+
+[concepts.regions]
+category = "Workspace Component (v0.2)"
+definition = "Named sections within a workspace that pull data from entities or surfaces."
+related = ["workspace", "display_modes", "aggregates"]
+v0_2_changes = "NEW in v0.2"

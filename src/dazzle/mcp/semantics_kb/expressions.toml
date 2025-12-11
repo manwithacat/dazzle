@@ -1,0 +1,12 @@
+# Expressions Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "expressions"
+concept_count = 1
+
+[concepts.conditions]
+category = "Expression System"
+definition = "Boolean expressions used in filters, attention signals, and persona scopes."
+related = ["attention_signals", "scope", "regions"]
+v0_2_changes = "Enhanced with new functions in v0.2"

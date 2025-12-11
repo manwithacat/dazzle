@@ -1,0 +1,110 @@
+# Types Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "types"
+concept_count = 4
+
+[concepts.enum]
+category = "Type System"
+definition = "Enumeration type defining a fixed set of allowed values. Values are comma-separated inside square brackets with no spaces. Can specify a default value with =."
+syntax = '''
+<field_name>: enum[value1,value2,value3]
+<field_name>: enum[value1,value2,value3]=default_value
+'''
+example = '''
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+  # Basic enum with default
+  priority: enum[low,normal,high,urgent]=normal
+
+  # Status enum for state tracking
+  task_status: enum[todo,in_progress,blocked,done]=todo
+
+  # Type classification
+  task_type: enum[bug,feature,chore,spike]=feature
+'''
+related = ["field_types", "reserved_keywords", "entity"]
+important_notes = ["Values are case-sensitive", "Default value must be one of the listed values", "Spaces between values are optional (enum[a, b, c] and enum[a,b,c] both work)", "Most keywords can now be used as enum values (create, update, delete, etc.)"]
+
+[concepts.enum.common_workarounds]
+"create/update/delete" = "Use add/modify/remove or created/updated/deleted"
+email = "Use mail or email_address"
+status = "Use state or current_status (status is a keyword)"
+manual = "Use manual_entry or by_hand"
+submitted = "Use sent or filed"
+message = "Use notification or alert"
+
+[concepts.field_types]
+category = "Type System"
+definition = "Data types available for entity fields."
+related = ["entity"]
+v0_2_changes = "No changes from v0.1"
+
+[concepts.ref]
+category = "Type System"
+definition = "Reference (foreign key) to another entity. Creates a relationship between entities. The referenced entity must be defined in the same module or imported."
+syntax = "<field_name>: ref <EntityName> [required|optional]"
+example = '''
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+
+  # Optional reference (can be null)
+  assigned_agent: ref User optional
+
+  # Required reference (must have value)
+  company: ref Company required
+
+  # Self-reference (same entity)
+  manager: ref Contact optional
+
+  # Multiple references to same entity
+  created_by: ref User required
+  updated_by: ref User optional
+'''
+related = ["field_types", "relationships", "entity"]
+
+[concepts.relationships]
+category = "Type System"
+definition = "References and ownership relationships between entities. v0.7.1 adds semantic relationship types (has_many, has_one, embeds, belongs_to) with delete behaviors."
+syntax = '''
+# Simple reference (foreign key)
+field_name: ref <EntityName> [required|optional]
+
+# v0.7.1 Ownership relationships
+field_name: has_many <EntityName> [cascade|restrict|nullify|readonly]
+field_name: has_one <EntityName> [cascade|restrict|nullify]
+field_name: embeds <EntityName>
+field_name: belongs_to <EntityName>
+'''
+example = '''
+# Parent entity with children
+entity Order "Order":
+  id: uuid pk
+  items: has_many OrderItem cascade  # Delete items when order deleted
+  shipping_address: embeds Address   # Embedded value object
+  customer: ref Customer required    # Foreign key reference
+
+entity OrderItem "Order Item":
+  id: uuid pk
+  order: belongs_to Order            # Inverse of has_many
+  product: ref Product required
+
+# Readonly relationship (prevents modification through parent)
+entity Customer "Customer":
+  id: uuid pk
+  orders: has_many Order readonly    # View orders but don't modify through Customer
+'''
+related = ["entity", "field_types", "archetype"]
+v0_2_changes = "No changes from v0.1"
+v0_7_1_changes = "Added has_many, has_one, embeds, belongs_to with cascade/restrict/nullify/readonly behaviors"
+
+[concepts.relationships.relationship_types]
+ref = "Simple foreign key reference to another entity"
+has_many = "Parent owns multiple children (one-to-many)"
+has_one = "Parent owns exactly one child (one-to-one)"
+embeds = "Value object embedded in parent (no separate identity)"
+belongs_to = "Child side of has_many/has_one relationship"

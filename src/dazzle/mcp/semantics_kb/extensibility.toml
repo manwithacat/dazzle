@@ -1,0 +1,92 @@
+# Extensibility Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "extensibility"
+concept_count = 5
+
+[concepts.action_purity]
+category = "Extensibility (v0.5)"
+definition = "Classification of actions as pure (no side effects) or impure (has side effects like fetch, navigate, etc.)."
+syntax = '''
+actions:
+  toggleFilter: pure    # Only affects local state
+  saveTask: impure      # Has side effect (API call)
+'''
+related = ["component_role"]
+v0_5_changes = "NEW in v0.5"
+
+[concepts.component_role]
+category = "Extensibility (v0.5)"
+definition = "Classification of components as presentational (no state/impure actions) or container (has state or impure actions)."
+related = ["action_purity"]
+v0_5_changes = "NEW in v0.5"
+
+[concepts.domain_service]
+category = "Extensibility (v0.5)"
+definition = "Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model."
+syntax = '''
+service <name> "<Title>":
+  kind: <domain_logic|validation|integration|workflow>
+  input:
+    <field_name>: <type> [required]
+    ...
+  output:
+    <field_name>: <type>
+    ...
+  guarantees:
+    - "<contract guarantee>"
+  stub: <python|typescript>
+'''
+example = '''
+service calculate_vat "Calculate VAT":
+  kind: domain_logic
+  input:
+    invoice_id: uuid required
+    country_code: str(2)
+  output:
+    vat_amount: decimal(10,2)
+    breakdown: json
+  guarantees:
+    - "Must not mutate the invoice record"
+    - "Must raise domain error if config incomplete"
+  stub: python
+'''
+related = ["stub", "three_layer_architecture"]
+v0_5_changes = "NEW in v0.5"
+
+[concepts.stub]
+category = "Extensibility (v0.5)"
+definition = "Turing-complete implementation of a domain service. Stubs are auto-generated from DSL with typed function signatures."
+example = '''
+# stubs/calculate_vat.py (auto-generated header)
+# === AUTO-GENERATED HEADER - DO NOT MODIFY ===
+# Service ID: calculate_vat
+# Kind: domain_logic
+# Input: invoice_id (uuid required), country_code (str(2) optional)
+# Output: vat_amount (decimal), breakdown (json)
+# ============================================
+
+from typing import TypedDict
+
+class CalculateVatResult(TypedDict):
+    vat_amount: float
+    breakdown: dict
+
+def calculate_vat(invoice_id: str, country_code: str | None = None) -> CalculateVatResult:
+    # Your implementation here
+    invoice = get_invoice(invoice_id)
+    vat_rate = get_vat_rate(country_code or invoice.country)
+    return {
+        "vat_amount": invoice.total * vat_rate,
+        "breakdown": {"rate": vat_rate, "country": country_code}
+    }
+'''
+related = ["domain_service", "three_layer_architecture"]
+v0_5_changes = "NEW in v0.5"
+
+[concepts.three_layer_architecture]
+category = "Extensibility (v0.5)"
+definition = "DAZZLE's separation of concerns: DSL (declarative) → Kernel (runtime) → Stubs (custom code). The DSL is Anti-Turing (no arbitrary computation) while stubs allow full programming."
+related = ["domain_service", "stub"]
+v0_5_changes = "NEW in v0.5"

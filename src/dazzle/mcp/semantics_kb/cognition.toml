@@ -1,0 +1,162 @@
+# Cognition Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "cognition"
+concept_count = 5
+
+[concepts.archetype]
+category = "LLM Cognition (v0.7.1)"
+definition = "Reusable template defining common field patterns. Entities can extend archetypes to inherit fields, computed fields, and invariants. Promotes consistency and reduces repetition."
+syntax = '''
+archetype <ArchetypeName>:
+  <field_name>: <type> [modifiers]
+  ...
+  [<computed_field>: computed <expression>]
+  [invariant: <condition>]
+
+# Entity extending an archetype
+entity <EntityName> "<Display Name>":
+  extends: <ArchetypeName1>, <ArchetypeName2>, ...
+  <additional_fields>
+'''
+example = '''
+# Define reusable archetypes
+archetype Timestamped:
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+archetype Auditable:
+  created_by: ref User
+  updated_by: ref User
+  version: int = 1
+
+archetype SoftDelete:
+  is_deleted: bool = false
+  deleted_at: datetime
+  deleted_by: ref User
+
+# Entity using archetypes
+entity Document "Document":
+  extends: Timestamped, Auditable, SoftDelete
+  intent: "Store versioned documents with full audit trail"
+
+  id: uuid pk
+  title: str(200) required
+  content: text
+  status: enum[draft,published,archived] = draft
+'''
+related = ["entity", "intent", "relationships"]
+v0_7_1_changes = "NEW in v0.7.1"
+best_practices = ["Use for cross-cutting concerns (audit, timestamps, soft delete)", "Keep archetypes focused on one pattern", "Name archetypes as adjectives or nouns (Timestamped, Auditable)", "Entity fields override archetype fields with same name"]
+
+[concepts.domain_patterns]
+category = "LLM Cognition (v0.7.1)"
+definition = "Semantic tags that classify entities by domain area and common patterns. Helps LLMs understand entity relationships and generate consistent code."
+syntax = '''
+# Single domain tag
+domain: <tag>
+
+# Multiple pattern tags
+patterns: <tag1>, <tag2>, <tag3>
+'''
+example = '''
+entity Invoice "Invoice":
+  domain: billing
+  patterns: lifecycle, audit, line_items
+
+entity User "User":
+  domain: identity
+  patterns: authentication, authorization, profile
+
+entity Order "Order":
+  domain: commerce
+  patterns: lifecycle, workflow, aggregate_root
+'''
+related = ["entity", "intent", "archetype"]
+v0_7_1_changes = "NEW in v0.7.1"
+
+[concepts.examples]
+category = "LLM Cognition (v0.7.1)"
+definition = "Inline example records that demonstrate valid data for an entity. Helps LLMs understand data formats, relationships, and realistic values."
+syntax = '''
+examples:
+  {<field>: <value>, <field>: <value>, ...}
+  {<field>: <value>, <field>: <value>, ...}
+'''
+example = '''
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[todo,in_progress,done] = todo
+  priority: enum[low,medium,high] = medium
+  due_date: date
+
+  examples:
+    {title: "Write documentation", status: todo, priority: high, due_date: "2024-03-15"}
+    {title: "Fix login bug", status: in_progress, priority: high}
+    {title: "Update dependencies", status: done, priority: low}
+
+entity User "User":
+  id: uuid pk
+  email: email required unique
+  name: str(100) required
+  role: enum[admin,manager,member] = member
+
+  examples:
+    {email: "admin@example.com", name: "Alice Admin", role: admin}
+    {email: "bob@example.com", name: "Bob Manager", role: manager}
+    {email: "carol@example.com", name: "Carol Member", role: member}
+'''
+related = ["entity", "intent", "field_types"]
+v0_7_1_changes = "NEW in v0.7.1"
+best_practices = ["Include 2-3 representative examples", "Show different states/variations", "Use realistic but non-sensitive values", "Demonstrate enum values and relationships"]
+
+[concepts.intent]
+category = "LLM Cognition (v0.7.1)"
+definition = "A single-line declaration explaining WHY an entity exists in the domain. Helps LLMs understand the semantic purpose of data structures."
+syntax = "intent: \"<explanation of entity purpose>\""
+example = '''
+entity Invoice "Invoice":
+  intent: "Represent a finalized billing request with line items and tax calculations"
+
+entity User "User":
+  intent: "Authenticate and authorize system access with role-based permissions"
+
+entity AuditLog "Audit Log":
+  intent: "Track all data modifications for compliance and debugging" 
+'''
+related = ["entity", "archetype", "examples"]
+v0_7_1_changes = "NEW in v0.7.1"
+best_practices = ["Focus on WHY the entity exists, not WHAT it contains", "Describe the business/domain purpose", "Keep to one sentence", "Avoid technical implementation details"]
+
+[concepts.invariant_message]
+category = "LLM Cognition (v0.7.1)"
+definition = "Human-readable error message and machine-readable error code for invariant violations. Improves API responses and internationalization."
+syntax = '''
+invariant: <condition>
+  message: "<human-readable error message>"
+  code: <ERROR_CODE>
+'''
+example = '''
+entity Booking "Booking":
+  start_date: datetime required
+  end_date: datetime required
+  status: enum[pending,confirmed,cancelled] = pending
+  confirmed_at: datetime
+
+  # Invariant with message and code
+  invariant: end_date > start_date
+    message: "End date must be after start date"
+    code: BOOKING_INVALID_DATE_RANGE
+
+  invariant: status != confirmed or confirmed_at != null
+    message: "Confirmed bookings must have a confirmation timestamp"
+    code: BOOKING_MISSING_CONFIRMATION
+
+  # Invariant without message (generates default)
+  invariant: status != cancelled or end_date > today
+'''
+related = ["entity", "invariant", "access_rules"]
+v0_7_1_changes = "NEW in v0.7.1"
+best_practices = ["Use SCREAMING_SNAKE_CASE for error codes", "Make messages user-friendly and actionable", "Include entity prefix in error codes (BOOKING_, USER_)", "Message and code are optional - defaults are generated"]

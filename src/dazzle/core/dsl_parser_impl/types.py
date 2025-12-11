@@ -240,6 +240,10 @@ class TypeParserMixin:
                         default = val == "true"
                     else:
                         default = val
+                elif self._is_keyword_as_identifier():
+                    # v0.9.1: Allow keywords as default enum values
+                    # e.g., status: enum[draft,submitted,approved]=submitted
+                    default = self.advance().value
             else:
                 break
 

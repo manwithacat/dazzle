@@ -161,8 +161,22 @@ def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     Raises:
         LinkError: If circular dependency detected or missing module
     """
+    # Check for duplicate module names before building map
+    seen_names: dict[str, ir.ModuleIR] = {}
+    for module in modules:
+        if module.name in seen_names:
+            existing = seen_names[module.name]
+            raise LinkError(
+                f"Duplicate module name '{module.name}' defined in multiple files:\n"
+                f"  - {existing.file}\n"
+                f"  - {module.file}\n"
+                f"Each DSL file should declare a unique module name, or files with "
+                f"the same module should be merged."
+            )
+        seen_names[module.name] = module
+
     # Build dependency graph
-    module_map = {m.name: m for m in modules}
+    module_map = seen_names  # Already built during duplicate check
     dependencies: dict[str, set[str]] = {m.name: set(m.uses) for m in modules}
 
     # Check for missing dependencies

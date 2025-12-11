@@ -1,0 +1,12 @@
+# Reference Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "reference"
+concept_count = 1
+
+[concepts.reserved_keywords]
+category = "DSL Reference"
+definition = "Words reserved by the DAZZLE DSL that cannot be used as field names, enum values, or identifiers. Using these will cause parse errors."
+related = ["enum", "field_types", "entity"]
+critical_keywords = ["# CRUD/Test keywords", "create, update, delete, get, query", "# Boolean", "true, false", "# Logical", "and, or, not, in, is", "# Control flow", "for, if, when, then", "# Entity/Surface", "entity, surface, workspace, persona, service", "# Field modifiers", "required, optional, unique, index, computed", "# Modes", "list, grid, detail, view, create, edit", "# State machine", "transitions, requires, auto, manual, role", "# Access control", "access, read, write, permissions, anonymous", "# Time", "days, hours, minutes, after", "# Messaging (v0.9)", "email, message, send, receive, channel, queue, stream", "# Status words", "status, created, submitted, failed, succeeded", "# UX", "attention, critical, warning, notice, info"]

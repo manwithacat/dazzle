@@ -2,19 +2,51 @@
 
 This is a Dazzle project for generating full-stack applications from DSL specifications.
 
-## Important Notes
+## MCP Server Integration
 
-### API Keys are OPTIONAL
-- The `dazzle analyze-spec` command can use AI to convert natural language to DSL
-- **This is completely optional** - you can write DSL directly without any API keys
-- Users control and pay for their own AI tokens if they choose to use this feature
-- Claude (you) should help users write DSL directly when they don't have API keys
+This project includes DAZZLE MCP server integration for enhanced tooling.
+
+### Automatic Setup
+If DAZZLE was installed via Homebrew or pip, the MCP server should be automatically available.
+
+### Manual Setup
+If the MCP tools are not available, you can register the server:
+
+```bash
+dazzle mcp-setup
+```
+
+Or add this configuration manually to your Claude Code config (`~/.claude/mcp_servers.json`):
+
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "dazzle",
+      "args": ["mcp", "--working-dir", "${projectDir}"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+You should have access to:
+- `validate_dsl` - Validate all DSL files
+- `inspect_entity <name>` - Inspect entity definitions
+- `inspect_surface <name>` - Inspect surface definitions
+- `analyze_patterns` - Detect CRUD and integration patterns
+- `lint_project` - Run extended validation
+- `list_modules` - List all modules
+- `lookup_concept <term>` - Look up DSL concepts (try: enum, ref, archetype, reserved_keywords)
+- `find_examples` - Find example projects
+
+Try asking: "What DAZZLE tools do you have access to?"
 
 ## Your Primary Tasks
 
 1. **Help write DSL specifications** in the `dsl/` directory
 2. **Validate DSL** using `dazzle validate`
-3. **Build applications** using `dazzle build --stack [stackname]`
+3. **Run the application** using `dazzle dnr serve`
 4. **Fix validation errors** by editing `.dsl` files
 5. **Answer questions** about Dazzle DSL syntax and capabilities
 
@@ -26,38 +58,43 @@ This is a Dazzle project for generating full-stack applications from DSL specifi
 ├── SPEC.md             # Natural language requirements (optional)
 ├── dsl/                # DSL specification files
 │   └── *.dsl          # Your domain models and UI definitions
-└── build/              # Generated code (after dazzle build)
+└── .dazzle/            # Runtime state and logs (gitignored)
 ```
 
 ## Common Workflows
 
 ### Creating DSL from Requirements
 If the user has requirements in SPEC.md or describes them to you:
-1. Help them write DSL directly - no API keys needed
+1. Help them write DSL directly
 2. Create entities, surfaces, and other constructs in `.dsl` files
 3. Validate with `dazzle validate`
-4. Build with `dazzle build`
+4. Run with `dazzle dnr serve`
 
 ### Working with Existing DSL
 1. Read existing `.dsl` files in the `dsl/` directory
 2. Make modifications as requested
 3. Always validate after changes
-4. Build when ready
+4. Run with `dazzle dnr serve` to test
 
-### Available Stacks
-Use `dazzle stacks` to see available code generation targets:
-- `micro` or `django_micro_modular` - Full Django app with UI
-- `django_api` - Django REST API
-- `express_micro` - Node.js/Express app
-- `openapi` - OpenAPI specification
-- `docker` - Docker Compose setup
-- `terraform` - AWS infrastructure
+### Running the Application
+```bash
+dazzle dnr serve              # Run with Docker (default)
+dazzle dnr serve --local      # Run without Docker
+```
+- UI: http://localhost:3000
+- API: http://localhost:8000/docs
 
 ## DSL Quick Reference
 
-### Basic Entity
+### Multi-Module Projects
+Each `.dsl` file should declare its module and import dependencies:
 ```dsl
 module myapp.core
+
+# Import entities from other modules
+use myapp.other_module
+
+app myapp "My Application"
 
 entity User "User":
   id: uuid pk
@@ -66,59 +103,76 @@ entity User "User":
   created_at: datetime auto_add
 ```
 
+### Entity with Archetypes and Patterns
+```dsl
+entity Task "Task":
+  intent: "Work items to track progress"
+  domain: project_management
+  patterns: lifecycle, audit
+
+  id: uuid pk
+  title: str(200) required
+  description: text optional
+  status: enum[open,in_progress,done]=open
+  priority: enum[low,medium,high]=medium
+  due_date: date optional
+  assignee: ref User optional
+```
+
 ### Surface (UI)
 ```dsl
-surface user_list "Users":
-  uses entity User
+surface task_list "Tasks":
+  uses entity Task
   mode: list
 
-surface user_form "User Form":
-  uses entity User
-  mode: form
+  section main:
+    field title "Title"
+    field status "Status"
+    field assignee "Assigned To"
 ```
 
 ### Field Types
-- `uuid`, `str(n)`, `text`, `int`, `float`, `bool`
-- `datetime`, `date`, `time`
-- `enum[option1,option2,option3]`
-- `ref OtherEntity` (relationships)
+- `uuid`, `str(n)`, `text`, `int`, `decimal(p,s)`, `bool`
+- `datetime`, `date`
+- `email` - validated email address
+- `enum[option1,option2,option3]` - enumerated values
+- `ref OtherEntity` - foreign key relationship
+- `has_many OtherEntity` - one-to-many relationship
+- `belongs_to OtherEntity` - inverse of has_many
 
 ### Modifiers
 - `pk` - Primary key
 - `required` - Not nullable
+- `optional` - Nullable (default)
 - `unique` - Unique constraint
 - `auto_add` - Set on creation
 - `auto_update` - Update on save
+- `=value` - Default value
+
+### Reserved Keywords
+Some words are reserved and cannot be used as enum values:
+- Use `add/modify/remove` instead of `create/update/delete`
+- Use `mail` instead of `email` for channel enums
+- Use `sent` instead of `submitted`
+
+Use `lookup_concept reserved_keywords` for the full list.
 
 ## Important Reminders
 
-1. **Always validate before building** - `dazzle validate` first
+1. **Always validate before running** - `dazzle validate` first
 2. **Check the dsl/ directory** - DSL files go here, not in root
-3. **API keys are optional** - You can write DSL without them
-4. **Users pay for their own tokens** - If they choose to use AI features
-5. **The .clinerules file** - Pre-approves common commands to reduce friction
-
-## When Users Ask About Costs
-
-If users ask about API costs or tokens:
-- Explain that Dazzle can be used **completely free** without AI
-- They can write DSL directly (with your help)
-- The AI features are optional conveniences
-- If they have their own API keys, they control their spending
+3. **Use module imports** - Add `use module_name` when referencing entities from other modules
 
 ## Your Capabilities
 
 You can:
 - ✅ Write and modify DSL files
-- ✅ Run dazzle commands (validate, build, lint, etc.)
-- ✅ Read and explain generated code
+- ✅ Run dazzle commands (validate, dnr serve, lint, etc.)
 - ✅ Debug validation errors
 - ✅ Suggest DSL patterns and best practices
 
 You should NOT:
-- ❌ Require users to get API keys
-- ❌ Assume AI features are necessary
-- ❌ Modify generated code directly (regenerate instead)
+- ❌ Modify runtime files in `.dazzle/` directory
 - ❌ Create files outside the DSL structure without user request
 
-Remember: Your primary role is to help users create applications using Dazzle DSL, with or without AI assistance.
+Remember: Your primary role is to help users create applications using Dazzle DSL.

@@ -1,0 +1,263 @@
+# Core DSL Constructs
+# Entity, Surface, Workspace, Stage definitions
+
+[meta]
+category = "Core Constructs"
+version = "0.9.1"
+
+[concepts.entity]
+category = "Core Construct"
+definition = """
+A domain model representing a business concept (User, Task, Device, etc.).
+Similar to a database table but defined at the semantic level. Includes fields
+with types, constraints, relationships, and business logic. v0.7.1 adds LLM
+cognition features: intent, domain/patterns tags, archetypes, and relationship semantics.
+"""
+
+syntax = """
+entity <EntityName> "<Display Name>":
+  [intent: "<why this entity exists>"]
+  [domain: <tag>]
+  [patterns: <tag1>, <tag2>, ...]
+  [extends: <ArchetypeName1>, <ArchetypeName2>, ...]
+
+  <field_name>: <type> [modifiers]
+  ...
+
+  [<computed_field>: computed <expression>]
+
+  [transitions:
+    <from_state> -> <to_state>
+    <from_state> -> <to_state>: requires <field>
+    <from_state> -> <to_state>: role(<role_name>)]
+
+  [invariant: <condition>
+    [message: "<error message>"]
+    [code: <ERROR_CODE>]]
+
+  [access:
+    read: <condition>
+    write: <condition>]
+
+  [examples:
+    {<field>: <value>, <field>: <value>, ...}
+    {<field>: <value>, <field>: <value>, ...}]
+
+  [index <field1>, <field2>]
+  [unique <field1>, <field2>]
+"""
+
+example = """
+entity Ticket "Support Ticket":
+  intent: "Track and resolve customer issues through structured workflow"
+  domain: support
+  patterns: lifecycle, assignment, audit
+
+  id: uuid pk
+  title: str(200) required
+  status: enum[open,in_progress,resolved,closed]=open
+  assigned_to: ref User
+  resolution: text
+  created_at: datetime auto_add
+
+  # Computed field
+  days_open: computed days_since(created_at)
+
+  # State machine
+  transitions:
+    open -> in_progress: requires assigned_to
+    in_progress -> resolved: requires resolution
+    resolved -> closed
+    closed -> open: role(manager)
+
+  # Invariants with messages
+  invariant: status != resolved or resolution != null
+    message: "Resolution is required before closing ticket"
+    code: TICKET_NEEDS_RESOLUTION
+
+  # Access rules
+  access:
+    read: role(agent) or role(manager)
+    write: role(agent) or role(manager)
+
+  # Example data for LLM understanding
+  examples:
+    {title: "Login page not loading", status: open, priority: high}
+    {title: "Password reset email delayed", status: in_progress, priority: medium}
+"""
+
+related = [
+  "surface", "field_types", "relationships", "state_machine",
+  "invariant", "computed_field", "access_rules", "archetype",
+  "intent", "examples"
+]
+v0_7_changes = "Enhanced with state machines, invariants, computed fields, and access rules"
+v0_7_1_changes = "Added intent, domain/patterns tags, extends archetypes, examples block, invariant message/code"
+
+
+[concepts.surface]
+category = "Core Construct"
+definition = """
+A UI or API interface definition for interacting with entities.
+Defines WHAT data to show and HOW users interact with it.
+"""
+
+syntax = """
+surface <surface_name> "<Display Name>":
+  uses entity <EntityName>
+  mode: <list|view|create|edit>
+
+  section <section_name> ["Section Title"]:
+    field <field_name> ["Field Label"]
+    ...
+
+  [ux:]
+    [purpose: "<semantic intent>"]
+    [... UX directives ...]
+"""
+
+example = """
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title
+    field status
+
+  ux:
+    purpose: "Track team task progress"
+    sort: status asc
+    filter: status, assigned_to
+"""
+
+related = ["entity", "ux_block", "surface_modes"]
+v0_2_changes = "Added optional ux: block for semantic layer"
+
+
+[concepts.workspace]
+category = "Core Construct (v0.2)"
+definition = """
+A composition of multiple data views into a cohesive dashboard or information hub.
+Workspaces aggregate related surfaces and data for specific user needs.
+"""
+
+syntax = """
+workspace <workspace_name> "<Display Name>":
+  purpose: "<semantic intent>"
+
+  <region_name>:
+    source: <Entity|surface_name>
+    [filter: <condition>]
+    [sort: <field> [asc|desc], ...]
+    [limit: <number>]
+    [display: <list|grid|timeline|map>]
+    [action: <surface_name>]
+    [empty: "<message>"]
+    [aggregate:]
+      <metric_name>: <expression>
+
+  [ux:]
+    [for <persona>: ...]
+"""
+
+example = """
+workspace dashboard "Team Dashboard":
+  purpose: "Real-time team overview"
+
+  urgent_tasks:
+    source: Task
+    filter: priority = high
+    sort: due_date asc
+    limit: 5
+    action: task_edit
+    empty: "No urgent tasks!"
+
+  team_metrics:
+    aggregate:
+      total: count(Task)
+      done: count(Task where status = done)
+"""
+
+related = ["persona", "regions", "aggregates", "display_modes", "stage"]
+v0_2_changes = "NEW in v0.2"
+
+
+[concepts.stage]
+category = "Core Construct (v0.8)"
+definition = """
+Layout stage that defines how a workspace's UI components are arranged.
+Stages are like theater stages - they provide a layout where your UI components perform.
+Select a stage to control the visual presentation of your workspace.
+"""
+
+syntax = """
+workspace <name> "<Title>":
+  purpose: "<intent>"
+  stage: "<stage_name>"  # Optional: auto-selected if omitted
+
+# Available stages:
+# - focus_metric: Spotlight - one hero KPI with supporting context
+# - scanner_table: Open stage - data-heavy table with filters
+# - dual_pane_flow: Split stage - list on one side, detail on the other
+# - monitor_wall: Gallery - multiple displays arranged in grid
+# - command_center: Control room - dense expert interface
+"""
+
+example = """
+# Explicit stage selection
+workspace ops_center "Operations Center":
+  purpose: "Real-time monitoring and incident response"
+  stage: "command_center"
+
+  alerts:
+    source: Alert
+    filter: is_active = true
+    sort: severity desc
+
+  services:
+    source: Service
+    aggregate:
+      healthy: count(Service where status = healthy)
+
+# Auto-selected stage (DUAL_PANE_FLOW)
+workspace contacts "Contact Manager":
+  purpose: "Browse and view contact details"
+
+  contact_list:
+    source: Contact
+    display: list
+    limit: 20
+
+  contact_detail:
+    source: Contact
+    display: detail
+"""
+
+related = ["workspace", "persona", "attention_signals"]
+v0_8_changes = "NEW in v0.8 - replaces engine_hint"
+
+[concepts.stage.stages]
+focus_metric = "Single hero KPI with supporting data. Use when one metric is the primary focus."
+scanner_table = "Dense data table with filters. Use for data-heavy views where scanning is primary."
+dual_pane_flow = "List + detail side by side. Use when users browse a list and view details."
+monitor_wall = "Grid of moderate-importance metrics. Use for dashboards monitoring multiple metrics."
+command_center = "Dense expert interface. Use for operations centers and expert users."
+
+[concepts.stage.selection_rules]
+rules = [
+  "If stage is specified, that stage is used",
+  "If workspace has one dominant KPI signal (weight > 0.7), FOCUS_METRIC is selected",
+  "If workspace has strong table presence (weight > 0.6), SCANNER_TABLE is selected",
+  "If workspace has list + detail signals, DUAL_PANE_FLOW is selected",
+  "If workspace has 5+ signals for expert persona, COMMAND_CENTER is selected",
+  "Otherwise MONITOR_WALL is the default for multiple signals"
+]
+
+[concepts.stage.best_practices]
+tips = [
+  "Let auto-selection work for most cases",
+  "Use explicit stage: for ops dashboards (command_center) or specific layouts",
+  "Match stage to user needs: novices prefer simpler stages, experts prefer command_center",
+  "Consider persona when choosing stage - same workspace can use different stages per persona"
+]

@@ -1,0 +1,207 @@
+# Ejection Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "ejection"
+concept_count = 5
+
+[concepts.ejection]
+category = "Ejection Toolchain (v0.7.2)"
+definition = "Path from DNR runtime to standalone generated code when projects outgrow the native runtime or have deployment constraints. Generates FastAPI backend, React frontend, testing, and CI configuration."
+syntax = '''
+# Run ejection
+dazzle eject run                    # Full ejection
+dazzle eject run --no-frontend      # Backend only
+dazzle eject run --dry-run          # Preview changes
+dazzle eject run -o ./generated     # Custom output directory
+
+# Check configuration
+dazzle eject status
+
+# List adapters
+dazzle eject adapters
+
+# Generate OpenAPI spec
+dazzle eject openapi -o openapi.yaml
+'''
+example = '''
+# dazzle.toml configuration
+[ejection]
+enabled = true
+reuse_dnr = false
+
+[ejection.backend]
+framework = "fastapi"
+models = "sqlalchemy"
+async_handlers = true
+routing = "tags"
+
+[ejection.frontend]
+framework = "react"
+api_client = "tanstack_query"
+state = "tanstack_query"
+
+[ejection.testing]
+contract = "schemathesis"
+unit = "pytest"
+e2e = "playwright"
+
+[ejection.ci]
+template = "github_actions"
+
+[ejection.output]
+directory = "generated"
+clean = true
+'''
+related = ["ejection_config", "ejection_adapter", "openapi_generation"]
+v0_7_2_changes = "NEW in v0.7.2"
+
+[concepts.ejection_adapter]
+category = "Ejection Toolchain (v0.7.2)"
+definition = "Pluggable generators that produce code for different targets. Adapters extend the Generator base class and register with AdapterRegistry."
+syntax = '''
+from dazzle.eject.adapters import AdapterRegistry
+
+# Get an adapter
+backend_adapter = AdapterRegistry.get_backend("fastapi")
+frontend_adapter = AdapterRegistry.get_frontend("react")
+
+# List available adapters
+backends = AdapterRegistry.list_backends()    # ["fastapi"]
+frontends = AdapterRegistry.list_frontends()  # ["react"]
+testing = AdapterRegistry.list_testing()      # ["schemathesis", "pytest"]
+ci = AdapterRegistry.list_ci()                # ["github_actions", "gitlab_ci"]
+'''
+example = '''
+# Custom adapter implementation
+from dazzle.eject.adapters import Generator, GeneratorResult
+from dazzle.core.ir import AppSpec
+
+class MyFrameworkAdapter(Generator):
+    def __init__(self, spec: AppSpec, output_dir: Path, config):
+        super().__init__(spec, output_dir)
+        self.config = config
+
+    def generate(self) -> GeneratorResult:
+        result = GeneratorResult()
+        # Generate code files...
+        return result
+
+# Register the adapter
+AdapterRegistry.register_backend("my_framework", MyFrameworkAdapter)
+'''
+related = ["ejection", "ejection_config", "openapi_generation"]
+v0_7_2_changes = "NEW in v0.7.2"
+
+[concepts.ejection_config]
+category = "Ejection Toolchain (v0.7.2)"
+definition = "Configuration in dazzle.toml's [ejection] section controlling what code is generated and how."
+syntax = '''
+[ejection]
+enabled = true                    # Enable ejection commands
+reuse_dnr = false                 # Import DNR components vs generate standalone
+
+[ejection.backend]
+framework = "fastapi"             # Backend framework (fastapi)
+models = "sqlalchemy"             # ORM (sqlalchemy, pydantic)
+async_handlers = true             # Use async handlers
+routing = "tags"                  # Router organization (tags, modules)
+
+[ejection.frontend]
+framework = "react"               # Frontend framework (react)
+api_client = "tanstack_query"     # API client (tanstack_query, axios, fetch)
+state = "tanstack_query"          # State management (tanstack_query, zustand, redux)
+
+[ejection.testing]
+contract = "schemathesis"         # Contract testing (schemathesis, none)
+unit = "pytest"                   # Unit testing (pytest)
+e2e = "playwright"                # E2E testing (playwright, none)
+
+[ejection.ci]
+template = "github_actions"       # CI template (github_actions, gitlab_ci, none)
+
+[ejection.output]
+directory = "generated"           # Output directory (relative to project)
+clean = true                      # Clean output before generating
+'''
+related = ["ejection", "ejection_adapter"]
+v0_7_2_changes = "NEW in v0.7.2"
+
+[concepts.ejection_runner]
+category = "Ejection Toolchain (v0.7.2)"
+definition = "Orchestrates all ejection adapters and generates shared infrastructure files. Entry point for the ejection process."
+syntax = '''
+from dazzle.eject import EjectionRunner, load_ejection_config
+
+# Load configuration
+config = load_ejection_config(project_path / "dazzle.toml")
+
+# Create runner
+runner = EjectionRunner(spec, project_path, config)
+
+# Run ejection
+result = runner.run(
+    backend=True,
+    frontend=True,
+    testing=True,
+    ci=True,
+    clean=True,
+)
+
+# Check result
+if result.success:
+    print(f"Generated {len(result.files)} files")
+else:
+    for error in result.errors:
+        print(f"Error: {error}")
+'''
+related = ["ejection", "ejection_config", "ejection_adapter"]
+v0_7_2_changes = "NEW in v0.7.2"
+
+[concepts.openapi_generation]
+category = "Ejection Toolchain (v0.7.2)"
+definition = "Generate OpenAPI 3.1 specification from DAZZLE AppSpec. Includes CRUD endpoints, state transition actions, and schema definitions."
+syntax = '''
+# Generate OpenAPI spec
+dazzle eject openapi                    # Print to stdout
+dazzle eject openapi -o openapi.yaml    # Save to file
+dazzle eject openapi -f json            # Output as JSON
+'''
+example = '''
+# Generated OpenAPI includes:
+# - Entity schemas (Base, Create, Update, Read, List)
+# - CRUD endpoints (GET, POST, PUT, DELETE)
+# - State transition action endpoints
+# - Enum schemas for enum fields
+
+# Example output structure:
+openapi: "3.1.0"
+info:
+  title: My App
+  version: "1.0.0"
+paths:
+  /api/tasks:
+    get:
+      summary: List all Tasks
+      operationId: list_tasks
+    post:
+      summary: Create a new Task
+      operationId: create_task
+  /api/tasks/{task_id}:
+    get: ...
+    put: ...
+    delete: ...
+  /api/tasks/{task_id}/actions/open_to_in_progress:
+    post:
+      summary: Transition Task from open to in_progress
+components:
+  schemas:
+    Task: ...
+    TaskCreate: ...
+    TaskUpdate: ...
+    TaskRead: ...
+    TaskList: ...
+    TaskStatus: ...  # Enum schema
+'''
+related = ["ejection", "ejection_adapter"]
+v0_7_2_changes = "NEW in v0.7.2"

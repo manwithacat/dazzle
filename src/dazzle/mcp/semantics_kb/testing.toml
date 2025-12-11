@@ -1,0 +1,37 @@
+# Testing Concepts
+# Auto-generated from semantics.py
+
+[meta]
+file = "testing"
+concept_count = 3
+
+[concepts.e2e_testing]
+category = "Testing"
+definition = "End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app."
+related = ["flowspec", "semantic_dom", "authentication"]
+
+[concepts.flowspec]
+category = "Testing"
+definition = "JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can be customized."
+example = '''
+{
+  "flows": [{
+    "id": "task_crud_create",
+    "name": "Create Task",
+    "priority": "high",
+    "tags": ["crud", "task"],
+    "steps": [
+      {"type": "navigate", "url": "/tasks/new"},
+      {"type": "fill", "selector": "[data-dazzle-field='title']", "value": "Test Task"},
+      {"type": "click", "selector": "[data-dazzle-action='submit']"},
+      {"type": "assert", "condition": "url_contains", "value": "/tasks"}
+    ]
+  }]
+}
+'''
+related = ["e2e_testing", "semantic_dom"]
+
+[concepts.semantic_dom]
+category = "Testing"
+definition = "Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements."
+related = ["e2e_testing", "flowspec"]

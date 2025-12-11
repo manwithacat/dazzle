@@ -597,7 +597,6 @@ def lookup_inference_handler(args: dict[str, Any]) -> str:
 
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
-    import importlib
 
     reload_requested = args.get("reload", False)
     result: dict[str, Any] = {
@@ -613,23 +612,18 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         if not is_dev_mode():
             result["reload"] = "skipped - only available in dev mode"
         else:
-            # Reload the semantics module to pick up code changes
+            # Reload the semantics data from TOML files
             try:
-                import dazzle.mcp.semantics as semantics_module
+                from dazzle.mcp.semantics_kb import reload_cache
 
-                importlib.reload(semantics_module)
+                reload_cache()
 
-                # Re-import the functions we need
+                # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version
 
                 new_version_info = new_get_version()
                 result["reload"] = "success"
                 result["new_semantics_version"] = new_version_info
-
-                # Update lookup_concept to use reloaded module
-                # This requires updating the global reference
-                global lookup_concept
-                from dazzle.mcp.semantics import lookup_concept
 
             except Exception as e:
                 result["reload"] = f"failed: {e}"
