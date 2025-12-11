@@ -422,3 +422,158 @@ jobs:
           git diff --staged --stat
           git commit -m "Update dazzle to v${{ steps.version.outputs.VERSION }}"
           git push
+
+  # Post-release verification - tests actual Homebrew installation
+  verify-homebrew:
+    needs: update-homebrew
+    runs-on: macos-14  # Apple Silicon
+
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Wait for tap to be available
+        run: |
+          echo "Waiting 30s for homebrew-tap update to propagate..."
+          sleep 30
+
+      - name: Install from tap
+        run: |
+          # Update Homebrew
+          brew update
+
+          # Tap and install
+          brew tap manwithacat/tap
+          brew install --verbose manwithacat/tap/dazzle
+
+          echo "✓ Installation completed"
+
+      - name: Verify CLI version
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+
+          # Check version output
+          OUTPUT=$(dazzle version)
+          echo "Version output: ${OUTPUT}"
+
+          if [[ ! "${OUTPUT}" =~ "${VERSION}" ]]; then
+            echo "ERROR: Installed version doesn't match expected ${VERSION}"
+            exit 1
+          fi
+          echo "✓ Version matches: ${VERSION}"
+
+      - name: Test Python integration
+        run: |
+          # Test that Python is properly configured
+          OUTPUT=$(dazzle version --full)
+          echo "Full version output: ${OUTPUT}"
+
+          if [[ ! "${OUTPUT}" =~ "python_available" ]]; then
+            echo "ERROR: Python integration not working"
+            exit 1
+          fi
+          echo "✓ Python integration working"
+
+      - name: Test DSL validation
+        run: |
+          # Create test project
+          mkdir -p test-project/dsl
+
+          cat > test-project/dazzle.toml << 'EOF'
+          [project]
+          name = "test"
+          version = "0.1.0"
+          EOF
+
+          cat > test-project/dsl/app.dsl << 'EOF'
+          module test
+          app test "Test App"
+
+          entity Task "Task":
+            id: uuid pk
+            title: str(200) required
+            done: bool=false
+          EOF
+
+          cd test-project
+          OUTPUT=$(dazzle check --json)
+          echo "Check output: ${OUTPUT}"
+
+          if [[ ! "${OUTPUT}" =~ '"success"' ]]; then
+            echo "ERROR: DSL validation failed"
+            exit 1
+          fi
+          echo "✓ DSL validation working"
+
+      - name: Test performance (startup time)
+        run: |
+          # Measure CLI startup time (should be <500ms for simple commands)
+          echo "Measuring startup time..."
+
+          START=$(python3 -c 'import time; print(time.time())')
+          dazzle version > /dev/null
+          END=$(python3 -c 'import time; print(time.time())')
+
+          DURATION=$(python3 -c "print(f'{($END - $START) * 1000:.0f}')")
+          echo "Startup time: ${DURATION}ms"
+
+          if [ "${DURATION}" -gt 2000 ]; then
+            echo "WARNING: CLI startup is slow (${DURATION}ms > 2000ms)"
+            # Don't fail, just warn
+          else
+            echo "✓ Startup time acceptable: ${DURATION}ms"
+          fi
+
+      - name: Report success
+        if: success()
+        run: |
+          echo "============================================"
+          echo "✓ Homebrew installation verified successfully"
+          echo "  Version: ${{ steps.version.outputs.VERSION }}"
+          echo "  Platform: macOS ARM64"
+          echo "============================================"
+
+      - name: Create status check
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Create a check run to track homebrew verification status
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: '${{ job.status }}' === 'success' ? 'success' : 'failure',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: 'Homebrew installation verification',
+              context: 'homebrew-verification'
+            });
+
+  # Trigger tap repo validation (cross-repo)
+  trigger-tap-validation:
+    needs: update-homebrew
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger tap validation workflow
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          repository: manwithacat/homebrew-tap
+          event-type: validate-formula
+          client-payload: '{"version": "${{ steps.version.outputs.VERSION }}", "source_run_id": "${{ github.run_id }}"}'

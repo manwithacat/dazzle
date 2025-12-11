@@ -417,3 +417,84 @@ jobs:
       if: always()
       run: |
         pkill -f "dazzle dnr serve" || true
+
+  # Homebrew formula validation - ensures formula is syntactically correct
+  # and version numbers are consistent across all files
+  homebrew-validation:
+    name: Homebrew Formula Validation
+    runs-on: macos-14  # Need macOS for brew commands
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Extract expected version
+      id: version
+      run: |
+        # Get version from pyproject.toml (source of truth)
+        VERSION=$(grep '^version = ' pyproject.toml | head -1 | cut -d'"' -f2)
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Expected version: ${VERSION}"
+
+    - name: Validate formula syntax
+      run: |
+        # Check Ruby syntax
+        ruby -c homebrew/dazzle.rb || { echo "ERROR: Formula has Ruby syntax errors"; exit 1; }
+        echo "✓ Formula syntax is valid"
+
+    - name: Check version consistency
+      run: |
+        VERSION="${{ steps.version.outputs.VERSION }}"
+
+        # Check formula version (skip PLACEHOLDER check - handled at release time)
+        FORMULA_VERSION=$(grep 'version "' homebrew/dazzle.rb | head -1 | cut -d'"' -f2)
+
+        # Formula may have PLACEHOLDER_VERSION before release
+        if [[ "${FORMULA_VERSION}" == "PLACEHOLDER_VERSION" ]]; then
+          echo "Note: Formula has placeholder version (will be updated at release time)"
+        elif [[ "${FORMULA_VERSION}" != "${VERSION}" ]]; then
+          echo "WARNING: Formula version (${FORMULA_VERSION}) differs from pyproject.toml (${VERSION})"
+          echo "This may be expected if preparing a release"
+        else
+          echo "✓ Formula version matches pyproject.toml: ${VERSION}"
+        fi
+
+        # Check CLI version
+        CLI_VERSION=$(grep '"version":' cli/package.json | cut -d'"' -f4)
+        if [[ "${CLI_VERSION}" != "${VERSION}" ]]; then
+          echo "ERROR: CLI version (${CLI_VERSION}) doesn't match pyproject.toml (${VERSION})"
+          exit 1
+        fi
+        echo "✓ CLI version matches: ${CLI_VERSION}"
+
+    - name: Validate formula structure
+      run: |
+        # Ensure required sections exist
+        echo "Checking required formula sections..."
+
+        grep -q 'class Dazzle < Formula' homebrew/dazzle.rb || { echo "ERROR: Missing Dazzle class"; exit 1; }
+        grep -q 'desc "' homebrew/dazzle.rb || { echo "ERROR: Missing description"; exit 1; }
+        grep -q 'homepage "' homebrew/dazzle.rb || { echo "ERROR: Missing homepage"; exit 1; }
+        grep -q 'def install' homebrew/dazzle.rb || { echo "ERROR: Missing install method"; exit 1; }
+        grep -q 'test do' homebrew/dazzle.rb || { echo "ERROR: Missing test block"; exit 1; }
+        grep -q 'resource "cli-binary"' homebrew/dazzle.rb || { echo "ERROR: Missing cli-binary resource"; exit 1; }
+        grep -q 'resource "pydantic-core"' homebrew/dazzle.rb || { echo "ERROR: Missing pydantic-core resource"; exit 1; }
+
+        echo "✓ All required formula sections present"
+
+    - name: Check for common issues
+      run: |
+        # Check for unexpanded shell variables (shouldn't happen in template)
+        if grep -E '\$\{[A-Z_]+\}' homebrew/dazzle.rb | grep -v 'PLACEHOLDER'; then
+          echo "WARNING: Found unexpanded shell variables"
+        fi
+
+        # Check for hardcoded paths that should be variables
+        if grep -E '/usr/local|/opt/homebrew' homebrew/dazzle.rb; then
+          echo "WARNING: Found hardcoded paths - use Homebrew variables instead"
+        fi
+
+        # Ensure Python version dependency is reasonable
+        PYTHON_DEP=$(grep 'depends_on "python@' homebrew/dazzle.rb | head -1)
+        echo "Python dependency: ${PYTHON_DEP}"
+
+        echo "✓ Formula passed common issue checks"
