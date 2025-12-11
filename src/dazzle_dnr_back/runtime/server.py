@@ -62,6 +62,12 @@ class ServerConfig:
     enable_test_mode: bool = False
     services_dir: Path = field(default_factory=lambda: Path("services"))
 
+    # Dazzle Bar control plane (v0.8.5)
+    enable_dev_mode: bool = False
+    feedback_dir: Path = field(default_factory=lambda: Path(".dazzle/feedback"))
+    personas: list[dict[str, Any]] = field(default_factory=list)
+    scenarios: list[dict[str, Any]] = field(default_factory=list)
+
 
 # Runtime import
 try:
@@ -105,6 +111,11 @@ class DNRBackendApp:
         files_db_path: str | Path | None = None,
         enable_test_mode: bool | None = None,
         services_dir: str | Path | None = None,
+        # Dazzle Bar control plane (v0.8.5)
+        enable_dev_mode: bool | None = None,
+        feedback_dir: str | Path | None = None,
+        personas: list[dict[str, Any]] | None = None,
+        scenarios: list[dict[str, Any]] | None = None,
     ):
         """
         Initialize the backend application.
@@ -123,6 +134,10 @@ class DNRBackendApp:
             files_db_path: Path to file metadata database (default: .dazzle/files.db)
             enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
             services_dir: Path to domain service stubs directory (default: services/)
+            enable_dev_mode: Enable Dazzle Bar control plane (default: False)
+            feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
+            personas: List of persona configurations for Dazzle Bar
+            scenarios: List of scenario configurations for Dazzle Bar
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -146,6 +161,13 @@ class DNRBackendApp:
             enable_test_mode if enable_test_mode is not None else config.enable_test_mode
         )
         self._services_dir = Path(services_dir) if services_dir else config.services_dir
+        # Dazzle Bar control plane (v0.8.5)
+        self._enable_dev_mode = (
+            enable_dev_mode if enable_dev_mode is not None else config.enable_dev_mode
+        )
+        self._feedback_dir = Path(feedback_dir) if feedback_dir else config.feedback_dir
+        self._personas = personas if personas is not None else config.personas
+        self._scenarios = scenarios if scenarios is not None else config.scenarios
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -289,6 +311,20 @@ class DNRBackendApp:
                 entities=self.spec.entities,
             )
             self._app.include_router(test_router)
+
+        # Initialize Dazzle Bar control plane if dev mode enabled (v0.8.5)
+        if self._enable_dev_mode or self._enable_test_mode:
+            from dazzle_dnr_back.runtime.control_plane import create_control_plane_routes
+
+            control_plane_router = create_control_plane_routes(
+                db_manager=self._db_manager,
+                repositories=self._repositories if self._use_database else None,
+                entities=self.spec.entities,
+                personas=self._personas,
+                scenarios=self._scenarios,
+                feedback_dir=self._feedback_dir,
+            )
+            self._app.include_router(control_plane_router)
 
         # Initialize debug routes (always available when database is enabled)
         if self._use_database and self._db_manager:
@@ -434,6 +470,11 @@ class DNRBackendApp:
         return self._enable_test_mode
 
     @property
+    def dev_mode_enabled(self) -> bool:
+        """Check if dev mode (Dazzle Bar) is enabled."""
+        return self._enable_dev_mode
+
+    @property
     def repositories(self) -> dict[str, Any]:
         """Get repository instances."""
         return self._repositories
@@ -460,6 +501,10 @@ def create_app(
     files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
+    enable_dev_mode: bool = False,
+    feedback_dir: str | Path | None = None,
+    personas: list[dict[str, Any]] | None = None,
+    scenarios: list[dict[str, Any]] | None = None,
 ) -> FastAPI:
     """
     Create a FastAPI application from a BackendSpec.
@@ -477,6 +522,10 @@ def create_app(
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
+        enable_dev_mode: Enable Dazzle Bar control plane (default: False)
+        feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
+        personas: List of persona configurations for Dazzle Bar
+        scenarios: List of scenario configurations for Dazzle Bar
 
     Returns:
         FastAPI application
@@ -498,6 +547,10 @@ def create_app(
         files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
+        enable_dev_mode=enable_dev_mode,
+        feedback_dir=feedback_dir,
+        personas=personas,
+        scenarios=scenarios,
     )
     return builder.build()
 
@@ -516,6 +569,10 @@ def run_app(
     files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
+    enable_dev_mode: bool = False,
+    feedback_dir: str | Path | None = None,
+    personas: list[dict[str, Any]] | None = None,
+    scenarios: list[dict[str, Any]] | None = None,
 ) -> None:
     """
     Run a DNR-Back application.
@@ -534,6 +591,10 @@ def run_app(
         files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
+        enable_dev_mode: Enable Dazzle Bar control plane (default: False)
+        feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
+        personas: List of persona configurations for Dazzle Bar
+        scenarios: List of scenario configurations for Dazzle Bar
 
     Example:
         >>> from dazzle_dnr_back.specs import BackendSpec
@@ -556,6 +617,10 @@ def run_app(
         files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
+        enable_dev_mode=enable_dev_mode,
+        feedback_dir=feedback_dir,
+        personas=personas,
+        scenarios=scenarios,
     )
     uvicorn.run(app, host=host, port=port, reload=reload)
 

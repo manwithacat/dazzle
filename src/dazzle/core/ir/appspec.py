@@ -19,6 +19,8 @@ from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
+from .personas import PersonaSpec
+from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
@@ -67,6 +69,8 @@ class AppSpec(BaseModel):
     tests: list[TestSpec] = Field(default_factory=list)
     e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
+    personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
 
@@ -160,6 +164,20 @@ class AppSpec(BaseModel):
     def get_flows_by_priority(self, priority: FlowPriority) -> list[FlowSpec]:
         """Get all E2E flows with given priority."""
         return [f for f in self.e2e_flows if f.priority == priority]
+
+    def get_persona(self, persona_id: str) -> PersonaSpec | None:
+        """Get persona by ID."""
+        for persona in self.personas:
+            if persona.id == persona_id:
+                return persona
+        return None
+
+    def get_scenario(self, scenario_id: str) -> ScenarioSpec | None:
+        """Get scenario by ID."""
+        for scenario in self.scenarios:
+            if scenario.id == scenario_id:
+                return scenario
+        return None
 
     @property
     def type_catalog(self) -> dict[str, list[FieldType]]:

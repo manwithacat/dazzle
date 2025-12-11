@@ -131,6 +131,10 @@
     'integrations': list([
     ]),
     'name': 'simple_test',
+    'personas': list([
+    ]),
+    'scenarios': list([
+    ]),
     'surfaces': list([
       dict({
         'access': None,

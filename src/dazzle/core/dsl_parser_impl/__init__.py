@@ -24,6 +24,7 @@ from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
 from .flow import FlowParserMixin
 from .integration import IntegrationParserMixin
+from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
 from .surface import SurfaceParserMixin
 from .test import TestParserMixin
@@ -44,6 +45,7 @@ class Parser(
     FlowParserMixin,
     UXParserMixin,
     WorkspaceParserMixin,
+    ScenarioParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -95,6 +97,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.ENTITY):
@@ -112,6 +116,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.SURFACE):
@@ -129,6 +135,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.EXPERIENCE):
@@ -146,6 +154,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.SERVICE):
@@ -165,6 +175,8 @@ class Parser(
                         tests=fragment.tests,
                         e2e_flows=fragment.e2e_flows,
                         fixtures=fragment.fixtures,
+                        personas=fragment.personas,
+                        scenarios=fragment.scenarios,
                     )
                 else:
                     fragment = ir.ModuleFragment(
@@ -180,6 +192,8 @@ class Parser(
                         tests=fragment.tests,
                         e2e_flows=fragment.e2e_flows,
                         fixtures=fragment.fixtures,
+                        personas=fragment.personas,
+                        scenarios=fragment.scenarios,
                     )
 
             elif self.match(TokenType.FOREIGN_MODEL):
@@ -197,6 +211,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.INTEGRATION):
@@ -214,6 +230,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.TEST):
@@ -231,6 +249,8 @@ class Parser(
                     tests=fragment.tests + [test],
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.WORKSPACE):
@@ -248,6 +268,8 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows,
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
 
             elif self.match(TokenType.FLOW):
@@ -265,7 +287,102 @@ class Parser(
                     tests=fragment.tests,
                     e2e_flows=fragment.e2e_flows + [flow],
                     fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
                 )
+
+            elif self.match(TokenType.PERSONA):
+                persona = self.parse_persona()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas + [persona],
+                    scenarios=fragment.scenarios,
+                )
+
+            elif self.match(TokenType.SCENARIO):
+                scenario = self.parse_scenario()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios + [scenario],
+                )
+
+            elif self.match(TokenType.DEMO):
+                demo_fixtures = self.parse_demo()
+                # Demo fixtures go into the first scenario or create a default one
+                if fragment.scenarios:
+                    # Update the last scenario with new fixtures
+                    last_scenario = fragment.scenarios[-1]
+                    updated_scenario = ir.ScenarioSpec(
+                        id=last_scenario.id,
+                        name=last_scenario.name,
+                        description=last_scenario.description,
+                        persona_entries=last_scenario.persona_entries,
+                        seed_data_path=last_scenario.seed_data_path,
+                        demo_fixtures=list(last_scenario.demo_fixtures) + demo_fixtures,
+                    )
+                    fragment = ir.ModuleFragment(
+                        archetypes=fragment.archetypes,
+                        entities=fragment.entities,
+                        surfaces=fragment.surfaces,
+                        workspaces=fragment.workspaces,
+                        experiences=fragment.experiences,
+                        apis=fragment.apis,
+                        domain_services=fragment.domain_services,
+                        foreign_models=fragment.foreign_models,
+                        integrations=fragment.integrations,
+                        tests=fragment.tests,
+                        e2e_flows=fragment.e2e_flows,
+                        fixtures=fragment.fixtures,
+                        personas=fragment.personas,
+                        scenarios=fragment.scenarios[:-1] + [updated_scenario],
+                    )
+                else:
+                    # Create a default scenario for standalone demo blocks
+                    default_scenario = ir.ScenarioSpec(
+                        id="default",
+                        name="Default",
+                        description="Default demo scenario",
+                        demo_fixtures=demo_fixtures,
+                    )
+                    fragment = ir.ModuleFragment(
+                        archetypes=fragment.archetypes,
+                        entities=fragment.entities,
+                        surfaces=fragment.surfaces,
+                        workspaces=fragment.workspaces,
+                        experiences=fragment.experiences,
+                        apis=fragment.apis,
+                        domain_services=fragment.domain_services,
+                        foreign_models=fragment.foreign_models,
+                        integrations=fragment.integrations,
+                        tests=fragment.tests,
+                        e2e_flows=fragment.e2e_flows,
+                        fixtures=fragment.fixtures,
+                        personas=fragment.personas,
+                        scenarios=[default_scenario],
+                    )
 
             else:
                 token = self.current_token()
@@ -315,4 +432,5 @@ __all__ = [
     "FlowParserMixin",
     "UXParserMixin",
     "WorkspaceParserMixin",
+    "ScenarioParserMixin",
 ]

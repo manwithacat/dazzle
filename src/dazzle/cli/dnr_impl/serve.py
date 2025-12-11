@@ -264,6 +264,22 @@ def dnr_serve(
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
     typer.echo(f"  • Database: {db_path}")
+
+    # Extract personas and scenarios for Dazzle Bar (v0.8.5)
+    personas = [
+        {"id": p.id, "label": p.label, "description": p.description, "goals": p.goals}
+        for p in appspec.personas
+    ]
+    scenarios = [
+        {"id": s.id, "name": s.name, "description": s.description}
+        for s in appspec.scenarios
+    ]
+
+    if personas:
+        typer.echo(f"  • {len(personas)} personas (Dazzle Bar)")
+    if scenarios:
+        typer.echo(f"  • {len(scenarios)} scenarios (Dazzle Bar)")
+
     typer.echo()
 
     # Ensure database directory exists
@@ -290,4 +306,6 @@ def dnr_serve(
         host=host,
         enable_watch=watch,
         project_root=project_root,
+        personas=personas,
+        scenarios=scenarios,
     )

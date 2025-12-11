@@ -141,6 +141,18 @@ from .module import (
     ModuleIR,
 )
 
+# Personas (v0.8.5 Dazzle Bar)
+from .personas import (
+    PersonaSpec,
+)
+
+# Scenarios (v0.8.5 Dazzle Bar)
+from .scenarios import (
+    DemoFixture,
+    PersonaScenarioEntry,
+    ScenarioSpec,
+)
+
 # Services (External APIs and Domain Services)
 from .services import (
     APISpec,
@@ -339,4 +351,10 @@ __all__ = [
     "NotExpr",
     "InvariantExpr",
     "InvariantSpec",
+    # Personas (v0.8.5 Dazzle Bar)
+    "PersonaSpec",
+    # Scenarios (v0.8.5 Dazzle Bar)
+    "DemoFixture",
+    "PersonaScenarioEntry",
+    "ScenarioSpec",
 ]

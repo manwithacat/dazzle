@@ -17,6 +17,8 @@ from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
+from .personas import PersonaSpec
+from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
@@ -56,6 +58,8 @@ class ModuleFragment(BaseModel):
     tests: list[TestSpec] = Field(default_factory=list)
     e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
+    personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
 
     model_config = ConfigDict(frozen=True)
 

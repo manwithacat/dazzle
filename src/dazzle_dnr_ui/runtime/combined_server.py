@@ -41,6 +41,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     backend_url: str = "http://127.0.0.1:8000"
     test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
+    dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
 
     def do_GET(self) -> None:
         """Handle GET requests."""
@@ -51,6 +52,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._proxy_request("GET")
         elif path.startswith("/__test__/"):
             self._proxy_request("GET")
+        elif path.startswith("/dazzle/dev/"):
+            # Proxy Dazzle Bar control plane requests (v0.8.5)
+            self._proxy_request("GET")
+        elif path == "/dazzle-bar.js":
+            # Serve Dazzle Bar JavaScript (v0.8.5)
+            self._serve_dazzle_bar()
         elif path == "/dnr-runtime.js":
             self._serve_runtime()
         elif path == "/app.js":
@@ -75,6 +82,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/api/"):
             self._proxy_request("POST")
         elif self.path.startswith("/__test__/"):
+            self._proxy_request("POST")
+        elif self.path.startswith("/dazzle/dev/"):
+            # Proxy Dazzle Bar control plane requests (v0.8.5)
             self._proxy_request("POST")
         else:
             self.send_error(405, "Method Not Allowed")
@@ -101,6 +111,14 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._proxy_request("PATCH")
         else:
             self.send_error(405, "Method Not Allowed")
+
+    def do_HEAD(self) -> None:
+        """Handle HEAD requests (used by Dazzle Bar to check control plane availability)."""
+        if self.path.startswith("/dazzle/dev/"):
+            self._proxy_request("HEAD")
+        else:
+            # Default HEAD behavior for other paths
+            super().do_HEAD()
 
     def _proxy_request(self, method: str) -> None:
         """Proxy request to backend server."""
@@ -152,6 +170,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = self.generator.generate_html(include_runtime=False)
+
+        # Inject Dazzle Bar script in dev mode (v0.8.5)
+        if self.dev_mode:
+            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
+            html = html.replace("</body>", dazzle_bar_script)
+
         # Inject hot reload script (disabled in test mode for Playwright compatibility)
         if not self.test_mode:
             hot_reload_script = """
@@ -212,6 +236,20 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, "No UISpec loaded")
             return
         self._send_response(generator.generate_spec_json(), "application/json")
+
+    def _serve_dazzle_bar(self) -> None:
+        """Serve the Dazzle Bar JavaScript bundle (v0.8.5)."""
+        if not self.dev_mode:
+            self.send_error(404, "Dazzle Bar not available in production mode")
+            return
+
+        try:
+            from dazzle_dnr_ui.runtime.js_loader import get_dazzle_bar_js
+
+            js_content = get_dazzle_bar_js()
+            self._send_response(js_content, "application/javascript")
+        except Exception as e:
+            self.send_error(500, f"Failed to load Dazzle Bar: {e}")
 
     def _serve_hot_reload(self) -> None:
         """Serve hot reload SSE endpoint."""
@@ -291,6 +329,8 @@ class DNRCombinedServer:
         enable_auth: bool = False,
         enable_watch: bool = False,
         project_root: Path | None = None,
+        personas: list[dict[str, Any]] | None = None,
+        scenarios: list[dict[str, Any]] | None = None,
     ):
         """
         Initialize the combined server.
@@ -307,6 +347,8 @@ class DNRCombinedServer:
             enable_auth: Enable authentication endpoints (/auth/*)
             enable_watch: Enable hot reload file watching
             project_root: Project root directory (required for hot reload)
+            personas: List of persona configurations for Dazzle Bar (v0.8.5)
+            scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
         """
         self.backend_spec = backend_spec
         self.ui_spec = ui_spec
@@ -319,6 +361,8 @@ class DNRCombinedServer:
         self.enable_auth = enable_auth
         self.enable_watch = enable_watch
         self.project_root = project_root or Path.cwd()
+        self.personas = personas or []
+        self.scenarios = scenarios or []
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
@@ -376,6 +420,8 @@ class DNRCombinedServer:
         # Capture flags for closure
         enable_test_mode = self.enable_test_mode
         enable_auth = self.enable_auth
+        personas = self.personas
+        scenarios = self.scenarios
 
         def run_backend() -> None:
             try:
@@ -387,6 +433,9 @@ class DNRCombinedServer:
                     use_database=True,
                     enable_test_mode=enable_test_mode,
                     enable_auth=enable_auth,
+                    enable_dev_mode=True,  # Enable Dazzle Bar control plane (v0.8.5)
+                    personas=personas,
+                    scenarios=scenarios,
                 )
                 app = app_builder.build()
 
@@ -473,6 +522,8 @@ def run_combined_server(
     host: str = "127.0.0.1",
     enable_watch: bool = False,
     project_root: Path | None = None,
+    personas: list[dict[str, Any]] | None = None,
+    scenarios: list[dict[str, Any]] | None = None,
 ) -> None:
     """
     Run a combined DNR development server.
@@ -488,6 +539,8 @@ def run_combined_server(
         host: Host to bind both servers to
         enable_watch: Enable hot reload file watching
         project_root: Project root directory (for hot reload)
+        personas: List of persona configurations for Dazzle Bar (v0.8.5)
+        scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
     """
     server = DNRCombinedServer(
         backend_spec=backend_spec,
@@ -501,6 +554,8 @@ def run_combined_server(
         enable_auth=enable_auth,
         enable_watch=enable_watch,
         project_root=project_root,
+        personas=personas,
+        scenarios=scenarios,
     )
     server.start()
 

@@ -188,6 +188,15 @@ class TokenType(Enum):
     GIVEN = "given"
     THEN = "then"
 
+    # v0.8.5 Dazzle Bar Keywords
+    SCENARIO = "scenario"
+    DEMO = "demo"
+    PERSONA = "persona"
+    GOALS = "goals"
+    PROFICIENCY = "proficiency"
+    SEED_SCRIPT = "seed_script"
+    START_ROUTE = "start_route"
+
     # Flow/E2E Test Keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
@@ -448,6 +457,14 @@ KEYWORDS = {
     "scenarios",
     "given",
     "then",
+    # v0.8.5 Dazzle Bar keywords
+    "scenario",
+    "demo",
+    "persona",
+    "goals",
+    "proficiency",
+    "seed_script",
+    "start_route",
 }
 
 

@@ -346,3 +346,87 @@ def get_realtime_js() -> str:
 def clear_cache() -> None:
     """Clear the module loading cache."""
     load_js_module.cache_clear()
+
+
+# =============================================================================
+# Dazzle Bar Bundle (v0.8.5)
+# =============================================================================
+
+_DAZZLE_BAR_MODULE_ORDER = [
+    "dazzle-bar/runtime.js",
+    "dazzle-bar/bar.js",
+    "dazzle-bar/index.js",
+]
+
+
+def get_dazzle_bar_js() -> str:
+    """
+    Get the Dazzle Bar JavaScript as an ES module bundle.
+
+    The Dazzle Bar uses ES modules and imports from the signals.js.
+    This returns a self-contained bundle that can be loaded as a module.
+
+    Returns:
+        Complete Dazzle Bar JavaScript bundle
+    """
+    # Load signals.js first since dazzle-bar depends on it
+    signals_source = load_js_module("signals.js")
+    # Strip exports from signals.js so it defines functions in global scope
+    signals_source = _strip_imports_and_exports(signals_source)
+
+    bundle_parts = [
+        "/**",
+        " * Dazzle Bar - Developer Overlay for Persona/Scenario Control",
+        " * Part of the Dazzle Native Runtime v0.8.5",
+        " */",
+        "",
+        "// === signals.js (dependency) ===",
+        signals_source,
+        "",
+    ]
+
+    # Load dazzle-bar modules
+    for name in _DAZZLE_BAR_MODULE_ORDER:
+        path = _STATIC_JS_DIR / name
+        if path.exists():
+            source = path.read_text(encoding="utf-8")
+            # Strip imports/exports since we're bundling
+            source = _strip_imports_and_exports(source)
+            bundle_parts.append(f"// === {name} ===")
+            bundle_parts.append(source)
+            bundle_parts.append("")
+
+    return "\n".join(bundle_parts)
+
+
+def _strip_imports_and_exports(source: str) -> str:
+    """
+    Strip import and export statements from ES module source.
+
+    Args:
+        source: ES module source code
+
+    Returns:
+        Source with imports removed and exports converted
+    """
+    import re
+
+    # Remove multi-line export blocks: export { ... };
+    source = re.sub(r"export\s*\{[^}]*\}\s*;?", "", source, flags=re.DOTALL)
+
+    lines = source.split("\n")
+    result = []
+
+    for line in lines:
+        stripped = line.strip()
+        # Skip import statements
+        if stripped.startswith("import "):
+            continue
+        # Convert export statements to regular declarations
+        if stripped.startswith("export "):
+            if stripped.startswith("export default"):
+                continue
+            line = line.replace("export ", "", 1)
+        result.append(line)
+
+    return "\n".join(result)
