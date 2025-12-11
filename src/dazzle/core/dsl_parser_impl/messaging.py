@@ -164,7 +164,7 @@ class MessagingParserMixin:
 
         # Check for ref type (not a keyword, parse as identifier)
         type_token = self.expect_identifier_or_keyword()
-        type_name = type_token.value
+        type_name: str = str(type_token.value)
 
         if type_name == "ref":
             ref_entity = self.expect(TokenType.IDENTIFIER).value

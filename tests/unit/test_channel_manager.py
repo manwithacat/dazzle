@@ -6,14 +6,12 @@ Tests channel manager initialization, sending, and status reporting.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from dazzle.core.ir import ChannelKind, ChannelSpec
 from dazzle_dnr_back.channels import (
     ChannelManager,
-    ChannelStatus,
     create_channel_manager,
 )
 from dazzle_dnr_back.channels.detection import DetectionResult, ProviderStatus
