@@ -74,10 +74,12 @@ class ServerConfig:
 
 # Runtime import
 try:
-    from fastapi import FastAPI as _FastAPI
+    from fastapi import FastAPI as _FastAPI, Request
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import JSONResponse
 
     from dazzle_dnr_back.runtime.route_generator import RouteGenerator
+    from dazzle_dnr_back.runtime.state_machine import TransitionError
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -85,6 +87,9 @@ except ImportError:
     _FastAPI = None  # type: ignore
     CORSMiddleware = None  # type: ignore
     RouteGenerator = None  # type: ignore
+    Request = None  # type: ignore
+    JSONResponse = None  # type: ignore
+    TransitionError = Exception  # type: ignore
 
 
 # =============================================================================
@@ -320,6 +325,17 @@ class DNRBackendApp:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+
+        # Add exception handler for state machine transition errors
+        @self._app.exception_handler(TransitionError)
+        async def transition_error_handler(
+            request: Request, exc: TransitionError
+        ) -> JSONResponse:
+            """Convert state machine errors to 422 Unprocessable Entity."""
+            return JSONResponse(
+                status_code=422,
+                content={"detail": str(exc), "type": "transition_error"},
+            )
 
         # Generate models
         self._models = generate_all_entity_models(self.spec.entities)

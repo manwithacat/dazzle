@@ -32,6 +32,7 @@
               ]),
               'name': 'id',
               'type': dict({
+                'currency_code': None,
                 'enum_values': None,
                 'kind': <FieldTypeKind.UUID: 'uuid'>,
                 'max_length': None,
@@ -40,6 +41,7 @@
                 'ref_entity': None,
                 'relationship_behavior': None,
                 'scale': None,
+                'via_entity': None,
               }),
             }),
             dict({
@@ -49,6 +51,7 @@
               ]),
               'name': 'title',
               'type': dict({
+                'currency_code': None,
                 'enum_values': None,
                 'kind': <FieldTypeKind.STR: 'str'>,
                 'max_length': 200,
@@ -57,6 +60,7 @@
                 'ref_entity': None,
                 'relationship_behavior': None,
                 'scale': None,
+                'via_entity': None,
               }),
             }),
             dict({
@@ -65,6 +69,7 @@
               ]),
               'name': 'description',
               'type': dict({
+                'currency_code': None,
                 'enum_values': None,
                 'kind': <FieldTypeKind.TEXT: 'text'>,
                 'max_length': None,
@@ -73,6 +78,7 @@
                 'ref_entity': None,
                 'relationship_behavior': None,
                 'scale': None,
+                'via_entity': None,
               }),
             }),
             dict({
@@ -81,6 +87,7 @@
               ]),
               'name': 'status',
               'type': dict({
+                'currency_code': None,
                 'enum_values': list([
                   'todo',
                   'in_progress',
@@ -93,6 +100,7 @@
                 'ref_entity': None,
                 'relationship_behavior': None,
                 'scale': None,
+                'via_entity': None,
               }),
             }),
             dict({
@@ -102,6 +110,7 @@
               ]),
               'name': 'created_at',
               'type': dict({
+                'currency_code': None,
                 'enum_values': None,
                 'kind': <FieldTypeKind.DATETIME: 'datetime'>,
                 'max_length': None,
@@ -110,6 +119,7 @@
                 'ref_entity': None,
                 'relationship_behavior': None,
                 'scale': None,
+                'via_entity': None,
               }),
             }),
           ]),
