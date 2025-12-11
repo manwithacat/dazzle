@@ -10,6 +10,118 @@ import typer
 
 vocab_app = typer.Typer(help="Manage app-local vocabulary (macros, aliases, patterns)")
 
+EXAMPLE_MANIFEST = """\
+# Local Vocabulary Manifest
+# Define reusable macros, aliases, and patterns for your project.
+# See: https://dazzle.dev/docs/vocabulary
+
+version: 1.0.0
+app_id: {app_id}
+dsl_core_version: 1.0.0
+
+entries:
+  # Example: Standard audit timestamp fields
+  - id: audit_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard audit timestamp fields (created_at, updated_at)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: user
+      created_at: "{created_at}"
+      usage_count: 0
+    tags:
+      - audit
+      - timestamp
+
+  # Example: Priority enum field
+  - id: priority_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard priority enum field (low, medium, high)
+    parameters:
+      - name: default_value
+        type: string
+        required: false
+        default: medium
+        description: Default priority value
+    expansion:
+      language: dazzle-core-dsl
+      body: "priority: enum[low,medium,high]={{{{ default_value }}}}"
+    metadata:
+      stability: stable
+      source: user
+      created_at: "{created_at}"
+      usage_count: 0
+    tags:
+      - enum
+      - priority
+"""
+
+
+@vocab_app.command("init")
+def vocab_init(
+    path: str | None = typer.Option(
+        None, "--path", "-p", help="Project directory (default: current)"
+    ),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Overwrite existing manifest"
+    ),
+) -> None:
+    """Initialize a local vocabulary manifest with example entries."""
+    from datetime import datetime, timezone
+
+    project_path = Path(path or ".")
+    vocab_dir = project_path / "dazzle" / "local_vocab"
+    manifest_path = vocab_dir / "manifest.yml"
+
+    if manifest_path.exists() and not force:
+        typer.echo(f"Manifest already exists: {manifest_path}")
+        typer.echo("Use --force to overwrite.")
+        raise typer.Exit(code=1)
+
+    # Try to get app_id from dazzle.toml
+    app_id = "my_app"
+    toml_path = project_path / "dazzle.toml"
+    if toml_path.exists():
+        try:
+            import tomllib
+
+            with open(toml_path, "rb") as f:
+                config = tomllib.load(f)
+                app_id = config.get("project", {}).get("name", app_id)
+        except Exception:
+            pass
+
+    # Create directory and manifest
+    vocab_dir.mkdir(parents=True, exist_ok=True)
+
+    created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    content = EXAMPLE_MANIFEST.format(app_id=app_id, created_at=created_at)
+
+    manifest_path.write_text(content)
+    typer.echo(f"✓ Created vocabulary manifest: {manifest_path}")
+    typer.echo("")
+    typer.echo("Example entries included:")
+    typer.echo("  - audit_fields: Standard timestamp fields")
+    typer.echo("  - priority_enum: Priority enum with default parameter")
+    typer.echo("")
+    typer.echo("Usage in DSL:")
+    typer.echo("  @use audit_fields()")
+    typer.echo("  @use priority_enum(default_value=high)")
+    typer.echo("")
+    typer.echo("Commands:")
+    typer.echo("  dazzle vocab list          # List all entries")
+    typer.echo("  dazzle vocab show <id>     # Show entry details")
+
 
 @vocab_app.command("list")
 def vocab_list(
@@ -31,9 +143,12 @@ def vocab_list(
     manifest_path = project_path / "dazzle" / "local_vocab" / "manifest.yml"
 
     if not manifest_path.exists():
-        typer.echo("No vocabulary manifest found.", err=True)
-        typer.echo(f"Expected location: {manifest_path}", err=True)
-        typer.echo("\nTo create a manifest, use: dazzle vocab create", err=True)
+        typer.echo("No local vocabulary defined (this is optional).")
+        typer.echo("")
+        typer.echo("Local vocabulary lets you define reusable macros and patterns")
+        typer.echo("for your project. Most projects don't need this.")
+        typer.echo("")
+        typer.echo(f"To create one: dazzle vocab init")
         return
 
     # Load manifest
