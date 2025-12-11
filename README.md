@@ -58,9 +58,9 @@ See [Tooling Guide](docs/TOOLING.md) for details.
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v0.8.x** (Current) | New Bun CLI + DNR + Ejection | Active development |
-| v0.7.x | LLM Cognition Layer + State Machines | Stable |
-| v0.1.x-v0.6.x | Legacy versions | Deprecated |
+| **v0.9.x** (Current) | Messaging channels, UX layer, personas | Active development |
+| v0.8.x | Bun CLI + DNR + Ejection | Stable |
+| v0.1.x-v0.7.x | Legacy versions | Deprecated |
 
 - **DNR** is for rapid iteration - run your DSL directly without code generation
 - **Ejection** generates standalone FastAPI + React when you need production deployment
@@ -146,81 +146,91 @@ dazzle dev                       # Run instantly with DNR
 dazzle eject                     # Generate standalone code
 ```
 
-## Semantic Concepts
+## DSL Constructs
 
-### Entities
-Domain models with typed fields, constraints, and relationships.
+Complete reference: [docs/reference/](docs/reference/)
 
-```dsl
-entity User "User":
-  id: uuid pk
-  email: email unique required
-  role: enum[admin,user]=user
-  profile: ref Profile optional
-```
+### Core Constructs
 
-### Surfaces
-UI entry points that present entity data in specific modes.
+| Construct | Purpose |
+|-----------|---------|
+| `module` | Namespace declaration for DSL files |
+| `app` | Application metadata |
+| `use` | Import constructs from other modules |
 
-```dsl
-surface user_list "Users":
-  uses entity User
-  mode: list              # list | view | create | edit
+### Data Modeling
 
-  section main:
-    field email "Email"
-    field role "Role"
-```
+| Construct | Purpose |
+|-----------|---------|
+| `entity` | Domain models with typed fields and relationships |
+| `foreign_model` | External API data structures |
 
-### Workspaces
-Composition of related data views for user-centric interfaces. Workspaces automatically convert to semantic layouts with intelligent signal inference and attention budget management.
+**Entity Field Types**: `str(N)`, `text`, `int`, `decimal(P,S)`, `bool`, `date`, `datetime`, `uuid`, `email`, `enum[...]`
 
-```dsl
-workspace dashboard "Dashboard":
-  purpose: "Overview of key metrics"
+**Relationship Types**: `ref`, `has_many`, `has_one`, `belongs_to`, `embeds`
 
-  # Aggregate regions become KPI signals
-  task_count:
-    source: Task
-    aggregate:
-      total: count(Task)
+**Field Modifiers**: `required`, `optional`, `pk`, `unique`, `unique?`, `auto_add`, `auto_update`, `=default`
 
-  # Limited regions become curated lists
-  urgent_tasks:
-    source: Task
-    limit: 5
+### UI Layer
 
-  # Unlimited regions become browsable tables
-  all_tasks:
-    source: Task
-```
+| Construct | Purpose |
+|-----------|---------|
+| `surface` | UI screens and forms (list, view, create, edit modes) |
+| `workspace` | Dashboard views with regions, filters, and aggregates |
+| `experience` | Multi-step wizards and user flows |
 
-Visualize layouts with `dazzle layout-plan`:
-- Automatic archetype selection (FOCUS_METRIC, MONITOR_WALL, etc.)
-- Surface allocation and signal assignment
-- Attention budget analysis
+**Surface Elements**: `section`, `field`, `action`
 
-### Experiences
-Multi-step workflows connecting surfaces into user journeys.
-
-```dsl
-experience onboarding "User Onboarding":
-  start at step signup
-
-  step signup:
-    kind: surface
-    surface user_create
-    on success -> step welcome
-```
+**Workspace Elements**: `source`, `filter`, `sort`, `limit`, `display`, `aggregate`, `group_by`
 
 ### Services & Integrations
-External API connections with auth profiles.
 
-```dsl
-service github "GitHub API":
-  spec: url "https://api.github.com/openapi.yaml"
-  auth_profile: oauth2_pkce scopes="read:user"
-```
+| Construct | Purpose |
+|-----------|---------|
+| `service` | External APIs (OpenAPI) or domain services |
+| `integration` | Orchestrates data flow between app and external services |
+
+**Service Types**: External API (with `spec`, `auth_profile`) or Domain Service (with `kind`, `input`, `output`, `guarantees`)
+
+**Integration Elements**: `action` (request-response), `sync` (scheduled/event-driven)
+
+### Messaging (v0.9)
+
+| Construct | Purpose |
+|-----------|---------|
+| `message` | Typed message schemas |
+| `channel` | Communication pathways (email, queue, stream) |
+| `template` | Reusable message templates |
+| `asset` | Static file attachments |
+| `document` | Dynamic document generators |
+
+**Channel Operations**: `send` (outbound with triggers), `receive` (inbound with routing)
+
+**Send Triggers**: Entity events, status transitions, field changes, service events, schedules
+
+### UX Semantic Layer
+
+| Construct | Purpose |
+|-----------|---------|
+| `ux` | UI hints block within surfaces/workspaces |
+| `attention` | Conditional alerts (critical, warning, notice, info) |
+| `for` | Persona-specific view customization |
+
+**UX Properties**: `purpose`, `show`, `hide`, `sort`, `filter`, `search`, `empty`
+
+**Persona Properties**: `scope`, `show_aggregate`, `action_primary`, `read_only`, `defaults`, `focus`
+
+### Personas & Scenarios
+
+| Construct | Purpose |
+|-----------|---------|
+| `persona` | User archetypes with goals and proficiency |
+| `scenario` | Test data states for development and demos |
+| `demo` | Inline fixture data |
+
+**Persona Properties**: `description`, `goals`, `proficiency`, `default_workspace`, `default_route`
+
+**Scenario Properties**: `seed_script`, `for persona` (per-persona config)
 
 ## Ejection: From Prototype to Production
 
@@ -307,26 +317,25 @@ my_project/
 
 ## Documentation
 
-### Getting Started
-- [Philosophy](docs/PHILOSOPHY.md) - How DAZZLE's features work together
-- [Example Projects](docs/EXAMPLES.md) - Live demos with E2E test coverage
-- [Installation](docs/INSTALLATION.md) - Setup instructions
+### DSL Reference
+- [DSL Reference Guide](docs/reference/) - Complete DSL documentation
+  - [Modules](docs/reference/01-modules.md) - Module and app declarations
+  - [Entities](docs/reference/02-entities.md) - Data modeling
+  - [Surfaces](docs/reference/03-surfaces.md) - UI screens
+  - [Workspaces](docs/reference/04-workspaces.md) - Dashboards
+  - [Services](docs/reference/05-services.md) - External and domain services
+  - [Integrations](docs/reference/06-integrations.md) - API orchestration
+  - [Messaging](docs/reference/07-messaging.md) - Channels and templates
+  - [UX Layer](docs/reference/08-ux.md) - Attention signals and personas
+  - [Scenarios](docs/reference/09-scenarios.md) - Test data and personas
+  - [Experiences](docs/reference/10-experiences.md) - Multi-step flows
 
-### Reference
-- [DSL Quick Reference](docs/DAZZLE_DSL_QUICK_REFERENCE.md) - Language specification
-- [DNR CLI Reference](docs/dnr/CLI.md) - Command-line interface
-- [DNR Architecture](docs/dnr/ARCHITECTURE.md) - Runtime internals
-
-### Ejection
-- [Ejection Toolchain](docs/design/EJECTION_TOOLCHAIN_v0.7.2.md) - Design specification
-- [LLM Cognition Layer](docs/design/LLM_COGNITION_DSL_v0.7.1.md) - Intent, archetypes, examples
+### Technical
+- [DSL Grammar](docs/v0.9/DAZZLE_DSL_GRAMMAR.ebnf) - Formal EBNF grammar
+- [Example Projects](docs/examples/) - Live demos
 
 ### Tooling
-- [Tooling Guide](docs/TOOLING.md) - MCP server, IDE integration, developer tools
-- [VS Code Extension](docs/VSCODE_EXTENSION.md) - Editor support
-
-### Advanced
-- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Tooling Guide](docs/TOOLING.md) - MCP server, IDE integration
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ## Contributing
