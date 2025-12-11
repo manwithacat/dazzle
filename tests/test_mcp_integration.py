@@ -186,13 +186,11 @@ class TestMCPServerIntegration:
 class TestMCPServerUnit:
     """Unit tests for server components."""
 
-    def test_list_tools_async(self):
+    async def test_list_tools_async(self):
         """Test list_tools returns expected tools."""
-        import asyncio
-
         from dazzle.mcp.server import list_tools_handler
 
-        tools = asyncio.run(list_tools_handler())
+        tools = await list_tools_handler()
 
         assert len(tools) >= 7
         tool_names = [t.name for t in tools]
@@ -203,13 +201,11 @@ class TestMCPServerUnit:
         assert "analyze_patterns" in tool_names
         assert "lint_project" in tool_names
 
-    def test_call_tool_unknown(self):
+    async def test_call_tool_unknown(self):
         """Test calling unknown tool returns error."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
 
-        result = asyncio.run(call_tool("unknown_tool", {}))
+        result = await call_tool("unknown_tool", {})
 
         assert len(result) == 1
         assert result[0].type == "text"
@@ -264,17 +260,15 @@ class TestMCPDevMode:
         assert mcp_state.get_active_project() is not None
         assert mcp_state.get_active_project() in mcp_state.get_available_projects()
 
-    def test_dev_mode_tools_available(self):
+    async def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
-        import asyncio
-
         from dazzle.mcp.server import list_tools_handler
         from dazzle.mcp.server.state import init_dev_mode
 
         # Ensure dev mode is initialized
         init_dev_mode(PROJECT_ROOT)
 
-        tools = asyncio.run(list_tools_handler())
+        tools = await list_tools_handler()
         tool_names = [t.name for t in tools]
 
         # Dev mode tools should be present
@@ -287,16 +281,14 @@ class TestMCPDevMode:
         assert "validate_dsl" in tool_names
         assert "list_modules" in tool_names
 
-    def test_list_projects_tool(self):
+    async def test_list_projects_tool(self):
         """Test the list_projects tool."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = asyncio.run(call_tool("list_projects", {}))
+        result = await call_tool("list_projects", {})
 
         assert len(result) == 1
         data = json.loads(result[0].text)
@@ -306,10 +298,8 @@ class TestMCPDevMode:
         assert len(data["projects"]) > 0
         assert data["active_project"] is not None
 
-    def test_select_project_tool(self):
+    async def test_select_project_tool(self):
         """Test the select_project tool."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server import state as mcp_state
 
@@ -321,38 +311,34 @@ class TestMCPDevMode:
 
         # Select a project
         target_project = project_names[-1]  # Pick last one (different from auto-selected first)
-        result = asyncio.run(call_tool("select_project", {"project_name": target_project}))
+        result = await call_tool("select_project", {"project_name": target_project})
 
         data = json.loads(result[0].text)
         assert data["status"] == "selected"
         assert data["project"] == target_project
 
-    def test_select_project_invalid(self):
+    async def test_select_project_invalid(self):
         """Test selecting an invalid project."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = asyncio.run(call_tool("select_project", {"project_name": "nonexistent_project"}))
+        result = await call_tool("select_project", {"project_name": "nonexistent_project"})
 
         data = json.loads(result[0].text)
         assert "error" in data
         assert "not found" in data["error"]
         assert "available_projects" in data
 
-    def test_get_active_project_tool(self):
+    async def test_get_active_project_tool(self):
         """Test the get_active_project tool."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = asyncio.run(call_tool("get_active_project", {}))
+        result = await call_tool("get_active_project", {})
 
         data = json.loads(result[0].text)
         assert data["mode"] == "dev"
@@ -360,32 +346,28 @@ class TestMCPDevMode:
         assert data["active_project"] is not None
 
     @pytest.mark.slow
-    def test_validate_all_projects_tool(self):
+    async def test_validate_all_projects_tool(self):
         """Test the validate_all_projects tool."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = asyncio.run(call_tool("validate_all_projects", {}))
+        result = await call_tool("validate_all_projects", {})
 
         data = json.loads(result[0].text)
         assert "summary" in data
         assert "projects" in data
         assert data["summary"]["total"] > 0
 
-    def test_validate_dsl_in_dev_mode(self):
+    async def test_validate_dsl_in_dev_mode(self):
         """Test that validate_dsl works with active project in dev mode."""
-        import asyncio
-
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = asyncio.run(call_tool("validate_dsl", {}))
+        result = await call_tool("validate_dsl", {})
 
         data = json.loads(result[0].text)
         # Should have project context in dev mode

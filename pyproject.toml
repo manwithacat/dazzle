@@ -108,6 +108,8 @@ markers = [
     "slow: Slow tests (subprocess spawning, full validation)",
     "e2e: End-to-end tests for DNR runtime",
 ]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 # Coverage is opt-in for faster local runs. Use: pytest --cov=src/dazzle --cov-report=term-missing
 # Fast local run: pytest -m "not slow and not e2e"
 # CI runs with coverage enabled via command line
