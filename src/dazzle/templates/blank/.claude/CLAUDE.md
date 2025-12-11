@@ -52,11 +52,21 @@ If the user has requirements in SPEC.md or describes them to you:
 
 ### Running the Application
 ```bash
-dazzle dev                    # Run locally with hot reload (default)
-dazzle dev --docker           # Run in Docker containers
+dazzle dev --docker           # Run in Docker (recommended, no setup needed)
+dazzle dev                    # Run locally (requires Python environment)
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs
+
+### Environment Setup (for local mode)
+If running without Docker, install Python dependencies first:
+```bash
+# Using uv (recommended)
+uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
+
+# Or using pip
+python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+```
 
 ## DSL Quick Reference
 

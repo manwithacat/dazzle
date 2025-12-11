@@ -27,6 +27,7 @@ class SurfaceParserMixin:
         skip_newlines: Any
         file: Any
         parse_ux_block: Any
+        parse_persona_variant: Any  # From UXParserMixin
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
@@ -47,6 +48,7 @@ class SurfaceParserMixin:
         sections = []
         actions = []
         ux_spec = None
+        persona_variants: list[ir.PersonaVariant] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -82,10 +84,32 @@ class SurfaceParserMixin:
             elif self.match(TokenType.UX):
                 ux_spec = self.parse_ux_block()
 
+            # for persona_name: (persona variant at surface level)
+            elif self.match(TokenType.FOR):
+                variant = self.parse_persona_variant()
+                persona_variants.append(variant)
+
             else:
                 break
 
         self.expect(TokenType.DEDENT)
+
+        # Merge persona_variants into ux_spec (create one if needed)
+        if persona_variants:
+            if ux_spec is None:
+                ux_spec = ir.UXSpec(persona_variants=persona_variants)
+            else:
+                # Combine surface-level variants with ux block variants
+                ux_spec = ir.UXSpec(
+                    purpose=ux_spec.purpose,
+                    show=ux_spec.show,
+                    sort=ux_spec.sort,
+                    filter=ux_spec.filter,
+                    search=ux_spec.search,
+                    empty_message=ux_spec.empty_message,
+                    attention_signals=ux_spec.attention_signals,
+                    persona_variants=list(ux_spec.persona_variants) + persona_variants,
+                )
 
         return ir.SurfaceSpec(
             name=name,

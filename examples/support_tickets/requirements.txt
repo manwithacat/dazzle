@@ -1,0 +1,22 @@
+# Dazzle DNR Local Mode Requirements
+# Install with: pip install -r requirements.txt
+# Or use: uv pip install -r requirements.txt (recommended)
+#
+# For isolated environments:
+#   uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
+#   pyenv virtualenv 3.12 myapp && pyenv local myapp && pip install -r requirements.txt
+
+# Core runtime dependencies
+dazzle>=0.9.4
+fastapi>=0.100.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0
+
+# Optional: Image processing (for file uploads with image resizing)
+# pillow>=10.0.0
+
+# Optional: GraphQL support
+# strawberry-graphql>=0.220.0
+
+# Optional: HTTP clients for external API integrations
+# httpx>=0.25.0
