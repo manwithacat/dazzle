@@ -26,6 +26,7 @@ class FieldTypeKind(str, Enum):
     ENUM = "enum"
     REF = "ref"
     EMAIL = "email"
+    JSON = "json"  # v0.9.4: Flexible JSON data (maps to JSONB/JSON in databases)
     # v0.7.1: Relationship types with ownership semantics
     HAS_MANY = "has_many"
     HAS_ONE = "has_one"

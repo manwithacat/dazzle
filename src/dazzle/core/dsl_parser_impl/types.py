@@ -92,6 +92,11 @@ class TypeParserMixin:
             self.advance()
             return ir.FieldType(kind=ir.FieldTypeKind.EMAIL)
 
+        # json (v0.9.4)
+        elif token.value == "json":
+            self.advance()
+            return ir.FieldType(kind=ir.FieldTypeKind.JSON)
+
         # enum[val1,val2,...]
         elif token.value == "enum":
             self.advance()

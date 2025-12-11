@@ -64,6 +64,7 @@ def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
         ir.FieldTypeKind.DATETIME: ScalarType.DATETIME,
         ir.FieldTypeKind.UUID: ScalarType.UUID,
         ir.FieldTypeKind.EMAIL: ScalarType.EMAIL,
+        ir.FieldTypeKind.JSON: ScalarType.JSON,  # v0.9.4
     }
 
     if kind == ir.FieldTypeKind.ENUM:

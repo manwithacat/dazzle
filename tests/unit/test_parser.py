@@ -28,6 +28,7 @@ entity Post "Post":
   content: text
   status: enum[draft,published,archived]=draft
   views: int=0
+  metadata: json
 
   index author
 """

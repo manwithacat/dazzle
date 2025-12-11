@@ -24,6 +24,7 @@ entity EntityName "Display Title":
 | `datetime` | Date and time | `created_at: datetime` |
 | `uuid` | UUID identifier | `id: uuid` |
 | `email` | Email address (validated) | `contact: email` |
+| `json` | Flexible JSON data | `metadata: json` |
 
 ### Enum Type
 

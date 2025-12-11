@@ -39,9 +39,33 @@ message = "Use notification or alert"
 
 [concepts.field_types]
 category = "Type System"
-definition = "Data types available for entity fields."
-related = ["entity"]
+definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, enum[...], ref Entity, has_many/has_one/embeds/belongs_to."
+related = ["entity", "json"]
 v0_2_changes = "No changes from v0.1"
+v0_9_4_changes = "Added json type for flexible JSON data storage"
+
+[concepts.json]
+category = "Type System"
+definition = "Flexible JSON data type for storing structured but schema-less data. Maps to JSONB in PostgreSQL, JSON in MySQL/SQLite. Use for metadata, settings, external API payloads, or any data with variable structure."
+syntax = "<field_name>: json"
+example = '''
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+
+  # Flexible metadata - structure can vary per record
+  metadata: json
+
+  # User preferences (UI settings, notifications, etc.)
+  preferences: json
+
+  # External system data (from integrations)
+  external_data: json
+'''
+related = ["field_types", "entity", "embeds"]
+v0_9_4_changes = "NEW in v0.9.4"
+best_practices = ["Use for truly dynamic data where schema varies", "Prefer explicit fields when structure is known", "Consider embeds for structured nested data", "JSON fields have limited query/filter support", "Validate JSON structure in application code if needed"]
+security_notes = ["JSON is deserialized safely by the runtime", "Avoid storing executable code in JSON fields", "Treat JSON field contents as untrusted user input"]
 
 [concepts.ref]
 category = "Type System"

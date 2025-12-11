@@ -52,6 +52,13 @@ def test_field_types():
     )
     assert ref_field.type.ref_entity == "User"
 
+    # JSON field (v0.9.4)
+    json_field = ir.FieldSpec(
+        name="metadata",
+        type=ir.FieldType(kind=ir.FieldTypeKind.JSON),
+    )
+    assert json_field.type.kind == ir.FieldTypeKind.JSON
+
     print("✓ Field types work correctly")
 
 
