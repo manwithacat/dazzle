@@ -19,6 +19,13 @@ from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
+from .messaging import (
+    AssetSpec,
+    ChannelSpec,
+    DocumentSpec,
+    MessageSpec,
+    TemplateSpec,
+)
 from .personas import PersonaSpec
 from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
@@ -71,6 +78,12 @@ class AppSpec(BaseModel):
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    # Messaging Channels (v0.9.0)
+    messages: list[MessageSpec] = Field(default_factory=list)
+    channels: list[ChannelSpec] = Field(default_factory=list)
+    assets: list[AssetSpec] = Field(default_factory=list)
+    documents: list[DocumentSpec] = Field(default_factory=list)
+    templates: list[TemplateSpec] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
 
@@ -177,6 +190,43 @@ class AppSpec(BaseModel):
         for scenario in self.scenarios:
             if scenario.id == scenario_id:
                 return scenario
+        return None
+
+    # Messaging getters (v0.9.0)
+
+    def get_message(self, name: str) -> MessageSpec | None:
+        """Get message schema by name."""
+        for message in self.messages:
+            if message.name == name:
+                return message
+        return None
+
+    def get_channel(self, name: str) -> ChannelSpec | None:
+        """Get channel by name."""
+        for channel in self.channels:
+            if channel.name == name:
+                return channel
+        return None
+
+    def get_asset(self, name: str) -> AssetSpec | None:
+        """Get asset by name."""
+        for asset in self.assets:
+            if asset.name == name:
+                return asset
+        return None
+
+    def get_document(self, name: str) -> DocumentSpec | None:
+        """Get document by name."""
+        for document in self.documents:
+            if document.name == name:
+                return document
+        return None
+
+    def get_template(self, name: str) -> TemplateSpec | None:
+        """Get template by name."""
+        for template in self.templates:
+            if template.name == name:
+                return template
         return None
 
     @property

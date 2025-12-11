@@ -68,6 +68,9 @@ class ServerConfig:
     personas: list[dict[str, Any]] = field(default_factory=list)
     scenarios: list[dict[str, Any]] = field(default_factory=list)
 
+    # Messaging channels (v0.9)
+    enable_channels: bool = True  # Auto-enabled if channels defined in spec
+
 
 # Runtime import
 try:
@@ -180,6 +183,120 @@ class DNRBackendApp:
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
         self._service_loader: ServiceLoader | None = None
+        # Messaging channels (v0.9)
+        self._channel_manager: Any | None = None  # ChannelManager type
+        self._enable_channels = config.enable_channels
+
+    def _init_channel_manager(self) -> None:
+        """Initialize the channel manager for messaging."""
+        try:
+            from dazzle.core.ir import ChannelKind
+            from dazzle.core.ir import ChannelSpec as IRChannelSpec
+            from dazzle_dnr_back.channels import create_channel_manager
+
+            # Convert BackendSpec channels to IR ChannelSpecs
+            ir_channels = []
+            for channel in self.spec.channels:
+                # Map string kind to ChannelKind enum
+                kind_map = {
+                    "email": ChannelKind.EMAIL,
+                    "queue": ChannelKind.QUEUE,
+                    "stream": ChannelKind.STREAM,
+                }
+                ir_channel = IRChannelSpec(
+                    name=channel.name,
+                    kind=kind_map.get(channel.kind, ChannelKind.EMAIL),
+                    provider=channel.provider,
+                )
+                ir_channels.append(ir_channel)
+
+            # Create channel manager
+            self._channel_manager = create_channel_manager(
+                db_manager=self._db_manager,
+                channel_specs=ir_channels,
+                build_id=f"{self.spec.name}-{self.spec.version}",
+            )
+
+            # Add channel routes to the app
+            self._add_channel_routes()
+
+        except ImportError:
+            # Channels module not available - skip
+            pass
+        except Exception as e:
+            # Log but don't fail startup
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init channels: {e}")
+
+    def _add_channel_routes(self) -> None:
+        """Add channel management routes to the FastAPI app."""
+        if not self._channel_manager or not self._app:
+            return
+
+        channel_manager = self._channel_manager  # Capture for closures
+
+        @self._app.on_event("startup")
+        async def startup_channels() -> None:
+            """Initialize channels on app startup."""
+            await channel_manager.initialize()
+            # Start background outbox processor
+            await channel_manager.start_processor()
+
+        @self._app.on_event("shutdown")
+        async def shutdown_channels() -> None:
+            """Cleanup channels on app shutdown."""
+            await channel_manager.shutdown()
+
+        @self._app.get("/_dazzle/channels", tags=["Channels"])
+        async def list_channels() -> dict[str, Any]:
+            """List all messaging channels and their status."""
+            statuses = channel_manager.get_all_statuses()
+            return {
+                "channels": [s.to_dict() for s in statuses],
+                "outbox_stats": channel_manager.get_outbox_stats(),
+            }
+
+        @self._app.get("/_dazzle/channels/{channel_name}", tags=["Channels"])
+        async def get_channel_status(channel_name: str) -> dict[str, Any]:
+            """Get status of a specific channel."""
+            status = channel_manager.get_channel_status(channel_name)
+            if not status:
+                return {"error": f"Channel '{channel_name}' not found"}
+            return status.to_dict()
+
+        @self._app.post("/_dazzle/channels/{channel_name}/send", tags=["Channels"])
+        async def send_message(
+            channel_name: str,
+            message: dict[str, Any],
+        ) -> dict[str, Any]:
+            """Send a message through a channel (for testing)."""
+            try:
+                result = await channel_manager.send(
+                    channel=channel_name,
+                    operation=message.get("operation", "test"),
+                    message_type=message.get("type", "TestMessage"),
+                    payload=message.get("payload", {}),
+                    recipient=message.get("recipient", "test@example.com"),
+                    metadata=message.get("metadata"),
+                )
+                # Return message info
+                if hasattr(result, "to_dict"):
+                    return {"status": "queued", "message": result.to_dict()}
+                elif hasattr(result, "is_success"):
+                    return {
+                        "status": "sent" if result.is_success else "failed",
+                        "error": result.error,
+                    }
+                return {"status": "queued"}
+            except Exception as e:
+                return {"error": str(e)}
+
+        @self._app.post("/_dazzle/channels/health", tags=["Channels"])
+        async def check_channel_health() -> dict[str, Any]:
+            """Run health checks on all channels."""
+            results = await channel_manager.health_check_all()
+            return {"health": results}
 
     def build(self) -> FastAPI:
         """
@@ -339,6 +456,10 @@ class DNRBackendApp:
             )
             self._app.include_router(debug_router)
 
+        # Initialize messaging channels (v0.9)
+        if self._enable_channels and self.spec.channels:
+            self._init_channel_manager()
+
         # Load domain service stubs
         self._service_loader = ServiceLoader(services_dir=self._services_dir)
         try:
@@ -483,6 +604,16 @@ class DNRBackendApp:
     def service_loader(self) -> ServiceLoader | None:
         """Get the domain service loader (None if not initialized)."""
         return self._service_loader
+
+    @property
+    def channel_manager(self) -> Any | None:
+        """Get the channel manager (None if channels not enabled)."""
+        return self._channel_manager
+
+    @property
+    def channels_enabled(self) -> bool:
+        """Check if messaging channels are enabled."""
+        return self._enable_channels and self._channel_manager is not None
 
 
 # =============================================================================

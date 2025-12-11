@@ -253,6 +253,53 @@ def get_dnr_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        # v0.9 Channel/Messaging Tools
+        Tool(
+            name="list_channels",
+            description="List all messaging channels configured in the DSL with their resolution status. Shows email, queue, and stream channels with detected providers.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_channel_status",
+            description="Get detailed status for a specific messaging channel including provider info, health status, and outbox statistics.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "channel_name": {
+                        "type": "string",
+                        "description": "Name of the channel to get status for",
+                    }
+                },
+                "required": ["channel_name"],
+            },
+        ),
+        Tool(
+            name="list_messages",
+            description="List message schemas defined in the DSL with their fields and validation rules.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "channel_name": {
+                        "type": "string",
+                        "description": "Optional filter by channel name",
+                    }
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_outbox_status",
+            description="Get outbox statistics showing pending, processing, sent, and failed message counts.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -273,4 +320,9 @@ DNR_TOOL_NAMES = [
     "list_graphql_types",
     "list_adapters",
     "get_adapter_guide",
+    # v0.9 Channel/Messaging tools
+    "list_channels",
+    "get_channel_status",
+    "list_messages",
+    "get_outbox_status",
 ]

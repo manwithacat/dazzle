@@ -24,6 +24,7 @@ from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
 from .flow import FlowParserMixin
 from .integration import IntegrationParserMixin
+from .messaging import MessagingParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
 from .surface import SurfaceParserMixin
@@ -46,6 +47,7 @@ class Parser(
     UXParserMixin,
     WorkspaceParserMixin,
     ScenarioParserMixin,
+    MessagingParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -329,6 +331,127 @@ class Parser(
                     scenarios=fragment.scenarios + [scenario],
                 )
 
+            # v0.9.0 Messaging Channels
+            elif self.match(TokenType.MESSAGE):
+                message = self.parse_message()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages + [message],
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                )
+
+            elif self.match(TokenType.CHANNEL):
+                channel = self.parse_channel()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels + [channel],
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                )
+
+            elif self.match(TokenType.ASSET):
+                asset = self.parse_asset()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets + [asset],
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                )
+
+            elif self.match(TokenType.DOCUMENT):
+                document = self.parse_document()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents + [document],
+                    templates=fragment.templates,
+                )
+
+            elif self.match(TokenType.TEMPLATE):
+                template = self.parse_template()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates + [template],
+                )
+
             elif self.match(TokenType.DEMO):
                 demo_fixtures = self.parse_demo()
                 # Demo fixtures go into the first scenario or create a default one
@@ -433,4 +556,5 @@ __all__ = [
     "UXParserMixin",
     "WorkspaceParserMixin",
     "ScenarioParserMixin",
+    "MessagingParserMixin",
 ]

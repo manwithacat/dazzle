@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-10
-**Current Version**: v0.8.0
+**Last Updated**: 2025-12-11
+**Current Version**: v0.8.11
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 ---
@@ -792,6 +792,111 @@ dazzle eject --dry-run    # Preview without writing
 
 ---
 
+### v0.9.0 - Messaging Channels
+
+**Status**: In Progress
+**Focus**: Unified messaging abstraction for email, queues, and event streams
+
+**Design Documents**:
+- `dev_docs/RFC-001-messaging-channels.md` - Main architecture
+- `dev_docs/RFC-001-messaging-grammar.ebnf` - Grammar extensions
+- `dev_docs/RFC-001-provider-detection.md` - Auto-detection system
+- `dev_docs/RFC-001-mcp-prompting-strategy.md` - LLM guidance
+- `dev_docs/RFC-001-llm-email-interaction.md` - MCP tools for email testing
+- `dev_docs/RFC-001-design-decisions.md` - Architectural stances
+
+#### Core Concepts
+
+**Message Schemas** (first-class DSL construct):
+```dsl
+message OrderConfirmation "Order Confirmation Email":
+  to: email required
+  order_number: str required
+  items: list[OrderItem] required
+  total: money required
+```
+
+**Channels** (unified send/receive):
+```dsl
+channel notifications:
+  kind: email           # email | queue | stream
+  provider: auto        # mailpit locally, sendgrid in prod
+
+  send order_confirmation:
+    message: OrderConfirmation
+    when: entity Order status -> confirmed
+    delivery_mode: outbox  # transactional guarantee
+    mapping:
+      to -> Order.customer.email
+      order_number -> Order.order_number
+
+  receive support_ticket:
+    message: InboundEmail
+    match:
+      to: "support@{{app.domain}}"
+    action: create SupportTicket
+    mapping:
+      from -> requester_email
+      subject -> title
+```
+
+#### Channel Kinds
+
+| Kind | Dev Provider | Prod Providers | Use Case |
+|------|--------------|----------------|----------|
+| `email` | Mailpit, FileProvider | SendGrid, SES, SMTP | User notifications, transactional email |
+| `queue` | In-memory | RabbitMQ, SQS | Async processing, reliable delivery |
+| `stream` | In-memory | Kafka, Redis Streams | Event sourcing, audit logs, real-time |
+
+#### Key Design Decisions
+
+1. **No Schema Evolution**: Messages carry `_dazzle.build_id` for observability. Migration handled post-eject.
+
+2. **Transactional Outbox**: Default `delivery_mode: outbox` writes to outbox table in same transaction. Background worker dispatches. `delivery_mode: direct` for fire-and-forget.
+
+3. **DSL-Native Templates**: Restricted Jinja-ish syntax (`{{ user.name }}`, simple `{% if %}`). No loops, filters, or math. Compiles to target engine.
+
+4. **Resource-Based Attachments**: `asset` for static files, `document` for entity-bound generated files. No storage paths in DSL.
+
+5. **Two-Layer Rate Limiting**: Provider limits in `provider_config` (operational). Business throttles (`per_recipient`, `per_entity`) first-class in DSL.
+
+#### Implementation Phases
+
+**Phase 1: Core Infrastructure**
+- [ ] DSL parser extensions for `message` and `channel` constructs
+- [ ] IR types: `MessageSpec`, `ChannelSpec`, `ChannelOperationSpec`
+- [ ] Provider detection framework with auto-discovery
+
+**Phase 2: Email Channel (Mailpit First)**
+- [ ] Mailpit provider (SMTP send, HTTP API read)
+- [ ] FileEmailProvider fallback (`.dazzle/mail/`)
+- [ ] Dazzle Bar integration with Mailpit panel
+- [ ] CLI: `dazzle channel list`, `dazzle channel send`, `dazzle channel inbox`
+
+**Phase 3: Outbox & Templates**
+- [ ] `_dazzle_message_outbox` table generation
+- [ ] Background outbox dispatcher worker
+- [ ] Template parser with restricted syntax
+- [ ] Template compilation to Jinja2
+
+**Phase 4: Queue & Stream Channels**
+- [ ] In-memory queue/stream providers
+- [ ] RabbitMQ provider
+- [ ] Redis Streams provider
+
+**Phase 5: MCP & LLM Integration**
+- [ ] `suggest_channels` tool with pattern detection
+- [ ] `get_channel_status` tool
+- [ ] `send_test_email`, `get_mailpit_messages`, `simulate_inbound_email` tools
+- [ ] Inference hints for channel-related keywords
+
+**Phase 6: Throttling & Assets**
+- [ ] Business throttle enforcement (`per_recipient`, `per_entity`)
+- [ ] `asset` and `document` declarations
+- [ ] Attachment handling in email sends
+
+---
+
 ### v1.0.0 - Dazzle Orchestrator Control Plane
 
 **Focus**: Hosted control plane for production app management
@@ -955,12 +1060,26 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 **Document Owner**: Claude + James
-**Last Review**: 2025-12-10
-**Next Review**: Q1 2026 (planning v0.8.0)
+**Last Review**: 2025-12-11
+**Next Review**: Q1 2026 (v0.9.0 completion)
 
 ---
 
 ## Changelog
+
+### 2025-12-11 (v0.9.0 Started - Messaging Channels)
+- **v0.9.0 IN PROGRESS**: Messaging Channels
+  - Unified messaging abstraction for email, queues, and event streams
+  - `message` construct for typed, reusable message schemas
+  - `channel` construct with `kind: email | queue | stream`
+  - Provider auto-detection (Mailpit locally, SendGrid/SQS/Kafka in prod)
+  - Transactional outbox pattern as default (`delivery_mode: outbox | direct`)
+  - DSL-native template language (restricted Jinja-ish syntax)
+  - Resource-based attachments (`asset`, `document`)
+  - Two-layer rate limiting (provider config vs business throttles)
+  - MCP tools for LLM-driven email testing
+  - Dazzle Bar integration with Mailpit panel
+- Design documents created in `dev_docs/RFC-001-*`
 
 ### 2025-12-10 (v0.7.1 + v0.7.2 Complete)
 - **v0.7.1 COMPLETE**: LLM Cognition & DSL Generation Enhancement

@@ -197,6 +197,53 @@ class TokenType(Enum):
     SEED_SCRIPT = "seed_script"
     START_ROUTE = "start_route"
 
+    # v0.9.0 Messaging Channel Keywords
+    # Note: MESSAGE already defined above in UX keywords
+    CHANNEL = "channel"
+    SEND = "send"
+    RECEIVE = "receive"
+    PROVIDER = "provider"
+    CONFIG = "config"
+    PROVIDER_CONFIG = "provider_config"
+    DELIVERY_MODE = "delivery_mode"
+    OUTBOX = "outbox"
+    DIRECT = "direct"
+    THROTTLE = "throttle"
+    PER_RECIPIENT = "per_recipient"
+    PER_ENTITY = "per_entity"
+    PER_CHANNEL = "per_channel"
+    WINDOW = "window"
+    MAX_MESSAGES = "max_messages"
+    ON_EXCEED = "on_exceed"
+    DROP = "drop"
+    LOG = "log"
+    QUEUE = "queue"
+    STREAM = "stream"
+    EMAIL = "email"
+    ASSET = "asset"
+    DOCUMENT = "document"
+    TEMPLATE = "template"
+    SUBJECT = "subject"
+    BODY = "body"
+    HTML_BODY = "html_body"
+    ATTACHMENTS = "attachments"
+    ASSET_REF = "asset_ref"
+    DOCUMENT_REF = "document_ref"
+    ENTITY_ARG = "entity_arg"
+    FILENAME = "filename"
+    FOR_ENTITY = "for_entity"
+    FORMAT = "format"
+    LAYOUT = "layout"
+    PATH = "path"
+    CHANGED = "changed"
+    TO = "to"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    EVERY = "every"
+    CRON = "cron"
+    UPSERT = "upsert"
+    REGEX = "regex"
+
     # Flow/E2E Test Keywords (v0.3.2)
     # Note: Only include keywords that don't conflict with common DSL usage
     # Words like 'high', 'medium', 'low', 'priority', 'status' are NOT keywords
@@ -465,6 +512,52 @@ KEYWORDS = {
     "proficiency",
     "seed_script",
     "start_route",
+    # v0.9.0 Messaging Channel keywords
+    # Note: "message" already in UX keywords
+    "channel",
+    "send",
+    "receive",
+    "provider",
+    "config",
+    "provider_config",
+    "delivery_mode",
+    "outbox",
+    "direct",
+    "throttle",
+    "per_recipient",
+    "per_entity",
+    "per_channel",
+    "window",
+    "max_messages",
+    "on_exceed",
+    "drop",
+    "log",
+    "queue",
+    "stream",
+    "email",
+    "asset",
+    "document",
+    "template",
+    "subject",
+    "body",
+    "html_body",
+    "attachments",
+    "asset_ref",
+    "document_ref",
+    "entity_arg",
+    "filename",
+    "for_entity",
+    "format",
+    "layout",
+    "path",
+    "changed",
+    "to",
+    "succeeded",
+    "failed",
+    "every",
+    "cron",
+    "upsert",
+    "regex",
 }
 
 

@@ -57,6 +57,16 @@ def handle_dnr_tool(name: str, arguments: dict[str, Any]) -> str:
     elif name == "get_adapter_guide":
         return _get_adapter_guide(arguments)
 
+    # Channel/Messaging tools (v0.9)
+    elif name == "list_channels":
+        return _list_channels()
+    elif name == "get_channel_status":
+        return _get_channel_status(arguments)
+    elif name == "list_messages":
+        return _list_messages(arguments)
+    elif name == "get_outbox_status":
+        return _get_outbox_status()
+
     return json.dumps({"error": f"Unknown DNR tool: {name}"})
 
 
@@ -641,6 +651,199 @@ def _get_adapter_guide(args: dict[str, Any]) -> str:
             "status": "success",
             "service_type": service_type,
             "guide": guide,
+        },
+        indent=2,
+    )
+
+
+# =============================================================================
+# Channel/Messaging Tool Implementations (v0.9)
+# =============================================================================
+
+
+def _list_channels() -> str:
+    """List all messaging channels from BackendSpec."""
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Select a project first.",
+                "channels": [],
+            }
+        )
+
+    channels = spec.get("channels", [])
+    if not channels:
+        return json.dumps(
+            {
+                "status": "no_channels",
+                "message": "No channels defined in DSL. Use 'channel' construct to define messaging channels.",
+                "channels": [],
+                "hint": "Example: channel notifications email provider=auto",
+            }
+        )
+
+    summaries = []
+    for channel in channels:
+        summaries.append(
+            {
+                "name": channel.get("name"),
+                "kind": channel.get("kind"),
+                "provider": channel.get("provider", "auto"),
+                "send_operations": len(channel.get("send_operations", [])),
+                "receive_operations": len(channel.get("receive_operations", [])),
+            }
+        )
+
+    return json.dumps(
+        {
+            "status": "success",
+            "count": len(summaries),
+            "channels": summaries,
+        },
+        indent=2,
+    )
+
+
+def _get_channel_status(args: dict[str, Any]) -> str:
+    """Get detailed status for a specific channel."""
+    channel_name = args.get("channel_name")
+    if not channel_name:
+        return json.dumps({"error": "channel_name parameter required"})
+
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps({"error": "No BackendSpec loaded. Select a project first."})
+
+    channels = spec.get("channels", [])
+    channel = next((c for c in channels if c.get("name") == channel_name), None)
+
+    if not channel:
+        return json.dumps(
+            {
+                "error": f"Channel '{channel_name}' not found",
+                "available": [c.get("name") for c in channels],
+            }
+        )
+
+    # Get runtime status if available
+    runtime_status = None
+    try:
+        import importlib.util
+
+        # Check if dazzle_dnr_back.channels is available
+        if importlib.util.find_spec("dazzle_dnr_back.channels"):
+            # Note: In real usage, this would connect to the running DNR server
+            # For now, return the DSL spec with a note about runtime status
+            runtime_status = {"note": "Start DNR server for live status"}
+        else:
+            runtime_status = {"note": "DNR backend not installed"}
+    except Exception:
+        runtime_status = {"note": "Could not check DNR backend availability"}
+
+    return json.dumps(
+        {
+            "status": "success",
+            "channel": {
+                "name": channel.get("name"),
+                "kind": channel.get("kind"),
+                "provider": channel.get("provider", "auto"),
+                "connection_url": channel.get("connection_url"),
+                "send_operations": channel.get("send_operations", []),
+                "receive_operations": channel.get("receive_operations", []),
+                "config": channel.get("config", {}),
+            },
+            "runtime": runtime_status,
+        },
+        indent=2,
+    )
+
+
+def _list_messages(args: dict[str, Any]) -> str:
+    """List message schemas from BackendSpec."""
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Select a project first.",
+                "messages": [],
+            }
+        )
+
+    channel_filter = args.get("channel_name")
+    messages = spec.get("messages", [])
+
+    if channel_filter:
+        # Filter messages by channel (if they reference a channel)
+        messages = [m for m in messages if m.get("channel") == channel_filter]
+
+    if not messages:
+        hint = "No messages defined in DSL."
+        if channel_filter:
+            hint = f"No messages found for channel '{channel_filter}'."
+        return json.dumps(
+            {
+                "status": "no_messages",
+                "message": hint,
+                "messages": [],
+                "hint": "Use 'message' construct to define typed message schemas.",
+            }
+        )
+
+    summaries = []
+    for msg in messages:
+        summaries.append(
+            {
+                "name": msg.get("name"),
+                "description": msg.get("description"),
+                "field_count": len(msg.get("fields", [])),
+                "channel": msg.get("channel"),
+            }
+        )
+
+    return json.dumps(
+        {
+            "status": "success",
+            "count": len(summaries),
+            "filter": channel_filter,
+            "messages": summaries,
+        },
+        indent=2,
+    )
+
+
+def _get_outbox_status() -> str:
+    """Get outbox statistics."""
+    spec = get_backend_spec()
+    if not spec:
+        return json.dumps(
+            {
+                "status": "no_spec",
+                "message": "No BackendSpec loaded. Select a project first.",
+            }
+        )
+
+    # Check if any channels are defined
+    channels = spec.get("channels", [])
+    if not channels:
+        return json.dumps(
+            {
+                "status": "no_channels",
+                "message": "No channels defined - outbox not in use.",
+            }
+        )
+
+    # Note: Real implementation would connect to running DNR server
+    # For now, return a helpful message about how to get live stats
+    return json.dumps(
+        {
+            "status": "info",
+            "message": "Outbox statistics require a running DNR server.",
+            "hint": "Start the server with 'dazzle dnr serve' then query the /_dazzle/channels endpoint.",
+            "channels_defined": len(channels),
+            "channel_names": [c.get("name") for c in channels],
         },
         indent=2,
     )

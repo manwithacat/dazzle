@@ -19,6 +19,13 @@ from dazzle_dnr_back.specs.auth import (
     VisibilityRuleSpec,
 )
 from dazzle_dnr_back.specs.backend_spec import BackendSpec
+from dazzle_dnr_back.specs.channel import (
+    ChannelSpec,
+    MessageFieldSpec,
+    MessageSpec,
+    ReceiveOperationSpec,
+    SendOperationSpec,
+)
 from dazzle_dnr_back.specs.endpoint import (
     EndpointSpec,
     HttpMethod,
@@ -117,6 +124,12 @@ __all__ = [
     "VisibilityRuleSpec",
     "PermissionRuleSpec",
     "EntityAccessSpec",
+    # Channel/Messaging types (v0.9)
+    "ChannelSpec",
+    "MessageSpec",
+    "MessageFieldSpec",
+    "SendOperationSpec",
+    "ReceiveOperationSpec",
     # Main spec
     "BackendSpec",
 ]

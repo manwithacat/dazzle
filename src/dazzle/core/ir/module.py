@@ -17,6 +17,13 @@ from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
+from .messaging import (
+    AssetSpec,
+    ChannelSpec,
+    DocumentSpec,
+    MessageSpec,
+    TemplateSpec,
+)
 from .personas import PersonaSpec
 from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
@@ -60,6 +67,12 @@ class ModuleFragment(BaseModel):
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    # Messaging Channels (v0.9.0)
+    messages: list[MessageSpec] = Field(default_factory=list)
+    channels: list[ChannelSpec] = Field(default_factory=list)
+    assets: list[AssetSpec] = Field(default_factory=list)
+    documents: list[DocumentSpec] = Field(default_factory=list)
+    templates: list[TemplateSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
