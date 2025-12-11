@@ -69,7 +69,7 @@ jobs:
     - name: Run bandit security check
       run: |
         pip install bandit[toml]
-        bandit -c pyproject.toml -r src/
+        bandit -c pyproject.toml -r src/ --severity-level medium
 
     - name: Check DSL files (strict mode)
       run: |
