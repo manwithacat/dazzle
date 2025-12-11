@@ -187,9 +187,12 @@ skips = [
     "B101",  # assert_used - we use asserts for type narrowing
     "B104",  # hardcoded_bind_all_interfaces - intentional for containerized apps
     "B110",  # try_except_pass - intentional for discovery patterns
+    "B310",  # urllib_urlopen - we use with controlled localhost URLs only
     "B404",  # import_subprocess - we need subprocess for git, CLI tools
     "B601",  # shell injection - we use subprocess safely with list args
+    "B602",  # subprocess_popen_with_shell_true - false positive, using for piping
     "B603",  # subprocess_without_shell - we intentionally avoid shell=True
+    "B604",  # any_other_function_shell_true - using for npm/node commands
     "B607",  # start_process_with_partial_path - we use git/python which are in PATH
     "B608",  # hardcoded SQL - false positives on template strings
 ]
