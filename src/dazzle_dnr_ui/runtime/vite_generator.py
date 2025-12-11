@@ -83,7 +83,7 @@ def _get_runtime_files() -> dict[str, str]:
 # plus the polish layer for modern SaaS aesthetics
 _CSS_SOURCE_FILES = [
     "dazzle-layer.css",  # Semantic aliases on top of DaisyUI + Tailwind
-    "polish.css",        # Modern SaaS polish layer (v0.8.11)
+    "polish.css",  # Modern SaaS polish layer (v0.8.11)
 ]
 
 

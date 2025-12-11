@@ -418,7 +418,7 @@ def get_recent_logs(count: int = 50, level: str | None = None) -> list[dict[str,
 
     entries: list[dict[str, Any]] = []
     try:
-        with open(log_file, "r", encoding="utf-8") as f:
+        with open(log_file, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:

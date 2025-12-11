@@ -8,8 +8,6 @@ and called without import errors - catching broken references early.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 

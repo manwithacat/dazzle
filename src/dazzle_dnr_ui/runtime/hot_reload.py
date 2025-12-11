@@ -277,9 +277,9 @@ def create_reload_callback(
         try:
             from dazzle.core.fileset import discover_dsl_files
             from dazzle.core.linker import build_appspec
+            from dazzle.core.lint import lint_appspec
             from dazzle.core.manifest import load_manifest
             from dazzle.core.parser import parse_modules
-            from dazzle.core.lint import lint_appspec
             from dazzle_dnr_back.converters import convert_appspec_to_backend
             from dazzle_dnr_ui.converters import convert_appspec_to_ui
 

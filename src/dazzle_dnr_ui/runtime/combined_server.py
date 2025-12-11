@@ -12,7 +12,6 @@ from __future__ import annotations
 import http.server
 import os
 import socketserver
-import sys
 import threading
 import time
 import urllib.error
@@ -528,7 +527,9 @@ class DNRCombinedServer:
             except OSError as e:
                 if e.errno == 48 or "address already in use" in str(e).lower():
                     print(f"\n[DNR] ERROR: Backend port {self.backend_port} is already in use.")
-                    print(f"[DNR] Stop the other process or use --api-port to specify a different port.")
+                    print(
+                        "[DNR] Stop the other process or use --api-port to specify a different port."
+                    )
                     print(f"[DNR] Hint: lsof -i :{self.backend_port} | grep LISTEN")
                 else:
                     print(f"[DNR] Backend error: {e}")
@@ -573,7 +574,7 @@ class DNRCombinedServer:
         except OSError as e:
             if e.errno == 48 or "address already in use" in str(e).lower():
                 print(f"\n[DNR] ERROR: Port {self.frontend_port} is already in use.")
-                print(f"[DNR] Stop the other process or use --port to specify a different port.")
+                print("[DNR] Stop the other process or use --port to specify a different port.")
                 print(f"[DNR] Hint: lsof -i :{self.frontend_port} | grep LISTEN")
                 raise SystemExit(1)
             raise
@@ -680,7 +681,7 @@ def run_frontend_only(
     except OSError as e:
         if e.errno == 48 or "address already in use" in str(e).lower():
             print(f"\n[DNR-UI] ERROR: Port {port} is already in use.")
-            print(f"[DNR-UI] Stop the other process or use --port to specify a different port.")
+            print("[DNR-UI] Stop the other process or use --port to specify a different port.")
             print(f"[DNR-UI] Hint: lsof -i :{port} | grep LISTEN")
             raise SystemExit(1)
         raise
@@ -775,7 +776,7 @@ def run_backend_only(
     except OSError as e:
         if e.errno == 48 or "address already in use" in str(e).lower():
             print(f"\n[DNR] ERROR: Port {port} is already in use.")
-            print(f"[DNR] Stop the other process or use --api-port to specify a different port.")
+            print("[DNR] Stop the other process or use --api-port to specify a different port.")
             print(f"[DNR] Hint: lsof -i :{port} | grep LISTEN")
         else:
             raise
