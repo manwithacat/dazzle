@@ -7,9 +7,7 @@ Tests the Faker-based data generator and data loader.
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -161,9 +159,7 @@ class TestDemoDataGenerator:
         value = generator.generate_value(field)
         assert isinstance(value, date)
 
-    def test_generate_entity(
-        self, generator: DemoDataGenerator, task_entity: EntitySpec
-    ) -> None:
+    def test_generate_entity(self, generator: DemoDataGenerator, task_entity: EntitySpec) -> None:
         """Test generating a complete entity."""
         data = generator.generate_entity(task_entity)
 
@@ -263,9 +259,7 @@ class TestDemoDataLoader:
         data_dir = tmp_path / "data"
         data_dir.mkdir()
 
-        (data_dir / "Task.json").write_text(
-            json.dumps([{"title": "Task 1"}, {"title": "Task 2"}])
-        )
+        (data_dir / "Task.json").write_text(json.dumps([{"title": "Task 1"}, {"title": "Task 2"}]))
         (data_dir / "Contact.json").write_text(
             json.dumps([{"name": "John Doe", "email": "john@example.com"}])
         )
@@ -316,9 +310,7 @@ class TestDemoDataLoader:
         assert "Task" in loaded
         assert loaded["Task"][0]["title"] == "Inline Task"
 
-    def test_load_scenario_data_fallback_to_empty(
-        self, loader: DemoDataLoader
-    ) -> None:
+    def test_load_scenario_data_fallback_to_empty(self, loader: DemoDataLoader) -> None:
         """Test that scenario data falls back to empty dict."""
         loaded = loader.load_scenario_data(scenario_id="test")
 
