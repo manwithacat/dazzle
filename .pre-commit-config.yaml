@@ -88,4 +88,31 @@ repos:
         exclude: (templates/|_archive/)
         pass_filenames: true
 
+      # Run fast unit tests on Python changes
+      - id: pytest-fast
+        name: pytest-fast
+        entry: pytest tests/unit -x -q --tb=short -m "not slow"
+        language: system
+        files: ^src/dazzle/.*\.py$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Validate Homebrew formula syntax
+      - id: homebrew-validate
+        name: homebrew-validate
+        entry: ruby -c
+        language: system
+        files: ^homebrew/.*\.rb$
+        pass_filenames: true
+        stages: [pre-commit]
+
+      # Verify PyPI wheel URLs are valid (checks that URLs exist)
+      - id: verify-pypi-urls
+        name: verify-pypi-urls
+        entry: bash -c 'grep -oE "https://files.pythonhosted.org/[^\"]+\.whl" "$@" | while read url; do echo "Checking $url..."; curl -sIf "$url" > /dev/null || { echo "ERROR: Invalid URL: $url"; exit 1; }; done'
+        language: system
+        files: ^(homebrew/.*\.rb|\.github/workflows/release-cli\.yml)$
+        pass_filenames: true
+        stages: [pre-push]
+
 # Configuration for specific hooks can be added to pyproject.toml

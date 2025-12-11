@@ -320,21 +320,21 @@ jobs:
             resource "jiter" do
               on_macos do
                 on_arm do
-                  url "https://files.pythonhosted.org/packages/f0/93/5aa0d5c10fbb925ffe33c1e3c7da3c7ccaa5a64d6de91c9de0d52f0ca5bc/jiter-0.12.0-cp312-cp312-macosx_11_0_arm64.whl"
+                  url "https://files.pythonhosted.org/packages/98/6e/e8efa0e78de00db0aee82c0cf9e8b3f2027efd7f8a71f859d8f4be8e98ef/jiter-0.12.0-cp312-cp312-macosx_11_0_arm64.whl"
                   sha256 "5c1860627048e302a528333c9307c818c547f214d8659b0705d2195e1a94b274"
                 end
                 on_intel do
-                  url "https://files.pythonhosted.org/packages/25/b4/44b18b96d8e0c0e36bff8b4ea7a273c85f0ba1e1f1e21de252beec9c8679/jiter-0.12.0-cp312-cp312-macosx_10_12_x86_64.whl"
+                  url "https://files.pythonhosted.org/packages/92/c9/5b9f7b4983f1b542c64e84165075335e8a236fa9e2ea03a0c79780062be8/jiter-0.12.0-cp312-cp312-macosx_10_12_x86_64.whl"
                   sha256 "305e061fa82f4680607a775b2e8e0bcb071cd2205ac38e6ef48c8dd5ebe1cf37"
                 end
               end
               on_linux do
                 on_arm do
-                  url "https://files.pythonhosted.org/packages/f3/0d/1ff4c0ec8a7a7a35f3b5d55ed5a94ff4ba47f88fd1e40bf4b3d4e60dc7c1/jiter-0.12.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+                  url "https://files.pythonhosted.org/packages/20/26/894cd88e60b5d58af53bec5c6759d1292bd0b37a8b5f60f07abf7a63ae5f/jiter-0.12.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
                   sha256 "df37577a4f8408f7e0ec3205d2a8f87672af8f17008358063a4d6425b6081ce3"
                 end
                 on_intel do
-                  url "https://files.pythonhosted.org/packages/f2/19/ec34bccdfd5bbf1cfc88c95ed1cd22e816dc9e1e8d7cb616a88cc0969fa0/jiter-0.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+                  url "https://files.pythonhosted.org/packages/71/b3/7a69d77943cc837d30165643db753471aff5df39692d598da880a6e51c24/jiter-0.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
                   sha256 "4321e8a3d868919bcb1abb1db550d41f2b5b326f72df29e53b2df8b006eb9403"
                 end
               end

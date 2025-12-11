@@ -498,3 +498,33 @@ jobs:
         echo "Python dependency: ${PYTHON_DEP}"
 
         echo "✓ Formula passed common issue checks"
+
+    - name: Validate PyPI wheel URLs
+      run: |
+        echo "Checking PyPI wheel URLs in formula..."
+
+        # Extract and validate all PyPI URLs (skip PLACEHOLDERs)
+        URLS=$(grep -oE 'https://files.pythonhosted.org/[^"]+\.whl' homebrew/dazzle.rb || true)
+
+        if [ -z "$URLS" ]; then
+          echo "Note: No PyPI wheel URLs found (may be using placeholders)"
+          exit 0
+        fi
+
+        FAILED=0
+        for url in $URLS; do
+          echo -n "  Checking $url... "
+          if curl -sIf "$url" > /dev/null 2>&1; then
+            echo "✓"
+          else
+            echo "✗ INVALID"
+            FAILED=1
+          fi
+        done
+
+        if [ $FAILED -eq 1 ]; then
+          echo "ERROR: One or more PyPI wheel URLs are invalid!"
+          exit 1
+        fi
+
+        echo "✓ All PyPI wheel URLs are valid"

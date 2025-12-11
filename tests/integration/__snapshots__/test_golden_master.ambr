@@ -5,6 +5,12 @@
     ]),
     'archetypes': list([
     ]),
+    'assets': list([
+    ]),
+    'channels': list([
+    ]),
+    'documents': list([
+    ]),
     'domain': dict({
       'entities': list([
         dict({
@@ -129,6 +135,8 @@
     'foreign_models': list([
     ]),
     'integrations': list([
+    ]),
+    'messages': list([
     ]),
     'name': 'simple_test',
     'personas': list([
@@ -268,6 +276,8 @@
         'title': 'Edit Task',
         'ux': None,
       }),
+    ]),
+    'templates': list([
     ]),
     'tests': list([
     ]),
