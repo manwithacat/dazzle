@@ -33,9 +33,36 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Get version from tag
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install dependencies
         working-directory: cli
         run: bun install
+
+      - name: Inject version into package.json
+        working-directory: cli
+        run: |
+          # Update package.json with the version from git tag
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          echo "Injecting version ${VERSION} into package.json"
+
+          # Use jq if available, otherwise sed
+          if command -v jq &> /dev/null; then
+            jq ".version = \"${VERSION}\"" package.json > package.json.tmp && mv package.json.tmp package.json
+          else
+            sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"${VERSION}\"/" package.json
+            rm -f package.json.bak
+          fi
+
+          echo "Updated package.json:"
+          grep '"version"' package.json
 
       - name: Build CLI binary
         working-directory: cli
@@ -288,6 +315,31 @@ jobs:
               end
             end
 
+            # jiter also requires Rust to build - pre-built wheels avoid dylib header issues
+            # The jiter dylib has minimal Mach-O headers that cause install_name_tool failures
+            resource "jiter" do
+              on_macos do
+                on_arm do
+                  url "https://files.pythonhosted.org/packages/f0/93/5aa0d5c10fbb925ffe33c1e3c7da3c7ccaa5a64d6de91c9de0d52f0ca5bc/jiter-0.12.0-cp312-cp312-macosx_11_0_arm64.whl"
+                  sha256 "5c1860627048e302a528333c9307c818c547f214d8659b0705d2195e1a94b274"
+                end
+                on_intel do
+                  url "https://files.pythonhosted.org/packages/25/b4/44b18b96d8e0c0e36bff8b4ea7a273c85f0ba1e1f1e21de252beec9c8679/jiter-0.12.0-cp312-cp312-macosx_10_12_x86_64.whl"
+                  sha256 "305e061fa82f4680607a775b2e8e0bcb071cd2205ac38e6ef48c8dd5ebe1cf37"
+                end
+              end
+              on_linux do
+                on_arm do
+                  url "https://files.pythonhosted.org/packages/f3/0d/1ff4c0ec8a7a7a35f3b5d55ed5a94ff4ba47f88fd1e40bf4b3d4e60dc7c1/jiter-0.12.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+                  sha256 "df37577a4f8408f7e0ec3205d2a8f87672af8f17008358063a4d6425b6081ce3"
+                end
+                on_intel do
+                  url "https://files.pythonhosted.org/packages/f2/19/ec34bccdfd5bbf1cfc88c95ed1cd22e816dc9e1e8d7cb616a88cc0969fa0/jiter-0.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+                  sha256 "4321e8a3d868919bcb1abb1db550d41f2b5b326f72df29e53b2df8b006eb9403"
+                end
+              end
+            end
+
             depends_on "python@3.12"
 
             def install
@@ -304,8 +356,18 @@ jobs:
                        wheel
               end
 
+              # Install jiter wheel (dylib has minimal Mach-O headers that break install_name_tool)
+              resource("jiter").stage do
+                wheel = Dir["*.whl"].first
+                odie "jiter wheel not found in resource" unless wheel
+
+                system venv.root/"bin/python", "-m", "pip", "install",
+                       "--no-deps", "--no-compile",
+                       wheel
+              end
+
               # Install dazzle with all optional dependencies (mcp, llm)
-              # pip will resolve transitive dependencies and use our pre-installed pydantic-core
+              # pip will resolve transitive dependencies and use our pre-installed pydantic-core and jiter
               system venv.root/"bin/python", "-m", "pip", "install",
                      "--no-compile",
                      "#{buildpath}[mcp,llm]"

@@ -122,6 +122,19 @@ from .invariant import (
     LogicalOperator as InvariantLogicalOperator,
 )
 
+# Layout Engine
+from .layout import (
+    AttentionSignalKind,
+    LayoutArchetype,  # Backward compat alias for Stage
+    LayoutPlan,
+    LayoutSignal,
+    LayoutSurface,
+    PersonaLayout,
+    Stage,
+    UXLayouts,
+    WorkspaceLayout,
+)
+
 # Messaging Channels (v0.9.0)
 from .messaging import (
     AssetKind,
@@ -133,9 +146,9 @@ from .messaging import (
     DocumentFormat,
     DocumentSpec,
     EntityEvent,
+    MappingSpec,
     MatchPatternKind,
     MatchPatternSpec,
-    MappingSpec,
     MessageFieldSpec,
     MessageSpec,
     ProviderConfigSpec,
@@ -151,19 +164,6 @@ from .messaging import (
     ThrottleExceedAction,
     ThrottleScope,
     ThrottleSpec,
-)
-
-# Layout Engine
-from .layout import (
-    AttentionSignalKind,
-    LayoutArchetype,  # Backward compat alias for Stage
-    LayoutPlan,
-    LayoutSignal,
-    LayoutSurface,
-    PersonaLayout,
-    Stage,
-    UXLayouts,
-    WorkspaceLayout,
 )
 
 # Module-level IR

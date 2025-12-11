@@ -1,9 +1,9 @@
-# DAZZLE Homebrew Formula v0.9.1
+# DAZZLE Homebrew Formula v0.9.2
 #
 # Installation: brew install manwithacat/tap/dazzle
 # Or from this file: brew install ./homebrew/dazzle.rb
 #
-# v0.8.6 Architecture:
+# v0.9.2 Architecture:
 # - CLI: Bun-compiled native binary (50x faster startup)
 # - Runtime: Python package for DSL parsing and code generation
 #
@@ -15,33 +15,35 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.9.1"
+  version "0.9.2"
   license "MIT"
 
   # Source tarball for Python package
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.9.1.tar.gz"
-  sha256 "d4b0f1c942c43d6a50aaa082280d0502e8ba6f2a27c22c8d686c25474a41ad69"
+  # SHA256 will be updated by CI after tag is created
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.9.2.tar.gz"
+  sha256 "PLACEHOLDER_SOURCE_SHA256"
 
   # Pre-compiled CLI binaries for each platform
+  # SHA256 values will be updated by CI after release binaries are built
   resource "cli-binary" do
     on_macos do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.1/dazzle-darwin-arm64.tar.gz"
-        sha256 "135c7016ae7c763eb986b2e14d59b4b5fc7185ccd4e365eb0665869b0fc0ef3b"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.2/dazzle-darwin-arm64.tar.gz"
+        sha256 "PLACEHOLDER_DARWIN_ARM64_SHA256"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.1/dazzle-darwin-x64.tar.gz"
-        sha256 "492cfdbc007ae797daec65aa376b2794bfe21f4dbbc6dd62cc6c2efb711822cb"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.2/dazzle-darwin-x64.tar.gz"
+        sha256 "PLACEHOLDER_DARWIN_X64_SHA256"
       end
     end
     on_linux do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.1/dazzle-linux-arm64.tar.gz"
-        sha256 "7d4a85009148589f6832dbaa6460b520a97e3d591afaab97d1827ea370fddcf6"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.2/dazzle-linux-arm64.tar.gz"
+        sha256 "PLACEHOLDER_LINUX_ARM64_SHA256"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.1/dazzle-linux-x64.tar.gz"
-        sha256 "d6b1c87651aec328f7d5f3f6dde3f84caa6df9c92f1e8f1f676e46f6173bb324"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.2/dazzle-linux-x64.tar.gz"
+        sha256 "PLACEHOLDER_LINUX_X64_SHA256"
       end
     end
   end
@@ -70,12 +72,32 @@ class Dazzle < Formula
     end
   end
 
-  depends_on "python@3.12"
+  # jiter also requires Rust to build - pre-built wheels avoid dylib header issues
+  # The jiter dylib has minimal Mach-O headers that cause install_name_tool failures
+  resource "jiter" do
+    on_macos do
+      on_arm do
+        url "https://files.pythonhosted.org/packages/f0/93/5aa0d5c10fbb925ffe33c1e3c7da3c7ccaa5a64d6de91c9de0d52f0ca5bc/jiter-0.12.0-cp312-cp312-macosx_11_0_arm64.whl"
+        sha256 "5c1860627048e302a528333c9307c818c547f214d8659b0705d2195e1a94b274"
+      end
+      on_intel do
+        url "https://files.pythonhosted.org/packages/25/b4/44b18b96d8e0c0e36bff8b4ea7a273c85f0ba1e1f1e21de252beec9c8679/jiter-0.12.0-cp312-cp312-macosx_10_12_x86_64.whl"
+        sha256 "305e061fa82f4680607a775b2e8e0bcb071cd2205ac38e6ef48c8dd5ebe1cf37"
+      end
+    end
+    on_linux do
+      on_arm do
+        url "https://files.pythonhosted.org/packages/f3/0d/1ff4c0ec8a7a7a35f3b5d55ed5a94ff4ba47f88fd1e40bf4b3d4e60dc7c1/jiter-0.12.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+        sha256 "df37577a4f8408f7e0ec3205d2a8f87672af8f17008358063a4d6425b6081ce3"
+      end
+      on_intel do
+        url "https://files.pythonhosted.org/packages/f2/19/ec34bccdfd5bbf1cfc88c95ed1cd22e816dc9e1e8d7cb616a88cc0969fa0/jiter-0.12.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+        sha256 "4321e8a3d868919bcb1abb1db550d41f2b5b326f72df29e53b2df8b006eb9403"
+      end
+    end
+  end
 
-  # Skip dylib relocation for jiter - its header is too small for Homebrew's
-  # install_name_tool modifications. This is safe because jiter is only used
-  # at runtime within the virtualenv, not linked by other formulae.
-  skip_clean "libexec/lib/python3.12/site-packages/jiter"
+  depends_on "python@3.12"
 
   def install
     # Install Python package in virtualenv
@@ -91,8 +113,18 @@ class Dazzle < Formula
              wheel
     end
 
+    # Install jiter wheel (dylib has minimal Mach-O headers that break install_name_tool)
+    resource("jiter").stage do
+      wheel = Dir["*.whl"].first
+      odie "jiter wheel not found in resource" unless wheel
+
+      system venv.root/"bin/python", "-m", "pip", "install",
+             "--no-deps", "--no-compile",
+             wheel
+    end
+
     # Install dazzle with all optional dependencies (mcp, llm, lsp)
-    # pip will resolve transitive dependencies and use our pre-installed pydantic-core
+    # pip will resolve transitive dependencies and use our pre-installed pydantic-core and jiter
     system venv.root/"bin/python", "-m", "pip", "install",
            "--no-compile",
            "#{buildpath}[mcp,llm,lsp]"
@@ -122,7 +154,7 @@ class Dazzle < Formula
 
   def caveats
     <<~EOS
-      DAZZLE v0.9.1 has been installed!
+      DAZZLE v0.9.2 has been installed!
 
       What's New:
         - 50x faster CLI startup (Bun-compiled binary)
@@ -158,7 +190,7 @@ class Dazzle < Formula
   test do
     # Test fast path (no Python needed)
     output = shell_output("#{bin}/dazzle version")
-    assert_match "0.9.1", output
+    assert_match "0.9.2", output
 
     # Test Python integration
     output = shell_output("#{bin}/dazzle version --full")
