@@ -198,9 +198,9 @@ class TestHTMLGeneration:
             # If script has src attribute, content should be empty or whitespace
             if 'src="' in attrs or "src='" in attrs:
                 content_stripped = content.strip()
-                assert content_stripped == "", (
-                    f"Script with src attribute has inline content: {content[:100]}..."
-                )
+                assert (
+                    content_stripped == ""
+                ), f"Script with src attribute has inline content: {content[:100]}..."
 
     def test_html_has_required_structure(self) -> None:
         """Test that HTML has the required structure."""

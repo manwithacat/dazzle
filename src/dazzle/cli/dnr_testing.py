@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING, Any
 import typer
 
 if TYPE_CHECKING:
-    from dazzle_dnr_back.specs.backend import BackendSpec
-
     from dazzle.core import ir
+    from dazzle_dnr_back.specs.backend import BackendSpec
 
 
 def run_api_contract_tests(

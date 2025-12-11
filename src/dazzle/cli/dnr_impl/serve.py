@@ -271,8 +271,7 @@ def dnr_serve(
         for p in appspec.personas
     ]
     scenarios = [
-        {"id": s.id, "name": s.name, "description": s.description}
-        for s in appspec.scenarios
+        {"id": s.id, "name": s.name, "description": s.description} for s in appspec.scenarios
     ]
 
     if personas:
