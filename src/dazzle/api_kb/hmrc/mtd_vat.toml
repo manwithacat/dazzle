@@ -1,0 +1,112 @@
+# HMRC MTD VAT Pack
+# Curated API configuration for HMRC Making Tax Digital VAT
+#
+# Capabilities:
+# - Retrieve VAT obligations
+# - Submit VAT returns
+# - View VAT liabilities and payments
+# - Check submission status
+#
+# Note: Requires HMRC Developer Hub registration and OAuth2 setup
+
+[pack]
+name = "hmrc_mtd_vat"
+provider = "HMRC"
+category = "tax"
+version = "1.0"
+description = "Making Tax Digital for VAT - submit VAT returns to HMRC"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/vat-api"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"  # Will generate HMRC_CLIENT_ID and HMRC_CLIENT_SECRET
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:vat", "write:vat"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_VRN = { required = false, description = "Default VAT Registration Number (9 digits)", example = "123456789" }
+
+[operations]
+# Obligations
+get_obligations = { method = "GET", path = "/organisations/vat/{vrn}/obligations", description = "Get VAT obligations for a period" }
+
+# Returns
+submit_return = { method = "POST", path = "/organisations/vat/{vrn}/returns", description = "Submit a VAT return" }
+get_return = { method = "GET", path = "/organisations/vat/{vrn}/returns/{period_key}", description = "View a submitted VAT return" }
+
+# Liabilities
+get_liabilities = { method = "GET", path = "/organisations/vat/{vrn}/liabilities", description = "Get VAT liabilities" }
+
+# Payments
+get_payments = { method = "GET", path = "/organisations/vat/{vrn}/payments", description = "Get VAT payments" }
+
+[foreign_models.VATObligation]
+description = "A VAT obligation period that must be fulfilled"
+key = "period_key"
+cache_ttl = 3600
+
+[foreign_models.VATObligation.fields]
+period_key = { type = "str(20)", required = true, pk = true }
+start = { type = "date", required = true, description = "Obligation period start date" }
+end = { type = "date", required = true, description = "Obligation period end date" }
+due = { type = "date", required = true, description = "Due date for submission" }
+status = { type = "enum[O,F]", required = true, description = "O=Open, F=Fulfilled" }
+received = { type = "date", description = "Date HMRC received the return (if fulfilled)" }
+
+[foreign_models.VATReturn]
+description = "A submitted VAT return"
+key = "period_key"
+
+[foreign_models.VATReturn.fields]
+period_key = { type = "str(20)", required = true, pk = true }
+vat_due_sales = { type = "decimal(13,2)", required = true, description = "Box 1: VAT due on sales" }
+vat_due_acquisitions = { type = "decimal(13,2)", required = true, description = "Box 2: VAT due on acquisitions" }
+total_vat_due = { type = "decimal(13,2)", required = true, description = "Box 3: Total VAT due" }
+vat_reclaimed_curr_period = { type = "decimal(13,2)", required = true, description = "Box 4: VAT reclaimed" }
+net_vat_due = { type = "decimal(11,2)", required = true, description = "Box 5: Net VAT due/owed" }
+total_value_sales_ex_vat = { type = "int", required = true, description = "Box 6: Total sales ex VAT" }
+total_value_purchases_ex_vat = { type = "int", required = true, description = "Box 7: Total purchases ex VAT" }
+total_value_goods_supplied_ex_vat = { type = "int", required = true, description = "Box 8: Goods supplied to EU ex VAT" }
+total_acquisitions_ex_vat = { type = "int", required = true, description = "Box 9: Acquisitions from EU ex VAT" }
+finalised = { type = "bool", description = "Whether the return has been finalised" }
+
+[foreign_models.VATLiability]
+description = "A VAT liability owed to HMRC"
+key = "charge_reference"
+
+[foreign_models.VATLiability.fields]
+charge_reference = { type = "str(50)", required = true, pk = true }
+tax_period_from = { type = "date", required = true }
+tax_period_to = { type = "date", required = true }
+type = { type = "str(50)", description = "Type of liability" }
+original_amount = { type = "decimal(13,2)", required = true }
+outstanding_amount = { type = "decimal(13,2)", required = true }
+due = { type = "date" }
+
+[foreign_models.VATPayment]
+description = "A VAT payment received by HMRC"
+key = "received"
+
+[foreign_models.VATPayment.fields]
+received = { type = "date", required = true }
+amount = { type = "decimal(13,2)", required = true }
+
+# DSL generation hints for integration actions
+[integration_hints]
+on_quarter_end = "get_obligations to check for pending returns"
+on_return_submitted = "submit_return with VAT figures from accounting system"
+on_daily_check = "get_obligations to monitor deadlines"
+
+# Webhook events (HMRC uses polling, not webhooks)
+[polling_hints]
+check_obligations = { frequency = "daily", description = "Check for new obligations" }
+check_payments = { frequency = "weekly", description = "Check for payment confirmations" }
+
+# Important notes for LLM guidance
+[notes]
+fraud_prevention = "All requests require fraud prevention headers (Gov-Client-* headers)"
+sandbox = "Use sandbox environment for testing: https://test-api.service.hmrc.gov.uk"
+agent_access = "Acting as agent requires separate agent services account authorization"

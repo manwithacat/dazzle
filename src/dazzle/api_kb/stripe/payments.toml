@@ -1,0 +1,141 @@
+# Stripe Payments Pack
+# Curated API configuration for Stripe payment processing
+#
+# Capabilities:
+# - Create and manage payment intents
+# - Process charges and refunds
+# - Handle payment methods
+# - Webhook event handling
+
+[pack]
+name = "stripe_payments"
+provider = "Stripe"
+category = "payments"
+version = "2024-11-20"
+description = "Accept payments via cards, wallets, and bank transfers"
+base_url = "https://api.stripe.com/v1"
+docs_url = "https://stripe.com/docs/api"
+
+[auth]
+type = "api_key"
+header = "Authorization"
+prefix = "Bearer"
+env_var = "STRIPE_SECRET_KEY"
+
+[env_vars]
+STRIPE_SECRET_KEY = { required = true, description = "Stripe secret key (starts with sk_)", example = "sk_test_..." }
+STRIPE_PUBLISHABLE_KEY = { required = true, description = "Stripe publishable key (starts with pk_)", example = "pk_test_..." }
+STRIPE_WEBHOOK_SECRET = { required = false, description = "Webhook endpoint signing secret", example = "whsec_..." }
+
+[operations]
+# Payment Intents - recommended for card payments
+create_payment_intent = { method = "POST", path = "/payment_intents", description = "Create a payment intent for a new payment" }
+get_payment_intent = { method = "GET", path = "/payment_intents/{id}", description = "Retrieve a payment intent by ID" }
+confirm_payment_intent = { method = "POST", path = "/payment_intents/{id}/confirm", description = "Confirm a payment intent" }
+cancel_payment_intent = { method = "POST", path = "/payment_intents/{id}/cancel", description = "Cancel an uncaptured payment intent" }
+list_payment_intents = { method = "GET", path = "/payment_intents", description = "List all payment intents" }
+
+# Charges - for simple payments
+create_charge = { method = "POST", path = "/charges", description = "Create a charge (legacy, prefer payment intents)" }
+get_charge = { method = "GET", path = "/charges/{id}", description = "Retrieve a charge by ID" }
+list_charges = { method = "GET", path = "/charges", description = "List all charges" }
+
+# Refunds
+create_refund = { method = "POST", path = "/refunds", description = "Create a refund for a charge or payment intent" }
+get_refund = { method = "GET", path = "/refunds/{id}", description = "Retrieve a refund by ID" }
+list_refunds = { method = "GET", path = "/refunds", description = "List all refunds" }
+
+# Payment Methods
+create_payment_method = { method = "POST", path = "/payment_methods", description = "Create a payment method" }
+get_payment_method = { method = "GET", path = "/payment_methods/{id}", description = "Retrieve a payment method" }
+attach_payment_method = { method = "POST", path = "/payment_methods/{id}/attach", description = "Attach a payment method to a customer" }
+detach_payment_method = { method = "POST", path = "/payment_methods/{id}/detach", description = "Detach a payment method from a customer" }
+
+[foreign_models.PaymentIntent]
+description = "A payment intent represents your intent to collect payment"
+key = "id"
+cache_ttl = 60
+
+[foreign_models.PaymentIntent.fields]
+id = { type = "str(50)", required = true, pk = true }
+object = { type = "str(20)" }
+amount = { type = "int", required = true, description = "Amount in smallest currency unit (e.g., cents)" }
+amount_received = { type = "int", description = "Amount that was collected" }
+currency = { type = "str(3)", required = true, description = "Three-letter ISO currency code" }
+status = { type = "enum[requires_payment_method,requires_confirmation,requires_action,processing,requires_capture,canceled,succeeded]", required = true }
+client_secret = { type = "str(100)", description = "Client secret for frontend use" }
+customer = { type = "str(50)", description = "Customer ID if attached" }
+description = { type = "str(500)" }
+metadata = { type = "json" }
+payment_method = { type = "str(50)" }
+created = { type = "int", description = "Unix timestamp" }
+
+[foreign_models.Charge]
+description = "A charge represents a payment that has been made"
+key = "id"
+cache_ttl = 60
+
+[foreign_models.Charge.fields]
+id = { type = "str(50)", required = true, pk = true }
+object = { type = "str(20)" }
+amount = { type = "int", required = true }
+amount_captured = { type = "int" }
+amount_refunded = { type = "int" }
+currency = { type = "str(3)", required = true }
+status = { type = "enum[succeeded,pending,failed]", required = true }
+paid = { type = "bool" }
+refunded = { type = "bool" }
+customer = { type = "str(50)" }
+description = { type = "str(500)" }
+metadata = { type = "json" }
+payment_intent = { type = "str(50)" }
+payment_method = { type = "str(50)" }
+receipt_url = { type = "str(500)" }
+created = { type = "int" }
+
+[foreign_models.Refund]
+description = "A refund represents a reversal of a charge"
+key = "id"
+cache_ttl = 60
+
+[foreign_models.Refund.fields]
+id = { type = "str(50)", required = true, pk = true }
+object = { type = "str(20)" }
+amount = { type = "int", required = true }
+currency = { type = "str(3)", required = true }
+status = { type = "enum[pending,succeeded,failed,canceled]", required = true }
+charge = { type = "str(50)" }
+payment_intent = { type = "str(50)" }
+reason = { type = "enum[duplicate,fraudulent,requested_by_customer]" }
+metadata = { type = "json" }
+created = { type = "int" }
+
+[foreign_models.PaymentMethod]
+description = "A payment method represents a customer's payment instrument"
+key = "id"
+cache_ttl = 300
+
+[foreign_models.PaymentMethod.fields]
+id = { type = "str(50)", required = true, pk = true }
+object = { type = "str(20)" }
+type = { type = "enum[card,bank_transfer,sepa_debit,bacs_debit]", required = true }
+customer = { type = "str(50)" }
+created = { type = "int" }
+# Card details (if type == card)
+card_brand = { type = "str(20)", description = "Card brand (visa, mastercard, etc.)" }
+card_last4 = { type = "str(4)", description = "Last 4 digits of card" }
+card_exp_month = { type = "int" }
+card_exp_year = { type = "int" }
+
+# DSL generation hints for integration actions
+[integration_hints]
+on_order_confirmed = "create_payment_intent with amount from Order.total"
+on_payment_failed = "notify customer, suggest retry"
+on_refund_requested = "create_refund for original payment_intent"
+
+# Webhook events this pack handles
+[webhooks]
+payment_intent_succeeded = { description = "Payment completed successfully" }
+payment_intent_payment_failed = { description = "Payment attempt failed" }
+charge_refunded = { description = "Charge was refunded" }
+charge_dispute_created = { description = "Customer disputed a charge" }

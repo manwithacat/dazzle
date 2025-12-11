@@ -1,0 +1,134 @@
+# Xero Accounting Pack
+# Curated API configuration for Xero accounting integration
+#
+# Capabilities:
+# - Manage invoices and bills
+# - Track contacts (customers/suppliers)
+# - Bank reconciliation
+# - Chart of accounts
+
+[pack]
+name = "xero_accounting"
+provider = "Xero"
+category = "accounting"
+version = "2.0"
+description = "Cloud accounting - invoices, contacts, and bank feeds"
+base_url = "https://api.xero.com/api.xro/2.0"
+docs_url = "https://developer.xero.com/documentation/api/accounting/overview"
+
+[auth]
+type = "oauth2"
+env_var = "XERO"
+token_url = "https://identity.xero.com/connect/token"
+scopes = ["openid", "profile", "email", "accounting.transactions", "accounting.contacts", "accounting.settings"]
+
+[env_vars]
+XERO_CLIENT_ID = { required = true, description = "Xero OAuth2 client ID", example = "" }
+XERO_CLIENT_SECRET = { required = true, description = "Xero OAuth2 client secret", example = "" }
+XERO_TENANT_ID = { required = false, description = "Xero tenant ID (for multi-org)", example = "" }
+
+[operations]
+# Invoices
+create_invoice = { method = "POST", path = "/Invoices", description = "Create a sales invoice" }
+get_invoice = { method = "GET", path = "/Invoices/{invoice_id}", description = "Get invoice by ID" }
+list_invoices = { method = "GET", path = "/Invoices", description = "List all invoices" }
+update_invoice = { method = "POST", path = "/Invoices/{invoice_id}", description = "Update an invoice" }
+
+# Bills (accounts payable)
+create_bill = { method = "POST", path = "/Invoices", description = "Create a bill (ACCPAY type)" }
+list_bills = { method = "GET", path = "/Invoices?where=Type==\"ACCPAY\"", description = "List all bills" }
+
+# Contacts
+create_contact = { method = "POST", path = "/Contacts", description = "Create a contact" }
+get_contact = { method = "GET", path = "/Contacts/{contact_id}", description = "Get contact by ID" }
+list_contacts = { method = "GET", path = "/Contacts", description = "List all contacts" }
+update_contact = { method = "POST", path = "/Contacts/{contact_id}", description = "Update a contact" }
+
+# Payments
+create_payment = { method = "POST", path = "/Payments", description = "Record a payment" }
+list_payments = { method = "GET", path = "/Payments", description = "List all payments" }
+
+# Bank Transactions
+create_bank_transaction = { method = "POST", path = "/BankTransactions", description = "Create a bank transaction" }
+list_bank_transactions = { method = "GET", path = "/BankTransactions", description = "List bank transactions" }
+
+# Accounts
+list_accounts = { method = "GET", path = "/Accounts", description = "List chart of accounts" }
+
+# Organisation
+get_organisation = { method = "GET", path = "/Organisation", description = "Get organisation details" }
+
+[foreign_models.Invoice]
+description = "A sales invoice"
+key = "invoice_id"
+cache_ttl = 300
+
+[foreign_models.Invoice.fields]
+invoice_id = { type = "uuid", required = true, pk = true }
+invoice_number = { type = "str(50)" }
+reference = { type = "str(255)" }
+type = { type = "enum[ACCREC,ACCPAY]", required = true, description = "ACCREC=Sales, ACCPAY=Bill" }
+status = { type = "enum[DRAFT,SUBMITTED,AUTHORISED,PAID,VOIDED,DELETED]" }
+contact_id = { type = "uuid", required = true }
+date = { type = "date" }
+due_date = { type = "date" }
+line_amount_types = { type = "enum[Exclusive,Inclusive,NoTax]" }
+sub_total = { type = "decimal(13,2)" }
+total_tax = { type = "decimal(13,2)" }
+total = { type = "decimal(13,2)" }
+currency_code = { type = "str(3)" }
+amount_due = { type = "decimal(13,2)" }
+amount_paid = { type = "decimal(13,2)" }
+sent_to_contact = { type = "bool" }
+has_attachments = { type = "bool" }
+updated_date_utc = { type = "datetime" }
+
+[foreign_models.Contact]
+description = "A customer or supplier contact"
+key = "contact_id"
+cache_ttl = 3600
+
+[foreign_models.Contact.fields]
+contact_id = { type = "uuid", required = true, pk = true }
+contact_number = { type = "str(50)" }
+name = { type = "str(200)", required = true }
+first_name = { type = "str(100)" }
+last_name = { type = "str(100)" }
+email_address = { type = "email" }
+is_customer = { type = "bool" }
+is_supplier = { type = "bool" }
+tax_number = { type = "str(50)", description = "VAT number" }
+bank_account_details = { type = "str(200)" }
+accounts_receivable_tax_type = { type = "str(20)" }
+accounts_payable_tax_type = { type = "str(20)" }
+default_currency = { type = "str(3)" }
+contact_status = { type = "enum[ACTIVE,ARCHIVED,GDPRREQUEST]" }
+updated_date_utc = { type = "datetime" }
+
+[foreign_models.Payment]
+description = "A payment against an invoice"
+key = "payment_id"
+
+[foreign_models.Payment.fields]
+payment_id = { type = "uuid", required = true, pk = true }
+date = { type = "date", required = true }
+amount = { type = "decimal(13,2)", required = true }
+invoice_id = { type = "uuid" }
+account_id = { type = "uuid" }
+currency_rate = { type = "decimal(13,6)" }
+payment_type = { type = "enum[ACCRECPAYMENT,ACCPAYPAYMENT,AROVERPAYMENT,ARPREPAYMENT,APOVERPAYMENT,APPREPAYMENT]" }
+status = { type = "enum[AUTHORISED,DELETED]" }
+reference = { type = "str(255)" }
+is_reconciled = { type = "bool" }
+
+# DSL generation hints
+[integration_hints]
+on_order_confirmed = "create_invoice with line items from Order"
+on_payment_received = "create_payment against invoice"
+on_customer_created = "create_contact in Xero"
+on_monthly_reconciliation = "list_bank_transactions for reconciliation"
+
+[notes]
+rate_limits = "Minute limit: 60 calls, Daily limit: 5000 calls"
+webhooks = "Webhook subscriptions available for real-time updates"
+multi_tenant = "Multi-org apps require tenant selection via xero-tenant-id header"

@@ -193,6 +193,82 @@ def get_project_tools() -> list[Tool]:
     ]
 
 
+def get_api_kb_tools() -> list[Tool]:
+    """Get API Knowledgebase tools for integration assistance."""
+    return [
+        Tool(
+            name="list_api_packs",
+            description="List all available API packs in the knowledgebase. Returns pack names, providers, categories, and descriptions.",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+        ),
+        Tool(
+            name="search_api_packs",
+            description="Search for API packs by category, provider, or text query. Use to find integrations for payments, accounting, tax, etc.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Filter by category (e.g., 'payments', 'tax', 'accounting', 'business_data')",
+                    },
+                    "provider": {
+                        "type": "string",
+                        "description": "Filter by provider name (e.g., 'Stripe', 'HMRC', 'Xero')",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Text search in name, provider, or description",
+                    },
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_api_pack",
+            description="Get full details of an API pack including auth config, env vars, operations, and foreign models.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pack_name": {
+                        "type": "string",
+                        "description": "Pack name (e.g., 'stripe_payments', 'hmrc_mtd_vat')",
+                    }
+                },
+                "required": ["pack_name"],
+            },
+        ),
+        Tool(
+            name="generate_service_dsl",
+            description="Generate DSL service and foreign_model blocks from an API pack. Copy-paste ready code.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pack_name": {
+                        "type": "string",
+                        "description": "Pack name to generate DSL for",
+                    }
+                },
+                "required": ["pack_name"],
+            },
+        ),
+        Tool(
+            name="get_env_vars_for_packs",
+            description="Get .env.example content for specified packs or all packs. Use when setting up a new project.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pack_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of pack names. Omit for all packs.",
+                    }
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -267,6 +343,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add DNR tools (always available)
     tools.extend(get_dnr_tools())
+
+    # Add API Knowledgebase tools (always available)
+    tools.extend(get_api_kb_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

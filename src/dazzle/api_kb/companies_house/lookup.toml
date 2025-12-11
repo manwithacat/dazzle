@@ -1,0 +1,138 @@
+# Companies House Lookup Pack
+# Curated API configuration for UK Companies House company data
+#
+# Capabilities:
+# - Search for companies
+# - Get company profile
+# - Get company officers
+# - Get filing history
+#
+# Rate limits: 600 requests per 5 minutes
+
+[pack]
+name = "companies_house_lookup"
+provider = "Companies House"
+category = "business_data"
+version = "1.0"
+description = "Look up UK company information, officers, and filings"
+base_url = "https://api.company-information.service.gov.uk"
+docs_url = "https://developer-specs.company-information.service.gov.uk/"
+
+[auth]
+type = "api_key"
+header = "Authorization"
+prefix = "Basic"  # API key is used as basic auth username with empty password
+env_var = "COMPANIES_HOUSE_API_KEY"
+
+[env_vars]
+COMPANIES_HOUSE_API_KEY = { required = true, description = "Companies House API key", example = "" }
+
+[operations]
+# Search
+search_companies = { method = "GET", path = "/search/companies", description = "Search for companies by name or number" }
+search_officers = { method = "GET", path = "/search/officers", description = "Search for company officers" }
+search_disqualified_officers = { method = "GET", path = "/search/disqualified-officers", description = "Search disqualified directors" }
+
+# Company Profile
+get_company = { method = "GET", path = "/company/{company_number}", description = "Get company profile" }
+get_registered_office = { method = "GET", path = "/company/{company_number}/registered-office-address", description = "Get registered office address" }
+
+# Officers
+list_officers = { method = "GET", path = "/company/{company_number}/officers", description = "List company officers" }
+get_officer_appointments = { method = "GET", path = "/officers/{officer_id}/appointments", description = "Get officer's appointments" }
+
+# Filing History
+get_filing_history = { method = "GET", path = "/company/{company_number}/filing-history", description = "Get company filing history" }
+get_filing = { method = "GET", path = "/company/{company_number}/filing-history/{transaction_id}", description = "Get specific filing" }
+
+# Charges (Mortgages)
+list_charges = { method = "GET", path = "/company/{company_number}/charges", description = "List company charges/mortgages" }
+
+# Persons with Significant Control
+list_pscs = { method = "GET", path = "/company/{company_number}/persons-with-significant-control", description = "List persons with significant control" }
+
+[foreign_models.Company]
+description = "A UK registered company"
+key = "company_number"
+cache_ttl = 86400  # 24 hours - company data doesn't change often
+
+[foreign_models.Company.fields]
+company_number = { type = "str(10)", required = true, pk = true }
+company_name = { type = "str(200)", required = true }
+company_status = { type = "enum[active,dissolved,liquidation,receivership,administration,voluntary-arrangement,converted-closed,insolvency-proceedings]" }
+company_type = { type = "str(50)", description = "ltd, plc, llp, etc." }
+date_of_creation = { type = "date" }
+date_of_cessation = { type = "date" }
+jurisdiction = { type = "str(50)" }
+sic_codes = { type = "json", description = "Array of SIC codes" }
+has_been_liquidated = { type = "bool" }
+has_charges = { type = "bool" }
+has_insolvency_history = { type = "bool" }
+registered_office_is_in_dispute = { type = "bool" }
+undeliverable_registered_office_address = { type = "bool" }
+etag = { type = "str(50)" }
+
+[foreign_models.CompanyAddress]
+description = "A company address (registered office)"
+key = "company_number"
+
+[foreign_models.CompanyAddress.fields]
+premises = { type = "str(100)" }
+address_line_1 = { type = "str(100)" }
+address_line_2 = { type = "str(100)" }
+locality = { type = "str(100)" }
+region = { type = "str(100)" }
+postal_code = { type = "str(20)" }
+country = { type = "str(50)" }
+
+[foreign_models.Officer]
+description = "A company officer (director, secretary, etc.)"
+key = "officer_id"
+cache_ttl = 86400
+
+[foreign_models.Officer.fields]
+officer_id = { type = "str(50)", required = true, pk = true }
+name = { type = "str(200)", required = true }
+officer_role = { type = "enum[director,secretary,corporate-director,corporate-secretary,corporate-nominee-director,corporate-nominee-secretary,judicial-factor,llp-member,llp-designated-member,corporate-llp-member,corporate-llp-designated-member,receiver-and-manager,cic-manager,nominee-director,nominee-secretary]" }
+appointed_on = { type = "date" }
+resigned_on = { type = "date" }
+nationality = { type = "str(100)" }
+country_of_residence = { type = "str(100)" }
+occupation = { type = "str(100)" }
+
+[foreign_models.Filing]
+description = "A company filing/document"
+key = "transaction_id"
+
+[foreign_models.Filing.fields]
+transaction_id = { type = "str(50)", required = true, pk = true }
+date = { type = "date", required = true }
+type = { type = "str(50)", required = true, description = "Filing type code" }
+description = { type = "str(500)" }
+category = { type = "str(50)" }
+barcode = { type = "str(20)" }
+paper_filed = { type = "bool" }
+
+[foreign_models.PSC]
+description = "Person with Significant Control"
+key = "psc_id"
+
+[foreign_models.PSC.fields]
+psc_id = { type = "str(50)", required = true, pk = true }
+name = { type = "str(200)", required = true }
+natures_of_control = { type = "json", description = "Array of control natures" }
+notified_on = { type = "date" }
+ceased_on = { type = "date" }
+nationality = { type = "str(100)" }
+country_of_residence = { type = "str(100)" }
+
+# DSL generation hints for integration actions
+[integration_hints]
+on_customer_created = "get_company to verify company exists and is active"
+on_company_number_entered = "get_company to auto-fill company details"
+on_kyc_check = "get_company, list_officers, list_pscs for due diligence"
+
+[notes]
+rate_limits = "600 requests per 5 minutes per API key"
+document_api = "Filing documents (PDFs) require separate Document API key"
+streaming = "Streaming API available for bulk data access"

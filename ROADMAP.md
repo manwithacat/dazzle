@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-11
-**Current Version**: v0.8.11
+**Current Version**: v0.9.3
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 ---
@@ -897,6 +897,154 @@ channel notifications:
 
 ---
 
+### v0.10.0 - API Knowledgebase & Integration Assistant
+
+**Status**: Planned
+**Focus**: Curated API definitions and LLM-assisted integration setup
+
+**Design Document**: `dev_docs/api_definition_chair_keyboard_interface.md`
+
+#### Core Concept
+
+The API Knowledgebase provides pre-baked, tested configurations for common external APIs. Instead of an LLM hallucinating endpoints or parsing OpenAPI specs at runtime, we maintain curated "packs" for popular services.
+
+```
+Founder Intent (natural language)
+        │ LLM: extract api_intent (HIGH VALUE)
+        ▼
+    API Knowledgebase (curated packs)
+        │ Deterministic: load pre-tested config (ZERO COST)
+        ▼
+    DSL service/integration blocks
+```
+
+#### API Knowledgebase Structure
+
+```
+src/dazzle/api_kb/
+  __init__.py
+  loader.py           # Load and query packs
+  stripe/
+    payments.toml     # Stripe payments pack
+    billing.toml      # Stripe billing pack
+  hmrc/
+    mtd_vat.toml      # HMRC MTD VAT pack
+  companies_house/
+    lookup.toml       # Companies House lookup
+  xero/
+    accounting.toml   # Xero accounting pack
+```
+
+Each pack contains:
+- Pre-validated `service_ir` fragment
+- DSL template for `service` block
+- Required environment variables
+- Common `foreign_model` definitions
+- Test fixtures for integration testing
+
+#### Key Features
+
+**1. Curated API Packs**
+```toml
+# api_kb/stripe/payments.toml
+[pack]
+name = "stripe_payments"
+provider = "Stripe"
+category = "payments"
+version = "2024-01-01"
+
+[auth]
+type = "api_key"
+header = "Authorization"
+prefix = "Bearer"
+env_var = "STRIPE_SECRET_KEY"
+
+[operations]
+create_payment_intent = { method = "POST", path = "/v1/payment_intents" }
+confirm_payment = { method = "POST", path = "/v1/payment_intents/{id}/confirm" }
+list_payments = { method = "GET", path = "/v1/charges" }
+
+[env_vars]
+STRIPE_SECRET_KEY = { required = true, description = "Stripe secret key (sk_...)" }
+STRIPE_WEBHOOK_SECRET = { required = false, description = "Webhook signing secret" }
+```
+
+**2. .env.example Generation**
+When services are added to a project, automatically generate `.env.example`:
+```bash
+# Stripe (stripe_payments pack)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# HMRC (hmrc_mtd_vat pack)
+HMRC_CLIENT_ID=
+HMRC_CLIENT_SECRET=
+```
+
+**3. MCP Tools for Integration**
+```
+lookup_api_pack      - Query available packs by category or provider
+suggest_integration  - Analyze intent and recommend packs
+get_pack_config      - Get full pack configuration
+validate_env_vars    - Check required environment variables are set
+```
+
+**4. DSL Generation from Packs**
+```dsl
+# Auto-generated from stripe_payments pack
+service stripe "Stripe Payments":
+  pack: stripe_payments
+  auth_profile: api_key header="Authorization" key_env="STRIPE_SECRET_KEY"
+
+foreign_model PaymentIntent from stripe "Payment Intent":
+  key: id
+  constraint cache ttl="60"
+
+  id: str(50) required pk
+  amount: int required
+  currency: str(3) required
+  status: enum[requires_payment_method,requires_confirmation,succeeded,canceled]
+```
+
+#### Implementation Phases
+
+**Phase 1: Core Infrastructure**
+- [ ] Create `api_kb/` package structure
+- [ ] Pack loader with TOML parsing
+- [ ] Environment variable registry
+- [ ] `.env.example` generator in `dazzle new`
+
+**Phase 2: Initial Packs (UK Focus)**
+- [ ] Stripe payments pack
+- [ ] HMRC MTD VAT pack
+- [ ] Companies House lookup pack
+- [ ] Xero accounting pack (basic)
+
+**Phase 3: MCP Integration**
+- [ ] `lookup_api_pack` tool
+- [ ] `suggest_integration` tool with intent matching
+- [ ] `get_pack_config` tool
+- [ ] `validate_env_vars` tool
+
+**Phase 4: DSL Generation**
+- [ ] Generate `service` blocks from packs
+- [ ] Generate `foreign_model` blocks from pack schemas
+- [ ] Generate `integration` actions from pack operations
+
+**Phase 5: Testing & Documentation**
+- [ ] Mock server fixtures per pack
+- [ ] Integration test templates
+- [ ] Pack contribution guide
+
+#### Success Criteria
+
+- 5+ curated packs for common UK business APIs
+- `dazzle new` generates `.env.example` with all service env vars
+- MCP tools enable LLM to recommend and configure integrations
+- Zero hallucinated endpoints - all from curated packs
+
+---
+
 ### v1.0.0 - Dazzle Orchestrator Control Plane
 
 **Focus**: Hosted control plane for production app management
@@ -1066,6 +1214,19 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Changelog
+
+### 2025-12-11 (v0.10.0 Planned - API Knowledgebase)
+- **v0.10.0 PLANNED**: API Knowledgebase & Integration Assistant
+  - Curated API packs for common external services (Stripe, HMRC, Xero, etc.)
+  - Pre-validated service configurations to avoid LLM hallucination
+  - `.env.example` generation from service env var requirements
+  - MCP tools: `lookup_api_pack`, `suggest_integration`, `validate_env_vars`
+  - DSL generation from packs (`service` and `foreign_model` blocks)
+  - Design document: `dev_docs/api_definition_chair_keyboard_interface.md`
+- **v0.9.3 Released**: Documentation overhaul
+  - Complete DSL reference guide in `docs/reference/` (11 files)
+  - README updated with comprehensive DSL constructs overview
+  - Renamed docs/v0.7 to docs/v0.9
 
 ### 2025-12-11 (v0.9.0 Started - Messaging Channels)
 - **v0.9.0 IN PROGRESS**: Messaging Channels

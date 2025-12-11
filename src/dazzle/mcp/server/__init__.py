@@ -39,20 +39,25 @@ from .state import (
 from .tool_handlers import (
     analyze_patterns,
     find_examples_handler,
+    generate_service_dsl_handler,
     get_active_project_info,
+    get_api_pack_handler,
     get_cli_help_handler,
     get_dnr_logs_handler,
     get_entities,
+    get_env_vars_for_packs_handler,
     get_mcp_status_handler,
     get_surfaces,
     get_workflow_guide_handler,
     inspect_entity,
     inspect_surface,
     lint_project,
+    list_api_packs_handler,
     list_modules,
     list_projects,
     lookup_concept_handler,
     lookup_inference_handler,
+    search_api_packs_handler,
     select_project,
     validate_all_projects,
     validate_dsl,
@@ -113,6 +118,18 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = get_mcp_status_handler(arguments)
     elif name == "get_dnr_logs":
         result = get_dnr_logs_handler(arguments)
+
+    # API Knowledgebase tools (always available)
+    elif name == "list_api_packs":
+        result = list_api_packs_handler(arguments)
+    elif name == "search_api_packs":
+        result = search_api_packs_handler(arguments)
+    elif name == "get_api_pack":
+        result = get_api_pack_handler(arguments)
+    elif name == "generate_service_dsl":
+        result = generate_service_dsl_handler(arguments)
+    elif name == "get_env_vars_for_packs":
+        result = get_env_vars_for_packs_handler(arguments)
 
     # DNR tools (always available)
     elif name in DNR_TOOL_NAMES:
