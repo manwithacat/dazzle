@@ -20,9 +20,9 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-# MCP Semantic Index version
-MCP_SEMANTICS_VERSION = "0.9.1"
-MCP_SEMANTICS_BUILD = 1
+# MCP Semantic Index version - should match pyproject.toml version
+MCP_SEMANTICS_VERSION = "0.9.4"
+MCP_SEMANTICS_BUILD = 0
 
 # Cache for loaded data
 _semantic_cache: dict[str, Any] | None = None

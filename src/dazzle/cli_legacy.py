@@ -13,8 +13,8 @@ from pathlib import Path
 
 import typer
 
-# Version is defined here as the single source of truth
-__version__ = "0.4.0"
+# Version fallback - primary source is pyproject.toml via importlib.metadata
+__version__ = "0.9.4"
 
 
 def get_version() -> str:

@@ -10,7 +10,7 @@ This package provides:
 - Converters: Transform Dazzle AppSpec to UISpec
 """
 
-__version__ = "0.4.0"
+__version__ = "0.9.4"
 
 from dazzle_dnr_ui.specs.ui_spec import UISpec
 
