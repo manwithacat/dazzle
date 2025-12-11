@@ -269,7 +269,16 @@ class TypeParserMixin:
         return path
 
     def _parse_literal_value(self) -> str | int | float | bool | None:
-        """Parse a literal value (string, number, boolean, or null)."""
+        """Parse a literal value (string, number, boolean, null, or dotted path).
+
+        Supports:
+            - String literals: "hello"
+            - Numbers: 42, 3.14
+            - Booleans: true, false
+            - Null: null, None
+            - Identifiers: current_user, draft
+            - Dotted paths: current_user.team_id, current_user.contact_id
+        """
         if self.match(TokenType.STRING):
             return str(self.advance().value)
         elif self.match(TokenType.NUMBER):
@@ -288,8 +297,13 @@ class TypeParserMixin:
             if val == "null" or val == "None":
                 self.advance()
                 return None
-            # Treat as string value (for enum values etc)
-            return str(self.advance().value)
+            # Parse identifier, potentially with dotted path (e.g., current_user.team_id)
+            result = str(self.advance().value)
+            while self.match(TokenType.DOT):
+                self.advance()
+                next_part = self.expect_identifier_or_keyword().value
+                result = f"{result}.{next_part}"
+            return result
         else:
             # Allow keywords as values (e.g., enum values)
             if self._is_keyword_as_identifier():
