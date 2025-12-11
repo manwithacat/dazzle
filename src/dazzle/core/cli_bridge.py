@@ -367,24 +367,68 @@ def eject_project_json(
     Returns:
         Dict with ejection results
     """
-    from dazzle.eject.runner import run_ejection  # type: ignore[attr-defined]
+    from dazzle.core import load_project
+    from dazzle.eject import EjectionRunner, load_ejection_config
 
     project_path = Path(path) if path else Path.cwd()
     output_path = Path(output)
 
     try:
-        result = run_ejection(
-            project_path=project_path,
-            output_path=output_path,
-            backend=backend if backend != "none" else None,
-            frontend=frontend if frontend != "none" else None,
-            dry_run=dry_run,
+        # Load project
+        app_spec = load_project(project_path)
+
+        # Load ejection config (or use defaults)
+        toml_path = project_path / "dazzle.toml"
+        if toml_path.exists():
+            config = load_ejection_config(toml_path)
+        else:
+            # Create minimal config
+            from dazzle.eject.config import EjectionConfig
+            config = EjectionConfig()
+
+        # Override output directory
+        config.output.directory = str(output_path)
+
+        # Create runner and execute
+        runner = EjectionRunner(app_spec, project_path, config)
+
+        if dry_run:
+            # Return preview info
+            return {
+                "output_path": str(output_path),
+                "backend_files": [],
+                "frontend_files": [],
+                "total_files": 0,
+                "dry_run": True,
+            }
+
+        # Run ejection
+        result = runner.run(
+            backend=backend != "none",
+            frontend=frontend != "none",
+            testing=False,
+            ci=False,
+            clean=True,
+            verify=False,
         )
+
+        # Categorize files
+        backend_files = [
+            str(p.relative_to(output_path))
+            for p in result.files.keys()
+            if any(part in str(p) for part in ["backend", "api", "models"])
+        ]
+        frontend_files = [
+            str(p.relative_to(output_path))
+            for p in result.files.keys()
+            if any(part in str(p) for part in ["frontend", "src", "components"])
+        ]
+
         return {
             "output_path": str(output_path),
-            "backend_files": result.get("backend_files", []),
-            "frontend_files": result.get("frontend_files", []),
-            "total_files": result.get("total_files", 0),
+            "backend_files": backend_files,
+            "frontend_files": frontend_files,
+            "total_files": len(result.files),
         }
     except Exception as e:
         raise RuntimeError(f"Ejection failed: {e}") from e
