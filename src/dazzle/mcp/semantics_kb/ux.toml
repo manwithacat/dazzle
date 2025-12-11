@@ -138,15 +138,40 @@ best_practices = ["✅ Focus on user intent, not implementation", "✅ Answer 'w
 
 [concepts.scope]
 category = "UX Semantic Layer (v0.2)"
-definition = "Filter expression defining what data a persona can see."
+definition = "Filter expression defining what data a persona can see. Must be either 'all' or a comparison expression."
 syntax = '''
 scope: all
-scope: owner = current_user
-scope: team = current_user.team
-scope: status = Active and owner = current_user
+scope: <field> = current_user
+scope: <field> = current_user.<attribute>
+scope: <field> = <value>
+scope: <expr1> and <expr2>
+scope: <expr1> or <expr2>
+'''
+example = '''
+# Full access for admins
+for admin:
+  scope: all
+
+# Personal data - matches current user
+for member:
+  scope: owner_id = current_user
+
+# Team-scoped data
+for manager:
+  scope: team_id = current_user.team_id
+
+# Combined ownership - "my tasks"
+for member:
+  scope: assigned_to = current_user or created_by = current_user
+
+# Status-filtered with ownership
+for agent:
+  scope: status = open and assigned_to = current_user
 '''
 related = ["persona", "conditions"]
 v0_2_changes = "NEW in v0.2"
+important_notes = ["'scope: all' is the only keyword - all other forms require a comparison expression", "Use 'field = current_user' for personal data (NOT 'scope: owned' or 'scope: personal')", "Combine with 'and'/'or' for complex expressions", "Field names must match entity field names exactly"]
+common_mistakes = ["scope: owned  # INVALID - 'owned' is not a keyword", "scope: personal  # INVALID - use 'field = current_user'", "scope: mine  # INVALID - use 'field = current_user'", "scope: self  # INVALID - use 'id = current_user' or similar"]
 
 [concepts.ux_block]
 category = "UX Semantic Layer (v0.2)"
