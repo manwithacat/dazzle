@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.8.5"
+version = "0.8.6"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -83,6 +83,7 @@ namespaces = false
 
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
+"dazzle.examples" = ["**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -156,6 +157,8 @@ disallow_untyped_decorators = false
 line-length = 100
 target-version = "py311"
 src = ["src"]
+# Exclude bundled examples from linting (they may have auto-generated code)
+exclude = ["src/dazzle/examples/*"]
 
 [tool.ruff.lint]
 select = [

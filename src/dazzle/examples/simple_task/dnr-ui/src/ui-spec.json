@@ -1,0 +1,1233 @@
+{
+  "name": "simple_task_ui",
+  "version": "0.1.0",
+  "description": "Simple Task Manager",
+  "shell": {
+    "layout": "app-shell",
+    "nav": {
+      "style": "sidebar",
+      "items": [
+        {
+          "label": "Task Dashboard",
+          "route": "/",
+          "icon": null,
+          "workspace": "dashboard"
+        },
+        {
+          "label": "My Work",
+          "route": "/my-work",
+          "icon": null,
+          "workspace": "my_work"
+        }
+      ],
+      "brand": "Simple Task",
+      "logo": null
+    },
+    "header": {
+      "show_auth": true,
+      "title": "Simple Task"
+    },
+    "footer": {
+      "powered_by": true,
+      "copyright": null,
+      "links": []
+    },
+    "pages": []
+  },
+  "workspaces": [
+    {
+      "name": "dashboard",
+      "label": "Task Dashboard",
+      "description": "Overview of all tasks with key metrics",
+      "persona": null,
+      "layout": {
+        "kind": "appShell",
+        "sidebar": "dashboard_sidebar",
+        "main": "TaskList",
+        "header": "dashboard_header",
+        "footer": null
+      },
+      "routes": [
+        {
+          "path": "/task/create",
+          "component": "TaskCreate",
+          "title": "Create Task",
+          "metadata": {}
+        },
+        {
+          "path": "/task/list",
+          "component": "TaskList",
+          "title": "Task List",
+          "metadata": {}
+        },
+        {
+          "path": "/",
+          "component": "TaskList",
+          "title": "Task List",
+          "metadata": {}
+        },
+        {
+          "path": "/task/:id/edit",
+          "component": "TaskEdit",
+          "title": "Edit Task",
+          "metadata": {}
+        },
+        {
+          "path": "/task/:id",
+          "component": "TaskDetail",
+          "title": "Task Detail",
+          "metadata": {}
+        }
+      ],
+      "state": [],
+      "metadata": {}
+    },
+    {
+      "name": "my_work",
+      "label": "My Work",
+      "description": "Personal task view for assigned work",
+      "persona": null,
+      "layout": {
+        "kind": "singleColumn",
+        "main": "TaskList"
+      },
+      "routes": [
+        {
+          "path": "/my-work/task/create",
+          "component": "TaskCreate",
+          "title": "Create Task",
+          "metadata": {}
+        },
+        {
+          "path": "/my-work/task/list",
+          "component": "TaskList",
+          "title": "Task List",
+          "metadata": {}
+        },
+        {
+          "path": "/my-work",
+          "component": "TaskList",
+          "title": "Task List",
+          "metadata": {}
+        },
+        {
+          "path": "/my-work/task/:id/edit",
+          "component": "TaskEdit",
+          "title": "Edit Task",
+          "metadata": {}
+        },
+        {
+          "path": "/my-work/task/:id",
+          "component": "TaskDetail",
+          "title": "Task Detail",
+          "metadata": {}
+        }
+      ],
+      "state": [],
+      "metadata": {}
+    }
+  ],
+  "components": [
+    {
+      "kind": "component",
+      "name": "TaskList",
+      "description": "Task List",
+      "category": "custom",
+      "role": null,
+      "props_schema": {
+        "fields": [
+          {
+            "name": "items",
+            "type": "list[Task]",
+            "required": true,
+            "default": null,
+            "description": null
+          },
+          {
+            "name": "loading",
+            "type": "bool",
+            "required": false,
+            "default": false,
+            "description": null
+          },
+          {
+            "name": "onRowClick",
+            "type": "Action",
+            "required": false,
+            "default": null,
+            "description": null
+          }
+        ]
+      },
+      "view": {
+        "kind": "element",
+        "as": "FilterableTable",
+        "props": {
+          "title": {
+            "kind": "literal",
+            "value": "Task List"
+          },
+          "entity": {
+            "kind": "literal",
+            "value": "Task"
+          },
+          "columns": {
+            "kind": "literal",
+            "value": [
+              {
+                "key": "title",
+                "label": "Title"
+              },
+              {
+                "key": "status",
+                "label": "Status"
+              },
+              {
+                "key": "priority",
+                "label": "Priority"
+              },
+              {
+                "key": "due_date",
+                "label": "Due Date"
+              },
+              {
+                "key": "assigned_to",
+                "label": "Assigned To"
+              }
+            ]
+          },
+          "apiEndpoint": {
+            "kind": "literal",
+            "value": "/api/tasks"
+          },
+          "dazzle": {
+            "kind": "literal",
+            "value": {
+              "view": "task_list",
+              "entity": "Task",
+              "formMode": null
+            }
+          }
+        },
+        "children": []
+      },
+      "state": [
+        {
+          "name": "items",
+          "scope": "local",
+          "initial": [],
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "loading",
+          "scope": "local",
+          "initial": true,
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "selectedId",
+          "scope": "local",
+          "initial": null,
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "filters",
+          "scope": "local",
+          "initial": {},
+          "persistent": false,
+          "description": null
+        }
+      ],
+      "actions": [
+        {
+          "name": "viewItem",
+          "description": "Navigate to item detail",
+          "purity": null,
+          "inputs": {
+            "id": "uuid"
+          },
+          "transitions": [],
+          "effect": {
+            "kind": "navigate",
+            "route": "/task/{id}",
+            "params": null
+          }
+        }
+      ],
+      "metadata": {},
+      "view_name": "task_list",
+      "entity_name": "Task"
+    },
+    {
+      "kind": "component",
+      "name": "TaskDetail",
+      "description": "Task Detail",
+      "category": "custom",
+      "role": null,
+      "props_schema": {
+        "fields": [
+          {
+            "name": "task",
+            "type": "Task",
+            "required": true,
+            "default": null,
+            "description": null
+          }
+        ]
+      },
+      "view": {
+        "kind": "element",
+        "as": "Card",
+        "props": {
+          "title": {
+            "kind": "literal",
+            "value": "Task Detail"
+          },
+          "dazzle": {
+            "kind": "literal",
+            "value": {
+              "view": "task_detail",
+              "entity": "Task",
+              "formMode": null
+            }
+          }
+        },
+        "children": []
+      },
+      "state": [
+        {
+          "name": "loading",
+          "scope": "local",
+          "initial": true,
+          "persistent": false,
+          "description": null
+        }
+      ],
+      "actions": [],
+      "metadata": {},
+      "view_name": "task_detail",
+      "entity_name": "Task"
+    },
+    {
+      "kind": "component",
+      "name": "TaskCreate",
+      "description": "Create Task",
+      "category": "custom",
+      "role": null,
+      "props_schema": {
+        "fields": [
+          {
+            "name": "onSubmit",
+            "type": "Action",
+            "required": true,
+            "default": null,
+            "description": null
+          },
+          {
+            "name": "onCancel",
+            "type": "Action",
+            "required": false,
+            "default": null,
+            "description": null
+          }
+        ]
+      },
+      "view": {
+        "kind": "element",
+        "as": "Form",
+        "props": {
+          "title": {
+            "kind": "literal",
+            "value": "Create Task"
+          },
+          "entity": {
+            "kind": "literal",
+            "value": "Task"
+          },
+          "mode": {
+            "kind": "literal",
+            "value": "create"
+          },
+          "dazzle": {
+            "kind": "literal",
+            "value": {
+              "view": "task_create",
+              "entity": "Task",
+              "formMode": "create"
+            }
+          }
+        },
+        "children": [
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.title"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Title"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Title"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.title",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.description"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Description"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "fieldType": {
+                "kind": "literal",
+                "value": "text"
+              },
+              "multiline": {
+                "kind": "literal",
+                "value": true
+              },
+              "placeholder": {
+                "kind": "literal",
+                "value": "Description"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.description",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.priority"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Priority"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Select",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Select Priority"
+              },
+              "options": {
+                "kind": "literal",
+                "value": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.priority",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.due_date"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Due Date"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "fieldType": {
+                "kind": "literal",
+                "value": "date"
+              },
+              "placeholder": {
+                "kind": "literal",
+                "value": "Due Date"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.due_date",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.assigned_to"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Assigned To"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Assigned To"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.assigned_to",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Stack",
+            "props": {
+              "direction": {
+                "kind": "literal",
+                "value": "row"
+              },
+              "gap": {
+                "kind": "literal",
+                "value": "sm"
+              }
+            },
+            "children": [
+              {
+                "kind": "element",
+                "as": "Button",
+                "props": {
+                  "variant": {
+                    "kind": "literal",
+                    "value": "primary"
+                  },
+                  "type": {
+                    "kind": "literal",
+                    "value": "submit"
+                  },
+                  "label": {
+                    "kind": "literal",
+                    "value": "Create"
+                  },
+                  "dazzle": {
+                    "kind": "literal",
+                    "value": {
+                      "action": "Task.create",
+                      "actionRole": "primary"
+                    }
+                  }
+                },
+                "children": []
+              },
+              {
+                "kind": "element",
+                "as": "Button",
+                "props": {
+                  "variant": {
+                    "kind": "literal",
+                    "value": "secondary"
+                  },
+                  "type": {
+                    "kind": "literal",
+                    "value": "button"
+                  },
+                  "label": {
+                    "kind": "literal",
+                    "value": "Cancel"
+                  },
+                  "dazzle": {
+                    "kind": "literal",
+                    "value": {
+                      "action": "Task.cancel",
+                      "actionRole": "cancel"
+                    }
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "state": [
+        {
+          "name": "formData",
+          "scope": "local",
+          "initial": {},
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "errors",
+          "scope": "local",
+          "initial": {},
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "submitting",
+          "scope": "local",
+          "initial": false,
+          "persistent": false,
+          "description": null
+        }
+      ],
+      "actions": [
+        {
+          "name": "submitCreate",
+          "description": "Create new Task",
+          "purity": null,
+          "inputs": null,
+          "transitions": [],
+          "effect": {
+            "kind": "fetch",
+            "backend_service": "create_task",
+            "inputs": null,
+            "on_success": "onCreateSuccess",
+            "on_error": "onCreateError"
+          }
+        },
+        {
+          "name": "onCreateSuccess",
+          "description": "Handle successful creation",
+          "purity": null,
+          "inputs": null,
+          "transitions": [],
+          "effect": {
+            "kind": "navigate",
+            "route": "/",
+            "params": null
+          }
+        }
+      ],
+      "metadata": {},
+      "view_name": "task_create",
+      "entity_name": "Task"
+    },
+    {
+      "kind": "component",
+      "name": "TaskEdit",
+      "description": "Edit Task",
+      "category": "custom",
+      "role": null,
+      "props_schema": {
+        "fields": [
+          {
+            "name": "onSubmit",
+            "type": "Action",
+            "required": true,
+            "default": null,
+            "description": null
+          },
+          {
+            "name": "onCancel",
+            "type": "Action",
+            "required": false,
+            "default": null,
+            "description": null
+          },
+          {
+            "name": "initialValues",
+            "type": "Task",
+            "required": true,
+            "default": null,
+            "description": null
+          }
+        ]
+      },
+      "view": {
+        "kind": "element",
+        "as": "Form",
+        "props": {
+          "title": {
+            "kind": "literal",
+            "value": "Edit Task"
+          },
+          "entity": {
+            "kind": "literal",
+            "value": "Task"
+          },
+          "mode": {
+            "kind": "literal",
+            "value": "edit"
+          },
+          "dazzle": {
+            "kind": "literal",
+            "value": {
+              "view": "task_edit",
+              "entity": "Task",
+              "formMode": "edit"
+            }
+          }
+        },
+        "children": [
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.title"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Title"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Title"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.title",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.description"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Description"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "fieldType": {
+                "kind": "literal",
+                "value": "text"
+              },
+              "multiline": {
+                "kind": "literal",
+                "value": true
+              },
+              "placeholder": {
+                "kind": "literal",
+                "value": "Description"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.description",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.status"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Status"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Select",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Select Status"
+              },
+              "options": {
+                "kind": "literal",
+                "value": [
+                  "todo",
+                  "in_progress",
+                  "done"
+                ]
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.status",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.priority"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Priority"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Select",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Select Priority"
+              },
+              "options": {
+                "kind": "literal",
+                "value": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.priority",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.due_date"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Due Date"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "fieldType": {
+                "kind": "literal",
+                "value": "date"
+              },
+              "placeholder": {
+                "kind": "literal",
+                "value": "Due Date"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.due_date",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Text",
+            "props": {
+              "variant": {
+                "kind": "literal",
+                "value": "label"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "label": "Task.assigned_to"
+                }
+              }
+            },
+            "children": [
+              {
+                "kind": "text",
+                "content": {
+                  "kind": "literal",
+                  "value": "Assigned To"
+                }
+              }
+            ]
+          },
+          {
+            "kind": "element",
+            "as": "Input",
+            "props": {
+              "placeholder": {
+                "kind": "literal",
+                "value": "Assigned To"
+              },
+              "dazzle": {
+                "kind": "literal",
+                "value": {
+                  "field": "Task.assigned_to",
+                  "entity": "Task"
+                }
+              }
+            },
+            "children": []
+          },
+          {
+            "kind": "element",
+            "as": "Stack",
+            "props": {
+              "direction": {
+                "kind": "literal",
+                "value": "row"
+              },
+              "gap": {
+                "kind": "literal",
+                "value": "sm"
+              }
+            },
+            "children": [
+              {
+                "kind": "element",
+                "as": "Button",
+                "props": {
+                  "variant": {
+                    "kind": "literal",
+                    "value": "primary"
+                  },
+                  "type": {
+                    "kind": "literal",
+                    "value": "submit"
+                  },
+                  "label": {
+                    "kind": "literal",
+                    "value": "Save"
+                  },
+                  "dazzle": {
+                    "kind": "literal",
+                    "value": {
+                      "action": "Task.update",
+                      "actionRole": "primary"
+                    }
+                  }
+                },
+                "children": []
+              },
+              {
+                "kind": "element",
+                "as": "Button",
+                "props": {
+                  "variant": {
+                    "kind": "literal",
+                    "value": "secondary"
+                  },
+                  "type": {
+                    "kind": "literal",
+                    "value": "button"
+                  },
+                  "label": {
+                    "kind": "literal",
+                    "value": "Cancel"
+                  },
+                  "dazzle": {
+                    "kind": "literal",
+                    "value": {
+                      "action": "Task.cancel",
+                      "actionRole": "cancel"
+                    }
+                  }
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "state": [
+        {
+          "name": "formData",
+          "scope": "local",
+          "initial": {},
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "errors",
+          "scope": "local",
+          "initial": {},
+          "persistent": false,
+          "description": null
+        },
+        {
+          "name": "submitting",
+          "scope": "local",
+          "initial": false,
+          "persistent": false,
+          "description": null
+        }
+      ],
+      "actions": [
+        {
+          "name": "submitEdit",
+          "description": "Update Task",
+          "purity": null,
+          "inputs": null,
+          "transitions": [],
+          "effect": {
+            "kind": "fetch",
+            "backend_service": "update_task",
+            "inputs": null,
+            "on_success": "onUpdateSuccess",
+            "on_error": "onUpdateError"
+          }
+        },
+        {
+          "name": "onUpdateSuccess",
+          "description": "Handle successful update",
+          "purity": null,
+          "inputs": null,
+          "transitions": [],
+          "effect": {
+            "kind": "navigate",
+            "route": "/",
+            "params": null
+          }
+        }
+      ],
+      "metadata": {},
+      "view_name": "task_edit",
+      "entity_name": "Task"
+    }
+  ],
+  "themes": [
+    {
+      "name": "default",
+      "description": "Default application theme",
+      "tokens": {
+        "colors": {
+          "primary": "#0066cc",
+          "secondary": "#6c757d",
+          "success": "#28a745",
+          "danger": "#dc3545",
+          "warning": "#ffc107",
+          "info": "#17a2b8",
+          "background": "#ffffff",
+          "surface": "#f8f9fa",
+          "text": "#212529",
+          "text-secondary": "#6c757d"
+        },
+        "spacing": {
+          "xs": 4,
+          "sm": 8,
+          "md": 16,
+          "lg": 24,
+          "xl": 32
+        },
+        "radii": {
+          "sm": 2,
+          "md": 4,
+          "lg": 8
+        },
+        "typography": {},
+        "shadows": {},
+        "custom": {}
+      },
+      "variants": [],
+      "metadata": {}
+    }
+  ],
+  "default_workspace": "dashboard",
+  "default_theme": "default",
+  "metadata": {}
+}

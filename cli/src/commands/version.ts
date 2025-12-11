@@ -7,6 +7,9 @@ import type { CommandDefinition } from '../types/commands'
 import { success } from '../lib/output'
 import { checkPythonDazzle } from '../lib/python'
 
+// Read version from package.json at build time
+import pkg from '../../package.json'
+
 const VersionArgs = z.object({
   full: z.boolean().default(false).describe('Include Python package info'),
 })
@@ -17,7 +20,7 @@ export const version: CommandDefinition<typeof VersionArgs> = {
   args: VersionArgs,
 
   async run(args, _ctx) {
-    const cliVersion = '0.8.0'
+    const cliVersion = pkg.version
     const bunVersion = Bun.version
 
     // Fast path - no Python check

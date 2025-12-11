@@ -1,0 +1,738 @@
+{
+  "app_name": "simple_task",
+  "version": "0.1.0",
+  "fixtures": [
+    {
+      "id": "Task_valid",
+      "entity": "Task",
+      "data": {
+        "title": "Test Title",
+        "description": "Sample text content for description.",
+        "status": "todo",
+        "priority": "low",
+        "due_date": "2025-01-15",
+        "assigned_to": "Test Assigned To",
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z"
+      },
+      "refs": {},
+      "description": "Valid Task fixture with all required fields"
+    },
+    {
+      "id": "Task_updated",
+      "entity": "Task",
+      "data": {
+        "title": "Test Title_updated",
+        "description": "Sample text content for description_updated.",
+        "status": "todo",
+        "priority": "low",
+        "due_date": "2025-01-15",
+        "assigned_to": "Test Assigned To_updated",
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z"
+      },
+      "refs": {},
+      "description": "Updated Task fixture for update tests"
+    },
+    {
+      "id": "test_user",
+      "entity": "User",
+      "data": {
+        "username": "testuser",
+        "password": "testpass123"
+      },
+      "refs": {},
+      "description": "Test user for authentication flows"
+    }
+  ],
+  "flows": [
+    {
+      "id": "auth_login",
+      "description": "Login with valid credentials",
+      "priority": "high",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:login",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to login page"
+        },
+        {
+          "kind": "fill",
+          "target": "field:username",
+          "value": "testuser",
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Fill username field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:password",
+          "value": "testpass123",
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Fill password field"
+        },
+        {
+          "kind": "click",
+          "target": "action:login",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click login button"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "element:user_menu",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert user menu is visible after login"
+        }
+      ],
+      "tags": [
+        "auth",
+        "login"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
+    {
+      "id": "auth_logout",
+      "description": "Logout after being logged in",
+      "priority": "high",
+      "preconditions": {
+        "authenticated": true,
+        "fixtures": [],
+        "user_role": null,
+        "view": null
+      },
+      "steps": [
+        {
+          "kind": "click",
+          "target": "action:user_menu",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Open user menu"
+        },
+        {
+          "kind": "click",
+          "target": "action:logout",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click logout"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:login",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert redirected to login page"
+        }
+      ],
+      "tags": [
+        "auth",
+        "logout"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
+    {
+      "id": "auth_protected_route",
+      "description": "Unauthenticated user redirected to login",
+      "priority": "medium",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to protected task list"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "redirects_to",
+            "target": null,
+            "expected": "/login",
+            "operator": null
+          },
+          "description": "Assert redirected to login"
+        }
+      ],
+      "tags": [
+        "auth",
+        "protection"
+      ],
+      "entity": null,
+      "auto_generated": false
+    },
+    {
+      "id": "Task_create_valid",
+      "description": "Create a valid Task entity",
+      "priority": "high",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task list"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.create",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click create Task button"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.title",
+          "value": null,
+          "fixture_ref": "Task_valid.title",
+          "assertion": null,
+          "description": "Fill title field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.description",
+          "value": null,
+          "fixture_ref": "Task_valid.description",
+          "assertion": null,
+          "description": "Fill description field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.status",
+          "value": null,
+          "fixture_ref": "Task_valid.status",
+          "assertion": null,
+          "description": "Fill status field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.priority",
+          "value": null,
+          "fixture_ref": "Task_valid.priority",
+          "assertion": null,
+          "description": "Fill priority field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.due_date",
+          "value": null,
+          "fixture_ref": "Task_valid.due_date",
+          "assertion": null,
+          "description": "Fill due_date field"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.assigned_to",
+          "value": null,
+          "fixture_ref": "Task_valid.assigned_to",
+          "assertion": null,
+          "description": "Fill assigned_to field"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.save",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click save button"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "entity_exists",
+            "target": "Task",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert Task was created"
+        }
+      ],
+      "tags": [
+        "crud",
+        "create",
+        "task"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "Task_view_detail",
+      "description": "View a Task entity detail",
+      "priority": "medium",
+      "preconditions": {
+        "user_role": null,
+        "fixtures": [
+          "Task_valid"
+        ],
+        "authenticated": true,
+        "view": null
+      },
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task list"
+        },
+        {
+          "kind": "click",
+          "target": "row:Task",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click on a Task row"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:task_detail",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert Task detail view is visible"
+        }
+      ],
+      "tags": [
+        "crud",
+        "read",
+        "task"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "Task_update_valid",
+      "description": "Update a Task entity",
+      "priority": "high",
+      "preconditions": {
+        "user_role": null,
+        "fixtures": [
+          "Task_valid"
+        ],
+        "authenticated": true,
+        "view": null
+      },
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task list"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.edit",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click edit Task button"
+        },
+        {
+          "kind": "fill",
+          "target": "field:Task.title",
+          "value": null,
+          "fixture_ref": "Task_updated.title",
+          "assertion": null,
+          "description": "Update title field"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.save",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click save button"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "entity_exists",
+            "target": "Task",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert Task was updated"
+        }
+      ],
+      "tags": [
+        "crud",
+        "update",
+        "task"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "Task_delete",
+      "description": "Delete a Task entity",
+      "priority": "medium",
+      "preconditions": {
+        "user_role": null,
+        "fixtures": [
+          "Task_valid"
+        ],
+        "authenticated": true,
+        "view": null
+      },
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task list"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.delete",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click delete Task button"
+        },
+        {
+          "kind": "click",
+          "target": "action:confirm",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Confirm deletion"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "entity_not_exists",
+            "target": "Task",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert Task was deleted"
+        }
+      ],
+      "tags": [
+        "crud",
+        "delete",
+        "task"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "Task_validation_required_title",
+      "description": "Validation error when title is missing",
+      "priority": "medium",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task list"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.create",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click create Task button"
+        },
+        {
+          "kind": "click",
+          "target": "action:Task.save",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Click save without filling required field"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "validation_error",
+            "target": "field:Task.title",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert validation error on title"
+        }
+      ],
+      "tags": [
+        "validation",
+        "required",
+        "task"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "navigate_task_list",
+      "description": "Navigate to Task List",
+      "priority": "low",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_list",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task List"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:task_list",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert task_list view is visible"
+        }
+      ],
+      "tags": [
+        "navigation",
+        "task_list"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "navigate_task_detail",
+      "description": "Navigate to Task Detail",
+      "priority": "low",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_detail",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Task Detail"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:task_detail",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert task_detail view is visible"
+        }
+      ],
+      "tags": [
+        "navigation",
+        "task_detail"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "navigate_task_create",
+      "description": "Navigate to Create Task",
+      "priority": "low",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_create",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Create Task"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:task_create",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert task_create view is visible"
+        }
+      ],
+      "tags": [
+        "navigation",
+        "task_create"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    },
+    {
+      "id": "navigate_task_edit",
+      "description": "Navigate to Edit Task",
+      "priority": "low",
+      "preconditions": null,
+      "steps": [
+        {
+          "kind": "navigate",
+          "target": "view:task_edit",
+          "value": null,
+          "fixture_ref": null,
+          "assertion": null,
+          "description": "Navigate to Edit Task"
+        },
+        {
+          "kind": "assert",
+          "target": null,
+          "value": null,
+          "fixture_ref": null,
+          "assertion": {
+            "kind": "visible",
+            "target": "view:task_edit",
+            "expected": null,
+            "operator": null
+          },
+          "description": "Assert task_edit view is visible"
+        }
+      ],
+      "tags": [
+        "navigation",
+        "task_edit"
+      ],
+      "entity": "Task",
+      "auto_generated": true
+    }
+  ],
+  "usability_rules": [
+    {
+      "id": "high_priority_max_steps",
+      "description": "High priority flows should complete in 5 steps or less",
+      "check": "max_steps",
+      "threshold": 5,
+      "target": "priority:high",
+      "severity": "warning"
+    },
+    {
+      "id": "primary_action_visible",
+      "description": "Primary actions should be visible on page load",
+      "check": "primary_action_visible",
+      "threshold": null,
+      "target": null,
+      "severity": "error"
+    },
+    {
+      "id": "destructive_confirm",
+      "description": "Destructive actions should have confirmation dialogs",
+      "check": "destructive_confirm",
+      "threshold": null,
+      "target": null,
+      "severity": "error"
+    },
+    {
+      "id": "validation_near_field",
+      "description": "Validation messages should appear near the field",
+      "check": "validation_placement",
+      "threshold": null,
+      "target": null,
+      "severity": "warning"
+    }
+  ],
+  "a11y_rules": [
+    {
+      "id": "color-contrast",
+      "level": "AA",
+      "enabled": true
+    },
+    {
+      "id": "label",
+      "level": "A",
+      "enabled": true
+    },
+    {
+      "id": "button-name",
+      "level": "A",
+      "enabled": true
+    },
+    {
+      "id": "link-name",
+      "level": "A",
+      "enabled": true
+    },
+    {
+      "id": "image-alt",
+      "level": "A",
+      "enabled": true
+    },
+    {
+      "id": "heading-order",
+      "level": "AA",
+      "enabled": true
+    },
+    {
+      "id": "focus-visible",
+      "level": "AA",
+      "enabled": true
+    }
+  ],
+  "metadata": {
+    "generator": "dazzle.testing.testspec_generator",
+    "entity_count": 1,
+    "surface_count": 4,
+    "auth_enabled": false
+  }
+}

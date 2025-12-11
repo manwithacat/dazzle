@@ -32,8 +32,10 @@ def list_examples(examples_dir: Path | None = None) -> list[str]:
         List of example names
     """
     if examples_dir is None:
-        # Use installed examples directory
-        examples_dir = Path(__file__).parent.parent.parent.parent.parent / "examples"
+        # Use bundled examples from dazzle.examples package
+        from dazzle.examples import get_examples_dir
+
+        examples_dir = get_examples_dir()
 
     if not examples_dir.exists():
         return []
@@ -129,8 +131,10 @@ def init_project(
     # Determine source directory
     if from_example:
         log(f"Copying from example '{from_example}'...")
-        # Copy from example
-        examples_dir = Path(__file__).parent.parent.parent.parent.parent / "examples"
+        # Copy from bundled examples in dazzle.examples package
+        from dazzle.examples import get_examples_dir
+
+        examples_dir = get_examples_dir()
         template_dir = examples_dir / from_example
 
         if not template_dir.exists():

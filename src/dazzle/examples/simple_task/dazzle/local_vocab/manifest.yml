@@ -1,0 +1,612 @@
+version: 1.0.0
+app_id: simple_task
+dsl_core_version: 1.0.0
+
+# Common vocabulary entries for task management applications
+# These are practical, reusable patterns you can use in your DSL
+
+entries:
+  # ========================================================================
+  # DATA PATTERNS - Common field patterns for entities
+  # ========================================================================
+
+  - id: audit_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard audit timestamp fields (created_at, updated_at)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - audit
+      - timestamp
+      - data
+      - common
+
+  - id: status_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard status enum field (todo, in_progress, done)
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+        description: Name of the status field
+      - name: default_value
+        type: string
+        required: false
+        default: todo
+        description: Default status value
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[todo,in_progress,done]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - status
+      - data
+      - common
+
+  - id: priority_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard priority enum field (low, medium, high)
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: priority
+        description: Name of the priority field
+      - name: default_value
+        type: string
+        required: false
+        default: medium
+        description: Default priority value
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: enum[low,medium,high]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - priority
+      - data
+      - common
+
+  - id: user_reference
+    kind: alias
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Reference to User entity
+    parameters:
+      - name: field_name
+        type: string
+        required: true
+        description: Name of the user reference field
+      - name: required
+        type: boolean
+        required: false
+        default: false
+        description: Whether the field is required
+    expansion:
+      language: dazzle-core-dsl
+      body: "{{ field_name }}: ref User{% if required %} required{% endif %}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - reference
+      - user
+      - data
+      - common
+
+  # ========================================================================
+  # UI PATTERNS - Common surface patterns
+  # ========================================================================
+
+  - id: crud_surface_set
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Complete CRUD surface set (list, view, create, edit) for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity (e.g., Task, User)
+      - name: title_field
+        type: string
+        required: true
+        description: Primary field to display in surfaces
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - crud
+      - ui
+      - pattern
+      - common
+
+  - id: list_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Simple list surface for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: display_field
+        type: string
+        required: true
+        description: Field to display in list
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+
+          section main "{{ entity_name }}s":
+            field {{ display_field }} "{{ display_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - list
+      - ui
+      - surface
+
+  - id: detail_surface
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Simple detail/view surface for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: display_field
+        type: string
+        required: true
+        description: Primary field to display
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+
+          section main "{{ entity_name }} Details":
+            field {{ display_field }} "{{ display_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - detail
+      - ui
+      - surface
+
+  - id: create_form
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Simple create form surface for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: main_field
+        type: string
+        required: true
+        description: Primary input field
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+
+          section main "New {{ entity_name }}":
+            field {{ main_field }} "{{ main_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - form
+      - create
+      - ui
+      - surface
+
+  - id: edit_form
+    kind: macro
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Simple edit form surface for an entity
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: main_field
+        type: string
+        required: true
+        description: Primary input field
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+
+          section main "Edit {{ entity_name }}":
+            field {{ main_field }} "{{ main_field | title }}"
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - form
+      - edit
+      - ui
+      - surface
+
+  # ========================================================================
+  # ENTITY PATTERNS - Complete entity templates
+  # ========================================================================
+
+  - id: timestamped_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Entity template with ID, title, description, status, and timestamps
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: title_max_length
+        type: number
+        required: false
+        default: 200
+        description: Max length for title field
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          title: str({{ title_max_length }}) required
+          description: text
+          status: enum[todo,in_progress,done]=todo
+          created_at: datetime auto_add
+          updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+    tags:
+      - entity
+      - template
+      - timestamp
+      - data
+      - common
+
+  # ========================================================================
+  # DOMAIN PATTERNS - Intent-level patterns (cross-stack portable)
+  # ========================================================================
+  # These patterns express business intent without prescribing implementation.
+  # Each stack (Django, Express, FastAPI, etc.) interprets them idiomatically.
+  # See: dev_docs/architecture/vocabulary_design_philosophy.md
+
+  - id: soft_delete_behavior
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Mark records as deleted without removing from database. Enables recovery,
+      trash/recycle bin, and compliance with data retention requirements.
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: deleted_at
+        description: Timestamp field for soft delete
+      - name: include_user
+        type: boolean
+        required: false
+        default: true
+        description: Track who deleted the record
+    hints:
+      default_queries: exclude_deleted
+      recovery: admin_interface
+      stack_implements:
+        django: Custom manager with exclude filter
+        express: Global scope on model
+        fastapi: Query filter dependency
+        graphql: Filter in dataloader
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ field_name }}: datetime optional
+        {% if include_user %}deleted_by: ref User{% endif %}
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+      intent_level: true
+      cross_stack: true
+    tags:
+      - domain
+      - soft-delete
+      - recovery
+      - data
+      - intent
+
+  - id: status_workflow_pattern
+    kind: pattern
+    scope: workflow
+    dsl_core_version: 1.0.0
+    description: |
+      State machine with valid transitions. Entity progresses through defined
+      states with validation. Common for order processing, content publishing,
+      ticket resolution, approval flows.
+    parameters:
+      - name: field_name
+        type: string
+        required: false
+        default: status
+        description: Name of the status field
+      - name: states
+        type: list
+        required: true
+        description: All possible states
+      - name: initial_state
+        type: string
+        required: true
+        description: Starting state for new records
+      - name: track_transitions
+        type: boolean
+        required: false
+        default: true
+        description: Log all state changes
+    hints:
+      validation: enforce_valid_transitions
+      audit: track_all_changes
+      notifications: on_state_change
+      stack_implements:
+        django: django-fsm or enum with validation
+        express: State machine lib with validation
+        fastapi: Pydantic validation + transition endpoints
+        graphql: Enum type with mutation validation
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ field_name }}: enum[{{ states | join(',') }}]={{ initial_state }}
+        {% if track_transitions %}{{ field_name }}_changed_at: datetime optional{% endif %}
+        {% if track_transitions %}{{ field_name }}_changed_by: ref User{% endif %}
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+      intent_level: true
+      cross_stack: true
+    tags:
+      - domain
+      - workflow
+      - state-machine
+      - validation
+      - intent
+
+  - id: searchable_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Entity supports search and filtering. Marks which fields should be indexed
+      for search and provides hints for optimization. Stack implements using
+      database indexes, full-text search, or external search engines.
+    parameters:
+      - name: search_fields
+        type: list
+        required: true
+        description: Fields for text search
+      - name: filter_fields
+        type: list
+        required: false
+        default: []
+        description: Fields for exact filtering
+      - name: full_text
+        type: boolean
+        required: false
+        default: false
+        description: Use full-text search engine
+    hints:
+      indexing: required_on_search_fields
+      query_optimization: true
+      pagination: recommended
+      stack_implements:
+        django: Postgres full-text search or Elasticsearch
+        express: Sequelize where + Elasticsearch
+        fastapi: SQLAlchemy filters + dependencies
+        graphql: Query args + dataloader optimization
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        # Search and filter hints (stack interprets)
+        # search_fields: {{ search_fields | join(', ') }}
+        # filter_fields: {{ filter_fields | join(', ') }}
+        # full_text: {{ full_text }}
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+      intent_level: true
+      cross_stack: true
+      note: Primarily provides hints to stack - minimal DSL expansion
+    tags:
+      - domain
+      - search
+      - indexing
+      - performance
+      - intent
+
+  - id: multi_tenant_isolation
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Isolate data by tenant/organization. Each tenant sees only their data.
+      Essential for SaaS applications. Stack implements row-level security,
+      query scoping, and ensures tenant context is enforced.
+    parameters:
+      - name: tenant_field
+        type: string
+        required: false
+        default: organization_id
+        description: Field that identifies the tenant
+      - name: tenant_entity
+        type: string
+        required: false
+        default: Organization
+        description: Entity representing the tenant
+    hints:
+      isolation_level: row
+      default_scope: current_tenant
+      indexing: include_tenant_in_all_indexes
+      stack_implements:
+        django: Middleware to set tenant, manager to scope
+        express: Middleware to inject tenant_id, query scoping
+        fastapi: Depends to get tenant, query filter
+        graphql: Context with tenant, dataloader scoping
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ tenant_field }}: ref {{ tenant_entity }} required
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+      intent_level: true
+      cross_stack: true
+    tags:
+      - domain
+      - multi-tenant
+      - saas
+      - isolation
+      - intent
+
+  - id: versioned_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: |
+      Track versions of entity over time. Each change creates new version,
+      enabling history, rollback, and audit. Common for documents, contracts,
+      configurations, and compliance scenarios.
+    parameters:
+      - name: version_field
+        type: string
+        required: false
+        default: version
+        description: Version number field
+      - name: keep_history
+        type: boolean
+        required: false
+        default: true
+        description: Keep full history of all versions
+    hints:
+      storage: version_table_or_jsonb
+      retrieval: by_version_number
+      current: latest_version_flag
+      stack_implements:
+        django: django-simple-history or manual versioning
+        express: Separate versions table with FK
+        fastapi: Versioning service with history endpoint
+        graphql: Version field + history query
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        {{ version_field }}: int
+        {% if keep_history %}version_created_at: datetime auto_add{% endif %}
+        {% if keep_history %}version_created_by: ref User{% endif %}
+    metadata:
+      stability: experimental
+      source: agent
+      created_at: "2025-11-23T00:00:00Z"
+      usage_count: 0
+      intent_level: true
+      cross_stack: true
+    tags:
+      - domain
+      - versioning
+      - history
+      - audit
+      - intent
