@@ -199,7 +199,8 @@ export function progress(event: ProgressEvent, options: OutputOptions): void {
       ? `${colors.cyan}[${bar}]${colors.reset} ${event.message}`
       : `[${bar}] ${event.message}`
     // Use stderr for progress so stdout remains clean for piping
-    process.stderr.write(`\r${msg}`)
+    // \x1b[K clears from cursor to end of line (prevents leftover chars when message gets shorter)
+    process.stderr.write(`\r${msg}\x1b[K`)
     if (event.step === event.total) {
       process.stderr.write('\n')
     }
