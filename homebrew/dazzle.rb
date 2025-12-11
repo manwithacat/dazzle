@@ -20,7 +20,7 @@ class Dazzle < Formula
 
   # Source tarball for Python package
   url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.8.5.tar.gz"
-  sha256 "85ea441f080c772d16f9dc04029594171be9e647ece220089d1c74d292cd6101"
+  sha256 "e15546b8a608d1b6595e5c8e46be0fc14e6cad10e6348c9532c7212f6e0a2ab5"
 
   # Pre-compiled CLI binaries for each platform
   resource "cli-binary" do

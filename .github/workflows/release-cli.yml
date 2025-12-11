@@ -185,7 +185,7 @@ jobs:
           # Wait for release assets to be available (sometimes takes a moment)
           sleep 10
 
-          # Download SHA256 files with retry
+          # Download SHA256 files with retry for CLI binaries
           for i in {1..5}; do
             curl -sL "${BASE_URL}/dazzle-darwin-arm64.tar.gz.sha256" -o darwin-arm64.sha256 && break
             echo "Retry $i..."
@@ -195,17 +195,20 @@ jobs:
           curl -sL "${BASE_URL}/dazzle-darwin-x64.tar.gz.sha256" -o darwin-x64.sha256
           curl -sL "${BASE_URL}/dazzle-linux-arm64.tar.gz.sha256" -o linux-arm64.sha256
           curl -sL "${BASE_URL}/dazzle-linux-x64.tar.gz.sha256" -o linux-x64.sha256
-          curl -sL "${BASE_URL}/dazzle-source.tar.gz.sha256" -o source.sha256
 
-          # Extract just the hash and export to env
+          # IMPORTANT: Calculate source SHA256 from GitHub's tag archive URL
+          # NOT from the release asset - they have different metadata and thus different hashes
+          SOURCE_SHA256=$(curl -sL "https://github.com/manwithacat/dazzle/archive/refs/tags/v${VERSION}.tar.gz" | sha256sum | cut -d' ' -f1)
+          echo "SHA256_SOURCE=${SOURCE_SHA256}" >> $GITHUB_ENV
+
+          # Extract CLI binary hashes
           echo "SHA256_DARWIN_ARM64=$(cut -d' ' -f1 darwin-arm64.sha256)" >> $GITHUB_ENV
           echo "SHA256_DARWIN_X64=$(cut -d' ' -f1 darwin-x64.sha256)" >> $GITHUB_ENV
           echo "SHA256_LINUX_ARM64=$(cut -d' ' -f1 linux-arm64.sha256)" >> $GITHUB_ENV
           echo "SHA256_LINUX_X64=$(cut -d' ' -f1 linux-x64.sha256)" >> $GITHUB_ENV
-          echo "SHA256_SOURCE=$(cut -d' ' -f1 source.sha256)" >> $GITHUB_ENV
 
           # Debug: show what we got
-          echo "Source SHA256: $(cat source.sha256)"
+          echo "Source SHA256 (from tag URL): ${SOURCE_SHA256}"
           echo "Darwin ARM64 SHA256: $(cat darwin-arm64.sha256)"
 
       - name: Generate new formula
