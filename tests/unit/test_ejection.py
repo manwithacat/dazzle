@@ -953,7 +953,7 @@ class TestSchemathesisAdapter:
         config = EjectionTestingConfig()
         adapter = SchemathesisAdapter(complex_appspec, tmp_path, config)
 
-        result = adapter._generate_contract_tests()
+        adapter._generate_contract_tests()
 
         test_path = tmp_path / "tests" / "contract" / "test_contract.py"
         content = test_path.read_text()
@@ -1021,7 +1021,7 @@ class TestPytestAdapter:
         config = EjectionTestingConfig()
         adapter = PytestAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter._generate_conftest()
+        adapter._generate_conftest()
 
         conftest_path = tmp_path / "tests" / "unit" / "conftest.py"
         content = conftest_path.read_text()
@@ -1071,7 +1071,7 @@ class TestPytestAdapter:
         config = EjectionTestingConfig()
         adapter = PytestAdapter(complex_appspec, tmp_path, config)
 
-        result = adapter._generate_entity_tests()
+        adapter._generate_entity_tests()
 
         # Should create test files for each entity
         assert (tmp_path / "tests" / "unit" / "test_task.py").exists()
@@ -1470,7 +1470,7 @@ class TestGitHubActionsAdapter:
         config = EjectionCIConfig()
         adapter = GitHubActionsAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter._generate_ci_workflow()
+        adapter._generate_ci_workflow()
 
         ci_path = tmp_path / ".github" / "workflows" / "ci.yml"
         content = ci_path.read_text()
@@ -1537,7 +1537,7 @@ class TestGitLabCIAdapter:
         config = EjectionCIConfig()
         adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter.generate()
+        adapter.generate()
 
         gitlab_path = tmp_path / ".gitlab-ci.yml"
         content = gitlab_path.read_text()
@@ -1560,7 +1560,7 @@ class TestGitLabCIAdapter:
         config = EjectionCIConfig()
         adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter.generate()
+        adapter.generate()
 
         gitlab_path = tmp_path / ".gitlab-ci.yml"
         content = gitlab_path.read_text()
@@ -1582,7 +1582,7 @@ class TestGitLabCIAdapter:
         config = EjectionCIConfig()
         adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter.generate()
+        adapter.generate()
 
         gitlab_path = tmp_path / ".gitlab-ci.yml"
         content = gitlab_path.read_text()
@@ -1603,7 +1603,7 @@ class TestGitLabCIAdapter:
         config = EjectionCIConfig()
         adapter = GitLabCIAdapter(simple_appspec, tmp_path, config)
 
-        result = adapter.generate()
+        adapter.generate()
 
         gitlab_path = tmp_path / ".gitlab-ci.yml"
         content = gitlab_path.read_text()
