@@ -9,4 +9,49 @@ concept_count = 1
 category = "DSL Reference"
 definition = "Words reserved by the DAZZLE DSL that cannot be used as field names, enum values, or identifiers. Using these will cause parse errors."
 related = ["enum", "field_types", "entity"]
-critical_keywords = ["# CRUD/Test keywords", "create, update, delete, get, query", "# Boolean", "true, false", "# Logical", "and, or, not, in, is", "# Control flow", "for, if, when, then", "# Entity/Surface", "entity, surface, workspace, persona, service", "# Field modifiers", "required, optional, unique, index, computed", "# Modes", "list, grid, detail, view, create, edit", "# State machine", "transitions, requires, auto, manual, role", "# Access control", "access, read, write, permissions, anonymous", "# Time", "days, hours, minutes, after", "# Messaging (v0.9)", "email, message, send, receive, channel, queue, stream", "# Status words", "status, created, submitted, failed, succeeded", "# UX", "attention, critical, warning, notice, info"]
+critical_keywords = [
+  "# Top-level constructs",
+  "app, module, use, entity, surface, workspace, experience, service, foreign_model, integration, persona, scenario",
+  "# CRUD operations (use add/modify/remove instead)",
+  "create, update, delete, get, query, upsert",
+  "# Boolean",
+  "true, false",
+  "# Logical operators",
+  "and, or, not, in, is",
+  "# Control flow",
+  "for, if, when, then, given",
+  "# Field modifiers",
+  "required, optional, unique, index, computed, readonly, pk, default",
+  "# Relationships",
+  "has_many, has_one, embeds, belongs_to, ref, cascade, restrict, nullify",
+  "# Entity metadata",
+  "intent, examples, domain, patterns, extends, archetype, invariant",
+  "# Surface/UI modes",
+  "list, grid, timeline, detail, view, edit, mode, section, field, action",
+  "# Workspace (use current_stage instead of stage)",
+  "stage, source, limit, display, aggregate, group_by, where, focus, defaults",
+  "# State machine",
+  "transitions, requires, auto, manual, role, after",
+  "# Access control",
+  "access, read, write, permissions, anonymous, authenticated, scope, deny",
+  "# Time units",
+  "days, hours, minutes",
+  "# Messaging/Channels",
+  "email, message, send, receive, channel, queue, stream, provider, template, subject, body",
+  "# Status words (use custom alternatives)",
+  "status, created, submitted, failed, succeeded",
+  "# UX signals",
+  "attention, critical, warning, notice, info, purpose, show, sort, empty, hide",
+  "# Other reserved",
+  "from, uses, on, call, with, map, response, into, match, sync, spec, key, test, data, expect, count, first, last"
+]
+common_alternatives = [
+  "# Instead of 'create' -> 'add', 'new', 'init'",
+  "# Instead of 'update' -> 'modify', 'change', 'edit'",
+  "# Instead of 'delete' -> 'remove', 'archive', 'cancel'",
+  "# Instead of 'status' -> 'state', 'condition', 'progress'",
+  "# Instead of 'email' (as field) -> 'email_address', 'contact_email'",
+  "# Instead of 'stage' -> 'current_stage', 'progress_stage', 'phase'",
+  "# Instead of 'created' -> 'added', 'initialized', 'started'",
+  "# Instead of 'submitted' -> 'sent', 'filed', 'posted'"
+]
