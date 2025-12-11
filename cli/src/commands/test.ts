@@ -6,13 +6,12 @@
 
 import { z } from 'zod'
 import type { CommandDefinition } from '../types/commands'
-import { success, error, ErrorHints } from '../lib/output'
+import { success, error, ErrorHints, progress } from '../lib/output'
 
 const TestArgs = z.object({
   flow: z.string().optional().describe('Specific flow to run'),
   headless: z.boolean().default(true).describe('Run in headless mode'),
   coverage: z.boolean().default(false).describe('Generate UX coverage report'),
-  watch: z.boolean().default(false).describe('Watch for changes and rerun'),
 })
 
 export const test: CommandDefinition<typeof TestArgs> = {
@@ -47,47 +46,79 @@ and actions are covered by tests.
       )
     }
 
-    // Build test command for Python
-    const cliArgs = ['test', 'run']
-    if (args.flow) cliArgs.push('--flow', args.flow)
-    if (!args.headless) cliArgs.push('--no-headless')
-    if (args.coverage) cliArgs.push('--coverage')
-    if (args.watch) cliArgs.push('--watch')
+    progress({ type: 'progress', step: 1, total: 2, message: 'Running tests...' }, ctx.output)
 
-    // Run tests interactively
-    const python = 'python3'
+    // Call Python bridge
+    const result = await ctx.python<{
+      passed: number
+      failed: number
+      skipped: number
+      total: number
+      duration_ms?: number
+      coverage?: unknown
+      error?: string
+      hint?: string
+    }>(
+      'dazzle.core.cli_bridge',
+      'run_tests_json',
+      {
+        path: ctx.cwd,
+        flow: args.flow,
+        headless: args.headless,
+        coverage: args.coverage,
+      }
+    )
 
-    console.log('Running E2E tests...')
-    if (args.flow) {
-      console.log(`  Flow: ${args.flow}`)
-    }
-    console.log()
-
-    const proc = Bun.spawn([python, '-m', 'dazzle', ...cliArgs], {
-      cwd: ctx.cwd,
-      stdio: ['inherit', 'inherit', 'inherit'],
-      env: {
-        ...process.env,
-        PYTHONPATH: new URL('../../../../src', import.meta.url).pathname,
-      },
-    })
-
-    const exitCode = await proc.exited
-    const duration_ms = Date.now() - startTime
-
-    if (exitCode !== 0) {
+    if (!result.success) {
       return error(
         'TEST_FAILED',
-        `Tests failed with exit code ${exitCode}`,
-        'Check the test output above for details. Run with --no-headless to debug interactively.'
+        result.error || 'Tests failed',
+        'Check that the project is valid and test dependencies are installed'
       )
+    }
+
+    progress({ type: 'progress', step: 2, total: 2, message: 'Done' }, ctx.output)
+
+    const duration_ms = Date.now() - startTime
+    const data = result.data!
+
+    // Check if there was an error in the test run itself
+    if (data.error) {
+      return error(
+        'TEST_FAILED',
+        data.error,
+        data.hint || 'Check test configuration'
+      )
+    }
+
+    // Check if any tests failed
+    if (data.failed > 0) {
+      return {
+        success: false,
+        error: {
+          code: 'TESTS_FAILED',
+          message: `${data.failed} of ${data.total} tests failed`,
+          __agent_hint: 'Run with --no-headless to debug interactively',
+        },
+        data: {
+          passed: data.passed,
+          failed: data.failed,
+          skipped: data.skipped,
+          total: data.total,
+          flow: args.flow || 'all',
+        },
+        meta: { duration_ms },
+      }
     }
 
     return success(
       {
-        passed: true,
+        passed: data.passed,
+        failed: data.failed,
+        skipped: data.skipped,
+        total: data.total,
         flow: args.flow || 'all',
-        duration_ms,
+        coverage: data.coverage,
       },
       { duration_ms }
     )

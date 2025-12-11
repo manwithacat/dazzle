@@ -1,6 +1,6 @@
 {
   "name": "@dazzle/cli",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "description": "DAZZLE CLI - Fast, LLM-friendly command line interface",
   "module": "src/index.ts",
   "type": "module",

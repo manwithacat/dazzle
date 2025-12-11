@@ -432,3 +432,248 @@ def eject_project_json(
         }
     except Exception as e:
         raise RuntimeError(f"Ejection failed: {e}") from e
+
+
+def db_migrate_json(
+    path: str | None = None,
+    dry_run: bool = False,
+    force: bool = False,
+) -> dict[str, Any]:
+    """
+    Run database migrations.
+
+    Args:
+        path: Project path
+        dry_run: Preview changes only
+        force: Apply destructive changes
+
+    Returns:
+        Dict with migration results
+    """
+    from dazzle.core import load_project_with_manifest
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        # Load project to get backend spec
+        app_spec, manifest = load_project_with_manifest(project_path)
+
+        # Try to import DNR backend
+        try:
+            from dazzle_dnr_back.converters import convert_appspec_to_backend
+            from dazzle_dnr_back.runtime.migrations import auto_migrate, plan_migrations
+            from dazzle_dnr_back.runtime.repository import DatabaseManager
+        except ImportError as e:
+            raise RuntimeError(f"DNR backend not available: {e}") from e
+
+        # Convert to backend spec
+        backend_spec = convert_appspec_to_backend(app_spec)
+
+        # Get database path
+        db_path = project_path / ".dazzle" / "data.db"
+        db_manager = DatabaseManager(db_path)
+
+        if dry_run:
+            # Plan only
+            plan = plan_migrations(db_manager, backend_spec.entities)
+            return {
+                "dry_run": True,
+                "steps": len(plan.steps),
+                "safe_steps": len(plan.safe_steps),
+                "has_destructive": plan.has_destructive,
+                "warnings": plan.warnings,
+            }
+        else:
+            # Apply migrations
+            plan = auto_migrate(db_manager, backend_spec.entities, record_history=True)
+            return {
+                "applied": len(plan.safe_steps),
+                "skipped": len(plan.steps) - len(plan.safe_steps),
+                "warnings": plan.warnings,
+            }
+    except Exception as e:
+        raise RuntimeError(f"Migration failed: {e}") from e
+
+
+def db_seed_json(
+    path: str | None = None,
+) -> dict[str, Any]:
+    """
+    Seed database with demo data.
+
+    Args:
+        path: Project path
+
+    Returns:
+        Dict with seeding results
+    """
+    from dazzle.core import load_project_with_manifest
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        app_spec, manifest = load_project_with_manifest(project_path)
+
+        try:
+            from dazzle_dnr_back.converters import convert_appspec_to_backend
+            from dazzle_dnr_back.runtime.repository import DatabaseManager
+            from dazzle_dnr_back.runtime.seeder import seed_demo_data
+        except ImportError as e:
+            raise RuntimeError(f"DNR backend not available: {e}") from e
+
+        backend_spec = convert_appspec_to_backend(app_spec)
+        db_path = project_path / ".dazzle" / "data.db"
+        db_manager = DatabaseManager(db_path)
+
+        counts = seed_demo_data(db_manager, backend_spec.entities)
+        return {
+            "seeded": True,
+            "counts": counts,
+        }
+    except Exception as e:
+        raise RuntimeError(f"Seeding failed: {e}") from e
+
+
+def db_reset_json(
+    path: str | None = None,
+) -> dict[str, Any]:
+    """
+    Reset database (drop and recreate).
+
+    Args:
+        path: Project path
+
+    Returns:
+        Dict with reset results
+    """
+    from dazzle.core import load_project_with_manifest
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        app_spec, manifest = load_project_with_manifest(project_path)
+
+        try:
+            from dazzle_dnr_back.converters import convert_appspec_to_backend
+            from dazzle_dnr_back.runtime.repository import DatabaseManager
+        except ImportError as e:
+            raise RuntimeError(f"DNR backend not available: {e}") from e
+
+        backend_spec = convert_appspec_to_backend(app_spec)
+        db_path = project_path / ".dazzle" / "data.db"
+
+        # Delete existing database
+        if db_path.exists():
+            db_path.unlink()
+
+        # Create fresh database with schema
+        db_manager = DatabaseManager(db_path)
+        db_manager.initialize_schema(backend_spec.entities)
+
+        return {
+            "reset": True,
+            "tables": len(backend_spec.entities),
+        }
+    except Exception as e:
+        raise RuntimeError(f"Reset failed: {e}") from e
+
+
+def dev_server_json(
+    path: str | None = None,
+    port: int = 8000,
+    ui_port: int = 3000,
+    host: str = "127.0.0.1",
+) -> dict[str, Any]:
+    """
+    Start development server info (actual server runs in foreground).
+
+    Note: This just returns server config. The actual server
+    is started by the CLI using subprocess for foreground mode.
+
+    Args:
+        path: Project path
+        port: API port
+        ui_port: UI port
+        host: Host to bind
+
+    Returns:
+        Dict with server configuration
+    """
+    from dazzle.core import load_project_with_manifest
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        app_spec, manifest = load_project_with_manifest(project_path)
+        return {
+            "name": manifest.name if manifest else app_spec.name,
+            "api_url": f"http://{host}:{port}",
+            "ui_url": f"http://{host}:{ui_port}",
+            "api_docs": f"http://{host}:{port}/docs",
+        }
+    except Exception as e:
+        raise RuntimeError(f"Failed to load project: {e}") from e
+
+
+def run_tests_json(
+    path: str | None = None,
+    flow: str | None = None,
+    headless: bool = True,
+    coverage: bool = False,
+) -> dict[str, Any]:
+    """
+    Run E2E tests.
+
+    Args:
+        path: Project path
+        flow: Specific flow to run
+        headless: Run in headless mode
+        coverage: Generate coverage report
+
+    Returns:
+        Dict with test results
+    """
+    from dazzle.core import load_project_with_manifest
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        app_spec, manifest = load_project_with_manifest(project_path)
+
+        # Try to import test runner
+        try:
+            from dazzle.testing import TestRunner
+        except ImportError:
+            # Testing module may not be available
+            return {
+                "error": "Testing module not available",
+                "hint": "E2E testing requires playwright. Install with: pip install playwright",
+            }
+
+        runner = TestRunner(app_spec, project_path)
+        results = runner.run(
+            flow=flow,
+            headless=headless,
+            coverage=coverage,
+        )
+
+        return {
+            "passed": results.passed,
+            "failed": results.failed,
+            "skipped": results.skipped,
+            "total": results.total,
+            "duration_ms": results.duration_ms,
+            "coverage": results.coverage if coverage else None,
+        }
+    except ImportError:
+        # No testing module - return helpful message
+        return {
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "total": 0,
+            "error": "E2E testing not configured",
+            "hint": "Add test flows to your DSL or install playwright",
+        }
+    except Exception as e:
+        raise RuntimeError(f"Tests failed: {e}") from e

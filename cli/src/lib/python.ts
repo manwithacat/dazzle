@@ -9,8 +9,29 @@ import type { PythonResult } from '../types/commands'
 
 /**
  * Find Python executable
+ *
+ * Priority:
+ * 1. DAZZLE_PYTHON env var (set by Homebrew wrapper)
+ * 2. Common Python paths
  */
 async function findPython(): Promise<string> {
+  // First check DAZZLE_PYTHON (set by Homebrew wrapper)
+  const dazzlePython = process.env.DAZZLE_PYTHON
+  if (dazzlePython) {
+    try {
+      const proc = Bun.spawn([dazzlePython, '--version'], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+      await proc.exited
+      if (proc.exitCode === 0) {
+        return dazzlePython
+      }
+    } catch {
+      // Fall through to other candidates
+    }
+  }
+
   // Check common Python paths
   const candidates = ['python3', 'python', '/usr/bin/python3', '/usr/local/bin/python3']
 
@@ -39,6 +60,13 @@ async function getPython(): Promise<string> {
     cachedPython = await findPython()
   }
   return cachedPython
+}
+
+/**
+ * Get Python executable path for external use (e.g., interactive commands)
+ */
+export async function getPythonPath(): Promise<string> {
+  return getPython()
 }
 
 /**

@@ -154,3 +154,73 @@ class TestInitProjectJson:
         assert "path" in result
         assert target.exists()
         assert (target / "dazzle.toml").exists()
+
+
+class TestNewBridgeFunctions:
+    """Tests for newly added bridge functions (db, test, dev)."""
+
+    def test_run_tests_json_imports(self) -> None:
+        """run_tests_json should import without errors."""
+        from dazzle.core.cli_bridge import run_tests_json
+
+        assert callable(run_tests_json)
+
+    def test_db_migrate_json_imports(self) -> None:
+        """db_migrate_json should import without errors."""
+        from dazzle.core.cli_bridge import db_migrate_json
+
+        assert callable(db_migrate_json)
+
+    def test_db_seed_json_imports(self) -> None:
+        """db_seed_json should import without errors."""
+        from dazzle.core.cli_bridge import db_seed_json
+
+        assert callable(db_seed_json)
+
+    def test_db_reset_json_imports(self) -> None:
+        """db_reset_json should import without errors."""
+        from dazzle.core.cli_bridge import db_reset_json
+
+        assert callable(db_reset_json)
+
+    def test_dev_server_json_imports(self) -> None:
+        """dev_server_json should import without errors."""
+        from dazzle.core.cli_bridge import dev_server_json
+
+        assert callable(dev_server_json)
+
+    def test_run_tests_json_internal_imports(self, tmp_path: Path) -> None:
+        """run_tests_json should not have broken internal imports."""
+        from dazzle.core.cli_bridge import run_tests_json
+
+        # Create minimal project structure
+        (tmp_path / "dazzle.toml").write_text('[project]\nname = "test"\nversion = "0.1.0"')
+        dsl_dir = tmp_path / "dsl"
+        dsl_dir.mkdir()
+        (dsl_dir / "app.dsl").write_text('module test\napp test "Test"')
+
+        # Should not raise ImportError for internal imports
+        try:
+            run_tests_json(path=str(tmp_path))
+        except ImportError as e:
+            pytest.fail(f"run_tests_json has broken import: {e}")
+        except Exception:
+            pass  # Other errors are OK (e.g., no test framework)
+
+    def test_db_migrate_json_internal_imports(self, tmp_path: Path) -> None:
+        """db_migrate_json should not have broken internal imports."""
+        from dazzle.core.cli_bridge import db_migrate_json
+
+        # Create minimal project structure
+        (tmp_path / "dazzle.toml").write_text('[project]\nname = "test"\nversion = "0.1.0"')
+        dsl_dir = tmp_path / "dsl"
+        dsl_dir.mkdir()
+        (dsl_dir / "app.dsl").write_text('module test\napp test "Test"')
+
+        # Should not raise ImportError for internal imports
+        try:
+            db_migrate_json(path=str(tmp_path))
+        except ImportError as e:
+            pytest.fail(f"db_migrate_json has broken import: {e}")
+        except Exception:
+            pass  # Other errors are OK

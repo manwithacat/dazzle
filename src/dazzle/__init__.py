@@ -5,7 +5,7 @@ A DSL-first toolkit for designing and generating applications from
 high-level specifications.
 """
 
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 # Re-export commonly used types for convenience
 from .core import ir

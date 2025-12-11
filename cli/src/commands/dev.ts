@@ -7,6 +7,7 @@
 import { z } from 'zod'
 import type { CommandDefinition } from '../types/commands'
 import { success, error, ErrorHints } from '../lib/output'
+import { getPythonPath } from '../lib/python'
 
 const DevArgs = z.object({
   port: z.number().default(8000).describe('API server port'),
@@ -64,7 +65,8 @@ With --graphql, enables /graphql endpoint.
 
     // For the dev server, we need to run interactively (not capture output)
     // This hands control to the Python process
-    const python = 'python3'
+    // Use getPythonPath() to respect DAZZLE_PYTHON env var (set by Homebrew)
+    const python = await getPythonPath()
 
     console.log(`Starting development server...`)
     console.log(`  API: http://${args.host}:${args.port}`)
