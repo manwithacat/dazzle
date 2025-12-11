@@ -72,7 +72,9 @@ def generate_dnr_ui(
         modules: list[ModuleIR] = []
         for dsl_file in dsl_files:
             content = dsl_file.read_text()
-            module_name, app_name, app_title, uses, fragment = parse_dsl(content, dsl_file)
+            module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+                content, dsl_file
+            )
 
             if module_name is None:
                 log(f"  Skipping {dsl_file} (no module name found)")
@@ -83,6 +85,7 @@ def generate_dnr_ui(
                 file=dsl_file,
                 app_name=app_name,
                 app_title=app_title,
+                app_config=app_config,
                 uses=uses,
                 fragment=fragment,
             )

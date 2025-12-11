@@ -34,7 +34,7 @@ entity Task "Task":
   access:
     read: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -66,7 +66,7 @@ entity Task "Task":
   access:
     write: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -105,7 +105,7 @@ entity Task "Task":
     read: owner_id = current_user or is_public = true
     write: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -135,7 +135,7 @@ entity Document "Document":
     read: owner_id = current_user or team_id = current_team or status = published
     write: owner_id = current_user and status != published
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         doc = fragment.entities[0]
 
         assert doc.access is not None
@@ -169,7 +169,7 @@ entity Task "Task":
     read: owner_id = current_user
     write: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -199,7 +199,7 @@ entity Task "Task":
     read: owner_id = current_user
     write: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -262,7 +262,7 @@ entity Task "Task":
     write: owner_id = current_user
     delete: owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         assert task.access is not None
@@ -291,7 +291,7 @@ entity Document "Document":
     write: owner_id = current_user
     delete: owner_id = current_user and is_archived = true
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         doc = fragment.entities[0]
 
         # Find DELETE permission
@@ -325,7 +325,7 @@ entity Task "Task":
     write: role(admin)
     delete: role(admin)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         # Check visibility rule has role check
@@ -353,7 +353,7 @@ entity Task "Task":
     read: role(admin) or owner_id = current_user
     write: role(admin) or owner_id = current_user
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         # Check visibility rule has compound OR condition
@@ -377,7 +377,7 @@ entity Task "Task":
   access:
     read: owner.team_id = current_team
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         vis = task.access.visibility[0]
@@ -397,7 +397,7 @@ entity Task "Task":
   access:
     read: owner.team.organization_id = current_org
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         task = fragment.entities[0]
 
         vis = task.access.visibility[0]
@@ -416,7 +416,7 @@ entity Document "Document":
   access:
     write: role(editor) and status = draft
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         doc = fragment.entities[0]
 
         perm = doc.access.permissions[0]
@@ -438,7 +438,7 @@ entity AdminPanel "AdminPanel":
   access:
     read: role(admin) or role(superuser)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         panel = fragment.entities[0]
 
         vis = panel.access.visibility[0]

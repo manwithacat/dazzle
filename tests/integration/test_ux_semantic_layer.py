@@ -162,7 +162,7 @@ class TestUXParsing:
 
     def test_parse_ux_block(self):
         """Test parsing UX block within surface."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         assert module_name == "urban_canopy.core"
         assert app_name == "urban_canopy"
@@ -191,7 +191,7 @@ class TestUXParsing:
 
     def test_parse_attention_signals(self):
         """Test parsing attention signals."""
-        _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         task_list = next(s for s in fragment.surfaces if s.name == "task_list")
         signals = task_list.ux.attention_signals
@@ -205,7 +205,7 @@ class TestUXParsing:
 
     def test_parse_persona_variants(self):
         """Test parsing persona variants."""
-        _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         task_list = next(s for s in fragment.surfaces if s.name == "task_list")
         personas = task_list.ux.persona_variants
@@ -225,7 +225,7 @@ class TestUXParsing:
 
     def test_parse_workspace(self):
         """Test parsing workspace declarations."""
-        _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         assert len(fragment.workspaces) == 2
 
@@ -246,7 +246,7 @@ class TestUXLinking:
 
     def test_link_with_ux(self):
         """Test linking modules with UX specs."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         # Create ModuleIR from parsed data
         from dazzle.core import ir
@@ -278,7 +278,7 @@ class TestUXValidation:
 
     def test_lint_valid_ux(self):
         """Test linting valid UX specs."""
-        module_name, app_name, app_title, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(UX_DSL, Path("test.dsl"))
 
         from dazzle.core import ir
 
@@ -318,7 +318,7 @@ surface task_list "Tasks":
     ux:
         show: title, nonexistent_field
 """
-        module_name, app_name, app_title, uses, fragment = parse_dsl(invalid_dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(invalid_dsl, Path("test.dsl"))
 
         from dazzle.core import ir
 

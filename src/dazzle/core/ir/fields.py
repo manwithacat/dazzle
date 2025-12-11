@@ -27,6 +27,10 @@ class FieldTypeKind(str, Enum):
     REF = "ref"
     EMAIL = "email"
     JSON = "json"  # v0.9.4: Flexible JSON data (maps to JSONB/JSON in databases)
+    # v0.9.5: Additional semantic types
+    MONEY = "money"  # Currency amount with optional currency code (maps to decimal + metadata)
+    FILE = "file"  # File reference/upload (stores path/URL/identifier)
+    URL = "url"  # URL/URI string with validation
     # v0.7.1: Relationship types with ownership semantics
     HAS_MANY = "has_many"
     HAS_ONE = "has_one"
@@ -57,6 +61,15 @@ class FieldType(BaseModel):
         - has_one Profile: FieldType(kind=HAS_ONE, ref_entity="Profile")
         - embeds Address: FieldType(kind=EMBEDS, ref_entity="Address")
         - belongs_to Order: FieldType(kind=BELONGS_TO, ref_entity="Order")
+
+    v0.9.5 Semantic type examples:
+        - money: FieldType(kind=MONEY, currency_code="GBP") - defaults to GBP
+        - money(USD): FieldType(kind=MONEY, currency_code="USD")
+        - file: FieldType(kind=FILE)
+        - url: FieldType(kind=URL)
+
+    v0.9.5 Many-to-many via junction table:
+        - has_many Contact via ClientContact: FieldType(kind=HAS_MANY, ref_entity="Contact", via_entity="ClientContact")
     """
 
     kind: FieldTypeKind
@@ -67,6 +80,10 @@ class FieldType(BaseModel):
     ref_entity: str | None = None  # for ref, has_many, has_one, embeds, belongs_to
     relationship_behavior: RelationshipBehavior | None = None  # for has_many, has_one
     readonly: bool = False  # for relationships - cannot modify through this relationship
+    # v0.9.5: Money type configuration
+    currency_code: str | None = None  # for money (e.g., "GBP", "USD", "EUR")
+    # v0.9.5: Many-to-many via junction table
+    via_entity: str | None = None  # for has_many with junction table (m:n relationship)
 
     model_config = ConfigDict(frozen=True)
 

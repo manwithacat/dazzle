@@ -27,7 +27,7 @@ entity Invoice "Invoice":
   gross_amount: decimal(10, 2)
   net_amount: computed gross_amount
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert entity.name == "Invoice"
@@ -55,7 +55,7 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total")
@@ -80,7 +80,7 @@ entity Order "Order":
 entity Item "Item":
   id: uuid pk
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("item_count")
@@ -104,7 +104,7 @@ entity Task "Task":
   days_until_due: computed days_until(due_date)
   age_days: computed days_since(created_at)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
 
@@ -137,7 +137,7 @@ entity Stats "Stats":
   minimum: computed min(value)
   maximum: computed max(value)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
 
@@ -167,7 +167,7 @@ entity Invoice "Invoice":
   tax_rate: decimal(3, 2)
   tax: computed subtotal * tax_rate
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("tax")
@@ -195,7 +195,7 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("tax")
@@ -219,7 +219,7 @@ entity Invoice "Invoice":
   tax: decimal(10, 2)
   total: computed subtotal + tax
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total")
@@ -241,7 +241,7 @@ entity Calc "Calc":
   c: decimal(10, 2)
   result: computed a + b * c
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("result")
@@ -277,7 +277,7 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert len(entity.computed_fields) == 3
@@ -305,7 +305,7 @@ entity TimeEntry "TimeEntry":
   id: uuid pk
   hours: decimal(4, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total_hours")
@@ -325,7 +325,7 @@ entity Task "Task":
   id: uuid pk
   title: str(200)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert entity.has_computed_fields is False
@@ -345,7 +345,7 @@ entity Product "Product":
   total_value: computed price * quantity
   description: text optional
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
 
@@ -369,7 +369,7 @@ entity Stats "Stats":
   count: int
   doubled: computed count * 2
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("doubled")
@@ -397,7 +397,7 @@ entity LineItem "LineItem":
   amount: decimal(10, 2)
   tax: decimal(10, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("result")
@@ -425,7 +425,7 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
 

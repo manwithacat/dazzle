@@ -234,11 +234,11 @@ class ServiceParserMixin:
                 break
 
             # field_name: type_name [required]
-            field_name = self.expect(TokenType.IDENTIFIER).value
+            field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
 
-            # Parse type - could be identifier or type with params like decimal(10,2)
-            type_name = self.expect(TokenType.IDENTIFIER).value
+            # Parse type - could be identifier or type keyword with params like decimal(10,2)
+            type_name = self.expect_identifier_or_keyword().value
 
             # Check for type parameters like (10,2) or (200)
             if self.match(TokenType.LPAREN):

@@ -168,6 +168,7 @@ from .messaging import (
 
 # Module-level IR
 from .module import (
+    AppConfigSpec,
     ModuleFragment,
     ModuleIR,
 )
@@ -350,6 +351,7 @@ __all__ = [
     "LayoutPlan",
     "UXLayouts",
     # Module
+    "AppConfigSpec",
     "ModuleFragment",
     "ModuleIR",
     # AppSpec

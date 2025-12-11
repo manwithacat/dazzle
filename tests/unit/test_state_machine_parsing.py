@@ -31,7 +31,7 @@ entity Ticket "Ticket":
     assigned -> resolved
     resolved -> closed
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert entity.name == "Ticket"
@@ -70,7 +70,7 @@ entity Task "Task":
   transitions:
     * -> draft: role(admin)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         sm = entity.state_machine
@@ -97,7 +97,7 @@ entity Task "Task":
   transitions:
     processing -> complete: auto after 24 hours
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         sm = entity.state_machine
@@ -130,7 +130,7 @@ entity Task "Task":
   transitions:
     review -> approved: auto after 7 days OR manual
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         sm = entity.state_machine
@@ -158,7 +158,7 @@ entity Task "Task":
     b -> c: auto after 2 hours
     c -> d: auto after 30 days
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         sm = entity.state_machine
@@ -195,7 +195,7 @@ entity Ticket "Ticket":
     open -> closed
     * -> new: role(admin)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         sm = entity.state_machine
@@ -241,7 +241,7 @@ entity Task "Task":
   id: uuid pk
   status: enum[todo, done]
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert entity.has_state_machine is False
@@ -258,7 +258,7 @@ entity User "User":
   role: enum[admin, user, guest]
   name: str(100)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         entity = fragment.entities[0]
         assert entity.name == "User"

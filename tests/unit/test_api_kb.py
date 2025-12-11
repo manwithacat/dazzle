@@ -211,7 +211,7 @@ class TestDSLGeneration:
         dsl = pack.generate_service_dsl()
 
         assert 'service stripe' in dsl.lower() or 'service stripepayments' in dsl.lower()
-        assert 'pack: stripe_payments' in dsl
+        assert 'inline "pack:stripe_payments"' in dsl
         assert 'auth_profile:' in dsl
 
     def test_generate_service_dsl_hmrc(self):
@@ -222,7 +222,7 @@ class TestDSLGeneration:
         dsl = pack.generate_service_dsl()
 
         assert 'service' in dsl.lower()
-        assert 'pack: hmrc_mtd_vat' in dsl
+        assert 'inline "pack:hmrc_mtd_vat"' in dsl
         assert 'oauth2' in dsl
 
     def test_generate_foreign_model_dsl(self):

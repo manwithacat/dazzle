@@ -26,7 +26,7 @@ flow simple_flow "A simple flow":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.e2e_flows) == 1
         flow = fragment.e2e_flows[0]
@@ -47,7 +47,7 @@ flow high_priority_flow "Critical flow":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         flow = fragment.e2e_flows[0]
         assert flow.priority == FlowPriority.HIGH
@@ -62,7 +62,7 @@ flow tagged_flow "Tagged flow":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         flow = fragment.e2e_flows[0]
         assert flow.tags == ["smoke", "crud", "regression"]
@@ -81,7 +81,7 @@ flow auth_flow "Auth required flow":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         flow = fragment.e2e_flows[0]
         assert flow.preconditions is not None
@@ -99,7 +99,7 @@ flow navigate_flow "Navigate test":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.NAVIGATE
@@ -114,7 +114,7 @@ flow fill_flow "Fill test":
   steps:
     fill field:Task.title "Test Task"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.FILL
@@ -130,7 +130,7 @@ flow click_flow "Click test":
   steps:
     click action:Task.save
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.CLICK
@@ -145,7 +145,7 @@ flow wait_flow "Wait test":
   steps:
     wait 1000
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.WAIT
@@ -160,7 +160,7 @@ flow wait_target_flow "Wait for element":
   steps:
     wait view:task_detail
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.WAIT
@@ -175,7 +175,7 @@ flow snapshot_flow "Snapshot test":
   steps:
     snapshot
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.SNAPSHOT
@@ -189,7 +189,7 @@ flow assert_flow "Assert entity exists":
   steps:
     expect entity_exists Task
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.kind == FlowStepKind.ASSERT
@@ -206,7 +206,7 @@ flow assert_where_flow "Assert with condition":
   steps:
     expect entity_exists Task where title="Test"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.assertion is not None
@@ -222,7 +222,7 @@ flow assert_validation_flow "Assert validation":
   steps:
     expect validation_error field:Task.title
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.assertion is not None
@@ -238,7 +238,7 @@ flow assert_visible_flow "Assert visible":
   steps:
     expect visible view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.assertion is not None
@@ -254,7 +254,7 @@ flow assert_text_flow "Assert text":
   steps:
     expect text_contains "Success"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         step = fragment.e2e_flows[0].steps[0]
         assert step.assertion is not None
@@ -283,7 +283,7 @@ flow create_task_complete "Create a task end to end":
     expect entity_exists Task where title="Test Task"
     expect visible view:task_detail
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.e2e_flows) == 1
         flow = fragment.e2e_flows[0]
@@ -309,7 +309,7 @@ flow flow_two "Second flow":
   steps:
     click action:Task.save
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.e2e_flows) == 2
         assert fragment.e2e_flows[0].id == "flow_one"
@@ -331,7 +331,7 @@ flow create_task "Create a task":
     fill field:Task.title "Test"
     click action:Task.save
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.entities) == 1
         assert len(fragment.e2e_flows) == 1
@@ -352,7 +352,7 @@ flow dotted_flow "Dotted target":
     fill field:Task.title "Test"
     click action:Task.save
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         steps = fragment.e2e_flows[0].steps
         assert steps[0].target == "field:Task.title"
@@ -372,7 +372,7 @@ flow high_flow "High priority":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         assert fragment.e2e_flows[0].priority == FlowPriority.HIGH
 
     def test_parse_medium_priority(self) -> None:
@@ -385,7 +385,7 @@ flow medium_flow "Medium priority":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         assert fragment.e2e_flows[0].priority == FlowPriority.MEDIUM
 
     def test_parse_low_priority(self) -> None:
@@ -398,5 +398,5 @@ flow low_flow "Low priority":
   steps:
     navigate view:task_list
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         assert fragment.e2e_flows[0].priority == FlowPriority.LOW

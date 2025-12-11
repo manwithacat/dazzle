@@ -33,7 +33,7 @@ message WelcomeEmail "Welcome Email":
   subject: str required
   body: text required
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.messages) == 1
         msg = fragment.messages[0]
@@ -56,7 +56,7 @@ message Notification:
   priority: str optional
   retry_count: int = 3
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         msg = fragment.messages[0]
         assert len(msg.fields) == 3
@@ -78,7 +78,7 @@ message OrderDetails:
   total: decimal(10,2) required
   notes: str(500) optional
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         msg = fragment.messages[0]
         assert msg.fields[0].type_name == "list[OrderItem]"
@@ -99,7 +99,7 @@ channel notifications:
   kind: email
   provider: auto
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.channels) == 1
         ch = fragment.channels[0]
@@ -117,7 +117,7 @@ channel tasks:
   kind: queue
   provider: rabbitmq
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert ch.kind == ChannelKind.QUEUE
@@ -133,7 +133,7 @@ channel events:
   kind: stream
   provider: kafka
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert ch.kind == ChannelKind.STREAM
@@ -153,7 +153,7 @@ channel notifications:
     from_address: "noreply@example.com"
     from_name: "My App"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert ch.config.options["from_address"] == "noreply@example.com"
@@ -173,7 +173,7 @@ channel notifications:
     max_per_minute: 200
     max_concurrent: 10
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert ch.provider_config.max_per_minute == 200
@@ -197,7 +197,7 @@ channel notifications:
     message: WelcomeEmail
     delivery_mode: outbox
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert len(ch.send_operations) == 1
@@ -221,7 +221,7 @@ channel notifications:
     message: WelcomeEmail
     when: entity User created
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].send_operations[0]
         assert op.trigger.kind == SendTriggerKind.ENTITY_EVENT
@@ -242,7 +242,7 @@ channel notifications:
     message: ShippingNotification
     when: entity Order status -> shipped
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].send_operations[0]
         assert op.trigger.kind == SendTriggerKind.ENTITY_STATUS_TRANSITION
@@ -266,7 +266,7 @@ channel notifications:
       to -> User.email
       name -> User.display_name
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].send_operations[0]
         assert len(op.mappings) == 2
@@ -294,7 +294,7 @@ channel notifications:
         max_messages: 5
         on_exceed: drop
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].send_operations[0]
         assert op.throttle is not None
@@ -317,7 +317,7 @@ channel analytics:
     message: PageViewEvent
     delivery_mode: direct
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].send_operations[0]
         assert op.delivery_mode == DeliveryMode.DIRECT
@@ -340,7 +340,7 @@ channel notifications:
     message: InboundEmail
     action: create SupportTicket
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         ch = fragment.channels[0]
         assert len(ch.receive_operations) == 1
@@ -368,7 +368,7 @@ channel notifications:
       subject: "Help:*"
     action: create SupportTicket
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].receive_operations[0]
         assert len(op.match_patterns) == 2
@@ -399,7 +399,7 @@ channel notifications:
       subject -> title
       body -> description
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].receive_operations[0]
         assert len(op.mappings) == 3
@@ -423,7 +423,7 @@ channel events:
       customer_id -> external_id
       name -> display_name
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].receive_operations[0]
         assert op.action.kind == ReceiveActionKind.UPSERT
@@ -444,7 +444,7 @@ channel events:
     message: PaymentEvent
     action: call service process_payment
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         op = fragment.channels[0].receive_operations[0]
         assert op.action.kind == ReceiveActionKind.CALL_SERVICE
@@ -464,7 +464,7 @@ asset terms_of_service:
   kind: file
   path: "legal/terms.pdf"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.assets) == 1
         asset = fragment.assets[0]
@@ -482,7 +482,7 @@ asset company_logo:
   kind: image
   path: "branding/logo.png"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         asset = fragment.assets[0]
         assert asset.kind.value == "image"
@@ -502,7 +502,7 @@ document invoice_pdf:
   format: pdf
   layout: invoice_layout
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.documents) == 1
         doc = fragment.documents[0]
@@ -525,7 +525,7 @@ template welcome_email:
   subject: "Welcome to our app"
   body: "Hello, thanks for signing up!"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.templates) == 1
         tpl = fragment.templates[0]
@@ -544,7 +544,7 @@ template welcome_email:
   body: "Plain text version"
   html_body: "<h1>Welcome</h1><p>HTML version</p>"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         tpl = fragment.templates[0]
         assert tpl.html_body == "<h1>Welcome</h1><p>HTML version</p>"
@@ -617,7 +617,7 @@ channel order_events:
     when: entity Order created
     delivery_mode: direct
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         # Verify all constructs parsed
         assert len(fragment.messages) == 2

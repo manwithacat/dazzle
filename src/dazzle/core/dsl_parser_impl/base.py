@@ -157,16 +157,21 @@ class BaseParser:
         while self.match(TokenType.NEWLINE):
             self.advance()
 
-    def parse_module_header(self) -> tuple[str | None, str | None, str | None, list[str]]:
+    def parse_module_header(
+        self,
+    ) -> tuple[str | None, str | None, str | None, "ir.AppConfigSpec | None", list[str]]:
         """
         Parse module header (module, app, use declarations).
 
         Returns:
-            Tuple of (module_name, app_name, app_title, uses)
+            Tuple of (module_name, app_name, app_title, app_config, uses)
         """
+        from .. import ir
+
         module_name = None
         app_name = None
         app_title = None
+        app_config = None
         uses = []
 
         self.skip_newlines()
@@ -190,7 +195,7 @@ class BaseParser:
 
             self.skip_newlines()
 
-        # Parse app declaration
+        # Parse app declaration (v0.9.5: with optional body)
         if self.match(TokenType.APP):
             self.advance()
             app_name = self.expect_identifier_or_keyword().value
@@ -198,9 +203,76 @@ class BaseParser:
             if self.match(TokenType.STRING):
                 app_title = self.advance().value
 
-            self.skip_newlines()
+            # v0.9.5: Optional app config body
+            if self.match(TokenType.COLON):
+                self.advance()
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
 
-        return module_name, app_name, app_title, uses
+                description = None
+                multi_tenant = False
+                audit_trail = False
+                features: dict[str, str | bool] = {}
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    # description: "..."
+                    if self.match(TokenType.DESCRIPTION):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        description = self.expect(TokenType.STRING).value
+                        self.skip_newlines()
+
+                    # multi_tenant: true|false
+                    elif self.match(TokenType.MULTI_TENANT):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        token = self.advance()
+                        multi_tenant = token.type == TokenType.TRUE
+                        self.skip_newlines()
+
+                    # audit_trail: true|false
+                    elif self.match(TokenType.AUDIT_TRAIL):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        token = self.advance()
+                        audit_trail = token.type == TokenType.TRUE
+                        self.skip_newlines()
+
+                    # Any other identifier: value (for extensibility)
+                    elif self.match(TokenType.IDENTIFIER):
+                        key = self.advance().value
+                        self.expect(TokenType.COLON)
+                        if self.match(TokenType.STRING):
+                            features[key] = self.advance().value
+                        elif self.match(TokenType.TRUE):
+                            self.advance()
+                            features[key] = True
+                        elif self.match(TokenType.FALSE):
+                            self.advance()
+                            features[key] = False
+                        else:
+                            features[key] = self.advance().value
+                        self.skip_newlines()
+
+                    else:
+                        break
+
+                self.expect(TokenType.DEDENT)
+
+                app_config = ir.AppConfigSpec(
+                    description=description,
+                    multi_tenant=multi_tenant,
+                    audit_trail=audit_trail,
+                    features=features,
+                )
+            else:
+                self.skip_newlines()
+
+        return module_name, app_name, app_title, app_config, uses
 
     def parse_module_name(self) -> str:
         """Parse dotted module name (e.g., foo.bar.baz)."""
@@ -346,6 +418,13 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.GIVEN,
     TokenType.THEN,
     TokenType.CODE,
+    # v0.9.5 App Config keywords (can be field names)
+    TokenType.DESCRIPTION,
+    TokenType.MULTI_TENANT,
+    TokenType.AUDIT_TRAIL,
+    # v0.9.5 Field Type keywords (can be field names)
+    TokenType.MONEY,
+    TokenType.FILE_TYPE,
     # v0.9.0 Messaging keywords (can be field names)
     TokenType.CHANNEL,
     TokenType.SEND,
@@ -393,6 +472,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.REGEX,
     # Field types that are also keywords
     TokenType.URL,
+    # Workspace keywords that can be field names
+    TokenType.STAGE,
     # Commonly needed as enum values (v0.9.1)
     TokenType.SUBMITTED,
     TokenType.OPERATION,

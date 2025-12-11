@@ -60,7 +60,7 @@ class ScenarioParserMixin:
                 break
 
             # description: "..."
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "description":
+            if self.match(TokenType.DESCRIPTION):
                 self.advance()
                 self.expect(TokenType.COLON)
                 description = self.expect(TokenType.STRING).value
@@ -156,7 +156,7 @@ class ScenarioParserMixin:
                 break
 
             # description: "..."
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "description":
+            if self.match(TokenType.DESCRIPTION):
                 self.advance()
                 self.expect(TokenType.COLON)
                 description = self.expect(TokenType.STRING).value

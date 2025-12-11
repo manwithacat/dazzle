@@ -519,7 +519,9 @@ class Parser(
 
 def parse_dsl(
     text: str, file: Path
-) -> tuple[str | None, str | None, str | None, list[str], ir.ModuleFragment]:
+) -> tuple[
+    str | None, str | None, str | None, ir.AppConfigSpec | None, list[str], ir.ModuleFragment
+]:
     """
     Parse complete DSL file.
 
@@ -528,17 +530,17 @@ def parse_dsl(
         file: Source file path
 
     Returns:
-        Tuple of (module_name, app_name, app_title, uses, fragment)
+        Tuple of (module_name, app_name, app_title, app_config, uses, fragment)
     """
     # Tokenize
     tokens = tokenize(text, file)
 
     # Parse
     parser = Parser(tokens, file)
-    module_name, app_name, app_title, uses = parser.parse_module_header()
+    module_name, app_name, app_title, app_config, uses = parser.parse_module_header()
     fragment = parser.parse()
 
-    return module_name, app_name, app_title, uses, fragment
+    return module_name, app_name, app_title, app_config, uses, fragment
 
 
 __all__ = [

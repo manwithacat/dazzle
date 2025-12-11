@@ -8,10 +8,38 @@ representing parser output for single DSL files.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .archetype import ArchetypeSpec
+
+
+class AppConfigSpec(BaseModel):
+    """
+    Application-level configuration (v0.9.5).
+
+    Parsed from the optional app config block:
+        app MyApp "My Application":
+          description: "..."
+          multi_tenant: true
+          audit_trail: true
+
+    Attributes:
+        description: Human-readable description of the app
+        multi_tenant: Whether the app supports multi-tenancy
+        audit_trail: Whether to enable audit trail on all entities
+        features: Additional feature flags as key-value pairs
+    """
+
+    description: str | None = None
+    multi_tenant: bool = False
+    audit_trail: bool = False
+    features: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(frozen=True)
+
+
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
@@ -86,6 +114,7 @@ class ModuleIR(BaseModel):
         file: Source file path
         app_name: App name (if declared in this module)
         app_title: App title (if declared in this module)
+        app_config: App-level configuration (v0.9.5)
         uses: List of module names this module depends on
         fragment: Parsed DSL fragments
     """
@@ -94,6 +123,7 @@ class ModuleIR(BaseModel):
     file: Path
     app_name: str | None = None
     app_title: str | None = None
+    app_config: AppConfigSpec | None = None  # v0.9.5
     uses: list[str] = Field(default_factory=list)
     fragment: ModuleFragment = Field(default_factory=ModuleFragment)
 

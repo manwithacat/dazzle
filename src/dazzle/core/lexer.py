@@ -168,6 +168,16 @@ class TokenType(Enum):
     INVARIANT = "invariant"
     CODE = "code"
 
+    # v0.9.5 App Config Keywords
+    DESCRIPTION = "description"
+    MULTI_TENANT = "multi_tenant"
+    AUDIT_TRAIL = "audit_trail"
+
+    # v0.9.5 Field Type Keywords
+    MONEY = "money"
+    FILE_TYPE = "file"  # FILE conflicts with built-in, use FILE_TYPE
+    VIA = "via"  # For many-to-many relationships through junction tables
+
     # v0.7.1 LLM Cognition Keywords
     INTENT = "intent"
     EXAMPLES = "examples"
@@ -485,6 +495,14 @@ KEYWORDS = {
     # Invariant keywords
     "invariant",
     "code",
+    # v0.9.5 App Config keywords
+    "description",
+    "multi_tenant",
+    "audit_trail",
+    # v0.9.5 Field Type keywords
+    "money",
+    "file",
+    "via",
     # v0.7.1 LLM Cognition keywords
     "intent",
     "examples",

@@ -42,7 +42,7 @@ def parse_modules(files: list[Path]) -> list[ir.ModuleIR]:
                 raise DazzleError(f"Vocabulary expansion failed in {f}: {e}")
 
         # Parse DSL file
-        module_name, app_name, app_title, uses, fragment = parse_dsl(text, f)
+        module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(text, f)
 
         # Use filename as fallback module name
         if module_name is None:
@@ -54,6 +54,7 @@ def parse_modules(files: list[Path]) -> list[ir.ModuleIR]:
                 file=f,
                 app_name=app_name,
                 app_title=app_title,
+                app_config=app_config,
                 uses=uses,
                 fragment=fragment,
             )

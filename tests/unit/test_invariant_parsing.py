@@ -21,7 +21,7 @@ entity Item "Item":
 
   invariant: quantity > 0
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         assert len(fragment.entities) == 1
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
@@ -46,7 +46,7 @@ entity Task "Task":
 
   invariant: status == "active"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
 
@@ -78,7 +78,7 @@ entity Item "Item":
 
   invariant: value {dsl_op} 10
 """
-            _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
             entity = fragment.entities[0]
             inv = entity.invariants[0]
             assert isinstance(inv.expression, ir.ComparisonExpr), f"Failed for {dsl_op}"
@@ -101,7 +101,7 @@ entity Event "Event":
 
   invariant: end_date > start_date
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
 
@@ -128,7 +128,7 @@ entity Task "Task":
 
   invariant: due_date > 14 days
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -149,7 +149,7 @@ entity Reminder "Reminder":
 
   invariant: notify_at > 2 hours
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -169,7 +169,7 @@ entity Alert "Alert":
 
   invariant: trigger_at > 30 minutes
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -194,7 +194,7 @@ entity Order "Order":
 
   invariant: quantity > 0 and price > 0
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -216,7 +216,7 @@ entity User "User":
 
   invariant: is_admin or is_owner
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -235,7 +235,7 @@ entity Record "Record":
 
   invariant: not is_deleted
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -262,7 +262,7 @@ entity Item "Item":
   invariant: a or b and c
 """
         # Should parse as: a or (b and c)
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -287,7 +287,7 @@ entity Item "Item":
   invariant: (a or b) and c
 """
         # Should parse as: (a or b) and c
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -314,7 +314,7 @@ entity Order "Order":
   invariant: discount >= 0
   invariant: discount <= price
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         assert len(entity.invariants) == 4
 
@@ -330,7 +330,7 @@ entity Setting "Setting":
 
   invariant: enabled == true
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
@@ -350,7 +350,7 @@ entity Status "Status":
 
   invariant: value != "deleted"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 

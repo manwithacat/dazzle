@@ -24,7 +24,7 @@ module test_app
 service calculate_vat "Calculate VAT":
   kind: domain_logic
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.domain_services) == 1
         service = fragment.domain_services[0]
@@ -44,7 +44,7 @@ service calculate_vat "Calculate VAT":
     invoice_id: uuid required
     country_code: str(2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert len(service.inputs) == 2
@@ -66,7 +66,7 @@ service calculate_vat "Calculate VAT":
     vat_amount: money
     breakdown: json
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert len(service.outputs) == 2
@@ -86,7 +86,7 @@ service calculate_vat "Calculate VAT":
     - "Must not mutate the invoice record"
     - "Must raise domain error if config incomplete"
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert len(service.guarantees) == 2
@@ -102,7 +102,7 @@ service calculate_vat "Calculate VAT":
   kind: domain_logic
   stub: python
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert service.stub_language == StubLanguage.PYTHON
@@ -116,7 +116,7 @@ service send_email "Send Email":
   kind: integration
   stub: typescript
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert service.stub_language == StubLanguage.TYPESCRIPT
@@ -139,7 +139,7 @@ service calculate_vat "Calculate VAT for Invoice":
     - "Must raise domain error if config incomplete"
   stub: python
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.domain_services) == 1
         service = fragment.domain_services[0]
@@ -163,7 +163,7 @@ module test_app
 service validate_invoice "Validate Invoice":
   kind: validation
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert service.kind == DomainServiceKind.VALIDATION
@@ -176,7 +176,7 @@ module test_app
 service fetch_exchange_rate "Fetch Exchange Rate":
   kind: integration
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert service.kind == DomainServiceKind.INTEGRATION
@@ -189,7 +189,7 @@ module test_app
 service process_order "Process Order":
   kind: workflow
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         service = fragment.domain_services[0]
         assert service.kind == DomainServiceKind.WORKFLOW
@@ -214,7 +214,7 @@ service calculate_vat "Calculate VAT":
   output:
     vat_amount: decimal(10,2)
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.entities) == 1
         assert len(fragment.domain_services) == 1
@@ -235,7 +235,7 @@ service send_invoice "Send Invoice":
 service validate_invoice "Validate Invoice":
   kind: validation
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.domain_services) == 3
         assert fragment.domain_services[0].name == "calculate_vat"
@@ -255,7 +255,7 @@ service stripe_api "Stripe API":
   spec: url "https://api.stripe.com/openapi.yaml"
   auth_profile: api_key_header
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         # External APIs go to apis, not domain_services
         assert len(fragment.domain_services) == 0
@@ -276,7 +276,7 @@ service calculate_vat "Calculate VAT":
   input:
     amount: decimal(10,2) required
 """
-        _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.apis) == 1
         assert len(fragment.domain_services) == 1

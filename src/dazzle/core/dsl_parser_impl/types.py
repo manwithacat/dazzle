@@ -97,6 +97,27 @@ class TypeParserMixin:
             self.advance()
             return ir.FieldType(kind=ir.FieldTypeKind.JSON)
 
+        # money or money(CURRENCY) (v0.9.5)
+        elif token.value == "money":
+            self.advance()
+            currency_code = "GBP"  # Default to GBP for UK focus
+            if self.match(TokenType.LPAREN):
+                self.advance()
+                # Currency code as identifier (e.g., USD, EUR, GBP)
+                currency_code = self.expect_identifier_or_keyword().value.upper()
+                self.expect(TokenType.RPAREN)
+            return ir.FieldType(kind=ir.FieldTypeKind.MONEY, currency_code=currency_code)
+
+        # file (v0.9.5)
+        elif token.value == "file":
+            self.advance()
+            return ir.FieldType(kind=ir.FieldTypeKind.FILE)
+
+        # url (v0.9.5)
+        elif token.value == "url":
+            self.advance()
+            return ir.FieldType(kind=ir.FieldTypeKind.URL)
+
         # enum[val1,val2,...]
         elif token.value == "enum":
             self.advance()
@@ -118,14 +139,22 @@ class TypeParserMixin:
             entity_name = self.expect(TokenType.IDENTIFIER).value
             return ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=entity_name)
 
-        # v0.7.1: has_many EntityName [cascade|restrict|nullify] [readonly]
+        # v0.7.1: has_many EntityName [via JunctionEntity] [cascade|restrict|nullify] [readonly]
         elif token.type == TokenType.HAS_MANY:
             self.advance()
             entity_name = self.expect(TokenType.IDENTIFIER).value
+
+            # v0.9.5: Optional via junction entity for many-to-many
+            via_entity = None
+            if self.match(TokenType.VIA):
+                self.advance()
+                via_entity = self.expect(TokenType.IDENTIFIER).value
+
             behavior, readonly = self._parse_relationship_modifiers()
             return ir.FieldType(
                 kind=ir.FieldTypeKind.HAS_MANY,
                 ref_entity=entity_name,
+                via_entity=via_entity,
                 relationship_behavior=behavior,
                 readonly=readonly,
             )

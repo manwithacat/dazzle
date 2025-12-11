@@ -25,6 +25,9 @@ class DisplayMode(str, Enum):
     DETAIL = "detail"  # v0.3.1: Single item detail view
     SUMMARY = "summary"  # v0.9.5: Metrics/KPI summary cards
     METRICS = "metrics"  # v0.9.5: Alias for summary
+    KANBAN = "kanban"  # v0.9.5: Kanban board view for workflows
+    BAR_CHART = "bar_chart"  # v0.9.5: Bar chart visualization
+    FUNNEL_CHART = "funnel_chart"  # v0.9.5: Funnel chart (e.g., sales pipeline)
 
 
 class WorkspaceRegion(BaseModel):

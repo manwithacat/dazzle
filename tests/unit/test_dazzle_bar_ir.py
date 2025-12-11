@@ -171,7 +171,7 @@ persona teacher "Teacher":
   goals: "Grade papers", "Track attendance"
   proficiency: expert
 """
-        module_name, app_name, app_title, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.personas) == 1
         persona = fragment.personas[0]
@@ -203,7 +203,7 @@ scenario busy_term "Busy Term":
   for persona student:
     start_route: "/assignments"
 """
-        module_name, app_name, app_title, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.scenarios) == 1
         scenario = fragment.scenarios[0]
@@ -235,7 +235,7 @@ demo:
     - title: "Grade papers", completed: false
     - title: "Prepare lecture", completed: true
 """
-        module_name, app_name, app_title, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         # Demo blocks create a default scenario
         assert len(fragment.scenarios) == 1
@@ -266,7 +266,7 @@ persona admin "Administrator":
 persona viewer "Viewer":
   proficiency: novice
 """
-        module_name, app_name, app_title, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert len(fragment.personas) == 2
         assert fragment.personas[0].id == "admin"
