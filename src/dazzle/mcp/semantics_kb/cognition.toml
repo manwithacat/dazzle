@@ -81,8 +81,8 @@ category = "LLM Cognition (v0.7.1)"
 definition = "Inline example records that demonstrate valid data for an entity. Helps LLMs understand data formats, relationships, and realistic values."
 syntax = '''
 examples:
-  {<field>: <value>, <field>: <value>, ...}
-  {<field>: <value>, <field>: <value>, ...}
+  - <field>: <value>, <field>: <value>, ...
+  - <field>: <value>, <field>: <value>, ...
 '''
 example = '''
 entity Task "Task":
@@ -93,9 +93,9 @@ entity Task "Task":
   due_date: date
 
   examples:
-    {title: "Write documentation", status: todo, priority: high, due_date: "2024-03-15"}
-    {title: "Fix login bug", status: in_progress, priority: high}
-    {title: "Update dependencies", status: done, priority: low}
+    - title: "Write documentation", status: todo, priority: high, due_date: "2024-03-15"
+    - title: "Fix login bug", status: in_progress, priority: high
+    - title: "Update dependencies", status: done, priority: low
 
 entity User "User":
   id: uuid pk
@@ -104,10 +104,11 @@ entity User "User":
   role: enum[admin,manager,member] = member
 
   examples:
-    {email: "admin@example.com", name: "Alice Admin", role: admin}
-    {email: "bob@example.com", name: "Bob Manager", role: manager}
-    {email: "carol@example.com", name: "Carol Member", role: member}
+    - email_address: "admin@example.com", name: "Alice Admin", role: admin
+    - email_address: "bob@example.com", name: "Bob Manager", role: manager
+    - email_address: "carol@example.com", name: "Carol Member", role: member
 '''
+important_notes = ["Use dash (-) prefix for each example record, NOT curly braces", "Comma-separated key: value pairs on one line per example", "Values can be strings (quoted), numbers, booleans, or null"]
 related = ["entity", "intent", "field_types"]
 v0_7_1_changes = "NEW in v0.7.1"
 best_practices = ["Include 2-3 representative examples", "Show different states/variations", "Use realistic but non-sensitive values", "Demonstrate enum values and relationships"]
