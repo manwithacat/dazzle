@@ -1,0 +1,56 @@
+# HMRC VAT Number Lookup Pack
+# Check validity of UK VAT registration numbers
+#
+# Capabilities:
+# - Verify VAT registration status
+# - Get company name and address from VAT number
+# - Free tier available (no OAuth required)
+
+[pack]
+name = "hmrc_vat_lookup"
+provider = "HMRC"
+category = "tax"
+version = "1.0"
+description = "Verify UK VAT registration numbers and retrieve registration details"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/vat-registered-companies-api"
+
+[auth]
+type = "none"  # No authentication required for this API
+env_var = ""
+
+[env_vars]
+# No env vars required - this is a free public API
+
+[operations]
+lookup_vat = { method = "GET", path = "/organisations/vat/check-vat-number/lookup/{targetVrn}", description = "Check if VAT number is registered and get details" }
+lookup_vat_with_requester = { method = "GET", path = "/organisations/vat/check-vat-number/lookup/{targetVrn}/{requesterVrn}", description = "Lookup with requester VRN for audit trail" }
+
+[foreign_models.VATRegistration]
+description = "VAT registration lookup result"
+key = "vrn"
+
+[foreign_models.VATRegistration.fields]
+vrn = { type = "str(9)", required = true, pk = true, description = "VAT Registration Number" }
+target_vrn_valid = { type = "bool", required = true, description = "Whether VRN is valid/registered" }
+name = { type = "str(200)", description = "Registered business name" }
+address_line1 = { type = "str(100)" }
+address_line2 = { type = "str(100)" }
+address_line3 = { type = "str(100)" }
+address_line4 = { type = "str(100)" }
+postcode = { type = "str(10)" }
+country_code = { type = "str(2)" }
+processing_date = { type = "date", description = "Date of lookup" }
+consultation_number = { type = "str(50)", description = "Reference for this lookup" }
+
+[integration_hints]
+on_supplier_created = "lookup_vat to verify supplier VAT registration"
+on_invoice_received = "lookup_vat to validate VAT number before reclaiming"
+on_customer_signup = "lookup_vat to verify business customer VAT"
+on_vat_return_preparation = "lookup_vat for all suppliers to ensure valid reclaims"
+
+[notes]
+rate_limits = "No rate limits documented, but be respectful"
+no_auth = "No authentication required - public API"
+vrn_format = "9 digits, no spaces or GB prefix"
+audit = "Use requester VRN version for EU cross-border compliance audit trail"

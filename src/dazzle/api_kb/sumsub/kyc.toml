@@ -1,0 +1,176 @@
+# SumSub KYC/AML Verification Pack
+# Curated API configuration for identity verification and AML checks
+#
+# Capabilities:
+# - Identity document verification
+# - Liveness detection
+# - AML/PEP screening
+# - Proof of address verification
+# - KYB (business verification)
+#
+# IMPORTANT: Uses HMAC signature authentication, not simple API key
+
+[pack]
+name = "sumsub_kyc"
+provider = "SumSub"
+category = "verification"
+version = "1.0"
+description = "KYC/AML identity verification, document checks, and compliance screening"
+base_url = "https://api.sumsub.com"
+docs_url = "https://docs.sumsub.com/reference/about-sumsub-api"
+
+[auth]
+type = "hmac"
+env_var = "SUMSUB"
+# Authentication requires:
+# - X-App-Token: App token from dashboard
+# - X-App-Access-Ts: Unix timestamp
+# - X-App-Access-Sig: HMAC-SHA256 signature
+
+[env_vars]
+SUMSUB_APP_TOKEN = { required = true, description = "SumSub app token from Dashboard", example = "" }
+SUMSUB_SECRET_KEY = { required = true, description = "SumSub secret key for HMAC signing", example = "" }
+SUMSUB_WEBHOOK_SECRET = { required = false, description = "Secret for validating webhook signatures", example = "" }
+SUMSUB_LEVEL_NAME = { required = false, description = "Default verification level name", example = "basic-kyc-level" }
+
+[operations]
+# Applicant Management
+create_applicant = { method = "POST", path = "/resources/applicants?levelName={level_name}", description = "Create a new applicant for verification" }
+get_applicant = { method = "GET", path = "/resources/applicants/{applicant_id}", description = "Get applicant details" }
+get_applicant_status = { method = "GET", path = "/resources/applicants/{applicant_id}/status", description = "Get current verification status" }
+get_applicant_by_external_id = { method = "GET", path = "/resources/applicants/-;externalUserId={external_user_id}", description = "Find applicant by your user ID" }
+delete_applicant = { method = "DELETE", path = "/resources/applicants/{applicant_id}", description = "Delete applicant data (GDPR)" }
+
+# Document Operations
+add_document = { method = "POST", path = "/resources/applicants/{applicant_id}/info/idDoc", description = "Add identity document" }
+get_document_images = { method = "GET", path = "/resources/applicants/{applicant_id}/info/idDoc/{doc_id}", description = "Get document images" }
+
+# Verification Control
+request_check = { method = "POST", path = "/resources/applicants/{applicant_id}/status/pending", description = "Request verification check" }
+reset_applicant = { method = "POST", path = "/resources/applicants/{applicant_id}/reset", description = "Reset verification to allow resubmission" }
+
+# Access Token (for WebSDK/MobileSDK)
+generate_access_token = { method = "POST", path = "/resources/accessTokens?userId={external_user_id}&levelName={level_name}", description = "Generate token for SDK integration" }
+
+# AML Screening
+get_aml_check = { method = "GET", path = "/resources/applicants/{applicant_id}/checks/latest", description = "Get latest AML check result" }
+request_aml_check = { method = "POST", path = "/resources/applicants/{applicant_id}/checks/peps-sanctions", description = "Request AML/PEP/Sanctions screening" }
+
+# Verification Results
+get_review_result = { method = "GET", path = "/resources/applicants/{applicant_id}/requiredIdDocsStatus", description = "Get detailed verification result" }
+get_verification_steps = { method = "GET", path = "/resources/applicants/{applicant_id}/verificationSteps", description = "Get all verification step statuses" }
+
+# Questionnaires
+get_questionnaire = { method = "GET", path = "/resources/applicants/{applicant_id}/questionnaire", description = "Get applicant questionnaire responses" }
+
+[foreign_models.Applicant]
+description = "A person undergoing identity verification"
+key = "id"
+
+[foreign_models.Applicant.fields]
+id = { type = "str(50)", required = true, pk = true, description = "SumSub applicant ID" }
+external_user_id = { type = "str(100)", description = "Your application's user ID" }
+type = { type = "enum[individual,company]", required = true }
+created_at = { type = "datetime" }
+email = { type = "email" }
+phone = { type = "str(20)" }
+first_name = { type = "str(100)" }
+last_name = { type = "str(100)" }
+middle_name = { type = "str(100)" }
+legal_name = { type = "str(200)", description = "Full legal name" }
+gender = { type = "enum[M,F]" }
+dob = { type = "date", description = "Date of birth" }
+place_of_birth = { type = "str(100)" }
+country_of_birth = { type = "str(3)", description = "ISO 3166-1 alpha-3" }
+nationality = { type = "str(3)" }
+country = { type = "str(3)", description = "Country of residence" }
+state_of_birth = { type = "str(100)" }
+review_status = { type = "enum[init,pending,queued,completed,onHold]" }
+review_result = { type = "json", description = "Detailed review result" }
+moderation_comment = { type = "str(1000)" }
+client_comment = { type = "str(1000)" }
+tags = { type = "json", description = "Array of applicant tags" }
+
+[foreign_models.ApplicantStatus]
+description = "Current verification status of an applicant"
+key = "applicant_id"
+
+[foreign_models.ApplicantStatus.fields]
+applicant_id = { type = "str(50)", required = true, pk = true }
+review_status = { type = "enum[init,pending,queued,completed,onHold]", required = true }
+review_result = { type = "str(20)", description = "GREEN, RED, or null" }
+review_answer = { type = "str(50)" }
+moderation_comment = { type = "str(1000)" }
+client_comment = { type = "str(1000)" }
+reject_labels = { type = "json", description = "Array of rejection reasons" }
+auto_checked = { type = "bool" }
+elapsed_secs_total = { type = "int" }
+elapsed_secs_automated = { type = "int" }
+priority = { type = "int" }
+
+[foreign_models.Document]
+description = "An identity document submitted for verification"
+key = "id"
+
+[foreign_models.Document.fields]
+id = { type = "str(50)", required = true, pk = true }
+applicant_id = { type = "str(50)", required = true }
+id_doc_type = { type = "enum[PASSPORT,ID_CARD,DRIVERS,RESIDENCE_PERMIT,UTILITY_BILL,BANK_STATEMENT,SELFIE,VIDEO_SELFIE,OTHER]", required = true }
+id_doc_sub_type = { type = "str(50)" }
+country = { type = "str(3)", required = true, description = "Document issuing country" }
+first_name = { type = "str(100)" }
+last_name = { type = "str(100)" }
+middle_name = { type = "str(100)" }
+dob = { type = "date" }
+number = { type = "str(50)", description = "Document number" }
+valid_until = { type = "date" }
+issue_date = { type = "date" }
+first_name_en = { type = "str(100)", description = "Transliterated first name" }
+last_name_en = { type = "str(100)", description = "Transliterated last name" }
+address = { type = "json", description = "Extracted address" }
+
+[foreign_models.AMLCheck]
+description = "AML/PEP/Sanctions screening result"
+key = "id"
+
+[foreign_models.AMLCheck.fields]
+id = { type = "str(50)", required = true, pk = true }
+applicant_id = { type = "str(50)", required = true }
+created_at = { type = "datetime" }
+answer = { type = "enum[GREEN,YELLOW,RED]" }
+check_type = { type = "str(50)" }
+matches = { type = "json", description = "Array of potential matches" }
+sources_checked = { type = "json", description = "Databases checked" }
+
+[foreign_models.AccessToken]
+description = "SDK access token for client-side verification"
+key = "token"
+
+[foreign_models.AccessToken.fields]
+token = { type = "str(500)", required = true, pk = true }
+user_id = { type = "str(100)", required = true }
+
+# Webhooks
+[webhooks]
+applicant_created = { description = "New applicant created" }
+applicant_pending = { description = "Applicant submitted for review" }
+applicant_reviewed = { description = "Verification completed (approved/rejected)" }
+applicant_onHold = { description = "Verification needs manual review" }
+applicant_personal_info_changed = { description = "Applicant data updated" }
+applicant_prechecked = { description = "Automated precheck completed" }
+applicant_deleted = { description = "Applicant data deleted" }
+
+# DSL generation hints
+[integration_hints]
+on_user_signup = "create_applicant with external_user_id = User.id"
+on_kyc_required = "generate_access_token for WebSDK integration"
+on_kyc_submitted = "get_applicant_status to check progress"
+webhook_applicant_reviewed = "update User.kyc_status based on review_result"
+on_high_value_transaction = "request_aml_check for additional screening"
+on_user_deletion = "delete_applicant for GDPR compliance"
+
+[notes]
+sdk = "WebSDK 2.0 required from June 2025 - use access tokens for client-side"
+sandbox = "Sandbox mode available at same base URL with test credentials"
+hmac_auth = "All requests require HMAC-SHA256 signature in X-App-Access-Sig header"
+content_type = "Always include Content-Type: application/json even for empty bodies"

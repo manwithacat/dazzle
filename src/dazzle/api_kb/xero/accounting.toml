@@ -58,6 +58,28 @@ list_accounts = { method = "GET", path = "/Accounts", description = "List chart 
 # Organisation
 get_organisation = { method = "GET", path = "/Organisation", description = "Get organisation details" }
 
+# Repeating Invoices
+list_repeating_invoices = { method = "GET", path = "/RepeatingInvoices", description = "List all repeating invoice templates" }
+get_repeating_invoice = { method = "GET", path = "/RepeatingInvoices/{repeating_invoice_id}", description = "Get repeating invoice by ID" }
+create_repeating_invoice = { method = "PUT", path = "/RepeatingInvoices", description = "Create a repeating invoice template" }
+
+# Credit Notes
+list_credit_notes = { method = "GET", path = "/CreditNotes", description = "List all credit notes" }
+get_credit_note = { method = "GET", path = "/CreditNotes/{credit_note_id}", description = "Get credit note by ID" }
+create_credit_note = { method = "PUT", path = "/CreditNotes", description = "Create a credit note" }
+allocate_credit_note = { method = "PUT", path = "/CreditNotes/{credit_note_id}/Allocations", description = "Allocate credit note to invoices" }
+
+# Manual Journals
+list_manual_journals = { method = "GET", path = "/ManualJournals", description = "List manual journals" }
+create_manual_journal = { method = "PUT", path = "/ManualJournals", description = "Create a manual journal" }
+
+# Reports
+get_profit_and_loss = { method = "GET", path = "/Reports/ProfitAndLoss", description = "Get Profit and Loss report" }
+get_balance_sheet = { method = "GET", path = "/Reports/BalanceSheet", description = "Get Balance Sheet report" }
+get_trial_balance = { method = "GET", path = "/Reports/TrialBalance", description = "Get Trial Balance report" }
+get_aged_receivables = { method = "GET", path = "/Reports/AgedReceivablesByContact", description = "Get Aged Receivables by contact" }
+get_aged_payables = { method = "GET", path = "/Reports/AgedPayablesByContact", description = "Get Aged Payables by contact" }
+
 [foreign_models.Invoice]
 description = "A sales invoice"
 key = "invoice_id"
@@ -121,12 +143,54 @@ status = { type = "enum[AUTHORISED,DELETED]" }
 reference = { type = "str(255)" }
 is_reconciled = { type = "bool" }
 
+[foreign_models.RepeatingInvoice]
+description = "A repeating invoice template"
+key = "repeating_invoice_id"
+
+[foreign_models.RepeatingInvoice.fields]
+repeating_invoice_id = { type = "uuid", required = true, pk = true }
+type = { type = "enum[ACCREC,ACCPAY]", required = true }
+contact_id = { type = "uuid", required = true }
+schedule = { type = "json", required = true, description = "Recurrence schedule" }
+line_items = { type = "json" }
+line_amount_types = { type = "enum[Exclusive,Inclusive,NoTax]" }
+reference = { type = "str(255)" }
+branding_theme_id = { type = "uuid" }
+currency_code = { type = "str(3)" }
+status = { type = "enum[DRAFT,AUTHORISED,DELETED]" }
+sub_total = { type = "decimal(13,2)" }
+total_tax = { type = "decimal(13,2)" }
+total = { type = "decimal(13,2)" }
+has_attachments = { type = "bool" }
+
+[foreign_models.CreditNote]
+description = "A credit note"
+key = "credit_note_id"
+
+[foreign_models.CreditNote.fields]
+credit_note_id = { type = "uuid", required = true, pk = true }
+credit_note_number = { type = "str(50)" }
+type = { type = "enum[ACCPAYCREDIT,ACCRECCREDIT]", required = true }
+contact_id = { type = "uuid", required = true }
+date = { type = "date" }
+status = { type = "enum[DRAFT,SUBMITTED,AUTHORISED,PAID,VOIDED,DELETED]" }
+line_amount_types = { type = "enum[Exclusive,Inclusive,NoTax]" }
+sub_total = { type = "decimal(13,2)" }
+total_tax = { type = "decimal(13,2)" }
+total = { type = "decimal(13,2)" }
+remaining_credit = { type = "decimal(13,2)" }
+allocations = { type = "json", description = "Allocations to invoices" }
+currency_code = { type = "str(3)" }
+updated_date_utc = { type = "datetime" }
+
 # DSL generation hints
 [integration_hints]
 on_order_confirmed = "create_invoice with line items from Order"
 on_payment_received = "create_payment against invoice"
 on_customer_created = "create_contact in Xero"
 on_monthly_reconciliation = "list_bank_transactions for reconciliation"
+on_subscription_created = "create_repeating_invoice for recurring billing"
+on_refund_requested = "create_credit_note and allocate to original invoice"
 
 [notes]
 rate_limits = "Minute limit: 60 calls, Daily limit: 5000 calls"

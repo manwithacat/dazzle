@@ -1,0 +1,161 @@
+# DocuSeal E-Signatures Pack
+# Curated API configuration for document signing and e-signatures
+#
+# Capabilities:
+# - Create signature requests from templates
+# - Generate signing links for submitters
+# - Track submission status
+# - Create templates from PDF/DOCX/HTML
+# - Receive webhooks on signature events
+#
+# Deployment options:
+# - Cloud: api.docuseal.com (US) or api.docuseal.eu (EU)
+# - Self-hosted: Docker container with your own domain
+
+[pack]
+name = "docuseal_signatures"
+provider = "DocuSeal"
+category = "signatures"
+version = "1.0"
+description = "E-signatures and document signing - cloud or self-hosted"
+base_url = "https://api.docuseal.com"  # Or self-hosted URL
+docs_url = "https://www.docuseal.com/docs/api"
+deployment = "hybrid"  # cloud or self_hosted
+
+[auth]
+type = "api_key"
+header = "X-Auth-Token"
+env_var = "DOCUSEAL_API_KEY"
+
+[env_vars]
+DOCUSEAL_API_KEY = { required = true, description = "DocuSeal API key from settings", example = "" }
+DOCUSEAL_BASE_URL = { required = false, description = "Custom URL for self-hosted instances", example = "https://sign.yourdomain.com" }
+DOCUSEAL_WEBHOOK_SECRET = { required = false, description = "Secret for validating webhook signatures", example = "" }
+
+[operations]
+# Templates
+list_templates = { method = "GET", path = "/templates", description = "List all document templates" }
+get_template = { method = "GET", path = "/templates/{id}", description = "Get template by ID" }
+create_template_pdf = { method = "POST", path = "/templates/pdf", description = "Create template from PDF with {{field}} tags" }
+create_template_docx = { method = "POST", path = "/templates/docx", description = "Create template from Word document" }
+create_template_html = { method = "POST", path = "/templates/html", description = "Create template from HTML content" }
+clone_template = { method = "POST", path = "/templates/{id}/clone", description = "Duplicate an existing template" }
+merge_templates = { method = "POST", path = "/templates/merge", description = "Combine multiple templates" }
+update_template = { method = "PUT", path = "/templates/{id}", description = "Update template name or folder" }
+archive_template = { method = "DELETE", path = "/templates/{id}", description = "Archive a template" }
+
+# Submissions (signature requests)
+list_submissions = { method = "GET", path = "/submissions", description = "List submissions with filtering" }
+get_submission = { method = "GET", path = "/submissions/{id}", description = "Get submission details" }
+create_submission = { method = "POST", path = "/submissions", description = "Create signature request from template" }
+create_submission_pdf = { method = "POST", path = "/submissions/pdf", description = "One-off signing from PDF file" }
+create_submission_docx = { method = "POST", path = "/submissions/docx", description = "One-off signing from Word document" }
+create_submission_html = { method = "POST", path = "/submissions/html", description = "One-off signing from HTML" }
+archive_submission = { method = "DELETE", path = "/submissions/{id}", description = "Archive a submission" }
+
+# Submitters (signers)
+list_submitters = { method = "GET", path = "/submitters", description = "List submitters with filtering" }
+get_submitter = { method = "GET", path = "/submitters/{id}", description = "Get submitter details and field values" }
+update_submitter = { method = "PUT", path = "/submitters/{id}", description = "Pre-fill fields or mark as completed" }
+
+[foreign_models.Template]
+description = "A reusable document template for signing"
+key = "id"
+
+[foreign_models.Template.fields]
+id = { type = "int", required = true, pk = true }
+name = { type = "str(200)", required = true }
+slug = { type = "str(100)" }
+folder_name = { type = "str(100)" }
+created_at = { type = "datetime" }
+updated_at = { type = "datetime" }
+fields = { type = "json", description = "Template field definitions" }
+schema = { type = "json", description = "Document schema with submitter roles" }
+submitters = { type = "json", description = "Configured submitter roles" }
+documents = { type = "json", description = "Associated document files" }
+source = { type = "enum[native,api]" }
+external_id = { type = "str(100)" }
+author = { type = "json", description = "Template creator info" }
+archived_at = { type = "datetime" }
+
+[foreign_models.Submission]
+description = "A signature request sent to submitters"
+key = "id"
+
+[foreign_models.Submission.fields]
+id = { type = "int", required = true, pk = true }
+template_id = { type = "int", required = true }
+status = { type = "enum[pending,completed,expired,archived]" }
+created_at = { type = "datetime" }
+updated_at = { type = "datetime" }
+completed_at = { type = "datetime" }
+archived_at = { type = "datetime" }
+source = { type = "enum[native,api,embed,link]" }
+submitters = { type = "json", description = "Array of submitter details" }
+documents = { type = "json", description = "Array of document URLs" }
+audit_log_url = { type = "str(500)", description = "URL to audit log PDF" }
+combined_document_url = { type = "str(500)", description = "URL to combined signed document" }
+expire_at = { type = "datetime" }
+send_email = { type = "bool" }
+send_sms = { type = "bool" }
+message = { type = "json", description = "Custom email message config" }
+submitters_order = { type = "enum[random,preserved]" }
+external_id = { type = "str(100)", description = "Your reference ID" }
+metadata = { type = "json", description = "Custom metadata" }
+
+[foreign_models.Submitter]
+description = "A person who needs to sign a document"
+key = "id"
+
+[foreign_models.Submitter.fields]
+id = { type = "int", required = true, pk = true }
+submission_id = { type = "int", required = true }
+uuid = { type = "uuid" }
+email = { type = "email" }
+phone = { type = "str(20)" }
+name = { type = "str(200)" }
+role = { type = "str(100)", description = "Submitter role in template" }
+status = { type = "enum[pending,opened,sent,completed,declined]" }
+opened_at = { type = "datetime" }
+sent_at = { type = "datetime" }
+completed_at = { type = "datetime" }
+declined_at = { type = "datetime" }
+embed_src = { type = "str(500)", description = "Embeddable signing URL" }
+slug = { type = "str(100)" }
+values = { type = "json", description = "Field values entered by submitter" }
+metadata = { type = "json" }
+preferences = { type = "json" }
+ip = { type = "str(50)" }
+ua = { type = "str(500)", description = "User agent" }
+application_key = { type = "str(100)" }
+external_id = { type = "str(100)" }
+
+# Webhooks
+[webhooks]
+form_viewed = { description = "Submitter opened the signing form" }
+form_started = { description = "Submitter started filling the form" }
+form_completed = { description = "Submitter completed and signed" }
+form_declined = { description = "Submitter declined to sign" }
+submission_created = { description = "New submission created" }
+submission_completed = { description = "All submitters completed signing" }
+submission_expired = { description = "Submission expired without completion" }
+submission_archived = { description = "Submission was archived" }
+template_created = { description = "New template created" }
+template_updated = { description = "Template was modified" }
+
+# DSL generation hints
+[integration_hints]
+on_contract_created = "create_submission with template and submitter emails"
+on_document_ready = "create_template_pdf from generated document"
+on_onboarding_step = "create_submission_pdf for agreement signing"
+webhook_submission_completed = "update Contract.status = signed, store document URLs"
+webhook_form_declined = "notify admin, update Contract.status = declined"
+on_bulk_send = "create_submission with multiple submitters for mass signing"
+
+[notes]
+regions = "US: api.docuseal.com, EU: api.docuseal.eu"
+self_hosted = "Self-host via Docker: docker run -p 3000:3000 docuseal/docuseal"
+field_tags = "Use {{FieldName}} in documents for auto field placement"
+embedding = "Use embed_src URL to embed signing in your UI"
+two_factor = "Support for phone and email 2FA on submissions"
+sequential = "Control signing order with submitters_order parameter"

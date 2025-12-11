@@ -50,6 +50,16 @@ list_charges = { method = "GET", path = "/company/{company_number}/charges", des
 
 # Persons with Significant Control
 list_pscs = { method = "GET", path = "/company/{company_number}/persons-with-significant-control", description = "List persons with significant control" }
+get_psc = { method = "GET", path = "/company/{company_number}/persons-with-significant-control/individual/{psc_id}", description = "Get individual PSC details" }
+
+# Insolvency
+get_insolvency = { method = "GET", path = "/company/{company_number}/insolvency", description = "Get company insolvency information" }
+
+# UK Establishments (for overseas companies)
+list_uk_establishments = { method = "GET", path = "/company/{company_number}/uk-establishments", description = "List UK establishments for overseas company" }
+
+# Exemptions
+get_exemptions = { method = "GET", path = "/company/{company_number}/exemptions", description = "Get company exemptions from disclosure" }
 
 [foreign_models.Company]
 description = "A UK registered company"
@@ -125,6 +135,32 @@ notified_on = { type = "date" }
 ceased_on = { type = "date" }
 nationality = { type = "str(100)" }
 country_of_residence = { type = "str(100)" }
+date_of_birth = { type = "json", description = "Month and year only for privacy" }
+
+[foreign_models.Charge]
+description = "A company charge/mortgage"
+key = "charge_id"
+
+[foreign_models.Charge.fields]
+charge_id = { type = "str(50)", required = true, pk = true }
+charge_code = { type = "str(50)" }
+classification = { type = "json", description = "Charge classification details" }
+status = { type = "enum[outstanding,part-satisfied,satisfied,fully-satisfied]" }
+created_on = { type = "date" }
+delivered_on = { type = "date" }
+satisfied_on = { type = "date" }
+persons_entitled = { type = "json", description = "Persons entitled to the charge" }
+particulars = { type = "json", description = "Particulars of the charge" }
+secured_details = { type = "json", description = "Details of what is secured" }
+
+[foreign_models.Insolvency]
+description = "Company insolvency information"
+key = "company_number"
+
+[foreign_models.Insolvency.fields]
+status = { type = "json", description = "Insolvency status details" }
+cases = { type = "json", description = "Array of insolvency cases" }
+etag = { type = "str(50)" }
 
 # DSL generation hints for integration actions
 [integration_hints]

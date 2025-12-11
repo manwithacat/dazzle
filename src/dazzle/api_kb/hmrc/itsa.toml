@@ -1,0 +1,142 @@
+# HMRC MTD Income Tax Self Assessment Pack
+# Curated API configuration for Making Tax Digital for Income Tax
+#
+# Capabilities:
+# - Submit quarterly business updates
+# - Annual adjustments
+# - Final declaration
+# - Loss management
+#
+# Note: MTD ITSA is being phased in from April 2026 for businesses over £50k
+# Extended to 2027 for £30k+ threshold
+
+[pack]
+name = "hmrc_mtd_itsa"
+provider = "HMRC"
+category = "tax"
+version = "1.0"
+description = "Making Tax Digital for Income Tax Self Assessment"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/self-assessment-api"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:self-assessment", "write:self-assessment"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_NINO = { required = false, description = "Default National Insurance Number", example = "AB123456C" }
+
+[operations]
+# Business Details
+list_businesses = { method = "GET", path = "/individuals/business/details/{nino}/list", description = "List all businesses for taxpayer" }
+get_business = { method = "GET", path = "/individuals/business/details/{nino}/{business_id}", description = "Get business details" }
+
+# Self Employment
+create_se_period = { method = "POST", path = "/individuals/business/self-employment/{nino}/{business_id}/period", description = "Create quarterly period summary" }
+amend_se_period = { method = "PUT", path = "/individuals/business/self-employment/{nino}/{business_id}/period/{period_id}", description = "Amend period summary" }
+get_se_period = { method = "GET", path = "/individuals/business/self-employment/{nino}/{business_id}/period/{period_id}", description = "Get period summary" }
+list_se_periods = { method = "GET", path = "/individuals/business/self-employment/{nino}/{business_id}/period", description = "List all period summaries" }
+create_se_annual = { method = "PUT", path = "/individuals/business/self-employment/{nino}/{business_id}/annual/{tax_year}", description = "Submit annual summary" }
+get_se_annual = { method = "GET", path = "/individuals/business/self-employment/{nino}/{business_id}/annual/{tax_year}", description = "Get annual summary" }
+
+# Property Income
+create_property_period = { method = "POST", path = "/individuals/business/property/{nino}/{business_id}/period", description = "Create property income period" }
+amend_property_period = { method = "PUT", path = "/individuals/business/property/{nino}/{business_id}/period/{period_id}", description = "Amend property period" }
+create_property_annual = { method = "PUT", path = "/individuals/business/property/{nino}/{business_id}/annual/{tax_year}", description = "Submit property annual summary" }
+
+# Calculations
+trigger_calculation = { method = "POST", path = "/individuals/calculations/{nino}/self-assessment/{tax_year}", description = "Trigger tax calculation" }
+get_calculation = { method = "GET", path = "/individuals/calculations/{nino}/self-assessment/{tax_year}/{calculation_id}", description = "Get calculation result" }
+list_calculations = { method = "GET", path = "/individuals/calculations/{nino}/self-assessment", description = "List all calculations" }
+
+# Final Declaration
+submit_final_declaration = { method = "POST", path = "/individuals/calculations/{nino}/self-assessment/{tax_year}/{calculation_id}/final-declaration", description = "Submit final declaration (crystallisation)" }
+
+# Losses
+create_brought_forward_loss = { method = "POST", path = "/individuals/losses/{nino}/brought-forward-losses", description = "Create brought forward loss" }
+list_brought_forward_losses = { method = "GET", path = "/individuals/losses/{nino}/brought-forward-losses", description = "List all losses" }
+amend_loss = { method = "PUT", path = "/individuals/losses/{nino}/brought-forward-losses/{loss_id}/change-loss-amount", description = "Amend loss amount" }
+
+# Obligations
+get_obligations = { method = "GET", path = "/individuals/business/details/{nino}/{business_id}/obligations", description = "Get submission deadlines" }
+
+[foreign_models.Business]
+description = "A business registered for MTD ITSA"
+key = "business_id"
+
+[foreign_models.Business.fields]
+business_id = { type = "str(20)", required = true, pk = true }
+type_of_business = { type = "enum[self-employment,uk-property,foreign-property]" }
+business_name = { type = "str(200)" }
+accounting_type = { type = "enum[CASH,ACCRUAL]" }
+commencement_date = { type = "date" }
+cessation_date = { type = "date" }
+business_address = { type = "json" }
+quarterly_type = { type = "enum[STANDARD,CALENDAR]" }
+
+[foreign_models.PeriodSummary]
+description = "Quarterly period income/expense summary"
+key = "period_id"
+
+[foreign_models.PeriodSummary.fields]
+period_id = { type = "str(50)", required = true, pk = true }
+from_date = { type = "date", required = true }
+to_date = { type = "date", required = true }
+income_turnover = { type = "decimal(13,2)" }
+income_other = { type = "decimal(13,2)" }
+expenses_cost_of_goods = { type = "decimal(13,2)" }
+expenses_construction_costs = { type = "decimal(13,2)" }
+expenses_staff_costs = { type = "decimal(13,2)" }
+expenses_travel = { type = "decimal(13,2)" }
+expenses_premises = { type = "decimal(13,2)" }
+expenses_admin = { type = "decimal(13,2)" }
+expenses_advertising = { type = "decimal(13,2)" }
+expenses_interest = { type = "decimal(13,2)" }
+expenses_financial = { type = "decimal(13,2)" }
+expenses_bad_debt = { type = "decimal(13,2)" }
+expenses_professional = { type = "decimal(13,2)" }
+expenses_depreciation = { type = "decimal(13,2)" }
+expenses_other = { type = "decimal(13,2)" }
+
+[foreign_models.Calculation]
+description = "Tax calculation result"
+key = "calculation_id"
+
+[foreign_models.Calculation.fields]
+calculation_id = { type = "uuid", required = true, pk = true }
+tax_year = { type = "str(10)", required = true }
+calculation_timestamp = { type = "datetime" }
+total_income = { type = "decimal(13,2)" }
+total_taxable_income = { type = "decimal(13,2)" }
+income_tax_charged = { type = "decimal(13,2)" }
+nic_amount = { type = "decimal(13,2)" }
+total_tax_due = { type = "decimal(13,2)" }
+
+[foreign_models.Obligation]
+description = "Filing obligation/deadline"
+key = "period_key"
+
+[foreign_models.Obligation.fields]
+period_key = { type = "str(20)", required = true, pk = true }
+period_start = { type = "date", required = true }
+period_end = { type = "date", required = true }
+due = { type = "date", required = true }
+status = { type = "enum[O,F]", description = "O=Open, F=Fulfilled" }
+received = { type = "date" }
+
+[integration_hints]
+on_quarter_end = "create_se_period with income/expenses for quarter"
+on_year_end = "create_se_annual with adjustments"
+on_accounts_finalized = "trigger_calculation to preview tax due"
+on_submission_deadline = "submit_final_declaration to crystallise"
+on_daily_check = "get_obligations to monitor deadlines"
+
+[notes]
+fraud_headers = "All requests require Gov-Client-* fraud prevention headers"
+sandbox = "Test at: https://test-api.service.hmrc.gov.uk"
+phase_in = "MTD ITSA mandatory from April 2026 (£50k+), April 2027 (£30k+)"
+quarterly = "Four quarterly updates required, plus annual summary and final declaration"

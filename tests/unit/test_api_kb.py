@@ -326,10 +326,13 @@ class TestPackDataIntegrity:
             assert pack.auth.auth_type, f"Pack {pack.name} missing auth type"
 
     def test_all_packs_have_env_vars(self):
-        """Test all packs have at least one env var."""
+        """Test authenticated packs have at least one env var."""
         packs = list_packs()
 
         for pack in packs:
+            # Skip packs with no auth requirement (public APIs)
+            if pack.auth and pack.auth.auth_type == "none":
+                continue
             assert len(pack.env_vars) > 0, f"Pack {pack.name} has no env vars"
 
     def test_all_packs_have_operations(self):

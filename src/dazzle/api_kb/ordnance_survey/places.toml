@@ -1,0 +1,154 @@
+# OS Places API Pack
+# Curated API configuration for UK address lookup via Ordnance Survey
+#
+# Capabilities:
+# - Address search by postcode, text, or UPRN
+# - Geocoding and reverse geocoding
+# - Area-based address searches
+#
+# Data source: AddressBase Premium (most comprehensive UK address database)
+# Coverage: UK, Jersey, Guernsey, Isle of Man
+# Rate limits: Depends on subscription tier
+
+[pack]
+name = "os_places"
+provider = "Ordnance Survey"
+category = "address"
+version = "1.0"
+description = "UK address validation, lookup and geocoding via OS Places API"
+base_url = "https://api.os.uk/search/places/v1"
+docs_url = "https://docs.os.uk/os-apis/accessing-os-apis/os-places-api"
+
+[auth]
+type = "api_key"
+header = "key"  # OS uses query parameter, not header
+env_var = "OS_PLACES_API_KEY"
+
+[env_vars]
+OS_PLACES_API_KEY = { required = true, description = "OS Data Hub API key", example = "" }
+
+[operations]
+# Text search
+find = { method = "GET", path = "/find", description = "Free text address search - best for form autocomplete" }
+
+# Postcode search
+postcode = { method = "GET", path = "/postcode", description = "Search addresses by postcode" }
+
+# UPRN lookup
+uprn = { method = "GET", path = "/uprn", description = "Get address by Unique Property Reference Number" }
+
+# Nearest address (reverse geocoding)
+nearest = { method = "GET", path = "/nearest", description = "Find nearest address to coordinates" }
+
+# Bounding box search
+bbox = { method = "GET", path = "/bbox", description = "Find all addresses within a bounding box" }
+
+# Radius search
+radius = { method = "GET", path = "/radius", description = "Find all addresses within radius of a point" }
+
+# Polygon search (POST)
+polygon = { method = "POST", path = "/polygon", description = "Find all addresses within a GeoJSON polygon" }
+
+[foreign_models.Address]
+description = "A UK address from AddressBase Premium"
+key = "uprn"
+cache_ttl = 86400  # 24 hours - addresses rarely change
+
+[foreign_models.Address.fields]
+uprn = { type = "str(12)", required = true, pk = true, description = "Unique Property Reference Number" }
+address = { type = "str(500)", description = "Full formatted address string" }
+building_name = { type = "str(100)" }
+building_number = { type = "str(20)" }
+sub_building = { type = "str(100)" }
+thoroughfare = { type = "str(100)", description = "Street name" }
+dependent_thoroughfare = { type = "str(100)" }
+dependent_locality = { type = "str(100)" }
+locality = { type = "str(100)" }
+post_town = { type = "str(100)" }
+postcode = { type = "str(10)" }
+postcode_type = { type = "str(1)", description = "S=Small user, L=Large user" }
+country_code = { type = "str(1)", description = "E=England, W=Wales, S=Scotland, N=NI" }
+local_authority_code = { type = "str(20)" }
+x_coordinate = { type = "decimal(12,2)", description = "Easting (British National Grid)" }
+y_coordinate = { type = "decimal(12,2)", description = "Northing (British National Grid)" }
+lng = { type = "decimal(9,6)", description = "Longitude (WGS84)" }
+lat = { type = "decimal(9,6)", description = "Latitude (WGS84)" }
+classification_code = { type = "str(10)", description = "Property classification" }
+logical_status = { type = "str(1)", description = "1=Approved, 6=Provisional, 8=Historical" }
+blpu_state_code = { type = "str(1)", description = "Building state" }
+topography_layer_toid = { type = "str(20)", description = "OS MasterMap TOID reference" }
+parent_uprn = { type = "str(12)", description = "Parent property UPRN" }
+last_update_date = { type = "date" }
+entry_date = { type = "date" }
+postal_address_code = { type = "str(1)", description = "D=Delivery point, N=Not postal" }
+rpc = { type = "str(1)", description = "Representative point code" }
+
+[foreign_models.DPA]
+description = "Delivery Point Address (Royal Mail PAF data)"
+key = "uprn"
+
+[foreign_models.DPA.fields]
+uprn = { type = "str(12)", required = true, pk = true }
+udprn = { type = "str(8)", description = "Unique Delivery Point Reference Number" }
+address = { type = "str(500)" }
+organisation_name = { type = "str(100)" }
+department_name = { type = "str(100)" }
+po_box_number = { type = "str(10)" }
+building_name = { type = "str(100)" }
+sub_building_name = { type = "str(100)" }
+building_number = { type = "str(20)" }
+dependent_thoroughfare = { type = "str(100)" }
+thoroughfare = { type = "str(100)" }
+double_dependent_locality = { type = "str(100)" }
+dependent_locality = { type = "str(100)" }
+post_town = { type = "str(100)" }
+postcode = { type = "str(10)" }
+postcode_type = { type = "str(1)" }
+delivery_point_suffix = { type = "str(2)" }
+welsh_dependent_thoroughfare = { type = "str(100)" }
+welsh_thoroughfare = { type = "str(100)" }
+welsh_double_dependent_locality = { type = "str(100)" }
+welsh_dependent_locality = { type = "str(100)" }
+welsh_post_town = { type = "str(100)" }
+
+[foreign_models.LPI]
+description = "Local Property Identifier (Local Authority data)"
+key = "lpi_key"
+
+[foreign_models.LPI.fields]
+lpi_key = { type = "str(20)", required = true, pk = true }
+uprn = { type = "str(12)", required = true }
+address = { type = "str(500)" }
+usrn = { type = "str(12)", description = "Unique Street Reference Number" }
+pao_text = { type = "str(100)", description = "Primary Addressable Object text" }
+pao_start_number = { type = "str(10)" }
+pao_start_suffix = { type = "str(5)" }
+pao_end_number = { type = "str(10)" }
+pao_end_suffix = { type = "str(5)" }
+sao_text = { type = "str(100)", description = "Secondary Addressable Object text" }
+sao_start_number = { type = "str(10)" }
+sao_start_suffix = { type = "str(5)" }
+sao_end_number = { type = "str(10)" }
+sao_end_suffix = { type = "str(5)" }
+street_description = { type = "str(100)" }
+locality_name = { type = "str(100)" }
+town_name = { type = "str(100)" }
+administrative_area = { type = "str(100)" }
+postcode_locator = { type = "str(10)" }
+logical_status = { type = "str(1)" }
+classification_code = { type = "str(10)" }
+local_custodian_code = { type = "str(4)" }
+
+# DSL generation hints
+[integration_hints]
+on_address_entered = "find to validate and standardize address"
+on_postcode_entered = "postcode to suggest matching addresses"
+on_signup_form = "find for address autocomplete"
+on_delivery_address_needed = "postcode lookup with DPA for Royal Mail compatibility"
+on_location_detected = "nearest for reverse geocoding"
+
+[notes]
+format = "Supports GeoJSON and XML response formats"
+coordinates = "Jersey/Guernsey coordinates return 0.0 (outside British National Grid)"
+pagination = "Results paginated, use offset parameter"
+subscription = "Requires OS Data Hub subscription or trial"
