@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__dazzle",
+      "Bash(dazzle:*)",
+      "Bash(dazzle check:*)",
+      "Bash(dazzle dev:*)",
+      "Bash(dazzle build:*)",
+      "Bash(dazzle test:*)",
+      "Bash(dazzle show:*)",
+      "Bash(dazzle eject:*)",
+      "Bash(dazzle db:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)"
+    ]
+  }
+}

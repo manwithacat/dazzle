@@ -2,51 +2,25 @@
 
 This is a Dazzle project for generating full-stack applications from DSL specifications.
 
-## MCP Server Integration
+## MCP Tools Available
 
-This project includes DAZZLE MCP server integration for enhanced tooling.
+You have access to the DAZZLE MCP server with these tools (pre-approved in settings.json):
 
-### Automatic Setup
-If DAZZLE was installed via Homebrew or pip, the MCP server should be automatically available.
+- `mcp__dazzle__validate_dsl` - Validate DSL files
+- `mcp__dazzle__list_modules` - List project modules
+- `mcp__dazzle__inspect_entity` - Inspect entity definitions
+- `mcp__dazzle__inspect_surface` - Inspect surface definitions
+- `mcp__dazzle__lookup_concept` - Look up DSL concepts and patterns
+- `mcp__dazzle__find_examples` - Find example code
+- `mcp__dazzle__get_workflow_guide` - Get step-by-step guides
 
-### Manual Setup
-If the MCP tools are not available, you can register the server:
-
-```bash
-dazzle mcp-setup
-```
-
-Or add this configuration manually to your Claude Code config (`~/.claude/mcp_servers.json`):
-
-```json
-{
-  "mcpServers": {
-    "dazzle": {
-      "command": "dazzle",
-      "args": ["mcp", "--working-dir", "${projectDir}"]
-    }
-  }
-}
-```
-
-### Available MCP Tools
-You should have access to:
-- `validate_dsl` - Validate all DSL files
-- `inspect_entity <name>` - Inspect entity definitions
-- `inspect_surface <name>` - Inspect surface definitions
-- `analyze_patterns` - Detect CRUD and integration patterns
-- `lint_project` - Run extended validation
-- `list_modules` - List all modules
-- `lookup_concept <term>` - Look up DSL concepts (try: enum, ref, archetype, reserved_keywords)
-- `find_examples` - Find example projects
-
-Try asking: "What DAZZLE tools do you have access to?"
+Use MCP tools for quick lookups. They're faster than running CLI commands.
 
 ## Your Primary Tasks
 
 1. **Help write DSL specifications** in the `dsl/` directory
-2. **Validate DSL** using `dazzle validate`
-3. **Run the application** using `dazzle dnr serve`
+2. **Validate DSL** using `dazzle check` or MCP tools
+3. **Run the application** using `dazzle dev`
 4. **Fix validation errors** by editing `.dsl` files
 5. **Answer questions** about Dazzle DSL syntax and capabilities
 
@@ -78,8 +52,8 @@ If the user has requirements in SPEC.md or describes them to you:
 
 ### Running the Application
 ```bash
-dazzle dnr serve              # Run with Docker (default)
-dazzle dnr serve --local      # Run without Docker
+dazzle dev                    # Run locally with hot reload (default)
+dazzle dev --docker           # Run in Docker containers
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs
@@ -155,7 +129,7 @@ Some words are reserved and cannot be used as enum values:
 - Use `mail` instead of `email` for channel enums
 - Use `sent` instead of `submitted`
 
-Use `lookup_concept reserved_keywords` for the full list.
+Use MCP tool: `mcp__dazzle__lookup_concept` with term "reserved_keywords" for the full list.
 
 ## Important Reminders
 
