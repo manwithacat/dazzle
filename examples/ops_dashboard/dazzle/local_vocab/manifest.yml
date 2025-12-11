@@ -1,0 +1,338 @@
+# Ops Dashboard - Local Vocabulary
+# Domain-specific patterns for operations monitoring and alerting
+#
+# Usage: These patterns can be used with @use directives in DSL files
+# Example: @use system_status_enum()
+
+version: 1.0.0
+app_id: ops_dashboard
+dsl_core_version: 1.0.0
+
+entries:
+  # ========================================================================
+  # COMMON DATA PATTERNS
+  # ========================================================================
+
+  - id: audit_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Standard audit timestamp fields (created_at, updated_at)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        created_at: datetime auto_add
+        updated_at: datetime auto_update
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - audit
+      - timestamp
+      - common
+
+  # ========================================================================
+  # MONITORING-SPECIFIC PATTERNS
+  # ========================================================================
+
+  - id: system_status_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: System health status enum (healthy, degraded, critical, offline)
+    parameters:
+      - name: default_value
+        type: string
+        required: false
+        default: healthy
+        description: Default status value
+    expansion:
+      language: dazzle-core-dsl
+      body: "status: enum[healthy,degraded,critical,offline]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - status
+      - monitoring
+      - ops
+
+  - id: service_type_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Service type classification (web, api, database, cache, queue)
+    parameters:
+      - name: default_value
+        type: string
+        required: false
+        default: web
+        description: Default service type
+    expansion:
+      language: dazzle-core-dsl
+      body: "service_type: enum[web,api,database,cache,queue]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - service
+      - monitoring
+
+  - id: severity_enum
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Alert severity levels (low, medium, high, critical)
+    parameters:
+      - name: default_value
+        type: string
+        required: false
+        default: low
+        description: Default severity value
+    expansion:
+      language: dazzle-core-dsl
+      body: "severity: enum[low,medium,high,critical]={{ default_value }}"
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - enum
+      - severity
+      - alerting
+      - ops
+
+  - id: metric_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Common performance metric fields (response_time, error_rate, cpu, memory)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        response_time_ms: int
+        error_rate: decimal(5,2)
+        cpu_usage: decimal(5,2)
+        memory_usage: decimal(5,2)
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - metrics
+      - performance
+      - monitoring
+      - ops
+
+  - id: acknowledgment_fields
+    kind: macro
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Alert acknowledgment tracking (acknowledged flag and by whom)
+    parameters: []
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        acknowledged: bool = false
+        acknowledged_by: str(200)
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - acknowledgment
+      - alerting
+      - tracking
+      - ops
+
+  # ========================================================================
+  # ENTITY TEMPLATES
+  # ========================================================================
+
+  - id: system_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Monitored system entity with status and metrics
+    parameters:
+      - name: entity_name
+        type: string
+        required: false
+        default: System
+        description: Name of the system entity
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          name: str(200) required
+          service_type: enum[web,api,database,cache,queue]=web
+          status: enum[healthy,degraded,critical,offline]=healthy
+          response_time_ms: int
+          error_rate: decimal(5,2)
+          cpu_usage: decimal(5,2)
+          memory_usage: decimal(5,2)
+          last_check: datetime auto_update
+          created_at: datetime auto_add
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - entity
+      - system
+      - monitoring
+      - template
+
+  - id: alert_entity
+    kind: pattern
+    scope: data
+    dsl_core_version: 1.0.0
+    description: Alert entity for system monitoring notifications
+    parameters:
+      - name: entity_name
+        type: string
+        required: false
+        default: Alert
+        description: Name of the alert entity
+      - name: system_entity
+        type: string
+        required: false
+        default: System
+        description: Name of the monitored system entity
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        entity {{ entity_name }} "{{ entity_name }}":
+          id: uuid pk
+          system: ref {{ system_entity }} required
+          severity: enum[low,medium,high,critical]=low
+          message: str(500) required
+          triggered_at: datetime auto_add
+          acknowledged: bool = false
+          acknowledged_by: str(200)
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - entity
+      - alert
+      - monitoring
+      - template
+
+  # ========================================================================
+  # UI PATTERNS
+  # ========================================================================
+
+  - id: crud_surface_set
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Complete CRUD surface set (list, detail, create, edit)
+    parameters:
+      - name: entity_name
+        type: string
+        required: true
+        description: Name of the entity
+      - name: title_field
+        type: string
+        required: true
+        description: Primary display field
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        surface {{ entity_name | lower }}_list "{{ entity_name }} List":
+          uses entity {{ entity_name }}
+          mode: list
+          section main "{{ entity_name }}s":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_detail "{{ entity_name }} Detail":
+          uses entity {{ entity_name }}
+          mode: view
+          section main "{{ entity_name }} Details":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_create "Create {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: create
+          section main "New {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+
+        surface {{ entity_name | lower }}_edit "Edit {{ entity_name }}":
+          uses entity {{ entity_name }}
+          mode: edit
+          section main "Edit {{ entity_name }}":
+            field {{ title_field }} "{{ title_field | title }}"
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - crud
+      - ui
+      - pattern
+      - common
+
+  - id: command_center_workspace
+    kind: pattern
+    scope: ui
+    dsl_core_version: 1.0.0
+    description: Command center workspace with alert feed, system status, and metrics
+    parameters:
+      - name: workspace_name
+        type: string
+        required: false
+        default: command_center
+        description: Name of the workspace
+    expansion:
+      language: dazzle-core-dsl
+      body: |
+        workspace {{ workspace_name }} "Command Center":
+          purpose: "Real-time operations monitoring and incident response"
+          stage: "command_center"
+
+          active_alerts:
+            source: Alert
+            filter: acknowledged = false
+            sort: severity desc, triggered_at desc
+            limit: 20
+
+          system_status:
+            source: System
+            sort: status asc, name asc
+
+          health_summary:
+            source: System
+            aggregate:
+              total_systems: count(System)
+              healthy_count: count(System WHERE status = 'healthy')
+              critical_count: count(System WHERE status = 'critical')
+              avg_response_time: avg(response_time_ms)
+    metadata:
+      stability: stable
+      source: user
+      created_at: "2025-12-11T00:00:00Z"
+      usage_count: 0
+    tags:
+      - workspace
+      - command_center
+      - monitoring
+      - ui
