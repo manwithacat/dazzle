@@ -261,27 +261,86 @@ def build_project_json(
         path: Project path
         output: Output directory
         docker: Generate Dockerfile
-        graphql: Include GraphQL
+        graphql: Include GraphQL (not yet implemented)
 
     Returns:
         Dict with build results
     """
-    # Import the build functionality
-    from dazzle.cli.dnr_impl.build import build_production  # type: ignore[attr-defined]
+    from dazzle.core import load_project_with_manifest
+    from dazzle.cli.dnr_impl.docker import (
+        generate_dockerfile,
+        generate_docker_compose,
+        generate_env_template,
+        generate_production_main,
+        generate_requirements,
+    )
 
     project_path = Path(path) if path else Path.cwd()
     output_path = Path(output)
 
     try:
-        result = build_production(
-            project_path=project_path,
-            output_path=output_path,
-            include_docker=docker,
-            include_graphql=graphql,
-        )
+        # Load project
+        app_spec, manifest = load_project_with_manifest(project_path)
+        app_name = manifest.name if manifest else app_spec.name
+
+        # Create output directory
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        files_generated: list[str] = []
+
+        # Generate backend spec
+        try:
+            from dazzle_dnr_back.converters import convert_appspec_to_backend
+
+            backend_spec = convert_appspec_to_backend(app_spec)
+            backend_dir = output_path / "backend"
+            backend_dir.mkdir(exist_ok=True)
+            spec_file = backend_dir / "backend-spec.json"
+            spec_file.write_text(backend_spec.model_dump_json(indent=2))
+            files_generated.append("backend/backend-spec.json")
+        except ImportError:
+            pass  # DNR backend not installed
+
+        # Generate frontend
+        try:
+            from dazzle_dnr_ui.converters import convert_appspec_to_ui
+            from dazzle_dnr_ui.runtime import generate_vite_app
+
+            shell_config = manifest.shell if manifest else None
+            ui_spec = convert_appspec_to_ui(app_spec, shell_config=shell_config)
+            frontend_dir = output_path / "frontend"
+            frontend_files = generate_vite_app(ui_spec, str(frontend_dir))
+            files_generated.extend([f"frontend/{f}" for f in frontend_files])
+        except ImportError:
+            pass  # DNR UI not installed
+
+        # Generate main.py
+        main_content = generate_production_main(app_name, include_frontend=True)
+        (output_path / "main.py").write_text(main_content)
+        files_generated.append("main.py")
+
+        # Generate requirements.txt
+        requirements = generate_requirements()
+        (output_path / "requirements.txt").write_text(requirements)
+        files_generated.append("requirements.txt")
+
+        # Generate Docker files
+        if docker:
+            dockerfile = generate_dockerfile(app_name, include_frontend=True)
+            (output_path / "Dockerfile").write_text(dockerfile)
+            files_generated.append("Dockerfile")
+
+            compose = generate_docker_compose(app_name)
+            (output_path / "docker-compose.yml").write_text(compose)
+            files_generated.append("docker-compose.yml")
+
+            env = generate_env_template(app_name)
+            (output_path / ".env.example").write_text(env)
+            files_generated.append(".env.example")
+
         return {
             "output_path": str(output_path),
-            "files": result.get("files", []),
+            "files": files_generated,
             "docker": docker,
         }
     except Exception as e:
