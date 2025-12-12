@@ -569,7 +569,7 @@ jobs:
           [project]
           name = "test"
           version = "0.1.0"
-          root = "dsl"
+          root = "test"
           EOF
 
           cat > test-project/dsl/app.dsl << 'EOF'
