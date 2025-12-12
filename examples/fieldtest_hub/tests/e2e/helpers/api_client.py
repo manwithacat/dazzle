@@ -22,6 +22,20 @@ class APIClient:
         self.base_url = base_url.rstrip("/")
         self.client = httpx.Client(base_url=self.base_url, timeout=30.0)
 
+    def _pluralize_entity(self, entity: str) -> str:
+        """Convert entity name to plural API path.
+
+        The DNR uses plural endpoints (e.g., /devices, /testers, /issuereports).
+
+        Args:
+            entity: Entity name (e.g., "Device", "IssueReport")
+
+        Returns:
+            Pluralized lowercase path (e.g., "devices", "issuereports")
+        """
+        # Simple pluralization - add 's' to lowercase entity name
+        return f"{entity.lower()}s"
+
     def close(self) -> None:
         """Close the HTTP client."""
         self.client.close()
@@ -36,7 +50,8 @@ class APIClient:
         Returns:
             Created record with ID
         """
-        response = self.client.post(f"/{entity.lower()}", json=data)
+        path = self._pluralize_entity(entity)
+        response = self.client.post(f"/{path}", json=data)
         response.raise_for_status()
         return response.json()
 
@@ -50,7 +65,8 @@ class APIClient:
         Returns:
             Record data
         """
-        response = self.client.get(f"/{entity.lower()}/{entity_id}")
+        path = self._pluralize_entity(entity)
+        response = self.client.get(f"/{path}/{entity_id}")
         response.raise_for_status()
         return response.json()
 
@@ -63,9 +79,13 @@ class APIClient:
         Returns:
             List of records
         """
-        response = self.client.get(f"/{entity.lower()}")
+        path = self._pluralize_entity(entity)
+        response = self.client.get(f"/{path}")
         response.raise_for_status()
         return response.json()
+
+    # Alias for get_all
+    list = get_all
 
     def update(self, entity: str, entity_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Update an entity record.
@@ -78,7 +98,8 @@ class APIClient:
         Returns:
             Updated record
         """
-        response = self.client.put(f"/{entity.lower()}/{entity_id}", json=data)
+        path = self._pluralize_entity(entity)
+        response = self.client.put(f"/{path}/{entity_id}", json=data)
         response.raise_for_status()
         return response.json()
 
@@ -93,7 +114,8 @@ class APIClient:
         Returns:
             Updated record
         """
-        response = self.client.patch(f"/{entity.lower()}/{entity_id}", json=data)
+        path = self._pluralize_entity(entity)
+        response = self.client.patch(f"/{path}/{entity_id}", json=data)
         response.raise_for_status()
         return response.json()
 
@@ -104,7 +126,8 @@ class APIClient:
             entity: Entity name
             entity_id: Record ID
         """
-        response = self.client.delete(f"/{entity.lower()}/{entity_id}")
+        path = self._pluralize_entity(entity)
+        response = self.client.delete(f"/{path}/{entity_id}")
         response.raise_for_status()
 
     def count(self, entity: str) -> int:

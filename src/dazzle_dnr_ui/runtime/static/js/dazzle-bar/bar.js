@@ -375,6 +375,8 @@ const barStyles = `
 function createBarElement() {
   const bar = document.createElement('div');
   bar.id = BAR_ID;
+  // Add semantic attribute for E2E testing
+  bar.setAttribute('data-dazzle-component', 'dazzle-bar');
 
   bar.innerHTML = `
     <div class="dazzle-logo">
@@ -386,14 +388,14 @@ function createBarElement() {
 
     <div class="dazzle-section">
       <span class="dazzle-label">Persona</span>
-      <select class="dazzle-select" id="dazzle-persona-select">
+      <select class="dazzle-select" id="dazzle-persona-select" data-dazzle-control="persona-select">
         <option value="">Select persona...</option>
       </select>
     </div>
 
     <div class="dazzle-section">
       <span class="dazzle-label">Scenario</span>
-      <select class="dazzle-select" id="dazzle-scenario-select">
+      <select class="dazzle-select" id="dazzle-scenario-select" data-dazzle-control="scenario-select">
         <option value="">Select scenario...</option>
       </select>
     </div>
@@ -401,10 +403,10 @@ function createBarElement() {
     <div class="dazzle-divider"></div>
 
     <div class="dazzle-section">
-      <button class="dazzle-btn danger" id="dazzle-reset-btn" title="Reset all data">
+      <button class="dazzle-btn danger" id="dazzle-reset-btn" title="Reset all data" data-dazzle-action="reset" data-dazzle-action-role="destructive">
         <span class="dazzle-btn-icon">&#x21bb;</span><span class="dazzle-btn-text">Reset</span>
       </button>
-      <button class="dazzle-btn" id="dazzle-regenerate-btn" title="Regenerate demo data">
+      <button class="dazzle-btn" id="dazzle-regenerate-btn" title="Regenerate demo data" data-dazzle-action="regenerate" data-dazzle-action-role="secondary">
         <span class="dazzle-btn-icon">&#x2699;</span><span class="dazzle-btn-text">Regen</span>
       </button>
     </div>
@@ -412,22 +414,22 @@ function createBarElement() {
     <div class="dazzle-spacer"></div>
 
     <div class="dazzle-section">
-      <button class="dazzle-btn primary" id="dazzle-feedback-btn">
+      <button class="dazzle-btn primary" id="dazzle-feedback-btn" data-dazzle-action="feedback" data-dazzle-action-role="primary">
         <span class="dazzle-btn-icon">&#x1F4AC;</span><span class="dazzle-btn-text">Feedback</span>
       </button>
-      <button class="dazzle-btn" id="dazzle-export-btn" title="Export session to GitHub issue">
+      <button class="dazzle-btn" id="dazzle-export-btn" title="Export session to GitHub issue" data-dazzle-action="export" data-dazzle-action-role="secondary">
         <span class="dazzle-btn-icon">&#x1F4E4;</span><span class="dazzle-btn-text">Export</span>
       </button>
     </div>
 
     <div class="dazzle-divider"></div>
 
-    <div class="dazzle-status">
+    <div class="dazzle-status" data-dazzle-control="status">
       <span class="dazzle-status-dot" id="dazzle-status-dot"></span>
       <span class="dazzle-status-text" id="dazzle-status-text">Dev Mode</span>
     </div>
 
-    <button class="dazzle-toggle" id="dazzle-hide-btn" title="Hide bar (Cmd+Shift+D)">
+    <button class="dazzle-toggle" id="dazzle-hide-btn" title="Hide bar (Cmd+Shift+D)" data-dazzle-action="hide-bar">
       &#x2715;
     </button>
   `;

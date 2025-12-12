@@ -48,10 +48,12 @@ function renderElementNode(node, context) {
 
   // Pass dazzle semantic context to components
   // This enables the DOM contract (data-dazzle-* attributes)
+  // Note: 'view' should only be on the root element, not propagated to children
   if (context.dazzle || node.dazzle) {
+    const { view: _contextView, ...contextDazzleWithoutView } = context.dazzle || {};
     resolvedProps.dazzle = {
-      ...context.dazzle,
-      ...node.dazzle,
+      ...contextDazzleWithoutView,
+      ...node.dazzle, // node.dazzle can override with its own view if explicitly set
     };
   }
 

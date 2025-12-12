@@ -36,21 +36,21 @@ class TestDazzleBarVisibility:
         """Dazzle Bar should have persona selection dropdown."""
         app.goto("/")
 
-        persona_select = app.page.locator('[data-dazzle-component="persona-select"]')
+        persona_select = app.page.locator('[data-dazzle-control="persona-select"]')
         assert persona_select.count() > 0, "Persona selector not found"
 
     def test_dazzle_bar_has_reset_button(self, app: FieldTestHubPage):
         """Dazzle Bar should have reset data button."""
         app.goto("/")
 
-        reset_btn = app.page.locator('[data-dazzle-action="reset-data"]')
+        reset_btn = app.page.locator('[data-dazzle-action="reset"]')
         assert reset_btn.count() > 0, "Reset data button not found"
 
     def test_dazzle_bar_has_regenerate_button(self, app: FieldTestHubPage):
         """Dazzle Bar should have regenerate data button."""
         app.goto("/")
 
-        regen_btn = app.page.locator('[data-dazzle-action="regenerate-data"]')
+        regen_btn = app.page.locator('[data-dazzle-action="regenerate"]')
         assert regen_btn.count() > 0, "Regenerate data button not found"
 
 
@@ -68,7 +68,7 @@ class TestPersonaSwitching:
         """All three personas should be available in dropdown."""
         app.goto("/")
 
-        persona_select = app.page.locator('[data-dazzle-component="persona-select"]')
+        persona_select = app.page.locator('[data-dazzle-control="persona-select"]')
         options = persona_select.locator("option")
 
         # Should have at least 3 options (engineer, tester, manager)
@@ -161,7 +161,7 @@ class TestDataReset:
         """Can trigger reset via Dazzle Bar button."""
         app.goto("/")
 
-        reset_btn = app.page.locator('[data-dazzle-action="reset-data"]')
+        reset_btn = app.page.locator('[data-dazzle-action="reset"]')
         if reset_btn.count() > 0:
             reset_btn.click()
             # Wait for confirmation or completion
@@ -205,7 +205,7 @@ class TestDataRegeneration:
         """Can trigger regenerate via Dazzle Bar button."""
         app.goto("/")
 
-        regen_btn = app.page.locator('[data-dazzle-action="regenerate-data"]')
+        regen_btn = app.page.locator('[data-dazzle-action="regenerate"]')
         if regen_btn.count() > 0:
             regen_btn.click()
             # Wait for confirmation or completion

@@ -85,6 +85,9 @@ export function withDazzleAttrs(element, attrs) {
   if (!attrs) return element;
 
   const attrMap = {
+    // Components
+    component: 'component',
+    control: 'control',
     // Views
     view: 'view',
     // Entity context

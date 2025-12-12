@@ -107,6 +107,16 @@ markers = [
     "integration: Integration tests",
     "slow: Slow tests (subprocess spawning, full validation)",
     "e2e: End-to-end tests for DNR runtime",
+    "story: User story tests (FieldTest Hub)",
+    "access_control: Permission/access control tests (FieldTest Hub)",
+    "state_machine: State transition tests (FieldTest Hub)",
+    "invariant: Business rule/invariant tests (FieldTest Hub)",
+    "dazzle_bar: Dazzle Bar feature tests (FieldTest Hub)",
+    "computed: Computed field tests (FieldTest Hub)",
+    "personas: Persona-related tests (FieldTest Hub)",
+    "data_management: Data reset/regenerate tests (FieldTest Hub)",
+    "state: State persistence tests (FieldTest Hub)",
+    "display: Display/UI element tests (FieldTest Hub)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

@@ -111,35 +111,79 @@ class FieldTestHubPage:
     def view(self, view_name: str) -> Locator:
         """Get a view container by name.
 
+        Note: Uses form[data-dazzle-view] to target forms specifically,
+        falling back to the first element with the view attribute.
+
         Args:
             view_name: View name
 
         Returns:
             Locator for the view
         """
-        return self.page.locator(f'[data-dazzle-view="{view_name}"]')
+        # Target forms specifically (most common case for create/edit views)
+        # or use :first-child pattern to get the container, not children
+        return self.page.locator(
+            f'form[data-dazzle-view="{view_name}"], '
+            f'div[data-dazzle-view="{view_name}"]'
+        ).first
 
-    def field(self, field_name: str) -> Locator:
+    def field(self, field_name: str, entity: str | None = None) -> Locator:
         """Get a form field by name.
 
+        The DNR emits field names in format "Entity.field" (e.g., "Device.name").
+        This method supports both:
+        - Simple names: "name" -> matches "[data-dazzle-field$='.name']" or exact
+        - Full names: "Device.name" -> exact match
+
         Args:
-            field_name: Field name
+            field_name: Field name (e.g., "name", "Device.name")
+            entity: Optional entity name to construct full field path
 
         Returns:
             Locator for the field input
         """
-        return self.page.locator(f'[data-dazzle-field="{field_name}"]')
+        if entity:
+            # Build full field path
+            full_field = f"{entity}.{field_name}"
+            return self.page.locator(f'[data-dazzle-field="{full_field}"]')
+        elif "." in field_name:
+            # Full field path provided
+            return self.page.locator(f'[data-dazzle-field="{field_name}"]')
+        else:
+            # Simple field name - match suffix (e.g., ".name") or exact match
+            # This handles both "Entity.name" and standalone "name"
+            return self.page.locator(
+                f'[data-dazzle-field$=".{field_name}"], [data-dazzle-field="{field_name}"]'
+            )
 
-    def action(self, action_name: str) -> Locator:
+    def action(self, action_name: str, entity: str | None = None) -> Locator:
         """Get an action button by name.
 
+        The DNR emits action names in format "Entity.action" (e.g., "Device.create").
+        This method supports both:
+        - Simple names: "create" -> matches "[data-dazzle-action$='.create']" or exact
+        - Full names: "Device.create" -> exact match
+
         Args:
-            action_name: Action name (e.g., "create", "save", "delete")
+            action_name: Action name (e.g., "create", "Device.create")
+            entity: Optional entity name to construct full action
 
         Returns:
             Locator for the action button
         """
-        return self.page.locator(f'[data-dazzle-action="{action_name}"]')
+        if entity:
+            # Build full action name
+            full_action = f"{entity}.{action_name}"
+            return self.page.locator(f'[data-dazzle-action="{full_action}"]')
+        elif "." in action_name:
+            # Full action name provided
+            return self.page.locator(f'[data-dazzle-action="{action_name}"]')
+        else:
+            # Simple action name - match suffix (e.g., ".create") or exact match
+            # This handles both "Entity.create" and standalone "create"
+            return self.page.locator(
+                f'[data-dazzle-action$=".{action_name}"], [data-dazzle-action="{action_name}"]'
+            )
 
     def row(self, entity: str, entity_id: str | None = None) -> Locator:
         """Get a table row.
@@ -404,17 +448,17 @@ class FieldTestHubPage:
         Args:
             persona_id: Persona identifier
         """
-        self.page.locator('[data-dazzle-component="persona-select"]').select_option(persona_id)
+        self.page.locator('[data-dazzle-control="persona-select"]').select_option(persona_id)
         self.wait_for_navigation()
 
     def click_reset_data(self) -> None:
         """Click the reset data button in the Dazzle Bar."""
-        self.page.locator('[data-dazzle-action="reset-data"]').click()
+        self.page.locator('[data-dazzle-action="reset"]').click()
         self.wait_for_navigation()
 
     def click_regenerate_data(self) -> None:
         """Click the regenerate data button in the Dazzle Bar."""
-        self.page.locator('[data-dazzle-action="regenerate-data"]').click()
+        self.page.locator('[data-dazzle-action="regenerate"]').click()
         self.wait_for_navigation()
 
     # =========================================================================
