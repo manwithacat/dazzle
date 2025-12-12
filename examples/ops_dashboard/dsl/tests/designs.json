@@ -1,0 +1,230 @@
+{
+  "version": "1.0",
+  "project_name": null,
+  "created_at": "2025-12-12T21:43:06.755805",
+  "updated_at": "2025-12-12T21:43:06.755803",
+  "designs": [
+    {
+      "test_id": "TD-001",
+      "title": "Operations Engineer can access Command Center workspace",
+      "description": "Test that Operations Engineer can access and use the command_center workspace",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "data": null,
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "navigate_to",
+          "target": "command_center",
+          "data": null,
+          "rationale": "Go to Command Center workspace"
+        },
+        {
+          "action": "assert_visible",
+          "target": "workspace:command_center",
+          "data": null,
+          "rationale": "Verify workspace is accessible"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace command_center loads successfully",
+        "All workspace regions are visible"
+      ],
+      "entities": [],
+      "surfaces": [
+        "active_alerts",
+        "system_status",
+        "health_summary"
+      ],
+      "tags": [
+        "persona",
+        "ops_engineer",
+        "workspace"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.755667",
+      "updated_at": "2025-12-12T21:43:06.755669"
+    },
+    {
+      "test_id": "SM_SYSTEM_001",
+      "title": "State machine transitions for System",
+      "description": "Verify all valid state transitions for System",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "status": "healthy"
+          },
+          "rationale": "Create System in 'healthy' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:System",
+          "data": {
+            "from_state": "healthy",
+            "to_state": "degraded"
+          },
+          "rationale": "Transition from 'healthy' to 'degraded'"
+        },
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "status": "healthy"
+          },
+          "rationale": "Create System in 'healthy' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:System",
+          "data": {
+            "from_state": "healthy",
+            "to_state": "critical"
+          },
+          "rationale": "Transition from 'healthy' to 'critical'"
+        },
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "status": "degraded"
+          },
+          "rationale": "Create System in 'degraded' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:System",
+          "data": {
+            "from_state": "degraded",
+            "to_state": "healthy"
+          },
+          "rationale": "Transition from 'degraded' to 'healthy'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.755681",
+      "updated_at": "2025-12-12T21:43:06.755682"
+    },
+    {
+      "test_id": "ACL_SYSTEM_001",
+      "title": "System access control",
+      "description": "Test access control for System",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "system-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.755690",
+      "updated_at": "2025-12-12T21:43:06.755690"
+    },
+    {
+      "test_id": "ACL_ALERT_001",
+      "title": "Alert access control",
+      "description": "Test access control for Alert",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "alert-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Alert"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.755697",
+      "updated_at": "2025-12-12T21:43:06.755698"
+    }
+  ]
+}

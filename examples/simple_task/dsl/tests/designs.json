@@ -1,0 +1,553 @@
+{
+  "version": "1.0",
+  "project_name": null,
+  "created_at": "2025-12-12T21:41:14.097561",
+  "updated_at": "2025-12-12T21:41:14.097558",
+  "designs": [
+    {
+      "test_id": "TD-001",
+      "title": "Administrator can manage all tasks",
+      "description": "Test that Administrator persona can achieve goal: Manage all tasks",
+      "persona": "admin",
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "data": null,
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "navigate_to",
+          "target": "metrics",
+          "data": null,
+          "rationale": "Navigate to primary workspace"
+        },
+        {
+          "action": "click",
+          "target": "action",
+          "data": {
+            "from_goal": "Manage all tasks"
+          },
+          "rationale": "Interact to achieve goal"
+        }
+      ],
+      "expected_outcomes": [
+        "Goal achieved: Manage all tasks",
+        "No errors or permission denials"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "metrics",
+        "team_metrics"
+      ],
+      "tags": [
+        "persona",
+        "admin",
+        "goal"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:40:37.963089",
+      "updated_at": "2025-12-12T21:40:37.963317"
+    },
+    {
+      "test_id": "TD-002",
+      "title": "Administrator can view analytics",
+      "description": "Test that Administrator persona can achieve goal: View analytics",
+      "persona": "admin",
+      "scenario": null,
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "data": null,
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "navigate_to",
+          "target": "admin_dashboard",
+          "data": null,
+          "rationale": "Navigate to Admin Dashboard"
+        },
+        {
+          "action": "assert_visible",
+          "target": "workspace:admin_dashboard",
+          "data": null,
+          "rationale": "Verify analytics visible"
+        }
+      ],
+      "expected_outcomes": [
+        "Analytics dashboard loads successfully",
+        "Metrics are visible"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "metrics",
+        "team_metrics"
+      ],
+      "tags": [
+        "persona",
+        "admin",
+        "analytics"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:40:37.963336",
+      "updated_at": "2025-12-12T21:40:37.963337"
+    },
+    {
+      "test_id": "TD-003",
+      "title": "Team Manager can assign tasks",
+      "description": "Test that Team Manager persona can achieve goal: Assign tasks to team",
+      "persona": "manager",
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "data": null,
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "navigate_to",
+          "target": "task_board",
+          "data": null,
+          "rationale": "Navigate to task board"
+        },
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "New Team Task",
+            "assignee": "member"
+          },
+          "rationale": "Create and assign task"
+        }
+      ],
+      "expected_outcomes": [
+        "Task created successfully",
+        "Task assigned to team member"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "task_board"
+      ],
+      "tags": [
+        "persona",
+        "manager",
+        "goal"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:40:37.963347",
+      "updated_at": "2025-12-12T21:40:37.963347"
+    },
+    {
+      "test_id": "TD-004",
+      "title": "Team Member can complete tasks",
+      "description": "Test that Team Member persona can achieve goal: Complete assigned tasks",
+      "persona": "member",
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "data": null,
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "navigate_to",
+          "target": "my_tasks",
+          "data": null,
+          "rationale": "Navigate to My Tasks view"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Task",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "review"
+          },
+          "rationale": "Mark task for review"
+        }
+      ],
+      "expected_outcomes": [
+        "Task status updated to review",
+        "Success message displayed"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "my_tasks"
+      ],
+      "tags": [
+        "persona",
+        "member",
+        "goal"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:40:37.963355",
+      "updated_at": "2025-12-12T21:40:37.963355"
+    },
+    {
+      "test_id": "TD-005",
+      "title": "Team Member can update task status",
+      "description": "Test that Team Member persona can achieve goal: Update task status",
+      "persona": "member",
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "data": null,
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "navigate_to",
+          "target": "my_tasks",
+          "data": null,
+          "rationale": "Navigate to My Tasks view"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Task",
+          "data": {
+            "from_state": "todo",
+            "to_state": "in_progress"
+          },
+          "rationale": "Start working on task"
+        }
+      ],
+      "expected_outcomes": [
+        "Task status updated to in_progress",
+        "Task appears in In Progress column"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "my_tasks"
+      ],
+      "tags": [
+        "persona",
+        "member",
+        "status"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:40:37.963364",
+      "updated_at": "2025-12-12T21:40:37.963365"
+    },
+    {
+      "test_id": "SCENARIO_EMPTY_STATE_001",
+      "title": "Empty State onboarding flow",
+      "description": "Test fresh install with no data - verify onboarding flows work",
+      "persona": null,
+      "scenario": "Empty State",
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "task_board",
+          "data": null,
+          "rationale": "Navigate to main task board"
+        },
+        {
+          "action": "assert_visible",
+          "target": "empty-state-message",
+          "data": null,
+          "rationale": "Verify empty state UI shown"
+        },
+        {
+          "action": "click",
+          "target": "create-first-task",
+          "data": null,
+          "rationale": "Click onboarding CTA"
+        },
+        {
+          "action": "fill",
+          "target": "form:Task",
+          "data": {
+            "title": "First Task"
+          },
+          "rationale": "Fill task creation form"
+        },
+        {
+          "action": "click",
+          "target": "submit",
+          "data": null,
+          "rationale": "Submit new task"
+        },
+        {
+          "action": "assert_not_visible",
+          "target": "empty-state-message",
+          "data": null,
+          "rationale": "Empty state should disappear"
+        }
+      ],
+      "expected_outcomes": [
+        "Empty state shown initially",
+        "Task created successfully",
+        "Empty state replaced with task list"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "task_board"
+      ],
+      "tags": [
+        "scenario",
+        "onboarding",
+        "empty-state"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:41:14.097054",
+      "updated_at": "2025-12-12T21:41:14.097285"
+    },
+    {
+      "test_id": "SCENARIO_ACTIVE_SPRINT_001",
+      "title": "Active Sprint workflow",
+      "description": "Test mid-sprint with tasks in various states",
+      "persona": null,
+      "scenario": "Active Sprint",
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "data": null,
+          "rationale": "Login as manager to see sprint"
+        },
+        {
+          "action": "navigate_to",
+          "target": "task_board",
+          "data": null,
+          "rationale": "View task board"
+        },
+        {
+          "action": "assert_count",
+          "target": "task-card",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify tasks exist"
+        },
+        {
+          "action": "assert_visible",
+          "target": "column:todo",
+          "data": null,
+          "rationale": "Verify todo column"
+        },
+        {
+          "action": "assert_visible",
+          "target": "column:in_progress",
+          "data": null,
+          "rationale": "Verify in-progress column"
+        },
+        {
+          "action": "assert_visible",
+          "target": "column:done",
+          "data": null,
+          "rationale": "Verify done column"
+        }
+      ],
+      "expected_outcomes": [
+        "Tasks visible in multiple states",
+        "Sprint progress trackable",
+        "Board columns functional"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "task_board"
+      ],
+      "tags": [
+        "scenario",
+        "sprint",
+        "kanban"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:41:14.097308",
+      "updated_at": "2025-12-12T21:41:14.097309"
+    },
+    {
+      "test_id": "SCENARIO_OVERDUE_TASKS_001",
+      "title": "Overdue Tasks attention flow",
+      "description": "Test that overdue tasks are highlighted and actionable",
+      "persona": null,
+      "scenario": "Overdue Tasks",
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "data": null,
+          "rationale": "Login as admin to see all tasks"
+        },
+        {
+          "action": "navigate_to",
+          "target": "admin_dashboard",
+          "data": null,
+          "rationale": "View admin dashboard"
+        },
+        {
+          "action": "assert_visible",
+          "target": "overdue-tasks-widget",
+          "data": null,
+          "rationale": "Verify overdue widget visible"
+        },
+        {
+          "action": "assert_count",
+          "target": "overdue-task",
+          "data": {
+            "min": 1
+          },
+          "rationale": "At least one overdue task"
+        },
+        {
+          "action": "click",
+          "target": "overdue-task:first",
+          "data": null,
+          "rationale": "Click first overdue task"
+        },
+        {
+          "action": "assert_visible",
+          "target": "task-detail",
+          "data": null,
+          "rationale": "Task detail opens"
+        }
+      ],
+      "expected_outcomes": [
+        "Overdue tasks highlighted",
+        "Admin can see all overdue",
+        "Tasks are actionable"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [
+        "admin_dashboard",
+        "overdue_tasks"
+      ],
+      "tags": [
+        "scenario",
+        "overdue",
+        "alerts"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:41:14.097325",
+      "updated_at": "2025-12-12T21:41:14.097326"
+    },
+    {
+      "test_id": "CRUD_USER_001",
+      "title": "User management CRUD operations",
+      "description": "Test User entity CRUD from admin perspective",
+      "persona": "admin",
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "data": null,
+          "rationale": "Authenticate as admin"
+        },
+        {
+          "action": "navigate_to",
+          "target": "user-management",
+          "data": null,
+          "rationale": "Navigate to user management"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "name": "Test User",
+            "email": "test@example.com"
+          },
+          "rationale": "Create new user"
+        },
+        {
+          "action": "assert_visible",
+          "target": "user-row:Test User",
+          "data": null,
+          "rationale": "User appears in list"
+        },
+        {
+          "action": "update",
+          "target": "entity:User",
+          "data": {
+            "name": "Updated User"
+          },
+          "rationale": "Update user name"
+        },
+        {
+          "action": "assert_text",
+          "target": "user-row",
+          "data": {
+            "text": "Updated User"
+          },
+          "rationale": "Name updated"
+        }
+      ],
+      "expected_outcomes": [
+        "User created successfully",
+        "User can be updated",
+        "Changes persisted"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [
+        "user_management"
+      ],
+      "tags": [
+        "entity",
+        "user",
+        "crud",
+        "admin"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:41:14.097337",
+      "updated_at": "2025-12-12T21:41:14.097338"
+    }
+  ]
+}

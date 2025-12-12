@@ -1,0 +1,227 @@
+{
+  "version": "1.0",
+  "project_name": null,
+  "created_at": "2025-12-12T21:43:06.816693",
+  "updated_at": "2025-12-12T21:43:06.816691",
+  "designs": [
+    {
+      "test_id": "SM_TICKET_001",
+      "title": "State machine transitions for Ticket",
+      "description": "Verify all valid state transitions for Ticket",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "status": "open"
+          },
+          "rationale": "Create Ticket in 'open' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Ticket",
+          "data": {
+            "from_state": "open",
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition from 'open' to 'in_progress'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "status": "in_progress"
+          },
+          "rationale": "Create Ticket in 'in_progress' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Ticket",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "resolved"
+          },
+          "rationale": "Transition from 'in_progress' to 'resolved'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "status": "in_progress"
+          },
+          "rationale": "Create Ticket in 'in_progress' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Ticket",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "open"
+          },
+          "rationale": "Transition from 'in_progress' to 'open'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.816564",
+      "updated_at": "2025-12-12T21:43:06.816565"
+    },
+    {
+      "test_id": "ACL_TICKET_001",
+      "title": "Ticket access control",
+      "description": "Test access control for Ticket",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "ticket-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.816578",
+      "updated_at": "2025-12-12T21:43:06.816578"
+    },
+    {
+      "test_id": "ACL_COMMENT_001",
+      "title": "Comment access control",
+      "description": "Test access control for Comment",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "comment-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Comment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.816585",
+      "updated_at": "2025-12-12T21:43:06.816586"
+    },
+    {
+      "test_id": "CRUD_USER_001",
+      "title": "User CRUD operations",
+      "description": "Test CRUD operations for User entity",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "user-list",
+          "data": null,
+          "rationale": "Navigate to entity list"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {},
+          "rationale": "Create User"
+        },
+        {
+          "action": "assert_visible",
+          "target": "user-row",
+          "data": null,
+          "rationale": "Verify created"
+        }
+      ],
+      "expected_outcomes": [
+        "User CRUD operations work correctly"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "entity",
+        "crud",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.816592",
+      "updated_at": "2025-12-12T21:43:06.816593"
+    }
+  ]
+}

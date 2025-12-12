@@ -1,0 +1,756 @@
+{
+  "version": "1.0",
+  "project_name": null,
+  "created_at": "2025-12-12T21:43:06.690558",
+  "updated_at": "2025-12-12T21:43:06.690556",
+  "designs": [
+    {
+      "test_id": "TD-001",
+      "title": "Engineer can access Engineering Dashboard workspace",
+      "description": "Test that Engineer can access and use the engineering_dashboard workspace",
+      "persona": "engineer",
+      "scenario": null,
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "data": null,
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "navigate_to",
+          "target": "engineering_dashboard",
+          "data": null,
+          "rationale": "Go to Engineering Dashboard workspace"
+        },
+        {
+          "action": "assert_visible",
+          "target": "workspace:engineering_dashboard",
+          "data": null,
+          "rationale": "Verify workspace is accessible"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace engineering_dashboard loads successfully",
+        "All workspace regions are visible"
+      ],
+      "entities": [],
+      "surfaces": [
+        "critical_issues",
+        "recent_reports",
+        "active_devices",
+        "metrics"
+      ],
+      "tags": [
+        "persona",
+        "engineer",
+        "workspace"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690338",
+      "updated_at": "2025-12-12T21:43:06.690340"
+    },
+    {
+      "test_id": "TD-002",
+      "title": "Field Tester can access Engineering Dashboard workspace",
+      "description": "Test that Field Tester can access and use the engineering_dashboard workspace",
+      "persona": "tester",
+      "scenario": null,
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "data": null,
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "navigate_to",
+          "target": "engineering_dashboard",
+          "data": null,
+          "rationale": "Go to Engineering Dashboard workspace"
+        },
+        {
+          "action": "assert_visible",
+          "target": "workspace:engineering_dashboard",
+          "data": null,
+          "rationale": "Verify workspace is accessible"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace engineering_dashboard loads successfully",
+        "All workspace regions are visible"
+      ],
+      "entities": [],
+      "surfaces": [
+        "critical_issues",
+        "recent_reports",
+        "active_devices",
+        "metrics"
+      ],
+      "tags": [
+        "persona",
+        "tester",
+        "workspace"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690349",
+      "updated_at": "2025-12-12T21:43:06.690349"
+    },
+    {
+      "test_id": "TD-003",
+      "title": "Manager can access Engineering Dashboard workspace",
+      "description": "Test that Manager can access and use the engineering_dashboard workspace",
+      "persona": "manager",
+      "scenario": null,
+      "trigger": "page_load",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "data": null,
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "navigate_to",
+          "target": "engineering_dashboard",
+          "data": null,
+          "rationale": "Go to Engineering Dashboard workspace"
+        },
+        {
+          "action": "assert_visible",
+          "target": "workspace:engineering_dashboard",
+          "data": null,
+          "rationale": "Verify workspace is accessible"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace engineering_dashboard loads successfully",
+        "All workspace regions are visible"
+      ],
+      "entities": [],
+      "surfaces": [
+        "critical_issues",
+        "recent_reports",
+        "active_devices",
+        "metrics"
+      ],
+      "tags": [
+        "persona",
+        "manager",
+        "workspace"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690357",
+      "updated_at": "2025-12-12T21:43:06.690358"
+    },
+    {
+      "test_id": "SM_DEVICE_001",
+      "title": "State machine transitions for Device",
+      "description": "Verify all valid state transitions for Device",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "status": "prototype"
+          },
+          "rationale": "Create Device in 'prototype' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Device",
+          "data": {
+            "from_state": "prototype",
+            "to_state": "active"
+          },
+          "rationale": "Transition from 'prototype' to 'active'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "status": "active"
+          },
+          "rationale": "Create Device in 'active' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Device",
+          "data": {
+            "from_state": "active",
+            "to_state": "recalled"
+          },
+          "rationale": "Transition from 'active' to 'recalled'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "status": "active"
+          },
+          "rationale": "Create Device in 'active' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Device",
+          "data": {
+            "from_state": "active",
+            "to_state": "retired"
+          },
+          "rationale": "Transition from 'active' to 'retired'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690370",
+      "updated_at": "2025-12-12T21:43:06.690370"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_001",
+      "title": "State machine transitions for IssueReport",
+      "description": "Verify all valid state transitions for IssueReport",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "status": "open"
+          },
+          "rationale": "Create IssueReport in 'open' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "from_state": "open",
+            "to_state": "triaged"
+          },
+          "rationale": "Transition from 'open' to 'triaged'"
+        },
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "status": "triaged"
+          },
+          "rationale": "Create IssueReport in 'triaged' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "from_state": "triaged",
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition from 'triaged' to 'in_progress'"
+        },
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "status": "in_progress"
+          },
+          "rationale": "Create IssueReport in 'in_progress' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "fixed"
+          },
+          "rationale": "Transition from 'in_progress' to 'fixed'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690381",
+      "updated_at": "2025-12-12T21:43:06.690382"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_001",
+      "title": "State machine transitions for FirmwareRelease",
+      "description": "Verify all valid state transitions for FirmwareRelease",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "status": "draft"
+          },
+          "rationale": "Create FirmwareRelease in 'draft' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "from_state": "draft",
+            "to_state": "released"
+          },
+          "rationale": "Transition from 'draft' to 'released'"
+        },
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "status": "released"
+          },
+          "rationale": "Create FirmwareRelease in 'released' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "from_state": "released",
+            "to_state": "deprecated"
+          },
+          "rationale": "Transition from 'released' to 'deprecated'"
+        },
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "status": "deprecated"
+          },
+          "rationale": "Create FirmwareRelease in 'deprecated' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "from_state": "deprecated",
+            "to_state": "draft"
+          },
+          "rationale": "Transition from 'deprecated' to 'draft'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690392",
+      "updated_at": "2025-12-12T21:43:06.690393"
+    },
+    {
+      "test_id": "SM_TASK_001",
+      "title": "State machine transitions for Task",
+      "description": "Verify all valid state transitions for Task",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "status": "open"
+          },
+          "rationale": "Create Task in 'open' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Task",
+          "data": {
+            "from_state": "open",
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition from 'open' to 'in_progress'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "status": "in_progress"
+          },
+          "rationale": "Create Task in 'in_progress' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Task",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "completed"
+          },
+          "rationale": "Transition from 'in_progress' to 'completed'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "status": "in_progress"
+          },
+          "rationale": "Create Task in 'in_progress' state"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "entity:Task",
+          "data": {
+            "from_state": "in_progress",
+            "to_state": "open"
+          },
+          "rationale": "Transition from 'in_progress' to 'open'"
+        }
+      ],
+      "expected_outcomes": [
+        "All valid transitions complete successfully",
+        "Final state matches expected state"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690403",
+      "updated_at": "2025-12-12T21:43:06.690403"
+    },
+    {
+      "test_id": "ACL_DEVICE_001",
+      "title": "Device access control",
+      "description": "Test access control for Device",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "device-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690411",
+      "updated_at": "2025-12-12T21:43:06.690411"
+    },
+    {
+      "test_id": "ACL_TESTER_001",
+      "title": "Tester access control",
+      "description": "Test access control for Tester",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "tester-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690418",
+      "updated_at": "2025-12-12T21:43:06.690419"
+    },
+    {
+      "test_id": "ACL_ISSUEREPORT_001",
+      "title": "IssueReport access control",
+      "description": "Test access control for IssueReport",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "issuereport-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690425",
+      "updated_at": "2025-12-12T21:43:06.690426"
+    },
+    {
+      "test_id": "ACL_TESTSESSION_001",
+      "title": "TestSession access control",
+      "description": "Test access control for TestSession",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "testsession-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "TestSession"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690432",
+      "updated_at": "2025-12-12T21:43:06.690433"
+    },
+    {
+      "test_id": "ACL_FIRMWARERELEASE_001",
+      "title": "FirmwareRelease access control",
+      "description": "Test access control for FirmwareRelease",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "firmwarerelease-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690439",
+      "updated_at": "2025-12-12T21:43:06.690440"
+    },
+    {
+      "test_id": "ACL_TASK_001",
+      "title": "Task access control",
+      "description": "Test access control for Task",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "authorized_user",
+          "data": null,
+          "rationale": "Login as authorized"
+        },
+        {
+          "action": "navigate_to",
+          "target": "task-list",
+          "data": null,
+          "rationale": "Access entity"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authorized access works",
+        "Unauthorized access denied"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "access_control",
+        "security",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.690446",
+      "updated_at": "2025-12-12T21:43:06.690446"
+    }
+  ]
+}

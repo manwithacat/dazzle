@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "project_name": null,
+  "created_at": "2025-12-12T21:43:06.614114",
+  "updated_at": "2025-12-12T21:43:06.614111",
+  "designs": [
+    {
+      "test_id": "CRUD_CONTACT_001",
+      "title": "Contact CRUD operations",
+      "description": "Test CRUD operations for Contact entity",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "contact-list",
+          "data": null,
+          "rationale": "Navigate to entity list"
+        },
+        {
+          "action": "create",
+          "target": "entity:Contact",
+          "data": {},
+          "rationale": "Create Contact"
+        },
+        {
+          "action": "assert_visible",
+          "target": "contact-row",
+          "data": null,
+          "rationale": "Verify created"
+        }
+      ],
+      "expected_outcomes": [
+        "Contact CRUD operations work correctly"
+      ],
+      "entities": [
+        "Contact"
+      ],
+      "surfaces": [],
+      "tags": [
+        "entity",
+        "crud",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T21:43:06.613996",
+      "updated_at": "2025-12-12T21:43:06.613997"
+    }
+  ]
+}
