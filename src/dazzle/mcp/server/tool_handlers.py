@@ -2694,7 +2694,7 @@ def get_runtime_coverage_gaps_handler(project_root: Path, args: dict[str, Any]) 
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def _generate_crud_steps(entity_name: str, operation: str) -> list[dict]:
+def _generate_crud_steps(entity_name: str, operation: str) -> list[dict[str, Any]]:
     """Generate steps for a CRUD operation test."""
     entity_lower = entity_name.lower()
     route = f"/{entity_lower}s" if not entity_lower.endswith("s") else f"/{entity_lower}"
@@ -2741,7 +2741,7 @@ def _generate_crud_steps(entity_name: str, operation: str) -> list[dict]:
     return []
 
 
-def _generate_view_steps(entity_name: str, view: str) -> list[dict]:
+def _generate_view_steps(entity_name: str, view: str) -> list[dict[str, Any]]:
     """Generate steps for a UI view test."""
     entity_lower = entity_name.lower()
     route = f"/{entity_lower}s" if not entity_lower.endswith("s") else f"/{entity_lower}"
