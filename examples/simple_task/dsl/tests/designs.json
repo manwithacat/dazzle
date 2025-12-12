@@ -2,7 +2,7 @@
   "version": "1.0",
   "project_name": null,
   "created_at": "2025-12-12T21:41:14.097561",
-  "updated_at": "2025-12-12T21:41:14.097558",
+  "updated_at": "2025-12-12T22:04:00.000000",
   "designs": [
     {
       "test_id": "TD-001",
@@ -548,6 +548,144 @@
       "prompt_version": "v1",
       "created_at": "2025-12-12T21:41:14.097337",
       "updated_at": "2025-12-12T21:41:14.097338"
+    },
+    {
+      "test_id": "RUNTIME_TASK_DELETE_001",
+      "title": "Test delete operation for Task",
+      "description": "Fill runtime coverage gap: delete operation for Task",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "/tasks",
+          "data": null,
+          "rationale": "Go to list"
+        },
+        {
+          "action": "click",
+          "target": "delete-button",
+          "data": null,
+          "rationale": "Click delete"
+        },
+        {
+          "action": "click",
+          "target": "confirm-delete",
+          "data": null,
+          "rationale": "Confirm deletion"
+        }
+      ],
+      "expected_outcomes": [
+        "Delete operation completes successfully"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "runtime_gap",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": "Generated from runtime coverage analysis",
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T22:04:00.000000",
+      "updated_at": "2025-12-12T22:04:00.000000"
+    },
+    {
+      "test_id": "RUNTIME_TASK_VIEW_DETAIL_001",
+      "title": "Test detail view for Task",
+      "description": "Fill runtime coverage gap: detail view for Task",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "/tasks",
+          "data": null,
+          "rationale": "Go to list first"
+        },
+        {
+          "action": "click",
+          "target": "first-item",
+          "data": null,
+          "rationale": "Click to view detail"
+        },
+        {
+          "action": "assert_visible",
+          "target": "content",
+          "data": null,
+          "rationale": "Verify detail view"
+        }
+      ],
+      "expected_outcomes": [
+        "Detail view renders correctly"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "ui_view",
+        "runtime_gap",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": "Generated from runtime coverage analysis",
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T22:04:00.000000",
+      "updated_at": "2025-12-12T22:04:00.000000"
+    },
+    {
+      "test_id": "RUNTIME_TASK_VIEW_EDIT_001",
+      "title": "Test edit view for Task",
+      "description": "Fill runtime coverage gap: edit view for Task",
+      "persona": null,
+      "scenario": null,
+      "trigger": "user_click",
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "/tasks",
+          "data": null,
+          "rationale": "Go to list first"
+        },
+        {
+          "action": "click",
+          "target": "edit-button",
+          "data": null,
+          "rationale": "Click edit"
+        },
+        {
+          "action": "assert_visible",
+          "target": "form",
+          "data": null,
+          "rationale": "Verify edit form"
+        }
+      ],
+      "expected_outcomes": [
+        "Edit view renders correctly"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "ui_view",
+        "runtime_gap",
+        "automated"
+      ],
+      "status": "accepted",
+      "implementation_path": null,
+      "notes": "Generated from runtime coverage analysis",
+      "prompt_version": "v1",
+      "created_at": "2025-12-12T22:04:00.000000",
+      "updated_at": "2025-12-12T22:04:00.000000"
     }
   ]
 }
