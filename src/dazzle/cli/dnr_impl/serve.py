@@ -153,7 +153,7 @@ def dnr_serve(
     write_runtime_file(project_root, allocation)
 
     # Clean up runtime file on exit
-    def cleanup_runtime():
+    def cleanup_runtime() -> None:
         clear_runtime_file(project_root)
 
     atexit.register(cleanup_runtime)

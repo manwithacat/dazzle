@@ -51,7 +51,7 @@ def hash_project_name(project_name: str) -> int:
         Integer offset in range [0, 999]
     """
     # Use MD5 for speed (not security-sensitive)
-    h = hashlib.md5(project_name.encode()).hexdigest()
+    h = hashlib.md5(project_name.encode(), usedforsecurity=False).hexdigest()
     # Take first 8 hex chars and mod by range
     return int(h[:8], 16) % UI_PORT_RANGE
 
