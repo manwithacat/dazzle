@@ -582,14 +582,20 @@ jobs:
           EOF
 
           cd test-project
-          OUTPUT=$(dazzle check --json)
+
+          # Capture output even if command fails (CLI returns exit 1 on validation errors)
+          OUTPUT=$(dazzle check --json 2>&1) || true
           echo "Check output: ${OUTPUT}"
 
-          if [[ ! "${OUTPUT}" =~ '"success"' ]]; then
+          # Check for success in JSON output
+          if [[ "${OUTPUT}" =~ '"success": true' ]] || [[ "${OUTPUT}" =~ '"success":true' ]]; then
+            echo "✓ DSL validation working"
+          else
             echo "ERROR: DSL validation failed"
+            echo "Full output:"
+            echo "${OUTPUT}"
             exit 1
           fi
-          echo "✓ DSL validation working"
 
       - name: Test performance (startup time)
         run: |
