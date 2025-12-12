@@ -1498,7 +1498,7 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
                 field_type_str = (
                     field.type.kind.value if field.type and field.type.kind else "str"
                 )
-                is_enum = (
+                is_enum = bool(
                     field.type and field.type.kind and field.type.kind.value == "enum"
                 )
 

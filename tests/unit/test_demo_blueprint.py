@@ -12,6 +12,13 @@ from pathlib import Path
 
 import pytest
 
+from dazzle.core.demo_blueprint_persistence import (
+    delete_blueprint,
+    get_blueprint_dir,
+    get_blueprint_file,
+    load_blueprint,
+    save_blueprint,
+)
 from dazzle.core.ir.demo_blueprint import (
     BlueprintContainer,
     DemoDataBlueprint,
@@ -20,13 +27,6 @@ from dazzle.core.ir.demo_blueprint import (
     FieldStrategy,
     PersonaBlueprint,
     TenantBlueprint,
-)
-from dazzle.core.demo_blueprint_persistence import (
-    delete_blueprint,
-    get_blueprint_dir,
-    get_blueprint_file,
-    load_blueprint,
-    save_blueprint,
 )
 from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
 
