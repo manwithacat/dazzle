@@ -53,6 +53,7 @@ from .tool_handlers import (
     get_entities,
     get_env_vars_for_packs_handler,
     get_mcp_status_handler,
+    get_runtime_coverage_gaps_handler,
     get_stories_handler,
     get_surfaces,
     get_test_designs_handler,
@@ -70,6 +71,7 @@ from .tool_handlers import (
     propose_persona_tests_handler,
     propose_stories_from_dsl_handler,
     save_demo_blueprint_handler,
+    save_runtime_coverage_handler,
     save_stories_handler,
     save_test_designs_handler,
     search_api_packs_handler,
@@ -222,6 +224,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = get_test_designs_handler(project_path, arguments)
             elif name == "get_coverage_actions":
                 result = get_coverage_actions_handler(project_path, arguments)
+            elif name == "get_runtime_coverage_gaps":
+                result = get_runtime_coverage_gaps_handler(project_path, arguments)
+            elif name == "save_runtime_coverage":
+                result = save_runtime_coverage_handler(project_path, arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
 

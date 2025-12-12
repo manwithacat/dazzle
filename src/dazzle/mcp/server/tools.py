@@ -746,15 +746,15 @@ def get_test_design_tools() -> list[Tool]:
         ),
         Tool(
             name="get_coverage_actions",
-            description="""Get prioritized actions to increase test coverage. Returns actionable prompts an LLM can execute directly.
+            description="""Get prioritized actions to increase test design coverage. Returns actionable prompts an LLM can execute directly.
 
-This tool analyzes the current coverage state and returns:
+This tool analyzes the current test design coverage and returns:
 - Current coverage score and breakdown
 - Prioritized list of specific actions to increase coverage
 - Complete prompts for each action (ready to execute)
 - Code templates where applicable
 
-Use this tool when you want to systematically increase test coverage. Execute the returned actions in priority order.""",
+Use this tool when you want to systematically increase test design coverage. Execute the returned actions in priority order.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -770,6 +770,52 @@ Use this tool when you want to systematically increase test coverage. Execute th
                     **PROJECT_PATH_SCHEMA,
                 },
                 "required": [],
+            },
+        ),
+        Tool(
+            name="get_runtime_coverage_gaps",
+            description="""Analyze runtime UX coverage report to find gaps and generate tests to fill them.
+
+This tool reads a previous runtime coverage report (from CI or local test run) and identifies:
+- Routes not visited
+- CRUD operations not tested
+- UI views not exercised
+- Components not tested
+
+Returns actionable test designs that can be saved with save_test_designs and will execute in future test runs.
+
+IMPORTANT: Runtime coverage is expensive to collect (requires running the full E2E test suite). The coverage report should be retained in dsl/tests/runtime_coverage.json.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "coverage_report_path": {
+                        "type": "string",
+                        "description": "Path to ux_coverage.json. If not provided, looks in dsl/tests/runtime_coverage.json",
+                    },
+                    "max_actions": {
+                        "type": "integer",
+                        "description": "Maximum number of test designs to generate (default: 5)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="save_runtime_coverage",
+            description="""Save a runtime coverage report to dsl/tests/runtime_coverage.json for future analysis.
+
+Use this after a test run to persist the coverage report so it can be used by get_runtime_coverage_gaps.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "coverage_data": {
+                        "type": "object",
+                        "description": "The coverage report data (from ux_coverage.json)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["coverage_data"],
             },
         ),
     ]
