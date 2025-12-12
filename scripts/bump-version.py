@@ -28,6 +28,7 @@ VERSION_FILES = [
     ("src/dazzle/cli_legacy.py", r'^__version__\s*=\s*["\']([^"\']+)["\']', '__version__ = "{version}"'),
     ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("homebrew/dazzle-simple.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
+    ("cli/package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
 ]
 
 # Files where version appears in URLs/comments (update tag references)
