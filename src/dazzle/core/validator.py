@@ -616,6 +616,10 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     # Validate workspaces
     for workspace in appspec.workspaces:
         for region in workspace.regions:
+            # Skip source validation for aggregate-only regions
+            if region.source is None:
+                continue
+
             # Check that source references a valid entity
             source_entity_name = (
                 region.source.split(".")[0] if "." in region.source else region.source

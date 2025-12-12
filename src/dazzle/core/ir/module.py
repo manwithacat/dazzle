@@ -13,33 +13,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .archetype import ArchetypeSpec
-
-
-class AppConfigSpec(BaseModel):
-    """
-    Application-level configuration (v0.9.5).
-
-    Parsed from the optional app config block:
-        app MyApp "My Application":
-          description: "..."
-          multi_tenant: true
-          audit_trail: true
-
-    Attributes:
-        description: Human-readable description of the app
-        multi_tenant: Whether the app supports multi-tenancy
-        audit_trail: Whether to enable audit trail on all entities
-        features: Additional feature flags as key-value pairs
-    """
-
-    description: str | None = None
-    multi_tenant: bool = False
-    audit_trail: bool = False
-    features: dict[str, Any] = Field(default_factory=dict)
-
-    model_config = ConfigDict(frozen=True)
-
-
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
 from .experiences import ExperienceSpec
@@ -58,6 +31,34 @@ from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
+
+
+class AppConfigSpec(BaseModel):
+    """
+    Application-level configuration (v0.9.5).
+
+    Parsed from the optional app config block:
+        app MyApp "My Application":
+          description: "..."
+          multi_tenant: true
+          audit_trail: true
+          security_profile: standard
+
+    Attributes:
+        description: Human-readable description of the app
+        multi_tenant: Whether the app supports multi-tenancy
+        audit_trail: Whether to enable audit trail on all entities
+        security_profile: Security profile level (basic, standard, strict)
+        features: Additional feature flags as key-value pairs
+    """
+
+    description: str | None = None
+    multi_tenant: bool = False
+    audit_trail: bool = False
+    security_profile: str = "basic"  # basic | standard | strict
+    features: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(frozen=True)
 
 
 class ModuleFragment(BaseModel):

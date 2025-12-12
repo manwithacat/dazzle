@@ -28,6 +28,7 @@ from .messaging import (
 )
 from .personas import PersonaSpec
 from .scenarios import ScenarioSpec
+from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
@@ -86,6 +87,7 @@ class AppSpec(BaseModel):
     templates: list[TemplateSpec] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
+    security: SecurityConfig | None = None  # Security configuration (v0.11.0)
 
     model_config = ConfigDict(frozen=True)
 

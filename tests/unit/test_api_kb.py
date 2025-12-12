@@ -4,10 +4,7 @@ Unit tests for DAZZLE API Knowledgebase (api_kb).
 Tests the pack loader, search functionality, and DSL generation.
 """
 
-import pytest
-
 from dazzle.api_kb import (
-    ApiPack,
     EnvVarSpec,
     list_packs,
     load_pack,
@@ -210,9 +207,9 @@ class TestDSLGeneration:
 
         dsl = pack.generate_service_dsl()
 
-        assert 'service stripe' in dsl.lower() or 'service stripepayments' in dsl.lower()
+        assert "service stripe" in dsl.lower() or "service stripepayments" in dsl.lower()
         assert 'inline "pack:stripe_payments"' in dsl
-        assert 'auth_profile:' in dsl
+        assert "auth_profile:" in dsl
 
     def test_generate_service_dsl_hmrc(self):
         """Test generating DSL service block for HMRC."""
@@ -221,9 +218,9 @@ class TestDSLGeneration:
 
         dsl = pack.generate_service_dsl()
 
-        assert 'service' in dsl.lower()
+        assert "service" in dsl.lower()
         assert 'inline "pack:hmrc_mtd_vat"' in dsl
-        assert 'oauth2' in dsl
+        assert "oauth2" in dsl
 
     def test_generate_foreign_model_dsl(self):
         """Test generating DSL foreign_model block."""
@@ -313,7 +310,7 @@ class TestPackDataIntegrity:
         packs = list_packs()
 
         for pack in packs:
-            assert pack.name, f"Pack missing name"
+            assert pack.name, "Pack missing name"
             assert pack.provider, f"Pack {pack.name} missing provider"
             assert pack.category, f"Pack {pack.name} missing category"
 

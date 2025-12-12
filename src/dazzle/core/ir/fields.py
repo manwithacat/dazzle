@@ -163,7 +163,9 @@ def _rebuild_field_spec() -> None:
     # Import here to avoid circular imports
     from .dates import DateArithmeticExpr, DateLiteral
 
-    FieldSpec.model_rebuild(_types_namespace={"DateLiteral": DateLiteral, "DateArithmeticExpr": DateArithmeticExpr})
+    FieldSpec.model_rebuild(
+        _types_namespace={"DateLiteral": DateLiteral, "DateArithmeticExpr": DateArithmeticExpr}
+    )
 
 
 # Call rebuild after module initialization

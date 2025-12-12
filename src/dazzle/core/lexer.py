@@ -179,6 +179,7 @@ class TokenType(Enum):
     DESCRIPTION = "description"
     MULTI_TENANT = "multi_tenant"
     AUDIT_TRAIL = "audit_trail"
+    SECURITY_PROFILE = "security_profile"  # v0.11.0
 
     # v0.9.5 Field Type Keywords
     MONEY = "money"
@@ -512,6 +513,7 @@ KEYWORDS = {
     "description",
     "multi_tenant",
     "audit_trail",
+    "security_profile",  # v0.11.0
     # v0.9.5 Field Type keywords
     "money",
     "file",
@@ -853,7 +855,9 @@ class Lexer:
             elif ch.isdigit():
                 value, is_duration = self.read_number()
                 if is_duration:
-                    self.tokens.append(Token(TokenType.DURATION_LITERAL, value, token_line, token_col))
+                    self.tokens.append(
+                        Token(TokenType.DURATION_LITERAL, value, token_line, token_col)
+                    )
                 else:
                     self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
 

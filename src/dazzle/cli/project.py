@@ -31,7 +31,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
 if TYPE_CHECKING:
-    pass
+    from dazzle.core import ir
 
 
 # =============================================================================
@@ -70,7 +70,7 @@ def _is_directory_empty(directory: Path) -> bool:
 def _print_human_diagnostics(
     errors: list[str],
     warnings: list[str],
-    appspec: "ir.AppSpec | None" = None,
+    appspec: ir.AppSpec | None = None,
 ) -> None:
     """Print diagnostics in human-readable format."""
     if errors:

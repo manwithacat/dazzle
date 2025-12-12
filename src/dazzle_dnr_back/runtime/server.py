@@ -71,6 +71,10 @@ class ServerConfig:
     # Messaging channels (v0.9)
     enable_channels: bool = True  # Auto-enabled if channels defined in spec
 
+    # Security (v0.11.0)
+    security_profile: str = "basic"  # basic | standard | strict
+    cors_origins: list[str] | None = None  # Custom CORS origins
+
 
 # Runtime import
 try:
@@ -192,6 +196,9 @@ class DNRBackendApp:
         # Messaging channels (v0.9)
         self._channel_manager: Any | None = None  # ChannelManager type
         self._enable_channels = config.enable_channels
+        # Security (v0.11.0)
+        self._security_profile = config.security_profile
+        self._cors_origins = config.cors_origins
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -318,13 +325,13 @@ class DNRBackendApp:
             version=self.spec.version,
         )
 
-        # Add CORS middleware
-        self._app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+        # Add security middleware based on profile (v0.11.0)
+        from dazzle_dnr_back.runtime.security_middleware import apply_security_middleware
+
+        apply_security_middleware(
+            self._app,
+            self._security_profile,
+            cors_origins=self._cors_origins,
         )
 
         # Add exception handler for state machine transition errors

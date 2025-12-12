@@ -1,6 +1,7 @@
 from . import ir
 from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import LinkError
+from .ir.security import SecurityConfig, SecurityProfile
 from .linker_impl import (
     build_symbol_table,
     merge_fragments,
@@ -54,6 +55,9 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # Extract app name and title from root module
     app_name = root_module.app_name or root_module_name
     app_title = root_module.app_title or app_name
+
+    # Build security config from app config (v0.11.0)
+    security_config = _build_security_config(root_module.app_config)
 
     # Stage 3: Full linking implementation
 
@@ -112,8 +116,37 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         tests=merged_fragment.tests,
         personas=merged_fragment.personas,  # v0.8.5 Dazzle Bar
         scenarios=merged_fragment.scenarios,  # v0.8.5 Dazzle Bar
+        security=security_config,  # v0.11.0 Security
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,
         },
+    )
+
+
+def _build_security_config(app_config: ir.AppConfigSpec | None) -> SecurityConfig:
+    """
+    Build SecurityConfig from app configuration.
+
+    Args:
+        app_config: App configuration from root module
+
+    Returns:
+        SecurityConfig with profile-based defaults
+    """
+    if app_config is None:
+        return SecurityConfig.from_profile(SecurityProfile.BASIC)
+
+    # Parse security profile
+    profile_str = app_config.security_profile.lower()
+    try:
+        profile = SecurityProfile(profile_str)
+    except ValueError:
+        # Default to basic if invalid profile
+        profile = SecurityProfile.BASIC
+
+    # Build config with profile defaults
+    return SecurityConfig.from_profile(
+        profile,
+        multi_tenant=app_config.multi_tenant,
     )

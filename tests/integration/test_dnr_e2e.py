@@ -426,10 +426,7 @@ class TestAuthDisabled:
 
         This ensures the UI doesn't get console errors for 404s.
         """
-        resp = requests.get(
-            f"{simple_task_server.api_url}/api/auth/me",
-            timeout=REQUEST_TIMEOUT
-        )
+        resp = requests.get(f"{simple_task_server.api_url}/api/auth/me", timeout=REQUEST_TIMEOUT)
         # Should return 401 (Unauthorized) not 404 (Not Found)
         # When auth is enabled, would return user info or 401 based on session
         # When auth is disabled, stub endpoint returns 401

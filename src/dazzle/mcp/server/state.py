@@ -93,9 +93,7 @@ def resolve_project_path(project_path: str | None = None) -> Path:
             raise ValueError(f"Project path is not a directory: {path}")
         # Check for dazzle.toml to confirm it's a valid project
         if not (path / "dazzle.toml").exists():
-            raise ValueError(
-                f"Not a valid Dazzle project (no dazzle.toml found): {path}"
-            )
+            raise ValueError(f"Not a valid Dazzle project (no dazzle.toml found): {path}")
         return path
 
     # Try active project path

@@ -25,7 +25,9 @@ class EnvVarSpec:
         """Generate a line for .env.example file."""
         comment = f"# {self.description}" if self.description else ""
         example_value = self.example or ""
-        return f"{comment}\n{self.name}={example_value}" if comment else f"{self.name}={example_value}"
+        return (
+            f"{comment}\n{self.name}={example_value}" if comment else f"{self.name}={example_value}"
+        )
 
 
 @dataclass
@@ -65,7 +67,7 @@ class AuthSpec:
     def to_dsl_auth_profile(self) -> str:
         """Generate DSL auth_profile declaration."""
         if self.auth_type == "api_key":
-            parts = ['api_key']
+            parts = ["api_key"]
             if self.header:
                 parts.append(f'header="{self.header}"')
             if self.env_var:
@@ -130,16 +132,16 @@ class ApiPack:
         # Use inline spec with pack name for documentation
         lines.append(f'  spec: inline "pack:{self.name}"')
         if self.auth:
-            lines.append(f'  auth_profile: {self.auth.to_dsl_auth_profile()}')
+            lines.append(f"  auth_profile: {self.auth.to_dsl_auth_profile()}")
         if self.docs_url:
-            lines.append(f'  # Docs: {self.docs_url}')
+            lines.append(f"  # Docs: {self.docs_url}")
         return "\n".join(lines)
 
     def generate_foreign_model_dsl(self, model: ForeignModelSpec) -> str:
         """Generate DSL foreign_model block for a model."""
         service_name = self.name.replace("_", "")
         lines = [f'foreign_model {model.name} from {service_name} "{model.description}":']
-        lines.append(f'  key: {model.key_field}')
+        lines.append(f"  key: {model.key_field}")
         if model.cache_ttl:
             lines.append(f'  constraint cache ttl="{model.cache_ttl}"')
         lines.append("")

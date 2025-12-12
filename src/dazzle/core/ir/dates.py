@@ -107,7 +107,9 @@ class DateArithmeticExpr(BaseModel):
 # DateExpr can be: DateLiteral, DateArithmeticExpr, or a field reference (str)
 DateExpr = Annotated[
     Union[DateLiteral, "DateArithmeticExpr", str],
-    Field(description="A date expression: literal (today/now), arithmetic (today + 7d), or field ref"),
+    Field(
+        description="A date expression: literal (today/now), arithmetic (today + 7d), or field ref"
+    ),
 ]
 
 # Rebuild model to resolve forward references

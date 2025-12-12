@@ -41,6 +41,10 @@ class ParserProtocol(Protocol):
     def parse_sort_list(self) -> list[tuple[str, str]]: ...
     def parse_ux_block(self) -> "ir.UXSpec": ...
 
+    # v0.10.2: Date/duration methods from TypeParserMixin
+    def _parse_date_expr(self) -> "ir.DateLiteral | ir.DateArithmeticExpr": ...
+    def _parse_duration_literal(self) -> "ir.DurationLiteral": ...
+
 
 class BaseParser:
     """
@@ -212,6 +216,7 @@ class BaseParser:
                 description = None
                 multi_tenant = False
                 audit_trail = False
+                security_profile = "basic"  # v0.11.0
                 features: dict[str, str | bool] = {}
 
                 while not self.match(TokenType.DEDENT):
@@ -242,6 +247,18 @@ class BaseParser:
                         audit_trail = token.type == TokenType.TRUE
                         self.skip_newlines()
 
+                    # security_profile: basic|standard|strict (v0.11.0)
+                    elif self.match(TokenType.SECURITY_PROFILE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        # Accept identifier (basic, standard, strict) or string
+                        token = self.advance()
+                        if token.type == TokenType.STRING:
+                            security_profile = token.value
+                        else:
+                            security_profile = token.value
+                        self.skip_newlines()
+
                     # Any other identifier: value (for extensibility)
                     elif self.match(TokenType.IDENTIFIER):
                         key = self.advance().value
@@ -267,6 +284,7 @@ class BaseParser:
                     description=description,
                     multi_tenant=multi_tenant,
                     audit_trail=audit_trail,
+                    security_profile=security_profile,
                     features=features,
                 )
             else:

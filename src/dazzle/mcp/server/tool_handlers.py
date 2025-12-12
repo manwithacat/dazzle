@@ -379,13 +379,9 @@ def list_modules(project_root: Path) -> str:
                 "dependencies": module.uses,
             }
 
-        return json.dumps(
-            {"project_path": str(project_root), "modules": modules}, indent=2
-        )
+        return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
     except Exception as e:
-        return json.dumps(
-            {"project_path": str(project_root), "error": str(e)}, indent=2
-        )
+        return json.dumps({"project_path": str(project_root), "error": str(e)}, indent=2)
 
 
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:

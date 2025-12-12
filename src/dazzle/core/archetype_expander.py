@@ -886,9 +886,7 @@ def _generate_user_management_surfaces(entity: ir.EntitySpec) -> list[ir.Surface
     }
 
     display_fields = [
-        f
-        for f in entity.fields
-        if not f.is_primary_key and f.name not in sensitive_fields
+        f for f in entity.fields if not f.is_primary_key and f.name not in sensitive_fields
     ]
 
     # List surface (admin)

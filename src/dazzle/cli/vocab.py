@@ -4,6 +4,7 @@ Vocabulary management CLI commands.
 Commands for managing app-local vocabulary (macros, aliases, patterns).
 """
 
+from datetime import UTC
 from pathlib import Path
 
 import typer
@@ -72,12 +73,10 @@ def vocab_init(
     path: str | None = typer.Option(
         None, "--path", "-p", help="Project directory (default: current)"
     ),
-    force: bool = typer.Option(
-        False, "--force", "-f", help="Overwrite existing manifest"
-    ),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing manifest"),
 ) -> None:
     """Initialize a local vocabulary manifest with example entries."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     project_path = Path(path or ".")
     vocab_dir = project_path / "dazzle" / "local_vocab"
@@ -104,7 +103,7 @@ def vocab_init(
     # Create directory and manifest
     vocab_dir.mkdir(parents=True, exist_ok=True)
 
-    created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     content = EXAMPLE_MANIFEST.format(app_id=app_id, created_at=created_at)
 
     manifest_path.write_text(content)
@@ -148,7 +147,7 @@ def vocab_list(
         typer.echo("Local vocabulary lets you define reusable macros and patterns")
         typer.echo("for your project. Most projects don't need this.")
         typer.echo("")
-        typer.echo(f"To create one: dazzle vocab init")
+        typer.echo("To create one: dazzle vocab init")
         return
 
     # Load manifest

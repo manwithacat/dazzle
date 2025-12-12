@@ -314,24 +314,28 @@ class TestRuntimeEvaluation:
 
     def test_today_plus_days(self):
         """Factory for 'today + 7d' returns date 7 days from now."""
-        factory = _create_date_factory({
-            "kind": "today",
-            "op": "+",
-            "value": 7,
-            "unit": "days",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "today",
+                "op": "+",
+                "value": 7,
+                "unit": "days",
+            }
+        )
         result = factory()
         expected = date.today() + timedelta(days=7)
         assert result == expected
 
     def test_now_minus_hours(self):
         """Factory for 'now - 24h' returns datetime 24 hours ago."""
-        factory = _create_date_factory({
-            "kind": "now",
-            "op": "-",
-            "value": 24,
-            "unit": "hours",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "now",
+                "op": "-",
+                "value": 24,
+                "unit": "hours",
+            }
+        )
         result = factory()
         # Allow 1 second tolerance
         expected = datetime.now() - timedelta(hours=24)
@@ -339,24 +343,28 @@ class TestRuntimeEvaluation:
 
     def test_weeks_arithmetic(self):
         """Factory handles weeks correctly."""
-        factory = _create_date_factory({
-            "kind": "today",
-            "op": "+",
-            "value": 2,
-            "unit": "weeks",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "today",
+                "op": "+",
+                "value": 2,
+                "unit": "weeks",
+            }
+        )
         result = factory()
         expected = date.today() + timedelta(weeks=2)
         assert result == expected
 
     def test_minutes_arithmetic(self):
         """Factory handles minutes correctly."""
-        factory = _create_date_factory({
-            "kind": "now",
-            "op": "+",
-            "value": 30,
-            "unit": "minutes",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "now",
+                "op": "+",
+                "value": 30,
+                "unit": "minutes",
+            }
+        )
         result = factory()
         expected = datetime.now() + timedelta(minutes=30)
         # Allow 1 second tolerance
@@ -364,12 +372,14 @@ class TestRuntimeEvaluation:
 
     def test_months_arithmetic(self):
         """Factory handles months (using relativedelta if available)."""
-        factory = _create_date_factory({
-            "kind": "today",
-            "op": "+",
-            "value": 3,
-            "unit": "months",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "today",
+                "op": "+",
+                "value": 3,
+                "unit": "months",
+            }
+        )
         result = factory()
         # Just verify it returns a date in the future
         assert result > date.today()
@@ -379,12 +389,14 @@ class TestRuntimeEvaluation:
 
     def test_years_arithmetic(self):
         """Factory handles years (using relativedelta if available)."""
-        factory = _create_date_factory({
-            "kind": "today",
-            "op": "+",
-            "value": 1,
-            "unit": "years",
-        })
+        factory = _create_date_factory(
+            {
+                "kind": "today",
+                "op": "+",
+                "value": 1,
+                "unit": "years",
+            }
+        )
         result = factory()
         # Just verify it returns a date in the future
         assert result > date.today()

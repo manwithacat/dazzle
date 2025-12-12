@@ -318,7 +318,9 @@ surface task_list "Tasks":
     ux:
         show: title, nonexistent_field
 """
-        module_name, app_name, app_title, _, uses, fragment = parse_dsl(invalid_dsl, Path("test.dsl"))
+        module_name, app_name, app_title, _, uses, fragment = parse_dsl(
+            invalid_dsl, Path("test.dsl")
+        )
 
         from dazzle.core import ir
 

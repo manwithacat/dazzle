@@ -256,8 +256,7 @@ entity Contact "Contact":
         org_refs = [
             f
             for f in contact.fields
-            if f.type.kind == ir.FieldTypeKind.REF
-            and f.type.ref_entity == "Organization"
+            if f.type.kind == ir.FieldTypeKind.REF and f.type.ref_entity == "Organization"
         ]
         # Should only have one ref (the existing one)
         assert len(org_refs) == 1

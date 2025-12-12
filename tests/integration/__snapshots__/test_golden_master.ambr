@@ -15,6 +15,7 @@
       'entities': list([
         dict({
           'access': None,
+          'archetype_kind': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -126,6 +127,8 @@
           'intent': None,
           'invariants': list([
           ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
           'name': 'Task',
           'patterns': list([
           ]),
@@ -153,6 +156,16 @@
     ]),
     'scenarios': list([
     ]),
+    'security': dict({
+      'cors_origins': list([
+        '*',
+      ]),
+      'enable_csp': False,
+      'enable_hsts': False,
+      'profile': <SecurityProfile.BASIC: 'basic'>,
+      'require_auth_by_default': False,
+      'tenant_isolation': False,
+    }),
     'surfaces': list([
       dict({
         'access': None,

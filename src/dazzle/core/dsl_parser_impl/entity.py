@@ -36,6 +36,9 @@ class EntityParserMixin:
         _parse_field_path: Any
         parse_type_spec: Any
         parse_field_modifiers: Any
+        # v0.10.2: Date/duration methods from TypeParserMixin
+        _parse_date_expr: Any
+        _parse_duration_literal: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""

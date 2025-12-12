@@ -1,7 +1,5 @@
 """Tests for dazzle.core.strings module."""
 
-import pytest
-
 from dazzle.core.strings import pluralize, to_api_plural
 
 

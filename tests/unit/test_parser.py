@@ -3,8 +3,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from dazzle.core.dsl_parser_impl import parse_dsl
 
 # Test entity parsing
@@ -70,14 +68,14 @@ class TestFieldTypes:
 
     def test_money_field_default_currency(self):
         """Test money field with default GBP currency."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
 entity Invoice "Invoice":
   id: uuid pk
   total: money required
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         invoice = fragment.entities[0]
         total_field = next(f for f in invoice.fields if f.name == "total")
@@ -87,14 +85,14 @@ entity Invoice "Invoice":
 
     def test_money_field_custom_currency(self):
         """Test money field with custom currency."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
 entity Invoice "Invoice":
   id: uuid pk
   total: money(USD) required
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         invoice = fragment.entities[0]
         total_field = next(f for f in invoice.fields if f.name == "total")
@@ -104,14 +102,14 @@ entity Invoice "Invoice":
 
     def test_file_field(self):
         """Test file field type."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
 entity Document "Document":
   id: uuid pk
   attachment: file
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         doc = fragment.entities[0]
         attachment_field = next(f for f in doc.fields if f.name == "attachment")
@@ -120,14 +118,14 @@ entity Document "Document":
 
     def test_url_field(self):
         """Test url field type."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
 entity Link "Link":
   id: uuid pk
   target: url required
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         link = fragment.entities[0]
         target_field = next(f for f in link.fields if f.name == "target")
@@ -136,7 +134,7 @@ entity Link "Link":
 
     def test_has_many_via_junction(self):
         """Test many-to-many relationship via junction table."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
@@ -153,7 +151,7 @@ entity ClientContact "Client Contact":
   id: uuid pk
   client: ref Client
   contact: ref Contact
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         client = fragment.entities[0]
         contacts_field = next(f for f in client.fields if f.name == "contacts")
@@ -168,7 +166,7 @@ class TestWorkspaceDisplayModes:
 
     def test_kanban_display_mode(self):
         """Test kanban display mode."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
@@ -180,7 +178,7 @@ workspace task_board "Task Board":
   tasks:
     source: Task
     display: kanban
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         workspace = fragment.workspaces[0]
         region = workspace.regions[0]
@@ -189,7 +187,7 @@ workspace task_board "Task Board":
 
     def test_bar_chart_display_mode(self):
         """Test bar_chart display mode."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
@@ -201,7 +199,7 @@ workspace sales_dashboard "Sales Dashboard":
   chart:
     source: Sale
     display: bar_chart
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         workspace = fragment.workspaces[0]
         region = workspace.regions[0]
@@ -210,7 +208,7 @@ workspace sales_dashboard "Sales Dashboard":
 
     def test_funnel_chart_display_mode(self):
         """Test funnel_chart display mode."""
-        dsl = '''
+        dsl = """
 module test.core
 app MyApp "My App"
 
@@ -222,7 +220,7 @@ workspace pipeline "Pipeline":
   funnel:
     source: Lead
     display: funnel_chart
-'''
+"""
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
         workspace = fragment.workspaces[0]
         region = workspace.regions[0]
@@ -235,7 +233,7 @@ class TestAppConfig:
 
     def test_app_config_basic(self):
         """Test basic app config with all options."""
-        dsl = '''
+        dsl = """
 module test.core
 
 app MyApp "My Application":
@@ -246,7 +244,7 @@ app MyApp "My Application":
 entity User "User":
   id: uuid pk
   name: str(100) required
-'''
+"""
         module_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
             dsl, Path("test.dsl")
         )
@@ -261,7 +259,7 @@ entity User "User":
 
     def test_app_config_partial(self):
         """Test app config with only some options."""
-        dsl = '''
+        dsl = """
 module test.core
 
 app MyApp "My Application":
@@ -269,7 +267,7 @@ app MyApp "My Application":
 
 entity User "User":
   id: uuid pk
-'''
+"""
         _, _, _, app_config, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 
         assert app_config is not None
@@ -280,7 +278,7 @@ entity User "User":
 
     def test_app_config_features(self):
         """Test app config with custom features."""
-        dsl = '''
+        dsl = """
 module test.core
 
 app MyApp "My Application":
@@ -290,7 +288,7 @@ app MyApp "My Application":
 
 entity User "User":
   id: uuid pk
-'''
+"""
         _, _, _, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
 
         assert app_config is not None
@@ -300,14 +298,14 @@ entity User "User":
 
     def test_app_without_config(self):
         """Test app declaration without config body."""
-        dsl = '''
+        dsl = """
 module test.core
 
 app MyApp "My Application"
 
 entity User "User":
   id: uuid pk
-'''
+"""
         _, app_name, app_title, app_config, _, _ = parse_dsl(dsl, Path("test.dsl"))
 
         assert app_name == "MyApp"

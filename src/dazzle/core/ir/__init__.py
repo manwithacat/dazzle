@@ -30,16 +30,6 @@ from .computed import (
     LiteralValue,
 )
 
-# Date Expressions (v0.10.2)
-from .dates import (
-    DateArithmeticExpr,
-    DateArithmeticOp,
-    DateExpr,
-    DateLiteral,
-    DateLiteralKind,
-    DurationLiteral,
-)
-
 # Conditions
 from .conditions import (
     Comparison,
@@ -49,6 +39,16 @@ from .conditions import (
     FunctionCall,
     LogicalOperator,
     RoleCheck,
+)
+
+# Date Expressions (v0.10.2)
+from .dates import (
+    DateArithmeticExpr,
+    DateArithmeticOp,
+    DateExpr,
+    DateLiteral,
+    DateLiteralKind,
+    DurationLiteral,
 )
 
 # Domain
@@ -194,6 +194,12 @@ from .scenarios import (
     DemoFixture,
     PersonaScenarioEntry,
     ScenarioSpec,
+)
+
+# Security (v0.11.0)
+from .security import (
+    SecurityConfig,
+    SecurityProfile,
 )
 
 # Services (External APIs and Domain Services)
@@ -409,6 +415,9 @@ __all__ = [
     "DemoFixture",
     "PersonaScenarioEntry",
     "ScenarioSpec",
+    # Security (v0.11.0)
+    "SecurityConfig",
+    "SecurityProfile",
     # Messaging Channels (v0.9.0)
     "AssetKind",
     "AssetSpec",
