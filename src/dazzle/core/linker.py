@@ -1,4 +1,5 @@
 from . import ir
+from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import LinkError
 from .linker_impl import (
     build_symbol_table,
@@ -76,10 +77,27 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         error_msg = "Reference validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
         raise LinkError(error_msg)
 
-    # 5. Merge fragments into unified structure
+    # 5. Expand archetypes (v0.10.3)
+    # - Merge fields from extended archetypes
+    # - Apply semantic archetype expansions (settings, tenant, tenant_settings)
+    # - Inject tenant FK into non-settings entities
+    expanded_entities = expand_archetypes(list(symbols.entities.values()), symbols)
+
+    # Update symbol table with expanded entities
+    symbols.entities = {e.name: e for e in expanded_entities}
+
+    # 6. Generate auto-surfaces for semantic archetypes
+    existing_surfaces = list(symbols.surfaces.values())
+    auto_surfaces = generate_archetype_surfaces(expanded_entities, existing_surfaces)
+
+    # Add auto-generated surfaces to symbol table
+    for surface in auto_surfaces:
+        symbols.surfaces[surface.name] = surface
+
+    # 7. Merge fragments into unified structure
     merged_fragment = merge_fragments(sorted_modules, symbols)
 
-    # 6. Build final AppSpec
+    # 8. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
         title=app_title,

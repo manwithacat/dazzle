@@ -3,7 +3,7 @@
 
 [meta]
 file = "extensibility"
-concept_count = 5
+concept_count = 6
 
 [concepts.action_purity]
 category = "Extensibility (v0.5)"
@@ -90,3 +90,62 @@ category = "Extensibility (v0.5)"
 definition = "DAZZLE's separation of concerns: DSL (declarative) → Kernel (runtime) → Stubs (custom code). The DSL is Anti-Turing (no arbitrary computation) while stubs allow full programming."
 related = ["domain_service", "stub"]
 v0_5_changes = "NEW in v0.5"
+
+[concepts.semantic_archetype]
+category = "Extensibility (v0.10.3)"
+definition = "Built-in archetype kinds (settings, tenant, tenant_settings) that trigger automatic behavior like singleton enforcement, tenant FK injection, and admin surface generation. Different from custom archetypes which only provide field inheritance."
+syntax = '''
+# Semantic archetypes use archetype: declaration in entity body
+entity <EntityName> "<Title>":
+    archetype: <settings|tenant|tenant_settings>
+    <fields...>
+
+# Custom archetypes use extends: for field inheritance only
+entity <EntityName> "<Title>":
+    extends: <CustomArchetype1>, <CustomArchetype2>
+    <fields...>
+'''
+example = '''
+# Semantic archetype: settings (system-wide singleton)
+entity AppSettings "Application Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"
+    maintenance_mode: bool = false
+
+# Semantic archetype: tenant (multi-tenant root)
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+    slug: str(50) required unique
+
+# Semantic archetype: tenant_settings (per-tenant singleton)
+entity CompanySettings "Company Settings":
+    archetype: tenant_settings
+    id: uuid pk
+    company: ref Company
+    timezone: timezone
+
+# Custom archetype: field inheritance only (no automatic behavior)
+archetype Timestamped:
+    created_at: datetime auto_add
+    updated_at: datetime auto_update
+
+entity Task "Task":
+    extends: Timestamped  # Gets created_at, updated_at fields
+    id: uuid pk
+    title: str(200) required
+'''
+related = ["archetype", "settings_archetype", "tenant_archetype", "tenant_settings_archetype"]
+v0_10_3_changes = "NEW in v0.10.3"
+
+[concepts.semantic_archetype.archetype_kinds]
+settings = "System-wide configuration singleton. Sets is_singleton=true, adds admin-only access, auto-generates settings surface."
+tenant = "Multi-tenant root entity. Sets is_tenant_root=true, auto-injects tenant FK into other entities, auto-generates tenant admin surface."
+tenant_settings = "Per-tenant configuration singleton. Sets is_singleton=true (per tenant), adds tenant admin access, auto-generates settings surface."
+
+[concepts.semantic_archetype.automatic_behaviors]
+settings = ["Entity becomes singleton (only one record)", "Admin-only visibility and permissions", "Auto-generated admin settings surface", "Excluded from tenant FK injection"]
+tenant = ["Entity marked as tenant root", "All other entities get tenant FK auto-injected (except settings)", "Auto-generated tenant admin surface (list mode)", "Tenant FK uses lowercase entity name (Company -> company)"]
+tenant_settings = ["Entity becomes singleton (per tenant)", "Admin access rules", "Auto-generated settings surface (edit mode)", "Gets tenant FK like other entities"]

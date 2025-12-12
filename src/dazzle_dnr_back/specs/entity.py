@@ -34,6 +34,8 @@ class ScalarType(str, Enum):
     FILE = "file"
     IMAGE = "image"
     RICHTEXT = "richtext"
+    # Timezone (v0.10.3)
+    TIMEZONE = "timezone"  # IANA timezone identifier
 
 
 class FileFieldConfig(BaseModel):
@@ -604,6 +606,15 @@ class EntitySpec(BaseModel):
     )
     access: EntityAccessSpec | None = Field(
         default=None, description="Entity access rules (visibility and permissions)"
+    )
+    # v0.10.3: Archetype flags
+    is_singleton: bool = Field(
+        default=False,
+        description="Entity is a singleton (settings entity - only one record exists)",
+    )
+    is_tenant_root: bool = Field(
+        default=False,
+        description="Entity is the tenant root (defines multi-tenant boundary)",
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 

@@ -310,3 +310,156 @@ entity Settings "Settings":
         tz_field = next(f for f in settings.fields if f.name == "timezone")
         assert tz_field.type.kind == ir.FieldTypeKind.TIMEZONE
         assert tz_field.default == "UTC"
+
+
+class TestAutoSurfaceGeneration:
+    """Test auto-surface generation for semantic archetypes."""
+
+    def test_settings_surface_generated(self):
+        """Settings entity gets auto-generated settings surface."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity AppSettings "Application Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"
+    maintenance_mode: bool = false
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        assert len(surfaces) == 1
+        surface = surfaces[0]
+        assert surface.name == "app_settings_settings"
+        assert surface.mode == ir.SurfaceMode.EDIT
+        assert surface.entity_ref == "AppSettings"
+        assert surface.access is not None
+        assert surface.access.require_auth is True
+        assert "admin" in surface.access.allow_personas
+
+    def test_tenant_admin_surface_generated(self):
+        """Tenant entity gets auto-generated admin surface."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity Organization "Organization":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+    slug: str(50) required unique
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        assert len(surfaces) == 1
+        surface = surfaces[0]
+        assert surface.name == "organization_admin"
+        assert surface.mode == ir.SurfaceMode.LIST
+        assert surface.entity_ref == "Organization"
+        assert surface.access is not None
+        assert "admin" in surface.access.allow_personas
+
+    def test_tenant_settings_surface_generated(self):
+        """Tenant settings entity gets auto-generated settings surface."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity Organization "Organization":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+
+entity OrgSettings "Organization Settings":
+    archetype: tenant_settings
+    id: uuid pk
+    org: ref Organization
+    timezone: timezone
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        # Should have 2 surfaces: one for tenant, one for tenant_settings
+        assert len(surfaces) == 2
+        surface_names = {s.name for s in surfaces}
+        assert "organization_admin" in surface_names
+        assert "org_settings_settings" in surface_names
+
+        org_settings_surface = next(s for s in surfaces if s.name == "org_settings_settings")
+        assert org_settings_surface.mode == ir.SurfaceMode.EDIT
+        assert org_settings_surface.entity_ref == "OrgSettings"
+
+    def test_existing_surface_not_overridden(self):
+        """Explicit DSL surface overrides auto-generation."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity AppSettings "Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        # Simulate existing surface with same name
+        existing_surface = ir.SurfaceSpec(
+            name="app_settings_settings",
+            title="Custom Settings",
+            entity_ref="AppSettings",
+            mode=ir.SurfaceMode.EDIT,
+            sections=[],
+            actions=[],
+        )
+
+        surfaces = generate_archetype_surfaces(expanded, [existing_surface])
+
+        # Should not generate new surface since one with same name exists
+        assert len(surfaces) == 0
+
+    def test_surface_elements_exclude_pk(self):
+        """Surface elements don't include primary key fields."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity AppSettings "Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"
+    site_name: str(200) = "My App"
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        assert len(surfaces) == 1
+        surface = surfaces[0]
+        assert len(surface.sections) == 1
+
+        section = surface.sections[0]
+        field_names = [e.field_name for e in section.elements]
+        assert "id" not in field_names
+        assert "timezone" in field_names
+        assert "site_name" in field_names

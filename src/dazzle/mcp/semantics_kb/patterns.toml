@@ -2,7 +2,7 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 19
+pattern_count = 22
 
 
 [patterns.adapter_result]
@@ -835,5 +835,120 @@ surface product_catalog "Products":
     search: name, description
     filter: category, in_stock
     sort: name asc
-    empty: "No products match your search" 
+    empty: "No products match your search"
 '''
+
+[patterns.settings_archetype]
+name = "Settings Archetype Pattern"
+description = "System-wide configuration using the settings semantic archetype for admin-only singleton entities"
+v0_10_3_feature = true
+components = ["archetype: settings declaration", "Automatic singleton behavior", "Auto-generated admin surface", "Admin-only access rules"]
+example = '''
+# v0.10.3: System-wide settings entity
+entity AppSettings "Application Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"          # IANA timezone (e.g., "Europe/London")
+    default_currency: str(3) = "GBP"
+    maintenance_mode: bool = false
+    max_upload_size_mb: int = 10
+    support_email: email
+
+# What happens automatically:
+# 1. Entity is marked as singleton (is_singleton = true)
+# 2. Admin-only access rules are applied
+# 3. Settings surface is auto-generated (if not explicitly defined):
+#    - Name: app_settings_settings
+#    - Mode: edit
+#    - Access: admin only
+#    - Route: /admin/settings/app_settings
+#
+# The singleton ensures only one record exists in the database.
+# First access will create the record; subsequent accesses update it.
+'''
+use_cases = ["Application-wide configuration", "Feature flags", "System defaults", "Admin-controlled settings"]
+related = ["tenant_archetype", "tenant_settings_archetype", "timezone_field"]
+
+[patterns.tenant_archetype]
+name = "Tenant Archetype Pattern"
+description = "Multi-tenant root entity that defines tenant boundaries and automatically injects tenant FK into other entities"
+v0_10_3_feature = true
+components = ["archetype: tenant declaration", "Automatic tenant FK injection", "Auto-generated tenant admin surface", "Tenant isolation at API level"]
+example = '''
+# v0.10.3: Multi-tenant application
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+    slug: str(50) required unique
+    plan: enum[free,pro,enterprise] = free
+    created_at: datetime auto_add
+
+# Other entities automatically get tenant FK injected
+entity Contact "Contact":
+    id: uuid pk
+    name: str(200) required
+    email: email required
+    # company: ref Company  <-- auto-injected by archetype expander
+
+entity Project "Project":
+    id: uuid pk
+    name: str(200) required
+    status: enum[active,completed,archived] = active
+    # company: ref Company  <-- auto-injected
+
+# What happens automatically:
+# 1. Company is marked as tenant root (is_tenant_root = true)
+# 2. All other entities (except archetype: settings) get company FK
+# 3. Tenant admin surface is auto-generated:
+#    - Name: company_admin
+#    - Mode: list
+#    - Access: admin only
+#    - Route: /admin/tenants
+'''
+use_cases = ["SaaS applications", "Multi-organization platforms", "White-label solutions", "Isolated customer data"]
+related = ["settings_archetype", "tenant_settings_archetype"]
+
+[patterns.tenant_settings_archetype]
+name = "Tenant Settings Archetype Pattern"
+description = "Per-tenant configuration using tenant_settings archetype for tenant-scoped singleton entities"
+v0_10_3_feature = true
+components = ["archetype: tenant_settings declaration", "Per-tenant singleton", "Auto-generated settings surface", "Tenant admin access"]
+example = '''
+# v0.10.3: Complete multi-tenant app with settings
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+    slug: str(50) required unique
+
+entity CompanySettings "Company Settings":
+    archetype: tenant_settings
+    id: uuid pk
+    company: ref Company              # Explicit tenant ref
+    timezone: timezone                # Override system default
+    logo_url: url
+    invoice_prefix: str(10) = "INV"
+    default_payment_terms: int = 30   # days
+
+# System-wide settings (not tenant-scoped)
+entity SystemSettings "System Settings":
+    archetype: settings
+    id: uuid pk
+    timezone: timezone = "UTC"
+    maintenance_mode: bool = false
+
+# What happens automatically:
+# 1. CompanySettings is marked as singleton (per-tenant)
+# 2. Tenant admin access rules are applied
+# 3. Settings surface is auto-generated:
+#    - Name: company_settings_settings
+#    - Mode: edit
+#    - Access: tenant admin only
+#    - Route: /settings/company_settings
+#
+# Note: SystemSettings is NOT tenant-scoped because it has
+# archetype: settings (not tenant_settings)
+'''
+use_cases = ["Per-tenant branding", "Tenant-specific defaults", "Customer customization", "White-label configuration"]
+related = ["settings_archetype", "tenant_archetype", "timezone_field"]

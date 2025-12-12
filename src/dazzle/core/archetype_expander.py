@@ -48,6 +48,217 @@ def expand_archetypes(
     return expanded
 
 
+def generate_archetype_surfaces(
+    entities: list[ir.EntitySpec],
+    existing_surfaces: list[ir.SurfaceSpec],
+) -> list[ir.SurfaceSpec]:
+    """
+    Generate auto-surfaces for semantic archetypes.
+
+    Generates:
+    - Settings surface for each settings entity (admin-only, edit mode)
+    - Tenant management surface for tenant entity (admin-only, list mode)
+    - Tenant settings surface for tenant_settings entities (admin-only, edit mode)
+
+    Skips generation if a surface with the same name already exists
+    (allowing DSL override).
+
+    Args:
+        entities: List of expanded entity specifications
+        existing_surfaces: List of existing surface specifications
+
+    Returns:
+        List of auto-generated surfaces (to be appended to existing)
+    """
+    existing_names = {s.name for s in existing_surfaces}
+    generated: list[ir.SurfaceSpec] = []
+
+    for entity in entities:
+        if not entity.archetype_kind:
+            continue
+
+        if entity.archetype_kind == ir.ArchetypeKind.SETTINGS:
+            surface = _generate_settings_surface(entity)
+            if surface.name not in existing_names:
+                generated.append(surface)
+
+        elif entity.archetype_kind == ir.ArchetypeKind.TENANT:
+            surface = _generate_tenant_admin_surface(entity)
+            if surface.name not in existing_names:
+                generated.append(surface)
+
+        elif entity.archetype_kind == ir.ArchetypeKind.TENANT_SETTINGS:
+            surface = _generate_tenant_settings_surface(entity)
+            if surface.name not in existing_names:
+                generated.append(surface)
+
+    return generated
+
+
+def _generate_settings_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
+    """
+    Generate admin settings surface for a settings entity.
+
+    Creates an edit-mode surface with:
+    - All non-PK fields in a single section
+    - Admin-only access
+    - Route: /admin/settings/{entity_snake_name}
+
+    Args:
+        entity: Settings entity
+
+    Returns:
+        Auto-generated settings surface
+    """
+    snake_name = _to_snake_case(entity.name)
+
+    # Create elements for all non-PK fields
+    elements = [
+        ir.SurfaceElement(
+            field_name=f.name,
+            label=f.name.replace("_", " ").title(),
+        )
+        for f in entity.fields
+        if not f.is_primary_key
+    ]
+
+    section = ir.SurfaceSection(
+        name="settings",
+        title=entity.title or f"{entity.name} Settings",
+        elements=elements,
+    )
+
+    access = ir.SurfaceAccessSpec(
+        require_auth=True,
+        allow_personas=["admin"],
+    )
+
+    return ir.SurfaceSpec(
+        name=f"{snake_name}_settings",
+        title=entity.title or f"{entity.name} Settings",
+        entity_ref=entity.name,
+        mode=ir.SurfaceMode.EDIT,
+        sections=[section],
+        actions=[],
+        access=access,
+    )
+
+
+def _generate_tenant_admin_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
+    """
+    Generate tenant management surface for site admins.
+
+    Creates a list-mode surface with:
+    - Key fields for tenant identification
+    - Admin-only access
+    - Route: /admin/tenants
+
+    Args:
+        entity: Tenant root entity
+
+    Returns:
+        Auto-generated tenant management surface
+    """
+    snake_name = _to_snake_case(entity.name)
+
+    # Create elements for key fields (name, slug, etc. - non-PK, non-FK)
+    elements = [
+        ir.SurfaceElement(
+            field_name=f.name,
+            label=f.name.replace("_", " ").title(),
+        )
+        for f in entity.fields
+        if not f.is_primary_key and f.type.kind != ir.FieldTypeKind.REF
+    ]
+
+    section = ir.SurfaceSection(
+        name="tenants",
+        title=f"{entity.title or entity.name} List",
+        elements=elements,
+    )
+
+    access = ir.SurfaceAccessSpec(
+        require_auth=True,
+        allow_personas=["admin"],
+    )
+
+    return ir.SurfaceSpec(
+        name=f"{snake_name}_admin",
+        title=f"Manage {entity.title or entity.name}s",
+        entity_ref=entity.name,
+        mode=ir.SurfaceMode.LIST,
+        sections=[section],
+        actions=[],
+        access=access,
+    )
+
+
+def _generate_tenant_settings_surface(entity: ir.EntitySpec) -> ir.SurfaceSpec:
+    """
+    Generate per-tenant settings surface.
+
+    Creates an edit-mode surface with:
+    - All non-PK, non-FK fields
+    - Admin-only access (tenant admin at runtime)
+    - Route: /settings/{entity_snake_name}
+
+    Args:
+        entity: Tenant settings entity
+
+    Returns:
+        Auto-generated tenant settings surface
+    """
+    snake_name = _to_snake_case(entity.name)
+
+    # Create elements for non-PK, non-FK fields
+    elements = [
+        ir.SurfaceElement(
+            field_name=f.name,
+            label=f.name.replace("_", " ").title(),
+        )
+        for f in entity.fields
+        if not f.is_primary_key and f.type.kind != ir.FieldTypeKind.REF
+    ]
+
+    section = ir.SurfaceSection(
+        name="settings",
+        title=entity.title or f"{entity.name}",
+        elements=elements,
+    )
+
+    access = ir.SurfaceAccessSpec(
+        require_auth=True,
+        allow_personas=["admin"],
+    )
+
+    return ir.SurfaceSpec(
+        name=f"{snake_name}_settings",
+        title=entity.title or f"{entity.name}",
+        entity_ref=entity.name,
+        mode=ir.SurfaceMode.EDIT,
+        sections=[section],
+        actions=[],
+        access=access,
+    )
+
+
+def _to_snake_case(name: str) -> str:
+    """
+    Convert PascalCase to snake_case.
+
+    Args:
+        name: PascalCase name (e.g., "AppSettings")
+
+    Returns:
+        snake_case name (e.g., "app_settings")
+    """
+    import re
+
+    # Insert underscore before uppercase letters (except first)
+    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+
 def _merge_archetype_fields(
     entity: ir.EntitySpec,
     symbols: SymbolTable,

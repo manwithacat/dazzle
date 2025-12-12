@@ -3,7 +3,7 @@
 
 [meta]
 file = "types"
-concept_count = 4
+concept_count = 5
 
 [concepts.enum]
 category = "Type System"
@@ -132,3 +132,35 @@ has_many = "Parent owns multiple children (one-to-many)"
 has_one = "Parent owns exactly one child (one-to-one)"
 embeds = "Value object embedded in parent (no separate identity)"
 belongs_to = "Child side of has_many/has_one relationship"
+
+[concepts.timezone]
+category = "Type System"
+definition = "IANA timezone identifier field type for storing timezone names like 'Europe/London', 'America/New_York', 'UTC'. Used for timezone configuration in settings entities."
+syntax = "<field_name>: timezone [= \"default_timezone\"]"
+example = '''
+entity AppSettings "Application Settings":
+    archetype: settings
+    id: uuid pk
+
+    # System timezone with default
+    timezone: timezone = "UTC"
+
+entity UserPreferences "User Preferences":
+    id: uuid pk
+    user: ref User required
+
+    # User-specific timezone
+    display_timezone: timezone = "Europe/London"
+
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+
+    # Per-tenant timezone
+    timezone: timezone = "UTC"
+'''
+related = ["field_types", "settings_archetype", "tenant_archetype"]
+v0_10_3_changes = "NEW in v0.10.3"
+valid_values = ["IANA timezone identifiers (e.g., 'Europe/London', 'America/New_York', 'Asia/Tokyo')", "UTC", "Region/City format required for DST support"]
+important_notes = ["Stored as string in database", "Validated against IANA timezone database at runtime", "Use for date/time display preferences", "Does not affect how dates are stored (always UTC in database)"]

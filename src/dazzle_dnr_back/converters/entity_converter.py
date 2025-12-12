@@ -65,6 +65,7 @@ def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
         ir.FieldTypeKind.UUID: ScalarType.UUID,
         ir.FieldTypeKind.EMAIL: ScalarType.EMAIL,
         ir.FieldTypeKind.JSON: ScalarType.JSON,  # v0.9.4
+        ir.FieldTypeKind.TIMEZONE: ScalarType.TIMEZONE,  # v0.10.3
     }
 
     if kind == ir.FieldTypeKind.ENUM:
@@ -554,6 +555,8 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
         relations=relations,
         state_machine=state_machine,
         access=access,
+        is_singleton=dazzle_entity.is_singleton,  # v0.10.3
+        is_tenant_root=dazzle_entity.is_tenant_root,  # v0.10.3
         metadata=metadata,
     )
 
