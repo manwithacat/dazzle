@@ -1,0 +1,121 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "contact_manager",
+    "domain_description": "Contact relationship management system for managing business contacts and interactions",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Alpha Ltd",
+        "slug": "alpha-ltd",
+        "notes": "Demo tenant 1"
+      },
+      {
+        "name": "Bravo Ltd",
+        "slug": "bravo-ltd",
+        "notes": null
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "Staff",
+        "description": "Regular staff users",
+        "default_role": "role_staff",
+        "default_user_count": 3
+      }
+    ],
+    "entities": [
+      {
+        "name": "Contact",
+        "row_count_default": 30,
+        "notes": "Contact",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "first_name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "last_name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "full_name",
+              "domains": [
+                "example.test"
+              ]
+            }
+          },
+          {
+            "field_name": "phone",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "company",
+            "strategy": "company_name",
+            "params": {}
+          },
+          {
+            "field_name": "job_title",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 3,
+              "max_words": 8
+            }
+          },
+          {
+            "field_name": "notes",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "is_favorite",
+            "strategy": "boolean_weighted",
+            "params": {
+              "true_weight": 0.3
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

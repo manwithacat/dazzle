@@ -1,0 +1,212 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "ops_dashboard",
+    "domain_description": "Operations monitoring dashboard for tracking system health and metrics",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Alpha Ltd",
+        "slug": "alpha-ltd",
+        "notes": "Demo tenant 1"
+      },
+      {
+        "name": "Bravo Ltd",
+        "slug": "bravo-ltd",
+        "notes": null
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "Operations Engineer",
+        "description": "Operations Engineer user",
+        "default_role": "role_ops_engineer",
+        "default_user_count": 1
+      }
+    ],
+    "entities": [
+      {
+        "name": "System",
+        "row_count_default": 20,
+        "notes": "System",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "service_type",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "web",
+                "api",
+                "database",
+                "cache",
+                "queue"
+              ],
+              "weights": [
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2
+              ]
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "healthy",
+                "degraded",
+                "critical",
+                "offline"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "response_time_ms",
+            "strategy": "numeric_range",
+            "params": {
+              "min": 1,
+              "max": 100
+            }
+          },
+          {
+            "field_name": "error_rate",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "cpu_usage",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "memory_usage",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "last_check",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "Alert",
+        "row_count_default": 20,
+        "notes": "Alert",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "system",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "severity",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "message",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "triggered_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "acknowledged",
+            "strategy": "boolean_weighted",
+            "params": {
+              "true_weight": 0.3
+            }
+          },
+          {
+            "field_name": "acknowledged_by",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

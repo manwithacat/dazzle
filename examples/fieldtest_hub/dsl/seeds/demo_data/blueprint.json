@@ -1,0 +1,663 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "fieldtest_hub",
+    "domain_description": "Field testing management hub for organizing and tracking field tests and results",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Alpha Ltd",
+        "slug": "alpha-ltd",
+        "notes": "Demo tenant 1"
+      },
+      {
+        "name": "Bravo Ltd",
+        "slug": "bravo-ltd",
+        "notes": null
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "Engineer",
+        "description": "Engineer user",
+        "default_role": "role_engineer",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "Field Tester",
+        "description": "Field Tester user",
+        "default_role": "role_tester",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "Manager",
+        "description": "Manager user",
+        "default_role": "role_manager",
+        "default_user_count": 1
+      }
+    ],
+    "entities": [
+      {
+        "name": "Device",
+        "row_count_default": 20,
+        "notes": "Device",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "model",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "batch_number",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "serial_number",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "firmware_version",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "prototype",
+                "active",
+                "recalled",
+                "retired"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "assigned_tester_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "deployed_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "Tester",
+        "row_count_default": 20,
+        "notes": "Tester",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "full_name",
+              "domains": [
+                "example.test"
+              ]
+            }
+          },
+          {
+            "field_name": "location",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "skill_level",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "casual",
+                "enthusiast",
+                "engineer"
+              ],
+              "weights": [
+                0.3333333333333333,
+                0.3333333333333333,
+                0.3333333333333333
+              ]
+            }
+          },
+          {
+            "field_name": "joined_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "active",
+            "strategy": "boolean_weighted",
+            "params": {
+              "true_weight": 0.3
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "IssueReport",
+        "row_count_default": 20,
+        "notes": "Issue Report",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "device_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "reported_by_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "category",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "battery",
+                "connectivity",
+                "mechanical",
+                "overheating",
+                "crash",
+                "other"
+              ],
+              "weights": [
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666
+              ]
+            }
+          },
+          {
+            "field_name": "severity",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "steps_to_reproduce",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "photo_url",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "reported_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "open",
+                "triaged",
+                "in_progress",
+                "fixed",
+                "verified",
+                "closed"
+              ],
+              "weights": [
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666,
+                0.16666666666666666
+              ]
+            }
+          },
+          {
+            "field_name": "resolution",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "firmware_version",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "TestSession",
+        "row_count_default": 20,
+        "notes": "Test Session",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "device_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "tester_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "duration_minutes",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "environment",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "indoor",
+                "outdoor",
+                "vehicle",
+                "industrial",
+                "other"
+              ],
+              "weights": [
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2
+              ]
+            }
+          },
+          {
+            "field_name": "temperature",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "notes",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "logged_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "FirmwareRelease",
+        "row_count_default": 20,
+        "notes": "Firmware Release",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "version",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "release_notes",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "release_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "draft",
+                "released",
+                "deprecated"
+              ],
+              "weights": [
+                0.3333333333333333,
+                0.3333333333333333,
+                0.3333333333333333
+              ]
+            }
+          },
+          {
+            "field_name": "applies_to_batch",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "Task",
+        "row_count_default": 20,
+        "notes": "Task",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "type",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "debugging",
+                "hardware_replacement",
+                "firmware_update",
+                "recall_request"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "created_by_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "assigned_to_id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "open",
+                "in_progress",
+                "completed",
+                "cancelled"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "notes",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

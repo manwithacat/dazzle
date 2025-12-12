@@ -1,0 +1,233 @@
+{
+  "version": "1.0",
+  "blueprint": {
+    "project_id": "simple_task",
+    "domain_description": "Simple task management application for tracking to-do items",
+    "seed": 42,
+    "tenants": [
+      {
+        "name": "Alpha Tasks Ltd",
+        "slug": "alpha-tasks-ltd",
+        "notes": "Demo tenant 1"
+      },
+      {
+        "name": "Bravo Tasks Ltd",
+        "slug": "bravo-tasks-ltd",
+        "notes": null
+      }
+    ],
+    "personas": [
+      {
+        "persona_name": "Administrator",
+        "description": "Full system access for task and user management",
+        "default_role": "role_admin",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "Team Manager",
+        "description": "Oversee team tasks and assignments",
+        "default_role": "role_manager",
+        "default_user_count": 1
+      },
+      {
+        "persona_name": "Team Member",
+        "description": "Work on assigned tasks",
+        "default_role": "role_member",
+        "default_user_count": 1
+      }
+    ],
+    "entities": [
+      {
+        "name": "User",
+        "row_count_default": 0,
+        "notes": "Team Member",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "email",
+            "strategy": "email_from_name",
+            "params": {
+              "source_field": "full_name",
+              "domains": [
+                "example.test"
+              ]
+            }
+          },
+          {
+            "field_name": "name",
+            "strategy": "person_name",
+            "params": {
+              "locale": "en_GB"
+            }
+          },
+          {
+            "field_name": "role",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "admin",
+                "manager",
+                "member"
+              ],
+              "weights": [
+                0.3333333333333333,
+                0.3333333333333333,
+                0.3333333333333333
+              ]
+            }
+          },
+          {
+            "field_name": "department",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "avatar_url",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "is_active",
+            "strategy": "boolean_weighted",
+            "params": {
+              "true_weight": 0.3
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      },
+      {
+        "name": "Task",
+        "row_count_default": 20,
+        "notes": "Task",
+        "tenant_scoped": false,
+        "field_patterns": [
+          {
+            "field_name": "id",
+            "strategy": "uuid_generate",
+            "params": {}
+          },
+          {
+            "field_name": "title",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 3,
+              "max_words": 8
+            }
+          },
+          {
+            "field_name": "description",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 5,
+              "max_words": 20
+            }
+          },
+          {
+            "field_name": "status",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0,
+              "enum_values": [
+                "todo",
+                "in_progress",
+                "review",
+                "done"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "priority",
+            "strategy": "enum_weighted",
+            "params": {
+              "enum_values": [
+                "low",
+                "medium",
+                "high",
+                "urgent"
+              ],
+              "weights": [
+                0.25,
+                0.25,
+                0.25,
+                0.25
+              ]
+            }
+          },
+          {
+            "field_name": "due_date",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "assigned_to",
+            "strategy": "free_text_lorem",
+            "params": {
+              "min_words": 2,
+              "max_words": 5
+            }
+          },
+          {
+            "field_name": "created_by",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "created_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          },
+          {
+            "field_name": "updated_at",
+            "strategy": "date_relative",
+            "params": {
+              "anchor": "today",
+              "min_offset_days": -365,
+              "max_offset_days": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
