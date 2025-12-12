@@ -231,6 +231,17 @@ from .stories import (
     StoryTrigger,
 )
 
+# Demo Data Blueprint (v0.12.0)
+from .demo_blueprint import (
+    BlueprintContainer,
+    DemoDataBlueprint,
+    EntityBlueprint,
+    FieldPattern,
+    FieldStrategy,
+    PersonaBlueprint,
+    TenantBlueprint,
+)
+
 # Surfaces
 from .surfaces import (
     Outcome,
@@ -431,6 +442,14 @@ __all__ = [
     "StorySpec",
     "StoryStatus",
     "StoryTrigger",
+    # Demo Data Blueprint (v0.12.0)
+    "BlueprintContainer",
+    "DemoDataBlueprint",
+    "EntityBlueprint",
+    "FieldPattern",
+    "FieldStrategy",
+    "PersonaBlueprint",
+    "TenantBlueprint",
     # Messaging Channels (v0.9.0)
     "AssetKind",
     "AssetSpec",

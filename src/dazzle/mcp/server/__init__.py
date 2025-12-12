@@ -40,11 +40,13 @@ from .state import (
 from .tool_handlers import (
     analyze_patterns,
     find_examples_handler,
+    generate_demo_data_handler,
     generate_service_dsl_handler,
     generate_story_stubs_handler,
     get_active_project_info,
     get_api_pack_handler,
     get_cli_help_handler,
+    get_demo_blueprint_handler,
     get_dnr_logs_handler,
     get_dsl_spec_handler,
     get_entities,
@@ -61,7 +63,9 @@ from .tool_handlers import (
     list_projects,
     lookup_concept_handler,
     lookup_inference_handler,
+    propose_demo_blueprint_handler,
     propose_stories_from_dsl_handler,
+    save_demo_blueprint_handler,
     save_stories_handler,
     search_api_packs_handler,
     select_project,
@@ -148,6 +152,11 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "save_stories",
         "get_stories",
         "generate_story_stubs",
+        # Demo Data Blueprint tools
+        "propose_demo_blueprint",
+        "save_demo_blueprint",
+        "get_demo_blueprint",
+        "generate_demo_data",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -183,8 +192,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = get_stories_handler(project_path, arguments)
             elif name == "generate_story_stubs":
                 result = generate_story_stubs_handler(project_path, arguments)
+            # Demo Data Blueprint tools
+            elif name == "propose_demo_blueprint":
+                result = propose_demo_blueprint_handler(project_path, arguments)
+            elif name == "save_demo_blueprint":
+                result = save_demo_blueprint_handler(project_path, arguments)
+            elif name == "get_demo_blueprint":
+                result = get_demo_blueprint_handler(project_path, arguments)
+            elif name == "generate_demo_data":
+                result = generate_demo_data_handler(project_path, arguments)
             else:
-                result = json.dumps({"error": f"Unknown story tool: {name}"})
+                result = json.dumps({"error": f"Unknown tool: {name}"})
 
     # Project tools - support explicit project_path or fall back to active project
     elif name in (

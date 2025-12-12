@@ -432,6 +432,156 @@ def get_story_tools() -> list[Tool]:
     ]
 
 
+def get_demo_data_tools() -> list[Tool]:
+    """Get Demo Data Blueprint tools for LLM-assisted demo data generation."""
+    return [
+        Tool(
+            name="propose_demo_blueprint",
+            description="Analyze DSL and propose a Demo Data Blueprint with field patterns. The blueprint defines how to generate realistic, domain-specific demo data for each entity.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "domain_description": {
+                        "type": "string",
+                        "description": "1-3 sentence domain description for flavoring data (e.g., 'Residential solar installer CRM for UK households')",
+                    },
+                    "tenant_count": {
+                        "type": "integer",
+                        "description": "Number of demo tenants to create (default: 2, uses Alpha/Bravo naming)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["domain_description"],
+            },
+        ),
+        Tool(
+            name="save_demo_blueprint",
+            description="Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json. Blueprint is validated before saving.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "blueprint": {
+                        "type": "object",
+                        "description": "DemoDataBlueprint object with project_id, domain_description, tenants, personas, entities",
+                        "properties": {
+                            "project_id": {"type": "string"},
+                            "domain_description": {"type": "string"},
+                            "seed": {"type": "integer"},
+                            "tenants": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "slug": {"type": "string"},
+                                        "notes": {"type": "string"},
+                                    },
+                                    "required": ["name"],
+                                },
+                            },
+                            "personas": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "persona_name": {"type": "string"},
+                                        "description": {"type": "string"},
+                                        "default_role": {"type": "string"},
+                                        "default_user_count": {"type": "integer"},
+                                    },
+                                    "required": ["persona_name", "description"],
+                                },
+                            },
+                            "entities": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {"type": "string"},
+                                        "row_count_default": {"type": "integer"},
+                                        "notes": {"type": "string"},
+                                        "tenant_scoped": {"type": "boolean"},
+                                        "field_patterns": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "field_name": {"type": "string"},
+                                                    "strategy": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "static_list",
+                                                            "enum_weighted",
+                                                            "person_name",
+                                                            "company_name",
+                                                            "email_from_name",
+                                                            "username_from_name",
+                                                            "hashed_password_placeholder",
+                                                            "free_text_lorem",
+                                                            "numeric_range",
+                                                            "currency_amount",
+                                                            "date_relative",
+                                                            "boolean_weighted",
+                                                            "foreign_key",
+                                                            "composite",
+                                                            "custom_prompt",
+                                                            "uuid_generate",
+                                                        ],
+                                                    },
+                                                    "params": {"type": "object"},
+                                                },
+                                                "required": ["field_name", "strategy"],
+                                            },
+                                        },
+                                    },
+                                    "required": ["name"],
+                                },
+                            },
+                        },
+                        "required": ["project_id", "domain_description"],
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["blueprint"],
+            },
+        ),
+        Tool(
+            name="get_demo_blueprint",
+            description="Load the current Demo Data Blueprint from .dazzle/demo_data/blueprint.json.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="generate_demo_data",
+            description="Generate demo data files from the blueprint. Outputs CSV or JSONL files to demo_data/ directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "format": {
+                        "type": "string",
+                        "enum": ["csv", "jsonl"],
+                        "description": "Output format (default: csv)",
+                    },
+                    "output_dir": {
+                        "type": "string",
+                        "description": "Output directory relative to project (default: demo_data)",
+                    },
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Specific entities to generate. If omitted, generates all.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -512,6 +662,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add Story/Behaviour Layer tools (always available)
     tools.extend(get_story_tools())
+
+    # Add Demo Data Blueprint tools (always available)
+    tools.extend(get_demo_data_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

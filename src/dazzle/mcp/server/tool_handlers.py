@@ -1328,3 +1328,353 @@ def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> st
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
+
+
+# ============================================================================
+# Demo Data Blueprint Tool Implementations
+# ============================================================================
+
+
+# NATO phonetic alphabet for tenant naming
+NATO_PREFIXES = [
+    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot",
+    "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima",
+]
+
+
+def _infer_domain_suffix(domain_description: str) -> str:
+    """Infer a domain suffix from the description."""
+    desc_lower = domain_description.lower()
+
+    # Domain patterns
+    if any(w in desc_lower for w in ["solar", "renewable", "energy", "battery"]):
+        return "Solar Ltd"
+    elif any(w in desc_lower for w in ["property", "letting", "estate", "rental"]):
+        return "Lettings Ltd"
+    elif any(w in desc_lower for w in ["account", "finance", "tax", "bookkeep"]):
+        return "Finance Ltd"
+    elif any(w in desc_lower for w in ["task", "project", "todo"]):
+        return "Tasks Ltd"
+    elif any(w in desc_lower for w in ["crm", "client", "customer"]):
+        return "Services Ltd"
+    else:
+        return "Ltd"
+
+
+def _infer_field_strategy(
+    field_name: str, field_type: str, entity_name: str, is_enum: bool = False
+) -> tuple[str, dict[str, Any]]:
+    """Infer a field strategy from field name and type."""
+    name_lower = field_name.lower()
+
+    # Primary key / ID fields
+    if name_lower == "id" or name_lower.endswith("_id") and "uuid" in field_type.lower():
+        return "uuid_generate", {}
+
+    # Foreign key fields
+    if name_lower.endswith("_id"):
+        target = field_name[:-3]  # Remove _id suffix
+        return "foreign_key", {"target_entity": target.title(), "target_field": "id"}
+
+    # Person name patterns
+    if any(w in name_lower for w in ["name", "full_name", "first_name", "last_name"]):
+        return "person_name", {"locale": "en_GB"}
+
+    # Company name patterns
+    if any(w in name_lower for w in ["company", "organization", "business"]):
+        return "company_name", {}
+
+    # Email patterns
+    if "email" in name_lower:
+        return "email_from_name", {"source_field": "full_name", "domains": ["example.test"]}
+
+    # Username patterns
+    if "username" in name_lower:
+        return "username_from_name", {"source_field": "full_name"}
+
+    # Password patterns
+    if "password" in name_lower:
+        return "hashed_password_placeholder", {"plaintext_demo_password": "Demo1234!"}
+
+    # Boolean patterns
+    if field_type.lower() == "bool" or name_lower.startswith("is_") or name_lower.startswith("has_"):
+        return "boolean_weighted", {"true_weight": 0.3}
+
+    # Date patterns
+    if any(w in name_lower for w in ["date", "created", "updated", "at"]):
+        return "date_relative", {"anchor": "today", "min_offset_days": -365, "max_offset_days": 0}
+
+    # Currency/amount patterns
+    if any(w in name_lower for w in ["amount", "price", "total", "cost", "value"]):
+        return "currency_amount", {"min": 10, "max": 10000, "decimals": 2}
+
+    # Numeric patterns
+    if field_type.lower() in ["int", "integer"]:
+        return "numeric_range", {"min": 1, "max": 100}
+
+    # Enum fields
+    if is_enum:
+        return "enum_weighted", {"enum_values": [], "weights": []}
+
+    # Text patterns
+    if any(w in name_lower for w in ["description", "notes", "comments", "text"]):
+        return "free_text_lorem", {"min_words": 5, "max_words": 20}
+
+    # Title patterns
+    if any(w in name_lower for w in ["title", "subject", "heading"]):
+        return "free_text_lorem", {"min_words": 3, "max_words": 8}
+
+    # Default to lorem text
+    return "free_text_lorem", {"min_words": 2, "max_words": 5}
+
+
+def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyze DSL and propose a Demo Data Blueprint."""
+    from dazzle.core.ir.demo_blueprint import (
+        DemoDataBlueprint,
+        EntityBlueprint,
+        FieldPattern,
+        FieldStrategy,
+        PersonaBlueprint,
+        TenantBlueprint,
+    )
+
+    domain_description = args.get("domain_description", "")
+    tenant_count = args.get("tenant_count", 2)
+
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        # Generate tenant blueprints
+        domain_suffix = _infer_domain_suffix(domain_description)
+        tenants = []
+        for i in range(min(tenant_count, len(NATO_PREFIXES))):
+            prefix = NATO_PREFIXES[i]
+            slug = f"{prefix.lower()}-{domain_suffix.replace(' ', '-').lower()}"
+            tenants.append(
+                TenantBlueprint(
+                    name=f"{prefix} {domain_suffix}",
+                    slug=slug,
+                    notes=f"Demo tenant {i + 1}" if i == 0 else None,
+                )
+            )
+
+        # Generate persona blueprints from DSL personas
+        personas = []
+        for persona in app_spec.personas:
+            personas.append(
+                PersonaBlueprint(
+                    persona_name=persona.label or persona.id,
+                    description=persona.description or f"{persona.label or persona.id} user",
+                    default_role=f"role_{persona.id.lower()}",
+                    default_user_count=2 if persona.id.lower() in ["staff", "user"] else 1,
+                )
+            )
+
+        # Default personas if none defined
+        if not personas:
+            personas = [
+                PersonaBlueprint(
+                    persona_name="Staff",
+                    description="Regular staff users",
+                    default_role="role_staff",
+                    default_user_count=3,
+                ),
+            ]
+
+        # Generate entity blueprints
+        entities = []
+        for entity in app_spec.domain.entities:
+            # Check for tenant_id field
+            tenant_scoped = any(f.name == "tenant_id" for f in entity.fields)
+
+            # Generate field patterns
+            field_patterns = []
+            for field in entity.fields:
+                # Detect field type
+                field_type_str = (
+                    field.type.kind.value if field.type and field.type.kind else "str"
+                )
+                is_enum = (
+                    field.type and field.type.kind and field.type.kind.value == "enum"
+                )
+
+                strategy, params = _infer_field_strategy(
+                    field.name, field_type_str, entity.name, is_enum
+                )
+
+                # Add enum values if applicable
+                if is_enum and field.type.enum_values:
+                    params["enum_values"] = field.type.enum_values
+                    params["weights"] = [1.0 / len(field.type.enum_values)] * len(
+                        field.type.enum_values
+                    )
+
+                field_patterns.append(
+                    FieldPattern(
+                        field_name=field.name,
+                        strategy=FieldStrategy(strategy),
+                        params=params,
+                    )
+                )
+
+            # Determine row count based on entity type
+            row_count = 20
+            if entity.name.lower() in ["user", "tenant"]:
+                row_count = 0  # Generated from personas/tenants
+            elif entity.name.lower() in ["invoice", "order", "transaction"]:
+                row_count = 100
+            elif entity.name.lower() in ["client", "customer", "contact"]:
+                row_count = 30
+
+            entities.append(
+                EntityBlueprint(
+                    name=entity.name,
+                    row_count_default=row_count,
+                    notes=entity.title,
+                    tenant_scoped=tenant_scoped,
+                    field_patterns=field_patterns,
+                )
+            )
+
+        # Create blueprint
+        blueprint = DemoDataBlueprint(
+            project_id=manifest.name or project_root.name,
+            domain_description=domain_description,
+            seed=42,
+            tenants=tenants,
+            personas=personas,
+            entities=entities,
+        )
+
+        # Convert to JSON
+        blueprint_data = blueprint.model_dump(mode="json")
+
+        return json.dumps(
+            {
+                "status": "proposed",
+                "project_path": str(project_root),
+                "tenant_count": len(tenants),
+                "persona_count": len(personas),
+                "entity_count": len(entities),
+                "note": "Review and adjust, then call save_demo_blueprint to persist.",
+                "blueprint": blueprint_data,
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
+    from dazzle.core.demo_blueprint_persistence import save_blueprint
+    from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
+
+    blueprint_data = args.get("blueprint")
+    if not blueprint_data:
+        return json.dumps({"error": "blueprint parameter required"})
+
+    try:
+        # Validate and create blueprint
+        blueprint = DemoDataBlueprint.model_validate(blueprint_data)
+
+        # Save blueprint
+        blueprint_file = save_blueprint(project_root, blueprint)
+
+        return json.dumps(
+            {
+                "status": "saved",
+                "file": str(blueprint_file),
+                "project_id": blueprint.project_id,
+                "tenant_count": len(blueprint.tenants),
+                "persona_count": len(blueprint.personas),
+                "entity_count": len(blueprint.entities),
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Load the current Demo Data Blueprint."""
+    from dazzle.core.demo_blueprint_persistence import get_blueprint_file, load_blueprint
+
+    try:
+        blueprint = load_blueprint(project_root)
+        blueprint_file = get_blueprint_file(project_root)
+
+        if blueprint is None:
+            return json.dumps(
+                {
+                    "status": "not_found",
+                    "file": str(blueprint_file),
+                    "message": "No blueprint found. Use propose_demo_blueprint to create one.",
+                }
+            )
+
+        return json.dumps(
+            {
+                "status": "loaded",
+                "file": str(blueprint_file),
+                "blueprint": blueprint.model_dump(mode="json"),
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate demo data files from the blueprint."""
+    from dazzle.core.demo_blueprint_persistence import load_blueprint
+    from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
+
+    output_format = args.get("format", "csv")
+    output_dir = args.get("output_dir", "demo_data")
+    filter_entities = args.get("entities")
+
+    try:
+        blueprint = load_blueprint(project_root)
+        if blueprint is None:
+            return json.dumps(
+                {
+                    "status": "no_blueprint",
+                    "message": "No blueprint found. Use propose_demo_blueprint first.",
+                }
+            )
+
+        # Create generator
+        generator = BlueprintDataGenerator(blueprint)
+
+        # Generate data
+        output_path = project_root / output_dir
+        files = generator.generate_all(
+            output_path,
+            format=output_format,
+            entities=filter_entities,
+        )
+
+        # Get login matrix
+        login_matrix = generator.get_login_matrix()
+        login_file = output_path / "login_matrix.md"
+        login_file.write_text(login_matrix, encoding="utf-8")
+
+        return json.dumps(
+            {
+                "status": "generated",
+                "output_dir": str(output_path),
+                "format": output_format,
+                "files": {name: str(path) for name, path in files.items()},
+                "login_matrix": str(login_file),
+                "total_rows": sum(generator.row_counts.values()),
+                "row_counts": generator.row_counts,
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
