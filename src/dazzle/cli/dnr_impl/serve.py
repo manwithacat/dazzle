@@ -2,10 +2,18 @@
 DNR serve command.
 
 Start the DNR development server with frontend and backend.
+
+Port Allocation:
+    By default, ports are deterministically assigned based on project name
+    to prevent collisions when running multiple DNR instances. Each project
+    gets a consistent port pair (UI + API) derived from its name hash.
+
+    Override with --port and --api-port for explicit control.
 """
 
 from __future__ import annotations
 
+import atexit
 import http.server
 import os
 import socketserver
@@ -21,11 +29,19 @@ from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
+from .ports import (
+    clear_runtime_file,
+    find_available_ports,
+    write_runtime_file,
+)
+
 
 def dnr_serve(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    port: int = typer.Option(3000, "--port", "-p", help="Frontend port"),
-    api_port: int = typer.Option(8000, "--api-port", help="Backend API port"),
+    port: int = typer.Option(None, "--port", "-p", help="Frontend port (auto-assigned if not set)"),
+    api_port: int = typer.Option(
+        None, "--api-port", help="Backend API port (auto-assigned if not set)"
+    ),
     host: str = typer.Option("127.0.0.1", "--host", help="Host to bind to"),
     ui_only: bool = typer.Option(False, "--ui-only", help="Serve UI only (static files)"),
     backend_only: bool = typer.Option(
@@ -110,10 +126,37 @@ def dnr_serve(
     try:
         mf = load_manifest(manifest_path)
         auth_enabled = mf.auth.enabled
-        project_name = mf.name
+        project_name = mf.name or project_root.name
     except Exception:
         auth_enabled = False
-        project_name = None
+        project_name = project_root.name
+
+    # Allocate ports based on project name (deterministic hashing)
+    # This prevents collisions when running multiple DNR instances
+    allocation = find_available_ports(
+        project_name=project_name,
+        ui_port=port,
+        api_port=api_port,
+        host=host,
+    )
+    port = allocation.ui_port
+    api_port = allocation.api_port
+
+    # Show port allocation info if auto-assigned
+    if allocation.ui_port != 3000 or allocation.api_port != 8000:
+        typer.echo(f"Port allocation for '{project_name}':")
+        typer.echo(f"  UI:  {allocation.ui_port}")
+        typer.echo(f"  API: {allocation.api_port}")
+        typer.echo()
+
+    # Write runtime file for port discovery by E2E tests
+    write_runtime_file(project_root, allocation)
+
+    # Clean up runtime file on exit
+    def cleanup_runtime():
+        clear_runtime_file(project_root)
+
+    atexit.register(cleanup_runtime)
 
     # Warn if --watch is used without --local
     if watch and not local:

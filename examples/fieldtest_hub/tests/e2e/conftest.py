@@ -26,12 +26,36 @@ from playwright.sync_api import Browser, ConsoleMessage, Page, sync_playwright
 # Configuration
 # =============================================================================
 
-# Default URLs (can be overridden via environment variables)
+# Default URLs (can be overridden via environment variables or runtime.json)
 DEFAULT_UI_URL = "http://localhost:3000"
 DEFAULT_API_URL = "http://localhost:8000"
 
 # Fixtures directory
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+# Project root (for runtime file discovery)
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+
+def _load_runtime_ports() -> tuple[str, str]:
+    """
+    Load port configuration from runtime.json if available.
+
+    The DNR serve command writes a runtime.json file with the actual
+    ports being used. This allows E2E tests to discover the correct
+    ports automatically, even when using auto-allocated ports.
+
+    Returns:
+        Tuple of (ui_url, api_url)
+    """
+    runtime_file = PROJECT_ROOT / ".dazzle" / "runtime.json"
+    if runtime_file.exists():
+        try:
+            data = json.load(open(runtime_file))
+            return data.get("ui_url", DEFAULT_UI_URL), data.get("api_url", DEFAULT_API_URL)
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return DEFAULT_UI_URL, DEFAULT_API_URL
 
 
 # =============================================================================
@@ -113,14 +137,32 @@ class PageDiagnostics:
 
 @pytest.fixture(scope="session")
 def ui_url() -> str:
-    """Get the UI base URL."""
-    return os.environ.get("DNR_UI_URL", DEFAULT_UI_URL)
+    """Get the UI base URL.
+
+    Priority:
+    1. DNR_UI_URL environment variable
+    2. .dazzle/runtime.json (written by `dazzle dnr serve`)
+    3. Default localhost:3000
+    """
+    if "DNR_UI_URL" in os.environ:
+        return os.environ["DNR_UI_URL"]
+    runtime_ui, _ = _load_runtime_ports()
+    return runtime_ui
 
 
 @pytest.fixture(scope="session")
 def api_url() -> str:
-    """Get the API base URL."""
-    return os.environ.get("DNR_BASE_URL", DEFAULT_API_URL)
+    """Get the API base URL.
+
+    Priority:
+    1. DNR_BASE_URL environment variable
+    2. .dazzle/runtime.json (written by `dazzle dnr serve`)
+    3. Default localhost:8000
+    """
+    if "DNR_BASE_URL" in os.environ:
+        return os.environ["DNR_BASE_URL"]
+    _, runtime_api = _load_runtime_ports()
+    return runtime_api
 
 
 # =============================================================================
