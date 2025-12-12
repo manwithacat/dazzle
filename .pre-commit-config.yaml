@@ -97,6 +97,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # Verify MCP server functionality (tools are published correctly)
+      - id: mcp-verify
+        name: mcp-verify
+        entry: python scripts/verify-mcp.py
+        language: system
+        files: ^src/dazzle/mcp/.*\.py$
+        pass_filenames: false
+        stages: [pre-commit]
+
       # Validate Homebrew formula syntax
       - id: homebrew-validate
         name: homebrew-validate

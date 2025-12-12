@@ -22,6 +22,7 @@ import { test as testCommand } from './test'
 import { db } from './db'
 import { version } from './version'
 import { dev } from './dev'
+import { mcp, mcpSetup, mcpCheck } from './mcp'
 
 // Test utilities
 /**
@@ -144,6 +145,24 @@ describe('CLI Commands - Import Tests', () => {
     expect(dev).toBeDefined()
     expect(dev.name).toBe('dev')
     expect(typeof dev.run).toBe('function')
+  })
+
+  test('mcp command can be imported', () => {
+    expect(mcp).toBeDefined()
+    expect(mcp.name).toBe('mcp')
+    expect(typeof mcp.run).toBe('function')
+  })
+
+  test('mcp-setup command can be imported', () => {
+    expect(mcpSetup).toBeDefined()
+    expect(mcpSetup.name).toBe('mcp-setup')
+    expect(typeof mcpSetup.run).toBe('function')
+  })
+
+  test('mcp-check command can be imported', () => {
+    expect(mcpCheck).toBeDefined()
+    expect(mcpCheck.name).toBe('mcp-check')
+    expect(typeof mcpCheck.run).toBe('function')
   })
 })
 
@@ -401,4 +420,38 @@ describe('CLI Commands - Error Handling', () => {
       expect(result.error?.code).toBe('NO_PROJECT')
     })
   }
+})
+
+describe('CLI Commands - MCP Commands', () => {
+  /**
+   * MCP commands use subprocess (like dev) because they need
+   * interactive stdio for the MCP protocol.
+   */
+
+  test('mcp command uses subprocess for MCP server', () => {
+    const source = getCommandSource(mcp)
+
+    // MCP command should use Bun.spawn because it needs interactive stdio
+    expect(source).toContain('Bun.spawn')
+    expect(source).toContain('stdio')
+
+    // Should NOT use ctx.python bridge
+    expect(source).not.toContain('ctx.python')
+  })
+
+  test('mcp-setup command uses subprocess to call Python CLI', () => {
+    const source = getCommandSource(mcpSetup)
+
+    // MCP setup uses subprocess to call Python MCP setup
+    expect(source).toContain('Bun.spawn')
+    expect(source).toContain('stdio')
+  })
+
+  test('mcp-check command uses subprocess to call Python CLI', () => {
+    const source = getCommandSource(mcpCheck)
+
+    // MCP check uses subprocess to call Python MCP check
+    expect(source).toContain('Bun.spawn')
+    expect(source).toContain('stdio')
+  })
 })

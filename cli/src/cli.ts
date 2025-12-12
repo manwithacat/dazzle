@@ -11,7 +11,7 @@ import { callPython } from './lib/python'
 import { findConfigPath, loadConfig, getProjectRoot } from './lib/config'
 
 // Import commands
-import { check, dev, show, version, new_, build, test, db, eject } from './commands'
+import { check, dev, show, version, new_, build, test, db, eject, mcp, mcpSetup, mcpCheck } from './commands'
 
 // Command registry
 const commands: Record<string, Command> = {
@@ -24,6 +24,9 @@ const commands: Record<string, Command> = {
   test,
   db,
   eject,
+  mcp,
+  'mcp-setup': mcpSetup,
+  'mcp-check': mcpCheck,
 }
 
 // Global options schema
@@ -152,6 +155,9 @@ Commands:
   test       Run E2E tests
   db         Database operations
   eject      Generate standalone code
+  mcp        Run MCP server for Claude Code
+  mcp-setup  Register MCP server with Claude Code
+  mcp-check  Check MCP server status
   version    Show version info
 
 Global Options:
@@ -167,6 +173,7 @@ Examples:
   dazzle show entities          # List entities
   dazzle build                  # Build for production
   dazzle eject                  # Generate standalone code
+  dazzle mcp-setup              # Register MCP with Claude Code
 
 Run 'dazzle <command> --help' for command-specific help.
 `)
