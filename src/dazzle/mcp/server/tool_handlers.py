@@ -1688,3 +1688,548 @@ def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
+
+
+# ============================================================================
+# Test Design Tool Implementations (v0.13.0)
+# ============================================================================
+
+
+def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Generate test designs from persona goals and workflows.
+
+    Analyzes a persona's goals from DSL and proposes tests that verify
+    the persona can achieve their stated objectives.
+    """
+    from datetime import datetime
+
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.testing.test_design_persistence import get_next_test_design_id
+
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        persona_filter = args.get("persona")
+        max_tests = args.get("max_tests", 10)
+
+        designs: list[TestDesignSpec] = []
+        design_count = 0
+
+        # Get starting ID
+        base_id = get_next_test_design_id(project_root)
+        base_num = int(base_id[3:])
+
+        def next_id() -> str:
+            nonlocal design_count
+            result = f"TD-{base_num + design_count:03d}"
+            design_count += 1
+            return result
+
+        now = datetime.utcnow()
+
+        # Filter personas
+        personas_to_process = app_spec.personas
+        if persona_filter:
+            personas_to_process = [
+                p for p in personas_to_process if p.id == persona_filter or p.label == persona_filter
+            ]
+
+        if not personas_to_process:
+            return json.dumps(
+                {
+                    "status": "no_personas",
+                    "message": "No personas found in DSL. Add persona definitions to generate persona-centric tests.",
+                    "available_personas": [p.id for p in app_spec.personas],
+                }
+            )
+
+        for persona in personas_to_process:
+            if design_count >= max_tests:
+                break
+
+            persona_name = persona.label or persona.id
+
+            # Generate tests for each persona goal
+            for goal in persona.goals[:3]:  # Limit goals per persona
+                if design_count >= max_tests:
+                    break
+
+                # Create test design for this goal
+                steps = [
+                    TestDesignStep(
+                        action=TestDesignAction.LOGIN_AS,
+                        target=persona.id,
+                        rationale=f"Authenticate as {persona_name}",
+                    ),
+                ]
+
+                # Find surfaces this persona can access
+                # Note: WorkspaceSpec doesn't directly link to persona; use all workspaces
+                surfaces_for_persona = []
+                for ws in app_spec.workspaces:
+                    surfaces_for_persona.extend(ws.regions)
+
+                # If persona has access to surfaces, navigate to first one
+                if surfaces_for_persona:
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target=surfaces_for_persona[0].name if surfaces_for_persona else "dashboard",
+                            rationale="Navigate to persona's primary workspace",
+                        )
+                    )
+
+                # Add goal-specific action (inferred from goal text)
+                if "create" in goal.lower() or "add" in goal.lower():
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CREATE,
+                            target="entity",
+                            data={"from_goal": goal},
+                            rationale=f"Perform action to achieve: {goal}",
+                        )
+                    )
+                elif "view" in goal.lower() or "see" in goal.lower():
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.ASSERT_VISIBLE,
+                            target="content",
+                            data={"from_goal": goal},
+                            rationale=f"Verify visibility for: {goal}",
+                        )
+                    )
+                else:
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="action",
+                            data={"from_goal": goal},
+                            rationale=f"Interact to achieve: {goal}",
+                        )
+                    )
+
+                designs.append(
+                    TestDesignSpec(
+                        test_id=next_id(),
+                        title=f"{persona_name} can {goal.lower().rstrip('.')}",
+                        description=f"Test that {persona_name} persona can achieve goal: {goal}",
+                        persona=persona.id,
+                        trigger=TestDesignTrigger.USER_CLICK,
+                        steps=steps,
+                        expected_outcomes=[
+                            f"Goal achieved: {goal}",
+                            "No errors or permission denials",
+                        ],
+                        entities=[],  # Will be filled by agent
+                        surfaces=[s.name for s in surfaces_for_persona[:2]],
+                        tags=["persona", persona.id, "goal"],
+                        status=TestDesignStatus.PROPOSED,
+                        prompt_version="v1",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+
+            # Generate test for persona accessing a workspace
+            # Note: WorkspaceSpec doesn't directly link to persona; generate test for first workspace
+            if app_spec.workspaces and design_count < max_tests:
+                ws = app_spec.workspaces[0]  # Use first workspace
+                designs.append(
+                    TestDesignSpec(
+                        test_id=next_id(),
+                        title=f"{persona_name} can access {ws.title or ws.name} workspace",
+                        description=f"Test that {persona_name} can access and use the {ws.name} workspace",
+                        persona=persona.id,
+                        trigger=TestDesignTrigger.PAGE_LOAD,
+                        steps=[
+                            TestDesignStep(
+                                action=TestDesignAction.LOGIN_AS,
+                                target=persona.id,
+                                rationale=f"Authenticate as {persona_name}",
+                            ),
+                            TestDesignStep(
+                                action=TestDesignAction.NAVIGATE_TO,
+                                target=ws.name,
+                                rationale=f"Go to {ws.title or ws.name} workspace",
+                            ),
+                            TestDesignStep(
+                                action=TestDesignAction.ASSERT_VISIBLE,
+                                target=f"workspace:{ws.name}",
+                                rationale="Verify workspace is accessible",
+                            ),
+                        ],
+                        expected_outcomes=[
+                            f"Workspace {ws.name} loads successfully",
+                            "All workspace regions are visible",
+                        ],
+                        entities=[],
+                        surfaces=[r.name for r in ws.regions],
+                        tags=["persona", persona.id, "workspace"],
+                        status=TestDesignStatus.PROPOSED,
+                        prompt_version="v1",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+
+        # Convert to JSON-serializable format
+        designs_data = [
+            {
+                "test_id": d.test_id,
+                "title": d.title,
+                "description": d.description,
+                "persona": d.persona,
+                "trigger": d.trigger.value,
+                "steps": [
+                    {
+                        "action": s.action.value,
+                        "target": s.target,
+                        "data": s.data,
+                        "rationale": s.rationale,
+                    }
+                    for s in d.steps
+                ],
+                "expected_outcomes": d.expected_outcomes,
+                "entities": d.entities,
+                "surfaces": d.surfaces,
+                "tags": d.tags,
+                "status": d.status.value,
+            }
+            for d in designs
+        ]
+
+        return json.dumps(
+            {
+                "proposed_count": len(designs_data),
+                "max_tests": max_tests,
+                "personas_analyzed": [p.id for p in personas_to_process],
+                "note": "These are draft test designs. Review and call save_test_designs with accepted designs.",
+                "designs": designs_data,
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Analyze coverage and suggest what's missing.
+
+    Returns untested entities, persona goals, state transitions, and suggested test designs.
+    """
+    from dazzle.core.ir.test_design import TestGap, TestGapAnalysis, TestGapCategory
+    from dazzle.testing.test_design_persistence import load_test_designs
+    from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        # Load existing test designs
+        existing_designs = load_test_designs(project_root)
+        existing_entities: set[str] = set()
+        existing_personas: set[str] = set()
+
+        for design in existing_designs:
+            existing_entities.update(design.entities)
+            if design.persona:
+                existing_personas.add(design.persona)
+
+        # Generate deterministic tests to see what we already cover
+        testspec = generate_e2e_testspec(app_spec)
+
+        gaps: list[TestGap] = []
+
+        # Check for untested entities (no custom test designs)
+        all_entities = {e.name for e in app_spec.domain.entities}
+        untested_entities = all_entities - existing_entities
+
+        for entity_name in untested_entities:
+            entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
+            if entity:
+                # High severity if it has state machine or access control
+                severity: str = "medium"
+                if entity.state_machine:
+                    severity = "high"
+                if entity.access:
+                    severity = "high"
+
+                gaps.append(
+                    TestGap(
+                        category=TestGapCategory.UNTESTED_ENTITY,
+                        target=entity_name,
+                        severity=severity,  # type: ignore[arg-type]
+                        suggestion=f"Add persona-centric test designs for {entity_name}",
+                    )
+                )
+
+        # Check for untested persona goals
+        for persona in app_spec.personas:
+            if persona.id not in existing_personas:
+                gaps.append(
+                    TestGap(
+                        category=TestGapCategory.UNTESTED_PERSONA_GOAL,
+                        target=persona.id,
+                        severity="high",
+                        suggestion=f"Use propose_persona_tests to generate tests for {persona.label or persona.id}",
+                    )
+                )
+            else:
+                # Check if all goals are covered
+                persona_designs = [d for d in existing_designs if d.persona == persona.id]
+                covered_goals = 0
+                for goal in persona.goals:
+                    if any(goal.lower() in (d.title.lower() if d.title else "") for d in persona_designs):
+                        covered_goals += 1
+
+                if covered_goals < len(persona.goals):
+                    gaps.append(
+                        TestGap(
+                            category=TestGapCategory.UNTESTED_PERSONA_GOAL,
+                            target=f"{persona.id} (partial)",
+                            severity="medium",
+                            suggestion=f"Only {covered_goals}/{len(persona.goals)} goals covered for {persona.id}",
+                        )
+                    )
+
+        # Check for untested state transitions
+        for entity in app_spec.domain.entities:
+            if entity.state_machine:
+                sm = entity.state_machine
+                for transition in sm.transitions:
+                    # Check if deterministic tests cover this
+                    flow_id = f"{entity.name}_transition_{transition.from_state}_to_{transition.to_state}"
+                    if not any(f.id == flow_id for f in testspec.flows):
+                        gaps.append(
+                            TestGap(
+                                category=TestGapCategory.UNTESTED_STATE_TRANSITION,
+                                target=f"{entity.name}: {transition.from_state} -> {transition.to_state}",
+                                severity="medium",
+                                suggestion=f"State transition test missing for {entity.name}",
+                                related_entities=[entity.name],
+                            )
+                        )
+
+        # Check for untested surfaces
+        tested_surfaces: set[str] = set()
+        for design in existing_designs:
+            tested_surfaces.update(design.surfaces)
+        for flow in testspec.flows:
+            # Extract surfaces from flow targets
+            for step in flow.steps:
+                if step.target and step.target.startswith("view:"):
+                    tested_surfaces.add(step.target.split(":", 1)[1])
+
+        for surface in app_spec.surfaces:
+            if surface.name not in tested_surfaces:
+                gaps.append(
+                    TestGap(
+                        category=TestGapCategory.UNTESTED_SURFACE,
+                        target=surface.name,
+                        severity="low",
+                        suggestion=f"Add navigation test for {surface.title or surface.name}",
+                    )
+                )
+
+        # Check for untested scenarios
+        for scenario in app_spec.scenarios:
+            # Check if any test design references this scenario
+            if not any(d.scenario == scenario.name for d in existing_designs):
+                gaps.append(
+                    TestGap(
+                        category=TestGapCategory.UNTESTED_SCENARIO,
+                        target=scenario.name,
+                        severity="medium",
+                        suggestion=f"DSL scenario '{scenario.name}' has no corresponding test design",
+                    )
+                )
+
+        # Calculate coverage score
+        total_items = (
+            len(all_entities) + len(app_spec.personas) + len(app_spec.surfaces) + len(app_spec.scenarios)
+        )
+        covered_items = (
+            len(all_entities - untested_entities)
+            + len(existing_personas)
+            + len(tested_surfaces)
+            + len([s for s in app_spec.scenarios if any(d.scenario == s.name for d in existing_designs)])
+        )
+
+        coverage_score = (covered_items / total_items * 100) if total_items > 0 else 100.0
+
+        analysis = TestGapAnalysis(
+            project_name=app_spec.name,
+            total_entities=len(all_entities),
+            total_surfaces=len(app_spec.surfaces),
+            total_personas=len(app_spec.personas),
+            total_scenarios=len(app_spec.scenarios),
+            gaps=gaps,
+            coverage_score=round(coverage_score, 1),
+        )
+
+        return json.dumps(
+            {
+                "project": analysis.project_name,
+                "coverage_score": analysis.coverage_score,
+                "totals": {
+                    "entities": analysis.total_entities,
+                    "surfaces": analysis.total_surfaces,
+                    "personas": analysis.total_personas,
+                    "scenarios": analysis.total_scenarios,
+                },
+                "gap_count": len(gaps),
+                "gaps_by_severity": {
+                    "high": len([g for g in gaps if g.severity == "high"]),
+                    "medium": len([g for g in gaps if g.severity == "medium"]),
+                    "low": len([g for g in gaps if g.severity == "low"]),
+                },
+                "gaps_by_category": analysis.gap_count_by_category,
+                "gaps": [
+                    {
+                        "category": g.category.value,
+                        "target": g.target,
+                        "severity": g.severity,
+                        "suggestion": g.suggestion,
+                    }
+                    for g in gaps
+                ],
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save test designs to dsl/tests/designs.json."""
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.testing.test_design_persistence import add_test_designs, get_dsl_tests_dir
+
+    designs_data = args.get("designs", [])
+    overwrite = args.get("overwrite", False)
+
+    if not designs_data:
+        return json.dumps({"error": "No designs provided"})
+
+    try:
+        # Convert dict data to TestDesignSpec objects
+        designs: list[TestDesignSpec] = []
+        for d in designs_data:
+            steps = []
+            for s in d.get("steps", []):
+                steps.append(
+                    TestDesignStep(
+                        action=TestDesignAction(s["action"]) if s.get("action") else TestDesignAction.CLICK,
+                        target=s.get("target", ""),
+                        data=s.get("data"),
+                        rationale=s.get("rationale"),
+                    )
+                )
+
+            designs.append(
+                TestDesignSpec(
+                    test_id=d["test_id"],
+                    title=d["title"],
+                    description=d.get("description"),
+                    persona=d.get("persona"),
+                    scenario=d.get("scenario"),
+                    trigger=TestDesignTrigger(d["trigger"]) if d.get("trigger") else TestDesignTrigger.USER_CLICK,
+                    steps=steps,
+                    expected_outcomes=d.get("expected_outcomes", []),
+                    entities=d.get("entities", []),
+                    surfaces=d.get("surfaces", []),
+                    tags=d.get("tags", []),
+                    status=TestDesignStatus(d.get("status", "proposed")),
+                    notes=d.get("notes"),
+                )
+            )
+
+        # Save designs
+        all_designs = add_test_designs(project_root, designs, overwrite=overwrite, to_dsl=True)
+        designs_file = get_dsl_tests_dir(project_root) / "designs.json"
+
+        return json.dumps(
+            {
+                "status": "saved",
+                "saved_count": len(designs),
+                "total_count": len(all_designs),
+                "file": str(designs_file),
+                "overwrite": overwrite,
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Retrieve test designs from storage."""
+    from dazzle.core.ir.test_design import TestDesignStatus
+    from dazzle.testing.test_design_persistence import (
+        get_dsl_tests_dir,
+        get_test_designs_by_status,
+    )
+
+    status_filter = args.get("status_filter")
+
+    try:
+        status = TestDesignStatus(status_filter) if status_filter and status_filter != "all" else None
+        designs = get_test_designs_by_status(project_root, status)
+        designs_file = get_dsl_tests_dir(project_root) / "designs.json"
+
+        return json.dumps(
+            {
+                "count": len(designs),
+                "filter": status_filter or "all",
+                "file": str(designs_file) if designs_file.exists() else None,
+                "designs": [
+                    {
+                        "test_id": d.test_id,
+                        "title": d.title,
+                        "description": d.description,
+                        "persona": d.persona,
+                        "scenario": d.scenario,
+                        "trigger": d.trigger.value,
+                        "steps": [
+                            {
+                                "action": s.action.value,
+                                "target": s.target,
+                                "data": s.data,
+                                "rationale": s.rationale,
+                            }
+                            for s in d.steps
+                        ],
+                        "expected_outcomes": d.expected_outcomes,
+                        "entities": d.entities,
+                        "surfaces": d.surfaces,
+                        "tags": d.tags,
+                        "status": d.status.value,
+                        "implementation_path": d.implementation_path,
+                        "notes": d.notes,
+                    }
+                    for d in designs
+                ],
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)

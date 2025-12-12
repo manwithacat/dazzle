@@ -255,6 +255,18 @@ from .surfaces import (
     SurfaceTrigger,
 )
 
+# Test Design (v0.13.0)
+from .test_design import (
+    TestDesignAction,
+    TestDesignSpec,
+    TestDesignStatus,
+    TestDesignStep,
+    TestDesignTrigger,
+    TestGap,
+    TestGapAnalysis,
+    TestGapCategory,
+)
+
 # Tests
 from .tests import (
     TestAction,
@@ -478,4 +490,13 @@ __all__ = [
     "ThrottleExceedAction",
     "ThrottleScope",
     "ThrottleSpec",
+    # Test Design (v0.13.0)
+    "TestDesignAction",
+    "TestDesignSpec",
+    "TestDesignStatus",
+    "TestDesignStep",
+    "TestDesignTrigger",
+    "TestGap",
+    "TestGapAnalysis",
+    "TestGapCategory",
 ]

@@ -24,11 +24,13 @@ from dazzle.core.ir import (
     FlowSpec,
     FlowStep,
     FlowStepKind,
+    PermissionKind,
     SurfaceAccessSpec,
     SurfaceMode,
     SurfaceSpec,
     UsabilityRule,
 )
+from dazzle.core.ir.computed import AggregateCall, AggregateFunction, ComputedFieldSpec
 from dazzle.core.manifest import ProjectManifest
 from dazzle.testing.auth_flows import generate_all_auth_flows
 
@@ -501,6 +503,561 @@ def generate_surface_flows(surface: SurfaceSpec, appspec: AppSpec) -> list[FlowS
 
 
 # =============================================================================
+# State Machine Transition Flow Generation (v0.13.0)
+# =============================================================================
+
+
+def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
+    """
+    Generate state machine transition test flows for an entity.
+
+    Tests:
+    - Valid transitions (status changes that should succeed)
+    - Invalid transitions (status changes that should be blocked)
+    - Guard condition enforcement (requires_field, requires_role)
+
+    Args:
+        entity: Entity with state machine
+        appspec: Full application spec
+
+    Returns:
+        List of flow specs for state machine tests
+    """
+    if not entity.state_machine:
+        return []
+
+    flows: list[FlowSpec] = []
+    sm = entity.state_machine
+    list_surface = _get_list_surface_name(entity, appspec)
+
+    # Generate tests for each explicit transition
+    for transition in sm.transitions:
+        if transition.is_wildcard:
+            # For wildcard transitions, pick first non-target state as example
+            example_states = [s for s in sm.states if s != transition.to_state]
+            from_states = example_states[:1] if example_states else []
+        else:
+            from_states = [transition.from_state]
+
+        for from_state in from_states:
+            # Test valid transition
+            steps: list[FlowStep] = [
+                FlowStep(
+                    kind=FlowStepKind.NAVIGATE,
+                    target=f"view:{list_surface}",
+                    description=f"Navigate to {entity.name} list",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"row:{entity.name}",
+                    description=f"Select {entity.name} in state '{from_state}'",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"action:{entity.name}.transition.{transition.to_state}",
+                    description=f"Trigger transition to '{transition.to_state}'",
+                ),
+            ]
+
+            # Add guard satisfaction steps if needed
+            for guard in transition.guards:
+                if guard.requires_field:
+                    steps.append(
+                        FlowStep(
+                            kind=FlowStepKind.FILL,
+                            target=f"field:{entity.name}.{guard.requires_field}",
+                            value="test_value",
+                            description=f"Fill required guard field '{guard.requires_field}'",
+                        )
+                    )
+
+            steps.append(
+                FlowStep(
+                    kind=FlowStepKind.ASSERT,
+                    assertion=FlowAssertion(
+                        kind=FlowAssertionKind.STATE_TRANSITION_ALLOWED,
+                        target=f"{entity.name}.{sm.status_field}",
+                        expected=transition.to_state,
+                    ),
+                    description=f"Assert transition to '{transition.to_state}' succeeded",
+                )
+            )
+
+            flow_id = f"{entity.name}_transition_{from_state}_to_{transition.to_state}"
+            flows.append(
+                FlowSpec(
+                    id=flow_id,
+                    description=f"Valid transition: {entity.name} from '{from_state}' to '{transition.to_state}'",
+                    priority=FlowPriority.HIGH,
+                    preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                    steps=steps,
+                    tags=["state_machine", "transition", entity.name.lower()],
+                    entity=entity.name,
+                    auto_generated=True,
+                )
+            )
+
+    # Generate tests for INVALID transitions (not in allowed list)
+    for from_state in sm.states:
+        allowed_targets = sm.get_allowed_targets(from_state)
+        invalid_targets = set(sm.states) - allowed_targets - {from_state}
+
+        for invalid_target in list(invalid_targets)[:1]:  # Just one example per state
+            steps = [
+                FlowStep(
+                    kind=FlowStepKind.NAVIGATE,
+                    target=f"view:{list_surface}",
+                    description=f"Navigate to {entity.name} list",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"row:{entity.name}",
+                    description=f"Select {entity.name} in state '{from_state}'",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"action:{entity.name}.transition.{invalid_target}",
+                    description=f"Attempt invalid transition to '{invalid_target}'",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.ASSERT,
+                    assertion=FlowAssertion(
+                        kind=FlowAssertionKind.STATE_TRANSITION_BLOCKED,
+                        target=f"{entity.name}.{sm.status_field}",
+                        expected=from_state,  # Should remain in original state
+                    ),
+                    description=f"Assert transition was blocked, status remains '{from_state}'",
+                ),
+            ]
+
+            flow_id = f"{entity.name}_transition_invalid_{from_state}_to_{invalid_target}"
+            flows.append(
+                FlowSpec(
+                    id=flow_id,
+                    description=f"Invalid transition: {entity.name} cannot go from '{from_state}' to '{invalid_target}'",
+                    priority=FlowPriority.MEDIUM,
+                    preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                    steps=steps,
+                    tags=["state_machine", "invalid_transition", entity.name.lower()],
+                    entity=entity.name,
+                    auto_generated=True,
+                )
+            )
+
+    return flows
+
+
+# =============================================================================
+# Computed Field Verification Flow Generation (v0.13.0)
+# =============================================================================
+
+
+def _get_expected_computed_value(computed: ComputedFieldSpec) -> str | int | float:
+    """Generate expected value for a computed field based on its expression."""
+    expr = computed.expression
+
+    # For aggregates on empty data, return sensible defaults
+    if isinstance(expr, AggregateCall):
+        if expr.function == AggregateFunction.COUNT:
+            return 0
+        elif expr.function in (AggregateFunction.SUM, AggregateFunction.AVG):
+            return 0
+        elif expr.function == AggregateFunction.DAYS_UNTIL:
+            return 0  # Placeholder
+        elif expr.function == AggregateFunction.DAYS_SINCE:
+            return 0  # Placeholder
+        else:
+            return 0
+
+    # For field references and arithmetic, use placeholder
+    return "computed"
+
+
+def generate_computed_field_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
+    """
+    Generate computed field verification test flows for an entity.
+
+    Tests that computed fields calculate correctly based on their
+    expressions (count, sum, avg, etc.).
+
+    Args:
+        entity: Entity with computed fields
+        appspec: Full application spec
+
+    Returns:
+        List of flow specs for computed field tests
+    """
+    if not entity.computed_fields:
+        return []
+
+    flows: list[FlowSpec] = []
+    list_surface = _get_list_surface_name(entity, appspec)
+
+    for computed in entity.computed_fields:
+        expected = _get_expected_computed_value(computed)
+
+        steps: list[FlowStep] = [
+            FlowStep(
+                kind=FlowStepKind.NAVIGATE,
+                target=f"view:{list_surface}",
+                description=f"Navigate to {entity.name} list",
+            ),
+            FlowStep(
+                kind=FlowStepKind.CLICK,
+                target=f"row:{entity.name}",
+                description=f"Select {entity.name} to view details",
+            ),
+            FlowStep(
+                kind=FlowStepKind.ASSERT,
+                assertion=FlowAssertion(
+                    kind=FlowAssertionKind.VISIBLE,
+                    target=f"field:{entity.name}.{computed.name}",
+                ),
+                description=f"Assert computed field '{computed.name}' is visible",
+            ),
+            FlowStep(
+                kind=FlowStepKind.ASSERT,
+                assertion=FlowAssertion(
+                    kind=FlowAssertionKind.COMPUTED_VALUE,
+                    target=f"field:{entity.name}.{computed.name}",
+                    expected=expected,
+                ),
+                description=f"Assert computed field '{computed.name}' has expected value",
+            ),
+        ]
+
+        flow_id = f"{entity.name}_computed_{computed.name}"
+        flows.append(
+            FlowSpec(
+                id=flow_id,
+                description=f"Verify computed field '{computed.name}' on {entity.name}",
+                priority=FlowPriority.MEDIUM,
+                preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                steps=steps,
+                tags=["computed", entity.name.lower()],
+                entity=entity.name,
+                auto_generated=True,
+            )
+        )
+
+    return flows
+
+
+# =============================================================================
+# Access Control Flow Generation (v0.13.0)
+# =============================================================================
+
+
+def generate_access_control_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
+    """
+    Generate access control test flows for an entity.
+
+    Tests that permissions are enforced correctly:
+    - Create permission (who can create)
+    - Update permission (who can update)
+    - Delete permission (who can delete)
+
+    Args:
+        entity: Entity with access spec
+        appspec: Full application spec
+
+    Returns:
+        List of flow specs for access control tests
+    """
+    if not entity.access:
+        return []
+
+    flows: list[FlowSpec] = []
+    list_surface = _get_list_surface_name(entity, appspec)
+
+    # Map permission kinds to actions
+    permission_actions = {
+        PermissionKind.CREATE: ("create", f"action:{entity.name}.create"),
+        PermissionKind.UPDATE: ("update", f"action:{entity.name}.edit"),
+        PermissionKind.DELETE: ("delete", f"action:{entity.name}.delete"),
+    }
+
+    for perm in entity.access.permissions:
+        action_name, action_target = permission_actions.get(
+            perm.operation, (perm.operation.value, f"action:{entity.name}.{perm.operation.value}")
+        )
+
+        # Test: Authenticated user CAN perform operation (if allowed)
+        if perm.require_auth:
+            steps: list[FlowStep] = [
+                FlowStep(
+                    kind=FlowStepKind.NAVIGATE,
+                    target=f"view:{list_surface}",
+                    description=f"Navigate to {entity.name} list as authenticated user",
+                ),
+            ]
+
+            if perm.operation == PermissionKind.CREATE:
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.CLICK,
+                        target=action_target,
+                        description=f"Click {action_name} button",
+                    )
+                )
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.ASSERT,
+                        assertion=FlowAssertion(
+                            kind=FlowAssertionKind.PERMISSION_GRANTED,
+                            target=f"{entity.name}.{action_name}",
+                        ),
+                        description=f"Assert {action_name} form is accessible",
+                    )
+                )
+            else:
+                # Update/Delete need existing entity
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.CLICK,
+                        target=f"row:{entity.name}",
+                        description=f"Select {entity.name}",
+                    )
+                )
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.CLICK,
+                        target=action_target,
+                        description=f"Click {action_name} button",
+                    )
+                )
+                steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.ASSERT,
+                        assertion=FlowAssertion(
+                            kind=FlowAssertionKind.PERMISSION_GRANTED,
+                            target=f"{entity.name}.{action_name}",
+                        ),
+                        description=f"Assert {action_name} is allowed",
+                    )
+                )
+
+            flow_id = f"{entity.name}_access_{action_name}_allowed"
+            flows.append(
+                FlowSpec(
+                    id=flow_id,
+                    description=f"Authenticated user can {action_name} {entity.name}",
+                    priority=FlowPriority.HIGH,
+                    preconditions=FlowPrecondition(
+                        authenticated=True,
+                        fixtures=[f"{entity.name}_valid"] if perm.operation != PermissionKind.CREATE else [],
+                    ),
+                    steps=steps,
+                    tags=["access_control", action_name, entity.name.lower()],
+                    entity=entity.name,
+                    auto_generated=True,
+                )
+            )
+
+            # Test: Anonymous user CANNOT perform operation (if auth required)
+            anon_steps: list[FlowStep] = [
+                FlowStep(
+                    kind=FlowStepKind.NAVIGATE,
+                    target=f"view:{list_surface}",
+                    description=f"Navigate to {entity.name} list as anonymous user",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=action_target,
+                    description=f"Attempt {action_name} without authentication",
+                ),
+                FlowStep(
+                    kind=FlowStepKind.ASSERT,
+                    assertion=FlowAssertion(
+                        kind=FlowAssertionKind.PERMISSION_DENIED,
+                        target=f"{entity.name}.{action_name}",
+                    ),
+                    description=f"Assert {action_name} is denied for anonymous user",
+                ),
+            ]
+
+            anon_flow_id = f"{entity.name}_access_{action_name}_denied_anon"
+            flows.append(
+                FlowSpec(
+                    id=anon_flow_id,
+                    description=f"Anonymous user cannot {action_name} {entity.name}",
+                    priority=FlowPriority.MEDIUM,
+                    preconditions=FlowPrecondition(
+                        authenticated=False,
+                        fixtures=[f"{entity.name}_valid"] if perm.operation != PermissionKind.CREATE else [],
+                    ),
+                    steps=anon_steps,
+                    tags=["access_control", "denied", entity.name.lower()],
+                    entity=entity.name,
+                    auto_generated=True,
+                )
+            )
+
+    return flows
+
+
+# =============================================================================
+# Reference Integrity Flow Generation (v0.13.0)
+# =============================================================================
+
+
+def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
+    """
+    Generate reference integrity test flows for an entity.
+
+    Tests that ref fields:
+    - Accept valid references to existing entities
+    - Reject invalid references (non-existent foreign keys)
+
+    Args:
+        entity: Entity with ref fields
+        appspec: Full application spec
+
+    Returns:
+        List of flow specs for reference integrity tests
+    """
+    flows: list[FlowSpec] = []
+    list_surface = _get_list_surface_name(entity, appspec)
+
+    # Find ref fields
+    ref_fields = [f for f in entity.fields if f.type.kind == FieldTypeKind.REF]
+
+    if not ref_fields:
+        return []
+
+    for ref_field in ref_fields:
+        ref_target = ref_field.type.ref_entity
+        if not ref_target:
+            continue
+
+        # Test: Create with valid reference
+        valid_steps: list[FlowStep] = [
+            FlowStep(
+                kind=FlowStepKind.NAVIGATE,
+                target=f"view:{list_surface}",
+                description=f"Navigate to {entity.name} list",
+            ),
+            FlowStep(
+                kind=FlowStepKind.CLICK,
+                target=f"action:{entity.name}.create",
+                description=f"Click create {entity.name}",
+            ),
+            FlowStep(
+                kind=FlowStepKind.FILL,
+                target=f"field:{entity.name}.{ref_field.name}",
+                fixture_ref=f"{ref_target}_valid.id",
+                description=f"Select valid {ref_target} reference",
+            ),
+        ]
+
+        # Fill other required fields
+        for field in _get_required_fields(entity):
+            if field.name != ref_field.name and field.type.kind != FieldTypeKind.REF:
+                valid_steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.FILL,
+                        target=f"field:{entity.name}.{field.name}",
+                        fixture_ref=f"{entity.name}_valid.{field.name}",
+                        description=f"Fill {field.name}",
+                    )
+                )
+
+        valid_steps.extend([
+            FlowStep(
+                kind=FlowStepKind.CLICK,
+                target=f"action:{entity.name}.save",
+                description="Save entity",
+            ),
+            FlowStep(
+                kind=FlowStepKind.ASSERT,
+                assertion=FlowAssertion(
+                    kind=FlowAssertionKind.REF_VALID,
+                    target=f"{entity.name}.{ref_field.name}",
+                ),
+                description=f"Assert {ref_field.name} reference is valid",
+            ),
+        ])
+
+        valid_flow_id = f"{entity.name}_ref_{ref_field.name}_valid"
+        flows.append(
+            FlowSpec(
+                id=valid_flow_id,
+                description=f"Create {entity.name} with valid {ref_field.name} reference",
+                priority=FlowPriority.HIGH,
+                preconditions=FlowPrecondition(fixtures=[f"{ref_target}_valid", f"{entity.name}_valid"]),
+                steps=valid_steps,
+                tags=["reference", "valid", entity.name.lower()],
+                entity=entity.name,
+                auto_generated=True,
+            )
+        )
+
+        # Test: Create with invalid reference (non-existent ID)
+        invalid_steps: list[FlowStep] = [
+            FlowStep(
+                kind=FlowStepKind.NAVIGATE,
+                target=f"view:{list_surface}",
+                description=f"Navigate to {entity.name} list",
+            ),
+            FlowStep(
+                kind=FlowStepKind.CLICK,
+                target=f"action:{entity.name}.create",
+                description=f"Click create {entity.name}",
+            ),
+            FlowStep(
+                kind=FlowStepKind.FILL,
+                target=f"field:{entity.name}.{ref_field.name}",
+                value="00000000-0000-0000-0000-000000000000",  # Non-existent UUID
+                description=f"Enter invalid {ref_target} reference",
+            ),
+        ]
+
+        # Fill other required fields
+        for field in _get_required_fields(entity):
+            if field.name != ref_field.name and field.type.kind != FieldTypeKind.REF:
+                invalid_steps.append(
+                    FlowStep(
+                        kind=FlowStepKind.FILL,
+                        target=f"field:{entity.name}.{field.name}",
+                        fixture_ref=f"{entity.name}_valid.{field.name}",
+                        description=f"Fill {field.name}",
+                    )
+                )
+
+        invalid_steps.extend([
+            FlowStep(
+                kind=FlowStepKind.CLICK,
+                target=f"action:{entity.name}.save",
+                description="Attempt to save with invalid reference",
+            ),
+            FlowStep(
+                kind=FlowStepKind.ASSERT,
+                assertion=FlowAssertion(
+                    kind=FlowAssertionKind.REF_INVALID,
+                    target=f"{entity.name}.{ref_field.name}",
+                ),
+                description=f"Assert {ref_field.name} reference validation failed",
+            ),
+        ])
+
+        invalid_flow_id = f"{entity.name}_ref_{ref_field.name}_invalid"
+        flows.append(
+            FlowSpec(
+                id=invalid_flow_id,
+                description=f"Create {entity.name} with invalid {ref_field.name} reference fails",
+                priority=FlowPriority.MEDIUM,
+                preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                steps=invalid_steps,
+                tags=["reference", "invalid", entity.name.lower()],
+                entity=entity.name,
+                auto_generated=True,
+            )
+        )
+
+    return flows
+
+
+# =============================================================================
 # Usability Rules Generation
 # =============================================================================
 
@@ -607,6 +1164,10 @@ def generate_e2e_testspec(
     - Fixtures for each entity (valid and updated variants)
     - CRUD flows for each entity (create, read, update, delete)
     - Validation flows for required field constraints
+    - State machine transition flows (valid/invalid transitions) [v0.13.0]
+    - Computed field verification flows [v0.13.0]
+    - Access control flows (permission granted/denied) [v0.13.0]
+    - Reference integrity flows (valid/invalid refs) [v0.13.0]
     - Navigation flows for each surface
     - Auth flows (if auth enabled in manifest)
     - Default usability rules
@@ -629,6 +1190,13 @@ def generate_e2e_testspec(
     for entity in appspec.domain.entities:
         flows.extend(generate_entity_crud_flows(entity, appspec))
         flows.extend(generate_validation_flows(entity, appspec))
+
+    # Generate v0.13.0 flows: state machines, computed fields, access control, references
+    for entity in appspec.domain.entities:
+        flows.extend(generate_state_machine_flows(entity, appspec))
+        flows.extend(generate_computed_field_flows(entity, appspec))
+        flows.extend(generate_access_control_flows(entity, appspec))
+        flows.extend(generate_reference_flows(entity, appspec))
 
     # Generate navigation flows for each surface
     for surface in appspec.surfaces:

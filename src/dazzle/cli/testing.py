@@ -54,6 +54,10 @@ def test_generate(
     Creates a complete test specification including:
     - CRUD flows for each entity (create, view, update, delete)
     - Validation flows from field constraints
+    - State machine transition flows (valid/invalid transitions) [v0.13.0]
+    - Computed field verification flows [v0.13.0]
+    - Access control flows (permission granted/denied) [v0.13.0]
+    - Reference integrity flows (valid/invalid refs) [v0.13.0]
     - Navigation flows for each surface
     - Fixtures from entity schemas
     - Usability and accessibility rules
@@ -560,6 +564,95 @@ def _execute_assertion_sync(
         selector = f'[data-dazzle-field="{target}"]'
         expect(page.locator(selector)).to_have_value(str(assertion.expected), timeout=timeout)
 
+    # v0.13.0 assertion kinds
+    elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_ALLOWED:
+        # Check that the entity's status field matches expected value
+        target = assertion.target or ""  # e.g., "Ticket.status"
+        expected_state = str(assertion.expected) if assertion.expected else ""
+        # Look for status indicator or field with expected value
+        selector = f'[data-dazzle-field="{target}"]'
+        expect(page.locator(selector)).to_have_text(expected_state, timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED:
+        # Check that the entity's status field still has the original value (transition failed)
+        target = assertion.target or ""  # e.g., "Ticket.status"
+        original_state = str(assertion.expected) if assertion.expected else ""  # Original state
+        selector = f'[data-dazzle-field="{target}"]'
+        expect(page.locator(selector)).to_have_text(original_state, timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.COMPUTED_VALUE:
+        # Check that computed field has expected value
+        target = assertion.target or ""
+        if target.startswith("field:"):
+            target = target.split(":", 1)[1]
+        selector = f'[data-dazzle-field="{target}"][data-dazzle-computed="true"]'
+        # For computed fields, we check the text content
+        if assertion.expected is not None:
+            expect(page.locator(selector)).to_contain_text(str(assertion.expected), timeout=timeout)
+        else:
+            expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.PERMISSION_GRANTED:
+        # Check that operation was allowed (form/action is accessible)
+        target = assertion.target or ""  # e.g., "Document.create"
+        # Should NOT see a permission denied message
+        selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
+        expect(page.locator(selector)).to_be_hidden(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.PERMISSION_DENIED:
+        # Check that operation was denied (403 or access denied message)
+        target = assertion.target or ""  # e.g., "Document.create"
+        # Should see a permission denied message or be redirected to login
+        denied_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
+        auth_modal_selector = '[data-dazzle-auth-modal]'
+        # Either permission denied message OR auth modal should be visible
+        combined = f'{denied_selector}, {auth_modal_selector}'
+        expect(page.locator(combined).first).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.REF_VALID:
+        # Check that reference was accepted (no validation error)
+        target = assertion.target or ""  # e.g., "Task.project_id"
+        error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
+        expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.REF_INVALID:
+        # Check that invalid reference shows validation error
+        target = assertion.target or ""  # e.g., "Task.project_id"
+        error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
+        expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
+
+    # Auth-related assertion kinds (v0.3.3)
+    elif assertion.kind == FlowAssertionKind.IS_AUTHENTICATED:
+        # Check for authenticated user indicator
+        selector = '[data-dazzle-auth="authenticated"]'
+        expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED:
+        # Check that user is not authenticated (login button visible, etc.)
+        selector = '[data-dazzle-auth="unauthenticated"]'
+        expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED:
+        # Check that login succeeded (should be on dashboard or no error)
+        error_selector = '[data-dazzle-message-kind="auth_error"]'
+        expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.LOGIN_FAILED:
+        # Check that login failed (error message visible)
+        error_selector = '[data-dazzle-message-kind="auth_error"]'
+        expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
+        # Check that accessing route shows auth modal or redirects
+        auth_modal_selector = '[data-dazzle-auth-modal]'
+        expect(page.locator(auth_modal_selector)).to_be_visible(timeout=timeout)
+
+    elif assertion.kind == FlowAssertionKind.HAS_PERSONA:
+        # Check that user has specific persona/role
+        expected_persona = assertion.expected or ""
+        selector = f'[data-dazzle-persona="{expected_persona}"]'
+        expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
     else:
         raise ValueError(f"Unknown assertion kind: {assertion.kind}")
 
@@ -647,3 +740,303 @@ def test_list(
         if f.tags:
             typer.echo(f"    Tags: {', '.join(f.tags)}")
         typer.echo()
+
+
+# ============================================================================
+# Feedback Loop Commands (v0.13.0)
+# ============================================================================
+
+feedback_app = typer.Typer(
+    help="Test feedback loop commands for tracking regressions and corrections.",
+    no_args_is_help=True,
+)
+test_app.add_typer(feedback_app, name="feedback")
+
+
+@feedback_app.command("record-regression")
+def feedback_record_regression(
+    test_id: str = typer.Option(..., "--test-id", "-t", help="ID of the failing test"),
+    test_path: str = typer.Option(..., "--test-path", "-p", help="Path to the test file"),
+    failure_message: str = typer.Option(
+        ..., "--message", "-m", help="Error message from the test"
+    ),
+    failure_type: str = typer.Option(
+        "assertion",
+        "--type",
+        help="Type: assertion, timeout, crash, flaky, infrastructure, selector_not_found, navigation_error, auth_error",
+    ),
+    example: str = typer.Option(
+        ..., "--example", "-e", help="Name of the example project"
+    ),
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    Record a test regression for tracking.
+
+    Examples:
+        dazzle test feedback record-regression -t TD-001 -p tests/e2e/test_crud.py \\
+            -m "Element not found" --type selector_not_found -e support_tickets
+    """
+    from dazzle.testing.feedback import FailureType, record_regression
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        ft = FailureType(failure_type)
+    except ValueError:
+        typer.echo(f"Invalid failure type: {failure_type}", err=True)
+        typer.echo(f"Valid types: {', '.join(f.value for f in FailureType)}", err=True)
+        raise typer.Exit(code=1)
+
+    regression = record_regression(
+        project_root=root,
+        test_id=test_id,
+        test_path=test_path,
+        failure_message=failure_message,
+        failure_type=ft,
+        example_name=example,
+    )
+
+    typer.secho(f"Recorded regression: {regression.regression_id}", fg=typer.colors.GREEN)
+    typer.echo(f"  Test: {test_id}")
+    typer.echo(f"  Type: {failure_type}")
+    typer.echo(f"  Status: {regression.status.value}")
+
+
+@feedback_app.command("add-correction")
+def feedback_add_correction(
+    regression_id: str = typer.Option(
+        ..., "--regression", "-r", help="Regression ID being fixed (e.g., REG-001)"
+    ),
+    problem: str = typer.Option(
+        ..., "--problem", "-p", help="Description of what was wrong"
+    ),
+    change_type: str = typer.Option(
+        "test_fix",
+        "--type",
+        "-t",
+        help="Type: test_fix, dsl_fix, prompt_fix, infrastructure",
+    ),
+    files: str = typer.Option(
+        None, "--files", "-f", help="Comma-separated list of files changed"
+    ),
+    pattern: str = typer.Option(
+        None, "--pattern", help="Reusable pattern identified from this fix"
+    ),
+    prompt_improvement: str = typer.Option(
+        None, "--prompt", help="Suggested improvement to test design prompt"
+    ),
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    Record a correction that fixed a regression.
+
+    Examples:
+        dazzle test feedback add-correction -r REG-001 \\
+            -p "Test assumed button text 'Save', actual was 'Submit'" \\
+            --type test_fix \\
+            -f "tests/e2e/test_crud.py" \\
+            --pattern "Prefer semantic selectors over text content"
+    """
+    from dazzle.testing.feedback import ChangeType, record_correction
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    try:
+        ct = ChangeType(change_type)
+    except ValueError:
+        typer.echo(f"Invalid change type: {change_type}", err=True)
+        typer.echo(f"Valid types: {', '.join(c.value for c in ChangeType)}", err=True)
+        raise typer.Exit(code=1)
+
+    files_list = [f.strip() for f in files.split(",")] if files else []
+
+    correction = record_correction(
+        project_root=root,
+        regression_id=regression_id,
+        problem_description=problem,
+        change_type=ct,
+        files_changed=files_list,
+        pattern_identified=pattern,
+        prompt_improvement=prompt_improvement,
+    )
+
+    typer.secho(f"Recorded correction: {correction.correction_id}", fg=typer.colors.GREEN)
+    typer.echo(f"  For regression: {regression_id}")
+    typer.echo(f"  Change type: {change_type}")
+    if pattern:
+        typer.secho(f"  Pattern: {pattern}", fg=typer.colors.CYAN)
+    if prompt_improvement:
+        typer.secho(f"  Prompt suggestion: {prompt_improvement}", fg=typer.colors.YELLOW)
+
+
+@feedback_app.command("list-regressions")
+def feedback_list_regressions(
+    status: str = typer.Option(
+        None, "--status", "-s", help="Filter by status: open, investigating, resolved, wontfix"
+    ),
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    List recorded regressions.
+
+    Examples:
+        dazzle test feedback list-regressions
+        dazzle test feedback list-regressions --status open
+    """
+    from dazzle.testing.feedback import RegressionStatus, get_regressions_by_status
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    status_filter = None
+    if status:
+        try:
+            status_filter = RegressionStatus(status)
+        except ValueError:
+            typer.echo(f"Invalid status: {status}", err=True)
+            raise typer.Exit(code=1)
+
+    regressions = get_regressions_by_status(root, status_filter)
+
+    if not regressions:
+        typer.echo("No regressions found.")
+        return
+
+    typer.echo(f"Regressions ({len(regressions)} total):\n")
+
+    status_colors = {
+        "open": typer.colors.RED,
+        "investigating": typer.colors.YELLOW,
+        "resolved": typer.colors.GREEN,
+        "wontfix": typer.colors.BRIGHT_BLACK,
+    }
+
+    for reg in regressions:
+        color = status_colors.get(reg.status.value, typer.colors.WHITE)
+        typer.echo(f"  {reg.regression_id}")
+        typer.echo(f"    Test: {reg.test_id}")
+        typer.secho(f"    Status: {reg.status.value}", fg=color)
+        typer.echo(f"    Type: {reg.failure_type.value}")
+        typer.echo(f"    Example: {reg.example_name}")
+        if reg.root_cause:
+            typer.echo(f"    Root cause: {reg.root_cause}")
+        typer.echo()
+
+
+@feedback_app.command("summary")
+def feedback_summary(
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    Show feedback loop summary statistics.
+
+    Examples:
+        dazzle test feedback summary
+    """
+    from dazzle.testing.feedback import get_feedback_summary
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    summary = get_feedback_summary(root)
+
+    typer.secho("Feedback Loop Summary", bold=True)
+    typer.echo()
+
+    typer.echo("Regressions:")
+    typer.echo(f"  Total: {summary.total_regressions}")
+    if summary.open_regressions > 0:
+        typer.secho(f"  Open: {summary.open_regressions}", fg=typer.colors.RED)
+    else:
+        typer.echo(f"  Open: {summary.open_regressions}")
+    typer.secho(f"  Resolved: {summary.resolved_regressions}", fg=typer.colors.GREEN)
+    typer.echo()
+
+    typer.echo("Corrections:")
+    typer.echo(f"  Total: {summary.total_corrections}")
+    typer.secho(f"  Patterns identified: {summary.patterns_identified}", fg=typer.colors.CYAN)
+    typer.secho(
+        f"  Prompt improvements suggested: {summary.prompt_improvements_suggested}",
+        fg=typer.colors.YELLOW,
+    )
+    typer.echo()
+
+    if summary.top_failure_types:
+        typer.echo("Top failure types:")
+        for ft, count in summary.top_failure_types:
+            typer.echo(f"  {ft}: {count}")
+        typer.echo()
+
+    if summary.prompt_versions:
+        typer.echo("Prompt versions by tool:")
+        for tool, count in summary.prompt_versions.items():
+            typer.echo(f"  {tool}: {count} versions")
+
+
+@feedback_app.command("patterns")
+def feedback_patterns(
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    List identified patterns from corrections.
+
+    These are reusable insights that can help improve test design.
+
+    Examples:
+        dazzle test feedback patterns
+    """
+    from dazzle.testing.feedback import get_pattern_insights
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    patterns = get_pattern_insights(root)
+
+    if not patterns:
+        typer.echo("No patterns identified yet.")
+        typer.echo(
+            "Patterns are recorded when adding corrections with --pattern flag."
+        )
+        return
+
+    typer.secho("Identified Patterns", bold=True)
+    typer.echo()
+
+    for i, pattern in enumerate(patterns, 1):
+        typer.secho(f"  {i}. {pattern}", fg=typer.colors.CYAN)
+
+
+@feedback_app.command("prompt-suggestions")
+def feedback_prompt_suggestions(
+    manifest: str = typer.Option("dazzle.toml", "--manifest"),
+) -> None:
+    """
+    List suggested prompt improvements from corrections.
+
+    These suggestions can help improve LLM test design quality.
+
+    Examples:
+        dazzle test feedback prompt-suggestions
+    """
+    from dazzle.testing.feedback import get_prompt_improvements
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    suggestions = get_prompt_improvements(root)
+
+    if not suggestions:
+        typer.echo("No prompt improvements suggested yet.")
+        typer.echo(
+            "Suggestions are recorded when adding corrections with --prompt flag."
+        )
+        return
+
+    typer.secho("Prompt Improvement Suggestions", bold=True)
+    typer.echo()
+
+    for i, suggestion in enumerate(suggestions, 1):
+        typer.secho(f"  {i}. {suggestion}", fg=typer.colors.YELLOW)

@@ -55,6 +55,21 @@ class FlowAssertionKind(str, Enum):
     ROUTE_PROTECTED = "route_protected"  # Route requires auth (modal/redirect)
     HAS_PERSONA = "has_persona"  # User has specific persona/role
 
+    # State machine assertions (v0.13.0)
+    STATE_TRANSITION_ALLOWED = "state_transition_allowed"  # Transition succeeded
+    STATE_TRANSITION_BLOCKED = "state_transition_blocked"  # Transition was blocked
+
+    # Computed field assertions (v0.13.0)
+    COMPUTED_VALUE = "computed_value"  # Computed field has expected value
+
+    # Access control assertions (v0.13.0)
+    PERMISSION_GRANTED = "permission_granted"  # Operation was allowed
+    PERMISSION_DENIED = "permission_denied"  # Operation was denied (403)
+
+    # Reference integrity assertions (v0.13.0)
+    REF_VALID = "ref_valid"  # Reference resolved successfully
+    REF_INVALID = "ref_invalid"  # Reference validation failed
+
 
 class FlowAssertion(BaseModel):
     """

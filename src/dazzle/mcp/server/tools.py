@@ -582,6 +582,171 @@ def get_demo_data_tools() -> list[Tool]:
     ]
 
 
+def get_test_design_tools() -> list[Tool]:
+    """Get UX Coverage test design tools for LLM-assisted test generation."""
+    return [
+        Tool(
+            name="propose_persona_tests",
+            description="Generate test designs from persona goals and workflows. Analyzes the persona's goals and generates high-level test specifications that verify the persona can achieve their objectives.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "persona": {
+                        "type": "string",
+                        "description": "Persona name to generate tests for. If omitted, generates for all personas.",
+                    },
+                    "max_tests": {
+                        "type": "integer",
+                        "description": "Maximum number of test designs per persona (default: 10)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_test_gaps",
+            description="Analyze coverage and identify what's missing. Returns untested entities, persona goals, state transitions, surfaces, and scenarios with suggested test designs.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="save_test_designs",
+            description="Save test designs to dsl/tests/designs.json. Test designs are validated before saving. Use overwrite=true to replace existing designs with same IDs.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "designs": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "test_id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "persona": {"type": "string"},
+                                "scenario": {"type": "string"},
+                                "trigger": {
+                                    "type": "string",
+                                    "enum": [
+                                        "form_submitted",
+                                        "status_changed",
+                                        "timer_elapsed",
+                                        "external_event",
+                                        "user_click",
+                                        "page_load",
+                                        "cron_daily",
+                                        "cron_hourly",
+                                    ],
+                                },
+                                "steps": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "action": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "login_as",
+                                                    "logout",
+                                                    "navigate_to",
+                                                    "create",
+                                                    "update",
+                                                    "delete",
+                                                    "click",
+                                                    "fill",
+                                                    "select",
+                                                    "wait_for",
+                                                    "assert_visible",
+                                                    "assert_not_visible",
+                                                    "assert_text",
+                                                    "assert_count",
+                                                    "trigger_transition",
+                                                    "upload",
+                                                    "download",
+                                                ],
+                                            },
+                                            "target": {"type": "string"},
+                                            "data": {"type": "object"},
+                                            "rationale": {"type": "string"},
+                                        },
+                                        "required": ["action", "target"],
+                                    },
+                                },
+                                "expected_outcomes": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "entities": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "surfaces": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "tags": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": [
+                                        "proposed",
+                                        "accepted",
+                                        "implemented",
+                                        "verified",
+                                        "rejected",
+                                    ],
+                                },
+                                "notes": {"type": "string"},
+                            },
+                            "required": ["test_id", "title"],
+                        },
+                        "description": "List of test design specifications to save",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "If true, replace designs with matching IDs. If false, skip existing.",
+                    },
+                    "to_dsl": {
+                        "type": "boolean",
+                        "description": "If true (default), save to dsl/tests/. If false, save to .dazzle/test_designs/.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["designs"],
+            },
+        ),
+        Tool(
+            name="get_test_designs",
+            description="Retrieve test designs from dsl/tests/ or .dazzle/test_designs/. Filter by status to get proposed, accepted, implemented, or rejected designs.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "status_filter": {
+                        "type": "string",
+                        "enum": [
+                            "all",
+                            "proposed",
+                            "accepted",
+                            "implemented",
+                            "verified",
+                            "rejected",
+                        ],
+                        "description": "Filter by status (default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -665,6 +830,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add Demo Data Blueprint tools (always available)
     tools.extend(get_demo_data_tools())
+
+    # Add UX Coverage Test Design tools (always available)
+    tools.extend(get_test_design_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

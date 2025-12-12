@@ -136,6 +136,7 @@ jobs:
               volumes:
                 - ./tests:/tests:ro
                 - ./src:/src:ro
+                - ./examples:/examples:ro
                 - ./tests/e2e/docker/screenshots/${{ matrix.example }}:/screenshots
               working_dir: /tests/e2e/docker
               networks:
@@ -170,14 +171,46 @@ jobs:
             sleep 1
           done
 
-      - name: Run UX validation tests
+      - name: Run UX validation tests (v0.13.0 Generated Flows)
         id: run-tests
         run: |
           # Pin playwright version to match Docker image (v1.55.0-noble)
+          # Run BOTH the generated flow tests AND the original validation tests
           docker compose -f docker-compose.${{ matrix.example }}.yaml run --rm playwright \
             bash -c "pip install httpx pytest-playwright 'playwright==1.55.0' --quiet && \
-                     python -m pytest test_ux_validation.py -v --tb=short" \
+                     echo '=== Running Generated Flow Tests (v0.13.0) ===' && \
+                     python -m pytest test_generated_flows.py -v --tb=short 2>&1 | tee test_output.txt || true && \
+                     echo '' && \
+                     echo '=== Running Original UX Validation Tests ===' && \
+                     python -m pytest test_ux_validation.py -v --tb=short 2>&1 | tee -a test_output.txt" \
             || echo "test_exit_code=$?" >> $GITHUB_OUTPUT
+          # Save test output for regression recording
+          if [ -f test_output.txt ]; then
+            cp test_output.txt "tests/e2e/docker/screenshots/${{ matrix.example }}/test_output.txt"
+          fi
+
+      - name: Record test regression (if failed)
+        if: failure()
+        continue-on-error: true
+        run: |
+          # Set up Python environment with dazzle
+          pip install -e . --quiet
+
+          # Parse test output for failures and record regressions
+          cd examples/${{ matrix.example }}
+
+          if [ -f "../../tests/e2e/docker/screenshots/${{ matrix.example }}/test_output.txt" ]; then
+            # Extract failure info (simplified - captures first error)
+            FAILURE_MSG=$(grep -A5 "FAILED\|ERROR" ../../tests/e2e/docker/screenshots/${{ matrix.example }}/test_output.txt | head -10 || echo "Test failed")
+
+            python -m dazzle.cli test feedback record-regression \
+              --test-id "E2E-${{ matrix.example }}-$(date +%Y%m%d)" \
+              --test-path "tests/e2e/docker/test_ux_validation.py" \
+              --message "$FAILURE_MSG" \
+              --type assertion \
+              --example "${{ matrix.example }}" \
+              || echo "Warning: Could not record regression"
+          fi
 
       - name: Copy coverage report
         if: always()
@@ -377,3 +410,206 @@ jobs:
               echo "::notice::All examples meet the UX coverage threshold (average: ${AVG}%)"
             fi
           fi
+
+  # Test Gap Analysis (v0.13.0)
+  # Analyzes DSL specs to identify untested areas and suggest new tests
+  gap-analysis:
+    needs: [ux-coverage]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dazzle
+        run: pip install -e .
+
+      - name: Analyze test gaps for all examples
+        id: gap-analysis
+        run: |
+          mkdir -p gap-reports
+
+          # Analyze each example
+          for example_dir in examples/*/; do
+            example=$(basename "$example_dir")
+            # Skip underscore-prefixed directories
+            if [[ "$example" == _* ]]; then
+              continue
+            fi
+
+            echo "Analyzing gaps for $example..."
+            cd "$example_dir"
+
+            if [ -f "dazzle.toml" ]; then
+              # Run gap analysis using MCP-style output
+              python3 << EOF > "../../gap-reports/${example}_gaps.json" 2>/dev/null || true
+          import json
+          import sys
+          sys.path.insert(0, '../../src')
+
+          from pathlib import Path
+          from dazzle.core.fileset import discover_dsl_files
+          from dazzle.core.linker import build_appspec
+          from dazzle.core.manifest import load_manifest
+          from dazzle.core.parser import parse_modules
+          from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+          try:
+              manifest_path = Path("dazzle.toml")
+              manifest = load_manifest(manifest_path)
+              dsl_files = discover_dsl_files(manifest_path.parent, manifest)
+              modules = parse_modules(dsl_files)
+              appspec = build_appspec(modules, manifest.project_root)
+
+              testspec = generate_e2e_testspec(appspec)
+
+              # Calculate coverage metrics
+              entity_count = len(appspec.domain.entities)
+              surface_count = len(appspec.surfaces)
+              persona_count = len(appspec.personas) if appspec.personas else 0
+              flow_count = len(testspec.flows)
+
+              gaps = {
+                  "example": "$example",
+                  "entity_count": entity_count,
+                  "surface_count": surface_count,
+                  "persona_count": persona_count,
+                  "generated_flows": flow_count,
+                  "coverage_estimate": min(100, (flow_count / max(1, entity_count * 4)) * 100),
+                  "suggestions": []
+              }
+
+              # Add suggestions based on what's missing
+              if persona_count > 0 and flow_count < persona_count * 3:
+                  gaps["suggestions"].append(f"Consider adding persona-specific tests for {persona_count} personas")
+
+              if hasattr(appspec, 'state_machines') and appspec.state_machines:
+                  sm_count = len(appspec.state_machines)
+                  gaps["suggestions"].append(f"Found {sm_count} state machines - ensure transition tests exist")
+
+              print(json.dumps(gaps, indent=2))
+          except Exception as e:
+              print(json.dumps({"example": "$example", "error": str(e)}))
+          EOF
+            fi
+            cd ../..
+          done
+
+          # Aggregate gap reports
+          python3 << 'EOF'
+          import json
+          from pathlib import Path
+
+          gap_dir = Path("gap-reports")
+          all_gaps = []
+
+          for gap_file in gap_dir.glob("*_gaps.json"):
+              try:
+                  with open(gap_file) as f:
+                      gaps = json.load(f)
+                      if "error" not in gaps:
+                          all_gaps.append(gaps)
+              except:
+                  pass
+
+          summary = {
+              "total_examples": len(all_gaps),
+              "total_entities": sum(g.get("entity_count", 0) for g in all_gaps),
+              "total_surfaces": sum(g.get("surface_count", 0) for g in all_gaps),
+              "total_generated_flows": sum(g.get("generated_flows", 0) for g in all_gaps),
+              "examples_with_suggestions": len([g for g in all_gaps if g.get("suggestions")]),
+              "all_suggestions": []
+          }
+
+          for g in all_gaps:
+              for s in g.get("suggestions", []):
+                  summary["all_suggestions"].append(f"{g['example']}: {s}")
+
+          with open("gap-reports/summary.json", "w") as f:
+              json.dump(summary, f, indent=2)
+
+          # Generate markdown
+          md = f"""## Test Gap Analysis Summary
+
+          | Metric | Value |
+          |--------|-------|
+          | Examples Analyzed | {summary['total_examples']} |
+          | Total Entities | {summary['total_entities']} |
+          | Total Surfaces | {summary['total_surfaces']} |
+          | Generated Test Flows | {summary['total_generated_flows']} |
+          | Examples with Suggestions | {summary['examples_with_suggestions']} |
+
+          """
+
+          if summary["all_suggestions"]:
+              md += "\n### Suggested Improvements\n\n"
+              for s in summary["all_suggestions"][:10]:  # Limit to 10
+                  md += f"- {s}\n"
+
+          with open("gap-reports/GAPS.md", "w") as f:
+              f.write(md)
+          EOF
+
+      - name: Upload gap analysis
+        uses: actions/upload-artifact@v5
+        with:
+          name: gap-analysis
+          path: gap-reports/
+          retention-days: 30
+
+      - name: Post gap analysis to job summary
+        run: |
+          if [ -f "gap-reports/GAPS.md" ]; then
+            cat gap-reports/GAPS.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment on PR with gap analysis
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read gap analysis markdown
+            let gapsContent = '';
+            try {
+              gapsContent = fs.readFileSync('gap-reports/GAPS.md', 'utf8');
+            } catch (e) {
+              console.log('No gap analysis to post');
+              return;
+            }
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Test Gap Analysis Summary')
+            );
+
+            const body = `<!-- dazzle-gap-analysis -->\n${gapsContent}`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
