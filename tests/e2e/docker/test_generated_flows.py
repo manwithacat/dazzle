@@ -432,8 +432,21 @@ def generated_testspec():
                 testspec = generate_e2e_testspec(appspec)
 
                 # Convert to dict for easier handling
+                flows = [f.model_dump() for f in testspec.flows]
+
+                # Also load LLM-generated test designs from dsl/tests/designs.json
+                designs_path = example_path / "dsl" / "tests" / "designs.json"
+                if designs_path.exists():
+                    try:
+                        designs_data = json.loads(designs_path.read_text())
+                        design_flows = _convert_designs_to_flows(designs_data)
+                        flows.extend(design_flows)
+                        print(f"Loaded {len(design_flows)} test designs from {designs_path}")
+                    except Exception as e:
+                        print(f"Warning: Could not load test designs: {e}")
+
                 return {
-                    "flows": [f.model_dump() for f in testspec.flows],
+                    "flows": flows,
                     "fixtures": [f.model_dump() for f in testspec.fixtures],
                     "metadata": testspec.metadata,
                 }
@@ -443,6 +456,71 @@ def generated_testspec():
 
     # Return empty testspec if not found
     return {"flows": [], "fixtures": [], "metadata": {}}
+
+
+def _convert_designs_to_flows(designs_data: list[dict]) -> list[dict]:
+    """Convert TestDesignSpec objects to FlowSpec-compatible dicts."""
+    flows = []
+    for design in designs_data:
+        # Only include accepted/implemented designs
+        status = design.get("status", "proposed")
+        if status not in ("accepted", "implemented", "verified"):
+            continue
+
+        # Convert test design steps to flow steps
+        flow_steps = []
+        for step in design.get("steps", []):
+            flow_steps.append(
+                {
+                    "action": step.get("action", "click"),
+                    "target": step.get("target", ""),
+                    "data": step.get("data"),
+                }
+            )
+
+        # Convert expected outcomes to assertions
+        assertions = []
+        for outcome in design.get("expected_outcomes", []):
+            assertions.append(
+                {
+                    "type": "outcome",
+                    "condition": outcome,
+                }
+            )
+
+        flow = {
+            "id": design.get("test_id", "unknown"),
+            "description": design.get("title", ""),
+            "type": _infer_flow_type(design),
+            "entity": design.get("entities", [None])[0] if design.get("entities") else None,
+            "steps": flow_steps,
+            "assertions": assertions,
+            "tags": design.get("tags", []) + ["test_design"],
+            "persona": design.get("persona"),
+            "scenario": design.get("scenario"),
+        }
+        flows.append(flow)
+
+    return flows
+
+
+def _infer_flow_type(design: dict) -> str:
+    """Infer the flow type from a test design."""
+    test_id = design.get("test_id", "").upper()
+    tags = design.get("tags", [])
+
+    if test_id.startswith("SM_") or "state_machine" in tags:
+        return "state_machine"
+    elif test_id.startswith("ACL_") or "access_control" in tags:
+        return "access_control"
+    elif test_id.startswith("CRUD_") or "crud" in tags:
+        return "crud"
+    elif test_id.startswith("SCENARIO_") or design.get("scenario"):
+        return "scenario"
+    elif design.get("persona") or "persona" in tags:
+        return "persona"
+    else:
+        return "custom"
 
 
 @pytest.fixture
@@ -659,6 +737,88 @@ class TestReferenceFlows:
         print(f"\nReference Flows: {passed}/{len(results)} passed")
 
 
+class TestPersonaFlows:
+    """Execute persona-based test designs (LLM-generated)."""
+
+    def test_persona_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
+        """Run persona flows from test designs."""
+        persona_flows = [
+            f
+            for f in generated_testspec.get("flows", [])
+            if f.get("type") == "persona" or f.get("persona")
+        ]
+
+        if not persona_flows:
+            pytest.skip("No persona flows in test designs")
+
+        results = []
+        for flow in persona_flows:
+            result = flow_executor.execute_flow(flow)
+            results.append(result)
+
+        passed = sum(1 for r in results if r.passed)
+        print(f"\nPersona Flows (test_design): {passed}/{len(results)} passed")
+
+
+class TestScenarioFlows:
+    """Execute scenario-based test designs (LLM-generated)."""
+
+    def test_scenario_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
+        """Run scenario flows from test designs."""
+        scenario_flows = [
+            f
+            for f in generated_testspec.get("flows", [])
+            if f.get("type") == "scenario" or f.get("scenario")
+        ]
+
+        if not scenario_flows:
+            pytest.skip("No scenario flows in test designs")
+
+        results = []
+        for flow in scenario_flows:
+            result = flow_executor.execute_flow(flow)
+            results.append(result)
+
+        passed = sum(1 for r in results if r.passed)
+        print(f"\nScenario Flows (test_design): {passed}/{len(results)} passed")
+
+
+class TestCustomFlows:
+    """Execute custom test designs (LLM-generated)."""
+
+    def test_custom_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
+        """Run custom flows from test designs."""
+        custom_flows = [
+            f
+            for f in generated_testspec.get("flows", [])
+            if f.get("type") == "custom" or "test_design" in f.get("tags", [])
+        ]
+
+        # Exclude flows already covered by other test classes
+        custom_flows = [
+            f
+            for f in custom_flows
+            if f.get("type") not in ("persona", "scenario", "state_machine", "access_control")
+        ]
+
+        if not custom_flows:
+            pytest.skip("No custom flows in test designs")
+
+        results = []
+        for flow in custom_flows:
+            result = flow_executor.execute_flow(flow)
+            results.append(result)
+
+        passed = sum(1 for r in results if r.passed)
+        print(f"\nCustom Flows (test_design): {passed}/{len(results)} passed")
+
+
 # =============================================================================
 # Coverage Summary
 # =============================================================================
@@ -675,6 +835,13 @@ class TestCoverageSummary:
         flows = generated_testspec.get("flows", [])
         flow_types: dict[str, int] = {}
         for flow in flows:
+            # Check flow type first (for test designs)
+            ftype = flow.get("type")
+            if ftype in ["persona", "scenario", "custom"]:
+                flow_types[ftype] = flow_types.get(ftype, 0) + 1
+                continue
+
+            # Fall back to tags (for deterministic flows)
             for tag in flow.get("tags", []):
                 if tag in [
                     "crud",
