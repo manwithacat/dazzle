@@ -177,7 +177,7 @@ jobs:
           # Pin playwright version to match Docker image (v1.55.0-noble)
           # Run BOTH the generated flow tests AND the original validation tests
           docker compose -f docker-compose.${{ matrix.example }}.yaml run --rm playwright \
-            bash -c "pip install httpx pytest-playwright 'playwright==1.55.0' --quiet && \
+            bash -c "pip install httpx pytest-playwright 'playwright==1.55.0' /src --quiet && \
                      echo '=== Running Generated Flow Tests (v0.13.0) ===' && \
                      python -m pytest test_generated_flows.py -v --tb=short 2>&1 | tee test_output.txt || true && \
                      echo '' && \
