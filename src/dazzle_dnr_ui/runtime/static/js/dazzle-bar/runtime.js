@@ -8,7 +8,7 @@
  * @module dazzle-bar/runtime
  */
 
-import { createSignal, createEffect } from '../signals.js';
+import { createSignal } from '../signals.js';
 
 // =============================================================================
 // Type Definitions

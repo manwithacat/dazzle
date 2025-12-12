@@ -483,9 +483,7 @@ class TestBlueprintDataGenerator:
             params={"source_field": "full_name", "domains": ["test.com"]},
         )
 
-        value = generator.generate_field_value(
-            pattern, {"full_name": "John Smith"}
-        )
+        value = generator.generate_field_value(pattern, {"full_name": "John Smith"})
 
         assert value == "john.smith@test.com"
 

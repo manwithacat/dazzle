@@ -153,9 +153,7 @@ class BlueprintDataGenerator:
 
         return row
 
-    def generate_field_value(
-        self, pattern: FieldPattern, context: dict[str, Any]
-    ) -> Any:
+    def generate_field_value(self, pattern: FieldPattern, context: dict[str, Any]) -> Any:
         """Generate a value based on a field pattern strategy.
 
         Args:
@@ -314,17 +312,15 @@ class BlueprintDataGenerator:
 
         return rows
 
-    def _generate_users_from_blueprint(
-        self, entity: EntityBlueprint
-    ) -> list[dict[str, Any]]:
+    def _generate_users_from_blueprint(self, entity: EntityBlueprint) -> list[dict[str, Any]]:
         """Generate user records from persona blueprints."""
         rows: list[dict[str, Any]] = []
         self._generated_users = []
 
         # Get tenant IDs
-        tenant_ids = [
-            t["id"] for t in self._generated_data.get("Tenant", [])
-        ] or [str(uuid.uuid4())]
+        tenant_ids = [t["id"] for t in self._generated_data.get("Tenant", [])] or [
+            str(uuid.uuid4())
+        ]
 
         # Track used names to avoid duplicates
         used_emails: set[str] = set()

@@ -1337,8 +1337,18 @@ def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> st
 
 # NATO phonetic alphabet for tenant naming
 NATO_PREFIXES = [
-    "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot",
-    "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima",
+    "Alpha",
+    "Bravo",
+    "Charlie",
+    "Delta",
+    "Echo",
+    "Foxtrot",
+    "Golf",
+    "Hotel",
+    "India",
+    "Juliet",
+    "Kilo",
+    "Lima",
 ]
 
 
@@ -1397,7 +1407,11 @@ def _infer_field_strategy(
         return "hashed_password_placeholder", {"plaintext_demo_password": "Demo1234!"}
 
     # Boolean patterns
-    if field_type.lower() == "bool" or name_lower.startswith("is_") or name_lower.startswith("has_"):
+    if (
+        field_type.lower() == "bool"
+        or name_lower.startswith("is_")
+        or name_lower.startswith("has_")
+    ):
         return "boolean_weighted", {"true_weight": 0.3}
 
     # Date patterns
@@ -1495,12 +1509,8 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
             field_patterns = []
             for field in entity.fields:
                 # Detect field type
-                field_type_str = (
-                    field.type.kind.value if field.type and field.type.kind else "str"
-                )
-                is_enum = bool(
-                    field.type and field.type.kind and field.type.kind.value == "enum"
-                )
+                field_type_str = field.type.kind.value if field.type and field.type.kind else "str"
+                is_enum = bool(field.type and field.type.kind and field.type.kind.value == "enum")
 
                 strategy, params = _infer_field_strategy(
                     field.name, field_type_str, entity.name, is_enum

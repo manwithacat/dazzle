@@ -587,7 +587,7 @@ function showFeedbackModal() {
         overlay.remove();
         // Show success toast
         showToast('Feedback submitted successfully!', 'success');
-      } catch (err) {
+      } catch (_err) {
         showToast('Failed to submit feedback', 'error');
       }
     });
@@ -711,7 +711,7 @@ function setupEventHandlers() {
       try {
         await DazzleRuntime.exportSession('github_issue');
         showToast('Export link opened in new tab', 'success');
-      } catch (err) {
+      } catch (_err) {
         showToast('Failed to export session', 'error');
       }
     });

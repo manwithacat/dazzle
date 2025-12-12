@@ -14,7 +14,7 @@ export default [
     rules: {
       // Error prevention
       "no-undef": "error",
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" }],
       "no-redeclare": "error",
       "no-dupe-keys": "error",
       "no-duplicate-case": "error",
