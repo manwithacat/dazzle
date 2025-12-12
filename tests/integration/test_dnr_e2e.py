@@ -284,7 +284,7 @@ class TestSimpleTaskE2E:
         assert resp.status_code == 200, f"Health check failed: {resp.text}"
 
         # Test list endpoint returns paginated response
-        resp = requests.get(f"{api}/api/tasks", timeout=REQUEST_TIMEOUT)
+        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"List failed: {resp.text}"
         data = resp.json()
         assert "items" in data or isinstance(data, list)
@@ -294,7 +294,7 @@ class TestSimpleTaskE2E:
             "title": "E2E Test Task",
             "status": "todo",
         }
-        resp = requests.post(f"{api}/api/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         assert "id" in created, "Response should have an ID"
@@ -305,7 +305,7 @@ class TestSimpleTaskE2E:
         """Test Create, Read, Update, List operations with persistence."""
         api = simple_task_server.api_url
 
-        # Create a task (POST to /api/tasks)
+        # Create a task (POST to /tasks)
         # Note: assigned_to is required by state machine for todo->in_progress transition
         task_data = {
             "title": "E2E Test Task",
@@ -313,29 +313,29 @@ class TestSimpleTaskE2E:
             "status": "todo",
             "priority": "high",
         }
-        resp = requests.post(f"{api}/api/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         task_id = created.get("id")
         assert task_id is not None, "Created task should have an ID"
 
-        # Read the task (GET /api/tasks/{id})
-        resp = requests.get(f"{api}/api/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        # Read the task (GET /tasks/{id})
+        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"Read failed: {resp.text}"
         fetched = resp.json()
         assert fetched["title"] == "E2E Test Task"
 
-        # Update the task (PUT /api/tasks/{id})
+        # Update the task (PUT /tasks/{id})
         # Only update title and priority - status change requires assigned_to per state machine
         update_data = {"title": "Updated E2E Task", "priority": "medium"}
-        resp = requests.put(f"{api}/api/tasks/{task_id}", json=update_data, timeout=REQUEST_TIMEOUT)
+        resp = requests.put(f"{api}/tasks/{task_id}", json=update_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"Update failed: {resp.text}"
         updated = resp.json()
         assert updated["title"] == "Updated E2E Task"
         assert updated["priority"] == "medium"
 
-        # List tasks - should include our task (GET /api/tasks)
-        resp = requests.get(f"{api}/api/tasks", timeout=REQUEST_TIMEOUT)
+        # List tasks - should include our task (GET /tasks)
+        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"List failed: {resp.text}"
         data = resp.json()
         # DNR returns paginated response with 'items' key or list directly
@@ -344,7 +344,7 @@ class TestSimpleTaskE2E:
         assert any(t["id"] == task_id for t in tasks)
 
         # Verify persistence: read again to confirm data persisted
-        resp = requests.get(f"{api}/api/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"Re-read failed: {resp.text}"
         persisted = resp.json()
         assert persisted["title"] == "Updated E2E Task"
@@ -422,11 +422,11 @@ class TestAuthDisabled:
 
     @pytest.mark.e2e
     def test_auth_me_returns_401_when_disabled(self, simple_task_server):
-        """Test that /api/auth/me returns 401 (not 404) when auth is disabled.
+        """Test that /auth/me returns 401 (not 404) when auth is disabled.
 
         This ensures the UI doesn't get console errors for 404s.
         """
-        resp = requests.get(f"{simple_task_server.api_url}/api/auth/me", timeout=REQUEST_TIMEOUT)
+        resp = requests.get(f"{simple_task_server.api_url}/auth/me", timeout=REQUEST_TIMEOUT)
         # Should return 401 (Unauthorized) not 404 (Not Found)
         # When auth is enabled, would return user info or 401 based on session
         # When auth is disabled, stub endpoint returns 401
@@ -443,15 +443,15 @@ class TestAuthDisabled:
 
         # Create should work
         task_data = {"title": "No Auth Test Task", "status": "todo"}
-        resp = requests.post(f"{api}/api/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         task_id = created["id"]
 
         # Read should work
-        resp = requests.get(f"{api}/api/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"Read failed: {resp.text}"
 
         # List should work
-        resp = requests.get(f"{api}/api/tasks", timeout=REQUEST_TIMEOUT)
+        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"List failed: {resp.text}"
