@@ -9,22 +9,16 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from .templates import (
     DNR_BACKEND_DOCKERFILE,
     DNR_COMPOSE_TEMPLATE,
-    DNR_DOCKERIGNORE,
     DNR_FRONTEND_DOCKERFILE,
-    generate_dockerfile,
 )
 from .utils import is_docker_available
-
-if TYPE_CHECKING:
-    pass
 
 
 def _get_container_package_path() -> Path:
@@ -63,10 +57,9 @@ class DockerRunConfig:
     project_name: str | None = None  # From manifest [project].name - used for stack naming
     image_name: str = "dazzle-dnr"
     test_mode: bool = False
-    auth_enabled: bool = False
+    auth_enabled: bool = True  # Enable authentication by default
     rebuild: bool = False
     detach: bool = False
-    single_container: bool = False  # Legacy mode: combined frontend + backend
 
 
 class DockerRunner:
@@ -101,17 +94,15 @@ class DockerRunner:
 
     def run(self) -> int:
         """
-        Run the DNR application in Docker container(s).
+        Run the DNR application in Docker containers.
 
-        Uses split containers (frontend + backend) by default.
-        Use single_container=True for legacy combined mode.
+        Uses split containers (frontend + backend) with docker-compose.
 
         Returns:
             Exit code from Docker run
         """
-        mode = "single-container" if self.config.single_container else "split containers"
         print("\n" + "=" * 60)
-        print(f"  DAZZLE NATIVE RUNTIME (DNR) - Docker Mode ({mode})")
+        print("  DAZZLE NATIVE RUNTIME (DNR) - Docker Mode")
         print("=" * 60)
         print()
 
@@ -121,118 +112,7 @@ class DockerRunner:
             print("[DNR] Please install Docker or use --local flag")
             return 1
 
-        if self.config.single_container:
-            # Legacy single-container mode
-            self._stop_existing_container()
-
-            if self.config.rebuild or not self._image_exists():
-                if not self._build_image():
-                    return 1
-
-            return self._run_container()
-        else:
-            # New split containers mode using docker-compose
-            return self._run_split_containers()
-
-    def _image_exists(self) -> bool:
-        """Check if the Docker image already exists."""
-        try:
-            result = subprocess.run(
-                ["docker", "image", "inspect", self.image_name],
-                capture_output=True,
-                timeout=10,
-            )
-            return result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            return False
-
-    def _stop_existing_container(self) -> None:
-        """Stop and remove any existing container with the same name."""
-        try:
-            subprocess.run(
-                ["docker", "stop", self.container_name],
-                capture_output=True,
-                timeout=10,
-            )
-            subprocess.run(
-                ["docker", "rm", self.container_name],
-                capture_output=True,
-                timeout=10,
-            )
-        except (subprocess.SubprocessError, FileNotFoundError):
-            pass  # Container may not exist
-
-    def _build_image(self) -> bool:
-        """
-        Build the Docker image.
-
-        Returns:
-            True if build succeeded
-        """
-        print(f"[DNR] Building Docker image: {self.image_name}")
-        print()
-
-        # First, generate the specs from DSL
-        print("[DNR] Generating specs from DSL...")
-        try:
-            backend_spec, ui_spec, html_content = self._generate_specs()
-        except Exception as e:
-            print(f"[DNR] ERROR: Failed to generate specs: {e}")
-            return False
-
-        # Create temporary build context
-        with tempfile.TemporaryDirectory() as tmpdir:
-            build_dir = Path(tmpdir)
-
-            # Generate Dockerfile
-            dockerfile_content = generate_dockerfile(
-                frontend_port=self.config.frontend_port,
-                api_port=self.config.api_port,
-            )
-            (build_dir / "Dockerfile").write_text(dockerfile_content)
-
-            # Generate .dockerignore
-            (build_dir / ".dockerignore").write_text(DNR_DOCKERIGNORE)
-
-            # Write pre-generated specs
-            import json
-
-            (build_dir / "backend_spec.json").write_text(json.dumps(backend_spec, indent=2))
-            (build_dir / "ui_spec.json").write_text(json.dumps(ui_spec, indent=2))
-
-            # Create static directory and write HTML
-            static_dir = build_dir / "static"
-            static_dir.mkdir(exist_ok=True)
-            (static_dir / "index.html").write_text(html_content)
-
-            # Copy container runtime package
-            _copy_container_package(build_dir)
-
-            # Build image
-            try:
-                result = subprocess.run(
-                    [
-                        "docker",
-                        "build",
-                        "-t",
-                        self.image_name,
-                        str(build_dir),
-                    ],
-                    timeout=300,  # 5 minute timeout
-                )
-                if result.returncode != 0:
-                    print("[DNR] ERROR: Docker build failed")
-                    return False
-            except subprocess.TimeoutExpired:
-                print("[DNR] ERROR: Docker build timed out")
-                return False
-            except FileNotFoundError:
-                print("[DNR] ERROR: Docker not found")
-                return False
-
-        print()
-        print(f"[DNR] Image built: {self.image_name}")
-        return True
+        return self._run_split_containers()
 
     def _generate_specs(self) -> tuple[dict[str, Any], dict[str, Any], str]:
         """
@@ -267,76 +147,6 @@ class DockerRunner:
             ui_spec.model_dump(by_alias=True),
             html_content,
         )
-
-    def _run_container(self) -> int:
-        """
-        Run the Docker container.
-
-        Returns:
-            Exit code from docker run
-        """
-        print()
-        print(f"[DNR] Starting container: {self.container_name}")
-        print()
-
-        # Build docker run command
-        cmd = [
-            "docker",
-            "run",
-            "--name",
-            self.container_name,
-            "-p",
-            f"{self.config.frontend_port}:{self.config.frontend_port}",
-            "-p",
-            f"{self.config.api_port}:{self.config.api_port}",
-        ]
-
-        # Mount data directory for persistence
-        data_dir = self.project_path / ".dazzle"
-        data_dir.mkdir(exist_ok=True)
-        cmd.extend(["-v", f"{data_dir}:/app/.dazzle"])
-
-        # Add test mode if enabled
-        if self.config.test_mode:
-            cmd.extend(["-e", "DNR_TEST_MODE=1"])
-
-        # Detach mode or interactive mode
-        if self.config.detach:
-            cmd.append("-d")
-        else:
-            # Only use -it if we have a TTY, otherwise just run attached
-            import sys
-
-            if sys.stdin.isatty():
-                cmd.append("-it")
-            cmd.append("--rm")
-
-        # Add image name
-        cmd.append(self.image_name)
-
-        # Note: Test mode is handled via DNR_TEST_MODE environment variable
-        # The entrypoint.py script reads this and enables test endpoints
-
-        print(f"[DNR] Frontend: http://localhost:{self.config.frontend_port}")
-        print(f"[DNR] API Docs: http://localhost:{self.config.api_port}/docs")
-        print()
-
-        if self.config.detach:
-            print(f"[DNR] Running in background (container: {self.container_name})")
-            print(f"[DNR] Stop with: docker stop {self.container_name}")
-        else:
-            print("Press Ctrl+C to stop")
-            print("-" * 60)
-
-        print()
-
-        try:
-            result = subprocess.run(cmd)
-            return result.returncode
-        except KeyboardInterrupt:
-            print("\n[DNR] Shutting down...")
-            self._stop_existing_container()
-            return 0
 
     def _run_split_containers(self) -> int:
         """
@@ -388,7 +198,11 @@ class DockerRunner:
         from dazzle_dnr_ui.specs import UISpec
 
         ui_spec = UISpec(**ui_spec_dict)
-        generator = ViteGenerator(ui_spec)
+        generator = ViteGenerator(
+            ui_spec,
+            frontend_port=self.config.frontend_port,
+            api_port=self.config.api_port,
+        )
         generator.write_to_directory(frontend_dir)
 
         # Add frontend Dockerfile
@@ -474,17 +288,15 @@ def run_in_docker(
     frontend_port: int = 3000,
     api_port: int = 8000,
     test_mode: bool = False,
-    auth_enabled: bool = False,
+    auth_enabled: bool = True,  # Enable authentication by default
     rebuild: bool = False,
     detach: bool = False,
-    single_container: bool = False,
     project_name: str | None = None,
 ) -> int:
     """
     Run a DNR application in Docker.
 
-    By default, runs frontend and backend in separate containers.
-    Use single_container=True for legacy combined mode.
+    Uses split containers (frontend + backend) with docker-compose.
 
     Args:
         project_path: Path to the Dazzle project
@@ -494,7 +306,6 @@ def run_in_docker(
         auth_enabled: Enable authentication endpoints
         rebuild: Force rebuild of Docker image
         detach: Run in background
-        single_container: Use legacy single-container mode
         project_name: Project name from manifest (used for stack naming)
 
     Returns:
@@ -508,7 +319,6 @@ def run_in_docker(
         auth_enabled=auth_enabled,
         rebuild=rebuild,
         detach=detach,
-        single_container=single_container,
         project_name=project_name,
     )
     runner = DockerRunner(config)

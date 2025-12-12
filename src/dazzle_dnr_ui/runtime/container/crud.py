@@ -12,6 +12,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 
+from dazzle.core.strings import to_api_plural
+
 from .data_store import data_store
 
 
@@ -28,17 +30,18 @@ def register_crud_routes(
     """
     for entity in entities:
         entity_name = entity["name"]
-        route_prefix = f"/api/{entity_name.lower()}s"
+        route_prefix = f"/{to_api_plural(entity_name)}"
+        tags = [entity_name]
 
         # Create handlers with closure to capture entity_name
         list_h, create_h, get_h, update_h, delete_h = _make_crud_handlers(entity_name)
 
-        # Register routes
-        app.get(route_prefix)(list_h)
-        app.post(route_prefix)(create_h)
-        app.get(f"{route_prefix}/{{item_id}}")(get_h)
-        app.put(f"{route_prefix}/{{item_id}}")(update_h)
-        app.delete(f"{route_prefix}/{{item_id}}")(delete_h)
+        # Register routes with tags for OpenAPI grouping
+        app.get(route_prefix, tags=tags, summary=f"List {entity_name}s")(list_h)
+        app.post(route_prefix, tags=tags, summary=f"Create {entity_name}")(create_h)
+        app.get(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Get {entity_name}")(get_h)
+        app.put(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Update {entity_name}")(update_h)
+        app.delete(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Delete {entity_name}")(delete_h)
 
 
 def _make_crud_handlers(

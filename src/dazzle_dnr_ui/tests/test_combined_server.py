@@ -297,11 +297,26 @@ class TestAPIProxyLogic:
     """Test API proxy path detection logic."""
 
     def test_api_paths_detected(self):
-        """Test that API paths are correctly identified."""
+        """Test that API paths are correctly identified by _is_api_path."""
+        from dazzle_dnr_ui.runtime.combined_server import DNRCombinedHandler
+
+        # Set up entity prefixes (normally done by DNRCombinedServer)
+        DNRCombinedHandler.api_route_prefixes = {"/tasks", "/users"}
+
+        # Create a mock handler to test _is_api_path
+        class MockHandler(DNRCombinedHandler):
+            def __init__(self):
+                pass  # Skip parent init
+
+        handler = MockHandler()
+
         api_paths = [
-            "/api/tasks",
-            "/api/users/123",
-            "/api/v1/items",
+            "/tasks",
+            "/tasks/123",
+            "/users/456",
+            "/auth/login",
+            "/auth/me",
+            "/files/upload",
         ]
         non_api_paths = [
             "/",
@@ -311,10 +326,10 @@ class TestAPIProxyLogic:
         ]
 
         for path in api_paths:
-            assert path.startswith("/api/"), f"{path} should be API path"
+            assert handler._is_api_path(path), f"{path} should be API path"
 
         for path in non_api_paths:
-            assert not path.startswith("/api/"), f"{path} should not be API path"
+            assert not handler._is_api_path(path), f"{path} should not be API path"
 
     def test_special_backend_paths(self):
         """Test special paths that go to backend."""

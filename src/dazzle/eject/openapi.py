@@ -209,7 +209,7 @@ def _add_entity_paths(openapi: dict, entity: EntitySpec) -> None:
     paths = openapi["paths"]
     entity_name = entity.name
     entity_lower = entity_name.lower()
-    base_path = f"/api/{entity_lower}s"
+    base_path = f"/{entity_lower}s"
     item_path = f"{base_path}/{{{entity_lower}_id}}"
 
     # List endpoint
@@ -380,7 +380,7 @@ def _add_transition_paths(
         from_state = transition.from_state
         to_state = transition.to_state
         action_name = f"{from_state}_to_{to_state}"
-        action_path = f"/api/{entity_lower}s/{{{entity_lower}_id}}/actions/{action_name}"
+        action_path = f"/{entity_lower}s/{{{entity_lower}_id}}/actions/{action_name}"
 
         if action_path not in paths:
             paths[action_path] = {}

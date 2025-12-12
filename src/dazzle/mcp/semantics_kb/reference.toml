@@ -43,7 +43,9 @@ critical_keywords = [
   "# UX signals",
   "attention, critical, warning, notice, info, purpose, show, sort, empty, hide",
   "# Other reserved",
-  "from, uses, on, call, with, map, response, into, match, sync, spec, key, test, data, expect, count, first, last"
+  "from, uses, on, call, with, map, response, into, match, sync, spec, key, test, data, expect, count, first, last",
+  "# Scheduling/Integration",
+  "schedule, step, kind, start, at"
 ]
 common_alternatives = [
   "# Instead of 'create' -> 'add', 'new', 'init'",
@@ -53,5 +55,6 @@ common_alternatives = [
   "# Instead of 'email' (as field) -> 'email_address', 'contact_email'",
   "# Instead of 'stage' -> 'current_stage', 'progress_stage', 'phase'",
   "# Instead of 'created' -> 'added', 'initialized', 'started'",
-  "# Instead of 'submitted' -> 'sent', 'filed', 'posted'"
+  "# Instead of 'submitted' -> 'sent', 'filed', 'posted'",
+  "# Instead of 'schedule' -> 'timing', 'scheduling_info', 'calendar'"
 ]

@@ -18,18 +18,18 @@ if TYPE_CHECKING:
 def create_file_routes(
     app: FastAPI,
     file_service: FileService,
-    prefix: str = "/api/files",
+    prefix: str = "/files",
     require_auth: bool = False,
 ) -> None:
     """
     Add file upload routes to FastAPI app.
 
     Routes:
-        POST /api/files/upload - Upload a file
-        GET /api/files/{file_id} - Get file info
-        GET /api/files/{file_id}/download - Download file
-        GET /api/files/{file_id}/thumbnail - Get thumbnail
-        DELETE /api/files/{file_id} - Delete file
+        POST /files/upload - Upload a file
+        GET /files/{file_id} - Get file info
+        GET /files/{file_id}/download - Download file
+        GET /files/{file_id}/thumbnail - Get thumbnail
+        DELETE /files/{file_id} - Delete file
 
     Args:
         app: FastAPI application

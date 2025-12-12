@@ -415,3 +415,46 @@ def test_example_builds_ui(dazzle_root, example_name):
         timeout=60,
     )
     assert result.returncode == 0, f"UI build failed for {example_name}: {result.stderr}"
+
+
+class TestAuthDisabled:
+    """Tests for auth stub endpoints when AUTH_ENABLED=0."""
+
+    @pytest.mark.e2e
+    def test_auth_me_returns_401_when_disabled(self, simple_task_server):
+        """Test that /api/auth/me returns 401 (not 404) when auth is disabled.
+
+        This ensures the UI doesn't get console errors for 404s.
+        """
+        resp = requests.get(
+            f"{simple_task_server.api_url}/api/auth/me",
+            timeout=REQUEST_TIMEOUT
+        )
+        # Should return 401 (Unauthorized) not 404 (Not Found)
+        # When auth is enabled, would return user info or 401 based on session
+        # When auth is disabled, stub endpoint returns 401
+        assert resp.status_code in (401, 200), f"Expected 401 or 200, got {resp.status_code}"
+
+    @pytest.mark.e2e
+    def test_crud_works_without_auth(self, simple_task_server):
+        """Test that CRUD operations work without authentication.
+
+        Even with auth enabled by default, the API should allow CRUD
+        operations (for now - future versions may require auth for write ops).
+        """
+        api = simple_task_server.api_url
+
+        # Create should work
+        task_data = {"title": "No Auth Test Task", "status": "todo"}
+        resp = requests.post(f"{api}/api/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
+        created = resp.json()
+        task_id = created["id"]
+
+        # Read should work
+        resp = requests.get(f"{api}/api/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        assert resp.status_code == 200, f"Read failed: {resp.text}"
+
+        # List should work
+        resp = requests.get(f"{api}/api/tasks", timeout=REQUEST_TIMEOUT)
+        assert resp.status_code == 200, f"List failed: {resp.text}"

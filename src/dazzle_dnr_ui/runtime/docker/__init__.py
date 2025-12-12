@@ -3,9 +3,8 @@ Docker subpackage for DNR runtime.
 
 This package provides Docker-first infrastructure for running DNR applications.
 It contains:
-- templates: Dockerfile, docker-compose, and entrypoint templates
+- templates: Dockerfile and docker-compose templates for split container mode
 - utils: Docker availability checks
-- entrypoint: Self-contained FastAPI server script for containers
 - runner: DockerRunner class and convenience functions
 
 Usage:
@@ -21,9 +20,6 @@ Usage:
 
 from __future__ import annotations
 
-# Entrypoint
-from .entrypoint import DNR_ENTRYPOINT_TEMPLATE
-
 # Runner
 from .runner import (
     DockerRunConfig,
@@ -36,10 +32,8 @@ from .runner import (
 from .templates import (
     DNR_BACKEND_DOCKERFILE,
     DNR_COMPOSE_TEMPLATE,
-    DNR_DOCKERFILE_TEMPLATE,
     DNR_DOCKERIGNORE,
     DNR_FRONTEND_DOCKERFILE,
-    generate_dockerfile,
 )
 
 # Utilities
@@ -50,14 +44,10 @@ __all__ = [
     "is_docker_available",
     "get_docker_version",
     # Templates
-    "DNR_DOCKERFILE_TEMPLATE",
     "DNR_BACKEND_DOCKERFILE",
     "DNR_FRONTEND_DOCKERFILE",
     "DNR_COMPOSE_TEMPLATE",
     "DNR_DOCKERIGNORE",
-    "generate_dockerfile",
-    # Entrypoint
-    "DNR_ENTRYPOINT_TEMPLATE",
     # Runner
     "DockerRunConfig",
     "DockerRunner",

@@ -402,7 +402,7 @@ class TestRuntimeIntegration:
                     name="list_items_endpoint",
                     service="list_items",
                     method=HttpMethod.GET,
-                    path="/api/items",
+                    path="/items",
                 ),
             ],
         )
@@ -478,7 +478,7 @@ class TestServerWithSQLite:
                     name="list_tasks",
                     service="task_service",
                     method=HttpMethod.GET,
-                    path="/api/tasks",
+                    path="/tasks",
                 ),
             ],
         )

@@ -70,7 +70,7 @@ def get_auth_stats() -> dict[str, int]:
 def register_auth_routes(app: FastAPI) -> None:
     """Register authentication routes on the FastAPI app."""
 
-    @app.post("/api/auth/register")
+    @app.post("/auth/register", tags=["Authentication"], summary="Register new user")
     async def auth_register(data: RegisterRequest) -> JSONResponse:
         """Register a new user."""
         if data.email in AUTH_USERS:
@@ -116,7 +116,7 @@ def register_auth_routes(app: FastAPI) -> None:
         )
         return response
 
-    @app.post("/api/auth/login")
+    @app.post("/auth/login", tags=["Authentication"], summary="Login")
     async def auth_login(data: LoginRequest) -> JSONResponse:
         """Login with email and password."""
         user = AUTH_USERS.get(data.email)
@@ -154,7 +154,7 @@ def register_auth_routes(app: FastAPI) -> None:
         )
         return response
 
-    @app.post("/api/auth/logout")
+    @app.post("/auth/logout", tags=["Authentication"], summary="Logout")
     async def auth_logout(request: Request) -> JSONResponse:
         """Logout and invalidate session."""
         session_token = request.cookies.get("dnr_session")
@@ -165,7 +165,7 @@ def register_auth_routes(app: FastAPI) -> None:
         response.delete_cookie("dnr_session")
         return response
 
-    @app.get("/api/auth/me")
+    @app.get("/auth/me", tags=["Authentication"], summary="Get current user")
     async def auth_me(request: Request) -> dict[str, Any]:
         """Get current user."""
         session_token = request.cookies.get("dnr_session")

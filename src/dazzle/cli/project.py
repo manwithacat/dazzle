@@ -67,7 +67,11 @@ def _is_directory_empty(directory: Path) -> bool:
     return False
 
 
-def _print_human_diagnostics(errors: list[str], warnings: list[str]) -> None:
+def _print_human_diagnostics(
+    errors: list[str],
+    warnings: list[str],
+    appspec: "ir.AppSpec | None" = None,
+) -> None:
     """Print diagnostics in human-readable format."""
     if errors:
         typer.echo("Validation failed:\n", err=True)
@@ -80,7 +84,15 @@ def _print_human_diagnostics(errors: list[str], warnings: list[str]) -> None:
             typer.echo(f"WARNING: {warn}", err=False)
 
     if not errors and not warnings:
-        typer.echo("OK: spec is valid.")
+        typer.secho("✓ Spec is valid", fg=typer.colors.GREEN)
+        # Show summary stats if appspec is provided
+        if appspec:
+            entity_count = len(appspec.domain.entities)
+            surface_count = len(appspec.surfaces)
+            workspace_count = len(appspec.workspaces)
+            typer.echo(
+                f"  {entity_count} entities, {surface_count} surfaces, {workspace_count} workspaces"
+            )
 
 
 def _print_vscode_diagnostics(errors: list[str], warnings: list[str], root: Path) -> None:
@@ -348,7 +360,7 @@ def validate_command(
         if format == "vscode":
             _print_vscode_diagnostics(errors, warnings, root)
         else:
-            _print_human_diagnostics(errors, warnings)
+            _print_human_diagnostics(errors, warnings, appspec)
 
         if errors:
             raise typer.Exit(code=1)

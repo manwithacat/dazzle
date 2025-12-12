@@ -19,6 +19,7 @@ import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.strings import to_api_plural
 from dazzle_dnr_ui.runtime.js_generator import JSGenerator
 from dazzle_dnr_ui.specs import UISpec
 
@@ -87,6 +88,20 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
     dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
+    api_route_prefixes: set[str] = set()  # Entity route prefixes (e.g., "/tasks", "/users")
+
+    def _is_api_path(self, path: str) -> bool:
+        """Check if a path should be proxied to the backend API."""
+        # Known system routes
+        if path.startswith(("/auth/", "/files/", "/pages/", "/__test__/")):
+            return True
+        if path in ("/ui-spec", "/health"):
+            return True
+        # Entity CRUD routes (dynamically registered)
+        for prefix in self.api_route_prefixes:
+            if path == prefix or path.startswith(prefix + "/"):
+                return True
+        return False
 
     def handle(self) -> None:
         """Handle request, suppressing connection reset errors from browser."""
@@ -101,9 +116,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         path = self.path.split("?")[0]
 
         # Proxy API requests to backend
-        if path.startswith("/api/"):
-            self._proxy_request("GET")
-        elif path.startswith("/__test__/"):
+        if self._is_api_path(path):
             self._proxy_request("GET")
         elif path.startswith("/dazzle/dev/"):
             # Proxy Dazzle Bar control plane requests (v0.8.5)
@@ -122,8 +135,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._serve_spec()
         elif path == "/__hot-reload__":
             self._serve_hot_reload()
-        elif path == "/health":
-            self._proxy_request("GET")
         elif path == "/docs" or path.startswith("/docs"):
             self._proxy_request("GET")
         elif path == "/openapi.json":
@@ -135,11 +146,10 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:
         """Handle POST requests."""
-        if self.path.startswith("/api/"):
+        path = self.path.split("?")[0]
+        if self._is_api_path(path):
             self._proxy_request("POST")
-        elif self.path.startswith("/__test__/"):
-            self._proxy_request("POST")
-        elif self.path.startswith("/dazzle/dev/"):
+        elif path.startswith("/dazzle/dev/"):
             # Proxy Dazzle Bar control plane requests (v0.8.5)
             self._proxy_request("POST")
         else:
@@ -147,23 +157,24 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_PUT(self) -> None:
         """Handle PUT requests."""
-        if self.path.startswith("/api/"):
+        path = self.path.split("?")[0]
+        if self._is_api_path(path):
             self._proxy_request("PUT")
         else:
             self.send_error(405, "Method Not Allowed")
 
     def do_DELETE(self) -> None:
         """Handle DELETE requests."""
-        if self.path.startswith("/api/"):
-            self._proxy_request("DELETE")
-        elif self.path.startswith("/__test__/"):
+        path = self.path.split("?")[0]
+        if self._is_api_path(path):
             self._proxy_request("DELETE")
         else:
             self.send_error(405, "Method Not Allowed")
 
     def do_PATCH(self) -> None:
         """Handle PATCH requests."""
-        if self.path.startswith("/api/"):
+        path = self.path.split("?")[0]
+        if self._is_api_path(path):
             self._proxy_request("PATCH")
         else:
             self.send_error(405, "Method Not Allowed")
@@ -364,7 +375,8 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         """Log HTTP requests."""
         path = args[0] if args else ""
         status = args[1] if len(args) > 1 else ""
-        if path.startswith("/api/"):
+        clean_path = path.split("?")[0]
+        if self._is_api_path(clean_path) or clean_path.startswith("/dazzle/dev/"):
             print(f"[DNR API] {path} -> {status}")
         elif path != "/__hot-reload__":
             print(f"[DNR UI] {path} -> {status}")
@@ -392,7 +404,7 @@ class DNRCombinedServer:
         frontend_port: int = 3000,
         db_path: str | Path | None = None,
         enable_test_mode: bool = False,
-        enable_auth: bool = False,
+        enable_auth: bool = True,  # Enable authentication by default
         enable_watch: bool = False,
         project_root: Path | None = None,
         personas: list[dict[str, Any]] | None = None,
@@ -559,6 +571,12 @@ class DNRCombinedServer:
         DNRCombinedHandler.test_mode = self.enable_test_mode
         DNRCombinedHandler.hot_reload_manager = self._hot_reload_manager
 
+        # Build API route prefixes from backend spec entities
+        api_prefixes: set[str] = set()
+        for entity in self.backend_spec.entities:
+            api_prefixes.add(f"/{to_api_plural(entity.name)}")
+        DNRCombinedHandler.api_route_prefixes = api_prefixes
+
         # Create server with threading for concurrent SSE connections
         socketserver.TCPServer.allow_reuse_address = True
 
@@ -613,7 +631,7 @@ def run_combined_server(
     frontend_port: int = 3000,
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
-    enable_auth: bool = False,
+    enable_auth: bool = True,  # Enable authentication by default
     host: str = "127.0.0.1",
     enable_watch: bool = False,
     project_root: Path | None = None,

@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from dazzle.core.strings import to_api_plural
 from dazzle_dnr_back.specs.endpoint import EndpointSpec, HttpMethod
 from dazzle_dnr_back.specs.service import OperationKind, ServiceSpec
 
@@ -430,7 +431,7 @@ def generate_crud_routes(
         raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
 
     router = _APIRouter()
-    prefix = prefix or f"/{entity_name.lower()}s"
+    prefix = prefix or f"/{to_api_plural(entity_name)}"
     tags = tags or [entity_name]
 
     # List

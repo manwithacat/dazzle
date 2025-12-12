@@ -79,11 +79,11 @@ def test_endpoint_spec_creation():
         name="create_client_endpoint",
         service="create_client",
         method=HttpMethod.POST,
-        path="/api/clients",
+        path="/clients",
     )
     assert endpoint.name == "create_client_endpoint"
     assert endpoint.method == HttpMethod.POST
-    assert endpoint.full_path == "POST /api/clients"
+    assert endpoint.full_path == "POST /clients"
 
 
 def test_backend_spec_creation():
@@ -118,7 +118,7 @@ def test_backend_spec_creation():
                 name="list_clients_endpoint",
                 service="list_clients",
                 method=HttpMethod.GET,
-                path="/api/clients",
+                path="/clients",
             )
         ],
     )
@@ -163,7 +163,7 @@ def test_backend_spec_validation():
                 name="list_endpoint",
                 service="list_clients",
                 method=HttpMethod.GET,
-                path="/api/clients",
+                path="/clients",
             )
         ],
     )
@@ -178,7 +178,7 @@ def test_backend_spec_validation():
                 name="bad_endpoint",
                 service="nonexistent_service",
                 method=HttpMethod.GET,
-                path="/api/bad",
+                path="/bad",
             )
         ],
     )

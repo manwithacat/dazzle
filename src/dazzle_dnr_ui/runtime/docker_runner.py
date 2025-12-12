@@ -17,7 +17,6 @@ Note: This module re-exports from the docker subpackage for backward compatibili
 The implementation has been refactored into:
 - docker/utils.py - Docker availability checks
 - docker/templates.py - Dockerfile and compose templates
-- docker/entrypoint.py - Container entrypoint script
 - docker/runner.py - DockerRunner class and convenience functions
 """
 
@@ -28,14 +27,11 @@ from .docker import (
     # Templates
     DNR_BACKEND_DOCKERFILE,
     DNR_COMPOSE_TEMPLATE,
-    DNR_DOCKERFILE_TEMPLATE,
     DNR_DOCKERIGNORE,
-    DNR_ENTRYPOINT_TEMPLATE,
     DNR_FRONTEND_DOCKERFILE,
     # Runner
     DockerRunConfig,
     DockerRunner,
-    generate_dockerfile,
     # Utilities
     get_docker_version,
     is_docker_available,
@@ -48,13 +44,10 @@ __all__ = [
     "is_docker_available",
     "get_docker_version",
     # Templates
-    "DNR_DOCKERFILE_TEMPLATE",
     "DNR_BACKEND_DOCKERFILE",
     "DNR_FRONTEND_DOCKERFILE",
     "DNR_COMPOSE_TEMPLATE",
     "DNR_DOCKERIGNORE",
-    "DNR_ENTRYPOINT_TEMPLATE",
-    "generate_dockerfile",
     # Runner
     "DockerRunConfig",
     "DockerRunner",

@@ -70,7 +70,7 @@ class JSONLFormatter(logging.Formatter):
     - source: Source file/location info (if available)
 
     Example output:
-    {"timestamp":"2024-01-15T10:30:45.123Z","level":"ERROR","component":"UI","message":"Failed to fetch /api/tasks","context":{"status":500,"url":"/api/tasks"}}
+    {"timestamp":"2024-01-15T10:30:45.123Z","level":"ERROR","component":"UI","message":"Failed to fetch /tasks","context":{"status":500,"url":"/tasks"}}
     """
 
     def format(self, record: logging.LogRecord) -> str:

@@ -1,9 +1,9 @@
-# DAZZLE Homebrew Formula v0.9.4
+# DAZZLE Homebrew Formula v0.10.1
 #
 # Installation: brew install manwithacat/tap/dazzle
 # Or from this file: brew install ./homebrew/dazzle.rb
 #
-# v0.9.4 Architecture:
+# v0.10.1 Architecture:
 # - CLI: Bun-compiled native binary (50x faster startup)
 # - Runtime: Python package for DSL parsing and code generation
 #
@@ -15,12 +15,12 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.9.4"
+  version "0.10.1"
   license "MIT"
 
   # Source tarball for Python package
   # SHA256 will be updated by CI after tag is created
-  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.9.4.tar.gz"
+  url "https://github.com/manwithacat/dazzle/archive/refs/tags/v0.10.1.tar.gz"
   sha256 "PLACEHOLDER_SOURCE_SHA256"
 
   # Pre-compiled CLI binaries for each platform
@@ -28,21 +28,21 @@ class Dazzle < Formula
   resource "cli-binary" do
     on_macos do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.4/dazzle-darwin-arm64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.10.1/dazzle-darwin-arm64.tar.gz"
         sha256 "PLACEHOLDER_DARWIN_ARM64_SHA256"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.4/dazzle-darwin-x64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.10.1/dazzle-darwin-x64.tar.gz"
         sha256 "PLACEHOLDER_DARWIN_X64_SHA256"
       end
     end
     on_linux do
       on_arm do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.4/dazzle-linux-arm64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.10.1/dazzle-linux-arm64.tar.gz"
         sha256 "PLACEHOLDER_LINUX_ARM64_SHA256"
       end
       on_intel do
-        url "https://github.com/manwithacat/dazzle/releases/download/v0.9.4/dazzle-linux-x64.tar.gz"
+        url "https://github.com/manwithacat/dazzle/releases/download/v0.10.1/dazzle-linux-x64.tar.gz"
         sha256 "PLACEHOLDER_LINUX_X64_SHA256"
       end
     end
@@ -154,7 +154,7 @@ class Dazzle < Formula
 
   def caveats
     <<~EOS
-      DAZZLE v0.9.3 has been installed!
+      DAZZLE v0.10.1 has been installed!
 
       What's New:
         - 50x faster CLI startup (Bun-compiled binary)

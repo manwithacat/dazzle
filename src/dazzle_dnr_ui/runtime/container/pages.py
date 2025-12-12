@@ -38,7 +38,7 @@ def register_page_routes(
                 return result
         return None
 
-    @app.get("/api/pages/{path:path}")
+    @app.get("/pages/{path:path}", tags=["Pages"], summary="Get page content")
     async def serve_static_page(path: str) -> dict[str, Any]:
         """Serve static page content."""
         route = f"/{path}"

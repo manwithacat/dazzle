@@ -126,11 +126,11 @@ class BaseAdapter(ABC):
         Returns:
             API endpoint URL
         """
-        # Convention: Entity.action maps to /api/{entity}/{action}
+        # Convention: Entity.action maps to /{entity}/{action}
         if "." in action_id:
             entity, action = action_id.split(".", 1)
-            return f"{self.api_url}/api/{entity.lower()}/{action}"
-        return f"{self.api_url}/api/{action_id}"
+            return f"{self.api_url}/{entity.lower()}/{action}"
+        return f"{self.api_url}/{action_id}"
 
     async def authenticate(
         self,

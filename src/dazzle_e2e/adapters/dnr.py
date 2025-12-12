@@ -116,7 +116,7 @@ class DNRAdapter(BaseAdapter):
         client = await self._get_client()
 
         # Try standard REST endpoint first
-        response = await client.get(f"{self.api_url}/api/{entity.lower()}")
+        response = await client.get(f"{self.api_url}/{entity.lower()}")
 
         if response.status_code == 200:
             data = response.json()
@@ -145,7 +145,7 @@ class DNRAdapter(BaseAdapter):
         """
         client = await self._get_client()
 
-        response = await client.get(f"{self.api_url}/api/{entity.lower()}/{entity_id}")
+        response = await client.get(f"{self.api_url}/{entity.lower()}/{entity_id}")
 
         if response.status_code == 200:
             return response.json()
@@ -184,7 +184,7 @@ class DNRAdapter(BaseAdapter):
             auth_data["role"] = role
 
         response = await client.post(
-            f"{self.api_url}/api/auth/login",
+            f"{self.api_url}/auth/login",
             json=auth_data,
         )
 
@@ -204,7 +204,7 @@ class DNRAdapter(BaseAdapter):
         """Log out via DNR auth endpoint."""
         client = await self._get_client()
 
-        await client.post(f"{self.api_url}/api/auth/logout")
+        await client.post(f"{self.api_url}/auth/logout")
 
     async def get_current_user(self) -> dict[str, Any] | None:
         """
@@ -216,7 +216,7 @@ class DNRAdapter(BaseAdapter):
         client = await self._get_client()
 
         try:
-            response = await client.get(f"{self.api_url}/api/auth/me")
+            response = await client.get(f"{self.api_url}/auth/me")
             if response.status_code == 200:
                 return response.json()
         except Exception:
@@ -280,7 +280,7 @@ class DNRAdapter(BaseAdapter):
         client = await self._get_client()
 
         response = await client.post(
-            f"{self.api_url}/api/auth/login",
+            f"{self.api_url}/auth/login",
             json={"email": email, "password": password},
         )
         response.raise_for_status()
@@ -375,7 +375,7 @@ class DNRAdapter(BaseAdapter):
         with httpx.Client(timeout=self.timeout) as client:
             # Try regular auth first
             response = client.post(
-                f"{self.api_url}/api/auth/login",
+                f"{self.api_url}/auth/login",
                 json=auth_data,
             )
 

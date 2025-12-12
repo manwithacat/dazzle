@@ -316,7 +316,7 @@ function updateAuthUI(user) {
  */
 async function checkAuthState() {
   try {
-    const response = await fetch('/api/auth/me', { credentials: 'include' });
+    const response = await fetch('/auth/me', { credentials: 'include' });
     if (response.ok) {
       const user = await response.json();
       updateAuthUI(user);
@@ -338,7 +338,7 @@ async function checkAuthState() {
 async function handleLogout(e) {
   e.preventDefault();
   try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
     window.dnrAuthUser = null;
     updateAuthUI(null);
     // Optionally redirect to home
@@ -436,7 +436,7 @@ function showLoginModal(e) {
     }
 
     try {
-      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+      const endpoint = isRegister ? '/auth/register' : '/auth/login';
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

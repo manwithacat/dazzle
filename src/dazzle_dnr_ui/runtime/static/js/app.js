@@ -130,7 +130,7 @@ export function createApp(uiSpec) {
 
     try {
       // Fetch page content from backend
-      const response = await fetch(`/api/pages${page.route}`);
+      const response = await fetch(`/pages${page.route}`);
       if (!response.ok) {
         throw new Error(`Failed to load page: ${response.status}`);
       }

@@ -6,6 +6,7 @@ CRUD operations based on surface modes.
 """
 
 from dazzle.core import ir
+from dazzle.core.strings import to_api_plural
 from dazzle_dnr_back.specs import (
     DomainOperation,
     EndpointSpec,
@@ -51,7 +52,7 @@ def _generate_service_name(surface: ir.SurfaceSpec) -> str:
     mode = surface.mode.value
 
     if mode == "list":
-        return f"list_{entity.lower()}s"
+        return f"list_{to_api_plural(entity)}"
     elif mode == "view":
         return f"get_{entity.lower()}"
     elif mode == "create":
@@ -206,13 +207,13 @@ def convert_surface_to_endpoint(
 
     # Generate path based on mode
     if surface.mode == ir.SurfaceMode.LIST:
-        path = f"/api/{entity_lower}s"
+        path = f"/{entity_lower}s"
     elif surface.mode == ir.SurfaceMode.CREATE:
-        path = f"/api/{entity_lower}s"
+        path = f"/{entity_lower}s"
     elif surface.mode in (ir.SurfaceMode.VIEW, ir.SurfaceMode.EDIT):
-        path = f"/api/{entity_lower}s/{{id}}"
+        path = f"/{entity_lower}s/{{id}}"
     else:
-        path = f"/api/{surface.name.replace('_', '-')}"
+        path = f"/{surface.name.replace('_', '-')}"
 
     return EndpointSpec(
         name=f"{surface.name}_endpoint",

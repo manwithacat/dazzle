@@ -51,6 +51,7 @@ def _load_static_css(filename: str) -> str:
 
 # Mapping from Vite project filenames to static source files
 _VITE_TO_STATIC_MAPPING = {
+    # Core runtime
     "signals.js": "signals.js",
     "state.js": "state.js",
     "dom.js": "dom.js",
@@ -62,6 +63,19 @@ _VITE_TO_STATIC_MAPPING = {
     "shell.js": "shell.js",
     "app.js": "app.js",
     "index.js": "index.js",
+    # Additional modules
+    "api-client.js": "api-client.js",
+    "toast.js": "toast.js",
+    "devtools.js": "devtools.js",
+    "logger.js": "logger.js",
+    "types.js": "types.js",
+}
+
+# Dazzle Bar files (separate directory)
+_DAZZLE_BAR_FILES = {
+    "dazzle-bar/index.js": "dazzle-bar/index.js",
+    "dazzle-bar/bar.js": "dazzle-bar/bar.js",
+    "dazzle-bar/runtime.js": "dazzle-bar/runtime.js",
 }
 
 
@@ -72,10 +86,14 @@ def _get_runtime_files() -> dict[str, str]:
     Returns:
         Dict mapping output filename to file content
     """
-    return {
+    files = {
         vite_name: _load_static_js(static_name)
         for vite_name, static_name in _VITE_TO_STATIC_MAPPING.items()
     }
+    # Add Dazzle Bar files
+    for vite_name, static_name in _DAZZLE_BAR_FILES.items():
+        files[vite_name] = _load_static_file("js", static_name)
+    return files
 
 
 # CSS source files to concatenate for the bundled stylesheet
@@ -116,35 +134,35 @@ def _get_bundled_css() -> str:
 # Configuration Templates
 # =============================================================================
 
-VITE_CONFIG_JS = """import { defineConfig } from 'vite';
+VITE_CONFIG_JS_TEMPLATE = """import {{ defineConfig }} from 'vite';
 
 // API URL from environment variable or default to localhost
 // In Docker, set VITE_API_URL=http://host.docker.internal:8000
-const apiTarget = process.env.VITE_API_URL || 'http://localhost:8000';
+const apiTarget = process.env.VITE_API_URL || 'http://localhost:{api_port}';
 
-export default defineConfig({
+export default defineConfig({{
   root: 'src',
-  build: {
+  build: {{
     outDir: '../dist',
     emptyOutDir: true,
     sourcemap: true,
-  },
-  server: {
-    port: 3000,
+  }},
+  server: {{
+    port: {frontend_port},
     host: true,  // Listen on 0.0.0.0 for Docker access
-    proxy: {
-      '/api': {
+    proxy: {{
+      '/api': {{
         target: apiTarget,
         changeOrigin: true,
-      }
-    }
-  },
-  resolve: {
-    alias: {
+      }}
+    }}
+  }},
+  resolve: {{
+    alias: {{
       '@dnr': '/dnr'
-    }
-  }
-});
+    }}
+  }}
+}});
 """
 
 PACKAGE_JSON_TEMPLATE = """{{
@@ -234,14 +252,23 @@ class ViteGenerator:
     - Source files
     """
 
-    def __init__(self, spec: UISpec):
+    def __init__(
+        self,
+        spec: UISpec,
+        frontend_port: int = 3000,
+        api_port: int = 8000,
+    ):
         """
         Initialize the generator.
 
         Args:
             spec: UI specification
+            frontend_port: Frontend dev server port (default 3000)
+            api_port: Backend API port (default 8000)
         """
         self.spec = spec
+        self.frontend_port = frontend_port
+        self.api_port = api_port
 
     def generate_package_json(self) -> str:
         """Generate package.json content."""
@@ -251,8 +278,11 @@ class ViteGenerator:
         return PACKAGE_JSON_TEMPLATE.format(name=name)
 
     def generate_vite_config(self) -> str:
-        """Generate vite.config.js content."""
-        return VITE_CONFIG_JS
+        """Generate vite.config.js content with correct port configuration."""
+        return VITE_CONFIG_JS_TEMPLATE.format(
+            frontend_port=self.frontend_port,
+            api_port=self.api_port,
+        )
 
     def generate_index_html(self) -> str:
         """Generate index.html content."""
@@ -331,6 +361,8 @@ class ViteGenerator:
 
         for filename, content in runtime_files.items():
             file_path = dnr_dir / filename
+            # Create subdirectories if needed (e.g., dazzle-bar/)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content)
             created_files.append(file_path)
 
@@ -359,6 +391,8 @@ class ViteGenerator:
 
         for filename, content in runtime_files.items():
             file_path = output_dir / filename
+            # Create subdirectories if needed (e.g., dazzle-bar/)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content)
             created_files.append(file_path)
 
@@ -370,18 +404,25 @@ class ViteGenerator:
 # =============================================================================
 
 
-def generate_vite_app(spec: UISpec, output_dir: str | Path) -> list[Path]:
+def generate_vite_app(
+    spec: UISpec,
+    output_dir: str | Path,
+    frontend_port: int = 3000,
+    api_port: int = 8000,
+) -> list[Path]:
     """
     Generate a complete Vite application from UISpec.
 
     Args:
         spec: UI specification
         output_dir: Output directory
+        frontend_port: Frontend dev server port (default 3000)
+        api_port: Backend API port (default 8000)
 
     Returns:
         List of created file paths
     """
-    generator = ViteGenerator(spec)
+    generator = ViteGenerator(spec, frontend_port=frontend_port, api_port=api_port)
     return generator.write_to_directory(output_dir)
 
 

@@ -80,11 +80,11 @@ entries:
       usage_count: 0
       generates:
         endpoints:
-          - POST /api/auth/login
-          - POST /api/auth/logout
-          - POST /api/auth/register
-          - GET /api/auth/me
-          - POST /api/auth/refresh
+          - POST /auth/login
+          - POST /auth/logout
+          - POST /auth/register
+          - GET /auth/me
+          - POST /auth/refresh
         middleware:
           - session_validation
           - user_context_injection
@@ -161,11 +161,11 @@ entries:
       usage_count: 0
       generates:
         endpoints:
-          - POST /api/auth/login
-          - POST /api/auth/logout
-          - POST /api/auth/register
-          - POST /api/auth/refresh
-          - GET /api/auth/me
+          - POST /auth/login
+          - POST /auth/logout
+          - POST /auth/register
+          - POST /auth/refresh
+          - GET /auth/me
         middleware:
           - jwt_validation
           - user_context_injection
@@ -287,9 +287,9 @@ entries:
       usage_count: 0
       generates:
         endpoints:
-          - POST /api/auth/keys (create key)
-          - GET /api/auth/keys (list keys)
-          - DELETE /api/auth/keys/:id (revoke key)
+          - POST /auth/keys (create key)
+          - GET /auth/keys (list keys)
+          - DELETE /auth/keys/:id (revoke key)
         middleware:
           - api_key_validation
       note: |
@@ -342,8 +342,8 @@ entries:
       usage_count: 0
       generates:
         endpoints:
-          - POST /api/auth/forgot-password
-          - POST /api/auth/reset-password
+          - POST /auth/forgot-password
+          - POST /auth/reset-password
       note: |
         Requires email service integration for sending reset emails.
         Configure [auth.email] in dazzle.toml.
@@ -398,8 +398,8 @@ entries:
       usage_count: 0
       generates:
         endpoints:
-          - GET /api/auth/oauth/:provider (initiate flow)
-          - GET /api/auth/oauth/:provider/callback (handle callback)
+          - GET /auth/oauth/:provider (initiate flow)
+          - GET /auth/oauth/:provider/callback (handle callback)
       config_required:
         - OAUTH_GOOGLE_CLIENT_ID
         - OAUTH_GOOGLE_CLIENT_SECRET

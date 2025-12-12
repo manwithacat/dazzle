@@ -74,31 +74,31 @@ def task_spec() -> BackendSpec:
                 name="list_tasks",
                 service="task_service",
                 method=HttpMethod.GET,
-                path="/api/tasks",
+                path="/tasks",
             ),
             EndpointSpec(
                 name="get_task",
                 service="task_service",
                 method=HttpMethod.GET,
-                path="/api/tasks/{id}",
+                path="/tasks/{id}",
             ),
             EndpointSpec(
                 name="create_task",
                 service="task_service",
                 method=HttpMethod.POST,
-                path="/api/tasks",
+                path="/tasks",
             ),
             EndpointSpec(
                 name="update_task",
                 service="task_service",
                 method=HttpMethod.PUT,
-                path="/api/tasks/{id}",
+                path="/tasks/{id}",
             ),
             EndpointSpec(
                 name="delete_task",
                 service="task_service",
                 method=HttpMethod.DELETE,
-                path="/api/tasks/{id}",
+                path="/tasks/{id}",
             ),
         ],
     )
@@ -128,7 +128,7 @@ class TestE2EEndpoints:
 
     def test_list_empty(self, client: TestClient):
         """Test listing tasks when empty."""
-        response = client.get("/api/tasks")
+        response = client.get("/tasks")
         assert response.status_code == 200
         data = response.json()
         assert data["items"] == []
@@ -137,7 +137,7 @@ class TestE2EEndpoints:
     def test_create_task(self, client: TestClient):
         """Test creating a task."""
         response = client.post(
-            "/api/tasks",
+            "/tasks",
             json={"title": "Test Task", "status": "pending"},
         )
         assert response.status_code == 200
@@ -150,13 +150,13 @@ class TestE2EEndpoints:
         """Test reading a task."""
         # Create first
         create_response = client.post(
-            "/api/tasks",
+            "/tasks",
             json={"title": "Read Test", "status": "pending"},
         )
         task_id = create_response.json()["id"]
 
         # Read back
-        response = client.get(f"/api/tasks/{task_id}")
+        response = client.get(f"/tasks/{task_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["title"] == "Read Test"
@@ -165,14 +165,14 @@ class TestE2EEndpoints:
         """Test updating a task."""
         # Create first
         create_response = client.post(
-            "/api/tasks",
+            "/tasks",
             json={"title": "Original", "status": "pending"},
         )
         task_id = create_response.json()["id"]
 
         # Update
         response = client.put(
-            f"/api/tasks/{task_id}",
+            f"/tasks/{task_id}",
             json={"title": "Updated", "status": "done"},
         )
         assert response.status_code == 200
@@ -184,24 +184,24 @@ class TestE2EEndpoints:
         """Test deleting a task."""
         # Create first
         create_response = client.post(
-            "/api/tasks",
+            "/tasks",
             json={"title": "To Delete", "status": "pending"},
         )
         task_id = create_response.json()["id"]
 
         # Delete
-        response = client.delete(f"/api/tasks/{task_id}")
+        response = client.delete(f"/tasks/{task_id}")
         assert response.status_code == 200
 
         # Verify deleted
-        get_response = client.get(f"/api/tasks/{task_id}")
+        get_response = client.get(f"/tasks/{task_id}")
         assert get_response.status_code == 404
 
     def test_crud_flow(self, client: TestClient):
         """Test complete CRUD flow."""
         # 1. Create
         create_response = client.post(
-            "/api/tasks",
+            "/tasks",
             json={"title": "CRUD Test", "status": "pending"},
         )
         assert create_response.status_code == 200
@@ -209,26 +209,26 @@ class TestE2EEndpoints:
         task_id = task["id"]
 
         # 2. List (should have 1 item)
-        list_response = client.get("/api/tasks")
+        list_response = client.get("/tasks")
         assert list_response.json()["total"] == 1
 
         # 3. Read
-        read_response = client.get(f"/api/tasks/{task_id}")
+        read_response = client.get(f"/tasks/{task_id}")
         assert read_response.json()["title"] == "CRUD Test"
 
         # 4. Update
         update_response = client.put(
-            f"/api/tasks/{task_id}",
+            f"/tasks/{task_id}",
             json={"title": "Updated CRUD", "status": "done"},
         )
         assert update_response.json()["status"] == "done"
 
         # 5. Delete
-        delete_response = client.delete(f"/api/tasks/{task_id}")
+        delete_response = client.delete(f"/tasks/{task_id}")
         assert delete_response.status_code == 200
 
         # 6. Verify empty again
-        final_list = client.get("/api/tasks")
+        final_list = client.get("/tasks")
         assert final_list.json()["total"] == 0
 
     def test_db_info(self, client: TestClient):

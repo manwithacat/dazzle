@@ -384,7 +384,7 @@ class TestAuthMiddleware:
 
     def test_is_excluded_path_api(self, middleware):
         """Test API endpoints are not excluded."""
-        assert middleware.is_excluded_path("/api/tasks") is False
+        assert middleware.is_excluded_path("/tasks") is False
         assert middleware.is_excluded_path("/users") is False
 
     def test_custom_exclude_paths(self, auth_store):

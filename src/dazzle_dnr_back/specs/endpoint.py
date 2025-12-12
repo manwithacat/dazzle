@@ -62,7 +62,7 @@ class EndpointSpec(BaseModel):
             name="create_invoice",
             service="create_invoice",
             method=HttpMethod.POST,
-            path="/api/invoices",
+            path="/invoices",
             auth=AuthRuleSpec(required=True, roles=["admin", "user"]),
             rate_limit=RateLimitSpec(requests=100, window_seconds=60)
         )
@@ -73,7 +73,7 @@ class EndpointSpec(BaseModel):
     name: str = Field(description="Endpoint name")
     service: str = Field(description="Service name to invoke")
     method: HttpMethod = Field(description="HTTP method")
-    path: str = Field(description="URL path (e.g., /api/invoices)")
+    path: str = Field(description="URL path (e.g., /invoices)")
     description: str | None = Field(default=None, description="Endpoint description")
     tags: list[str] = Field(default_factory=list, description="OpenAPI tags for grouping")
     rate_limit: RateLimitSpec | None = Field(

@@ -6,6 +6,7 @@ mapping surface modes to appropriate UI patterns.
 """
 
 from dazzle.core import ir
+from dazzle.core.strings import to_api_plural
 from dazzle_dnr_ui.specs import (
     ActionSpec,
     ComponentSpec,
@@ -525,7 +526,7 @@ def _generate_view(
         # Generate table columns from surface sections or entity fields
         columns = _generate_table_columns(surface, entity)
         entity_name = dazzle_attrs.get("entity") or surface.entity_ref
-        api_endpoint = f"/api/{entity_name.lower()}s" if entity_name else None
+        api_endpoint = f"/{to_api_plural(entity_name)}" if entity_name else None
 
         return ElementNode(
             as_=component_type,

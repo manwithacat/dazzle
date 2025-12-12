@@ -56,13 +56,13 @@ def create_app(
     )
 
     # Health check
-    @app.get("/health")
+    @app.get("/health", tags=["System"], summary="Health check")
     async def health() -> dict[str, str]:
         """Health check endpoint."""
         return {"status": "healthy", "mode": "docker"}
 
     # UI spec endpoint
-    @app.get("/api/ui-spec")
+    @app.get("/ui-spec", tags=["System"], summary="Get UI specification")
     async def get_ui_spec() -> dict[str, Any]:
         """Return the UI specification."""
         return ui_spec

@@ -42,7 +42,7 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
             self._serve_spec()
         elif path == "/__hot-reload__":
             self._serve_hot_reload()
-        elif path.startswith("/api/"):
+        elif path.startswith(("/auth/", "/files/", "/pages/")):
             # API routes should 404 (they go to backend server)
             self.send_error(404, "API route - use backend server")
         else:

@@ -61,11 +61,6 @@ def dnr_serve(
         "-a",
         help="Run Docker container attached (stream logs to terminal)",
     ),
-    single_container: bool = typer.Option(
-        False,
-        "--single-container",
-        help="Use legacy single-container mode (combined frontend + backend)",
-    ),
     graphql: bool = typer.Option(
         False,
         "--graphql",
@@ -76,7 +71,7 @@ def dnr_serve(
     Serve DNR app (backend API + UI with live data).
 
     By default, runs frontend and backend in separate Docker containers.
-    Use --single-container for legacy combined mode, --local to run without Docker.
+    Use --local to run without Docker.
 
     Runs:
     - FastAPI backend on api-port (default 8000) with SQLite persistence
@@ -85,11 +80,10 @@ def dnr_serve(
     - Interactive API docs at http://host:api-port/docs
 
     Examples:
-        dazzle dnr serve                    # Split containers (default)
+        dazzle dnr serve                    # Docker mode (default)
         dazzle dnr serve --local --watch    # Local mode with hot reload
         dazzle dnr serve --attach           # Run Docker with log streaming
         dazzle dnr serve --local            # Run locally without Docker
-        dazzle dnr serve --single-container # Legacy single-container mode
         dazzle dnr serve --backend-only     # API server only (for separate frontend)
         dazzle dnr serve --rebuild          # Force Docker image rebuild
         dazzle dnr serve --port 4000        # Frontend on 4000
@@ -136,12 +130,11 @@ def dnr_serve(
 
             if is_docker_available():
                 detach = not attach  # Default to detached (no logs), --attach streams logs
-                mode_desc = "single-container" if single_container else "split containers"
                 auth_desc = " with auth" if auth_enabled else ""
                 typer.echo(
-                    f"Running in Docker mode ({mode_desc}{auth_desc}, use --local to run without Docker)"
+                    f"Running in Docker mode{auth_desc} (use --local to run without Docker)"
                     if attach
-                    else f"Starting Docker containers in background ({mode_desc}{auth_desc})..."
+                    else f"Starting Docker containers in background{auth_desc}..."
                 )
                 exit_code = run_in_docker(
                     project_path=project_root,
@@ -151,7 +144,6 @@ def dnr_serve(
                     auth_enabled=auth_enabled,
                     rebuild=rebuild,
                     detach=detach,
-                    single_container=single_container,
                     project_name=project_name,
                 )
                 raise typer.Exit(code=exit_code)

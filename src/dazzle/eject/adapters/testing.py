@@ -130,7 +130,7 @@ def test_api_contract(case):
 {"".join(test_cases)}
 
 # Stateful testing for state machines
-@schema.parametrize(endpoint="/api/.*")
+@schema.parametrize(endpoint="/.*")
 @schemathesis.settings(max_examples=100)
 def test_api_stateful(case):
     """
@@ -295,21 +295,21 @@ class Test{entity.name}CRUD:
 
     def test_create_{entity_lower}(self, client, {entity_lower}_data):
         """Test creating a new {entity.name}."""
-        response = client.post("/api/{entity_lower}s", json={entity_lower}_data)
+        response = client.post("/{entity_lower}s", json={entity_lower}_data)
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert "id" in data
 
     def test_get_{entity_lower}(self, client, {entity_lower}_instance):
         """Test retrieving a {entity.name} by ID."""
-        response = client.get(f"/api/{entity_lower}s/{{{entity_lower}_instance.id}}")
+        response = client.get(f"/{entity_lower}s/{{{entity_lower}_instance.id}}")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == str({entity_lower}_instance.id)
 
     def test_list_{entity_lower}s(self, client, {entity_lower}_instance):
         """Test listing all {entity.name}s."""
-        response = client.get("/api/{entity_lower}s")
+        response = client.get("/{entity_lower}s")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert isinstance(data, list)
@@ -319,23 +319,23 @@ class Test{entity.name}CRUD:
         """Test updating a {entity.name}."""
         update_data = {{"id": str({entity_lower}_instance.id)}}
         response = client.put(
-            f"/api/{entity_lower}s/{{{entity_lower}_instance.id}}",
+            f"/{entity_lower}s/{{{entity_lower}_instance.id}}",
             json=update_data,
         )
         assert response.status_code == status.HTTP_200_OK
 
     def test_delete_{entity_lower}(self, client, {entity_lower}_instance):
         """Test deleting a {entity.name}."""
-        response = client.delete(f"/api/{entity_lower}s/{{{entity_lower}_instance.id}}")
+        response = client.delete(f"/{entity_lower}s/{{{entity_lower}_instance.id}}")
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
         # Verify deletion
-        response = client.get(f"/api/{entity_lower}s/{{{entity_lower}_instance.id}}")
+        response = client.get(f"/{entity_lower}s/{{{entity_lower}_instance.id}}")
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_get_{entity_lower}_not_found(self, client):
         """Test getting non-existent {entity.name}."""
-        response = client.get("/api/{entity_lower}s/00000000-0000-0000-0000-000000000000")
+        response = client.get("/{entity_lower}s/00000000-0000-0000-0000-000000000000")
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -344,7 +344,7 @@ class Test{entity.name}Validation:
 
     def test_create_{entity_lower}_invalid_data(self, client):
         """Test creating {entity.name} with invalid data."""
-        response = client.post("/api/{entity_lower}s", json={{}})
+        response = client.post("/{entity_lower}s", json={{}})
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 '''
 

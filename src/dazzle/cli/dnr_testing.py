@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
+from dazzle.core.strings import to_api_plural
+
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs.backend import BackendSpec
 
@@ -60,8 +62,8 @@ def run_api_contract_tests(
 
     # Test each entity's CRUD endpoints
     for entity in backend_spec.entities:
-        plural_name = entity.name.lower() + "s"
-        base_path = f"/api/{plural_name}"
+        plural_name = to_api_plural(entity.name)
+        base_path = f"/{plural_name}"
 
         # Test LIST
         status, data = make_request("GET", base_path)
@@ -366,8 +368,8 @@ def run_benchmarks(
     # Find a list endpoint to benchmark
     list_endpoint = None
     for entity in backend_spec.entities:
-        plural_name = entity.name.lower() + "s"
-        list_endpoint = f"/api/{plural_name}"
+        plural_name = to_api_plural(entity.name)
+        list_endpoint = f"/{plural_name}"
         break
 
     if not list_endpoint:
