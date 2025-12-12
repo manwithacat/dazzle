@@ -21,6 +21,139 @@ DECIMAL_PRECISION_MAX = 65
 STRING_MAX_LENGTH_MIN = 1
 STRING_MAX_LENGTH_WARN_THRESHOLD = 10000  # Suggest TEXT type above this
 
+# SQL reserved words (common across SQLite, PostgreSQL, MySQL)
+# These can cause issues when used unquoted in SQL statements
+SQL_RESERVED_WORDS = frozenset(
+    {
+        # Most common/problematic
+        "order",
+        "group",
+        "select",
+        "table",
+        "index",
+        "key",
+        "user",
+        "check",
+        "primary",
+        "foreign",
+        "references",
+        "constraint",
+        "default",
+        "null",
+        "not",
+        "and",
+        "or",
+        "where",
+        "from",
+        "join",
+        "on",
+        "as",
+        "in",
+        "is",
+        "like",
+        "between",
+        "case",
+        "when",
+        "then",
+        "else",
+        "end",
+        "create",
+        "alter",
+        "drop",
+        "insert",
+        "update",
+        "delete",
+        "set",
+        "values",
+        "into",
+        "add",
+        "column",
+        "all",
+        "distinct",
+        "limit",
+        "offset",
+        "union",
+        "except",
+        "intersect",
+        "having",
+        "by",
+        "asc",
+        "desc",
+        "trigger",
+        "view",
+        "exists",
+        "unique",
+        "current",
+        "current_date",
+        "current_time",
+        "current_timestamp",
+        "transaction",
+        "commit",
+        "rollback",
+        "grant",
+        "revoke",
+        "with",
+        "recursive",
+        "escape",
+        "collate",
+        "natural",
+        "left",
+        "right",
+        "inner",
+        "outer",
+        "cross",
+        "full",
+        # Additional SQL keywords
+        "abort",
+        "action",
+        "after",
+        "analyze",
+        "attach",
+        "autoincrement",
+        "before",
+        "begin",
+        "cascade",
+        "cast",
+        "conflict",
+        "database",
+        "deferrable",
+        "deferred",
+        "detach",
+        "each",
+        "exclusive",
+        "explain",
+        "fail",
+        "glob",
+        "if",
+        "ignore",
+        "immediate",
+        "indexed",
+        "initially",
+        "instead",
+        "isnull",
+        "match",
+        "no",
+        "notnull",
+        "of",
+        "plan",
+        "pragma",
+        "query",
+        "raise",
+        "regexp",
+        "reindex",
+        "release",
+        "rename",
+        "replace",
+        "restrict",
+        "row",
+        "savepoint",
+        "temp",
+        "temporary",
+        "vacuum",
+        "virtual",
+    }
+)
+
 
 def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
@@ -48,6 +181,13 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 f"Entity '{entity.name}' has no primary key field. Add a field with 'pk' modifier."
             )
 
+        # Check for SQL reserved words in entity name
+        if entity.name.lower() in SQL_RESERVED_WORDS:
+            warnings.append(
+                f"Entity '{entity.name}' uses SQL reserved word as name. "
+                f"Consider renaming (e.g., 'SalesOrder' instead of 'Order')."
+            )
+
         # Check for duplicate field names
         field_names = [f.name for f in entity.fields]
         duplicates = {name for name in field_names if field_names.count(name) > 1}
@@ -56,6 +196,12 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
         # Validate each field
         for field in entity.fields:
+            # Check for SQL reserved words in field name
+            if field.name.lower() in SQL_RESERVED_WORDS:
+                warnings.append(
+                    f"Entity '{entity.name}' field '{field.name}' uses SQL reserved word. "
+                    f"Consider renaming (e.g., 'sales_order' instead of 'order')."
+                )
             # Check enum values
             if field.type.kind == ir.FieldTypeKind.ENUM:
                 if not field.type.enum_values or len(field.type.enum_values) == 0:

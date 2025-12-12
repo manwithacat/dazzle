@@ -74,7 +74,8 @@ class ServerConfig:
 
 # Runtime import
 try:
-    from fastapi import FastAPI as _FastAPI, Request
+    from fastapi import FastAPI as _FastAPI
+    from fastapi import Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 
@@ -328,9 +329,7 @@ class DNRBackendApp:
 
         # Add exception handler for state machine transition errors
         @self._app.exception_handler(TransitionError)
-        async def transition_error_handler(
-            request: Request, exc: TransitionError
-        ) -> JSONResponse:
+        async def transition_error_handler(request: Request, exc: TransitionError) -> JSONResponse:
             """Convert state machine errors to 422 Unprocessable Entity."""
             return JSONResponse(
                 status_code=422,

@@ -10,6 +10,8 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle_dnr_back.runtime.query_builder import quote_identifier
+
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs.entity import EntitySpec
 
@@ -111,11 +113,13 @@ class FTSManager:
             return
 
         # Create standalone FTS5 virtual table (stores its own content)
-        fields_str = ", ".join(config.searchable_fields)
+        # Note: FTS5 column names don't need quoting as they're in the USING clause
+        fields_str = ", ".join(quote_identifier(f) for f in config.searchable_fields)
+        fts_table = quote_identifier(config.fts_table_name)
         sql = f"""
-            CREATE VIRTUAL TABLE IF NOT EXISTS {config.fts_table_name}
+            CREATE VIRTUAL TABLE IF NOT EXISTS {fts_table}
             USING fts5(
-                id,
+                "id",
                 {fields_str},
                 tokenize='{config.tokenizer}'
             )
@@ -135,20 +139,21 @@ class FTSManager:
     ) -> None:
         """Create triggers to sync FTS table with main table."""
         entity = config.entity_name
-        fts_table = config.fts_table_name
+        entity_quoted = quote_identifier(entity)
+        fts_table = quote_identifier(config.fts_table_name)
         fields = config.searchable_fields
 
-        # Field list for insert
-        field_list = ", ".join(fields)
-        new_field_list = ", ".join(f"NEW.{f}" for f in fields)
+        # Field list for insert (quoted)
+        field_list = ", ".join(quote_identifier(f) for f in fields)
+        new_field_list = ", ".join(f"NEW.{quote_identifier(f)}" for f in fields)
 
         # Insert trigger - for standalone FTS, just insert
         insert_sql = f"""
             CREATE TRIGGER IF NOT EXISTS {entity}_fts_insert
-            AFTER INSERT ON {entity}
+            AFTER INSERT ON {entity_quoted}
             BEGIN
-                INSERT INTO {fts_table}(id, {field_list})
-                VALUES (NEW.id, {new_field_list});
+                INSERT INTO {fts_table}("id", {field_list})
+                VALUES (NEW."id", {new_field_list});
             END
         """
         conn.execute(insert_sql)
@@ -156,11 +161,11 @@ class FTSManager:
         # Update trigger - delete old, insert new
         update_sql = f"""
             CREATE TRIGGER IF NOT EXISTS {entity}_fts_update
-            AFTER UPDATE ON {entity}
+            AFTER UPDATE ON {entity_quoted}
             BEGIN
-                DELETE FROM {fts_table} WHERE id = OLD.id;
-                INSERT INTO {fts_table}(id, {field_list})
-                VALUES (NEW.id, {new_field_list});
+                DELETE FROM {fts_table} WHERE "id" = OLD."id";
+                INSERT INTO {fts_table}("id", {field_list})
+                VALUES (NEW."id", {new_field_list});
             END
         """
         conn.execute(update_sql)
@@ -168,9 +173,9 @@ class FTSManager:
         # Delete trigger
         delete_sql = f"""
             CREATE TRIGGER IF NOT EXISTS {entity}_fts_delete
-            AFTER DELETE ON {entity}
+            AFTER DELETE ON {entity_quoted}
             BEGIN
-                DELETE FROM {fts_table} WHERE id = OLD.id;
+                DELETE FROM {fts_table} WHERE "id" = OLD."id";
             END
         """
         conn.execute(delete_sql)
@@ -194,23 +199,26 @@ class FTSManager:
         if not config:
             return 0
 
+        fts_table = quote_identifier(config.fts_table_name)
+        entity_quoted = quote_identifier(entity_name)
+
         # Clear existing FTS data
-        conn.execute(f"DELETE FROM {config.fts_table_name}")
+        conn.execute(f"DELETE FROM {fts_table}")
 
         # Rebuild from main table
         fields = config.searchable_fields
-        field_list = ", ".join(fields)
+        field_list = ", ".join(quote_identifier(f) for f in fields)
 
         sql = f"""
-            INSERT INTO {config.fts_table_name}(id, {field_list})
-            SELECT id, {field_list}
-            FROM {entity_name}
+            INSERT INTO {fts_table}("id", {field_list})
+            SELECT "id", {field_list}
+            FROM {entity_quoted}
         """
         conn.execute(sql)
         conn.commit()
 
         # Get count
-        cursor = conn.execute(f"SELECT COUNT(*) FROM {config.fts_table_name}")
+        cursor = conn.execute(f"SELECT COUNT(*) FROM {fts_table}")
         return cursor.fetchone()[0]
 
     def search(
@@ -253,18 +261,22 @@ class FTSManager:
             else:
                 escaped_query = escaped_query
 
+        fts_table = quote_identifier(config.fts_table_name)
+        # Note: FTS5 MATCH requires unquoted table name
+        fts_name = config.fts_table_name
+
         # Count total matches
         count_sql = f"""
-            SELECT COUNT(*) FROM {config.fts_table_name}
-            WHERE {config.fts_table_name} MATCH ?
+            SELECT COUNT(*) FROM {fts_table}
+            WHERE {fts_name} MATCH ?
         """
         cursor = conn.execute(count_sql, (escaped_query,))
         total = cursor.fetchone()[0]
 
         # Get matching IDs
         search_sql = f"""
-            SELECT id FROM {config.fts_table_name}
-            WHERE {config.fts_table_name} MATCH ?
+            SELECT "id" FROM {fts_table}
+            WHERE {fts_name} MATCH ?
             ORDER BY rank
             LIMIT ? OFFSET ?
         """
@@ -298,18 +310,21 @@ class FTSManager:
 
         escaped_query = self._escape_query(query)
 
+        fts_table = quote_identifier(config.fts_table_name)
+        fts_name = config.fts_table_name  # Unquoted for MATCH and snippet()
+
         # Build snippet columns - column indexes: 0=id, 1=first field, 2=second field, etc.
         snippet_cols = []
         for i, field_name in enumerate(config.searchable_fields):
             snippet_cols.append(
-                f"snippet({config.fts_table_name}, {i + 1}, '<mark>', '</mark>', '...', 32) AS {field_name}_snippet"
+                f"snippet({fts_name}, {i + 1}, '<mark>', '</mark>', '...', 32) AS {quote_identifier(field_name + '_snippet')}"
             )
         snippet_str = ", ".join(snippet_cols)
 
         sql = f"""
-            SELECT id, rank, {snippet_str}
-            FROM {config.fts_table_name}
-            WHERE {config.fts_table_name} MATCH ?
+            SELECT "id", rank, {snippet_str}
+            FROM {fts_table}
+            WHERE {fts_name} MATCH ?
             ORDER BY rank
             LIMIT ?
         """

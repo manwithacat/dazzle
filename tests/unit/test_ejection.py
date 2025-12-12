@@ -504,7 +504,7 @@ class TestOpenAPIGeneration:
         assert openapi["openapi"] == "3.1.0"
         assert openapi["info"]["title"] == "Test App"
         assert "Task" in openapi["components"]["schemas"]
-        assert "/api/tasks" in openapi["paths"]
+        assert "/tasks" in openapi["paths"]
 
     def test_generate_openapi_crud_endpoints(self, simple_appspec: AppSpec) -> None:
         """Test CRUD endpoint generation."""
@@ -513,13 +513,13 @@ class TestOpenAPIGeneration:
         openapi = generate_openapi(simple_appspec)
 
         # List endpoint
-        assert "get" in openapi["paths"]["/api/tasks"]
-        assert "post" in openapi["paths"]["/api/tasks"]
+        assert "get" in openapi["paths"]["/tasks"]
+        assert "post" in openapi["paths"]["/tasks"]
 
         # Item endpoints
-        assert "get" in openapi["paths"]["/api/tasks/{task_id}"]
-        assert "put" in openapi["paths"]["/api/tasks/{task_id}"]
-        assert "delete" in openapi["paths"]["/api/tasks/{task_id}"]
+        assert "get" in openapi["paths"]["/tasks/{task_id}"]
+        assert "put" in openapi["paths"]["/tasks/{task_id}"]
+        assert "delete" in openapi["paths"]["/tasks/{task_id}"]
 
     def test_generate_openapi_schemas(self, simple_appspec: AppSpec) -> None:
         """Test schema generation in OpenAPI."""

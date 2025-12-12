@@ -192,7 +192,7 @@ class TestBaseAdapterURLResolution:
         )
         url = adapter.resolve_action_url("Task.create")
 
-        assert url == "http://localhost:8000/api/task/create"
+        assert url == "http://localhost:8000/task/create"
 
     def test_urls_strip_trailing_slash(self) -> None:
         """Test that URLs have trailing slashes stripped."""

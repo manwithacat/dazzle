@@ -23,6 +23,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from dazzle_dnr_back.runtime.query_builder import quote_identifier
 from dazzle_dnr_back.runtime.repository import (
     DatabaseManager,
     _field_type_to_sqlite,
@@ -94,7 +95,7 @@ class ColumnInfo:
 
 def get_table_schema(conn: sqlite3.Connection, table_name: str) -> list[ColumnInfo]:
     """Get column information for a table."""
-    cursor = conn.execute(f"PRAGMA table_info({table_name})")
+    cursor = conn.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
     columns = []
     for row in cursor.fetchall():
         columns.append(
@@ -111,7 +112,7 @@ def get_table_schema(conn: sqlite3.Connection, table_name: str) -> list[ColumnIn
 
 def get_table_indexes(conn: sqlite3.Connection, table_name: str) -> list[str]:
     """Get index names for a table."""
-    cursor = conn.execute(f"PRAGMA index_list({table_name})")
+    cursor = conn.execute(f"PRAGMA index_list({quote_identifier(table_name)})")
     return [row[1] for row in cursor.fetchall()]
 
 
@@ -263,18 +264,20 @@ class MigrationPlanner:
         # Check if entity has an id field
         has_id = any(f.name == "id" for f in entity.fields)
         if not has_id:
-            columns.append("id TEXT PRIMARY KEY")
+            columns.append('"id" TEXT PRIMARY KEY')
 
         for field in entity.fields:
             col_def = self._generate_column_def(field)
             columns.append(col_def)
 
-        return f"CREATE TABLE IF NOT EXISTS {entity.name} ({', '.join(columns)})"
+        table = quote_identifier(entity.name)
+        return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(columns)})"
 
     def _generate_column_def(self, field: FieldSpec) -> str:
         """Generate column definition for a field."""
         sqlite_type = _field_type_to_sqlite(field.type)
-        parts = [field.name, sqlite_type]
+        col_name = quote_identifier(field.name)
+        parts = [col_name, sqlite_type]
 
         if field.name == "id":
             parts.append("PRIMARY KEY")
@@ -296,7 +299,9 @@ class MigrationPlanner:
     def _generate_add_column_sql(self, table_name: str, field: FieldSpec) -> str:
         """Generate ALTER TABLE ADD COLUMN SQL."""
         sqlite_type = _field_type_to_sqlite(field.type)
-        parts = [f"ALTER TABLE {table_name} ADD COLUMN {field.name} {sqlite_type}"]
+        table = quote_identifier(table_name)
+        col_name = quote_identifier(field.name)
+        parts = [f"ALTER TABLE {table} ADD COLUMN {col_name} {sqlite_type}"]
 
         # SQLite has restrictions on ALTER TABLE:
         # - Cannot add NOT NULL without default
@@ -344,7 +349,9 @@ class MigrationPlanner:
     def _generate_index_sql(self, table_name: str, column_name: str) -> str:
         """Generate CREATE INDEX SQL."""
         index_name = f"idx_{table_name}_{column_name}"
-        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table_name}({column_name})"
+        table = quote_identifier(table_name)
+        col = quote_identifier(column_name)
+        return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({col})"
 
 
 # =============================================================================

@@ -42,6 +42,29 @@ def validate_sql_identifier(name: str, context: str = "identifier") -> str:
     return name
 
 
+def quote_identifier(name: str) -> str:
+    """
+    Quote a SQL identifier to handle reserved words safely.
+
+    Uses double quotes which is the SQL standard for identifiers.
+    SQLite, PostgreSQL, and most databases support this.
+
+    Examples:
+        quote_identifier("Order") -> '"Order"'
+        quote_identifier("user") -> '"user"'
+        quote_identifier("normal_name") -> '"normal_name"'
+
+    Args:
+        name: The identifier to quote
+
+    Returns:
+        Double-quoted identifier safe for SQL
+    """
+    # Escape any double quotes in the name by doubling them
+    escaped = name.replace('"', '""')
+    return f'"{escaped}"'
+
+
 class FilterOperator(str, Enum):
     """Supported filter operators."""
 
@@ -146,8 +169,9 @@ class FilterCondition:
         Returns:
             Tuple of (sql_fragment, parameters)
         """
-        # Build field reference
-        field_ref = f"{table_alias}.{self.field}" if table_alias else self.field
+        # Build field reference with proper quoting
+        quoted_field = quote_identifier(self.field)
+        field_ref = f"{table_alias}.{quoted_field}" if table_alias else quoted_field
 
         # Convert value for SQL
         converted_value = self._convert_value(self.value)
@@ -259,7 +283,8 @@ class SortField:
 
     def to_sql(self, table_alias: str | None = None) -> str:
         """Convert to SQL ORDER BY fragment."""
-        field_ref = f"{table_alias}.{self.field}" if table_alias else self.field
+        quoted_field = quote_identifier(self.field)
+        field_ref = f"{table_alias}.{quoted_field}" if table_alias else quoted_field
         direction = "DESC" if self.descending else "ASC"
         return f"{field_ref} {direction}"
 
@@ -376,13 +401,18 @@ class QueryBuilder:
             Tuple of (sql, parameters)
         """
         params: list[Any] = []
+        table = quote_identifier(self.table_name)
 
         # SELECT clause
         if count_only:
-            select = f"SELECT COUNT(*) FROM {self.table_name}"
+            select = f"SELECT COUNT(*) FROM {table}"
         else:
-            fields = ", ".join(self.select_fields) if self.select_fields else "*"
-            select = f"SELECT {fields} FROM {self.table_name}"
+            fields = (
+                ", ".join(quote_identifier(f) for f in self.select_fields)
+                if self.select_fields
+                else "*"
+            )
+            select = f"SELECT {fields} FROM {table}"
 
         # WHERE clause
         where_clause, where_params = self.build_where_clause()

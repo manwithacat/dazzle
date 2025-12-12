@@ -20,6 +20,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from dazzle_dnr_back.runtime.query_builder import quote_identifier
 from dazzle_dnr_back.specs.entity import (
     ComputedFieldSpec,
     EntitySpec,
@@ -197,7 +198,8 @@ class DatabaseManager:
             entity: Entity specification
         """
         columns = self._build_columns(entity)
-        sql = f"CREATE TABLE IF NOT EXISTS {entity.name} ({columns})"
+        table = quote_identifier(entity.name)
+        sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
 
         with self.connection() as conn:
             conn.execute(sql)
@@ -205,7 +207,8 @@ class DatabaseManager:
             # Create indexes
             for field in entity.fields:
                 if field.indexed:
-                    index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {entity.name}({field.name})"
+                    col = quote_identifier(field.name)
+                    index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
                     conn.execute(index_sql)
 
     def _build_columns(self, entity: EntitySpec) -> str:
@@ -215,7 +218,7 @@ class DatabaseManager:
         # Check if entity has an id field
         has_id = any(f.name == "id" for f in entity.fields)
         if not has_id:
-            columns.append("id TEXT PRIMARY KEY")
+            columns.append('"id" TEXT PRIMARY KEY')
 
         for field in entity.fields:
             col_def = self._build_column(field)
@@ -226,7 +229,8 @@ class DatabaseManager:
     def _build_column(self, field: FieldSpec) -> str:
         """Build a single column definition."""
         sqlite_type = _field_type_to_sqlite(field.type)
-        parts = [field.name, sqlite_type]
+        col_name = quote_identifier(field.name)
+        parts = [col_name, sqlite_type]
 
         if field.name == "id":
             parts.append("PRIMARY KEY")
@@ -266,7 +270,7 @@ class DatabaseManager:
     def get_table_columns(self, table_name: str) -> list[str]:
         """Get column names for a table."""
         with self.connection() as conn:
-            cursor = conn.execute(f"PRAGMA table_info({table_name})")
+            cursor = conn.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
             return [row[1] for row in cursor.fetchall()]
 
 
@@ -335,11 +339,12 @@ class SQLiteRepository(Generic[T]):
         # Convert values for SQLite
         sqlite_data = {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
 
-        columns = ", ".join(sqlite_data.keys())
+        columns = ", ".join(quote_identifier(k) for k in sqlite_data.keys())
         placeholders = ", ".join("?" * len(sqlite_data))
         values = list(sqlite_data.values())
 
-        sql = f"INSERT INTO {self.table_name} ({columns}) VALUES ({placeholders})"
+        table = quote_identifier(self.table_name)
+        sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
         with self.db.connection() as conn:
             conn.execute(sql, values)
@@ -361,7 +366,8 @@ class SQLiteRepository(Generic[T]):
         Returns:
             Entity (or dict with nested data if include specified), or None if not found
         """
-        sql = f"SELECT * FROM {self.table_name} WHERE id = ?"
+        table = quote_identifier(self.table_name)
+        sql = f'SELECT * FROM {table} WHERE "id" = ?'
 
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (str(id),))
@@ -409,11 +415,12 @@ class SQLiteRepository(Generic[T]):
             k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in update_data.items()
         }
 
-        set_clause = ", ".join(f"{k} = ?" for k in sqlite_data.keys())
+        set_clause = ", ".join(f"{quote_identifier(k)} = ?" for k in sqlite_data.keys())
         values = list(sqlite_data.values())
         values.append(str(id))
 
-        sql = f"UPDATE {self.table_name} SET {set_clause} WHERE id = ?"
+        table = quote_identifier(self.table_name)
+        sql = f'UPDATE {table} SET {set_clause} WHERE "id" = ?'
 
         with self.db.connection() as conn:
             cursor = conn.execute(sql, values)
@@ -432,7 +439,8 @@ class SQLiteRepository(Generic[T]):
         Returns:
             True if deleted, False if not found
         """
-        sql = f"DELETE FROM {self.table_name} WHERE id = ?"
+        table = quote_identifier(self.table_name)
+        sql = f'DELETE FROM {table} WHERE "id" = ?'
 
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (str(id),))

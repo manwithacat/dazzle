@@ -233,6 +233,56 @@ class TestValidateEntities:
 
         assert any("text" in w.lower() for w in warnings)
 
+    def test_sql_reserved_word_entity_name_warning(self) -> None:
+        """Test warning for SQL reserved word as entity name."""
+        entity = ir.EntitySpec(
+            name="Order",  # SQL reserved word
+            title="An order",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                    modifiers=[ir.FieldModifier.PK],
+                ),
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+        )
+
+        errors, warnings = validate_entities(appspec)
+
+        assert len(errors) == 0  # Not an error, just a warning
+        assert any("SQL reserved word" in w and "Order" in w for w in warnings)
+
+    def test_sql_reserved_word_field_name_warning(self) -> None:
+        """Test warning for SQL reserved word as field name."""
+        entity = ir.EntitySpec(
+            name="Task",
+            title="A task",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                    modifiers=[ir.FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="order",  # SQL reserved word
+                    type=ir.FieldType(kind=ir.FieldTypeKind.INT),
+                ),
+            ],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+        )
+
+        errors, warnings = validate_entities(appspec)
+
+        assert len(errors) == 0  # Not an error, just a warning
+        assert any("SQL reserved word" in w and "order" in w for w in warnings)
+
     def test_conflicting_modifiers(self) -> None:
         """Test detection of conflicting required/optional modifiers."""
         entity = ir.EntitySpec(

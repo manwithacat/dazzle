@@ -12,9 +12,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 
-from dazzle.core.strings import to_api_plural
-
 from .data_store import data_store
+from .strings import to_api_plural
 
 
 def register_crud_routes(
@@ -41,7 +40,9 @@ def register_crud_routes(
         app.post(route_prefix, tags=tags, summary=f"Create {entity_name}")(create_h)
         app.get(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Get {entity_name}")(get_h)
         app.put(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Update {entity_name}")(update_h)
-        app.delete(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Delete {entity_name}")(delete_h)
+        app.delete(f"{route_prefix}/{{item_id}}", tags=tags, summary=f"Delete {entity_name}")(
+            delete_h
+        )
 
 
 def _make_crud_handlers(

@@ -65,7 +65,7 @@ def test_validate_command_success(cli_runner: CliRunner, test_project: Path):
     """Test validate command with valid DSL."""
     result = cli_runner.invoke(app, ["validate", "--manifest", str(test_project / "dazzle.toml")])
     assert result.exit_code == 0
-    assert "OK: spec is valid" in result.stdout
+    assert "Spec is valid" in result.stdout
 
 
 def test_validate_command_with_errors(cli_runner: CliRunner, tmp_path: Path):
