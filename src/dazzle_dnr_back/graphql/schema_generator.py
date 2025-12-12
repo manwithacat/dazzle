@@ -17,14 +17,12 @@ from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec, FieldType, Scala
 try:
     import strawberry
     from strawberry import ID
-    from strawberry.types import Info
 
     STRAWBERRY_AVAILABLE = True
 except ImportError:
     STRAWBERRY_AVAILABLE = False
     strawberry = None  # type: ignore
     ID = str  # type: ignore
-    Info = Any  # type: ignore
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec

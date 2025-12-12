@@ -293,6 +293,145 @@ def get_api_kb_tools() -> list[Tool]:
     ]
 
 
+def get_story_tools() -> list[Tool]:
+    """Get Behaviour Layer story tools for LLM-assisted story generation."""
+    return [
+        Tool(
+            name="get_dsl_spec",
+            description="Get complete DSL specification including entities, surfaces, personas, workspaces, and state machines. Use this as input for story proposal.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="propose_stories_from_dsl",
+            description="Analyze DSL spec and propose behavioural user stories. Stories describe WHAT should happen (outcomes) and WHEN (triggers), not HOW (implementation). Returns draft stories for human review.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional: Focus on specific entities. If omitted, analyzes all entities.",
+                    },
+                    "max_stories": {
+                        "type": "integer",
+                        "description": "Maximum number of stories to propose (default: 30)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="save_stories",
+            description="Save stories to .dazzle/stories/stories.json. Stories are validated before saving. Use overwrite=true to replace existing stories with same IDs.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "stories": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "story_id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "actor": {"type": "string"},
+                                "trigger": {
+                                    "type": "string",
+                                    "enum": [
+                                        "form_submitted",
+                                        "status_changed",
+                                        "timer_elapsed",
+                                        "external_event",
+                                        "user_click",
+                                        "cron_daily",
+                                        "cron_hourly",
+                                    ],
+                                },
+                                "scope": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "preconditions": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "happy_path_outcome": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "side_effects": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "constraints": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "variants": {
+                                    "type": "array",
+                                    "items": {"type": "string"},
+                                },
+                                "status": {
+                                    "type": "string",
+                                    "enum": ["draft", "accepted", "rejected"],
+                                },
+                            },
+                            "required": ["story_id", "title", "actor", "trigger"],
+                        },
+                        "description": "List of story specifications to save",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "If true, replace stories with matching IDs. If false, skip existing.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["stories"],
+            },
+        ),
+        Tool(
+            name="get_stories",
+            description="Retrieve stories from .dazzle/stories/. Filter by status to get accepted, rejected, or draft stories.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "status_filter": {
+                        "type": "string",
+                        "enum": ["all", "accepted", "rejected", "draft"],
+                        "description": "Filter by status (default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="generate_story_stubs",
+            description="Generate Python service stubs from accepted stories. Each stub contains the story contract as a docstring and raises NotImplementedError.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "story_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of story IDs to generate stubs for. If omitted, generates for all accepted stories.",
+                    },
+                    "output_dir": {
+                        "type": "string",
+                        "description": "Directory for generated stubs (default: 'services')",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -370,6 +509,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add API Knowledgebase tools (always available)
     tools.extend(get_api_kb_tools())
+
+    # Add Story/Behaviour Layer tools (always available)
+    tools.extend(get_story_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

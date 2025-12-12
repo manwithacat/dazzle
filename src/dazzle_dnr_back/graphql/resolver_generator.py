@@ -16,13 +16,11 @@ from dazzle_dnr_back.specs.entity import EntitySpec
 # Strawberry is optional
 try:
     import strawberry
-    from strawberry.types import Info
 
     STRAWBERRY_AVAILABLE = True
 except ImportError:
     STRAWBERRY_AVAILABLE = False
     strawberry = None  # type: ignore
-    Info = Any  # type: ignore
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
@@ -114,7 +112,7 @@ class ResolverGenerator:
         repo = self.repositories.get(entity_name)
 
         async def resolve_get(
-            info: Info,
+            info: strawberry.Info,
             id: str,
         ) -> Any | None:
             ctx: GraphQLContext = info.context
@@ -152,7 +150,7 @@ class ResolverGenerator:
         repo = self.repositories.get(entity_name)
 
         async def resolve_list(
-            info: Info,
+            info: strawberry.Info,
             limit: int | None = 100,
             offset: int | None = 0,
         ) -> list[Any]:
@@ -196,7 +194,7 @@ class ResolverGenerator:
         repo = self.repositories.get(entity_name)
 
         async def resolve_create(
-            info: Info,
+            info: strawberry.Info,
             input: Any,
         ) -> Any:
             ctx: GraphQLContext = info.context
@@ -236,7 +234,7 @@ class ResolverGenerator:
         repo = self.repositories.get(entity_name)
 
         async def resolve_update(
-            info: Info,
+            info: strawberry.Info,
             id: str,
             input: Any,
         ) -> Any:
@@ -283,7 +281,7 @@ class ResolverGenerator:
         repo = self.repositories.get(entity_name)
 
         async def resolve_delete(
-            info: Info,
+            info: strawberry.Info,
             id: str,
         ) -> bool:
             ctx: GraphQLContext = info.context

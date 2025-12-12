@@ -301,7 +301,7 @@ def _create_mutation_type(
 def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
     """Create a typed resolver for creating entities."""
 
-    async def resolve_create(info: Any, input: Any) -> Any:
+    async def resolve_create(info: strawberry.Info, input: Any) -> Any:
         from dazzle_dnr_back.graphql.resolver_generator import _input_to_dict
 
         ctx: GraphQLContext = info.context
@@ -324,15 +324,19 @@ def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Call
 
         raise ValueError(f"No repository for {entity_name}")
 
-    # Set __annotations__ to tell Strawberry the types
-    resolve_create.__annotations__ = {"input": input_type, "return": Any}
+    # Set __annotations__ to tell Strawberry the types (include info with proper type)
+    resolve_create.__annotations__ = {
+        "info": strawberry.Info,
+        "input": input_type,
+        "return": Any,
+    }
     return resolve_create
 
 
 def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
     """Create a typed resolver for updating entities."""
 
-    async def resolve_update(info: Any, id: str, input: Any) -> Any:
+    async def resolve_update(info: strawberry.Info, id: str, input: Any) -> Any:
         from dazzle_dnr_back.graphql.resolver_generator import _input_to_dict
 
         ctx: GraphQLContext = info.context
@@ -359,14 +363,19 @@ def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Call
 
         raise ValueError(f"No repository for {entity_name}")
 
-    resolve_update.__annotations__ = {"id": str, "input": input_type, "return": Any}
+    resolve_update.__annotations__ = {
+        "info": strawberry.Info,
+        "id": str,
+        "input": input_type,
+        "return": Any,
+    }
     return resolve_update
 
 
 def _make_delete_resolver(entity_name: str, repo: Any) -> Callable:
     """Create a typed resolver for deleting entities."""
 
-    async def resolve_delete(info: Any, id: str) -> bool:
+    async def resolve_delete(info: strawberry.Info, id: str) -> bool:
         ctx: GraphQLContext = info.context
 
         if repo:
@@ -386,7 +395,11 @@ def _make_delete_resolver(entity_name: str, repo: Any) -> Callable:
 
         return False
 
-    resolve_delete.__annotations__ = {"id": str, "return": bool}
+    resolve_delete.__annotations__ = {
+        "info": strawberry.Info,
+        "id": str,
+        "return": bool,
+    }
     return resolve_delete
 
 

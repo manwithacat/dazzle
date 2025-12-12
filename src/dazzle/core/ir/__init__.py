@@ -223,6 +223,14 @@ from .state_machine import (
     TransitionTrigger,
 )
 
+# Stories (v0.12.0 Behaviour Layer)
+from .stories import (
+    StoriesContainer,
+    StorySpec,
+    StoryStatus,
+    StoryTrigger,
+)
+
 # Surfaces
 from .surfaces import (
     Outcome,
@@ -418,6 +426,11 @@ __all__ = [
     # Security (v0.11.0)
     "SecurityConfig",
     "SecurityProfile",
+    # Stories (v0.12.0 Behaviour Layer)
+    "StoriesContainer",
+    "StorySpec",
+    "StoryStatus",
+    "StoryTrigger",
     # Messaging Channels (v0.9.0)
     "AssetKind",
     "AssetSpec",

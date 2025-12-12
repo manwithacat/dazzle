@@ -41,13 +41,16 @@ from .tool_handlers import (
     analyze_patterns,
     find_examples_handler,
     generate_service_dsl_handler,
+    generate_story_stubs_handler,
     get_active_project_info,
     get_api_pack_handler,
     get_cli_help_handler,
     get_dnr_logs_handler,
+    get_dsl_spec_handler,
     get_entities,
     get_env_vars_for_packs_handler,
     get_mcp_status_handler,
+    get_stories_handler,
     get_surfaces,
     get_workflow_guide_handler,
     inspect_entity,
@@ -58,6 +61,8 @@ from .tool_handlers import (
     list_projects,
     lookup_concept_handler,
     lookup_inference_handler,
+    propose_stories_from_dsl_handler,
+    save_stories_handler,
     search_api_packs_handler,
     select_project,
     validate_all_projects,
@@ -135,6 +140,51 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     # DNR tools (always available)
     elif name in DNR_TOOL_NAMES:
         result = handle_dnr_tool(name, arguments)
+
+    # Story/Behaviour Layer tools (require project context)
+    elif name in (
+        "get_dsl_spec",
+        "propose_stories_from_dsl",
+        "save_stories",
+        "get_stories",
+        "generate_story_stubs",
+    ):
+        # Try to resolve project path from arguments or state
+        explicit_path = arguments.get("project_path") if arguments else None
+        try:
+            project_path = resolve_project_path(explicit_path)
+        except ValueError as e:
+            result = json.dumps({"error": str(e)})
+            return [TextContent(type="text", text=result)]
+
+        if project_path is None:
+            if is_dev_mode():
+                result = json.dumps(
+                    {
+                        "error": "No project selected. Use 'select_project' to choose one, or pass 'project_path' directly.",
+                        "available_projects": list(get_available_projects().keys()),
+                    }
+                )
+            else:
+                result = json.dumps(
+                    {
+                        "error": "No dazzle.toml found in project root",
+                        "project_root": str(get_project_root()),
+                    }
+                )
+        else:
+            if name == "get_dsl_spec":
+                result = get_dsl_spec_handler(project_path, arguments)
+            elif name == "propose_stories_from_dsl":
+                result = propose_stories_from_dsl_handler(project_path, arguments)
+            elif name == "save_stories":
+                result = save_stories_handler(project_path, arguments)
+            elif name == "get_stories":
+                result = get_stories_handler(project_path, arguments)
+            elif name == "generate_story_stubs":
+                result = generate_story_stubs_handler(project_path, arguments)
+            else:
+                result = json.dumps({"error": f"Unknown story tool: {name}"})
 
     # Project tools - support explicit project_path or fall back to active project
     elif name in (
