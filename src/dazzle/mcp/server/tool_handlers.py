@@ -2257,3 +2257,272 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
+
+
+def get_coverage_actions_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Get prioritized actions to increase test coverage.
+
+    Returns actionable prompts an LLM can execute directly.
+    """
+    from dazzle.testing.test_design_persistence import load_test_designs
+    from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+    max_actions = args.get("max_actions", 5)
+    focus = args.get("focus", "all")
+
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        # Load existing test designs and testspec
+        existing_designs = load_test_designs(project_root)
+        testspec = generate_e2e_testspec(app_spec)
+
+        # Track what's covered
+        covered_personas: set[str] = set()
+        covered_entities: set[str] = set()
+        covered_scenarios: set[str] = set()
+
+        for design in existing_designs:
+            if design.persona:
+                covered_personas.add(design.persona)
+            covered_entities.update(design.entities)
+            if design.scenario:
+                covered_scenarios.add(design.scenario)
+
+        # Calculate coverage
+        all_entities = {e.name for e in app_spec.domain.entities}
+        all_personas = {p.id for p in app_spec.personas}
+        all_scenarios = {s.name for s in app_spec.scenarios}
+
+        # Build prioritized actions
+        actions: list[dict[str, Any]] = []
+
+        # Priority 1: Untested personas with goals (highest impact)
+        if focus in ("all", "personas"):
+            for persona in app_spec.personas:
+                if persona.id not in covered_personas and persona.goals:
+                    actions.append(
+                        {
+                            "priority": 1,
+                            "category": "persona_tests",
+                            "target": persona.id,
+                            "title": f"Generate tests for {persona.label or persona.id}",
+                            "impact": f"Covers {len(persona.goals)} persona goals",
+                            "prompt": f"""Generate test designs for the "{persona.label or persona.id}" persona.
+
+This persona has {len(persona.goals)} goals that need test coverage:
+{chr(10).join(f"- {goal}" for goal in persona.goals)}
+
+Use the `propose_persona_tests` MCP tool with persona="{persona.id}" to generate test designs, then review and save the accepted designs with `save_test_designs`.""",
+                            "mcp_tool": "propose_persona_tests",
+                            "mcp_args": {"persona": persona.id},
+                        }
+                    )
+
+        # Priority 2: Entities with state machines (complex behavior)
+        if focus in ("all", "state_machines", "entities"):
+            for entity in app_spec.domain.entities:
+                if entity.state_machine and entity.name not in covered_entities:
+                    sm = entity.state_machine
+                    transitions = [f"{t.from_state} → {t.to_state}" for t in sm.transitions]
+                    actions.append(
+                        {
+                            "priority": 2,
+                            "category": "state_machine_tests",
+                            "target": entity.name,
+                            "title": f"Add state machine tests for {entity.name}",
+                            "impact": f"Covers {len(sm.transitions)} state transitions",
+                            "prompt": f"""Create test designs for the {entity.name} entity's state machine.
+
+The state machine has these transitions:
+{chr(10).join(f"- {t}" for t in transitions)}
+
+Create a test design that:
+1. Creates a {entity.name} in each initial state
+2. Triggers each valid transition
+3. Verifies the state changes correctly
+4. Tests that invalid transitions are rejected
+
+Save the test design with `save_test_designs` using test_id="SM_{entity.name.upper()}_001".""",
+                            "code_template": _generate_state_machine_test_template(entity.name, sm),
+                        }
+                    )
+
+        # Priority 3: Untested scenarios (user workflows)
+        if focus in ("all", "scenarios"):
+            for scenario in app_spec.scenarios:
+                if scenario.name not in covered_scenarios:
+                    actions.append(
+                        {
+                            "priority": 3,
+                            "category": "scenario_tests",
+                            "target": scenario.name,
+                            "title": f"Add tests for scenario: {scenario.name}",
+                            "impact": "Covers defined user workflow",
+                            "prompt": f"""Create a test design for the "{scenario.name}" scenario.
+
+Description: {scenario.description or "No description"}
+
+This scenario defines a user workflow that should be tested end-to-end. Create a test design that:
+1. Sets up the required preconditions
+2. Executes the scenario steps
+3. Verifies the expected outcomes
+
+Save with `save_test_designs` using test_id="SCENARIO_{scenario.name.upper()}_001".""",
+                        }
+                    )
+
+        # Priority 4: Entities with access control (security)
+        if focus in ("all", "entities"):
+            for entity in app_spec.domain.entities:
+                if entity.access and entity.name not in covered_entities:
+                    actions.append(
+                        {
+                            "priority": 4,
+                            "category": "access_control_tests",
+                            "target": entity.name,
+                            "title": f"Add access control tests for {entity.name}",
+                            "impact": "Verifies permission rules",
+                            "prompt": f"""Create test designs for {entity.name} access control.
+
+The entity has access rules that need testing:
+- Verify authorized personas can access the entity
+- Verify unauthorized personas are denied
+- Test each permission (view, create, edit, delete) if applicable
+
+Save with `save_test_designs` using test_id="ACL_{entity.name.upper()}_001".""",
+                        }
+                    )
+
+        # Priority 5: Basic entity coverage
+        if focus in ("all", "entities"):
+            for entity in app_spec.domain.entities:
+                if (
+                    entity.name not in covered_entities
+                    and not entity.state_machine
+                    and not entity.access
+                ):
+                    actions.append(
+                        {
+                            "priority": 5,
+                            "category": "entity_tests",
+                            "target": entity.name,
+                            "title": f"Add CRUD tests for {entity.name}",
+                            "impact": "Basic entity coverage",
+                            "prompt": f"""Create test designs for basic {entity.name} CRUD operations.
+
+Note: Deterministic CRUD tests are auto-generated, but you can add persona-specific tests that:
+1. Test CRUD from a specific persona's perspective
+2. Verify business rules and validation
+3. Test edge cases specific to this entity
+
+Save with `save_test_designs` using test_id="CRUD_{entity.name.upper()}_001".""",
+                        }
+                    )
+
+        # Sort by priority and limit
+        actions.sort(key=lambda x: x["priority"])
+        actions = actions[:max_actions]
+
+        # Calculate coverage score
+        total_items = len(all_entities) + len(all_personas) + len(all_scenarios)
+        covered_items = len(covered_entities) + len(covered_personas) + len(covered_scenarios)
+        coverage_score = (covered_items / total_items * 100) if total_items > 0 else 100.0
+
+        # Build summary
+        summary = {
+            "coverage_score": round(coverage_score, 1),
+            "coverage_breakdown": {
+                "entities": f"{len(covered_entities)}/{len(all_entities)}",
+                "personas": f"{len(covered_personas)}/{len(all_personas)}",
+                "scenarios": f"{len(covered_scenarios)}/{len(all_scenarios)}",
+            },
+            "deterministic_flows": len(testspec.flows),
+            "custom_test_designs": len(existing_designs),
+        }
+
+        # Build response with guidance
+        return json.dumps(
+            {
+                "summary": summary,
+                "action_count": len(actions),
+                "focus": focus,
+                "guidance": (
+                    "Execute these actions in order to increase coverage. "
+                    "Each action includes a prompt you can follow directly. "
+                    "After completing an action, call get_coverage_actions again to get the next set."
+                ),
+                "actions": [
+                    {
+                        "priority": a["priority"],
+                        "category": a["category"],
+                        "target": a["target"],
+                        "title": a["title"],
+                        "impact": a["impact"],
+                        "prompt": a["prompt"],
+                        "mcp_tool": a.get("mcp_tool"),
+                        "mcp_args": a.get("mcp_args"),
+                        "code_template": a.get("code_template"),
+                    }
+                    for a in actions
+                ],
+                "next_steps": (
+                    "1. Read the first action's prompt\n"
+                    "2. Execute the suggested MCP tool or follow the instructions\n"
+                    "3. Save successful test designs with save_test_designs\n"
+                    "4. Call get_coverage_actions again to see updated coverage and next actions"
+                ),
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def _generate_state_machine_test_template(entity_name: str, state_machine: Any) -> str:
+    """Generate a test design template for state machine testing."""
+    transitions = state_machine.transitions
+    status_field = state_machine.status_field
+
+    template_steps = []
+    for t in transitions[:3]:  # Limit to first 3 transitions
+        template_steps.append(
+            {
+                "action": "create",
+                "target": f"entity:{entity_name}",
+                "data": {status_field: t.from_state},
+                "rationale": f"Create {entity_name} in '{t.from_state}' state",
+            }
+        )
+        template_steps.append(
+            {
+                "action": "trigger_transition",
+                "target": f"entity:{entity_name}",
+                "data": {
+                    "from_state": t.from_state,
+                    "to_state": t.to_state,
+                },
+                "rationale": f"Transition from '{t.from_state}' to '{t.to_state}'",
+            }
+        )
+
+    return json.dumps(
+        {
+            "test_id": f"SM_{entity_name.upper()}_001",
+            "title": f"State machine transitions for {entity_name}",
+            "description": f"Verify all valid state transitions for {entity_name}",
+            "trigger": "user_click",
+            "steps": template_steps,
+            "expected_outcomes": [
+                "All valid transitions complete successfully",
+                "Final state matches expected state",
+            ],
+            "entities": [entity_name],
+            "tags": ["state_machine", "automated"],
+        },
+        indent=2,
+    )

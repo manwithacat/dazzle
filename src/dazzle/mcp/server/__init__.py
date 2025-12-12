@@ -46,6 +46,7 @@ from .tool_handlers import (
     get_active_project_info,
     get_api_pack_handler,
     get_cli_help_handler,
+    get_coverage_actions_handler,
     get_demo_blueprint_handler,
     get_dnr_logs_handler,
     get_dsl_spec_handler,
@@ -219,6 +220,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = save_test_designs_handler(project_path, arguments)
             elif name == "get_test_designs":
                 result = get_test_designs_handler(project_path, arguments)
+            elif name == "get_coverage_actions":
+                result = get_coverage_actions_handler(project_path, arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
 

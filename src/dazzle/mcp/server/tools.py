@@ -744,6 +744,34 @@ def get_test_design_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="get_coverage_actions",
+            description="""Get prioritized actions to increase test coverage. Returns actionable prompts an LLM can execute directly.
+
+This tool analyzes the current coverage state and returns:
+- Current coverage score and breakdown
+- Prioritized list of specific actions to increase coverage
+- Complete prompts for each action (ready to execute)
+- Code templates where applicable
+
+Use this tool when you want to systematically increase test coverage. Execute the returned actions in priority order.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "max_actions": {
+                        "type": "integer",
+                        "description": "Maximum number of actions to return (default: 5)",
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["all", "personas", "entities", "state_machines", "scenarios"],
+                        "description": "Focus on a specific area (default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
