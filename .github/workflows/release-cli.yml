@@ -366,11 +366,12 @@ jobs:
                        wheel
               end
 
-              # Install dazzle with all optional dependencies (mcp, llm)
+              # Install dazzle with all optional dependencies (mcp, llm, lsp)
               # pip will resolve transitive dependencies and use our pre-installed pydantic-core and jiter
+              # IMPORTANT: lsp is required for VS Code extension Language Server Protocol support
               system venv.root/"bin/python", "-m", "pip", "install",
                      "--no-compile",
-                     "#{buildpath}[mcp,llm]"
+                     "#{buildpath}[mcp,llm,lsp]"
 
               # Install the pre-compiled CLI binary
               resource("cli-binary").stage do
@@ -438,6 +439,10 @@ jobs:
               # Test Python integration
               output = shell_output("#{bin}/dazzle version --full")
               assert_match "python_available", output
+
+              # Test LSP dependencies are installed (critical for VS Code extension)
+              # This catches the regression where [lsp] extras were missing from pip install
+              system libexec/"bin/python", "-c", "import dazzle.lsp"
 
               # Test basic functionality
               (testpath/"dazzle.toml").write <<~TOML

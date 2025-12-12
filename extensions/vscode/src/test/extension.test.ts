@@ -159,6 +159,202 @@ suite('DAZZLE Extension Test Suite', () => {
 });
 
 /**
+ * Python Discovery Tests
+ *
+ * These tests verify the Python discovery logic works correctly.
+ * This is critical because the VS Code extension needs to find a Python
+ * interpreter with dazzle.lsp installed to enable LSP features.
+ *
+ * Common failure scenarios this catches:
+ * - Homebrew installation missing LSP dependencies
+ * - pyenv shims not working in VS Code's environment
+ * - Python import failing due to missing dependencies
+ */
+suite('DAZZLE Python Discovery Tests', () => {
+    const child_process = require('child_process');
+    const fs = require('fs');
+    const path = require('path');
+
+    // Test the actual import check that the extension uses
+    test('dazzle.lsp should be importable from system Python', function(done) {
+        this.timeout(10000);
+
+        // This mirrors what canImportDazzle() does in lspClient.ts
+        const proc = child_process.spawn('python3', ['-c', 'import dazzle.lsp'], {
+            stdio: 'pipe',
+        });
+
+        let stderr = '';
+        proc.stderr.on('data', (data: Buffer) => {
+            stderr += data.toString();
+        });
+
+        proc.on('close', (code: number | null) => {
+            if (code === 0) {
+                done();
+            } else {
+                // Provide helpful diagnostic info
+                const errorInfo = [
+                    'Failed to import dazzle.lsp from python3.',
+                    'This is the same check the VS Code extension uses.',
+                    '',
+                    'Common causes:',
+                    '  1. dazzle not installed: pip install dazzle[lsp]',
+                    '  2. LSP dependencies missing: pip install pygls lsprotocol',
+                    '  3. Homebrew formula missing LSP extras (known issue)',
+                    '',
+                    'Error output:',
+                    stderr,
+                ].join('\n');
+                done(new Error(errorInfo));
+            }
+        });
+
+        proc.on('error', (err: Error) => {
+            if (err.message.includes('ENOENT')) {
+                console.log('python3 not found, skipping import test');
+                done();
+            } else {
+                done(err);
+            }
+        });
+
+        // Timeout after 5 seconds (extension uses 2s but we allow more for CI)
+        setTimeout(() => {
+            proc.kill();
+            done(new Error('Import check timed out - python3 may be hanging'));
+        }, 5000);
+    });
+
+    test('LSP dependencies should be installed', function(done) {
+        this.timeout(5000);
+
+        // Check specifically for pygls and lsprotocol
+        const checkScript = `
+import sys
+missing = []
+try:
+    import pygls
+except ImportError:
+    missing.append('pygls')
+try:
+    import lsprotocol
+except ImportError:
+    missing.append('lsprotocol')
+if missing:
+    print(f"MISSING:{','.join(missing)}")
+    sys.exit(1)
+print("OK")
+`;
+
+        const proc = child_process.spawn('python3', ['-c', checkScript], {
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+
+        let stdout = '';
+        let stderr = '';
+        proc.stdout.on('data', (data: Buffer) => { stdout += data.toString(); });
+        proc.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
+
+        proc.on('close', (code: number | null) => {
+            if (code === 0 && stdout.includes('OK')) {
+                done();
+            } else {
+                const missing = stdout.match(/MISSING:(.+)/)?.[1] || 'unknown';
+                done(new Error(
+                    `LSP dependencies missing: ${missing}\n` +
+                    'Fix: pip install dazzle[lsp]\n' +
+                    'Or: pip install pygls lsprotocol'
+                ));
+            }
+        });
+
+        proc.on('error', () => {
+            console.log('python3 not found, skipping dependency check');
+            done();
+        });
+    });
+
+    test('Homebrew dazzle should have LSP dependencies if installed', function(done) {
+        this.timeout(5000);
+
+        const homebrewPython = '/opt/homebrew/Cellar/dazzle/0.12.0/libexec/bin/python';
+
+        // Skip if Homebrew dazzle is not installed
+        if (!fs.existsSync(homebrewPython)) {
+            console.log('Homebrew dazzle not installed, skipping');
+            done();
+            return;
+        }
+
+        const proc = child_process.spawn(homebrewPython, ['-c', 'import dazzle.lsp'], {
+            stdio: 'pipe',
+        });
+
+        let stderr = '';
+        proc.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
+
+        proc.on('close', (code: number | null) => {
+            if (code === 0) {
+                done();
+            } else {
+                done(new Error(
+                    'Homebrew dazzle installation is missing LSP dependencies!\n' +
+                    'This is a known issue where the formula [lsp] extras were not installed.\n' +
+                    'Fix: /opt/homebrew/Cellar/dazzle/0.12.0/libexec/bin/python -m pip install pygls lsprotocol\n' +
+                    'Or reinstall: brew reinstall dazzle\n\n' +
+                    'Error: ' + stderr
+                ));
+            }
+        });
+
+        proc.on('error', () => done());
+    });
+
+    test('pyenv Python should work in clean environment', function(done) {
+        this.timeout(5000);
+
+        const home = process.env.HOME;
+        const pyenvPython = `${home}/.pyenv/shims/python3`;
+
+        // Skip if pyenv is not installed
+        if (!fs.existsSync(pyenvPython)) {
+            console.log('pyenv not installed, skipping');
+            done();
+            return;
+        }
+
+        // Test with a minimal environment (similar to VS Code's extension host)
+        const proc = child_process.spawn(pyenvPython, ['-c', 'import dazzle.lsp'], {
+            stdio: 'pipe',
+            env: {
+                HOME: home,
+                PATH: `${home}/.pyenv/shims:/usr/bin:/bin`,
+            },
+        });
+
+        let stderr = '';
+        proc.stderr.on('data', (data: Buffer) => { stderr += data.toString(); });
+
+        proc.on('close', (code: number | null) => {
+            if (code === 0) {
+                done();
+            } else {
+                done(new Error(
+                    'pyenv Python cannot import dazzle.lsp in clean environment.\n' +
+                    'The VS Code extension uses a similar environment.\n' +
+                    'Make sure dazzle[lsp] is installed in your pyenv Python:\n' +
+                    '  pyenv exec pip install dazzle[lsp]\n\n' +
+                    'Error: ' + stderr
+                ));
+            }
+        });
+
+        proc.on('error', () => done());
+    });
+});
+
+/**
  * LSP Server Tests
  *
  * These tests verify the Python LSP server starts correctly.

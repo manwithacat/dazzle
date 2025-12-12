@@ -1,9 +1,9 @@
-# DAZZLE Homebrew Formula v0.12.0
+# DAZZLE Homebrew Formula v0.13.0
 #
 # Installation: brew install manwithacat/tap/dazzle
 # Or from this file: brew install ./homebrew/dazzle.rb
 #
-# v0.12.0 Architecture:
+# v0.13.0 Architecture:
 # - CLI: Bun-compiled native binary (50x faster startup)
 # - Runtime: Python package for DSL parsing and code generation
 #
@@ -15,7 +15,7 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.12.0"
+  version "0.13.0"
   license "MIT"
 
   # Source tarball for Python package
@@ -154,7 +154,7 @@ class Dazzle < Formula
 
   def caveats
     <<~EOS
-      DAZZLE v0.12.0 has been installed!
+      DAZZLE v0.13.0 has been installed!
 
       What's New:
         - 50x faster CLI startup (Bun-compiled binary)
@@ -190,11 +190,15 @@ class Dazzle < Formula
   test do
     # Test fast path (no Python needed)
     output = shell_output("#{bin}/dazzle version")
-    assert_match "0.9.3", output
+    assert_match "0.13.0", output
 
     # Test Python integration
     output = shell_output("#{bin}/dazzle version --full")
     assert_match "python_available", output
+
+    # Test LSP dependencies are installed (critical for VS Code extension)
+    # This catches the regression where [lsp] extras were missing from pip install
+    system libexec/"bin/python", "-c", "import dazzle.lsp"
 
     # Test basic functionality
     (testpath/"dazzle.toml").write <<~TOML

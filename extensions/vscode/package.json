@@ -2,7 +2,7 @@
   "name": "dazzle-dsl",
   "displayName": "DAZZLE DSL",
   "description": "Language support for DAZZLE DSL - DSL-first application development with 50x faster CLI",
-  "version": "0.8.10",
+  "version": "0.9.0",
   "publisher": "dazzle",
   "repository": {
     "type": "git",
@@ -193,6 +193,7 @@
     "pretest": "npm run compile && npm run compile-tests",
     "test": "vscode-test",
     "test:integration": "vscode-test",
+    "test:python": "npm run compile-tests && npx mocha out/test/python-discovery.test.js --timeout 30000",
     "lint": "tsc --noEmit",
     "package": "vsce package"
   },
