@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "stories": [
+    {
+      "story_id": "ST-001",
+      "title": "Administrator creates a new Team Member",
+      "actor": "Administrator",
+      "trigger": "form_submitted",
+      "scope": [
+        "User"
+      ],
+      "preconditions": [
+        "Administrator has permission to create User"
+      ],
+      "happy_path_outcome": [
+        "New User is saved to database",
+        "Administrator sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "email must be valid",
+        "name must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.153845+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-002",
+      "title": "Administrator creates a new Task",
+      "actor": "Administrator",
+      "trigger": "form_submitted",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Administrator has permission to create Task"
+      ],
+      "happy_path_outcome": [
+        "New Task is saved to database",
+        "Administrator sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "title must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.153845+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-003",
+      "title": "Administrator changes Task from todo to in_progress",
+      "actor": "Administrator",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'todo'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'todo'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.153845+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-004",
+      "title": "Administrator changes Task from in_progress to review",
+      "actor": "Administrator",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'review'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.153845+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-005",
+      "title": "Administrator changes Task from in_progress to todo",
+      "actor": "Administrator",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'todo'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.153845+00:00",
+      "accepted_at": null
+    }
+  ]
+}

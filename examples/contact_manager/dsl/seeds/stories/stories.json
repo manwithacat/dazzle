@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "stories": [
+    {
+      "story_id": "ST-001",
+      "title": "User creates a new Contact",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Contact"
+      ],
+      "preconditions": [
+        "User has permission to create Contact"
+      ],
+      "happy_path_outcome": [
+        "New Contact is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "first_name must be valid",
+        "last_name must be valid",
+        "email must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.443094+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-002",
+      "title": "User creates a new Contact",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Contact"
+      ],
+      "preconditions": [
+        "User has permission to create Contact"
+      ],
+      "happy_path_outcome": [
+        "New Contact is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "first_name must be valid",
+        "last_name must be valid",
+        "email must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.170896+00:00",
+      "accepted_at": null
+    }
+  ]
+}

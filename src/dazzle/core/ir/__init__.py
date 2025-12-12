@@ -51,6 +51,17 @@ from .dates import (
     DurationLiteral,
 )
 
+# Demo Data Blueprint (v0.12.0)
+from .demo_blueprint import (
+    BlueprintContainer,
+    DemoDataBlueprint,
+    EntityBlueprint,
+    FieldPattern,
+    FieldStrategy,
+    PersonaBlueprint,
+    TenantBlueprint,
+)
+
 # Domain
 from .domain import (
     AccessSpec,
@@ -229,17 +240,6 @@ from .stories import (
     StorySpec,
     StoryStatus,
     StoryTrigger,
-)
-
-# Demo Data Blueprint (v0.12.0)
-from .demo_blueprint import (
-    BlueprintContainer,
-    DemoDataBlueprint,
-    EntityBlueprint,
-    FieldPattern,
-    FieldStrategy,
-    PersonaBlueprint,
-    TenantBlueprint,
 )
 
 # Surfaces

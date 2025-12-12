@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "stories": [
+    {
+      "story_id": "ST-001",
+      "title": "Operations Engineer creates a new System",
+      "actor": "Operations Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "System"
+      ],
+      "preconditions": [
+        "Operations Engineer has permission to create System"
+      ],
+      "happy_path_outcome": [
+        "New System is saved to database",
+        "Operations Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "name must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.226727+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-002",
+      "title": "Operations Engineer changes System from healthy to degraded",
+      "actor": "Operations Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "System"
+      ],
+      "preconditions": [
+        "System.status is 'healthy'"
+      ],
+      "happy_path_outcome": [
+        "System.status becomes 'degraded'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'healthy'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.226727+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-003",
+      "title": "Operations Engineer changes System from healthy to critical",
+      "actor": "Operations Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "System"
+      ],
+      "preconditions": [
+        "System.status is 'healthy'"
+      ],
+      "happy_path_outcome": [
+        "System.status becomes 'critical'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'healthy'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.226727+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-004",
+      "title": "Operations Engineer changes System from degraded to healthy",
+      "actor": "Operations Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "System"
+      ],
+      "preconditions": [
+        "System.status is 'degraded'"
+      ],
+      "happy_path_outcome": [
+        "System.status becomes 'healthy'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'degraded'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.226727+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-005",
+      "title": "Operations Engineer creates a new Alert",
+      "actor": "Operations Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "Alert"
+      ],
+      "preconditions": [
+        "Operations Engineer has permission to create Alert"
+      ],
+      "happy_path_outcome": [
+        "New Alert is saved to database",
+        "Operations Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "system must be valid",
+        "message must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.226727+00:00",
+      "accepted_at": null
+    }
+  ]
+}

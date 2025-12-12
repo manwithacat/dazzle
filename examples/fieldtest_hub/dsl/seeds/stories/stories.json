@@ -1,0 +1,457 @@
+{
+  "version": "1.0",
+  "stories": [
+    {
+      "story_id": "ST-001",
+      "title": "Engineer creates a new Device",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "Device"
+      ],
+      "preconditions": [
+        "Engineer has permission to create Device"
+      ],
+      "happy_path_outcome": [
+        "New Device is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "name must be valid",
+        "model must be valid",
+        "batch_number must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-002",
+      "title": "Engineer changes Device from prototype to active",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Device"
+      ],
+      "preconditions": [
+        "Device.status is 'prototype'"
+      ],
+      "happy_path_outcome": [
+        "Device.status becomes 'active'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'prototype'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-003",
+      "title": "Engineer changes Device from active to recalled",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Device"
+      ],
+      "preconditions": [
+        "Device.status is 'active'"
+      ],
+      "happy_path_outcome": [
+        "Device.status becomes 'recalled'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'active'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-004",
+      "title": "Engineer changes Device from active to retired",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Device"
+      ],
+      "preconditions": [
+        "Device.status is 'active'"
+      ],
+      "happy_path_outcome": [
+        "Device.status becomes 'retired'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'active'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-005",
+      "title": "Engineer creates a new Tester",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "Tester"
+      ],
+      "preconditions": [
+        "Engineer has permission to create Tester"
+      ],
+      "happy_path_outcome": [
+        "New Tester is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "name must be valid",
+        "email must be valid",
+        "location must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-006",
+      "title": "Engineer creates a new Issue Report",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "IssueReport"
+      ],
+      "preconditions": [
+        "Engineer has permission to create IssueReport"
+      ],
+      "happy_path_outcome": [
+        "New IssueReport is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "device_id must be valid",
+        "reported_by_id must be valid",
+        "description must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-007",
+      "title": "Engineer changes IssueReport from open to triaged",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "IssueReport"
+      ],
+      "preconditions": [
+        "IssueReport.status is 'open'"
+      ],
+      "happy_path_outcome": [
+        "IssueReport.status becomes 'triaged'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'open'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-008",
+      "title": "Engineer changes IssueReport from triaged to in_progress",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "IssueReport"
+      ],
+      "preconditions": [
+        "IssueReport.status is 'triaged'"
+      ],
+      "happy_path_outcome": [
+        "IssueReport.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'triaged'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-009",
+      "title": "Engineer changes IssueReport from in_progress to fixed",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "IssueReport"
+      ],
+      "preconditions": [
+        "IssueReport.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "IssueReport.status becomes 'fixed'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-010",
+      "title": "Engineer creates a new Test Session",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "TestSession"
+      ],
+      "preconditions": [
+        "Engineer has permission to create TestSession"
+      ],
+      "happy_path_outcome": [
+        "New TestSession is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "device_id must be valid",
+        "tester_id must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-011",
+      "title": "Engineer creates a new Firmware Release",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "FirmwareRelease"
+      ],
+      "preconditions": [
+        "Engineer has permission to create FirmwareRelease"
+      ],
+      "happy_path_outcome": [
+        "New FirmwareRelease is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "version must be valid",
+        "release_date must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-012",
+      "title": "Engineer changes FirmwareRelease from draft to released",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "FirmwareRelease"
+      ],
+      "preconditions": [
+        "FirmwareRelease.status is 'draft'"
+      ],
+      "happy_path_outcome": [
+        "FirmwareRelease.status becomes 'released'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'draft'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-013",
+      "title": "Engineer changes FirmwareRelease from released to deprecated",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "FirmwareRelease"
+      ],
+      "preconditions": [
+        "FirmwareRelease.status is 'released'"
+      ],
+      "happy_path_outcome": [
+        "FirmwareRelease.status becomes 'deprecated'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'released'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-014",
+      "title": "Engineer changes FirmwareRelease from deprecated to draft",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "FirmwareRelease"
+      ],
+      "preconditions": [
+        "FirmwareRelease.status is 'deprecated'"
+      ],
+      "happy_path_outcome": [
+        "FirmwareRelease.status becomes 'draft'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'deprecated'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-015",
+      "title": "Engineer creates a new Task",
+      "actor": "Engineer",
+      "trigger": "form_submitted",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Engineer has permission to create Task"
+      ],
+      "happy_path_outcome": [
+        "New Task is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "created_by_id must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-016",
+      "title": "Engineer changes Task from open to in_progress",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'open'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'open'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-017",
+      "title": "Engineer changes Task from in_progress to completed",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'completed'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-018",
+      "title": "Engineer changes Task from in_progress to open",
+      "actor": "Engineer",
+      "trigger": "status_changed",
+      "scope": [
+        "Task"
+      ],
+      "preconditions": [
+        "Task.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Task.status becomes 'open'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.269775+00:00",
+      "accepted_at": null
+    }
+  ]
+}

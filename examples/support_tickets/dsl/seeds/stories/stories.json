@@ -1,0 +1,315 @@
+{
+  "version": "1.0",
+  "stories": [
+    {
+      "story_id": "ST-001",
+      "title": "User creates a new User",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "User"
+      ],
+      "preconditions": [
+        "User has permission to create User"
+      ],
+      "happy_path_outcome": [
+        "New User is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "email must be valid",
+        "name must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-002",
+      "title": "User creates a new Support Ticket",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "User has permission to create Ticket"
+      ],
+      "happy_path_outcome": [
+        "New Ticket is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "title must be valid",
+        "description must be valid",
+        "created_by must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-003",
+      "title": "User changes Ticket from open to in_progress",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'open'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'open'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-004",
+      "title": "User changes Ticket from in_progress to resolved",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'resolved'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-005",
+      "title": "User changes Ticket from in_progress to open",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'open'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-006",
+      "title": "User creates a new Comment",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Comment"
+      ],
+      "preconditions": [
+        "User has permission to create Comment"
+      ],
+      "happy_path_outcome": [
+        "New Comment is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "ticket must be valid",
+        "author must be valid",
+        "content must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:20:52.477019+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-007",
+      "title": "User creates a new User",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "User"
+      ],
+      "preconditions": [
+        "User has permission to create User"
+      ],
+      "happy_path_outcome": [
+        "New User is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "email must be valid",
+        "name must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-008",
+      "title": "User creates a new Support Ticket",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "User has permission to create Ticket"
+      ],
+      "happy_path_outcome": [
+        "New Ticket is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "title must be valid",
+        "description must be valid",
+        "created_by must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-009",
+      "title": "User changes Ticket from open to in_progress",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'open'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'open'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-010",
+      "title": "User changes Ticket from in_progress to resolved",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'resolved'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-011",
+      "title": "User changes Ticket from in_progress to open",
+      "actor": "User",
+      "trigger": "status_changed",
+      "scope": [
+        "Ticket"
+      ],
+      "preconditions": [
+        "Ticket.status is 'in_progress'"
+      ],
+      "happy_path_outcome": [
+        "Ticket.status becomes 'open'",
+        "Timestamp is recorded"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "Transition only allowed from 'in_progress'"
+      ],
+      "variants": [],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    },
+    {
+      "story_id": "ST-012",
+      "title": "User creates a new Comment",
+      "actor": "User",
+      "trigger": "form_submitted",
+      "scope": [
+        "Comment"
+      ],
+      "preconditions": [
+        "User has permission to create Comment"
+      ],
+      "happy_path_outcome": [
+        "New Comment is saved to database",
+        "User sees confirmation message"
+      ],
+      "side_effects": [],
+      "constraints": [
+        "ticket must be valid",
+        "author must be valid",
+        "content must be valid"
+      ],
+      "variants": [
+        "Validation error on required field"
+      ],
+      "status": "draft",
+      "created_at": "2025-12-12T03:21:25.204389+00:00",
+      "accepted_at": null
+    }
+  ]
+}

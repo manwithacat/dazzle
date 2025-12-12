@@ -2,7 +2,8 @@
 Demo Data Blueprint Persistence Layer.
 
 Handles loading and saving Demo Data Blueprints to/from
-.dazzle/demo_data/blueprint.json files.
+.dazzle/demo_data/blueprint.json files, with fallback to
+dsl/seeds/demo_data/ for checked-in seed blueprints.
 """
 
 from __future__ import annotations
@@ -14,9 +15,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
 
+BLUEPRINT_DIR = ".dazzle/demo_data"
+SEEDS_BLUEPRINT_DIR = "dsl/seeds/demo_data"
+BLUEPRINT_FILE = "blueprint.json"
+
 
 def get_blueprint_dir(project_root: Path) -> Path:
-    """Get the .dazzle/demo_data/ directory.
+    """Get the .dazzle/demo_data/ directory (runtime location).
 
     Args:
         project_root: Root directory of the project
@@ -24,11 +29,23 @@ def get_blueprint_dir(project_root: Path) -> Path:
     Returns:
         Path to the demo_data directory
     """
-    return project_root / ".dazzle" / "demo_data"
+    return project_root / BLUEPRINT_DIR
+
+
+def get_seeds_blueprint_dir(project_root: Path) -> Path:
+    """Get the dsl/seeds/demo_data/ directory (checked-in fallback).
+
+    Args:
+        project_root: Root directory of the project
+
+    Returns:
+        Path to the seeds demo_data directory
+    """
+    return project_root / SEEDS_BLUEPRINT_DIR
 
 
 def get_blueprint_file(project_root: Path) -> Path:
-    """Get the blueprint.json file path.
+    """Get the blueprint.json file path (runtime location).
 
     Args:
         project_root: Root directory of the project
@@ -36,11 +53,36 @@ def get_blueprint_file(project_root: Path) -> Path:
     Returns:
         Path to blueprint.json
     """
-    return get_blueprint_dir(project_root) / "blueprint.json"
+    return get_blueprint_dir(project_root) / BLUEPRINT_FILE
+
+
+def _find_blueprint_file(project_root: Path) -> Path | None:
+    """Find the blueprint.json file, checking runtime then seeds.
+
+    Args:
+        project_root: Root directory of the project
+
+    Returns:
+        Path to existing blueprint.json, or None if not found.
+    """
+    # Check runtime location first (.dazzle/demo_data/)
+    runtime_file = get_blueprint_dir(project_root) / BLUEPRINT_FILE
+    if runtime_file.exists():
+        return runtime_file
+
+    # Fall back to seeds location (dsl/seeds/demo_data/)
+    seeds_file = get_seeds_blueprint_dir(project_root) / BLUEPRINT_FILE
+    if seeds_file.exists():
+        return seeds_file
+
+    return None
 
 
 def load_blueprint(project_root: Path) -> DemoDataBlueprint | None:
     """Load a Demo Data Blueprint from the project.
+
+    Checks the runtime location (.dazzle/demo_data/) first, then falls
+    back to the checked-in seeds location (dsl/seeds/demo_data/).
 
     Args:
         project_root: Root directory of the project
@@ -50,8 +92,8 @@ def load_blueprint(project_root: Path) -> DemoDataBlueprint | None:
     """
     from dazzle.core.ir.demo_blueprint import BlueprintContainer, DemoDataBlueprint
 
-    blueprint_file = get_blueprint_file(project_root)
-    if not blueprint_file.exists():
+    blueprint_file = _find_blueprint_file(project_root)
+    if blueprint_file is None:
         return None
 
     try:

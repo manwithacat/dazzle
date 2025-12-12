@@ -14,11 +14,12 @@ from pathlib import Path
 from .ir.stories import StoriesContainer, StorySpec, StoryStatus
 
 STORIES_DIR = ".dazzle/stories"
+SEEDS_STORIES_DIR = "dsl/seeds/stories"
 STORIES_FILE = "stories.json"
 
 
 def get_stories_dir(project_root: Path) -> Path:
-    """Get the .dazzle/stories/ directory path.
+    """Get the .dazzle/stories/ directory path (runtime location).
 
     Args:
         project_root: Root directory of the DAZZLE project.
@@ -29,8 +30,20 @@ def get_stories_dir(project_root: Path) -> Path:
     return project_root / STORIES_DIR
 
 
+def get_seeds_stories_dir(project_root: Path) -> Path:
+    """Get the dsl/seeds/stories/ directory path (checked-in fallback).
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        Path to the seeds stories directory.
+    """
+    return project_root / SEEDS_STORIES_DIR
+
+
 def get_stories_file(project_root: Path) -> Path:
-    """Get the stories.json file path.
+    """Get the stories.json file path (runtime location).
 
     Args:
         project_root: Root directory of the DAZZLE project.
@@ -41,8 +54,33 @@ def get_stories_file(project_root: Path) -> Path:
     return get_stories_dir(project_root) / STORIES_FILE
 
 
+def _find_stories_file(project_root: Path) -> Path | None:
+    """Find the stories.json file, checking runtime then seeds.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        Path to existing stories.json, or None if not found.
+    """
+    # Check runtime location first (.dazzle/stories/)
+    runtime_file = get_stories_dir(project_root) / STORIES_FILE
+    if runtime_file.exists():
+        return runtime_file
+
+    # Fall back to seeds location (dsl/seeds/stories/)
+    seeds_file = get_seeds_stories_dir(project_root) / STORIES_FILE
+    if seeds_file.exists():
+        return seeds_file
+
+    return None
+
+
 def load_stories(project_root: Path) -> list[StorySpec]:
-    """Load all stories from .dazzle/stories/stories.json.
+    """Load all stories from .dazzle/stories/ or dsl/seeds/stories/.
+
+    Checks the runtime location (.dazzle/stories/) first, then falls
+    back to the checked-in seeds location (dsl/seeds/stories/).
 
     Args:
         project_root: Root directory of the DAZZLE project.
@@ -50,9 +88,9 @@ def load_stories(project_root: Path) -> list[StorySpec]:
     Returns:
         List of story specifications. Returns empty list if file doesn't exist.
     """
-    stories_file = get_stories_file(project_root)
+    stories_file = _find_stories_file(project_root)
 
-    if not stories_file.exists():
+    if stories_file is None:
         return []
 
     try:
