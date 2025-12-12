@@ -118,6 +118,38 @@ def _extract_validators(field: ir.FieldSpec) -> list[ValidatorSpec]:
 # =============================================================================
 
 
+def _serialize_date_expr(default: object) -> object:
+    """
+    Serialize a date expression to a dictionary format for runtime evaluation.
+
+    Handles:
+        - DateLiteral (today, now) -> {"kind": "today"} or {"kind": "now"}
+        - DateArithmeticExpr -> {"kind": "today", "op": "+", "value": 7, "unit": "days"}
+        - Scalar values pass through unchanged
+
+    v0.10.2: Added for date arithmetic field defaults.
+    """
+    if isinstance(default, ir.DateLiteral):
+        return {"kind": default.kind.value}
+    elif isinstance(default, ir.DateArithmeticExpr):
+        # Get base kind from left operand
+        if isinstance(default.left, ir.DateLiteral):
+            base_kind = default.left.kind.value
+        else:
+            # Field reference (string) - not yet supported as base
+            base_kind = str(default.left)
+
+        return {
+            "kind": base_kind,
+            "op": default.operator.value,
+            "value": default.right.value,
+            "unit": default.right.unit.value,
+        }
+    else:
+        # Scalar value - pass through
+        return default
+
+
 def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
     """
     Convert a Dazzle IR FieldSpec to DNR BackendSpec FieldSpec.
@@ -128,12 +160,15 @@ def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
     Returns:
         DNR BackendSpec field specification
     """
+    # Serialize default value, handling date expressions
+    default = _serialize_date_expr(dazzle_field.default)
+
     return FieldSpec(
         name=dazzle_field.name,
         label=dazzle_field.name.replace("_", " ").title(),
         type=_map_field_type(dazzle_field.type),
         required=dazzle_field.is_required or dazzle_field.is_primary_key,
-        default=dazzle_field.default,
+        default=default,
         validators=_extract_validators(dazzle_field),
         indexed=dazzle_field.is_primary_key,
         unique=dazzle_field.is_unique or dazzle_field.is_primary_key,
@@ -298,9 +333,12 @@ def _convert_logical_operator(op: ir.InvariantLogicalOperator) -> InvariantLogic
 def _convert_duration_unit(unit: ir.DurationUnit) -> DurationUnitKind:
     """Map IR DurationUnit to BackendSpec DurationUnitKind."""
     mapping = {
-        ir.DurationUnit.DAYS: DurationUnitKind.DAYS,
-        ir.DurationUnit.HOURS: DurationUnitKind.HOURS,
         ir.DurationUnit.MINUTES: DurationUnitKind.MINUTES,
+        ir.DurationUnit.HOURS: DurationUnitKind.HOURS,
+        ir.DurationUnit.DAYS: DurationUnitKind.DAYS,
+        ir.DurationUnit.WEEKS: DurationUnitKind.WEEKS,  # v0.10.2
+        ir.DurationUnit.MONTHS: DurationUnitKind.MONTHS,  # v0.10.2
+        ir.DurationUnit.YEARS: DurationUnitKind.YEARS,  # v0.10.2
     }
     return mapping[unit]
 

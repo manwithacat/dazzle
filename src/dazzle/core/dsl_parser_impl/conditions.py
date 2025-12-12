@@ -27,6 +27,8 @@ class ConditionParserMixin:
         expect_identifier_or_keyword: Any
         file: Any
         _parse_literal_value: Any
+        _parse_date_expr: Any  # From TypeParserMixin
+        _parse_duration_literal: Any  # From TypeParserMixin
 
     def parse_condition_expr(self) -> ir.ConditionExpr:
         """
@@ -196,7 +198,11 @@ class ConditionParserMixin:
             )
 
     def _parse_condition_value(self) -> ir.ConditionValue:
-        """Parse value in a condition (literal, identifier, or list)."""
+        """
+        Parse value in a condition (literal, identifier, list, or date expression).
+
+        v0.10.2: Added support for date expressions (today, now, today + 7d, etc.)
+        """
         # List value: [a, b, c]
         if self.match(TokenType.LBRACKET):
             self.advance()
@@ -214,6 +220,11 @@ class ConditionParserMixin:
 
             self.expect(TokenType.RBRACKET)
             return ir.ConditionValue(values=values)
+
+        # v0.10.2: Check for date expressions (today, now)
+        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+            date_expr = self._parse_date_expr()
+            return ir.ConditionValue(date_expr=date_expr)
 
         # Single value
         value = self._parse_literal_value()

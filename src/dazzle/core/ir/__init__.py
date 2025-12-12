@@ -7,13 +7,14 @@ Types are organized into logical submodules for maintainability.
 All types are re-exported from this package for backward compatibility.
 """
 
-# Archetypes (v0.7.1)
+# Archetypes (v0.7.1, v0.10.3)
 # Fields
 # App Specification
 from .appspec import (
     AppSpec,
 )
 from .archetype import (
+    ArchetypeKind,
     ArchetypeSpec,
 )
 
@@ -27,6 +28,16 @@ from .computed import (
     ComputedFieldSpec,
     FieldReference,
     LiteralValue,
+)
+
+# Date Expressions (v0.10.2)
+from .dates import (
+    DateArithmeticExpr,
+    DateArithmeticOp,
+    DateExpr,
+    DateLiteral,
+    DateLiteralKind,
+    DurationLiteral,
 )
 
 # Conditions
@@ -247,7 +258,8 @@ from .workspaces import (
 )
 
 __all__ = [
-    # Archetypes (v0.7.1)
+    # Archetypes (v0.7.1, v0.10.3)
+    "ArchetypeKind",
     "ArchetypeSpec",
     # Fields
     "FieldTypeKind",
@@ -372,6 +384,13 @@ __all__ = [
     "LiteralValue",
     "ComputedExpr",
     "ComputedFieldSpec",
+    # Date Expressions (v0.10.2)
+    "DateLiteralKind",
+    "DateLiteral",
+    "DateArithmeticOp",
+    "DurationLiteral",
+    "DateArithmeticExpr",
+    "DateExpr",
     # Invariants
     "InvariantComparisonOperator",
     "InvariantLogicalOperator",

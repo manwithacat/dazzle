@@ -495,9 +495,12 @@ class InvariantLogicalKind(str, Enum):
 class DurationUnitKind(str, Enum):
     """Time units for duration expressions."""
 
-    DAYS = "days"
-    HOURS = "hours"
     MINUTES = "minutes"
+    HOURS = "hours"
+    DAYS = "days"
+    WEEKS = "weeks"  # v0.10.2
+    MONTHS = "months"  # v0.10.2
+    YEARS = "years"  # v0.10.2
 
 
 class InvariantExprSpec(BaseModel):

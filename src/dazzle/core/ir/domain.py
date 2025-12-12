@@ -11,6 +11,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .archetype import ArchetypeKind
 from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
 from .fields import FieldSpec
@@ -152,6 +153,9 @@ class EntitySpec(BaseModel):
         domain: Domain classification tag (v0.7.1)
         patterns: Pattern tags for auto-generation hints (v0.7.1)
         extends: Archetype names this entity inherits from (v0.7.1)
+        archetype_kind: Semantic archetype (settings, tenant, etc.) (v0.10.3)
+        is_singleton: Whether entity has exactly one record (v0.10.3)
+        is_tenant_root: Whether entity is the tenant root for multi-tenancy (v0.10.3)
         fields: List of field specifications
         computed_fields: List of computed (derived) field specifications
         invariants: List of entity invariants (cross-field constraints)
@@ -167,6 +171,10 @@ class EntitySpec(BaseModel):
     domain: str | None = None
     patterns: list[str] = Field(default_factory=list)
     extends: list[str] = Field(default_factory=list)
+    # v0.10.3: Semantic archetype support
+    archetype_kind: ArchetypeKind | None = None
+    is_singleton: bool = False
+    is_tenant_root: bool = False
     fields: list[FieldSpec]
     computed_fields: list[ComputedFieldSpec] = Field(default_factory=list)
     invariants: list[InvariantSpec] = Field(default_factory=list)

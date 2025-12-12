@@ -8,8 +8,12 @@ attention signals, filters, and other conditional logic.
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
+
+if TYPE_CHECKING:
+    from .dates import DateArithmeticExpr, DateLiteral
 
 
 class ComparisonOperator(str, Enum):
@@ -38,11 +42,18 @@ class ConditionValue(BaseModel):
     """
     A value in a condition expression.
 
-    Can be a literal (string, number, boolean, null) or a list of values.
+    Can be a literal (string, number, boolean, null), a list of values,
+    or a date expression (v0.10.2).
+
+    v0.10.2: Added date_expr for date arithmetic in conditions:
+        - due_date < today + 7d
+        - created_at > now - 24h
     """
 
     literal: str | int | float | bool | None = None
     values: list[str | int | float | bool] | None = None  # For 'in' operator
+    # v0.10.2: Date expression support
+    date_expr: DateLiteral | DateArithmeticExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -50,6 +61,11 @@ class ConditionValue(BaseModel):
     def is_list(self) -> bool:
         """Check if this is a list value."""
         return self.values is not None
+
+    @property
+    def is_date_expr(self) -> bool:
+        """Check if this is a date expression value."""
+        return self.date_expr is not None
 
 
 class FunctionCall(BaseModel):
@@ -135,3 +151,17 @@ class ConditionExpr(BaseModel):
     def is_role_check(self) -> bool:
         """Check if this is a role check condition."""
         return self.role_check is not None
+
+
+def _rebuild_condition_value() -> None:
+    """Rebuild ConditionValue model to resolve forward references to date types."""
+    # Import here to avoid circular imports
+    from .dates import DateArithmeticExpr, DateLiteral
+
+    ConditionValue.model_rebuild(
+        _types_namespace={"DateLiteral": DateLiteral, "DateArithmeticExpr": DateArithmeticExpr}
+    )
+
+
+# Call rebuild after module initialization
+_rebuild_condition_value()

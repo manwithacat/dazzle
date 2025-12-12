@@ -33,9 +33,12 @@ class LogicalOperator(str, Enum):
 class DurationUnit(str, Enum):
     """Time units for duration expressions."""
 
-    DAYS = "days"
-    HOURS = "hours"
     MINUTES = "minutes"
+    HOURS = "hours"
+    DAYS = "days"
+    WEEKS = "weeks"
+    MONTHS = "months"
+    YEARS = "years"
 
 
 class InvariantFieldRef(BaseModel):

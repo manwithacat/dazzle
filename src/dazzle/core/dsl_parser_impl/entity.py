@@ -57,6 +57,8 @@ class EntityParserMixin:
         patterns: list[str] = []
         extends: list[str] = []
         examples: list[ir.ExampleRecord] = []
+        # v0.10.3: Semantic archetype
+        archetype_kind: ir.ArchetypeKind | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -106,6 +108,15 @@ class EntityParserMixin:
                 while self.match(TokenType.COMMA):
                     self.advance()
                     extends.append(self.expect(TokenType.IDENTIFIER).value)
+                self.skip_newlines()
+                continue
+
+            # v0.10.3: Check for archetype: declaration (semantic archetype)
+            if self.match(TokenType.ARCHETYPE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                archetype_value = self.expect_identifier_or_keyword().value
+                archetype_kind = self._map_archetype_kind(archetype_value)
                 self.skip_newlines()
                 continue
 
@@ -373,6 +384,7 @@ class EntityParserMixin:
             domain=domain,
             patterns=patterns,
             extends=extends,
+            archetype_kind=archetype_kind,
             fields=fields,
             computed_fields=computed_fields,
             invariants=invariants,
@@ -381,6 +393,23 @@ class EntityParserMixin:
             state_machine=state_machine,
             examples=examples,
         )
+
+    def _map_archetype_kind(self, value: str) -> ir.ArchetypeKind:
+        """
+        Map archetype string value to ArchetypeKind enum.
+
+        v0.10.3: Supports settings, tenant, tenant_settings semantic archetypes.
+        """
+        mapping = {
+            "settings": ir.ArchetypeKind.SETTINGS,
+            "tenant": ir.ArchetypeKind.TENANT,
+            "tenant_settings": ir.ArchetypeKind.TENANT_SETTINGS,
+        }
+        if value in mapping:
+            return mapping[value]
+        # Default to CUSTOM for user-defined archetype names
+        # (though this is typically used with extends: instead)
+        return ir.ArchetypeKind.CUSTOM
 
     def _parse_visibility_rule(self) -> ir.VisibilityRule:
         """
@@ -776,11 +805,13 @@ class EntityParserMixin:
             - Numeric literals: 0, 1.5, -10
             - String literals: "active"
             - Boolean literals: true, false
-            - Duration expressions: 14 days, 2 hours
+            - Duration expressions: 14 days, 2 hours, 7d, 2w (v0.10.2)
+            - Date literals: today, now (v0.10.2)
+            - Date arithmetic: today + 7d (v0.10.2)
             - Parenthesized expressions: (expr)
 
         Syntax:
-            invariant_primary ::= field_ref | NUMBER | STRING | BOOL | duration | "(" invariant_expr ")"
+            invariant_primary ::= field_ref | NUMBER | STRING | BOOL | duration | date_expr | "(" invariant_expr ")"
         """
         # Check for parenthesized expression
         if self.match(TokenType.LPAREN):
@@ -789,16 +820,32 @@ class EntityParserMixin:
             self.expect(TokenType.RPAREN)
             return expr
 
+        # v0.10.2: Check for date literals (today, now)
+        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+            date_expr = self._parse_date_expr()
+            # Return the date expression - it will be used in comparisons
+            # For invariants, we wrap it in InvariantLiteral with the __str__ representation
+            # This is a simplification; for full support we'd need a dedicated InvariantDateExpr type
+            return ir.InvariantLiteral(value=str(date_expr))
+
+        # v0.10.2: Check for compact duration literal (7d, 2w, 30min)
+        if self.match(TokenType.DURATION_LITERAL):
+            duration = self._parse_duration_literal()
+            return ir.DurationExpr(value=duration.value, unit=duration.unit)
+
         # Check for numeric literal
         if self.match(TokenType.NUMBER):
             token = self.advance()
             value = float(token.value) if "." in token.value else int(token.value)
 
-            # Check if followed by duration unit
+            # Check if followed by duration unit (verbose syntax: 14 days)
             duration_units = {
                 TokenType.DAYS: ir.DurationUnit.DAYS,
                 TokenType.HOURS: ir.DurationUnit.HOURS,
                 TokenType.MINUTES: ir.DurationUnit.MINUTES,
+                TokenType.WEEKS: ir.DurationUnit.WEEKS,
+                TokenType.MONTHS: ir.DurationUnit.MONTHS,
+                TokenType.YEARS: ir.DurationUnit.YEARS,
             }
             for unit_token, unit in duration_units.items():
                 if self.match(unit_token):

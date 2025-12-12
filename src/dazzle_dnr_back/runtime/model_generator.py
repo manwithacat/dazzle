@@ -4,7 +4,8 @@ Model generator - generates Pydantic models from EntitySpec.
 This module creates dynamic Pydantic models at runtime from BackendSpec entity definitions.
 """
 
-from datetime import date, datetime
+from collections.abc import Callable
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -17,6 +18,14 @@ from dazzle_dnr_back.specs.entity import (
     FieldType,
     ScalarType,
 )
+
+# Try to import relativedelta for months/years arithmetic
+try:
+    from dateutil.relativedelta import relativedelta
+
+    HAS_DATEUTIL = True
+except ImportError:
+    HAS_DATEUTIL = False
 
 # =============================================================================
 # Type Mapping
@@ -64,12 +73,85 @@ def _field_type_to_python(field_type: FieldType, entity_models: dict[str, type])
         return str
 
 
+def _is_date_expr(default: Any) -> bool:
+    """Check if default is a date expression dictionary."""
+    return isinstance(default, dict) and "kind" in default
+
+
+def _create_date_factory(expr: dict[str, Any]) -> Callable[[], date | datetime]:
+    """
+    Create a factory function for date expression defaults.
+
+    v0.10.2: Supports date arithmetic with all duration units.
+
+    Args:
+        expr: Date expression dictionary with keys:
+            - kind: "today" or "now"
+            - op: "+" or "-" (optional)
+            - value: duration value (optional)
+            - unit: duration unit (optional)
+
+    Returns:
+        Factory function that returns evaluated date/datetime
+    """
+    kind = expr.get("kind", "today")
+    op = expr.get("op")
+    value = expr.get("value", 0)
+    unit = expr.get("unit", "days")
+
+    def factory() -> date | datetime:
+        # Get base value
+        if kind == "now":
+            base: date | datetime = datetime.now()
+        else:  # "today"
+            base = date.today()
+
+        # No arithmetic, return base
+        if not op:
+            return base
+
+        # Calculate duration
+        if unit == "minutes":
+            delta = timedelta(minutes=value)
+        elif unit == "hours":
+            delta = timedelta(hours=value)
+        elif unit == "days":
+            delta = timedelta(days=value)
+        elif unit == "weeks":
+            delta = timedelta(weeks=value)
+        elif unit in ("months", "years"):
+            # Use relativedelta for variable-length units
+            if HAS_DATEUTIL:
+                if unit == "months":
+                    delta = relativedelta(months=value)
+                else:
+                    delta = relativedelta(years=value)
+            else:
+                # Fallback: approximate months=30 days, years=365 days
+                if unit == "months":
+                    delta = timedelta(days=value * 30)
+                else:
+                    delta = timedelta(days=value * 365)
+        else:
+            delta = timedelta(days=value)
+
+        # Apply operation
+        if op == "+":
+            return base + delta
+        else:  # "-"
+            return base - delta
+
+    return factory
+
+
 def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
     """
     Build Pydantic field tuple for create_model.
 
     Returns:
         Tuple of (type, default_or_field_info)
+
+    v0.10.2: Supports date expression defaults with default_factory.
     """
     # Get Python type
     python_type = _field_type_to_python(field.type, {})
@@ -82,7 +164,11 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
 
     # Handle default value
     if field.default is not None:
-        field_kwargs["default"] = field.default
+        # v0.10.2: Check for date expression (dictionary with 'kind')
+        if _is_date_expr(field.default):
+            field_kwargs["default_factory"] = _create_date_factory(field.default)
+        else:
+            field_kwargs["default"] = field.default
     elif not field.required:
         field_kwargs["default"] = None
         # Make type Optional

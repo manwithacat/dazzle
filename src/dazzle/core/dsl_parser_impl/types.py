@@ -10,6 +10,19 @@ from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
+# Type alias for default values (scalars or date expressions)
+DefaultValue = str | int | float | bool | ir.DateLiteral | ir.DateArithmeticExpr | None
+
+# Duration suffix to DurationUnit mapping
+DURATION_SUFFIX_MAP = {
+    "min": ir.DurationUnit.MINUTES,
+    "h": ir.DurationUnit.HOURS,
+    "d": ir.DurationUnit.DAYS,
+    "w": ir.DurationUnit.WEEKS,
+    "m": ir.DurationUnit.MONTHS,
+    "y": ir.DurationUnit.YEARS,
+}
+
 
 class TypeParserMixin:
     """
@@ -118,6 +131,11 @@ class TypeParserMixin:
             self.advance()
             return ir.FieldType(kind=ir.FieldTypeKind.URL)
 
+        # timezone (v0.10.3) - IANA timezone identifier
+        elif token.value == "timezone":
+            self.advance()
+            return ir.FieldType(kind=ir.FieldTypeKind.TIMEZONE)
+
         # enum[val1,val2,...]
         elif token.value == "enum":
             self.advance()
@@ -216,17 +234,97 @@ class TypeParserMixin:
 
         return behavior, readonly
 
+    def _parse_duration_literal(self) -> ir.DurationLiteral:
+        """
+        Parse a duration literal from DURATION_LITERAL token (e.g., 7d, 24h, 30min).
+
+        Returns:
+            DurationLiteral with value and unit
+        """
+        token = self.expect(TokenType.DURATION_LITERAL)
+        value_str = token.value
+
+        # Extract numeric part and suffix
+        import re
+
+        match = re.match(r"(\d+)(min|h|d|w|m|y)", value_str)
+        if not match:
+            raise make_parse_error(
+                f"Invalid duration literal: {value_str}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        value = int(match.group(1))
+        suffix = match.group(2)
+        unit = DURATION_SUFFIX_MAP[suffix]
+
+        return ir.DurationLiteral(value=value, unit=unit)
+
+    def _parse_date_expr(self) -> ir.DateLiteral | ir.DateArithmeticExpr:
+        """
+        Parse a date expression.
+
+        Handles:
+            - today (DateLiteral)
+            - now (DateLiteral)
+            - today + 7d (DateArithmeticExpr)
+            - now - 24h (DateArithmeticExpr)
+
+        Returns:
+            DateLiteral or DateArithmeticExpr
+        """
+        # Parse the base (today or now)
+        if self.match(TokenType.TODAY):
+            self.advance()
+            base = ir.DateLiteral(kind=ir.DateLiteralKind.TODAY)
+        elif self.match(TokenType.NOW):
+            self.advance()
+            base = ir.DateLiteral(kind=ir.DateLiteralKind.NOW)
+        else:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Expected 'today' or 'now', got {token.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        # Check for arithmetic operator
+        if self.match(TokenType.PLUS):
+            self.advance()
+            duration = self._parse_duration_literal()
+            return ir.DateArithmeticExpr(
+                left=base,
+                operator=ir.DateArithmeticOp.ADD,
+                right=duration,
+            )
+        elif self.match(TokenType.MINUS):
+            self.advance()
+            duration = self._parse_duration_literal()
+            return ir.DateArithmeticExpr(
+                left=base,
+                operator=ir.DateArithmeticOp.SUBTRACT,
+                right=duration,
+            )
+
+        # Just a literal (today or now)
+        return base
+
     def parse_field_modifiers(
         self,
-    ) -> tuple[list[ir.FieldModifier], str | int | float | bool | None]:
+    ) -> tuple[list[ir.FieldModifier], DefaultValue]:
         """
         Parse field modifiers and default value.
 
         Returns:
             Tuple of (modifiers, default_value)
+
+        v0.10.2: default can now be a date expression (DateLiteral, DateArithmeticExpr)
         """
         modifiers = []
-        default: str | int | float | bool | None = None
+        default: DefaultValue = None
 
         while True:
             token = self.current_token()
@@ -256,7 +354,10 @@ class TypeParserMixin:
             elif self.match(TokenType.EQUALS):
                 # default=value
                 self.advance()
-                if self.match(TokenType.STRING):
+                # v0.10.2: Check for date expressions first (today, now)
+                if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+                    default = self._parse_date_expr()
+                elif self.match(TokenType.STRING):
                     default = self.advance().value
                 elif self.match(TokenType.NUMBER):
                     num_str = self.advance().value

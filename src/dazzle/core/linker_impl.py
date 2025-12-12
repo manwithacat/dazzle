@@ -17,7 +17,7 @@ class SymbolTable:
     Symbol table for tracking all named definitions across modules.
 
     Tracks entities, surfaces, workspaces, experiences, APIs, foreign models,
-    integrations, and tests to enable cross-module reference resolution.
+    integrations, tests, and archetypes to enable cross-module reference resolution.
     """
 
     entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
@@ -30,6 +30,7 @@ class SymbolTable:
     tests: dict[str, ir.TestSpec] = field(default_factory=dict)
     personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)  # v0.8.5
     scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)  # v0.8.5
+    archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -143,6 +144,17 @@ class SymbolTable:
             )
         self.scenarios[scenario.id] = scenario
         self.symbol_sources[scenario.id] = module_name
+
+    def add_archetype(self, archetype: ir.ArchetypeSpec, module_name: str) -> None:
+        """Add archetype to symbol table, checking for duplicates (v0.10.3)."""
+        if archetype.name in self.archetypes:
+            existing_module = self.symbol_sources.get(archetype.name, "unknown")
+            raise LinkError(
+                f"Duplicate archetype '{archetype.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.archetypes[archetype.name] = archetype
+        self.symbol_sources[archetype.name] = module_name
 
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
@@ -270,6 +282,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add scenarios (v0.8.5)
         for scenario in module.fragment.scenarios:
             symbols.add_scenario(scenario, module.name)
+
+        # Add archetypes (v0.10.3)
+        for archetype in module.fragment.archetypes:
+            symbols.add_archetype(archetype, module.name)
 
     return symbols
 
@@ -427,6 +443,13 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     errors.append(
                         f"Entity '{entity_name}' constraint references unknown field '{field_name}'"
                     )
+
+        # v0.10.3: Validate archetype references in extends
+        for archetype_name in entity.extends:
+            if archetype_name not in symbols.archetypes:
+                errors.append(
+                    f"Entity '{entity_name}' extends unknown archetype '{archetype_name}'"
+                )
 
     # Validate surface references
     for surface_name, surface in symbols.surfaces.items():

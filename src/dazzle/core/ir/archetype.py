@@ -6,15 +6,36 @@ They define common field patterns (audit trails, soft delete, etc.)
 that can be composed into entities.
 
 v0.7.1: Added for LLM cognition
+v0.10.3: Added ArchetypeKind for semantic archetypes (settings, tenant)
 """
 
 from __future__ import annotations
+
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .computed import ComputedFieldSpec
 from .fields import FieldSpec
 from .invariant import InvariantSpec
+
+
+class ArchetypeKind(str, Enum):
+    """
+    Kind of semantic archetype.
+
+    v0.10.3: Added for settings and multi-tenancy support.
+
+    CUSTOM: User-defined archetype (existing behavior)
+    SETTINGS: Singleton entity with admin-only access (system-wide config)
+    TENANT: Tenant root entity for multi-tenancy
+    TENANT_SETTINGS: Per-tenant settings (scoped to tenant admins)
+    """
+
+    CUSTOM = "custom"
+    SETTINGS = "settings"
+    TENANT = "tenant"
+    TENANT_SETTINGS = "tenant_settings"
 
 
 class ArchetypeSpec(BaseModel):

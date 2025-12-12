@@ -8,8 +8,12 @@ modifiers, and field specifications.
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+if TYPE_CHECKING:
+    from .dates import DateArithmeticExpr, DateLiteral
 
 
 class FieldTypeKind(str, Enum):
@@ -31,6 +35,8 @@ class FieldTypeKind(str, Enum):
     MONEY = "money"  # Currency amount with optional currency code (maps to decimal + metadata)
     FILE = "file"  # File reference/upload (stores path/URL/identifier)
     URL = "url"  # URL/URI string with validation
+    # v0.10.3: Timezone type for settings
+    TIMEZONE = "timezone"  # IANA timezone identifier (e.g., "Europe/London", "America/New_York")
     # v0.7.1: Relationship types with ownership semantics
     HAS_MANY = "has_many"
     HAS_ONE = "has_one"
@@ -118,13 +124,18 @@ class FieldSpec(BaseModel):
         name: Field identifier
         type: Field type specification
         modifiers: List of modifiers (required, pk, unique, etc.)
-        default: Optional default value
+        default: Optional default value (scalar or date expression)
+
+    v0.10.2: default can now be a date expression for date/datetime fields:
+        - today, now (literals)
+        - today + 7d, now - 24h (arithmetic)
     """
 
     name: str
     type: FieldType
     modifiers: list[FieldModifier] = Field(default_factory=list)
-    default: str | int | float | bool | None = None
+    # Default can be a scalar or a date expression (DateLiteral, DateArithmeticExpr)
+    default: str | int | float | bool | DateLiteral | DateArithmeticExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -145,3 +156,15 @@ class FieldSpec(BaseModel):
             FieldModifier.UNIQUE in self.modifiers
             or FieldModifier.UNIQUE_NULLABLE in self.modifiers
         )
+
+
+def _rebuild_field_spec() -> None:
+    """Rebuild FieldSpec model to resolve forward references to date types."""
+    # Import here to avoid circular imports
+    from .dates import DateArithmeticExpr, DateLiteral
+
+    FieldSpec.model_rebuild(_types_namespace={"DateLiteral": DateLiteral, "DateArithmeticExpr": DateArithmeticExpr})
+
+
+# Call rebuild after module initialization
+_rebuild_field_spec()

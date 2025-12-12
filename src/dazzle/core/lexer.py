@@ -154,6 +154,13 @@ class TokenType(Enum):
     DAYS = "days"
     HOURS = "hours"
     MINUTES = "minutes"
+    # v0.10.2 Date Arithmetic Keywords
+    TODAY = "today"
+    NOW = "now"
+    WEEKS = "weeks"
+    MONTHS = "months"
+    YEARS = "years"
+    DURATION_LITERAL = "DURATION_LITERAL"  # e.g., 7d, 24h, 30min
 
     # Computed Field Keywords
     COMPUTED = "computed"
@@ -484,6 +491,12 @@ KEYWORDS = {
     "days",
     "hours",
     "minutes",
+    # v0.10.2 Date Arithmetic keywords
+    "today",
+    "now",
+    "weeks",
+    "months",
+    "years",
     # Computed Field keywords
     "computed",
     "sum",
@@ -702,15 +715,43 @@ class Lexer:
         self.advance()  # skip closing quote
         return "".join(chars)
 
-    def read_number(self) -> str:
-        """Read a number (integer or decimal)."""
+    def read_number(self) -> tuple[str, bool]:
+        """
+        Read a number (integer or decimal), optionally followed by duration suffix.
+
+        Returns:
+            Tuple of (value, is_duration_literal)
+            Duration suffixes: min, h, d, w, m, y (e.g., 7d, 24h, 30min)
+        """
         chars = []
         current = self.current_char()
         while current and (current.isdigit() or current == "."):
             chars.append(current)
             self.advance()
             current = self.current_char()
-        return "".join(chars)
+
+        number_str = "".join(chars)
+
+        # Check for duration suffix (compact syntax: 7d, 24h, 30min, 2w, 3m, 1y)
+        # Only for integers (not decimals)
+        if "." not in number_str and current and current.isalpha():
+            suffix_start = self.pos
+            suffix_chars = []
+            while current and current.isalpha():
+                suffix_chars.append(current)
+                self.advance()
+                current = self.current_char()
+
+            suffix = "".join(suffix_chars)
+            # Valid duration suffixes
+            if suffix in ("min", "h", "d", "w", "m", "y"):
+                return f"{number_str}{suffix}", True
+            else:
+                # Not a duration, reset position to after number
+                self.pos = suffix_start
+                self.column -= len(suffix_chars)  # Approximate column reset
+
+        return number_str, False
 
     def read_identifier(self) -> str:
         """Read an identifier or keyword."""
@@ -808,10 +849,13 @@ class Lexer:
                 value = self.read_string()
                 self.tokens.append(Token(TokenType.STRING, value, token_line, token_col))
 
-            # Numbers
+            # Numbers (and duration literals like 7d, 24h)
             elif ch.isdigit():
-                value = self.read_number()
-                self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
+                value, is_duration = self.read_number()
+                if is_duration:
+                    self.tokens.append(Token(TokenType.DURATION_LITERAL, value, token_line, token_col))
+                else:
+                    self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
 
             # Identifiers and keywords
             elif ch.isalpha() or ch == "_":

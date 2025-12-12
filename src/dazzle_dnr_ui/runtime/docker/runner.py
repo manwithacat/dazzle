@@ -81,16 +81,16 @@ class DockerRunner:
 
         # Use project_name from manifest if provided, otherwise fall back to directory name
         # This allows multiple instances of the same project (in different directories) to coexist
-        base_name = config.project_name or self.project_path.name
+        self.project_name = config.project_name or self.project_path.name
 
         # Derive container/stack name from project name
         if config.container_name:
             self.container_name = config.container_name
         else:
-            self.container_name = f"dazzle-{base_name}"
+            self.container_name = f"dazzle-{self.project_name}"
 
         # Image name includes project context
-        self.image_name = f"{config.image_name}:{base_name}"
+        self.image_name = f"{config.image_name}:{self.project_name}"
 
     def run(self) -> int:
         """
@@ -214,6 +214,7 @@ class DockerRunner:
         # Generate docker-compose.yaml
         volume_name = f"{self.container_name}-data".replace("-", "_")
         compose_content = DNR_COMPOSE_TEMPLATE.format(
+            project_name=self.project_name,
             container_name=self.container_name,
             api_port=self.config.api_port,
             frontend_port=self.config.frontend_port,
