@@ -11,6 +11,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  statuses: write
+
 jobs:
   build-cli:
     strategy:
