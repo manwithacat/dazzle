@@ -845,7 +845,9 @@ def generate_access_control_flows(entity: EntitySpec, appspec: AppSpec) -> list[
                     priority=FlowPriority.HIGH,
                     preconditions=FlowPrecondition(
                         authenticated=True,
-                        fixtures=[f"{entity.name}_valid"] if perm.operation != PermissionKind.CREATE else [],
+                        fixtures=[f"{entity.name}_valid"]
+                        if perm.operation != PermissionKind.CREATE
+                        else [],
                     ),
                     steps=steps,
                     tags=["access_control", action_name, entity.name.lower()],
@@ -884,7 +886,9 @@ def generate_access_control_flows(entity: EntitySpec, appspec: AppSpec) -> list[
                     priority=FlowPriority.MEDIUM,
                     preconditions=FlowPrecondition(
                         authenticated=False,
-                        fixtures=[f"{entity.name}_valid"] if perm.operation != PermissionKind.CREATE else [],
+                        fixtures=[f"{entity.name}_valid"]
+                        if perm.operation != PermissionKind.CREATE
+                        else [],
                     ),
                     steps=anon_steps,
                     tags=["access_control", "denied", entity.name.lower()],
@@ -962,21 +966,23 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                     )
                 )
 
-        valid_steps.extend([
-            FlowStep(
-                kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.save",
-                description="Save entity",
-            ),
-            FlowStep(
-                kind=FlowStepKind.ASSERT,
-                assertion=FlowAssertion(
-                    kind=FlowAssertionKind.REF_VALID,
-                    target=f"{entity.name}.{ref_field.name}",
+        valid_steps.extend(
+            [
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"action:{entity.name}.save",
+                    description="Save entity",
                 ),
-                description=f"Assert {ref_field.name} reference is valid",
-            ),
-        ])
+                FlowStep(
+                    kind=FlowStepKind.ASSERT,
+                    assertion=FlowAssertion(
+                        kind=FlowAssertionKind.REF_VALID,
+                        target=f"{entity.name}.{ref_field.name}",
+                    ),
+                    description=f"Assert {ref_field.name} reference is valid",
+                ),
+            ]
+        )
 
         valid_flow_id = f"{entity.name}_ref_{ref_field.name}_valid"
         flows.append(
@@ -984,7 +990,9 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                 id=valid_flow_id,
                 description=f"Create {entity.name} with valid {ref_field.name} reference",
                 priority=FlowPriority.HIGH,
-                preconditions=FlowPrecondition(fixtures=[f"{ref_target}_valid", f"{entity.name}_valid"]),
+                preconditions=FlowPrecondition(
+                    fixtures=[f"{ref_target}_valid", f"{entity.name}_valid"]
+                ),
                 steps=valid_steps,
                 tags=["reference", "valid", entity.name.lower()],
                 entity=entity.name,
@@ -1024,21 +1032,23 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                     )
                 )
 
-        invalid_steps.extend([
-            FlowStep(
-                kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.save",
-                description="Attempt to save with invalid reference",
-            ),
-            FlowStep(
-                kind=FlowStepKind.ASSERT,
-                assertion=FlowAssertion(
-                    kind=FlowAssertionKind.REF_INVALID,
-                    target=f"{entity.name}.{ref_field.name}",
+        invalid_steps.extend(
+            [
+                FlowStep(
+                    kind=FlowStepKind.CLICK,
+                    target=f"action:{entity.name}.save",
+                    description="Attempt to save with invalid reference",
                 ),
-                description=f"Assert {ref_field.name} reference validation failed",
-            ),
-        ])
+                FlowStep(
+                    kind=FlowStepKind.ASSERT,
+                    assertion=FlowAssertion(
+                        kind=FlowAssertionKind.REF_INVALID,
+                        target=f"{entity.name}.{ref_field.name}",
+                    ),
+                    description=f"Assert {ref_field.name} reference validation failed",
+                ),
+            ]
+        )
 
         invalid_flow_id = f"{entity.name}_ref_{ref_field.name}_invalid"
         flows.append(

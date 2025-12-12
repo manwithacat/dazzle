@@ -108,7 +108,15 @@ class FlowExecutor:
     def _get_flow_type(self, flow: dict) -> str:
         """Determine flow type from tags."""
         tags = flow.get("tags", [])
-        for tag in ["crud", "validation", "navigation", "state_machine", "computed", "access_control", "reference"]:
+        for tag in [
+            "crud",
+            "validation",
+            "navigation",
+            "state_machine",
+            "computed",
+            "access_control",
+            "reference",
+        ]:
             if tag in tags:
                 return tag
         return "other"
@@ -467,7 +475,15 @@ class TestAPIHealth:
         flow_types: dict[str, int] = {}
         for flow in generated_testspec.get("flows", []):
             for tag in flow.get("tags", []):
-                if tag in ["crud", "validation", "navigation", "state_machine", "computed", "access_control", "reference"]:
+                if tag in [
+                    "crud",
+                    "validation",
+                    "navigation",
+                    "state_machine",
+                    "computed",
+                    "access_control",
+                    "reference",
+                ]:
                     flow_types[tag] = flow_types.get(tag, 0) + 1
                     break
 
@@ -483,7 +499,9 @@ class TestAPIHealth:
 class TestCRUDFlows:
     """Execute CRUD flows generated from DSL."""
 
-    def test_crud_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_crud_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run all CRUD flows."""
         crud_flows = [f for f in generated_testspec.get("flows", []) if "crud" in f.get("tags", [])]
 
@@ -506,9 +524,13 @@ class TestCRUDFlows:
 class TestValidationFlows:
     """Execute validation flows generated from field constraints."""
 
-    def test_validation_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_validation_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run all validation flows."""
-        validation_flows = [f for f in generated_testspec.get("flows", []) if "validation" in f.get("tags", [])]
+        validation_flows = [
+            f for f in generated_testspec.get("flows", []) if "validation" in f.get("tags", [])
+        ]
 
         if not validation_flows:
             pytest.skip("No validation flows generated")
@@ -525,9 +547,13 @@ class TestValidationFlows:
 class TestNavigationFlows:
     """Execute navigation flows for all surfaces."""
 
-    def test_navigation_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_navigation_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run all navigation flows."""
-        nav_flows = [f for f in generated_testspec.get("flows", []) if "navigation" in f.get("tags", [])]
+        nav_flows = [
+            f for f in generated_testspec.get("flows", []) if "navigation" in f.get("tags", [])
+        ]
 
         if not nav_flows:
             pytest.skip("No navigation flows generated")
@@ -544,9 +570,13 @@ class TestNavigationFlows:
 class TestStateMachineFlows:
     """Execute state machine transition flows."""
 
-    def test_state_machine_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_state_machine_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run state machine transition flows."""
-        sm_flows = [f for f in generated_testspec.get("flows", []) if "state_machine" in f.get("tags", [])]
+        sm_flows = [
+            f for f in generated_testspec.get("flows", []) if "state_machine" in f.get("tags", [])
+        ]
 
         if not sm_flows:
             pytest.skip("No state machine flows generated")
@@ -563,9 +593,13 @@ class TestStateMachineFlows:
 class TestComputedFieldFlows:
     """Execute computed field verification flows."""
 
-    def test_computed_field_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_computed_field_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run computed field flows."""
-        computed_flows = [f for f in generated_testspec.get("flows", []) if "computed" in f.get("tags", [])]
+        computed_flows = [
+            f for f in generated_testspec.get("flows", []) if "computed" in f.get("tags", [])
+        ]
 
         if not computed_flows:
             pytest.skip("No computed field flows generated")
@@ -582,9 +616,13 @@ class TestComputedFieldFlows:
 class TestAccessControlFlows:
     """Execute access control flows."""
 
-    def test_access_control_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_access_control_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run access control flows."""
-        access_flows = [f for f in generated_testspec.get("flows", []) if "access_control" in f.get("tags", [])]
+        access_flows = [
+            f for f in generated_testspec.get("flows", []) if "access_control" in f.get("tags", [])
+        ]
 
         if not access_flows:
             pytest.skip("No access control flows generated")
@@ -601,9 +639,13 @@ class TestAccessControlFlows:
 class TestReferenceFlows:
     """Execute reference integrity flows."""
 
-    def test_reference_flows(self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec):
+    def test_reference_flows(
+        self, page: Page, flow_executor: FlowExecutor, ux_tracker, generated_testspec
+    ):
         """Run reference integrity flows."""
-        ref_flows = [f for f in generated_testspec.get("flows", []) if "reference" in f.get("tags", [])]
+        ref_flows = [
+            f for f in generated_testspec.get("flows", []) if "reference" in f.get("tags", [])
+        ]
 
         if not ref_flows:
             pytest.skip("No reference flows generated")
@@ -634,7 +676,15 @@ class TestCoverageSummary:
         flow_types: dict[str, int] = {}
         for flow in flows:
             for tag in flow.get("tags", []):
-                if tag in ["crud", "validation", "navigation", "state_machine", "computed", "access_control", "reference"]:
+                if tag in [
+                    "crud",
+                    "validation",
+                    "navigation",
+                    "state_machine",
+                    "computed",
+                    "access_control",
+                    "reference",
+                ]:
                     flow_types[tag] = flow_types.get(tag, 0) + 1
                     break
 

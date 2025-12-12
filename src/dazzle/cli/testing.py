@@ -603,10 +603,12 @@ def _execute_assertion_sync(
         # Check that operation was denied (403 or access denied message)
         target = assertion.target or ""  # e.g., "Document.create"
         # Should see a permission denied message or be redirected to login
-        denied_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
-        auth_modal_selector = '[data-dazzle-auth-modal]'
+        denied_selector = (
+            f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
+        )
+        auth_modal_selector = "[data-dazzle-auth-modal]"
         # Either permission denied message OR auth modal should be visible
-        combined = f'{denied_selector}, {auth_modal_selector}'
+        combined = f"{denied_selector}, {auth_modal_selector}"
         expect(page.locator(combined).first).to_be_visible(timeout=timeout)
 
     elif assertion.kind == FlowAssertionKind.REF_VALID:
@@ -644,7 +646,7 @@ def _execute_assertion_sync(
 
     elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
         # Check that accessing route shows auth modal or redirects
-        auth_modal_selector = '[data-dazzle-auth-modal]'
+        auth_modal_selector = "[data-dazzle-auth-modal]"
         expect(page.locator(auth_modal_selector)).to_be_visible(timeout=timeout)
 
     elif assertion.kind == FlowAssertionKind.HAS_PERSONA:
@@ -757,17 +759,13 @@ test_app.add_typer(feedback_app, name="feedback")
 def feedback_record_regression(
     test_id: str = typer.Option(..., "--test-id", "-t", help="ID of the failing test"),
     test_path: str = typer.Option(..., "--test-path", "-p", help="Path to the test file"),
-    failure_message: str = typer.Option(
-        ..., "--message", "-m", help="Error message from the test"
-    ),
+    failure_message: str = typer.Option(..., "--message", "-m", help="Error message from the test"),
     failure_type: str = typer.Option(
         "assertion",
         "--type",
         help="Type: assertion, timeout, crash, flaky, infrastructure, selector_not_found, navigation_error, auth_error",
     ),
-    example: str = typer.Option(
-        ..., "--example", "-e", help="Name of the example project"
-    ),
+    example: str = typer.Option(..., "--example", "-e", help="Name of the example project"),
     manifest: str = typer.Option("dazzle.toml", "--manifest"),
 ) -> None:
     """
@@ -809,18 +807,14 @@ def feedback_add_correction(
     regression_id: str = typer.Option(
         ..., "--regression", "-r", help="Regression ID being fixed (e.g., REG-001)"
     ),
-    problem: str = typer.Option(
-        ..., "--problem", "-p", help="Description of what was wrong"
-    ),
+    problem: str = typer.Option(..., "--problem", "-p", help="Description of what was wrong"),
     change_type: str = typer.Option(
         "test_fix",
         "--type",
         "-t",
         help="Type: test_fix, dsl_fix, prompt_fix, infrastructure",
     ),
-    files: str = typer.Option(
-        None, "--files", "-f", help="Comma-separated list of files changed"
-    ),
+    files: str = typer.Option(None, "--files", "-f", help="Comma-separated list of files changed"),
     pattern: str = typer.Option(
         None, "--pattern", help="Reusable pattern identified from this fix"
     ),
@@ -997,9 +991,7 @@ def feedback_patterns(
 
     if not patterns:
         typer.echo("No patterns identified yet.")
-        typer.echo(
-            "Patterns are recorded when adding corrections with --pattern flag."
-        )
+        typer.echo("Patterns are recorded when adding corrections with --pattern flag.")
         return
 
     typer.secho("Identified Patterns", bold=True)
@@ -1030,9 +1022,7 @@ def feedback_prompt_suggestions(
 
     if not suggestions:
         typer.echo("No prompt improvements suggested yet.")
-        typer.echo(
-            "Suggestions are recorded when adding corrections with --prompt flag."
-        )
+        typer.echo("Suggestions are recorded when adding corrections with --prompt flag.")
         return
 
     typer.secho("Prompt Improvement Suggestions", bold=True)

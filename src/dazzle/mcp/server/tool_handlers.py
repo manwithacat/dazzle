@@ -1741,7 +1741,9 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
         personas_to_process = app_spec.personas
         if persona_filter:
             personas_to_process = [
-                p for p in personas_to_process if p.id == persona_filter or p.label == persona_filter
+                p
+                for p in personas_to_process
+                if p.id == persona_filter or p.label == persona_filter
             ]
 
         if not personas_to_process:
@@ -1784,7 +1786,9 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                     steps.append(
                         TestDesignStep(
                             action=TestDesignAction.NAVIGATE_TO,
-                            target=surfaces_for_persona[0].name if surfaces_for_persona else "dashboard",
+                            target=surfaces_for_persona[0].name
+                            if surfaces_for_persona
+                            else "dashboard",
                             rationale="Navigate to persona's primary workspace",
                         )
                     )
@@ -1992,7 +1996,10 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                 persona_designs = [d for d in existing_designs if d.persona == persona.id]
                 covered_goals = 0
                 for goal in persona.goals:
-                    if any(goal.lower() in (d.title.lower() if d.title else "") for d in persona_designs):
+                    if any(
+                        goal.lower() in (d.title.lower() if d.title else "")
+                        for d in persona_designs
+                    ):
                         covered_goals += 1
 
                 if covered_goals < len(persona.goals):
@@ -2011,7 +2018,9 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                 sm = entity.state_machine
                 for transition in sm.transitions:
                     # Check if deterministic tests cover this
-                    flow_id = f"{entity.name}_transition_{transition.from_state}_to_{transition.to_state}"
+                    flow_id = (
+                        f"{entity.name}_transition_{transition.from_state}_to_{transition.to_state}"
+                    )
                     if not any(f.id == flow_id for f in testspec.flows):
                         gaps.append(
                             TestGap(
@@ -2059,13 +2068,22 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         # Calculate coverage score
         total_items = (
-            len(all_entities) + len(app_spec.personas) + len(app_spec.surfaces) + len(app_spec.scenarios)
+            len(all_entities)
+            + len(app_spec.personas)
+            + len(app_spec.surfaces)
+            + len(app_spec.scenarios)
         )
         covered_items = (
             len(all_entities - untested_entities)
             + len(existing_personas)
             + len(tested_surfaces)
-            + len([s for s in app_spec.scenarios if any(d.scenario == s.name for d in existing_designs)])
+            + len(
+                [
+                    s
+                    for s in app_spec.scenarios
+                    if any(d.scenario == s.name for d in existing_designs)
+                ]
+            )
         )
 
         coverage_score = (covered_items / total_items * 100) if total_items > 0 else 100.0
@@ -2138,7 +2156,9 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
             for s in d.get("steps", []):
                 steps.append(
                     TestDesignStep(
-                        action=TestDesignAction(s["action"]) if s.get("action") else TestDesignAction.CLICK,
+                        action=TestDesignAction(s["action"])
+                        if s.get("action")
+                        else TestDesignAction.CLICK,
                         target=s.get("target", ""),
                         data=s.get("data"),
                         rationale=s.get("rationale"),
@@ -2152,7 +2172,9 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
                     description=d.get("description"),
                     persona=d.get("persona"),
                     scenario=d.get("scenario"),
-                    trigger=TestDesignTrigger(d["trigger"]) if d.get("trigger") else TestDesignTrigger.USER_CLICK,
+                    trigger=TestDesignTrigger(d["trigger"])
+                    if d.get("trigger")
+                    else TestDesignTrigger.USER_CLICK,
                     steps=steps,
                     expected_outcomes=d.get("expected_outcomes", []),
                     entities=d.get("entities", []),
@@ -2192,7 +2214,9 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     status_filter = args.get("status_filter")
 
     try:
-        status = TestDesignStatus(status_filter) if status_filter and status_filter != "all" else None
+        status = (
+            TestDesignStatus(status_filter) if status_filter and status_filter != "all" else None
+        )
         designs = get_test_designs_by_status(project_root, status)
         designs_file = get_dsl_tests_dir(project_root) / "designs.json"
 

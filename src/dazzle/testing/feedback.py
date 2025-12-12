@@ -681,9 +681,7 @@ def get_feedback_summary(project_root: Path) -> FeedbackSummary:
     return FeedbackSummary(
         total_regressions=len(regressions),
         open_regressions=len([r for r in regressions if r.status == RegressionStatus.OPEN]),
-        resolved_regressions=len(
-            [r for r in regressions if r.status == RegressionStatus.RESOLVED]
-        ),
+        resolved_regressions=len([r for r in regressions if r.status == RegressionStatus.RESOLVED]),
         total_corrections=len(corrections),
         patterns_identified=len([c for c in corrections if c.pattern_identified]),
         prompt_improvements_suggested=len([c for c in corrections if c.prompt_improvement]),
