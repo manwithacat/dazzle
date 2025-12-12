@@ -59,4 +59,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
 
 # Run DNR serve with local mode (single process, both API and UI)
 # Use --host 0.0.0.0 to allow external access from Docker
-CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--test-mode", "--host", "0.0.0.0"]
+# Explicit ports to override deterministic allocation (matches EXPOSE and health check)
+CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--test-mode", "--host", "0.0.0.0", "--port", "3000", "--api-port", "8000"]

@@ -57,4 +57,5 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run DNR backend only (API server without UI)
-CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--backend-only", "--test-mode", "--host", "0.0.0.0"]
+# Explicit port to override deterministic allocation (matches EXPOSE and health check)
+CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--backend-only", "--test-mode", "--host", "0.0.0.0", "--api-port", "8000"]

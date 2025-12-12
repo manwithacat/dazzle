@@ -20,7 +20,12 @@ from dazzle.core.ir import (
     SurfaceMode,
     SurfaceSpec,
 )
-from dazzle.core.ir.computed import AggregateCall, AggregateFunction, ComputedFieldSpec, FieldReference
+from dazzle.core.ir.computed import (
+    AggregateCall,
+    AggregateFunction,
+    ComputedFieldSpec,
+    FieldReference,
+)
 from dazzle.core.ir.domain import AccessSpec, PermissionKind, PermissionRule
 from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition
 from dazzle.testing.testspec_generator import (
@@ -567,7 +572,11 @@ class TestStateMachineFlowGeneration:
 
         # Check for valid transition flow (ID format: Ticket_transition_open_to_in_progress)
         valid_flow = next(
-            (f for f in flows if "transition_open_to_in_progress" in f.id and "invalid" not in f.id),
+            (
+                f
+                for f in flows
+                if "transition_open_to_in_progress" in f.id and "invalid" not in f.id
+            ),
             None,
         )
         assert valid_flow is not None
@@ -593,7 +602,9 @@ class TestStateMachineFlowGeneration:
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED
 
-    def test_no_flows_for_entity_without_state_machine(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
+    def test_no_flows_for_entity_without_state_machine(
+        self, task_entity: EntitySpec, simple_appspec: AppSpec
+    ) -> None:
         """Test that no flows are generated for entity without state machine."""
         flows = generate_state_machine_flows(task_entity, simple_appspec)
         assert flows == []
@@ -690,7 +701,9 @@ class TestComputedFieldFlowGeneration:
         )
         assert computed_value_assert is not None
 
-    def test_no_flows_for_entity_without_computed(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
+    def test_no_flows_for_entity_without_computed(
+        self, task_entity: EntitySpec, simple_appspec: AppSpec
+    ) -> None:
         """Test that no flows are generated for entity without computed fields."""
         flows = generate_computed_field_flows(task_entity, simple_appspec)
         assert flows == []
@@ -794,7 +807,9 @@ class TestAccessControlFlowGeneration:
         assert len(assert_steps) >= 1
         assert assert_steps[0].assertion.kind == FlowAssertionKind.PERMISSION_DENIED
 
-    def test_no_flows_for_entity_without_access(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
+    def test_no_flows_for_entity_without_access(
+        self, task_entity: EntitySpec, simple_appspec: AppSpec
+    ) -> None:
         """Test that no flows are generated for entity without access rules."""
         flows = generate_access_control_flows(task_entity, simple_appspec)
         assert flows == []
@@ -849,7 +864,9 @@ class TestReferenceFlowGeneration:
         )
 
     @pytest.fixture
-    def task_ref_appspec(self, task_entity_with_ref: EntitySpec, project_entity: EntitySpec) -> AppSpec:
+    def task_ref_appspec(
+        self, task_entity_with_ref: EntitySpec, project_entity: EntitySpec
+    ) -> AppSpec:
         """Create AppSpec with task and project entities."""
         return AppSpec(
             name="projects",
@@ -923,7 +940,8 @@ class TestReferenceFlowGeneration:
 
         # Should have fill step with fake UUID value
         fill_steps = [
-            s for s in invalid_flow.steps
+            s
+            for s in invalid_flow.steps
             if s.kind == FlowStepKind.FILL and s.value and "00000000" in s.value
         ]
         assert len(fill_steps) >= 1
@@ -936,7 +954,9 @@ class TestReferenceFlowGeneration:
         )
         assert ref_invalid_assert is not None
 
-    def test_no_flows_for_entity_without_refs(self, task_entity: EntitySpec, simple_appspec: AppSpec) -> None:
+    def test_no_flows_for_entity_without_refs(
+        self, task_entity: EntitySpec, simple_appspec: AppSpec
+    ) -> None:
         """Test that no flows are generated for entity without ref fields."""
         flows = generate_reference_flows(task_entity, simple_appspec)
         assert flows == []
