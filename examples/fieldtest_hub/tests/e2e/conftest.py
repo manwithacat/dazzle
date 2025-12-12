@@ -8,10 +8,14 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+# Add helpers to path
+sys.path.insert(0, str(Path(__file__).parent))
 
 import pytest
 from helpers.api_client import APIClient, ControlPlaneClient
