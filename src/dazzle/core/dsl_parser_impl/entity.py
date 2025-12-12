@@ -399,11 +399,14 @@ class EntityParserMixin:
         Map archetype string value to ArchetypeKind enum.
 
         v0.10.3: Supports settings, tenant, tenant_settings semantic archetypes.
+        v0.10.4: Added user, user_membership for user management.
         """
         mapping = {
             "settings": ir.ArchetypeKind.SETTINGS,
             "tenant": ir.ArchetypeKind.TENANT,
             "tenant_settings": ir.ArchetypeKind.TENANT_SETTINGS,
+            "user": ir.ArchetypeKind.USER,
+            "user_membership": ir.ArchetypeKind.USER_MEMBERSHIP,
         }
         if value in mapping:
             return mapping[value]

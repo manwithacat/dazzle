@@ -2,7 +2,7 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 22
+pattern_count = 24
 
 
 [patterns.adapter_result]
@@ -952,3 +952,88 @@ entity SystemSettings "System Settings":
 '''
 use_cases = ["Per-tenant branding", "Tenant-specific defaults", "Customer customization", "White-label configuration"]
 related = ["settings_archetype", "tenant_archetype", "timezone_field"]
+
+[patterns.user_archetype]
+name = "User Archetype Pattern"
+description = "Core user entity with built-in authentication fields for local auth and OAuth/SSO support"
+v0_10_4_feature = true
+components = ["archetype: user declaration", "Auto-injected auth fields", "OAuth provider support", "Admin-only CRUD surfaces"]
+example = '''
+# v0.10.4: User entity with automatic auth fields
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+    avatar_url: url optional
+
+# What gets auto-injected:
+# - password_hash: str(255) optional      # For local auth
+# - email_verified: bool = false
+# - email_verify_token: str(100) optional
+# - password_reset_token: str(100) optional
+# - password_reset_expires: datetime optional
+# - is_active: bool = true
+# - last_login: datetime optional
+# - auth_provider: enum[local,google,apple,github] = local
+# - auth_provider_id: str(255) optional    # External provider ID
+# - created_at: datetime auto_add
+
+# Auto-generated surfaces (admin-only):
+# - user_list: List all users
+# - user_view: View user details
+# - user_create: Create new user
+# - user_edit: Edit user
+
+# Important: User entity is system-wide (not tenant-scoped)
+# Use UserMembership for tenant-user relationships
+'''
+use_cases = ["User authentication", "Account management", "OAuth/SSO integration", "Admin user management"]
+related = ["user_membership_archetype", "tenant_archetype"]
+
+[patterns.user_membership_archetype]
+name = "User Membership Archetype Pattern"
+description = "User-tenant relationship with per-tenant personas (roles) for multi-tenant applications"
+v0_10_4_feature = true
+components = ["archetype: user_membership declaration", "Auto-injected user and tenant refs", "Personas JSON field for roles", "Invitation tracking fields"]
+example = '''
+# v0.10.4: Complete multi-tenant user management
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+    slug: str(50) required unique
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+    # Optionally define explicit refs (otherwise auto-injected):
+    # user: ref User required
+    # company: ref Company required
+
+# What gets auto-injected:
+# - user: ref User required              # Link to user
+# - company: ref Company required        # Link to tenant
+# - personas: json = []                  # ["admin", "member", "billing"]
+# - is_primary: bool = false             # Primary membership flag
+# - invited_by: ref User optional        # Who sent the invite
+# - invited_at: datetime auto_add        # When invited
+# - accepted_at: datetime optional       # When accepted
+
+# Auto-generated surfaces (admin-only):
+# - user_membership_list: List all memberships
+# - user_membership_edit: Edit membership (assign personas)
+
+# Usage: Assign personas to control per-tenant access
+# personas: ["admin"]           -> Full tenant admin
+# personas: ["member"]          -> Standard member
+# personas: ["billing", "member"] -> Member with billing access
+'''
+use_cases = ["Multi-tenant user management", "Per-tenant role assignment", "User invitation system", "Team member management"]
+related = ["user_archetype", "tenant_archetype"]

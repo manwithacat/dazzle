@@ -463,3 +463,300 @@ entity AppSettings "Settings":
         assert "id" not in field_names
         assert "timezone" in field_names
         assert "site_name" in field_names
+
+
+class TestUserArchetype:
+    """Test user semantic archetype expansion (v0.10.4)."""
+
+    def test_user_gets_auth_fields(self):
+        """User entity gets auth fields injected."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        user = expanded[0]
+        field_names = [f.name for f in user.fields]
+
+        # Check injected auth fields
+        assert "password_hash" in field_names
+        assert "email_verified" in field_names
+        assert "is_active" in field_names
+        assert "auth_provider" in field_names
+        assert "auth_provider_id" in field_names
+        assert "last_login" in field_names
+        assert "created_at" in field_names
+
+    def test_user_existing_fields_not_overwritten(self):
+        """User entity's existing fields are not overwritten."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+    is_active: bool = false
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        user = expanded[0]
+        # Find is_active field - should have user's default (false), not injected default (true)
+        is_active_fields = [f for f in user.fields if f.name == "is_active"]
+        assert len(is_active_fields) == 1
+        assert is_active_fields[0].default is False
+
+    def test_user_gets_admin_access(self):
+        """User entity gets admin-only access rules."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        user = expanded[0]
+        assert user.access is not None
+        assert len(user.access.visibility) > 0
+        assert len(user.access.permissions) == 3
+
+    def test_user_not_tenant_scoped(self):
+        """User entity does not get tenant FK injected."""
+        dsl = """
+module test
+app Test "Test"
+
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        user = next(e for e in expanded if e.name == "User")
+        field_names = [f.name for f in user.fields]
+        # User should NOT have company FK
+        assert "company" not in field_names
+
+
+class TestUserMembershipArchetype:
+    """Test user_membership semantic archetype expansion (v0.10.4)."""
+
+    def test_membership_gets_user_ref(self):
+        """User membership entity gets user ref injected."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        membership = next(e for e in expanded if e.name == "UserMembership")
+        field_names = [f.name for f in membership.fields]
+
+        assert "user" in field_names
+        user_field = next(f for f in membership.fields if f.name == "user")
+        assert user_field.type.kind == ir.FieldTypeKind.REF
+        assert user_field.type.ref_entity == "User"
+
+    def test_membership_gets_tenant_ref(self):
+        """User membership entity gets tenant ref injected."""
+        dsl = """
+module test
+app Test "Test"
+
+entity Company "Company":
+    archetype: tenant
+    id: uuid pk
+    name: str(200) required
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        membership = next(e for e in expanded if e.name == "UserMembership")
+        field_names = [f.name for f in membership.fields]
+
+        assert "company" in field_names
+        company_field = next(f for f in membership.fields if f.name == "company")
+        assert company_field.type.kind == ir.FieldTypeKind.REF
+        assert company_field.type.ref_entity == "Company"
+
+    def test_membership_gets_personas_field(self):
+        """User membership entity gets personas JSON field injected."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        membership = next(e for e in expanded if e.name == "UserMembership")
+        field_names = [f.name for f in membership.fields]
+
+        assert "personas" in field_names
+        personas_field = next(f for f in membership.fields if f.name == "personas")
+        assert personas_field.type.kind == ir.FieldTypeKind.JSON
+
+    def test_membership_gets_metadata_fields(self):
+        """User membership entity gets invitation metadata fields."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        membership = next(e for e in expanded if e.name == "UserMembership")
+        field_names = [f.name for f in membership.fields]
+
+        assert "is_primary" in field_names
+        assert "invited_by" in field_names
+        assert "invited_at" in field_names
+        assert "accepted_at" in field_names
+
+
+class TestUserManagementSurfaces:
+    """Test auto-surface generation for user archetypes (v0.10.4)."""
+
+    def test_user_crud_surfaces_generated(self):
+        """User entity gets full CRUD surfaces generated."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        surface_names = {s.name for s in surfaces}
+        assert "user_list" in surface_names
+        assert "user_view" in surface_names
+        assert "user_create" in surface_names
+        assert "user_edit" in surface_names
+
+    def test_user_surfaces_are_admin_only(self):
+        """User management surfaces have admin-only access."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        for surface in surfaces:
+            assert surface.access is not None
+            assert surface.access.require_auth is True
+            assert "admin" in surface.access.allow_personas
+
+    def test_membership_surfaces_generated(self):
+        """User membership entity gets list and edit surfaces."""
+        from dazzle.core.archetype_expander import generate_archetype_surfaces
+
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+
+entity UserMembership "User Membership":
+    archetype: user_membership
+    id: uuid pk
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+
+        surfaces = generate_archetype_surfaces(expanded, [])
+
+        surface_names = {s.name for s in surfaces}
+        # User surfaces
+        assert "user_list" in surface_names
+        # Membership surfaces
+        assert "user_membership_list" in surface_names
+        assert "user_membership_edit" in surface_names

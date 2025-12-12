@@ -25,17 +25,22 @@ class ArchetypeKind(str, Enum):
     Kind of semantic archetype.
 
     v0.10.3: Added for settings and multi-tenancy support.
+    v0.10.4: Added USER and USER_MEMBERSHIP for user management.
 
     CUSTOM: User-defined archetype (existing behavior)
     SETTINGS: Singleton entity with admin-only access (system-wide config)
     TENANT: Tenant root entity for multi-tenancy
     TENANT_SETTINGS: Per-tenant settings (scoped to tenant admins)
+    USER: Core user entity with auth fields (email, password_hash, OAuth support)
+    USER_MEMBERSHIP: User-tenant relationship with per-tenant personas
     """
 
     CUSTOM = "custom"
     SETTINGS = "settings"
     TENANT = "tenant"
     TENANT_SETTINGS = "tenant_settings"
+    USER = "user"
+    USER_MEMBERSHIP = "user_membership"
 
 
 class ArchetypeSpec(BaseModel):
