@@ -151,9 +151,14 @@ def _generate_routes_from_surfaces(
                 workspace_entities.add(surface.entity_ref)
 
     # Generate routes for each entity's surfaces
+    # v0.14.2: Only include surfaces for entities used in this workspace
     for surface in surfaces:
         entity_name = surface.entity_ref
         if not entity_name:
+            continue
+
+        # Filter: only include surfaces for entities in this workspace
+        if workspace_entities and entity_name not in workspace_entities:
             continue
 
         component_name = surface_component_map.get(surface.name)

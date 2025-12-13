@@ -52,15 +52,19 @@ def create_mcp_config(project_dir: Path) -> None:
     """
     Create .mcp.json configuration file for Claude Code integration.
 
+    Uses the current Python executable to ensure dazzle is available.
+    The MCP server module is dazzle.mcp (not dazzle.mcp.server).
+
     Args:
         project_dir: Directory to create the file in
     """
+    import sys
+
     mcp_config = {
         "mcpServers": {
             "dazzle": {
-                "command": "python",
-                "args": ["-m", "dazzle.mcp.server"],
-                "cwd": "${workspaceFolder}",
+                "command": sys.executable,
+                "args": ["-m", "dazzle.mcp"],
             }
         }
     }

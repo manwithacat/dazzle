@@ -75,8 +75,11 @@ Repository = "https://github.com/manwithacat/dazzle"
 Issues = "https://github.com/manwithacat/dazzle/issues"
 Changelog = "https://github.com/manwithacat/dazzle/blob/main/CHANGELOG.md"
 
-[project.scripts]
-dazzle = "dazzle.cli:main"
+# NOTE: Console script removed in v0.14.0
+# The Bun CLI is now the primary entry point.
+# Python CLI is still available via: python -m dazzle
+# [project.scripts]
+# dazzle = "dazzle.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

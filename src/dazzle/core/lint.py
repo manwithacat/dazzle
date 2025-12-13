@@ -79,4 +79,8 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
         extended_warnings = extended_lint(appspec)
         all_warnings.extend(extended_warnings)
 
+    # v0.14.1: Include link warnings (e.g., unused imports)
+    link_warnings = appspec.metadata.get("link_warnings", [])
+    all_warnings.extend(link_warnings)
+
     return all_errors, all_warnings

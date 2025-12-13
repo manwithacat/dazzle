@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "dazzle": {
-      "command": "python",
-      "args": ["-m", "dazzle.mcp.server"],
-      "cwd": "${workspaceFolder}"
-    }
-  }
-}
