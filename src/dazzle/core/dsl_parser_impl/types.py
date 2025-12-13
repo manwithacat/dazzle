@@ -379,6 +379,34 @@ class TypeParserMixin:
                     # v0.9.1: Allow keywords as default enum values
                     # e.g., status: enum[draft,submitted,approved]=submitted
                     default = self.advance().value
+                else:
+                    # v0.14.1: Provide helpful error for invalid default values
+                    err_token = self.current_token()
+                    operator_tokens = {
+                        TokenType.SLASH,
+                        TokenType.STAR,
+                        TokenType.PLUS,
+                        TokenType.MINUS,
+                        TokenType.COLON,
+                        TokenType.COMMA,
+                        TokenType.DOT,
+                        TokenType.ARROW,
+                    }
+                    if err_token.type in operator_tokens:
+                        raise make_parse_error(
+                            f"Invalid default value - unexpected '{err_token.value}'.\n"
+                            f"  If the default contains special characters, use quotes:\n"
+                            f'  Example: mime_type: str(100)="application/pdf"',
+                            self.file,
+                            err_token.line,
+                            err_token.column,
+                        )
+                    raise make_parse_error(
+                        f"Invalid default value: {err_token.value}",
+                        self.file,
+                        err_token.line,
+                        err_token.column,
+                    )
             else:
                 break
 

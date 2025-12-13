@@ -4,6 +4,7 @@ from .errors import LinkError
 from .ir.security import SecurityConfig, SecurityProfile
 from .linker_impl import (
     build_symbol_table,
+    check_unused_imports,
     merge_fragments,
     resolve_dependencies,
     validate_module_access,
@@ -98,10 +99,13 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     for surface in auto_surfaces:
         symbols.surfaces[surface.name] = surface
 
-    # 7. Merge fragments into unified structure
+    # 7. Check for unused imports (v0.14.1)
+    unused_import_warnings = check_unused_imports(sorted_modules, symbols)
+
+    # 8. Merge fragments into unified structure
     merged_fragment = merge_fragments(sorted_modules, symbols)
 
-    # 8. Build final AppSpec
+    # 9. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
         title=app_title,
@@ -120,6 +124,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,
+            "link_warnings": unused_import_warnings,  # v0.14.1
         },
     )
 

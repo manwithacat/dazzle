@@ -405,6 +405,164 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
     return errors
 
 
+def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> list[str]:
+    """
+    Check for modules that are imported but never used.
+
+    v0.14.1: Added based on user feedback - helps catch unnecessary coupling.
+
+    Args:
+        modules: List of all modules
+        symbols: Symbol table with all definitions
+
+    Returns:
+        List of warning messages for unused imports
+    """
+    warnings = []
+
+    for module in modules:
+        if not module.uses:
+            continue
+
+        # Track which imports are actually used
+        used_modules: set[str] = set()
+
+        # Check entity field references
+        for entity in module.fragment.entities:
+            for entity_field in entity.fields:
+                if entity_field.type.kind == ir.FieldTypeKind.REF:
+                    ref_entity = entity_field.type.ref_entity
+                    if ref_entity:
+                        owner = symbols.symbol_sources.get(ref_entity)
+                        if owner and owner != module.name:
+                            used_modules.add(owner)
+
+        # Check surface entity references
+        for surface in module.fragment.surfaces:
+            if surface.entity_ref:
+                owner = symbols.symbol_sources.get(surface.entity_ref)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+
+            # Check surface action outcomes
+            for action in surface.actions:
+                outcome = action.outcome
+                if outcome.target:
+                    owner = symbols.symbol_sources.get(outcome.target)
+                    if owner and owner != module.name:
+                        used_modules.add(owner)
+
+        # Check experience step references
+        for experience in module.fragment.experiences:
+            for step in experience.steps:
+                if step.surface:
+                    owner = symbols.symbol_sources.get(step.surface)
+                    if owner and owner != module.name:
+                        used_modules.add(owner)
+                if step.integration:
+                    owner = symbols.symbol_sources.get(step.integration)
+                    if owner and owner != module.name:
+                        used_modules.add(owner)
+
+        # Check foreign model API references
+        for foreign_model in module.fragment.foreign_models:
+            if foreign_model.api_ref:
+                owner = symbols.symbol_sources.get(foreign_model.api_ref)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+
+        # Check integration references
+        for integration in module.fragment.integrations:
+            for api_ref in integration.api_refs:
+                owner = symbols.symbol_sources.get(api_ref)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+            for fm_ref in integration.foreign_model_refs:
+                owner = symbols.symbol_sources.get(fm_ref)
+                if owner and owner != module.name:
+                    used_modules.add(owner)
+
+        # Find unused imports
+        unused = set(module.uses) - used_modules
+        for unused_import in sorted(unused):
+            warnings.append(
+                f"Module '{module.name}' imports '{unused_import}' but never uses it. "
+                f"Consider removing: use {unused_import}"
+            )
+
+    return warnings
+
+
+def detect_entity_cycles(symbols: SymbolTable) -> list[str]:
+    """
+    Detect circular reference chains between entities.
+
+    v0.14.1: Added based on user feedback - catches Entity A -> B -> C -> A cycles
+    early during linking instead of at database migration time.
+
+    Args:
+        symbols: Complete symbol table
+
+    Returns:
+        List of warning messages for circular refs (empty if none)
+    """
+    warnings = []
+
+    # Build adjacency list of entity refs
+    ref_graph: dict[str, set[str]] = {name: set() for name in symbols.entities}
+
+    for entity_name, entity in symbols.entities.items():
+        for fld in entity.fields:
+            if fld.type.kind == ir.FieldTypeKind.REF and fld.type.ref_entity:
+                ref_entity = fld.type.ref_entity
+                if ref_entity in symbols.entities:
+                    ref_graph[entity_name].add(ref_entity)
+
+    # DFS to detect cycles
+    def find_cycle(start: str) -> list[str] | None:
+        """Find cycle starting from given entity. Returns cycle path or None."""
+        visited: set[str] = set()
+        path: list[str] = []
+
+        def dfs(node: str) -> list[str] | None:
+            if node in path:
+                # Found cycle - return the cycle portion
+                cycle_start = path.index(node)
+                return path[cycle_start:] + [node]
+            if node in visited:
+                return None
+            visited.add(node)
+            path.append(node)
+            for neighbor in ref_graph.get(node, set()):
+                result = dfs(neighbor)
+                if result:
+                    return result
+            path.pop()
+            return None
+
+        return dfs(start)
+
+    # Check each entity for cycles
+    reported_cycles: set[tuple[str, ...]] = set()
+    for entity_name in symbols.entities:
+        cycle = find_cycle(entity_name)
+        if cycle:
+            # Normalize cycle to avoid duplicates (sort by first element)
+            # e.g., [A, B, C, A] and [B, C, A, B] are the same cycle
+            min_idx = cycle[:-1].index(min(cycle[:-1]))
+            normalized = tuple(cycle[min_idx:-1]) + (cycle[min_idx],)
+            if normalized not in reported_cycles:
+                reported_cycles.add(normalized)
+                cycle_str = " -> ".join(cycle)
+                warnings.append(
+                    f"Circular entity reference detected: {cycle_str}\n"
+                    f"  This may cause issues with database migrations and data loading.\n"
+                    f"  Consider breaking the cycle with optional refs or a junction entity."
+                )
+
+    return warnings
+
+
 def validate_references(symbols: SymbolTable) -> list[str]:
     """
     Validate all cross-references in the symbol table.
@@ -416,6 +574,7 @@ def validate_references(symbols: SymbolTable) -> list[str]:
     - Experience step targets point to valid surfaces/integrations
     - API refs in foreign models and integrations are valid
     - Foreign model refs in integrations are valid
+    - v0.14.1: Entity circular reference cycles
 
     Args:
         symbols: Complete symbol table
@@ -424,6 +583,10 @@ def validate_references(symbols: SymbolTable) -> list[str]:
         List of error messages (empty if valid)
     """
     errors = []
+
+    # v0.14.1: Detect entity reference cycles early
+    cycle_warnings = detect_entity_cycles(symbols)
+    errors.extend(cycle_warnings)
 
     # Validate entity references in entity fields
     for entity_name, entity in symbols.entities.items():

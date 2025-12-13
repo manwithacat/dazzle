@@ -85,7 +85,7 @@ entity Booking "Booking":
 '''
 related = ["entity", "state_machine", "access_rules"]
 v0_7_changes = "NEW in v0.7"
-best_practices = ["Use = for equality (consistent with access rules)", "Express as 'A or B' for 'if A then B' rules", "Keep invariants simple and focused", "Document the business rule in a comment"]
+best_practices = ["Use = for equality (consistent with access rules)", "Express as 'A or B' for 'if A then B' rules", "Keep invariants simple and focused", "Document the business rule in a comment", "Invariants use comparison operators (>, <, =, !=) - state machines use 'requires field' instead"]
 
 [concepts.state_machine]
 category = "Business Logic (v0.7)"
@@ -95,11 +95,26 @@ transitions:
   <from_state> -> <to_state>
   <from_state> -> <to_state>: requires <field_name>
   <from_state> -> <to_state>: role(<role_name>)
+  <from_state> -> <to_state>: auto after <N> days
+  <from_state> -> <to_state>: auto after <N> hours OR manual
   * -> <to_state>: role(admin)  # wildcard: from any state
+
+# Supported conditions:
+#   requires <field_name>     - Field must not be null
+#   role(<role_name>)         - User must have this role
+#   auto after <N> days       - Auto-transition after delay
+#   auto after <N> hours      - (also: minutes)
+#   auto ... OR manual        - Allow manual trigger too
+
+# NOT supported in transitions (use invariants instead):
+#   field != null        - Use: requires field
+#   field = value        - Not supported
+#   field > value        - Not supported
+#   Comparison operators - Not supported
 '''
 example = '''
 entity Task "Task":
-  status: enum[todo,in_progress,done]=todo
+  status: enum[todo,in_progress,done,archived]=todo
   assigned_to: ref User
 
   transitions:
@@ -107,7 +122,18 @@ entity Task "Task":
     in_progress -> done
     in_progress -> todo
     done -> todo: role(admin)  # Only admin can reopen
+    done -> archived: auto after 30 days OR manual
+
+entity Ticket "Ticket":
+  status: enum[open,resolved,closed]=open
+  resolution_note: text
+
+  transitions:
+    open -> resolved: requires resolution_note
+    resolved -> closed: auto after 7 days OR manual
+    resolved -> open
+    * -> open: role(admin)  # Admin can reopen from any state
 '''
 related = ["entity", "invariant", "access_rules"]
 v0_7_changes = "NEW in v0.7"
-best_practices = ["Use for status fields with defined workflows", "Document transition rules that match business processes", "Use role guards for administrative overrides", "Use requires guards for data integrity"]
+best_practices = ["Use for status fields with defined workflows", "Document transition rules that match business processes", "Use role guards for administrative overrides", "Use requires guards for data integrity", "Transition conditions are simpler than invariants - use 'requires field' not 'field != null'", "For complex validations (field > value, field = specific_value), use invariants with status conditions instead"]
