@@ -188,6 +188,7 @@ INDEX_HTML_TEMPLATE = """<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/dazzle-favicon.svg">
   <!-- DaisyUI - semantic component classes (42kB gzipped) -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
   <!-- Tailwind Browser - minimal utilities for layout -->
@@ -351,6 +352,17 @@ class ViteGenerator:
         css_file = styles_dir / "dnr.css"
         css_file.write_text(_get_bundled_css())
         created_files.append(css_file)
+
+        # Copy assets (favicon, etc.) from static/assets/
+        assets_src_dir = _STATIC_DIR / "assets"
+        if assets_src_dir.exists():
+            assets_dest_dir = src_dir / "assets"
+            assets_dest_dir.mkdir(exist_ok=True)
+            for asset_file in assets_src_dir.iterdir():
+                if asset_file.is_file():
+                    dest_file = assets_dest_dir / asset_file.name
+                    dest_file.write_bytes(asset_file.read_bytes())
+                    created_files.append(dest_file)
 
         # Create DNR runtime directory
         dnr_dir = src_dir / "dnr"

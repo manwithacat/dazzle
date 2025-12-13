@@ -127,6 +127,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/styles/dnr.css":
             # Serve bundled CSS (v0.8.11)
             self._serve_css()
+        elif path.startswith("/assets/"):
+            # Serve static assets (favicon, etc.) (v0.14.2)
+            self._serve_asset(path)
         elif path == "/dnr-runtime.js":
             self._serve_runtime()
         elif path == "/app.js":
@@ -327,6 +330,48 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._send_response(css_content, "text/css")
         except Exception as e:
             self.send_error(500, f"Failed to load CSS: {e}")
+
+    def _serve_asset(self, path: str) -> None:
+        """Serve static assets from static/assets/ directory (v0.14.2)."""
+        try:
+            # Get filename from path (e.g., /assets/dazzle-favicon.svg -> dazzle-favicon.svg)
+            filename = path.removeprefix("/assets/")
+            if not filename or ".." in filename or filename.startswith("/"):
+                self.send_error(404, "Asset not found")
+                return
+
+            # Load from static/assets directory
+            static_dir = Path(__file__).parent / "static" / "assets"
+            asset_path = static_dir / filename
+
+            if not asset_path.exists() or not asset_path.is_file():
+                self.send_error(404, f"Asset not found: {filename}")
+                return
+
+            # Determine content type based on extension
+            content_types = {
+                ".svg": "image/svg+xml",
+                ".png": "image/png",
+                ".ico": "image/x-icon",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".gif": "image/gif",
+                ".webp": "image/webp",
+            }
+            ext = asset_path.suffix.lower()
+            content_type = content_types.get(ext, "application/octet-stream")
+
+            # Read and send the asset
+            data = asset_path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "public, max-age=86400")  # Cache for 1 day
+            self.end_headers()
+            self.wfile.write(data)
+
+        except Exception as e:
+            self.send_error(500, f"Failed to load asset: {e}")
 
     def _serve_hot_reload(self) -> None:
         """Serve hot reload SSE endpoint."""

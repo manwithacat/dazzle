@@ -183,6 +183,7 @@ class JSGenerator:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title}</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/dazzle-favicon.svg">
   <!-- DaisyUI - semantic component classes -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
   <!-- Tailwind Browser - minimal utilities for layout -->
@@ -257,6 +258,18 @@ class JSGenerator:
             html_path = output_dir / "index.html"
             html_path.write_text(self.generate_html())
             created_files.append(html_path)
+
+        # Copy assets (favicon, etc.) from static/assets/
+        static_dir = Path(__file__).parent / "static"
+        assets_src_dir = static_dir / "assets"
+        if assets_src_dir.exists():
+            assets_dest_dir = output_dir / "assets"
+            assets_dest_dir.mkdir(exist_ok=True)
+            for asset_file in assets_src_dir.iterdir():
+                if asset_file.is_file():
+                    dest_file = assets_dest_dir / asset_file.name
+                    dest_file.write_bytes(asset_file.read_bytes())
+                    created_files.append(dest_file)
 
         return created_files
 
