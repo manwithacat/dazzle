@@ -593,7 +593,39 @@ class EntityParserMixin:
                     continue
 
                 else:
-                    # Unknown token, break
+                    # v0.14.1: Provide helpful error for unsupported syntax
+                    token = self.current_token()
+                    # Check for common unsupported patterns
+                    if token.type in (
+                        TokenType.NOT_EQUALS,
+                        TokenType.DOUBLE_EQUALS,
+                        TokenType.LESS_THAN,
+                        TokenType.GREATER_THAN,
+                    ):
+                        raise make_parse_error(
+                            f"Transition conditions don't support comparison operators like '{token.value}'.\n"
+                            f"  Supported syntax:\n"
+                            f"    requires field_name     # Field must not be null\n"
+                            f"    role(role_name)         # User must have role\n"
+                            f"    auto after N days       # Auto-transition with delay\n"
+                            f"  Example: open -> assigned: requires assignee",
+                            self.file,
+                            token.line,
+                            token.column,
+                        )
+                    elif token.type == TokenType.IDENTIFIER:
+                        # User might be trying to use field name directly
+                        raise make_parse_error(
+                            f"Unexpected identifier '{token.value}' in transition condition.\n"
+                            f"  Did you mean: requires {token.value}\n"
+                            f"  Supported syntax:\n"
+                            f"    requires field_name     # Field must not be null\n"
+                            f"    role(role_name)         # User must have role",
+                            self.file,
+                            token.line,
+                            token.column,
+                        )
+                    # For other unexpected tokens, break (might be end of transition)
                     break
 
         return ir.StateTransition(

@@ -7,7 +7,46 @@ concept_count = 1
 
 [concepts.reserved_keywords]
 category = "DSL Reference"
-definition = "Words reserved by the DAZZLE DSL that cannot be used as field names, enum values, or identifiers. Using these will cause parse errors."
+definition = "Words reserved by the DAZZLE DSL that cannot be used as field names, enum values, or identifiers. Using these will cause parse errors with suggestions for alternatives."
+syntax = '''
+# If you see: "'schedule' is a reserved keyword and cannot be used as an identifier"
+# Choose an alternative name:
+
+entity Appointment "Appointment":
+  # WRONG: schedule: datetime          # 'schedule' is reserved
+  scheduled_at: datetime required       # CORRECT alternative
+
+  # WRONG: status: enum[...]            # 'status' is reserved
+  state: enum[pending,confirmed,done]   # CORRECT alternative
+
+  # WRONG: message: text                # 'message' is reserved
+  content: text                         # CORRECT alternative
+'''
+example = '''
+# Common reserved words and their alternatives:
+
+# Timing/Scheduling:
+#   schedule    -> timing, scheduled_at, appointment_time
+#   start       -> start_at, begins_at, start_time
+#   created     -> created_at, added_at, initialized_at
+
+# Communication:
+#   message     -> notification, msg, content
+#   email       -> email_address, contact_email
+
+# Status/State:
+#   status      -> state, condition, progress, current_status
+#   stage       -> current_stage, phase, step_number
+
+# Data:
+#   data        -> payload, content, record_data
+#   query       -> search_query, query_text
+
+# Actions:
+#   create      -> add, new_record
+#   update      -> modify, change
+#   delete      -> remove, archive
+'''
 related = ["enum", "field_types", "entity"]
 critical_keywords = [
   "# Top-level constructs",

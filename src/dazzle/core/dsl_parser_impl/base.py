@@ -118,6 +118,7 @@ class BaseParser:
             return self.advance()
 
         # v0.3.1: Provide helpful alternatives for common reserved keywords
+        # v0.14.1: Expanded list based on user feedback
         keyword_alternatives = {
             "url": "endpoint, uri, address, link",
             "source": "data_source, origin, provider, event_source",
@@ -132,18 +133,76 @@ class BaseParser:
             "spec": "specification, api_spec",
             "from": "from_source, source_entity",
             "into": "into_target, target_entity",
+            # Added in v0.14.1
+            "schedule": "timing, scheduled_at, appointment",
+            "action": "action_type, operation, task_action",
+            "view": "view_type, display_view, page_view",
+            "access": "access_level, permissions, access_type",
+            "role": "user_role, role_type, assigned_role",
+            "input": "input_data, request_input, form_input",
+            "output": "output_data, result, response_output",
+            "query": "search_query, query_text, query_params",
+            "message": "notification, msg, content_message",
+            "sync": "synchronize, sync_status, is_synced",
+            "test": "test_case, test_name, is_test",
+            "flow": "workflow, process_flow, flow_type",
+            "step": "step_number, workflow_step, process_step",
+            "start": "start_at, begins_at, start_time",
+            "scope": "scope_type, access_scope, data_scope",
+            "limit": "max_limit, row_limit, limit_value",
+            "count": "total_count, item_count, record_count",
+            "display": "display_name, shown_as, label",
+            "list": "items, listing, item_list",
+            "sum": "total, sum_total, amount_sum",
         }
 
         keyword = token.type.value
-        if keyword in keyword_alternatives:
+
+        # v0.14.1: Distinguish between operators and reserved keywords
+        # Only include tokens that actually exist in the lexer
+        operator_tokens = {
+            TokenType.SLASH,
+            TokenType.STAR,
+            TokenType.PLUS,
+            TokenType.MINUS,
+            TokenType.EQUALS,
+            TokenType.NOT_EQUALS,
+            TokenType.DOUBLE_EQUALS,
+            TokenType.LESS_THAN,
+            TokenType.GREATER_THAN,
+            TokenType.LESS_EQUAL,
+            TokenType.GREATER_EQUAL,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
+            TokenType.LBRACKET,
+            TokenType.RBRACKET,
+            TokenType.COLON,
+            TokenType.COMMA,
+            TokenType.DOT,
+            TokenType.ARROW,
+        }
+
+        if token.type in operator_tokens:
+            # It's an operator, not a keyword - likely a syntax error
+            error_msg = (
+                f"Unexpected '{token.value}' - expected identifier.\n"
+                f'  If this is part of a string value, use quotes: "your value here"\n'
+                f'  Example: mime_type: str(100)="application/pdf"'
+            )
+        elif keyword in keyword_alternatives:
             alternatives = keyword_alternatives[keyword]
             error_msg = (
-                f"Field name '{keyword}' is a reserved keyword.\n"
+                f"'{keyword}' is a reserved keyword and cannot be used as an identifier.\n"
                 f"  Suggested alternatives: {alternatives}\n"
                 f"  See docs/DSL_RESERVED_KEYWORDS.md for full list"
             )
         else:
-            error_msg = f"Expected identifier or keyword, got {keyword}"
+            # Generic message for any reserved keyword
+            error_msg = (
+                f"'{keyword}' is a reserved keyword and cannot be used as an identifier.\n"
+                f"  Try a different name like '{keyword}_value' or '{keyword}_field'.\n"
+                f"  See docs/DSL_RESERVED_KEYWORDS.md for the full list of reserved keywords."
+            )
 
         raise make_parse_error(
             error_msg,
