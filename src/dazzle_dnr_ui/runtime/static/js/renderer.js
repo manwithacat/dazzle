@@ -50,7 +50,8 @@ function renderElementNode(node, context) {
   // This enables the DOM contract (data-dazzle-* attributes)
   // Note: 'view' should only be on the root element, not propagated to children
   if (context.dazzle || node.dazzle) {
-    const { view: _contextView, ...contextDazzleWithoutView } = context.dazzle || {};
+    const { view: _unusedView, ...contextDazzleWithoutView } = context.dazzle || {};
+    void _unusedView; // Intentionally unused - we strip view from context propagation
     resolvedProps.dazzle = {
       ...contextDazzleWithoutView,
       ...node.dazzle, // node.dazzle can override with its own view if explicitly set

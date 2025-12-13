@@ -666,7 +666,7 @@ registerComponent('FilterableTable', (props) => {
         if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
           throw new Error(
             `API returned HTML instead of JSON for ${apiEndpoint}. ` +
-            `Check that the backend is running and proxy is configured.`
+            'Check that the backend is running and proxy is configured.'
           );
         }
         throw new Error(`Unexpected content type: ${contentType || 'unknown'}`);
