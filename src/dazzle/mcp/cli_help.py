@@ -503,10 +503,23 @@ surface task_create "New Task":
             ],
             "next_steps": [
                 "Add more entities (use 'add_entity' workflow)",
-                "Create a dashboard workspace",
-                "Add personas for role-based access",
+                "Create a dashboard workspace (use 'add_workspace' workflow)",
+                "Add personas for role-based access (use 'add_personas' workflow)",
+                "Generate demo data: mcp__dazzle__propose_demo_blueprint",
                 "Set up E2E testing (use 'setup_testing' workflow)",
             ],
+            "demo_data_hint": """
+After validation succeeds, generate realistic demo data:
+
+1. Propose a demo data blueprint:
+   mcp__dazzle__propose_demo_blueprint
+
+2. Review and save the blueprint:
+   mcp__dazzle__save_demo_blueprint
+
+3. Generate demo data files:
+   mcp__dazzle__generate_demo_data
+""",
         },
         "new_project": {
             "name": "Create a New DAZZLE Project",
@@ -660,6 +673,20 @@ surface customer_create "New Customer":
                 "MONITOR_WALL - Multiple signal regions",
                 "COMMAND_CENTER - Complex multi-region layout",
             ],
+            "next_steps": [
+                "Define personas for role-based access (use 'add_personas' workflow)",
+                "Add attention signals to highlight important data",
+                "Generate demo data: mcp__dazzle__propose_demo_blueprint",
+            ],
+            "persona_hint": """
+You've created a workspace. Consider defining personas for role-based access:
+
+  workspace dashboard → persona admin (full visibility)
+  workspace customer_portal → persona customer (sees own data)
+  workspace sales_dashboard → persona sales_rep (sees team data)
+
+Use: get_workflow_guide('add_personas') for step-by-step instructions.
+""",
         },
         "add_personas": {
             "name": "Add Role-Based Access with Personas",

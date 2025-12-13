@@ -10,7 +10,7 @@ import { success, error } from '../lib/output'
 
 const NewArgs = z.object({
   name: z.string().optional().describe('Project name'),
-  template: z.string().default('simple_task').describe('Template to use'),
+  template: z.string().default('blank').describe('Template to use'),
   path: z.string().optional().describe('Directory to create project in'),
 })
 
@@ -21,7 +21,8 @@ export const newCommand: CommandDefinition<typeof NewArgs> = {
 Creates a new DAZZLE project from a template.
 
 Available templates:
-  simple_task      - Basic task management app (default)
+  blank            - Empty project with SPEC.md (default, recommended)
+  simple_task      - Basic task management app (working example)
   contact_manager  - Contact management with categories
   uptime_monitor   - Service monitoring dashboard
   ops_dashboard    - Operations dashboard with metrics

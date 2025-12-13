@@ -215,7 +215,7 @@ def get_project_info_json(
 
 def init_project_json(
     name: str,
-    template: str = "simple_task",
+    template: str = "blank",
     path: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -223,7 +223,7 @@ def init_project_json(
 
     Args:
         name: Project name
-        template: Template to use
+        template: Template to use ("blank" for empty project, or example name)
         path: Target path
 
     Returns:
@@ -233,11 +233,15 @@ def init_project_json(
 
     target_path = Path(path) if path else Path.cwd() / name
 
+    # "blank" template uses templates/blank, not an example
+    # Other templates are treated as example names
+    from_example = None if template == "blank" else template
+
     try:
         init_project(
             project_name=name,
             target_dir=target_path,
-            from_example=template,
+            from_example=from_example,
         )
         return {
             "name": name,

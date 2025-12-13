@@ -106,9 +106,12 @@ function parseArgs(argv: string[]): {
       continue
     }
 
-    // Positional argument (for commands that take a path, etc.)
+    // Positional argument (for commands that take a name/path, etc.)
+    // First positional goes to 'name', second goes to 'path' (if not already set by flag)
     if (!arg.startsWith('-')) {
-      if (!args.path) {
+      if (!args.name) {
+        args.name = arg
+      } else if (!args.path) {
         args.path = arg
       }
       i++

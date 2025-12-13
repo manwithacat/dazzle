@@ -51,9 +51,9 @@ def dnr_serve(
     ),
     db_path: str = typer.Option(".dazzle/data.db", "--db", help="SQLite database path"),
     test_mode: bool = typer.Option(
-        False,
-        "--test-mode",
-        help="Enable test endpoints (/__test__/seed, /__test__/reset, etc.)",
+        True,
+        "--test-mode/--no-test-mode",
+        help="Enable test endpoints (/__test__/seed, /__test__/reset, etc.). Enabled by default.",
     ),
     watch: bool = typer.Option(
         False,
@@ -106,7 +106,7 @@ def dnr_serve(
         dazzle dnr serve --api-port 9000    # API on 9000
         dazzle dnr serve --ui-only          # Static UI only (no API)
         dazzle dnr serve --db ./my.db       # Custom database path
-        dazzle dnr serve --test-mode        # Enable E2E test endpoints
+        dazzle dnr serve --no-test-mode     # Disable E2E test endpoints
         dazzle dnr serve --graphql          # Enable GraphQL at /graphql
 
     Hot reload (--watch):

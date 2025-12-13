@@ -98,13 +98,13 @@ After registration, restart Claude Code to activate the tools.
 
   async run(args, ctx) {
     const python = await getPythonPath()
-    const cliArgs = ['mcp', 'setup']
+    const cliArgs = ['mcp-setup']
 
     if (args.force) {
       cliArgs.push('--force')
     }
 
-    // Run mcp setup via Python CLI
+    // Run mcp-setup via Python CLI (hyphenated command, not subcommand)
     const proc = Bun.spawn([python, '-m', 'dazzle', ...cliArgs], {
       cwd: ctx.cwd,
       stdio: ['inherit', 'inherit', 'inherit'],
@@ -150,8 +150,8 @@ Use this to verify your MCP configuration is correct.
   async run(args, ctx) {
     const python = await getPythonPath()
 
-    // Run mcp check via Python CLI
-    const proc = Bun.spawn([python, '-m', 'dazzle', 'mcp', 'check'], {
+    // Run mcp-check via Python CLI (hyphenated command, not subcommand)
+    const proc = Bun.spawn([python, '-m', 'dazzle', 'mcp-check'], {
       cwd: ctx.cwd,
       stdio: ['inherit', 'inherit', 'inherit'],
       env: {

@@ -152,9 +152,9 @@ def _get_available_tools() -> list[str]:
     """
     # Import here to avoid circular dependency
     try:
-        from dazzle.mcp.tools import get_project_tools
+        from dazzle.mcp.server.tools import get_all_tools
 
-        tools = get_project_tools()
+        tools = get_all_tools()
         return [tool.name for tool in tools]
     except Exception:
         # Fallback to known tools
