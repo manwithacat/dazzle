@@ -101,6 +101,8 @@ class DNRDockerServerManager:
 
         result = subprocess.run(
             [
+                sys.executable,
+                "-m",
                 "dazzle",
                 "dnr",
                 "serve",
@@ -186,6 +188,8 @@ class DNRLocalServerManager:
 
         self.process = subprocess.Popen(
             [
+                sys.executable,
+                "-m",
                 "dazzle",
                 "dnr",
                 "serve",
@@ -390,7 +394,7 @@ def test_example_validates(dazzle_root, example_name):
         pytest.skip(f"Example {example_name} not found")
 
     result = subprocess.run(
-        ["dazzle", "validate"],
+        [sys.executable, "-m", "dazzle", "validate"],
         cwd=example_dir,
         capture_output=True,
         text=True,
@@ -408,7 +412,7 @@ def test_example_builds_ui(dazzle_root, example_name):
         pytest.skip(f"Example {example_name} not found")
 
     result = subprocess.run(
-        ["dazzle", "dnr", "build-ui"],
+        [sys.executable, "-m", "dazzle", "dnr", "build-ui"],
         cwd=example_dir,
         capture_output=True,
         text=True,
