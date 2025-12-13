@@ -437,7 +437,7 @@ def get_demo_data_tools() -> list[Tool]:
     return [
         Tool(
             name="propose_demo_blueprint",
-            description="Analyze DSL and propose a Demo Data Blueprint with field patterns. The blueprint defines how to generate realistic, domain-specific demo data for each entity.",
+            description="Analyze DSL and propose a Demo Data Blueprint with field patterns. For large projects (>15 entities), use the 'entities' parameter to generate in batches to avoid truncation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -449,6 +449,19 @@ def get_demo_data_tools() -> list[Tool]:
                         "type": "integer",
                         "description": "Number of demo tenants to create (default: 2, uses Alpha/Bravo naming)",
                     },
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional: Specific entities to include. Use for large projects to avoid truncation. Generate in batches of 10-15 entities.",
+                    },
+                    "include_metadata": {
+                        "type": "boolean",
+                        "description": "Include tenants/personas in output (default: true). Set false when generating additional entity batches.",
+                    },
+                    "quick_mode": {
+                        "type": "boolean",
+                        "description": "Quick demo mode: generates minimal patterns (5 rows/entity), prioritizes entities with surfaces. Good for testing.",
+                    },
                     **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["domain_description"],
@@ -456,7 +469,7 @@ def get_demo_data_tools() -> list[Tool]:
         ),
         Tool(
             name="save_demo_blueprint",
-            description="Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json. Blueprint is validated before saving.",
+            description="Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json. Validates against DSL and can merge with existing blueprint for chunked generation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -539,6 +552,14 @@ def get_demo_data_tools() -> list[Tool]:
                             },
                         },
                         "required": ["project_id", "domain_description"],
+                    },
+                    "merge": {
+                        "type": "boolean",
+                        "description": "Merge with existing blueprint (for chunked generation). New entities override existing ones.",
+                    },
+                    "validate": {
+                        "type": "boolean",
+                        "description": "Validate blueprint covers all DSL entities (default: true). Returns warnings for missing entities.",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
