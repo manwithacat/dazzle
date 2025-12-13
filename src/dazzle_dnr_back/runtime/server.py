@@ -82,7 +82,9 @@ try:
     from fastapi import Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
+    from pydantic import ValidationError
 
+    from dazzle_dnr_back.runtime.invariant_evaluator import InvariantViolationError
     from dazzle_dnr_back.runtime.route_generator import RouteGenerator
     from dazzle_dnr_back.runtime.state_machine import TransitionError
 
@@ -95,6 +97,8 @@ except ImportError:
     Request = None  # type: ignore
     JSONResponse = None  # type: ignore
     TransitionError = Exception  # type: ignore
+    InvariantViolationError = Exception  # type: ignore
+    ValidationError = Exception  # type: ignore
 
 
 # =============================================================================
@@ -343,6 +347,26 @@ class DNRBackendApp:
                 content={"detail": str(exc), "type": "transition_error"},
             )
 
+        # Add exception handler for invariant violations (v0.14.2)
+        @self._app.exception_handler(InvariantViolationError)
+        async def invariant_error_handler(
+            request: Request, exc: InvariantViolationError
+        ) -> JSONResponse:
+            """Convert invariant violations to 422 Unprocessable Entity."""
+            return JSONResponse(
+                status_code=422,
+                content={"detail": str(exc), "type": "invariant_violation"},
+            )
+
+        # Add exception handler for Pydantic validation errors (v0.14.2)
+        @self._app.exception_handler(ValidationError)
+        async def validation_error_handler(request: Request, exc: ValidationError) -> JSONResponse:
+            """Convert validation errors to 422 Unprocessable Entity with field details."""
+            return JSONResponse(
+                status_code=422,
+                content={"detail": exc.errors(), "type": "validation_error"},
+            )
+
         # Generate models
         self._models = generate_all_entity_models(self.spec.entities)
 
@@ -374,8 +398,11 @@ class DNRBackendApp:
             if entity.state_machine
         }
 
+        # Build entity specs lookup for validation (v0.14.2)
+        entity_specs = {entity.name: entity for entity in self.spec.entities}
+
         # Create services
-        factory = ServiceFactory(self._models, state_machines)
+        factory = ServiceFactory(self._models, state_machines, entity_specs)
         self._services = factory.create_all_services(
             self.spec.services,
             self._schemas,

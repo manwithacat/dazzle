@@ -85,6 +85,19 @@ export const apiClient = {
       throw error;
     }
 
+    // v0.14.2: Check content-type before parsing JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+        throw new Error(
+          `API returned HTML instead of JSON for ${url}. ` +
+          `Check that the backend is running and proxy is configured.`
+        );
+      }
+      throw new Error(`Unexpected content type: ${contentType || 'unknown'}`);
+    }
+
     return response.json();
   },
 

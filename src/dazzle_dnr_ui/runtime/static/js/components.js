@@ -658,6 +658,20 @@ registerComponent('FilterableTable', (props) => {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      // v0.14.2: Check content-type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        if (text.startsWith('<!DOCTYPE') || text.startsWith('<html')) {
+          throw new Error(
+            `API returned HTML instead of JSON for ${apiEndpoint}. ` +
+            `Check that the backend is running and proxy is configured.`
+          );
+        }
+        throw new Error(`Unexpected content type: ${contentType || 'unknown'}`);
+      }
+
       const responseData = await response.json();
       const data = Array.isArray(responseData) ? responseData : (responseData.items || []);
       renderContent(data, false, null);

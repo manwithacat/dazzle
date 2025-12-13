@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from dazzle_dnr_back.specs.entity import StateMachineSpec
+from dazzle_dnr_back.specs.entity import EntitySpec, StateMachineSpec
 from dazzle_dnr_back.specs.service import (
     ServiceSpec,
 )
@@ -67,12 +67,14 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         update_schema: type[UpdateT],
         repository: "SQLiteRepository[T] | None" = None,
         state_machine: StateMachineSpec | None = None,
+        entity_spec: EntitySpec | None = None,
     ):
         self.entity_name = entity_name
         self.model_class = model_class
         self.create_schema = create_schema
         self.update_schema = update_schema
         self.state_machine = state_machine
+        self.entity_spec = entity_spec
 
         # Repository for SQLite persistence
         self._repository = repository
@@ -103,12 +105,44 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         return await operations[operation](**kwargs)
 
     async def create(self, data: CreateT) -> T:
-        """Create a new entity."""
+        """
+        Create a new entity.
+
+        Validates:
+        - Invariants are satisfied
+        - Foreign key references exist
+
+        Applies:
+        - Default values for missing fields
+        """
+        from dazzle_dnr_back.runtime.invariant_evaluator import (
+            InvariantViolationError,
+            check_invariants_for_create,
+        )
+
         # Generate ID
         entity_id = uuid4()
 
         # Build entity data
         entity_data = {"id": entity_id, **data.model_dump()}
+
+        # Apply default values for fields not provided (v0.14.2)
+        if self.entity_spec:
+            for field in self.entity_spec.fields:
+                if field.name not in entity_data or entity_data[field.name] is None:
+                    if field.default is not None:
+                        entity_data[field.name] = field.default
+
+        # Validate invariants (v0.14.2)
+        if self.entity_spec and self.entity_spec.invariants:
+            try:
+                check_invariants_for_create(self.entity_spec.invariants, entity_data)
+            except InvariantViolationError:
+                raise  # Re-raise as-is
+
+        # Validate foreign key references (v0.14.2)
+        if self.entity_spec and self._repository:
+            await self._validate_references(entity_data)
 
         # Use repository if available
         if self._repository:
@@ -134,6 +168,11 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         """
         Update an existing entity.
 
+        Validates:
+        - State machine transitions are valid
+        - Invariants are satisfied after update
+        - Foreign key references exist
+
         Args:
             id: Entity ID to update
             data: Update data
@@ -144,7 +183,13 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         Raises:
             TransitionError: If state machine transition is invalid
+            InvariantViolationError: If invariant constraint is violated
+            ReferenceNotFoundError: If referenced entity doesn't exist
         """
+        from dazzle_dnr_back.runtime.invariant_evaluator import (
+            InvariantViolationError,
+            check_invariants_for_update,
+        )
         from dazzle_dnr_back.runtime.state_machine import (
             validate_status_update,
         )
@@ -157,9 +202,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         if current is None:
             return None
 
+        current_data = current.model_dump() if hasattr(current, "model_dump") else dict(current)
+
         # Validate state machine transition if entity has a state machine
         if self.state_machine:
-            current_data = current.model_dump() if hasattr(current, "model_dump") else dict(current)
             result = validate_status_update(
                 self.state_machine,
                 current_data,
@@ -168,6 +214,21 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             )
             if result is not None and not result.is_valid:
                 raise result.error  # type: ignore
+
+        # Validate invariants after update (v0.14.2)
+        if self.entity_spec and self.entity_spec.invariants:
+            try:
+                check_invariants_for_update(
+                    self.entity_spec.invariants,
+                    current_data,
+                    update_data,
+                )
+            except InvariantViolationError:
+                raise  # Re-raise as-is
+
+        # Validate foreign key references (v0.14.2)
+        if self.entity_spec and self._repository:
+            await self._validate_references(update_data)
 
         if self._repository:
             return await self._repository.update(id, update_data)
@@ -250,6 +311,54 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 filtered.append(item)
         return filtered
 
+    async def _validate_references(self, data: dict[str, Any]) -> None:
+        """
+        Validate that all foreign key references point to existing entities.
+
+        v0.14.2: Added to ensure referential integrity.
+
+        Args:
+            data: Entity data to validate
+
+        Raises:
+            ReferenceNotFoundError: If a referenced entity doesn't exist
+        """
+        if not self.entity_spec or not self._repository:
+            return
+
+        # Get ref fields from entity spec
+        for field in self.entity_spec.fields:
+            if field.type.kind == "ref" and field.type.ref_entity:
+                ref_value = data.get(field.name)
+                if ref_value is not None:
+                    # Need to check if the referenced entity exists
+                    # Import repository factory to get the right repo
+
+                    # Get the database manager from our repository
+                    db = self._repository.db
+
+                    # Check if referenced entity exists
+                    ref_entity = field.type.ref_entity
+                    ref_id = str(ref_value) if not isinstance(ref_value, str) else ref_value
+
+                    with db.connection() as conn:
+                        from dazzle_dnr_back.runtime.query_builder import quote_identifier
+
+                        table = quote_identifier(ref_entity)
+                        sql = f'SELECT 1 FROM {table} WHERE "id" = ? LIMIT 1'
+                        cursor = conn.execute(sql, (ref_id,))
+                        exists = cursor.fetchone() is not None
+
+                    if not exists:
+                        from dazzle_dnr_back.runtime.invariant_evaluator import (
+                            InvariantViolationError,
+                        )
+
+                        raise InvariantViolationError(
+                            f"Referenced {ref_entity} with ID '{ref_id}' not found "
+                            f"(field: {field.name})"
+                        )
+
 
 class CustomService(BaseService[T]):
     """
@@ -295,6 +404,7 @@ class ServiceFactory:
         self,
         models: dict[str, type[BaseModel]],
         state_machines: dict[str, StateMachineSpec] | None = None,
+        entity_specs: dict[str, EntitySpec] | None = None,
     ):
         """
         Initialize the service factory.
@@ -302,9 +412,11 @@ class ServiceFactory:
         Args:
             models: Dictionary mapping entity names to Pydantic models
             state_machines: Dictionary mapping entity names to state machine specs
+            entity_specs: Dictionary mapping entity names to full entity specs (v0.14.2)
         """
         self.models = models
         self.state_machines = state_machines or {}
+        self.entity_specs = entity_specs or {}
         self._services: dict[str, BaseService[Any]] = {}
 
     def create_service(
@@ -340,12 +452,16 @@ class ServiceFactory:
             # Get state machine for this entity
             state_machine = self.state_machines.get(entity_name)
 
+            # Get full entity spec for validation (v0.14.2)
+            entity_spec = self.entity_specs.get(entity_name)
+
             service: BaseService[Any] = CRUDService(
                 entity_name=entity_name,
                 model_class=model,
                 create_schema=create_schema,
                 update_schema=update_schema,
                 state_machine=state_machine,
+                entity_spec=entity_spec,
             )
         else:
             service = CustomService(service_name=spec.name)

@@ -759,4 +759,33 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
         if not surface.title:
             warnings.append(f"Surface '{surface.name}' has no title")
 
+    # v0.14.2: Check for workspaces without associated personas
+    if appspec.workspaces:
+        # Collect all persona IDs
+        persona_ids = {p.id for p in appspec.personas}
+
+        # Collect personas referenced by workspace UX variants
+        workspaces_with_personas: set[str] = set()
+        for workspace in appspec.workspaces:
+            if workspace.ux and workspace.ux.persona_variants:
+                for variant in workspace.ux.persona_variants:
+                    if variant.persona in persona_ids:
+                        workspaces_with_personas.add(workspace.name)
+                        break
+
+        # Collect personas that have default_workspace set
+        for persona in appspec.personas:
+            if persona.default_workspace:
+                for ws in appspec.workspaces:
+                    if ws.name == persona.default_workspace:
+                        workspaces_with_personas.add(ws.name)
+
+        # Warn about workspaces without personas
+        for workspace in appspec.workspaces:
+            if workspace.name not in workspaces_with_personas:
+                warnings.append(
+                    f"Workspace '{workspace.name}' has no associated persona. "
+                    f"Consider adding a persona for role-based access control."
+                )
+
     return warnings
