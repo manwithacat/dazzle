@@ -257,5 +257,5 @@ class TestCheckMcpServer:
         # Should have at least the core tools
         assert len(status["tools"]) > 0
         assert "validate_dsl" in status["tools"]
-        assert "build" in status["tools"]
+        assert "lint_project" in status["tools"]  # v0.14.2: build tool removed
         assert "inspect_entity" in status["tools"]

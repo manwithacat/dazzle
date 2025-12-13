@@ -410,12 +410,13 @@ class TestJSRuntime:
         with tempfile.TemporaryDirectory() as tmpdir:
             files = generate_js_app(ui, tmpdir)
 
-            assert len(files) == 4
+            assert len(files) == 5  # v0.14.2: Now includes favicon
             file_names = {f.name for f in files}
             assert "index.html" in file_names
             assert "dnr-runtime.js" in file_names
             assert "app.js" in file_names
             assert "ui-spec.json" in file_names
+            assert "dazzle-favicon.svg" in file_names
 
     def test_generated_spec_json(self, simple_appspec: ir.AppSpec) -> None:
         """Test that generated spec JSON is valid."""
