@@ -1,0 +1,278 @@
+name: PRA Stress Tests
+
+on:
+  # Run on demand
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Test scenario to run'
+        required: false
+        default: 'quick'
+        type: choice
+        options:
+          - quick
+          - standard
+          - burst
+          - backpressure
+          - full
+      update_baseline:
+        description: 'Update baseline after test'
+        required: false
+        default: false
+        type: boolean
+
+  # Also run on main pushes (quick test only)
+  push:
+    branches: [main]
+    paths:
+      - 'src/dazzle_dnr_back/pra/**'
+      - 'src/dazzle_dnr_back/events/**'
+      - 'src/dazzle_dnr_back/metrics/**'
+
+  # Weekly comprehensive test
+  schedule:
+    - cron: '0 2 * * 0'  # Every Sunday at 2am
+
+jobs:
+  pra-quick:
+    name: PRA Quick Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,llm,mcp]"
+        pip install click
+
+    - name: Run PRA quick test
+      run: |
+        python -c "
+        import asyncio
+        from dazzle_dnr_back.pra import run_quick_test, TestHarness, ScenarioType
+        from dazzle_dnr_back.metrics.reporter import ReportFormat
+
+        async def main():
+            harness = TestHarness()
+            result = await harness.run_scenario(ScenarioType.QUICK)
+            print(harness.generate_report(result, ReportFormat.HUMAN))
+            return result.criteria_passed
+
+        success = asyncio.run(main())
+        exit(0 if success else 1)
+        "
+
+  pra-scenario:
+    name: PRA ${{ github.event.inputs.scenario || 'quick' }} Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,llm,mcp]"
+        pip install click
+
+    - name: Download baseline (if exists)
+      id: baseline
+      uses: dawidd6/action-download-artifact@v9
+      with:
+        name: pra-baseline-${{ github.event.inputs.scenario }}
+        path: ./baseline
+        if_no_artifact_found: warn
+      continue-on-error: true
+
+    - name: Run PRA test
+      id: test
+      run: |
+        SCENARIO="${{ github.event.inputs.scenario }}"
+
+        python -c "
+        import asyncio
+        import json
+        from pathlib import Path
+        from dazzle_dnr_back.pra import TestHarness, ScenarioType
+        from dazzle_dnr_back.metrics.reporter import ReportFormat
+
+        async def main():
+            scenario = ScenarioType('${SCENARIO}')
+            harness = TestHarness()
+            result = await harness.run_scenario(scenario)
+
+            # Save results
+            Path('results.json').write_text(json.dumps(result.to_dict(), indent=2, default=str))
+
+            # Generate reports
+            Path('report.txt').write_text(harness.generate_report(result, ReportFormat.HUMAN))
+            Path('report.md').write_text(harness.generate_report(result, ReportFormat.MARKDOWN))
+
+            print(harness.generate_report(result, ReportFormat.HUMAN))
+
+            return result.criteria_passed
+
+        success = asyncio.run(main())
+        exit(0 if success else 1)
+        "
+
+    - name: Compare with baseline
+      if: steps.baseline.outcome == 'success'
+      run: |
+        if [ -f baseline/results.json ]; then
+          python -c "
+        import json
+        from pathlib import Path
+        from dazzle_dnr_back.pra.cli import compare_results, format_comparison_markdown
+
+        baseline = json.loads(Path('baseline/results.json').read_text())
+        current = json.loads(Path('results.json').read_text())
+
+        comparison = compare_results(current, baseline)
+
+        # Write comparison report
+        report = format_comparison_markdown(comparison)
+        Path('comparison.md').write_text(report)
+        print(report)
+
+        # Fail if there are regressions
+        if comparison['has_regressions']:
+            print('\n::warning::Performance regressions detected!')
+            for r in comparison['regressions']:
+                print(f'::warning::{r}')
+        "
+        else
+          echo "No baseline found for comparison"
+        fi
+
+    - name: Upload results
+      uses: actions/upload-artifact@v6
+      with:
+        name: pra-results-${{ github.event.inputs.scenario }}-${{ github.run_number }}
+        path: |
+          results.json
+          report.txt
+          report.md
+          comparison.md
+        retention-days: 90
+
+    - name: Update baseline
+      if: github.event.inputs.update_baseline == 'true' && steps.test.outcome == 'success'
+      uses: actions/upload-artifact@v6
+      with:
+        name: pra-baseline-${{ github.event.inputs.scenario }}
+        path: results.json
+        retention-days: 365
+
+    - name: Post summary to PR
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let report = '';
+
+          if (fs.existsSync('report.md')) {
+            report = fs.readFileSync('report.md', 'utf8');
+          }
+
+          if (fs.existsSync('comparison.md')) {
+            report += '\n\n## Comparison with Baseline\n\n';
+            report += fs.readFileSync('comparison.md', 'utf8');
+          }
+
+          if (report) {
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+          }
+
+  pra-weekly:
+    name: PRA Weekly Full Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,llm,mcp]"
+        pip install click
+
+    - name: Run full PRA test suite
+      run: |
+        python -c "
+        import asyncio
+        import json
+        from pathlib import Path
+        from dazzle_dnr_back.pra import TestHarness, ScenarioType, list_scenarios
+        from dazzle_dnr_back.metrics.reporter import ReportFormat
+
+        async def main():
+            harness = TestHarness()
+            results = {}
+            all_passed = True
+
+            # Run quick scenarios (don't run extended in CI)
+            for scenario_type in [ScenarioType.QUICK, ScenarioType.STANDARD, ScenarioType.BURST]:
+                print(f'\n\n=== Running {scenario_type.value} ===\n')
+                result = await harness.run_scenario(scenario_type)
+                results[scenario_type.value] = result.to_dict()
+
+                print(harness.generate_report(result, ReportFormat.HUMAN))
+
+                if not result.criteria_passed:
+                    all_passed = False
+
+            # Save combined results
+            Path('weekly-results.json').write_text(json.dumps(results, indent=2, default=str))
+
+            return all_passed
+
+        success = asyncio.run(main())
+        exit(0 if success else 1)
+        "
+
+    - name: Upload weekly results
+      uses: actions/upload-artifact@v6
+      with:
+        name: pra-weekly-${{ github.run_number }}
+        path: weekly-results.json
+        retention-days: 365
+
+    - name: Create issue on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'PRA Weekly Test Failed',
+            body: `The weekly PRA stress test failed.\n\nRun: ${context.runId}\n\nPlease investigate the performance regression.`,
+            labels: ['performance', 'automated']
+          });
