@@ -28,6 +28,9 @@ from .profiles import (
 )
 from .scenarios import ScenarioType, SuccessCriteria, TestScenario, get_scenario, list_scenarios
 
+# CLI group is imported on demand to avoid click dependency at import time
+# Use: from dazzle_dnr_back.pra.cli import pra_group
+
 __all__ = [
     # Profiles
     "BurstProfile",
