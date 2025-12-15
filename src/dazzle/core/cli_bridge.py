@@ -156,19 +156,38 @@ def get_project_info_json(
             "services": [],
         }
 
+    def format_field_type(ft: Any) -> str:
+        """Format a FieldType to a nice display string."""
+        kind = ft.kind.value if hasattr(ft.kind, "value") else str(ft.kind)
+        if kind == "str" and ft.max_length:
+            return f"str({ft.max_length})"
+        if kind == "decimal" and ft.precision:
+            return f"decimal({ft.precision},{ft.scale or 0})"
+        if kind == "enum" and ft.enum_values:
+            vals = ", ".join(ft.enum_values[:3])
+            if len(ft.enum_values) > 3:
+                vals += ", ..."
+            return f"enum[{vals}]"
+        if kind == "ref" and ft.ref_entity:
+            return f"ref {ft.ref_entity}"
+        if kind in ("has_many", "has_one", "belongs_to", "embeds") and ft.ref_entity:
+            return f"{kind} {ft.ref_entity}"
+        return kind
+
     # Build entity info
     domain_entities = app_spec.domain.entities if app_spec.domain else []
     entities = []
     for entity in domain_entities:
         entity_info: dict[str, Any] = {
             "name": entity.name,
+            "label": entity.title or entity.name,
             "description": entity.title or entity.intent or "",
         }
         if include_details:
             entity_info["fields"] = [
                 {
                     "name": f.name,
-                    "type": str(f.type),
+                    "type": format_field_type(f.type),
                     "required": f.is_required,
                 }
                 for f in entity.fields
@@ -190,6 +209,7 @@ def get_project_info_json(
     for surface in app_spec.surfaces:
         surface_info: dict[str, Any] = {
             "name": surface.name,
+            "label": surface.title or surface.name,
             "description": surface.title or "",
             "entity": surface.entity_ref or "",
             "mode": surface.mode.value if hasattr(surface.mode, "value") else str(surface.mode),
