@@ -24,6 +24,7 @@ from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
 from .eventing import EventingParserMixin
 from .flow import FlowParserMixin
+from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
 from .messaging import MessagingParserMixin
 from .scenario import ScenarioParserMixin
@@ -50,6 +51,7 @@ class Parser(
     ScenarioParserMixin,
     MessagingParserMixin,
     EventingParserMixin,
+    HLESSParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -591,6 +593,65 @@ class Parser(
                     projections=fragment.projections + [projection],
                 )
 
+            # v0.19.0 HLESS - High-Level Event Semantics
+            elif self.match(TokenType.STREAM):
+                stream = self.parse_stream()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams + [stream],
+                    hless_pragma=fragment.hless_pragma,
+                )
+
+            elif self.match(TokenType.HLESS):
+                hless_pragma = self.parse_hless_pragma()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=hless_pragma,
+                )
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -644,4 +705,5 @@ __all__ = [
     "ScenarioParserMixin",
     "MessagingParserMixin",
     "EventingParserMixin",
+    "HLESSParserMixin",
 ]

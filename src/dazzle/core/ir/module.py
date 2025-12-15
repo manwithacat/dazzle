@@ -20,6 +20,11 @@ from .eventing import (
     ProjectionSpec,
     SubscribeSpec,
 )
+from .hless import (
+    HLESSMode,
+    HLESSPragma,
+    StreamSpec,
+)
 from .experiences import ExperienceSpec
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
@@ -112,6 +117,9 @@ class ModuleFragment(BaseModel):
     subscriptions: list[SubscribeSpec] = Field(default_factory=list)
     projections: list[ProjectionSpec] = Field(default_factory=list)
     # Publish directives are stored on entities, not here
+    # HLESS - High-Level Event Semantics (v0.19.0)
+    streams: list[StreamSpec] = Field(default_factory=list)
+    hless_pragma: HLESSPragma | None = None
 
     model_config = ConfigDict(frozen=True)
 

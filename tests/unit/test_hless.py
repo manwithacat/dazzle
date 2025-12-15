@@ -784,3 +784,371 @@ class TestStreamSchema:
         schema = StreamSchema(name="OrderPlaced")
         assert schema.version == "v1"
         assert schema.qualified_name == "OrderPlaced@v1"
+
+
+# --- DSL Parsing Tests ---
+
+
+class TestHLESSParsing:
+    """Tests for HLESS DSL parsing."""
+
+    def test_parse_simple_fact_stream(self):
+        """Parse a simple FACT stream from DSL."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+stream order_facts:
+  kind: FACT
+  description: "Immutable facts about orders"
+
+  schema OrderPlaced:
+    order_id: uuid required
+    total_amount: int required
+    placed_at: datetime required
+
+  partition_key: order_id
+  ordering_scope: per_order
+  t_event: placed_at
+
+  side_effects:
+    allowed: false
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.streams) == 1
+        stream = fragment.streams[0]
+        assert stream.name == "order_facts"
+        assert stream.record_kind == RecordKind.FACT
+        assert stream.partition_key == "order_id"
+        assert stream.ordering_scope == "per_order"
+        assert stream.time_semantics.t_event_field == "placed_at"
+        assert stream.side_effect_policy.external_effects_allowed is False
+
+        # Check schema
+        assert len(stream.schemas) == 1
+        schema = stream.schemas[0]
+        assert schema.name == "OrderPlaced"
+        assert len(schema.fields) == 3
+
+    def test_parse_intent_stream_with_outcomes(self):
+        """Parse an INTENT stream with outcomes."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+stream order_placement_requests:
+  kind: INTENT
+  description: "Requests to place orders"
+
+  schema OrderPlacementRequested:
+    order_id: uuid required
+    customer_id: uuid required
+
+  partition_key: order_id
+  ordering_scope: per_order
+  t_event: requested_at
+
+  idempotency:
+    type: deterministic_id
+    field: request_id
+
+  outcomes:
+    success:
+      emits OrderPlaced from order_facts
+    failure:
+      emits OrderPlacementRejected from order_facts
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.streams) == 1
+        stream = fragment.streams[0]
+        assert stream.name == "order_placement_requests"
+        assert stream.record_kind == RecordKind.INTENT
+
+        # Check idempotency
+        assert stream.idempotency.strategy_type == IdempotencyType.DETERMINISTIC_ID
+        assert stream.idempotency.field == "request_id"
+
+        # Check outcomes
+        assert len(stream.expected_outcomes) == 2
+        success = next(o for o in stream.expected_outcomes if o.condition.value == "success")
+        assert "OrderPlaced" in success.emits
+        assert success.target_stream == "order_facts"
+
+    def test_parse_derivation_stream_with_lineage(self):
+        """Parse a DERIVATION stream with lineage."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+stream daily_order_stats:
+  kind: DERIVATION
+  description: "Daily aggregated order statistics"
+
+  schema DailyOrderTotal:
+    date: date required
+    total_orders: int required
+
+  partition_key: date
+  ordering_scope: per_day
+  t_event: date
+  t_process: calculated_at
+
+  derives_from:
+    streams: [order_facts]
+    type: aggregate
+    rebuild: full_replay
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.streams) == 1
+        stream = fragment.streams[0]
+        assert stream.name == "daily_order_stats"
+        assert stream.record_kind == RecordKind.DERIVATION
+        assert stream.time_semantics.t_process_field == "calculated_at"
+
+        # Check lineage
+        assert stream.lineage is not None
+        assert "order_facts" in stream.lineage.source_streams
+        assert stream.lineage.derivation_type == DerivationType.AGGREGATE
+        assert stream.lineage.rebuild_strategy == RebuildStrategy.FULL_REPLAY
+
+    def test_parse_observation_stream(self):
+        """Parse an OBSERVATION stream."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+stream sensor_readings:
+  kind: OBSERVATION
+  description: "Temperature sensor readings"
+
+  schema TemperatureReading:
+    sensor_id: uuid required
+    temperature: int required
+    observed_at: datetime required
+
+  partition_key: sensor_id
+  ordering_scope: per_sensor
+  t_event: observed_at
+
+  invariant: "May contain duplicates"
+  note: "Readings can arrive out of order"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.streams) == 1
+        stream = fragment.streams[0]
+        assert stream.name == "sensor_readings"
+        assert stream.record_kind == RecordKind.OBSERVATION
+        assert "May contain duplicates" in stream.invariants
+
+    def test_parse_hless_pragma(self):
+        """Parse @hless pragma."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.ir import HLESSMode
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+hless strict
+
+stream order_facts:
+  kind: FACT
+
+  schema OrderPlaced:
+    order_id: uuid required
+
+  partition_key: order_id
+  ordering_scope: per_order
+  t_event: placed_at
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert fragment.hless_pragma is not None
+        assert fragment.hless_pragma.mode == HLESSMode.STRICT
+
+    def test_parse_multiple_streams(self):
+        """Parse multiple streams in one file."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """
+module test_hless
+app test "Test App"
+
+stream order_requests:
+  kind: INTENT
+
+  schema OrderRequested:
+    order_id: uuid required
+
+  partition_key: order_id
+  ordering_scope: per_order
+  t_event: requested_at
+
+  outcomes:
+    success:
+      emits OrderPlaced from order_facts
+
+stream order_facts:
+  kind: FACT
+
+  schema OrderPlaced:
+    order_id: uuid required
+
+  partition_key: order_id
+  ordering_scope: per_order
+  t_event: placed_at
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.streams) == 2
+        stream_names = [s.name for s in fragment.streams]
+        assert "order_requests" in stream_names
+        assert "order_facts" in stream_names
+
+
+# --- Forbidden Terminology Tests ---
+
+
+class TestForbiddenTerminology:
+    """Tests for forbidden terminology enforcement."""
+
+    def test_event_in_stream_name_rejected_in_strict_mode(
+        self,
+        basic_time_semantics: TimeSemantics,
+        basic_idempotency: IdempotencyStrategy,
+    ):
+        """'event' in stream name rejected in strict mode."""
+        from dazzle.core.ir import HLESSMode, HLESSPragma
+
+        stream = StreamSpec(
+            name="order_events",  # Contains 'event'!
+            record_kind=RecordKind.FACT,
+            schemas=[StreamSchema(name="OrderPlaced")],
+            partition_key="order_id",
+            ordering_scope="per_order",
+            time_semantics=basic_time_semantics,
+            idempotency=basic_idempotency,
+        )
+
+        pragma = HLESSPragma(mode=HLESSMode.STRICT)
+        result = validate_stream(stream, pragma)
+        assert any(v.rule == "FORBIDDEN_TERMINOLOGY" for v in result.violations)
+
+    def test_event_in_schema_name_rejected_in_strict_mode(
+        self,
+        basic_time_semantics: TimeSemantics,
+        basic_idempotency: IdempotencyStrategy,
+    ):
+        """'Event' in schema name rejected in strict mode."""
+        from dazzle.core.ir import HLESSMode, HLESSPragma
+
+        stream = StreamSpec(
+            name="orders.fact.v1",
+            record_kind=RecordKind.FACT,
+            schemas=[StreamSchema(name="OrderEvent")],  # Contains 'Event'!
+            partition_key="order_id",
+            ordering_scope="per_order",
+            time_semantics=basic_time_semantics,
+            idempotency=basic_idempotency,
+        )
+
+        pragma = HLESSPragma(mode=HLESSMode.STRICT)
+        result = validate_stream(stream, pragma)
+        assert any(v.rule == "FORBIDDEN_TERMINOLOGY" for v in result.violations)
+
+    def test_event_allowed_in_warn_mode(
+        self,
+        basic_time_semantics: TimeSemantics,
+        basic_idempotency: IdempotencyStrategy,
+    ):
+        """'event' allowed (no FORBIDDEN_TERMINOLOGY error) in warn mode."""
+        from dazzle.core.ir import HLESSMode, HLESSPragma
+
+        stream = StreamSpec(
+            name="order_events",
+            record_kind=RecordKind.FACT,
+            schemas=[StreamSchema(name="OrderPlaced")],
+            partition_key="order_id",
+            ordering_scope="per_order",
+            time_semantics=basic_time_semantics,
+            idempotency=basic_idempotency,
+        )
+
+        pragma = HLESSPragma(mode=HLESSMode.WARN)
+        result = validate_stream(stream, pragma)
+        assert not any(v.rule == "FORBIDDEN_TERMINOLOGY" for v in result.violations)
+
+    def test_event_allowed_without_pragma(
+        self,
+        basic_time_semantics: TimeSemantics,
+        basic_idempotency: IdempotencyStrategy,
+    ):
+        """'event' allowed without any pragma."""
+        stream = StreamSpec(
+            name="order_events",
+            record_kind=RecordKind.FACT,
+            schemas=[StreamSchema(name="OrderPlaced")],
+            partition_key="order_id",
+            ordering_scope="per_order",
+            time_semantics=basic_time_semantics,
+            idempotency=basic_idempotency,
+        )
+
+        result = validate_stream(stream)
+        assert not any(v.rule == "FORBIDDEN_TERMINOLOGY" for v in result.violations)
+
+    @pytest.mark.parametrize(
+        "bad_name",
+        [
+            "order_events",
+            "user_events",
+            "payment_event_log",
+            "EventStream",
+        ],
+    )
+    def test_various_event_names_rejected(
+        self,
+        bad_name: str,
+        basic_time_semantics: TimeSemantics,
+        basic_idempotency: IdempotencyStrategy,
+    ):
+        """Various 'event' variations rejected in strict mode."""
+        from dazzle.core.ir import HLESSMode, HLESSPragma
+
+        stream = StreamSpec(
+            name=bad_name,
+            record_kind=RecordKind.FACT,
+            schemas=[StreamSchema(name="TestSchema")],
+            partition_key="id",
+            ordering_scope="per_id",
+            time_semantics=basic_time_semantics,
+            idempotency=basic_idempotency,
+        )
+
+        pragma = HLESSPragma(mode=HLESSMode.STRICT)
+        result = validate_stream(stream, pragma)
+        assert any(v.rule == "FORBIDDEN_TERMINOLOGY" for v in result.violations)

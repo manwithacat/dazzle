@@ -223,6 +223,32 @@ class TokenType(Enum):
     TOPIC = "topic"
     RETENTION = "retention"
 
+    # v0.19.0 HLESS (High-Level Event Semantics) Keywords
+    # RecordKind types (INTENT already exists in v0.7.1 LLM Cognition)
+    FACT = "FACT"
+    OBSERVATION = "OBSERVATION"
+    DERIVATION = "DERIVATION"
+    # Stream specification keywords
+    PARTITION_KEY = "partition_key"
+    ORDERING_SCOPE = "ordering_scope"
+    IDEMPOTENCY = "idempotency"
+    OUTCOMES = "outcomes"
+    DERIVES_FROM = "derives_from"
+    EMITS = "emits"
+    SIDE_EFFECTS = "side_effects"
+    ALLOWED = "allowed"
+    SCHEMA = "schema"
+    NOTE = "note"
+    # Time semantics
+    T_EVENT = "t_event"
+    T_LOG = "t_log"
+    T_PROCESS = "t_process"
+    # HLESS pragma
+    HLESS = "hless"
+    STRICT = "strict"
+    WARN = "warn"
+    OFF = "off"
+
     # v0.9.0 Messaging Channel Keywords
     # Note: MESSAGE already defined above in UX keywords
     CHANNEL = "channel"
@@ -560,6 +586,27 @@ KEYWORDS = {
     "project",
     "topic",
     "retention",
+    # v0.19.0 HLESS (High-Level Event Semantics) keywords
+    "FACT",
+    "OBSERVATION",
+    "DERIVATION",
+    "partition_key",
+    "ordering_scope",
+    "idempotency",
+    "outcomes",
+    "derives_from",
+    "emits",
+    "side_effects",
+    "allowed",
+    "schema",
+    "note",
+    "t_event",
+    "t_log",
+    "t_process",
+    "hless",
+    "strict",
+    "warn",
+    "off",
     # v0.9.0 Messaging Channel keywords
     # Note: "message" already in UX keywords
     "channel",

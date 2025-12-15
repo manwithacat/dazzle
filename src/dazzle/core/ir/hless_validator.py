@@ -20,6 +20,8 @@ import re
 from dataclasses import dataclass, field
 
 from .hless import (
+    HLESSMode,
+    HLESSPragma,
     HLESSViolation,
     RecordKind,
     StreamSpec,
@@ -123,17 +125,41 @@ class HLESSValidator:
         r"\bnext\b",
     ]
 
-    def validate(self, stream: StreamSpec) -> ValidationResult:
+    # Forbidden terminology in HLESS strict mode
+    # These words are ambiguous and must be replaced with precise RecordKind terminology
+    FORBIDDEN_TERMINOLOGY = {
+        "event": (
+            "Ambiguous. Use 'stream' with explicit RecordKind "
+            "(INTENT, FACT, OBSERVATION, or DERIVATION)"
+        ),
+        "Event": (
+            "Ambiguous. Use schema naming like 'OrderPlaced' (FACT) or "
+            "'OrderPlacementRequested' (INTENT)"
+        ),
+        "events": ("Ambiguous. Use 'streams' or specify the RecordKind"),
+        "Events": ("Ambiguous. Use explicit RecordKind in naming"),
+    }
+
+    def validate(
+        self,
+        stream: StreamSpec,
+        hless_pragma: HLESSPragma | None = None,
+    ) -> ValidationResult:
         """
         Validate a StreamSpec against all HLESS rules.
 
         Args:
             stream: The StreamSpec to validate
+            hless_pragma: Optional HLESS pragma for mode-specific enforcement
 
         Returns:
             ValidationResult with any violations found
         """
         violations: list[HLESSViolation] = []
+
+        # Rule 0: Forbidden terminology in strict mode
+        if hless_pragma and hless_pragma.mode == HLESSMode.STRICT:
+            violations.extend(self._validate_forbidden_terminology(stream))
 
         # Rule 1: FACT streams must not contain imperatives
         if stream.record_kind == RecordKind.FACT:
@@ -183,15 +209,70 @@ class HLESSValidator:
 
         # Validate INTENT outcomes
         if stream.record_kind == RecordKind.INTENT and stream.expected_outcomes:
-            violations.extend(
-                self._validate_intent_outcomes(stream, all_streams)
-            )
+            violations.extend(self._validate_intent_outcomes(stream, all_streams))
 
         # Validate DERIVATION lineage
         if stream.record_kind == RecordKind.DERIVATION and stream.lineage:
-            violations.extend(
-                self._validate_derivation_lineage(stream, all_streams)
-            )
+            violations.extend(self._validate_derivation_lineage(stream, all_streams))
+
+        return violations
+
+    def _validate_forbidden_terminology(self, stream: StreamSpec) -> list[HLESSViolation]:
+        """Rule 0: Forbidden terminology in strict HLESS mode.
+
+        The word 'event' is ambiguous and banned in strict mode.
+        Use explicit RecordKind terminology instead.
+        """
+        violations: list[HLESSViolation] = []
+
+        # Check stream name
+        for term, reason in self.FORBIDDEN_TERMINOLOGY.items():
+            if term.lower() in stream.name.lower():
+                violations.append(
+                    HLESSViolation(
+                        rule="FORBIDDEN_TERMINOLOGY",
+                        message=(
+                            f"Stream name '{stream.name}' contains forbidden term '{term}'. "
+                            f"{reason}"
+                        ),
+                        suggestion=(
+                            "Rename stream to use explicit RecordKind terminology. "
+                            "For example:\n"
+                            "  - INTENT: order_placement_requests\n"
+                            "  - FACT: order_facts\n"
+                            "  - OBSERVATION: sensor_readings\n"
+                            "  - DERIVATION: daily_order_stats"
+                        ),
+                        stream_name=stream.name,
+                        severity="error",
+                    )
+                )
+                break  # One violation per stream name is enough
+
+        # Check schema names
+        for schema in stream.schemas:
+            for term, reason in self.FORBIDDEN_TERMINOLOGY.items():
+                if term in schema.name:  # Case-sensitive for schema names
+                    violations.append(
+                        HLESSViolation(
+                            rule="FORBIDDEN_TERMINOLOGY",
+                            message=(
+                                f"Schema name '{schema.name}' contains forbidden term '{term}'. "
+                                f"{reason}"
+                            ),
+                            suggestion=(
+                                "Use precise naming that reflects the RecordKind:\n"
+                                "  - INTENT: OrderPlacementRequested, PaymentInitiated\n"
+                                "  - FACT: OrderPlaced, PaymentConfirmed\n"
+                                "  - OBSERVATION: TemperatureReading, StockQuote\n"
+                                "  - DERIVATION: DailyTotal, RunningAverage"
+                            ),
+                            stream_name=stream.name,
+                            schema_name=schema.name,
+                            severity="error",
+                        )
+                    )
+                    break  # One violation per schema is enough
 
         return violations
 
@@ -310,10 +391,7 @@ class HLESSValidator:
             )
 
         # DERIVATION must have t_process
-        if (
-            stream.time_semantics
-            and not stream.time_semantics.t_process_field
-        ):
+        if stream.time_semantics and not stream.time_semantics.t_process_field:
             violations.append(
                 HLESSViolation(
                     rule="DERIVATION_REQUIRES_T_PROCESS",
@@ -502,10 +580,7 @@ class HLESSValidator:
                     )
 
             # Validate partition key compatibility
-            if (
-                not stream.cross_partition
-                and target_stream.partition_key != stream.partition_key
-            ):
+            if not stream.cross_partition and target_stream.partition_key != stream.partition_key:
                 violations.append(
                     HLESSViolation(
                         rule="INTENT_OUTCOME_PARTITION_MISMATCH",
@@ -573,17 +648,13 @@ class HLESSValidator:
     def _invariant_asserts_truth(self, invariant: str) -> bool:
         """Check if invariant makes truth claims inappropriate for OBSERVATION."""
         invariant_lower = invariant.lower()
-        return any(
-            re.search(pattern, invariant_lower)
-            for pattern in self.TRUTH_ASSERTION_PATTERNS
-        )
+        return any(re.search(pattern, invariant_lower) for pattern in self.TRUTH_ASSERTION_PATTERNS)
 
     def _invariant_requires_order(self, invariant: str) -> bool:
         """Check if invariant implies ordering dependency."""
         invariant_lower = invariant.lower()
         return any(
-            re.search(pattern, invariant_lower)
-            for pattern in self.ORDER_DEPENDENCY_PATTERNS
+            re.search(pattern, invariant_lower) for pattern in self.ORDER_DEPENDENCY_PATTERNS
         )
 
     def _invariant_mentions_partition_scope(
@@ -603,28 +674,34 @@ class HLESSValidator:
         )
 
 
-def validate_stream(stream: StreamSpec) -> ValidationResult:
+def validate_stream(
+    stream: StreamSpec,
+    hless_pragma: HLESSPragma | None = None,
+) -> ValidationResult:
     """
     Convenience function to validate a single StreamSpec.
 
     Args:
         stream: The StreamSpec to validate
+        hless_pragma: Optional HLESS pragma for mode-specific enforcement
 
     Returns:
         ValidationResult with any violations found
     """
     validator = HLESSValidator()
-    return validator.validate(stream)
+    return validator.validate(stream, hless_pragma)
 
 
 def validate_streams_with_cross_references(
     streams: list[StreamSpec],
+    hless_pragma: HLESSPragma | None = None,
 ) -> ValidationResult:
     """
     Validate multiple StreamSpecs including cross-stream references.
 
     Args:
         streams: List of StreamSpecs to validate
+        hless_pragma: Optional HLESS pragma for mode-specific enforcement
 
     Returns:
         Combined ValidationResult
@@ -637,14 +714,12 @@ def validate_streams_with_cross_references(
 
     # Validate each stream individually
     for stream in streams:
-        result = validator.validate(stream)
+        result = validator.validate(stream, hless_pragma)
         all_violations.extend(result.violations)
 
     # Validate cross-stream references
     for stream in streams:
-        cross_violations = validator.validate_cross_stream_references(
-            stream, stream_index
-        )
+        cross_violations = validator.validate_cross_stream_references(stream, stream_index)
         all_violations.extend(cross_violations)
 
     return ValidationResult(
