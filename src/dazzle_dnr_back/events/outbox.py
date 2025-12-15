@@ -389,6 +389,26 @@ class EventOutbox:
 
         return [self._row_to_entry(row) async for row in cursor]
 
+    async def get_recent_entries(
+        self,
+        conn: aiosqlite.Connection,
+        *,
+        limit: int = 10,
+    ) -> list[OutboxEntry]:
+        """Get recent entries regardless of status (for event explorer)."""
+        conn.row_factory = aiosqlite.Row
+
+        cursor = await conn.execute(
+            f"""
+            SELECT * FROM {self._table}
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+
+        return [self._row_to_entry(row) async for row in cursor]
+
     async def retry_failed(
         self,
         conn: aiosqlite.Connection,

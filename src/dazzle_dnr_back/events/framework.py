@@ -403,6 +403,18 @@ class EventFramework:
             "bus": bus_info,
         }
 
+    async def get_outbox_stats(self) -> dict[str, Any]:
+        """Get outbox statistics for the event explorer."""
+        if self._outbox is None or self._conn is None:
+            return {"pending": 0, "publishing": 0, "published": 0, "failed": 0}
+        return await self._outbox.get_stats(self._conn)
+
+    async def get_recent_outbox_entries(self, limit: int = 10) -> list[Any]:
+        """Get recent outbox entries for the event explorer."""
+        if self._outbox is None or self._conn is None:
+            return []
+        return await self._outbox.get_recent_entries(self._conn, limit=limit)
+
 
 # Global framework instance (optional, for convenience)
 _framework: EventFramework | None = None

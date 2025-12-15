@@ -353,6 +353,16 @@ app.add_typer(eject_app, name="eject")
 
 
 # =============================================================================
+# Events Commands (imported from cli.events)
+# =============================================================================
+from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
+
+app.add_typer(events_app, name="events")
+app.add_typer(dlq_app, name="dlq")
+app.add_typer(outbox_app, name="outbox")
+
+
+# =============================================================================
 # Main Entry Point
 # =============================================================================
 

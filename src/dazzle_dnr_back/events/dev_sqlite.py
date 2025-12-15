@@ -527,14 +527,87 @@ class DevBrokerSQLite(EventBus):
             cursor = await conn.execute("SELECT DISTINCT topic FROM _dazzle_events ORDER BY topic")
             return [row["topic"] async for row in cursor]
 
-    async def list_consumer_groups(self, topic: str) -> list[str]:
-        """List all consumer groups for a topic."""
+    async def list_consumer_groups(
+        self,
+        topic: str | None = None,
+    ) -> list[str] | list[dict[str, str]]:
+        """
+        List consumer groups.
+
+        Args:
+            topic: If provided, returns list of group_id strings for that topic.
+                   If None, returns list of dicts with topic and group_id.
+        """
+        async with self._get_conn() as conn:
+            if topic:
+                cursor = await conn.execute(
+                    "SELECT group_id FROM _dazzle_consumer_offsets WHERE topic = ? ORDER BY group_id",
+                    (topic,),
+                )
+                return [row["group_id"] async for row in cursor]
+            else:
+                cursor = await conn.execute(
+                    "SELECT topic, group_id FROM _dazzle_consumer_offsets ORDER BY topic, group_id"
+                )
+                return [{"topic": row["topic"], "group_id": row["group_id"]} async for row in cursor]
+
+    async def get_consumer_info(self, group_id: str, topic: str) -> dict[str, Any]:
+        """Get detailed info for a specific consumer group."""
         async with self._get_conn() as conn:
             cursor = await conn.execute(
-                "SELECT group_id FROM _dazzle_consumer_offsets WHERE topic = ? ORDER BY group_id",
+                """
+                SELECT last_sequence, last_processed_at
+                FROM _dazzle_consumer_offsets
+                WHERE topic = ? AND group_id = ?
+                """,
+                (topic, group_id),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return {"last_sequence": 0, "lag": 0}
+
+            # Get current max sequence
+            cursor = await conn.execute(
+                "SELECT MAX(sequence_num) as max_seq FROM _dazzle_events WHERE topic = ?",
                 (topic,),
             )
-            return [row["group_id"] async for row in cursor]
+            max_row = await cursor.fetchone()
+            max_seq = max_row["max_seq"] if max_row and max_row["max_seq"] else 0
+
+            return {
+                "last_sequence": row["last_sequence"],
+                "lag": max_seq - row["last_sequence"],
+                "last_processed_at": row["last_processed_at"],
+            }
+
+    async def get_dlq_count(self, topic: str | None = None) -> int:
+        """Get count of events in dead letter queue."""
+        async with self._get_conn() as conn:
+            if topic:
+                cursor = await conn.execute(
+                    "SELECT COUNT(*) as count FROM _dazzle_dlq WHERE topic = ?",
+                    (topic,),
+                )
+            else:
+                cursor = await conn.execute("SELECT COUNT(*) as count FROM _dazzle_dlq")
+            row = await cursor.fetchone()
+            return row["count"] if row else 0
+
+    async def get_event(self, event_id: str) -> EventEnvelope | None:
+        """Get a single event by ID."""
+        async with self._get_conn() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT id, topic, event_type, event_version, key, payload,
+                       headers, correlation_id, causation_id, timestamp, producer
+                FROM _dazzle_events WHERE id = ?
+                """,
+                (event_id,),
+            )
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return self._row_to_envelope(row)
 
     async def get_topic_info(self, topic: str) -> dict[str, Any]:
         """Get information about a topic."""

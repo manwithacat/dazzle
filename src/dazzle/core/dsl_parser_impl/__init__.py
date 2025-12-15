@@ -22,6 +22,7 @@ from ..lexer import tokenize
 from .base import BaseParser
 from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
+from .eventing import EventingParserMixin
 from .flow import FlowParserMixin
 from .integration import IntegrationParserMixin
 from .messaging import MessagingParserMixin
@@ -48,6 +49,7 @@ class Parser(
     WorkspaceParserMixin,
     ScenarioParserMixin,
     MessagingParserMixin,
+    EventingParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -507,6 +509,88 @@ class Parser(
                         scenarios=[default_scenario],
                     )
 
+            # v0.18.0 Event-First Architecture
+            elif self.match(TokenType.EVENT_MODEL):
+                event_model = self.parse_event_model()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                )
+
+            elif self.match(TokenType.SUBSCRIBE):
+                subscription = self.parse_subscribe()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions + [subscription],
+                    projections=fragment.projections,
+                )
+
+            elif self.match(TokenType.PROJECT):
+                projection = self.parse_projection()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections + [projection],
+                )
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -559,4 +643,5 @@ __all__ = [
     "WorkspaceParserMixin",
     "ScenarioParserMixin",
     "MessagingParserMixin",
+    "EventingParserMixin",
 ]

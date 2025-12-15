@@ -215,6 +215,8 @@ class DNRBackendApp:
         # Security (v0.11.0)
         self._security_profile = config.security_profile
         self._cors_origins = config.cors_origins
+        # Event system (v0.18.0)
+        self._event_framework: Any | None = None  # EventFramework type
         # SiteSpec (v0.16.0)
         self._sitespec_data = config.sitespec_data
         self._project_root = config.project_root
@@ -329,6 +331,44 @@ class DNRBackendApp:
             """Run health checks on all channels."""
             results = await channel_manager.health_check_all()
             return {"health": results}
+
+    def _init_event_framework(self) -> None:
+        """Initialize the event framework for event-driven features (v0.18.0)."""
+        if not self._app:
+            return
+
+        try:
+            from dazzle_dnr_back.events.framework import EventFramework, EventFrameworkConfig
+
+            # Create event framework with same database as app
+            config = EventFrameworkConfig(
+                db_path=str(self._db_path),
+                auto_start_publisher=True,
+                auto_start_consumers=True,
+            )
+            self._event_framework = EventFramework(config)
+
+            # Capture for closures
+            event_framework = self._event_framework
+
+            @self._app.on_event("startup")
+            async def startup_events() -> None:
+                """Start event framework on app startup."""
+                await event_framework.start()
+
+            @self._app.on_event("shutdown")
+            async def shutdown_events() -> None:
+                """Stop event framework on app shutdown."""
+                await event_framework.stop()
+
+        except ImportError:
+            # Events module not available - skip
+            pass
+        except Exception as e:
+            # Log but don't fail startup
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init event framework: {e}")
 
     def build(self) -> FastAPI:
         """
@@ -507,6 +547,10 @@ class DNRBackendApp:
             )
             self._app.include_router(control_plane_router)
 
+        # Initialize event framework (v0.18.0)
+        if self._use_database:
+            self._init_event_framework()
+
         # Initialize debug routes (always available when database is enabled)
         if self._use_database and self._db_manager:
             from dazzle_dnr_back.runtime.debug_routes import create_debug_routes
@@ -519,6 +563,12 @@ class DNRBackendApp:
                 start_time=self._start_time,
             )
             self._app.include_router(debug_router)
+
+            # Initialize event explorer routes (v0.18.0)
+            from dazzle_dnr_back.runtime.event_explorer import create_event_explorer_routes
+
+            event_explorer_router = create_event_explorer_routes(self._event_framework)
+            self._app.include_router(event_explorer_router)
 
         # Initialize site routes (v0.16.0)
         if self._sitespec_data:
