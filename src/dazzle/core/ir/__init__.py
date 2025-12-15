@@ -106,6 +106,35 @@ from .eventing import (
     TopicSpec,
 )
 
+# HLESS - High-Level Event Semantics (v0.19.0)
+from .hless import (
+    DerivationLineage,
+    DerivationType,
+    ExpectedOutcome,
+    HLESSMode,
+    HLESSPragma,
+    HLESSViolation,
+    IdempotencyStrategy,
+    IdempotencyType,
+    OutcomeCondition,
+    RebuildStrategy,
+    RecordKind,
+    SchemaCompatibility,
+    SideEffectPolicy,
+    StreamSchema,
+    StreamSpec,
+    TimeSemantics,
+    WindowSpec,
+    WindowType,
+    get_default_idempotency,
+)
+from .hless_validator import (
+    HLESSValidator,
+    ValidationResult,
+    validate_stream,
+    validate_streams_with_cross_references,
+)
+
 # Experiences
 from .experiences import (
     ExperienceSpec,
@@ -565,6 +594,30 @@ __all__ = [
     "PublishSpec",
     "SubscribeSpec",
     "TopicSpec",
+    # HLESS - High-Level Event Semantics (v0.19.0)
+    "DerivationLineage",
+    "DerivationType",
+    "ExpectedOutcome",
+    "HLESSMode",
+    "HLESSPragma",
+    "HLESSValidator",
+    "HLESSViolation",
+    "IdempotencyStrategy",
+    "IdempotencyType",
+    "OutcomeCondition",
+    "RebuildStrategy",
+    "RecordKind",
+    "SchemaCompatibility",
+    "SideEffectPolicy",
+    "StreamSchema",
+    "StreamSpec",
+    "TimeSemantics",
+    "ValidationResult",
+    "WindowSpec",
+    "WindowType",
+    "get_default_idempotency",
+    "validate_stream",
+    "validate_streams_with_cross_references",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

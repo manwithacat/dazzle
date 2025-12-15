@@ -19,6 +19,11 @@ from .eventing import (
     ProjectionSpec,
     SubscribeSpec,
 )
+from .hless import (
+    HLESSMode,
+    HLESSPragma,
+    StreamSpec,
+)
 from .experiences import ExperienceSpec
 from .fields import FieldType
 from .foreign_models import ForeignModelSpec
@@ -97,6 +102,10 @@ class AppSpec(BaseModel):
     event_model: EventModelSpec | None = None
     subscriptions: list[SubscribeSpec] = Field(default_factory=list)
     projections: list[ProjectionSpec] = Field(default_factory=list)
+    # HLESS - High-Level Event Semantics (v0.19.0)
+    streams: list[StreamSpec] = Field(default_factory=list)
+    hless_mode: HLESSMode = Field(default=HLESSMode.STRICT)
+    hless_pragma: HLESSPragma | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -238,6 +247,15 @@ class AppSpec(BaseModel):
         for template in self.templates:
             if template.name == name:
                 return template
+        return None
+
+    # HLESS getters (v0.19.0)
+
+    def get_stream(self, name: str) -> StreamSpec | None:
+        """Get stream by name."""
+        for stream in self.streams:
+            if stream.name == name:
+                return stream
         return None
 
     @property
