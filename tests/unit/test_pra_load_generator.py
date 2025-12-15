@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from decimal import Decimal
+
+# Note: PRA data factory uses Money pattern (amount_minor: int + currency: str)
 from uuid import UUID
 
 import pytest
@@ -223,12 +224,12 @@ class TestPRADataFactory:
         assert "request_id" in payload
         assert "actor_id" in payload
         assert "account_id" in payload
-        assert "amount" in payload
+        assert "amount_minor" in payload  # Money pattern: amount in minor units
         assert "currency" in payload
         assert "occurred_at" in payload
 
         assert isinstance(payload["request_id"], UUID)
-        assert isinstance(payload["amount"], Decimal)
+        assert isinstance(payload["amount_minor"], int)  # Money uses int for precision
         assert payload["currency"] in ["GBP", "USD", "EUR"]
 
     def test_order_placement_requested_v2(self) -> None:
@@ -247,7 +248,8 @@ class TestPRADataFactory:
 
         assert "request_id" in payload
         assert "order_id" in payload
-        assert "amount" in payload
+        assert "amount_minor" in payload  # Money pattern
+        assert "currency" in payload
         assert "gateway" in payload
 
         assert payload["gateway"] in ["stripe", "adyen", "worldpay", "paypal"]
@@ -315,7 +317,8 @@ class TestPRADataFactory:
 
         assert "calculation_id" in payload
         assert "account_id" in payload
-        assert "balance" in payload
+        assert "balance_minor" in payload  # Money pattern
+        assert "currency" in payload
         assert "as_of_sequence" in payload
 
     def test_daily_revenue_aggregated(self) -> None:
@@ -325,15 +328,16 @@ class TestPRADataFactory:
 
         assert "calculation_id" in payload
         assert "revenue_date" in payload
-        assert "total_revenue" in payload
+        assert "total_revenue_minor" in payload  # Money pattern
+        assert "currency" in payload
         assert "order_count" in payload
 
     def test_daily_revenue_v2(self) -> None:
-        """Test v2 revenue includes average_order_value."""
+        """Test v2 revenue includes average_order_value_minor."""
         factory = PRADataFactory(seed=42)
         payload = factory.daily_revenue_aggregated(use_v2=True)
 
-        assert "average_order_value" in payload
+        assert "average_order_value_minor" in payload  # Money pattern
 
     def test_should_reject_order_rate(self) -> None:
         """Test rejection rate follows configuration."""

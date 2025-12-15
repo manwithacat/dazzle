@@ -702,6 +702,78 @@ def _validate_condition_fields(
     return errors
 
 
+def validate_money_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate that monetary fields use the correct type in FACT/INTENT streams.
+
+    The Money type (amount_minor: int + currency: str) is REQUIRED for all
+    monetary values in event payloads. Using float or decimal for money
+    causes precision issues and JSON serialization problems.
+
+    Checks:
+    - Fields with money-like names in FACT/INTENT streams must use 'money' type
+    - Rejects 'decimal' and warns about 'int' for money-like field names
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    # Check HLESS streams
+    for stream in appspec.streams:
+        # Only check FACT and INTENT streams (not OBSERVATION or DERIVATION)
+        if stream.record_kind not in (ir.RecordKind.FACT, ir.RecordKind.INTENT):
+            continue
+
+        for schema in stream.schemas:
+            for field in schema.fields:
+                if not ir.is_money_field_name(field.name):
+                    continue
+
+                # Check for forbidden types
+                if field.type.kind == ir.FieldTypeKind.DECIMAL:
+                    errors.append(
+                        f"Stream '{stream.name}' schema '{schema.name}' field '{field.name}' "
+                        f"uses 'decimal' type for monetary value. "
+                        f"Use 'money' type instead (expands to currency + amount_minor:int). "
+                        f"Rationale: decimal causes JSON serialization errors and precision issues."
+                    )
+
+                # Warn about raw int (might be intentional minor units, but not explicit)
+                elif field.type.kind == ir.FieldTypeKind.INT:
+                    # Only warn if it looks like a standalone money field without currency
+                    # If there's a corresponding currency field, assume it's intentional
+                    field_names = {f.name for f in schema.fields}
+                    has_currency = any("currency" in name.lower() for name in field_names)
+                    if not has_currency:
+                        warnings.append(
+                            f"Stream '{stream.name}' schema '{schema.name}' field '{field.name}' "
+                            f"uses 'int' for monetary value without a currency field. "
+                            f"Consider using 'money' type for explicit currency handling."
+                        )
+
+    # Also check entity fields (less strict - warning only)
+    for entity in appspec.domain.entities:
+        for field in entity.fields:
+            if not ir.is_money_field_name(field.name):
+                continue
+
+            # For entities, using decimal is okay but money is preferred
+            if field.type.kind == ir.FieldTypeKind.DECIMAL:
+                # Check if there's a corresponding currency field
+                field_names = {f.name for f in entity.fields}
+                has_currency = any("currency" in name.lower() for name in field_names)
+                if not has_currency:
+                    warnings.append(
+                        f"Entity '{entity.name}' field '{field.name}' uses 'decimal' "
+                        f"for monetary value without a currency field. "
+                        f"Consider using 'money' type or adding a currency field."
+                    )
+
+    return errors, warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """
     Extended lint rules for code quality.

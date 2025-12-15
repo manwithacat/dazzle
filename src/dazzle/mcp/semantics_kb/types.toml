@@ -3,7 +3,7 @@
 
 [meta]
 file = "types"
-concept_count = 5
+concept_count = 6
 
 [concepts.enum]
 category = "Type System"
@@ -39,10 +39,11 @@ message = "Use notification or alert"
 
 [concepts.field_types]
 category = "Type System"
-definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, enum[...], ref Entity, has_many/has_one/embeds/belongs_to."
-related = ["entity", "json"]
+definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, money, enum[...], ref Entity, has_many/has_one/embeds/belongs_to, timezone."
+related = ["entity", "json", "money", "timezone"]
 v0_2_changes = "No changes from v0.1"
 v0_9_4_changes = "Added json type for flexible JSON data storage"
+v0_20_changes = "Added money type for canonical monetary value representation"
 
 [concepts.json]
 category = "Type System"
@@ -132,6 +133,70 @@ has_many = "Parent owns multiple children (one-to-many)"
 has_one = "Parent owns exactly one child (one-to-one)"
 embeds = "Value object embedded in parent (no separate identity)"
 belongs_to = "Child side of has_many/has_one relationship"
+
+[concepts.money]
+category = "Type System"
+definition = "Canonical money representation for monetary values. Uses integer minor units (pence/cents) + ISO 4217 currency code for precision and JSON serialization safety. REQUIRED for monetary fields in FACT/INTENT streams."
+syntax = '''
+<field_name>: money [required|optional]
+<field_name>: money(GBP) [required|optional]  # Explicit currency
+'''
+example = '''
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer required
+
+  # Money field - expands to amount_minor (int) + currency (str)
+  total: money required
+
+  # With explicit currency
+  shipping_cost: money(GBP)
+
+  # Optional money field
+  discount: money optional
+
+entity Invoice "Invoice":
+  id: uuid pk
+  order: ref Order required
+
+  # Multiple money fields
+  subtotal: money required
+  tax_amount: money required
+  total_amount: money required
+'''
+related = ["field_types", "entity", "decimal"]
+v0_20_changes = "NEW in v0.20.0 - Canonical money representation"
+
+[concepts.money.why_not_decimal]
+json_safety = "Decimal is not JSON-serializable by default, causing serialization errors in event payloads"
+precision = "Float has precision issues (0.1 + 0.2 != 0.3), int minor units are exact"
+explicit_units = "field_minor makes units explicit (pence, cents) vs ambiguous amount"
+industry_standard = "Stripe, Adyen, and most payment APIs use integer minor units"
+
+[concepts.money.runtime_representation]
+description = "Money expands to two fields in the database and event payloads"
+amount_minor = "Integer amount in minor currency units (e.g., 1999 = 19.99 GBP)"
+currency = "ISO 4217 currency code (e.g., 'GBP', 'USD', 'EUR')"
+example_payload = '''
+{
+  "amount_minor": 1999,
+  "currency": "GBP"
+}
+'''
+
+[concepts.money.currency_scales]
+description = "Different currencies have different decimal scales"
+GBP = "2 decimal places (100 pence = 1 pound)"
+USD = "2 decimal places (100 cents = 1 dollar)"
+EUR = "2 decimal places (100 cents = 1 euro)"
+JPY = "0 decimal places (no minor unit)"
+BHD = "3 decimal places (1000 fils = 1 dinar)"
+
+[concepts.money.lint_rule]
+description = "Linter enforces Money type for monetary fields in FACT/INTENT streams"
+error_for_decimal = "Using decimal for money in FACT streams is an error"
+warning_for_entity_decimal = "Using decimal in entities without currency field is a warning"
+pattern_detection = "Fields named amount, price, cost, total, etc. are checked"
 
 [concepts.timezone]
 category = "Type System"

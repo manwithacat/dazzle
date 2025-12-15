@@ -2,6 +2,11 @@
 Data factory for PRA synthetic data generation.
 
 Generates realistic test data for all PRA entities and stream schemas.
+
+Uses the canonical Money type for all monetary values to ensure:
+- JSON serialization compatibility (int-based amount_minor)
+- No precision loss (exact integer arithmetic)
+- Explicit currency handling
 """
 
 from __future__ import annotations
@@ -9,9 +14,10 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
+
+from dazzle.core.ir.money import Money, to_money
 
 from .hot_keys import HotKeySelector, create_pareto_selector
 
@@ -74,17 +80,19 @@ class PRADataFactory:
             use_v2: Use v2 schema with idempotency_key
 
         Returns:
-            INTENT payload dict
+            INTENT payload dict with Money-typed amount
         """
         actor = actor_id or self.actor_selector.select()
         account = account_id or self.account_selector.select()
+        money = self._random_money(10, 1000)
 
-        payload = {
+        payload: dict[str, Any] = {
             "request_id": uuid4(),
             "actor_id": actor,
             "account_id": account,
-            "amount": self._random_amount(10, 1000),
-            "currency": self._random_currency(),
+            # Money fields use canonical representation
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "occurred_at": datetime.now(UTC),
         }
 
@@ -105,13 +113,14 @@ class PRADataFactory:
             order_id: Associated order ID
 
         Returns:
-            INTENT payload dict
+            INTENT payload dict with Money-typed amount
         """
+        money = self._random_money(10, 1000)
         return {
             "request_id": uuid4(),
             "order_id": order_id or uuid4(),
-            "amount": self._random_amount(10, 1000),
-            "currency": self._random_currency(),
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "gateway": self._random_gateway(),
             "occurred_at": datetime.now(UTC),
         }
@@ -127,15 +136,16 @@ class PRADataFactory:
         actor_id: UUID | None = None,
         account_id: UUID | None = None,
         causation_id: UUID | None = None,
-        amount: Decimal | None = None,
+        amount: Money | None = None,
     ) -> dict[str, Any]:
-        """Generate OrderPlaced fact payload."""
+        """Generate OrderPlaced fact payload with Money-typed amount."""
+        money = amount or self._random_money(10, 1000)
         return {
             "order_id": order_id or uuid4(),
             "actor_id": actor_id or self.actor_selector.select(),
             "account_id": account_id or self.account_selector.select(),
-            "amount": amount or self._random_amount(10, 1000),
-            "currency": self._random_currency(),
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "causation_id": causation_id or uuid4(),
             "occurred_at": datetime.now(UTC),
         }
@@ -179,14 +189,15 @@ class PRADataFactory:
         payment_id: UUID | None = None,
         order_id: UUID | None = None,
         causation_id: UUID | None = None,
-        amount: Decimal | None = None,
+        amount: Money | None = None,
     ) -> dict[str, Any]:
-        """Generate PaymentSucceeded fact payload."""
+        """Generate PaymentSucceeded fact payload with Money-typed amount."""
+        money = amount or self._random_money(10, 1000)
         return {
             "payment_id": payment_id or uuid4(),
             "order_id": order_id or uuid4(),
-            "amount": amount or self._random_amount(10, 1000),
-            "currency": self._random_currency(),
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "gateway_ref": self._random_gateway_ref(),
             "causation_id": causation_id or uuid4(),
             "occurred_at": datetime.now(UTC),
@@ -230,16 +241,18 @@ class PRADataFactory:
         self,
         *,
         account_id: UUID | None = None,
-        amount: Decimal | None = None,
+        amount: Money | None = None,
         reference_type: str = "payment",
         reference_id: UUID | None = None,
         causation_id: UUID | None = None,
     ) -> dict[str, Any]:
-        """Generate LedgerCredited fact payload."""
+        """Generate LedgerCredited fact payload with Money-typed amount."""
+        money = amount or self._random_money(10, 1000)
         return {
             "entry_id": uuid4(),
             "account_id": account_id or self.account_selector.select(),
-            "amount": amount or self._random_amount(10, 1000),
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "reference_type": reference_type,
             "reference_id": reference_id or uuid4(),
             "causation_id": causation_id or uuid4(),
@@ -250,16 +263,18 @@ class PRADataFactory:
         self,
         *,
         account_id: UUID | None = None,
-        amount: Decimal | None = None,
+        amount: Money | None = None,
         reference_type: str = "order",
         reference_id: UUID | None = None,
         causation_id: UUID | None = None,
     ) -> dict[str, Any]:
-        """Generate LedgerDebited fact payload."""
+        """Generate LedgerDebited fact payload with Money-typed amount."""
+        money = amount or self._random_money(10, 1000)
         return {
             "entry_id": uuid4(),
             "account_id": account_id or self.account_selector.select(),
-            "amount": amount or self._random_amount(10, 1000),
+            "amount_minor": money.amount_minor,
+            "currency": money.currency,
             "reference_type": reference_type,
             "reference_id": reference_id or uuid4(),
             "causation_id": causation_id or uuid4(),
@@ -316,15 +331,16 @@ class PRADataFactory:
         self,
         *,
         account_id: UUID | None = None,
-        balance: Decimal | None = None,
+        balance: Money | None = None,
         as_of_sequence: int | None = None,
     ) -> dict[str, Any]:
-        """Generate AccountBalanceCalculated derivation payload."""
+        """Generate AccountBalanceCalculated derivation payload with Money-typed balance."""
+        money = balance or self._random_money(-1000, 10000)
         return {
             "calculation_id": uuid4(),
             "account_id": account_id or self.account_selector.select(),
-            "balance": balance or self._random_amount(-1000, 10000),
-            "currency": self._random_currency(),
+            "balance_minor": money.amount_minor,
+            "currency": money.currency,
             "as_of_sequence": as_of_sequence or self._rng.randint(1, 100000),
             "occurred_at": datetime.now(UTC),
             "processed_at": datetime.now(UTC),
@@ -336,24 +352,25 @@ class PRADataFactory:
         revenue_date: datetime | None = None,
         use_v2: bool = False,
     ) -> dict[str, Any]:
-        """Generate DailyRevenueAggregated derivation payload."""
+        """Generate DailyRevenueAggregated derivation payload with Money-typed revenue."""
         date = revenue_date or datetime.now(UTC) - timedelta(days=self._rng.randint(0, 30))
         order_count = self._rng.randint(100, 10000)
-        total_revenue = self._random_amount(1000, 100000)
+        total_revenue = self._random_money(1000, 100000, currency="GBP")
 
-        payload = {
+        payload: dict[str, Any] = {
             "calculation_id": uuid4(),
             "revenue_date": date.date(),
-            "total_revenue": total_revenue,
+            "total_revenue_minor": total_revenue.amount_minor,
+            "currency": total_revenue.currency,
             "order_count": order_count,
-            "currency": "GBP",
             "occurred_at": datetime.now(UTC),
             "processed_at": datetime.now(UTC),
         }
 
         if use_v2:
-            avg = Decimal(str(total_revenue)) / Decimal(order_count)
-            payload["average_order_value"] = round(avg, 4)
+            # Average order value also in minor units
+            avg_minor = total_revenue.amount_minor // order_count
+            payload["average_order_value_minor"] = avg_minor
 
         return payload
 
@@ -384,11 +401,34 @@ class PRADataFactory:
     # Random Value Generators
     # =========================================================================
 
-    def _random_amount(self, min_val: int, max_val: int) -> Decimal:
-        """Generate random decimal amount."""
+    def _random_money(self, min_val: int, max_val: int, currency: str | None = None) -> Money:
+        """
+        Generate random Money value.
+
+        Args:
+            min_val: Minimum amount in major units (e.g., pounds)
+            max_val: Maximum amount in major units
+            currency: Currency code (default: random from GBP/USD/EUR)
+
+        Returns:
+            Money object with amount_minor in minor units
+        """
         whole = self._rng.randint(min_val, max_val)
         cents = self._rng.randint(0, 99)
-        return Decimal(f"{whole}.{cents:02d}")
+        amount = float(f"{whole}.{cents:02d}")
+        curr = currency or self._random_currency()
+        return to_money(amount, curr)
+
+    def _random_amount(self, min_val: int, max_val: int) -> float:
+        """
+        Generate random decimal amount (returns float).
+
+        DEPRECATED: Use _random_money() for event payloads.
+        This method is kept for non-money numeric fields.
+        """
+        whole = self._rng.randint(min_val, max_val)
+        cents = self._rng.randint(0, 99)
+        return float(f"{whole}.{cents:02d}")
 
     def _random_currency(self) -> str:
         """Generate random currency code."""

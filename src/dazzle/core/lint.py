@@ -5,6 +5,7 @@ from .validator import (
     validate_experiences,
     validate_foreign_models,
     validate_integrations,
+    validate_money_fields,
     validate_services,
     validate_surfaces,
     validate_ux_specs,
@@ -71,6 +72,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # UX Semantic Layer validation
     errors, warnings = validate_ux_specs(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Money field validation (FACT/INTENT streams must use Money type)
+    errors, warnings = validate_money_fields(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
