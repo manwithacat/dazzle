@@ -90,11 +90,13 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
     api_route_prefixes: set[str] = set()  # Entity route prefixes (e.g., "/tasks", "/users")
     theme_css: str | None = None  # Generated theme CSS (v0.16.0)
+    sitespec_data: dict[str, Any] | None = None  # SiteSpec for public site pages (v0.16.0)
+    site_page_routes: set[str] = set()  # Routes that are site pages (/, /about, /pricing, etc.)
 
     def _is_api_path(self, path: str) -> bool:
         """Check if a path should be proxied to the backend API."""
         # Known system routes
-        if path.startswith(("/auth/", "/files/", "/pages/", "/__test__/")):
+        if path.startswith(("/auth/", "/files/", "/pages/", "/__test__/", "/_site/")):
             return True
         if path in ("/ui-spec", "/health"):
             return True
@@ -103,6 +105,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             if path == prefix or path.startswith(prefix + "/"):
                 return True
         return False
+
+    def _is_site_page_path(self, path: str) -> bool:
+        """Check if a path is a site page route (/, /about, /pricing, etc.)."""
+        if not self.site_page_routes:
+            return False
+        return path in self.site_page_routes
 
     def handle(self) -> None:
         """Handle request, suppressing connection reset errors from browser."""
@@ -135,6 +143,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._serve_runtime()
         elif path == "/app.js":
             self._serve_app()
+        elif path == "/site.js":
+            # Serve site page JavaScript (v0.16.0)
+            self._serve_site_js()
         elif path == "/ui-spec.json":
             self._serve_spec()
         elif path == "/__hot-reload__":
@@ -143,6 +154,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._proxy_request("GET")
         elif path == "/openapi.json":
             self._proxy_request("GET")
+        elif self._is_site_page_path(path):
+            # Serve public site pages (v0.16.0)
+            self._serve_site_page(path)
         else:
             # For SPA: serve HTML for all non-static routes
             # This enables path-based routing (e.g., /task/create, /task/123)
@@ -331,6 +345,489 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self._send_response(css_content, "text/css")
         except Exception as e:
             self.send_error(500, f"Failed to load CSS: {e}")
+
+    def _serve_site_page(self, path: str) -> None:
+        """Serve a public site page (v0.16.0)."""
+        if not self.sitespec_data:
+            self.send_error(404, "No site configuration")
+            return
+
+        # Check if this is an auth page
+        auth_pages = self.sitespec_data.get("auth_pages", {})
+        login_page = auth_pages.get("login", {})
+        signup_page = auth_pages.get("signup", {})
+
+        if path == login_page.get("route", "/login"):
+            self._serve_auth_page("login")
+            return
+        if path == signup_page.get("route", "/signup"):
+            self._serve_auth_page("signup")
+            return
+
+        brand = self.sitespec_data.get("brand", {})
+        product_name = brand.get("product_name", "My App")
+        tagline = brand.get("tagline", "")
+        layout = self.sitespec_data.get("layout", {})
+        nav = layout.get("nav", {})
+        footer = layout.get("footer", {})
+
+        # Build nav HTML
+        nav_items_html = ""
+        for item in nav.get("items", []):
+            label = item.get("label", "")
+            href = item.get("href", "#")
+            nav_items_html += f'<a href="{href}" class="dz-nav-link">{label}</a>\n'
+
+        # Add CTA button if present
+        cta = nav.get("cta")
+        if cta:
+            cta_label = cta.get("label", "Get Started")
+            cta_href = cta.get("href", "/app")
+            nav_items_html += f'<a href="{cta_href}" class="dz-nav-cta">{cta_label}</a>\n'
+
+        # Build footer HTML
+        footer_html = ""
+        for col in footer.get("columns", []):
+            col_title = col.get("title", "")
+            footer_html += f'<div class="dz-footer-col"><h4>{col_title}</h4><ul>'
+            for link in col.get("links", []):
+                link_label = link.get("label", "")
+                link_href = link.get("href", "#")
+                footer_html += f'<li><a href="{link_href}">{link_label}</a></li>'
+            footer_html += '</ul></div>'
+
+        copyright_text = footer.get("copyright", f"© 2025 {product_name}")
+
+        html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{product_name}</title>
+    <link rel="icon" href="/assets/dazzle-favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles/dnr.css">
+</head>
+<body class="dz-site">
+    <header class="dz-site-header">
+        <nav class="dz-site-nav">
+            <a href="/" class="dz-site-logo">{product_name}</a>
+            <div class="dz-nav-items">
+                {nav_items_html}
+            </div>
+        </nav>
+    </header>
+
+    <main id="dz-site-main" data-route="{path}">
+        <!-- Page sections will be rendered by site.js -->
+        <div class="dz-loading">Loading...</div>
+    </main>
+
+    <footer class="dz-site-footer">
+        <div class="dz-footer-content">
+            {footer_html}
+        </div>
+        <div class="dz-footer-bottom">
+            <p>{copyright_text}</p>
+        </div>
+    </footer>
+
+    <script src="/site.js"></script>
+</body>
+</html>'''
+
+        self._send_response(html, "text/html")
+
+    def _serve_site_js(self) -> None:
+        """Serve the site page JavaScript (v0.16.0)."""
+        js = '''
+/**
+ * Dazzle Site Page Renderer
+ * Fetches page data from /_site/page/{route} and renders sections.
+ */
+(function() {
+    'use strict';
+
+    const main = document.getElementById('dz-site-main');
+    const route = main?.dataset.route || '/';
+
+    // Section renderers
+    const renderers = {
+        hero: renderHero,
+        features: renderFeatures,
+        feature_grid: renderFeatureGrid,
+        cta: renderCTA,
+        faq: renderFAQ,
+        testimonials: renderTestimonials,
+        stats: renderStats,
+        steps: renderSteps,
+        logo_cloud: renderLogoCloud,
+        pricing: renderPricing,
+        markdown: renderMarkdown,
+    };
+
+    function renderHero(section) {
+        const headline = section.headline || '';
+        const subhead = section.subhead || '';
+        const primaryCta = section.primary_cta;
+        const secondaryCta = section.secondary_cta;
+
+        let ctaHtml = '';
+        if (primaryCta) {
+            ctaHtml += `<a href="${primaryCta.href || '#'}" class="dz-btn dz-btn-primary">${primaryCta.label || 'Get Started'}</a>`;
+        }
+        if (secondaryCta) {
+            ctaHtml += `<a href="${secondaryCta.href || '#'}" class="dz-btn dz-btn-secondary">${secondaryCta.label || 'Learn More'}</a>`;
+        }
+
+        return `
+            <section class="dz-section dz-section-hero">
+                <div class="dz-section-content">
+                    <h1>${headline}</h1>
+                    ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
+                    ${ctaHtml ? `<div class="dz-cta-group">${ctaHtml}</div>` : ''}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFeatures(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-feature-item">
+                ${item.icon ? `<div class="dz-feature-icon">${item.icon}</div>` : ''}
+                <h3>${item.title || ''}</h3>
+                <p>${item.body || ''}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-features">
+                <div class="dz-section-content">
+                    <div class="dz-features-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFeatureGrid(section) {
+        return renderFeatures(section);  // Same layout
+    }
+
+    function renderCTA(section) {
+        const headline = section.headline || '';
+        const body = section.body || '';
+        const primaryCta = section.primary_cta;
+
+        return `
+            <section class="dz-section dz-section-cta">
+                <div class="dz-section-content">
+                    <h2>${headline}</h2>
+                    ${body ? `<p>${body}</p>` : ''}
+                    ${primaryCta ? `<a href="${primaryCta.href || '#'}" class="dz-btn dz-btn-primary">${primaryCta.label || 'Get Started'}</a>` : ''}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFAQ(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <details class="dz-faq-item">
+                <summary>${item.question || ''}</summary>
+                <p>${item.answer || ''}</p>
+            </details>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-faq">
+                <div class="dz-section-content">
+                    <h2>Frequently Asked Questions</h2>
+                    <div class="dz-faq-list">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderTestimonials(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-testimonial-item">
+                <blockquote>"${item.quote || ''}"</blockquote>
+                <div class="dz-testimonial-author">
+                    ${item.avatar ? `<img src="${item.avatar}" alt="${item.author}" class="dz-avatar">` : ''}
+                    <div>
+                        <strong>${item.author || ''}</strong>
+                        ${item.role ? `<span>${item.role}${item.company ? `, ${item.company}` : ''}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-testimonials">
+                <div class="dz-section-content">
+                    <div class="dz-testimonials-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderStats(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-stat-item">
+                <span class="dz-stat-value">${item.value || ''}</span>
+                <span class="dz-stat-label">${item.label || ''}</span>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-stats">
+                <div class="dz-section-content">
+                    <div class="dz-stats-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderSteps(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-step-item">
+                <span class="dz-step-number">${item.step || ''}</span>
+                <h3>${item.title || ''}</h3>
+                <p>${item.body || ''}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-steps">
+                <div class="dz-section-content">
+                    <div class="dz-steps-list">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderLogoCloud(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <a href="${item.href || '#'}" class="dz-logo-item" title="${item.name || ''}">
+                <img src="${item.src || ''}" alt="${item.name || ''}">
+            </a>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-logo-cloud">
+                <div class="dz-section-content">
+                    <div class="dz-logos-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderPricing(section) {
+        const tiers = section.tiers || [];
+        const tiersHtml = tiers.map(tier => {
+            const features = (tier.features || []).map(f => `<li>${f}</li>`).join('');
+            const highlighted = tier.highlighted ? ' dz-pricing-highlighted' : '';
+            return `
+                <div class="dz-pricing-tier${highlighted}">
+                    <h3>${tier.name || ''}</h3>
+                    <div class="dz-pricing-price">
+                        <span class="dz-price">${tier.price || ''}</span>
+                        ${tier.period ? `<span class="dz-period">/${tier.period}</span>` : ''}
+                    </div>
+                    <ul class="dz-pricing-features">${features}</ul>
+                    ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="dz-btn dz-btn-primary">${tier.cta.label || 'Get Started'}</a>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <section class="dz-section dz-section-pricing">
+                <div class="dz-section-content">
+                    <div class="dz-pricing-grid">${tiersHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderMarkdown(section) {
+        // For markdown content, we'll render it as-is (assuming pre-rendered HTML)
+        const content = section.content || '';
+        return `
+            <section class="dz-section dz-section-markdown">
+                <div class="dz-section-content dz-prose">
+                    ${content}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderPage(pageData) {
+        if (!main) return;
+
+        const sections = pageData.sections || [];
+        let html = '';
+
+        for (const section of sections) {
+            const renderer = renderers[section.type];
+            if (renderer) {
+                html += renderer(section);
+            } else {
+                console.warn(`Unknown section type: ${section.type}`);
+            }
+        }
+
+        // Handle markdown page content
+        if (pageData.content && pageData.type === 'markdown') {
+            html = renderMarkdown({ content: pageData.content });
+        }
+
+        main.innerHTML = html || '<p>No content</p>';
+    }
+
+    // Fetch and render page
+    async function init() {
+        try {
+            const apiRoute = route === '/' ? '' : route;
+            const response = await fetch(`/_site/page${apiRoute}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load page: ${response.status}`);
+            }
+            const pageData = await response.json();
+            renderPage(pageData);
+        } catch (error) {
+            console.error('Error loading page:', error);
+            if (main) {
+                main.innerHTML = '<p class="dz-error">Failed to load page content.</p>';
+            }
+        }
+    }
+
+    init();
+})();
+'''
+        self._send_response(js, "application/javascript")
+
+    def _serve_auth_page(self, page_type: str) -> None:
+        """Serve a login or signup page (v0.16.0)."""
+        if not self.sitespec_data:
+            self.send_error(404, "No site configuration")
+            return
+
+        brand = self.sitespec_data.get("brand", {})
+        product_name = brand.get("product_name", "My App")
+        layout = self.sitespec_data.get("layout", {})
+        auth_config = layout.get("auth", {})
+
+        is_login = page_type == "login"
+        title = "Sign In" if is_login else "Create Account"
+        other_page = "/signup" if is_login else "/login"
+        other_link_text = "Create an account" if is_login else "Sign in instead"
+        button_text = "Sign In" if is_login else "Sign Up"
+        action_url = "/auth/login" if is_login else "/auth/register"
+
+        # Build form fields
+        fields_html = ""
+        if not is_login:
+            fields_html += '''
+            <div class="dz-auth-field">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" name="name" required autocomplete="name">
+            </div>'''
+
+        fields_html += '''
+            <div class="dz-auth-field">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
+            </div>
+            <div class="dz-auth-field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>'''
+
+        if not is_login:
+            fields_html += '''
+            <div class="dz-auth-field">
+                <label for="confirm_password">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required>
+            </div>'''
+
+        html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} - {product_name}</title>
+    <link rel="icon" href="/assets/dazzle-favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles/dnr.css">
+</head>
+<body class="dz-site dz-auth-page">
+    <div class="dz-auth-container">
+        <div class="dz-auth-card">
+            <a href="/" class="dz-auth-logo">{product_name}</a>
+            <h1>{title}</h1>
+
+            <div id="dz-auth-error" class="dz-auth-error hidden"></div>
+
+            <form id="dz-auth-form" method="POST" action="{action_url}">
+                {fields_html}
+
+                <button type="submit" class="dz-btn dz-btn-primary dz-btn-full">
+                    {button_text}
+                </button>
+            </form>
+
+            <p class="dz-auth-switch">
+                <a href="{other_page}">{other_link_text}</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+    (function() {{
+        const form = document.getElementById('dz-auth-form');
+        const errorDiv = document.getElementById('dz-auth-error');
+
+        form.addEventListener('submit', async (e) => {{
+            e.preventDefault();
+            errorDiv.classList.add('hidden');
+            errorDiv.textContent = '';
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {{
+                const response = await fetch(form.action, {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify(data),
+                }});
+
+                if (response.ok) {{
+                    const result = await response.json();
+                    if (result.token) {{
+                        localStorage.setItem('auth_token', result.token);
+                    }}
+                    window.location.href = '/app';
+                }} else {{
+                    const error = await response.json();
+                    errorDiv.textContent = error.detail || 'Authentication failed';
+                    errorDiv.classList.remove('hidden');
+                }}
+            }} catch (err) {{
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }}
+        }});
+    }})();
+    </script>
+</body>
+</html>'''
+
+        self._send_response(html, "text/html")
 
     def _serve_asset(self, path: str) -> None:
         """Serve static assets from static/assets/ directory (v0.14.2)."""
@@ -647,6 +1144,35 @@ class DNRCombinedServer:
             DNRCombinedHandler.theme_css = generate_theme_css(theme)
         except ImportError:
             DNRCombinedHandler.theme_css = None
+
+        # Configure site pages (v0.16.0)
+        DNRCombinedHandler.sitespec_data = self.sitespec_data
+        if self.sitespec_data:
+            # Build set of site page routes
+            site_routes: set[str] = set()
+            for page in self.sitespec_data.get("pages", []):
+                route = page.get("route")
+                if route:
+                    site_routes.add(route)
+            # Add legal page routes
+            legal = self.sitespec_data.get("legal", {})
+            if legal.get("terms"):
+                site_routes.add(legal["terms"].get("route", "/terms"))
+            if legal.get("privacy"):
+                site_routes.add(legal["privacy"].get("route", "/privacy"))
+            # Add auth page routes (login/signup)
+            auth_pages = self.sitespec_data.get("auth_pages", {})
+            login_page = auth_pages.get("login", {})
+            signup_page = auth_pages.get("signup", {})
+            if login_page.get("enabled", True) and login_page.get("mode") == "generated":
+                site_routes.add(login_page.get("route", "/login"))
+            if signup_page.get("enabled", True) and signup_page.get("mode") == "generated":
+                site_routes.add(signup_page.get("route", "/signup"))
+            DNRCombinedHandler.site_page_routes = site_routes
+            if site_routes:
+                print(f"[DNR] Site pages: {', '.join(sorted(site_routes))}")
+        else:
+            DNRCombinedHandler.site_page_routes = set()
 
         # Create server with threading for concurrent SSE connections
         socketserver.TCPServer.allow_reuse_address = True
