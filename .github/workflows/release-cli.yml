@@ -97,7 +97,7 @@ jobs:
           shasum -a 256 dazzle-darwin-x64.tar.gz > dazzle-darwin-x64.tar.gz.sha256
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dazzle-${{ matrix.target }}
           path: |
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upload x64 artifact (cross-compiled)
         if: matrix.target == 'darwin-arm64'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dazzle-darwin-x64
           path: |

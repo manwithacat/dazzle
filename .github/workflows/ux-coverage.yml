@@ -262,7 +262,7 @@ jobs:
 
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: screenshots-${{ matrix.example }}
           path: tests/e2e/docker/screenshots/${{ matrix.example }}/
@@ -270,7 +270,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-${{ matrix.example }}
           path: |
@@ -384,7 +384,7 @@ jobs:
           EOF
 
       - name: Upload combined report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ux-coverage-combined
           path: combined-report/
@@ -556,7 +556,7 @@ jobs:
           EOF
 
       - name: Upload gap analysis
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: gap-analysis
           path: gap-reports/
