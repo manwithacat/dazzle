@@ -5,8 +5,18 @@ Provides load generation, data factories, and test harness for
 stress testing the Dazzle event-first architecture.
 """
 
+from .consumers import (
+    ConsumerGroup,
+    DerivationConsumer,
+    FailingConsumer,
+    NormalConsumer,
+    ProjectionConsumer,
+    SlowConsumer,
+    TestConsumer,
+)
 from .data_factory import PRADataFactory
 from .generator import GeneratorConfig, LoadGenerator
+from .harness import TestHarness, TestResult, TestStatus, run_quick_test, run_standard_test
 from .hot_keys import HotKeySelector
 from .profiles import (
     BurstProfile,
@@ -16,16 +26,39 @@ from .profiles import (
     SkewedBurstProfile,
     SteadyRampProfile,
 )
+from .scenarios import ScenarioType, SuccessCriteria, TestScenario, get_scenario, list_scenarios
 
 __all__ = [
+    # Profiles
     "BurstProfile",
     "FailureInjectionProfile",
-    "GeneratorConfig",
-    "HotKeySelector",
-    "LoadGenerator",
     "LoadProfile",
-    "PRADataFactory",
     "ReplayProfile",
     "SkewedBurstProfile",
     "SteadyRampProfile",
+    # Generator
+    "GeneratorConfig",
+    "HotKeySelector",
+    "LoadGenerator",
+    "PRADataFactory",
+    # Consumers
+    "ConsumerGroup",
+    "DerivationConsumer",
+    "FailingConsumer",
+    "NormalConsumer",
+    "ProjectionConsumer",
+    "SlowConsumer",
+    "TestConsumer",
+    # Harness
+    "TestHarness",
+    "TestResult",
+    "TestStatus",
+    "run_quick_test",
+    "run_standard_test",
+    # Scenarios
+    "ScenarioType",
+    "SuccessCriteria",
+    "TestScenario",
+    "get_scenario",
+    "list_scenarios",
 ]
