@@ -91,6 +91,21 @@ from .e2e import (
     UsabilityRule,
 )
 
+# Eventing (v0.18.0 Event-First Architecture)
+from .eventing import (
+    EventFieldSpec,
+    EventHandlerSpec,
+    EventModelSpec,
+    EventSpec,
+    EventTriggerKind,
+    ProjectionAction,
+    ProjectionHandlerSpec,
+    ProjectionSpec,
+    PublishSpec,
+    SubscribeSpec,
+    TopicSpec,
+)
+
 # Experiences
 from .experiences import (
     ExperienceSpec,
@@ -538,6 +553,18 @@ __all__ = [
     "TestGap",
     "TestGapAnalysis",
     "TestGapCategory",
+    # Eventing (v0.18.0 Event-First Architecture)
+    "EventFieldSpec",
+    "EventHandlerSpec",
+    "EventModelSpec",
+    "EventSpec",
+    "EventTriggerKind",
+    "ProjectionAction",
+    "ProjectionHandlerSpec",
+    "ProjectionSpec",
+    "PublishSpec",
+    "SubscribeSpec",
+    "TopicSpec",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

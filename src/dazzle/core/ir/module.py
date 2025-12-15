@@ -15,6 +15,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from .archetype import ArchetypeSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
+from .eventing import (
+    EventModelSpec,
+    ProjectionSpec,
+    SubscribeSpec,
+)
 from .experiences import ExperienceSpec
 from .foreign_models import ForeignModelSpec
 from .integrations import IntegrationSpec
@@ -102,6 +107,11 @@ class ModuleFragment(BaseModel):
     assets: list[AssetSpec] = Field(default_factory=list)
     documents: list[DocumentSpec] = Field(default_factory=list)
     templates: list[TemplateSpec] = Field(default_factory=list)
+    # Event-First Architecture (v0.18.0)
+    event_model: EventModelSpec | None = None
+    subscriptions: list[SubscribeSpec] = Field(default_factory=list)
+    projections: list[ProjectionSpec] = Field(default_factory=list)
+    # Publish directives are stored on entities, not here
 
     model_config = ConfigDict(frozen=True)
 

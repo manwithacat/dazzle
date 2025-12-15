@@ -215,6 +215,14 @@ class TokenType(Enum):
     SEED_SCRIPT = "seed_script"
     START_ROUTE = "start_route"
 
+    # v0.18.0 Event-First Architecture Keywords
+    EVENT_MODEL = "event_model"
+    PUBLISH = "publish"
+    SUBSCRIBE = "subscribe"
+    PROJECT = "project"
+    TOPIC = "topic"
+    RETENTION = "retention"
+
     # v0.9.0 Messaging Channel Keywords
     # Note: MESSAGE already defined above in UX keywords
     CHANNEL = "channel"
@@ -545,6 +553,13 @@ KEYWORDS = {
     "proficiency",
     "seed_script",
     "start_route",
+    # v0.18.0 Event-First Architecture keywords
+    "event_model",
+    "publish",
+    "subscribe",
+    "project",
+    "topic",
+    "retention",
     # v0.9.0 Messaging Channel keywords
     # Note: "message" already in UX keywords
     "channel",

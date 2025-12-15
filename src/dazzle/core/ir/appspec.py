@@ -14,6 +14,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from .archetype import ArchetypeSpec
 from .domain import DomainSpec, EntitySpec
 from .e2e import FixtureSpec, FlowPriority, FlowSpec
+from .eventing import (
+    EventModelSpec,
+    ProjectionSpec,
+    SubscribeSpec,
+)
 from .experiences import ExperienceSpec
 from .fields import FieldType
 from .foreign_models import ForeignModelSpec
@@ -88,6 +93,10 @@ class AppSpec(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     ux: UXLayouts | None = None  # Semantic layout engine (v0.3)
     security: SecurityConfig | None = None  # Security configuration (v0.11.0)
+    # Event-First Architecture (v0.18.0)
+    event_model: EventModelSpec | None = None
+    subscriptions: list[SubscribeSpec] = Field(default_factory=list)
+    projections: list[ProjectionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
