@@ -366,7 +366,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         brand = self.sitespec_data.get("brand", {})
         product_name = brand.get("product_name", "My App")
-        tagline = brand.get("tagline", "")
         layout = self.sitespec_data.get("layout", {})
         nav = layout.get("nav", {})
         footer = layout.get("footer", {})
@@ -720,7 +719,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         brand = self.sitespec_data.get("brand", {})
         product_name = brand.get("product_name", "My App")
         layout = self.sitespec_data.get("layout", {})
-        auth_config = layout.get("auth", {})
+        _ = layout.get("auth", {})  # Reserved for future auth customization
 
         is_login = page_type == "login"
         title = "Sign In" if is_login else "Create Account"
