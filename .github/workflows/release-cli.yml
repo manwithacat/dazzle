@@ -632,7 +632,7 @@ jobs:
 
       - name: Create status check
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             // Create a check run to track homebrew verification status
