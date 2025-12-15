@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-15
-**Current Version**: v0.15.0
+**Current Version**: v0.14.0
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
@@ -32,7 +32,7 @@ Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
 
 ## Roadmap
 
-### v0.9.0 - Messaging Channels
+### v0.15.0 - Messaging Channels
 
 **Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
 **Status**: Planned
@@ -47,7 +47,7 @@ Unified messaging abstraction for email, queues, and event streams.
 
 ---
 
-### v0.10.0 - API Knowledgebase & Integration Assistant
+### v0.16.0 - API Knowledgebase & Integration Assistant
 
 **Issue**: [#21](https://github.com/manwithacat/dazzle/issues/21)
 **Status**: Planned
@@ -61,7 +61,7 @@ Curated API definitions and LLM-assisted integration setup.
 
 ---
 
-### v0.11.0 - SiteSpec: Public Site Shell
+### v0.17.0 - SiteSpec: Public Site Shell
 
 **Issue**: [#24](https://github.com/manwithacat/dazzle/issues/24)
 **Status**: Planned
