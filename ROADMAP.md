@@ -76,6 +76,23 @@ Public-facing site shell pages without polluting the App DSL.
 
 ---
 
+### v0.20.0 - Event-First Architecture
+
+**Issue**: [#25](https://github.com/manwithacat/dazzle/issues/25)
+**Status**: Planned
+
+Events as the invisible substrate - correctness by construction.
+
+- EventBus interface (Kafka-shaped) with DevBrokerSQLite (zero-Docker)
+- Transactional outbox + idempotent inbox (at-least-once, dedupe)
+- DSL: `topic`, `event`, `publish when`, `subscribe`, `project`
+- Replay capability for projection rebuild
+- CLI: `dazzle bus info/tail/replay`, `dazzle outbox drain`
+- AsyncAPI generation (Swagger for events)
+- Optional data product boundaries with classification policies
+
+---
+
 ### v1.0.0 - Dazzle Orchestrator Control Plane
 
 **Issue**: [#22](https://github.com/manwithacat/dazzle/issues/22)
