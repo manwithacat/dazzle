@@ -61,6 +61,21 @@ Curated API definitions and LLM-assisted integration setup.
 
 ---
 
+### v0.11.0 - SiteSpec: Public Site Shell
+
+**Issue**: [#24](https://github.com/manwithacat/dazzle/issues/24)
+**Status**: Planned
+
+Public-facing site shell pages without polluting the App DSL.
+
+- YAML-based `sitespec.yaml` for home, about, pricing, terms, privacy pages
+- Section-based landing pages (hero, features, cta, faq, testimonials)
+- Markdown content with template variables
+- Zero-config default generation
+- MCP tools: `site_spec`, `site_content`
+
+---
+
 ### v1.0.0 - Dazzle Orchestrator Control Plane
 
 **Issue**: [#22](https://github.com/manwithacat/dazzle/issues/22)
