@@ -97,6 +97,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # Parser corpus snapshot tests (catches parser regressions)
+      - id: parser-corpus
+        name: parser-corpus
+        entry: pytest tests/parser_corpus/ -x -q --tb=short
+        language: system
+        files: ^(src/dazzle/core/dsl_parser.*\.py|tests/parser_corpus/|tests/corpora/)
+        pass_filenames: false
+        stages: [pre-commit]
+
       # Verify MCP server functionality (tools are published correctly)
       - id: mcp-verify
         name: mcp-verify
