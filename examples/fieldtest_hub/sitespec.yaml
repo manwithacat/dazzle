@@ -1,0 +1,39 @@
+version: 1
+
+brand:
+  product_name: "FieldTest Hub"
+  tagline: "Distributed beta testing for hardware devices"
+  company_legal_name: "FieldTest Hub Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Hardware Field Testing Platform"
+        subhead: "Manage devices, track issues, and coordinate testers in one place."
+        primary_cta:
+          label: "Get Started"
+          href: "/login"
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns: []
+    disclaimer: "FieldTest Hub Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

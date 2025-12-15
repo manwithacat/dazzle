@@ -1,0 +1,39 @@
+version: 1
+
+brand:
+  product_name: "Ops Dashboard"
+  tagline: "Monitor your operations in real-time"
+  company_legal_name: "Ops Dashboard Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Operations Command Center"
+        subhead: "Real-time visibility into your operations with actionable insights."
+        primary_cta:
+          label: "View Dashboard"
+          href: "/login"
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns: []
+    disclaimer: "Ops Dashboard Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

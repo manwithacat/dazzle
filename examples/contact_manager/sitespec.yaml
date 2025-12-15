@@ -1,0 +1,39 @@
+version: 1
+
+brand:
+  product_name: "Contact Manager"
+  tagline: "Organize your contacts effortlessly"
+  company_legal_name: "Contact Manager Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Contact Management Made Simple"
+        subhead: "Keep track of all your important contacts in one place."
+        primary_cta:
+          label: "Get Started"
+          href: "/login"
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns: []
+    disclaimer: "Contact Manager Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true

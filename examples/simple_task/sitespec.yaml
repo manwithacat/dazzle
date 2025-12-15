@@ -1,0 +1,39 @@
+version: 1
+
+brand:
+  product_name: "Simple Task"
+  tagline: "Track your tasks with ease"
+  company_legal_name: "Simple Task Demo"
+  support_email: "support@example.com"
+
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Simple Task Management"
+        subhead: "A straightforward way to track what needs to be done."
+        primary_cta:
+          label: "Get Started"
+          href: "/login"
+
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+      - label: "Sign In"
+        href: "/login"
+  footer:
+    columns: []
+    disclaimer: "Simple Task Demo"
+
+auth_pages:
+  login:
+    route: "/login"
+    mode: generated
+    enabled: true
+  signup:
+    route: "/signup"
+    mode: generated
+    enabled: true
