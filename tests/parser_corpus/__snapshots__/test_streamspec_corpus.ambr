@@ -1,0 +1,1488 @@
+# serializer version: 1
+# name: TestInvalidStreamSpec.test_invalid_streamspec_diagnostics_snapshot[missing_kind]
+  dict({
+    'diagnostics': list([
+      dict({
+        'error_type': 'UnexpectedError',
+        'message': "'Parser' object has no attribute 'error'",
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'missing_kind.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidStreamSpec.test_invalid_streamspec_diagnostics_snapshot[missing_ordering_scope]
+  dict({
+    'diagnostics': list([
+      dict({
+        'error_type': 'UnexpectedError',
+        'message': "'Parser' object has no attribute 'error'",
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'missing_ordering_scope.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidStreamSpec.test_invalid_streamspec_diagnostics_snapshot[missing_partition_key]
+  dict({
+    'diagnostics': list([
+      dict({
+        'error_type': 'UnexpectedError',
+        'message': "'Parser' object has no attribute 'error'",
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'missing_partition_key.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidStreamSpec.test_invalid_streamspec_diagnostics_snapshot[missing_t_event]
+  dict({
+    'diagnostics': list([
+      dict({
+        'error_type': 'UnexpectedError',
+        'message': "'Parser' object has no attribute 'error'",
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'missing_t_event.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidStreamSpec.test_invalid_streamspec_diagnostics_snapshot[unknown_kind]
+  dict({
+    'diagnostics': list([
+      dict({
+        'error_type': 'UnexpectedError',
+        'message': "'Parser' object has no attribute 'error'",
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'unknown_kind.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidStreamSpec.test_valid_streamspec_ir_snapshot[complex_derivation]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'complex_derivation.dsl',
+    'result': dict({
+      'stream_count': 3,
+      'streams': list([
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Immutable ledger entries',
+          'idempotency': dict({
+            'derivation': 'hash(stream, rk, natural_key, t_event, payload_canonical)',
+            'field': 'record_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'ledger_entries',
+          'ordering_scope': 'per_account',
+          'partition_key': 'account_id',
+          'record_kind': 'fact',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'entry_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'account_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reference_type',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 50,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reference_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'credited_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'LedgerCredited',
+              'version': 'v1',
+            }),
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'entry_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'account_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reference_type',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 50,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reference_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'debited_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'LedgerDebited',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'credited_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Computed account balances',
+          'idempotency': dict({
+            'derivation': 'hash(source_record_ids, derivation_function, window)',
+            'field': 'derivation_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'invariants': list([
+            'Balance is always rebuildable from ledger entries',
+          ]),
+          'lineage': dict({
+            'derivation_function': 'sum(credits) - sum(debits) grouped by account_id',
+            'derivation_type': 'aggregate',
+            'rebuild_strategy': 'incremental',
+            'source_streams': list([
+              'ledger_entries',
+            ]),
+          }),
+          'name': 'account_balances',
+          'notes': list([
+            'DERIVATION streams carry lineage to source records',
+          ]),
+          'ordering_scope': 'per_account',
+          'partition_key': 'account_id',
+          'record_kind': 'derivation',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'calculation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'account_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'balance_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'as_of_sequence',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'calculated_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'AccountBalanceCalculated',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'calculated_at',
+            't_log_field': '_t_log',
+            't_process_field': 'calculated_at',
+          }),
+        }),
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Daily revenue aggregations',
+          'idempotency': dict({
+            'derivation': 'hash(source_record_ids, derivation_function, window)',
+            'field': 'derivation_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'invariants': list([
+            'Revenue is always rebuildable from ledger entries',
+          ]),
+          'lineage': dict({
+            'derivation_function': "sum(amount_minor) where reference_type = 'order' grouped by date(credited_at)",
+            'derivation_type': 'aggregate',
+            'rebuild_strategy': 'windowed',
+            'source_streams': list([
+              'ledger_entries',
+            ]),
+          }),
+          'name': 'daily_revenue',
+          'ordering_scope': 'per_day',
+          'partition_key': 'revenue_date',
+          'record_kind': 'derivation',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'calculation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'revenue_date',
+                  'type': dict({
+                    'kind': 'date',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'total_revenue_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_count',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'calculated_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'DailyRevenueAggregated',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'revenue_date',
+            't_log_field': '_t_log',
+            't_process_field': 'calculated_at',
+          }),
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidStreamSpec.test_valid_streamspec_ir_snapshot[minimal_fact]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'minimal_fact.dsl',
+    'result': dict({
+      'stream_count': 1,
+      'streams': list([
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Immutable facts about orders',
+          'idempotency': dict({
+            'derivation': 'hash(stream, rk, natural_key, t_event, payload_canonical)',
+            'field': 'record_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'order_facts',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'fact',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'total_amount',
+                  'type': dict({
+                    'kind': 'decimal',
+                    'precision': 10,
+                    'readonly': False,
+                    'scale': 2,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'placed_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlaced',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'placed_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidStreamSpec.test_valid_streamspec_ir_snapshot[minimal_intent]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'minimal_intent.dsl',
+    'result': dict({
+      'stream_count': 1,
+      'streams': list([
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Requests to place orders',
+          'expected_outcomes': list([
+            dict({
+              'condition': 'success',
+              'emits': list([
+                'OrderPlaced',
+              ]),
+              'target_stream': 'order_facts',
+            }),
+            dict({
+              'condition': 'failure',
+              'emits': list([
+                'OrderPlacementRejected',
+              ]),
+              'target_stream': 'order_facts',
+            }),
+          ]),
+          'idempotency': dict({
+            'derivation': 'hash(stream, natural_key, t_event)',
+            'field': 'request_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'order_placement_requests',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'intent',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'request_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'customer_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'requested_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlacementRequested',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'requested_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidStreamSpec.test_valid_streamspec_ir_snapshot[typical_order_flow]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'typical_order_flow.dsl',
+    'result': dict({
+      'stream_count': 2,
+      'streams': list([
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Captures requests to place orders',
+          'expected_outcomes': list([
+            dict({
+              'condition': 'success',
+              'emits': list([
+                'OrderPlaced',
+              ]),
+              'target_stream': 'order_facts',
+            }),
+            dict({
+              'condition': 'failure',
+              'emits': list([
+                'OrderPlacementRejected',
+              ]),
+              'target_stream': 'order_facts',
+            }),
+            dict({
+              'condition': 'timeout',
+              'emits': list([
+                'OrderPlacementTimedOut',
+              ]),
+              'target_stream': 'order_facts',
+            }),
+          ]),
+          'idempotency': dict({
+            'derivation': 'hash(stream, order_id, customer_id, requested_at)',
+            'field': 'request_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'order_placement_requests',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'intent',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'request_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'customer_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'requested_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlacementRequested',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'requested_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Immutable facts about orders',
+          'idempotency': dict({
+            'derivation': 'hash(stream, rk, natural_key, t_event, payload_canonical)',
+            'field': 'record_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'invariants': list([
+            'OrderPlaced represents a completed and irreversible action',
+            'No imperative language is permitted in FACT streams',
+          ]),
+          'name': 'order_facts',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'fact',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'customer_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'placed_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlaced',
+              'version': 'v1',
+            }),
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'customer_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reason',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 500,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'rejected_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlacementRejected',
+              'version': 'v1',
+            }),
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'timed_out_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'OrderPlacementTimedOut',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'placed_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidStreamSpec.test_valid_streamspec_ir_snapshot[typical_payment_flow]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'typical_payment_flow.dsl',
+    'result': dict({
+      'stream_count': 3,
+      'streams': list([
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Requests to process payments',
+          'expected_outcomes': list([
+            dict({
+              'condition': 'success',
+              'emits': list([
+                'PaymentSucceeded',
+              ]),
+              'target_stream': 'payment_facts',
+            }),
+            dict({
+              'condition': 'failure',
+              'emits': list([
+                'PaymentFailed',
+              ]),
+              'target_stream': 'payment_facts',
+            }),
+            dict({
+              'condition': 'timeout',
+              'emits': list([
+                'PaymentTimedOut',
+              ]),
+              'target_stream': 'payment_facts',
+            }),
+          ]),
+          'idempotency': dict({
+            'derivation': 'hash(stream, natural_key, t_event)',
+            'field': 'request_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'payment_requests',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'intent',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'request_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'payment_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'gateway',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 50,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'requested_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'PaymentRequested',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'requested_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Observations from payment gateways',
+          'idempotency': dict({
+            'derivation': 'hash(gateway_ref, webhook_type, payload_hash)',
+            'field': 'observation_fingerprint',
+            'strategy_type': 'dedupe_window',
+          }),
+          'name': 'gateway_observations',
+          'notes': list([
+            'Observations may arrive late or out of order',
+            "Truth is 'this was observed', not 'this is correct'",
+          ]),
+          'ordering_scope': 'per_gateway',
+          'partition_key': 'gateway_ref',
+          'record_kind': 'observation',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'observation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'gateway_ref',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 100,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'webhook_type',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 50,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'payload_hash',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 64,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'received_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'GatewayWebhookReceived',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'received_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+        dict({
+          'causality_fields': list([
+            'trace_id',
+            'causation_id',
+            'correlation_id',
+          ]),
+          'cross_partition': False,
+          'description': 'Immutable facts about payments',
+          'idempotency': dict({
+            'derivation': 'hash(stream, rk, natural_key, t_event, payload_canonical)',
+            'field': 'record_id',
+            'strategy_type': 'deterministic_id',
+          }),
+          'name': 'payment_facts',
+          'ordering_scope': 'per_order',
+          'partition_key': 'order_id',
+          'record_kind': 'fact',
+          'schemas': list([
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'payment_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'amount_minor',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'currency',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 3,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'gateway_ref',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 100,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'succeeded_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'PaymentSucceeded',
+              'version': 'v1',
+            }),
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'payment_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'reason',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 500,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'optional',
+                  ]),
+                  'name': 'error_code',
+                  'type': dict({
+                    'kind': 'str',
+                    'max_length': 50,
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'failed_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'PaymentFailed',
+              'version': 'v1',
+            }),
+            dict({
+              'compatibility': 'additive',
+              'fields': list([
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'payment_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'order_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'timeout_ms',
+                  'type': dict({
+                    'kind': 'int',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'timed_out_at',
+                  'type': dict({
+                    'kind': 'datetime',
+                    'readonly': False,
+                  }),
+                }),
+                dict({
+                  'modifiers': list([
+                    'required',
+                  ]),
+                  'name': 'causation_id',
+                  'type': dict({
+                    'kind': 'uuid',
+                    'readonly': False,
+                  }),
+                }),
+              ]),
+              'name': 'PaymentTimedOut',
+              'version': 'v1',
+            }),
+          ]),
+          'side_effect_policy': dict({
+            'external_effects_allowed': False,
+          }),
+          'time_semantics': dict({
+            't_event_field': 'succeeded_at',
+            't_log_field': '_t_log',
+          }),
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---

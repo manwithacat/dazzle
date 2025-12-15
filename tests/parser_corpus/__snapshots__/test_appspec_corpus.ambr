@@ -1,0 +1,1476 @@
+# serializer version: 1
+# name: TestInvalidAppSpec.test_invalid_appspec_diagnostics_snapshot[duplicate_entity_name]
+  dict({
+    'diagnostics': list([
+      dict({
+        'column': 12,
+        'error_type': 'ParseError',
+        'line': 6,
+        'message': 'Expected :, got NEWLINE',
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'duplicate_entity_name.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidAppSpec.test_invalid_appspec_diagnostics_snapshot[invalid_enum_value]
+  dict({
+    'diagnostics': list([
+      dict({
+        'column': 16,
+        'error_type': 'ParseError',
+        'line': 9,
+        'message': 'Expected [, got IDENTIFIER',
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'invalid_enum_value.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidAppSpec.test_invalid_appspec_diagnostics_snapshot[missing_required_field]
+  dict({
+    'diagnostics': list([
+      dict({
+        'column': 19,
+        'error_type': 'ParseError',
+        'line': 6,
+        'message': 'Expected :, got NEWLINE',
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'missing_required_field.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidAppSpec.test_invalid_appspec_diagnostics_snapshot[syntax_unexpected_token]
+  dict({
+    'diagnostics': list([
+      dict({
+        'column': 19,
+        'error_type': 'ParseError',
+        'line': 6,
+        'message': 'Expected :, got NEWLINE',
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'syntax_unexpected_token.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestInvalidAppSpec.test_invalid_appspec_diagnostics_snapshot[unknown_keyword]
+  dict({
+    'diagnostics': list([
+      dict({
+        'column': 9,
+        'error_type': 'ParseError',
+        'line': 8,
+        'message': 'Unknown type: invalidtype',
+        'severity': 'error',
+      }),
+    ]),
+    'emit_mode': 'diag',
+    'file': 'unknown_keyword.dsl',
+    'result': None,
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[complex_workspace]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'complex_workspace.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'default': 'medium',
+              'name': 'priority',
+              'type': dict({
+                'enum_values': list([
+                  'low',
+                  'medium',
+                  'high',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'default': 'todo',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'todo',
+                  'in_progress',
+                  'done',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'assigned_to',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'due_date',
+              'type': dict({
+                'kind': 'date',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Task',
+          'title': 'Task',
+        }),
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'generated_at',
+              'type': dict({
+                'kind': 'datetime',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'content',
+              'type': dict({
+                'kind': 'text',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Report',
+          'title': 'Report',
+        }),
+      ]),
+      'personas': list([
+        dict({
+          'default_workspace': 'admin_dashboard',
+          'description': 'System administrator with full access',
+          'id': 'admin',
+          'label': 'Administrator',
+          'proficiency_level': 'intermediate',
+        }),
+        dict({
+          'default_workspace': 'user_home',
+          'description': 'Standard user with limited access',
+          'id': 'user',
+          'label': 'Regular User',
+          'proficiency_level': 'intermediate',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Task',
+          'mode': 'list',
+          'name': 'task_kanban',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Task',
+                }),
+                dict({
+                  'field_name': 'priority',
+                  'label': 'Priority',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+                dict({
+                  'field_name': 'assigned_to',
+                  'label': 'Assignee',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Task Board',
+        }),
+        dict({
+          'entity_ref': 'Task',
+          'mode': 'create',
+          'name': 'task_create',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Title',
+                }),
+                dict({
+                  'field_name': 'priority',
+                  'label': 'Priority',
+                }),
+                dict({
+                  'field_name': 'assigned_to',
+                  'label': 'Assign To',
+                }),
+                dict({
+                  'field_name': 'due_date',
+                  'label': 'Due Date',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'New Task',
+        }),
+        dict({
+          'entity_ref': 'Report',
+          'mode': 'list',
+          'name': 'report_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Report',
+                }),
+                dict({
+                  'field_name': 'generated_at',
+                  'label': 'Generated',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Reports',
+        }),
+      ]),
+      'workspaces': list([
+        dict({
+          'name': 'admin_dashboard',
+          'purpose': 'Administrative overview of tasks and reports',
+          'regions': list([
+            dict({
+              'display': 'list',
+              'name': 'sidebar',
+              'source': 'Task',
+            }),
+            dict({
+              'display': 'kanban',
+              'filter': dict({
+                'comparison': dict({
+                  'field': 'status',
+                  'operator': '!=',
+                  'value': dict({
+                    'literal': 'done',
+                  }),
+                }),
+              }),
+              'name': 'main',
+              'source': 'Task',
+            }),
+          ]),
+          'title': 'Admin Dashboard',
+        }),
+        dict({
+          'name': 'user_home',
+          'purpose': "User's personal task view",
+          'regions': list([
+            dict({
+              'display': 'list',
+              'filter': dict({
+                'comparison': dict({
+                  'field': 'status',
+                  'operator': '!=',
+                  'value': dict({
+                    'literal': 'done',
+                  }),
+                }),
+              }),
+              'name': 'main',
+              'source': 'Task',
+            }),
+          ]),
+          'title': 'User Home',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[edge_comments]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'edge_comments.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'default': 'open',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'open',
+                  'closed',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Task',
+          'title': 'Task',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Task',
+          'mode': 'list',
+          'name': 'task_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Title',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Tasks',
+        }),
+        dict({
+          'actions': list([
+            dict({
+              'label': 'Save',
+              'name': 'save',
+              'outcome': dict({
+                'kind': 'surface',
+                'target': 'task_list',
+              }),
+              'trigger': 'submit',
+            }),
+          ]),
+          'entity_ref': 'Task',
+          'mode': 'create',
+          'name': 'task_create',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Title',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Create',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[edge_whitespace]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'edge_whitespace.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'count',
+              'type': dict({
+                'kind': 'int',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Item',
+          'title': 'Item',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Item',
+          'mode': 'list',
+          'name': 'item_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Name',
+                }),
+                dict({
+                  'field_name': 'count',
+                  'label': 'Count',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Items',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[minimal_entity]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'minimal_entity.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Item',
+          'title': 'Item',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[minimal_surface]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'minimal_surface.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Task',
+          'title': 'Task',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Task',
+          'mode': 'list',
+          'name': 'task_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Title',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Task List',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[state_machine]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'state_machine.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'archetype_kind': 'custom',
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'description',
+              'type': dict({
+                'kind': 'text',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'assignee',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'resolution_note',
+              'type': dict({
+                'kind': 'text',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'default': 'open',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'open',
+                  'assigned',
+                  'in_progress',
+                  'resolved',
+                  'closed',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Ticket',
+          'state_machine': dict({
+            'states': list([
+              'open',
+              'assigned',
+              'in_progress',
+              'resolved',
+              'closed',
+            ]),
+            'status_field': 'status',
+            'transitions': list([
+              dict({
+                'from_state': 'open',
+                'guards': list([
+                  dict({
+                    'requires_field': 'assignee',
+                  }),
+                ]),
+                'to_state': 'assigned',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'assigned',
+                'to_state': 'in_progress',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'in_progress',
+                'guards': list([
+                  dict({
+                    'requires_field': 'resolution_note',
+                  }),
+                ]),
+                'to_state': 'resolved',
+                'trigger': 'manual',
+              }),
+              dict({
+                'auto_spec': dict({
+                  'allow_manual': False,
+                  'delay_unit': 'days',
+                  'delay_value': 7,
+                }),
+                'from_state': 'resolved',
+                'to_state': 'closed',
+                'trigger': 'auto',
+              }),
+              dict({
+                'from_state': '*',
+                'guards': list([
+                  dict({
+                    'requires_role': 'admin',
+                  }),
+                ]),
+                'to_state': 'open',
+                'trigger': 'manual',
+              }),
+            ]),
+          }),
+          'title': 'Support Ticket',
+        }),
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'customer_name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'total',
+              'type': dict({
+                'kind': 'decimal',
+                'precision': 10,
+                'readonly': False,
+                'scale': 2,
+              }),
+            }),
+            dict({
+              'default': 'draft',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'draft',
+                  'pending',
+                  'confirmed',
+                  'shipped',
+                  'delivered',
+                  'cancelled',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Order',
+          'state_machine': dict({
+            'states': list([
+              'draft',
+              'pending',
+              'confirmed',
+              'shipped',
+              'delivered',
+              'cancelled',
+            ]),
+            'status_field': 'status',
+            'transitions': list([
+              dict({
+                'from_state': 'draft',
+                'to_state': 'pending',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'pending',
+                'to_state': 'confirmed',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'confirmed',
+                'to_state': 'shipped',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'shipped',
+                'to_state': 'delivered',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'pending',
+                'to_state': 'cancelled',
+                'trigger': 'manual',
+              }),
+              dict({
+                'from_state': 'confirmed',
+                'guards': list([
+                  dict({
+                    'requires_role': 'manager',
+                  }),
+                ]),
+                'to_state': 'cancelled',
+                'trigger': 'manual',
+              }),
+            ]),
+          }),
+          'title': 'Order',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Ticket',
+          'mode': 'list',
+          'name': 'ticket_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Title',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+                dict({
+                  'field_name': 'assignee',
+                  'label': 'Assignee',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Tickets',
+        }),
+        dict({
+          'entity_ref': 'Order',
+          'mode': 'list',
+          'name': 'order_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'customer_name',
+                  'label': 'Customer',
+                }),
+                dict({
+                  'field_name': 'total',
+                  'label': 'Total',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Orders',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[typical_crud_app]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'typical_crud_app.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'email',
+              'type': dict({
+                'kind': 'email',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'phone',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 50,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'default': 'active',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'active',
+                  'inactive',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'created_at',
+              'type': dict({
+                'kind': 'datetime',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Contact',
+          'title': 'Contact',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Contact',
+          'mode': 'list',
+          'name': 'contact_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Name',
+                }),
+                dict({
+                  'field_name': 'email',
+                  'label': 'Email',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Contact List',
+        }),
+        dict({
+          'entity_ref': 'Contact',
+          'mode': 'view',
+          'name': 'contact_detail',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Name',
+                }),
+                dict({
+                  'field_name': 'email',
+                  'label': 'Email',
+                }),
+                dict({
+                  'field_name': 'phone',
+                  'label': 'Phone',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+                dict({
+                  'field_name': 'created_at',
+                  'label': 'Created',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Contact Detail',
+        }),
+        dict({
+          'actions': list([
+            dict({
+              'label': 'Save',
+              'name': 'save',
+              'outcome': dict({
+                'kind': 'surface',
+                'target': 'contact_list',
+              }),
+              'trigger': 'submit',
+            }),
+          ]),
+          'entity_ref': 'Contact',
+          'mode': 'create',
+          'name': 'contact_create',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Name',
+                }),
+                dict({
+                  'field_name': 'email',
+                  'label': 'Email',
+                }),
+                dict({
+                  'field_name': 'phone',
+                  'label': 'Phone',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Create Contact',
+        }),
+        dict({
+          'actions': list([
+            dict({
+              'label': 'Save',
+              'name': 'save',
+              'outcome': dict({
+                'kind': 'surface',
+                'target': 'contact_list',
+              }),
+              'trigger': 'submit',
+            }),
+          ]),
+          'entity_ref': 'Contact',
+          'mode': 'edit',
+          'name': 'contact_edit',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Name',
+                }),
+                dict({
+                  'field_name': 'email',
+                  'label': 'Email',
+                }),
+                dict({
+                  'field_name': 'phone',
+                  'label': 'Phone',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Edit Contact',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
+# name: TestValidAppSpec.test_valid_appspec_ir_snapshot[typical_multi_entity]
+  dict({
+    'diagnostics': list([
+    ]),
+    'emit_mode': 'ir',
+    'file': 'typical_multi_entity.dsl',
+    'result': dict({
+      'entities': list([
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'industry',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Company',
+          'title': 'Company',
+        }),
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'first_name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'last_name',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 100,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'email',
+              'type': dict({
+                'kind': 'email',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'company',
+              'type': dict({
+                'kind': 'ref',
+                'readonly': False,
+                'ref_entity': 'Company',
+              }),
+            }),
+            dict({
+              'default': 'employee',
+              'name': 'role',
+              'type': dict({
+                'enum_values': list([
+                  'employee',
+                  'contractor',
+                  'intern',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Person',
+          'title': 'Person',
+        }),
+        dict({
+          'fields': list([
+            dict({
+              'modifiers': list([
+                'pk',
+              ]),
+              'name': 'id',
+              'type': dict({
+                'kind': 'uuid',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'title',
+              'type': dict({
+                'kind': 'str',
+                'max_length': 200,
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'description',
+              'type': dict({
+                'kind': 'text',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'lead',
+              'type': dict({
+                'kind': 'ref',
+                'readonly': False,
+                'ref_entity': 'Person',
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'required',
+              ]),
+              'name': 'company',
+              'type': dict({
+                'kind': 'ref',
+                'readonly': False,
+                'ref_entity': 'Company',
+              }),
+            }),
+            dict({
+              'default': 'planning',
+              'name': 'status',
+              'type': dict({
+                'enum_values': list([
+                  'planning',
+                  'active',
+                  'completed',
+                  'cancelled',
+                ]),
+                'kind': 'enum',
+                'readonly': False,
+              }),
+            }),
+            dict({
+              'modifiers': list([
+                'optional',
+              ]),
+              'name': 'budget',
+              'type': dict({
+                'kind': 'decimal',
+                'precision': 12,
+                'readonly': False,
+                'scale': 2,
+              }),
+            }),
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'Project',
+          'title': 'Project',
+        }),
+      ]),
+      'surfaces': list([
+        dict({
+          'entity_ref': 'Company',
+          'mode': 'list',
+          'name': 'company_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'name',
+                  'label': 'Company Name',
+                }),
+                dict({
+                  'field_name': 'industry',
+                  'label': 'Industry',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Companies',
+        }),
+        dict({
+          'entity_ref': 'Person',
+          'mode': 'list',
+          'name': 'person_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'first_name',
+                  'label': 'First Name',
+                }),
+                dict({
+                  'field_name': 'last_name',
+                  'label': 'Last Name',
+                }),
+                dict({
+                  'field_name': 'email',
+                  'label': 'Email',
+                }),
+                dict({
+                  'field_name': 'company',
+                  'label': 'Company',
+                }),
+                dict({
+                  'field_name': 'role',
+                  'label': 'Role',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'People',
+        }),
+        dict({
+          'entity_ref': 'Project',
+          'mode': 'list',
+          'name': 'project_list',
+          'sections': list([
+            dict({
+              'elements': list([
+                dict({
+                  'field_name': 'title',
+                  'label': 'Project',
+                }),
+                dict({
+                  'field_name': 'lead',
+                  'label': 'Lead',
+                }),
+                dict({
+                  'field_name': 'company',
+                  'label': 'Company',
+                }),
+                dict({
+                  'field_name': 'status',
+                  'label': 'Status',
+                }),
+              ]),
+              'name': 'main',
+            }),
+          ]),
+          'title': 'Projects',
+        }),
+      ]),
+    }),
+    'snapshot_version': 1,
+  })
+# ---
