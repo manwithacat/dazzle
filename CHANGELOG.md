@@ -7,341 +7,322 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.15.0] - 2025-12-15
+
+### Added
+- **Interactive CLI Commands**: New user-friendly interactive modes
+  - `dazzle init`: Interactive project wizard with guided setup
+  - `dazzle doctor`: Environment diagnostics with automatic fixes
+  - `dazzle explore`: Interactive DSL explorer with syntax examples
+  - `dazzle kb`: Knowledgebase browser for DSL concepts and patterns
+
+### Changed
+- CLI version bumped to 0.15.0
+
+---
+
+## [0.14.0] - 2025-12-14
+
+### Added
+- **MCP Commands Restored**: Full MCP server functionality in Bun CLI
+  - `dazzle mcp`: Run MCP server for Claude Code integration
+  - `dazzle mcp-setup`: Register MCP server with Claude Code
+  - `dazzle mcp-check`: Check MCP server status
+- **Deterministic Port Allocation**: DNR serve now uses deterministic ports based on project path
+- **Semantic E2E Attributes**: Added `data-dazzle-*` attributes for E2E testability
+
+---
+
+## [0.9.3] - 2025-12-11
+
+### Added
+- **Documentation Overhaul**
+  - Complete DSL reference guide in `docs/reference/` (11 files)
+  - Comprehensive README with DSL constructs overview
+  - Renamed docs/v0.7 to docs/v0.9
+
+---
+
+## [0.8.0] - 2025-12-09
+
+### Added
+- **Bun CLI Framework**: Complete CLI rewrite for 50x faster startup
+  - Bun-compiled binary (57MB, single file)
+  - 20ms startup vs 1000ms+ Python CLI
+  - JSON-first output for LLM integration
+  - `__agent_hint` fields in errors for AI remediation
+
+### Changed
+- **Command Mappings**:
+  | Old Command | New Command |
+  |-------------|-------------|
+  | `dazzle init` | `dazzle new` |
+  | `dazzle dnr serve` | `dazzle dev` |
+  | `dazzle validate` | `dazzle check` |
+  | `dazzle inspect` | `dazzle show` |
+  | `dazzle dnr test` | `dazzle test` |
+  | `dazzle eject run` | `dazzle eject` |
+  | `dazzle dnr migrate` | `dazzle db` |
+
+### Distribution
+- GitHub Releases with 4 platform binaries (darwin-arm64, darwin-x64, linux-arm64, linux-x64)
+- Homebrew tap updated (`brew install manwithacat/tap/dazzle`)
+- VS Code extension v0.8.0 with new command mappings
+
+---
+
+## [0.7.2] - 2025-12-10
+
+### Added
+- **Ejection Toolchain**: Generate standalone code from DNR applications
+  - Ejection config parser for `dazzle.toml` `[ejection]` section
+  - Adapter registry with pluggable generators
+  - FastAPI backend adapter (models, schemas, routes, guards, validators, access)
+  - React frontend adapter (TypeScript types, Zod schemas, TanStack Query hooks)
+  - Testing adapters (Schemathesis contract tests, Pytest unit tests)
+  - CI adapters (GitHub Actions, GitLab CI)
+  - OpenAPI 3.1 generation from AppSpec
+  - Post-ejection verification (no Dazzle imports, no template markers)
+  - `.ejection.json` metadata file for audit trail
+  - CLI: `eject run`, `eject status`, `eject adapters`, `eject openapi`, `eject verify`
+  - 35 unit tests
+
+---
+
+## [0.7.1] - 2025-12-10
+
+### Added
+- **LLM Cognition & DSL Generation Enhancement**
+  - Intent declarations on entities (`intent: "..."`)
+  - Domain and patterns semantic tags (`domain: billing`, `patterns: lifecycle, audit`)
+  - Archetypes with extends inheritance (`archetype Timestamped`, `extends: Timestamped`)
+  - Example data blocks (`examples: [{...}]`)
+  - Invariant messages and codes (`message: "...", code: ERROR_CODE`)
+  - Relationship semantics (`has_many`, `has_one`, `embeds`, `belongs_to`)
+  - Delete behaviors (`cascade`, `restrict`, `nullify`, `readonly`)
+  - Updated MCP semantic index with all v0.7.1 concepts
+  - 5 example projects updated
+
+---
+
+## [0.7.0] - 2025-12-10
+
+### Added
+- **Business Logic Extraction**: DSL as compression boundary for semantic reasoning
+  - State machines for entity lifecycle (`transitions:` block)
+  - Computed fields for derived values (`computed` keyword)
+  - Invariants for data integrity (`invariant:` rules)
+  - Access rules for visibility/permissions
+  - All 5 example projects upgraded with v0.7 features
+  - 756 tests passing
+
+---
+
+## [0.6.0] - 2025-12-09
+
+### Added
+- **GraphQL BFF Layer**: API aggregation and external service facade
+  - GraphQLContext: Multi-tenant context with role-based access control
+  - SchemaGenerator: Generate Strawberry types from BackendSpec
+  - ResolverGenerator: Generate CRUD resolvers with tenant isolation
+  - FastAPI Integration: `mount_graphql()`, `create_graphql_app()`
+  - CLI: `--graphql` flag for `dazzle dnr serve`
+  - `dazzle dnr inspect --schema` command
+  - External API Adapters with retry logic and rate limiting
+  - Error normalization with unified error model
+  - 53 unit tests for adapter interface
+  - 7 GraphQL integration tests
+
+---
+
 ## [0.5.0] - 2025-12-02
 
 ### Added
+- **Anti-Turing Extensibility Model**
+  - Domain Service DSL: `service` with `kind`, `input`, `output`, `guarantees`, `stub`
+  - Service Kinds: domain_logic, validation, integration, workflow
+  - ServiceLoader: Runtime discovery of Python stubs
+  - Stub Generation: `dazzle stubs generate` command
+  - EBNF Grammar: Restricted to aggregate functions only
+  - Documentation: `docs/EXTENSIBILITY.md`
+  - 31 new tests (14 domain service + 17 service loader)
 
-**Advanced DSL Features**:
-
-- **Inline Access Rules**:
+- **Inline Access Rules**
   - New `access:` block syntax in entity definitions
   - `read:` rule for visibility/view access control
   - `write:` rule for create/update/delete permissions
-  - Parser support with ACCESS, READ, WRITE tokens
-  - Backward compatible - keywords can still be used as enum values
-  - Maps to existing AccessSpec, VisibilityRule, PermissionRule IR types
-  - 8 unit tests in `tests/unit/test_access_rules.py`
+  - 8 unit tests
 
-- **Component Roles** (UISpec):
-  - New `ComponentRole` enum: PRESENTATIONAL, CONTAINER
-  - `role` field on ComponentSpec with auto-inference
-  - `is_presentational` property: True if no state and no impure actions
-  - `is_container` property: True if has state or impure actions
-  - Explicit role annotation overrides inference
-  - 13 unit tests in `tests/unit/test_component_roles.py`
+- **Component Roles** (UISpec)
+  - `ComponentRole` enum: PRESENTATIONAL, CONTAINER
+  - Auto-inference based on state and actions
+  - 13 unit tests
 
-- **Action Purity** (UISpec):
-  - New `ActionPurity` enum: PURE, IMPURE
-  - `purity` field on ActionSpec with auto-inference
-  - `is_pure` property: True if no effect
-  - `is_impure` property: True if has effect (fetch, navigate, log, toast, custom)
-  - Explicit purity annotation overrides inference
-  - 14 unit tests in `tests/unit/test_action_purity.py`
-
-### Changed
-
-- DSL Quick Reference updated with access control pattern
-- Reserved keywords list updated (access, read, write)
+- **Action Purity** (UISpec)
+  - `ActionPurity` enum: PURE, IMPURE
+  - Auto-inference based on effects
+  - 14 unit tests
 
 ### Status
-- **v0.5.0**: Complete ✅
-- **Test Results**: 530 tests pass (35 new, no regressions from 495 baseline)
-- **Next**: v0.6.0 - GraphQL BFF Layer (Q3 2026)
+- 601 tests passing
 
 ---
 
 ## [0.4.0] - 2025-12-02
 
 ### Added
+- **DNR Production Ready**
+  - `dazzle dnr test` command for API contract testing
+  - `--benchmark` option for performance testing
+  - `--a11y` option for WCAG accessibility testing
+  - `dazzle dnr build` for production bundles
+  - Multi-stage Dockerfile generation
+  - docker-compose.yml for local deployment
+  - `dazzle dnr migrate` for database migrations
+  - Kubernetes health probes (`/_dnr/live`, `/_dnr/ready`)
 
-**Dazzle Native Runtime (DNR) - Phase 1 Complete + Phase 2 Auth**:
-- **Backend Runtime** (Week 1-2):
-  - SQLite database auto-creation from entity specs
-  - Auto-migration system with safe schema change detection
-  - CRUD endpoints generated dynamically from BackendSpec
-  - Repository pattern with SQLite persistence
-  - Dynamic Pydantic model generation from EntitySpec
-  - 8 E2E tests covering full CRUD lifecycle
+---
 
-- **Frontend Runtime** (Week 3-4):
-  - Combined server architecture (backend + frontend in one process)
-  - API proxy for seamless frontend-backend communication
-  - Hot reload support via Server-Sent Events
-  - Signals-based UI runtime (pure JavaScript)
-  - Vite generator for production builds
-  - 15 combined server tests
+## [0.3.3] - 2025-12
 
-- **Behaviour Layer** (Week 5-6):
-  - Enhanced signals: `batch()`, `createResource()`, cleanup on dispose
-  - Pure actions: filter, sort, select, toggle, reset
-  - Impure actions via `apiClient` (CRUD helpers)
-  - Effects system: fetch, navigate, toast, log, custom
-  - Global loading/error states with notifications
-  - UI components: Loading, Error, Empty, Modal
-  - Patch operations: SET, MERGE, APPEND, REMOVE, DELETE
-  - 44 behaviour layer tests
+### Added
+- **DNR Developer Experience**
+  - DSL file watching with instant reload (`dazzle dnr serve --watch`)
+  - Browser dev tools panel with state/action inspection
+  - State inspector with real-time updates
+  - Action log with state diff visualization
+  - `dazzle dnr inspect` command for spec inspection
+  - `dazzle dnr inspect --live` for running server inspection
+  - `/_dnr/*` debug endpoints (health, stats, entity details)
 
-- **Authentication & Authorization** (Week 7-8):
-  - Session-based authentication with PBKDF2 password hashing
-  - AuthStore class with SQLite persistence (users, sessions)
-  - Login/logout/register/me/change-password endpoints
-  - AuthMiddleware for session validation
-  - User entity auto-detection from BackendSpec
-  - Dependency injection for protected routes
-  - Role-based access control (`require_roles` parameter)
-  - Optional vs required authentication modes
-  - 65 auth tests
+---
 
-- **Row-Level Security** (Week 7-8):
-  - Owner-based access control (filter by `owner_id`, `user_id`, etc.)
-  - Tenant-based access control (filter by `tenant_id`, `organization_id`)
-  - AccessContext for user/tenant/role information
-  - AccessPolicy with configurable rules per entity
-  - AccessEnforcer for repository-level enforcement
-  - Auto-detection of owner and tenant fields
-  - Multi-tenant architecture design document
-  - 42 RLS tests
+## [0.3.2] - 2025-12
 
-- **File Uploads & Rich Fields** (Week 9-10):
-  - New field types: FILE, IMAGE, RICHTEXT
-  - Local storage backend with date-organized file paths
-  - S3-compatible storage backend (AWS S3, MinIO)
-  - File metadata SQLite store with entity association
-  - File validation (size limits, MIME type checking)
-  - Secure filename sanitization
-  - Image thumbnail generation (Pillow integration)
-  - Image optimization and format conversion
-  - File upload REST endpoints (upload, download, delete, stream)
-  - Entity-scoped file queries
-  - Markdown processor with HTML rendering
-  - HTML sanitization (XSS prevention via bleach)
-  - Inline base64 image extraction and upload
-  - Text extraction for search indexing
-  - 34 file storage tests + 26 image processor tests + 36 rich text tests
+### Added
+- **Semantic E2E Testing Framework** (8 phases complete)
+  - DOM Contract: `data-dazzle-*` attributes for semantic locators
+  - TestSpec IR: FlowSpec, FlowStep, FlowAssertion, FixtureSpec, E2ETestSpec
+  - Auto-Generate E2ETestSpec from AppSpec (CRUD, validation, navigation flows)
+  - Playwright Harness: semantic locators, flow execution, domain assertions
+  - Test Endpoints: `/__test__/seed`, `/__test__/reset`, `/__test__/snapshot`
+  - DSL Extensions: `flow` block syntax with parser support
+  - CLI: `dazzle test generate`, `dazzle test run`, `dazzle test list`
+  - Usability & Accessibility: axe-core integration, WCAG mapping
+  - 61 new tests
 
-- **Relationships & Queries** (Week 11-12):
-  - QueryBuilder for advanced filtering and sorting
-  - Filter operators: eq, ne, gt, gte, lt, lte, contains, icontains, startswith, endswith, in, not_in, isnull, between
-  - Relation path filters (e.g., `owner__name__contains`)
-  - Multi-field sorting with ascending/descending support
-  - RelationRegistry for tracking entity relationships
-  - Auto-detection of implicit relations from ref fields
-  - Nested data fetching via `include` parameter
-  - Batch loading to avoid N+1 queries
-  - Foreign key constraint generation
-  - Full-text search with SQLite FTS5
-  - Auto-detection of searchable text fields
-  - Sync triggers for insert/update/delete
-  - Search with snippets and highlighting
-  - 56 query builder tests + 24 relation tests + 28 FTS tests
+---
 
-- **Real-time & Collaboration** (Week 13-14):
-  - WebSocket manager for connection lifecycle management
-  - Channel-based pub/sub subscriptions
-  - Entity event bus (CREATED, UPDATED, DELETED)
-  - Live updates broadcast to subscribers
-  - Presence tracking (who's viewing what)
-  - Heartbeat-based activity detection
-  - Optimistic UI updates for instant feedback
-  - RealtimeClient JavaScript class with reconnection
-  - PresenceManager for collaboration awareness
-  - EntitySync for auto-updating signals
-  - 76 real-time tests (26 WebSocket + 22 event bus + 28 presence)
+## [0.3.1] - 2025-12
 
-**New CLI Commands**:
-- `dazzle dnr serve`: Run complete DNR app with backend and frontend
-  - `--port`: Frontend port (default: 3000)
-  - `--api-port`: Backend API port (default: 8000)
-  - `--db`: SQLite database path (default: .dazzle/data.db)
-  - `--ui-only`: Serve static UI only (no backend)
-- `dazzle dnr build-ui`: Generate UI artifacts from AppSpec
-- `dazzle dnr build-api`: Generate API spec from AppSpec
-- `dazzle dnr info`: Show DNR installation status
+### Fixed
+- **Critical Bug Fixes**
+  - ES module export block conversion failure in `js_loader.py`
+  - HTML script tag malformation in `js_generator.py`
 
-**New Packages**:
-- `dazzle_dnr_back`: Backend runtime (FastAPI + SQLite)
-  - `runtime/server.py`: DNRBackendApp builder
-  - `runtime/repository.py`: Repository pattern implementation
-  - `runtime/migrations.py`: Auto-migration system
-  - `runtime/model_generator.py`: Dynamic Pydantic models
-  - `runtime/service_generator.py`: CRUD service layer
-  - `runtime/route_generator.py`: FastAPI route generation
-- `dazzle_dnr_ui`: Frontend runtime (signals-based JS)
-  - `runtime/js_generator.py`: JavaScript code generation
-  - `runtime/vite_generator.py`: Vite project generation
-  - `runtime/combined_server.py`: Unified dev server
-  - `runtime/dev_server.py`: Standalone dev server
-  - `runtime/file_storage.py`: File storage backends (local, S3)
-  - `runtime/file_routes.py`: File upload REST endpoints
-  - `runtime/image_processor.py`: Image processing utilities
-  - `runtime/richtext_processor.py`: Rich text/markdown processing
-  - `runtime/websocket_manager.py`: WebSocket connection manager
-  - `runtime/event_bus.py`: Entity change event bus
-  - `runtime/presence_tracker.py`: User presence tracking
-  - `runtime/realtime_routes.py`: WebSocket endpoint setup
-  - `runtime/realtime_client.py`: Frontend realtime JavaScript
+### Added
+- **E2E Testing**
+  - E2E tests for DNR serve in `tests/e2e/test_dnr_serve.py`
+  - Matrix-based E2E testing for example projects in CI
+  - P0 examples (simple_task, contact_manager) block PRs on failure
+
+- **MCP Server Improvements**
+  - Getting-started workflow guidance
+  - Common DSL patterns documentation
+  - Semantic index v0.5.0 with extensibility concepts
+
+---
+
+## [0.3.0] - 2025-11
+
+### Added
+- **Dazzle Native Runtime (DNR)**: Major pivot to runtime-first approach
+
+  **DNR Backend**:
+  - SQLite persistence with auto-migration
+  - FastAPI server with auto-generated CRUD endpoints
+  - Session-based auth, PBKDF2 password hashing
+  - Row-level security, owner/tenant-based access control
+  - File uploads: Local and S3 storage, image processing, thumbnails
+  - Rich text: Markdown rendering, HTML sanitization
+  - Relationships: Foreign keys, nested data fetching
+  - Full-text search: SQLite FTS5 integration
+  - Real-time: WebSocket support, presence indicators, optimistic updates
+
+  **DNR Frontend**:
+  - Signals-based UI: Reactive JavaScript without virtual DOM
+  - Combined server: Backend + Frontend with API proxy
+  - Hot reload: SSE-based live updates
+  - Vite integration: Production builds
+
+  **UI Semantic Layout Engine**:
+  - 5 Archetypes: FOCUS_METRIC, SCANNER_TABLE, DUAL_PANE_FLOW, MONITOR_WALL, COMMAND_CENTER
+  - Attention signals with priority weights
+  - Engine variants: Classic, Dense, Comfortable
+  - `dazzle layout-plan` command
+  - Persona-aware layout adjustments
 
 ### Changed
-- Legacy stack deprecation began - DNR is now the recommended approach
-- Updated examples to use DNR workflow
+- Legacy code generation stacks deprecated in favor of DNR
 
-### Improved
-- **JavaScript Restructuring**: Refactored monolithic inline JavaScript into modular files
-  - Created `static/js/` directory with 13 separate JS modules
-  - Modules: signals, state, api-client, toast, dom, binding, components, renderer, actions, theme, app, index, realtime
-  - New `js_loader.py` handles module loading and bundle generation
-  - Supports both IIFE (browser-compatible) and ESM (modern) output formats
-  - Backward compatible - existing imports continue to work
-  - 17 new tests for the JS loader
+---
 
-### Status
-- **Phase 1 (Vertical)**: Complete ✅ (All 6 weeks)
-- **Phase 2 Week 7-8**: Complete ✅ (Authentication & Row-Level Security)
-- **Phase 2 Week 9-10**: Complete ✅ (File Uploads & Rich Fields)
-- **Phase 2 Week 11-12**: Complete ✅ (Relationships & Queries)
-- **Phase 2 Week 13-14**: Complete ✅ (Real-time & Collaboration)
-- **Next**: Phase 3 - Hot Reload & Dev Tools (Week 15-16)
-- See `dev_docs/roadmap_v0_4_0_dnr.md` for full roadmap
+## [0.2.0] - 2025-11
+
+### Added
+- **UX Semantic Layer**: Fundamental DSL language enhancement
+  - Personas: Role-based surface/workspace variants with scope filtering
+  - Workspaces: Composed dashboards with multiple data regions
+  - Attention Signals: Data-driven alerts (critical, warning, notice, info)
+  - Information Needs: `show`, `sort`, `filter`, `search`, `empty` directives
+  - Purpose Statements: Semantic intent documentation
+  - MCP Enhancements: Semantic concept lookup, example search
 
 ---
 
 ## [0.1.1] - 2025-11-23
 
 ### Fixed
-
-**express_micro stack**:
-- **CRITICAL**: Added graceful fallback for AdminJS on incompatible Node.js versions (v25+)
-- **CRITICAL**: Added Node.js version constraints to package.json (`>=18.0.0 <25.0.0`)
-- **HIGH**: Fixed missing `title` variable in all route handlers (detail, form, delete views)
-- **HIGH**: Fixed admin interface not being mounted in server.js
-- **HIGH**: Improved error handling with contextual logging in all routes
-- **MEDIUM**: Removed deprecated `--backend` flag from generated README.md
+- **express_micro stack**:
+  - Graceful fallback for AdminJS on incompatible Node.js versions (v25+)
+  - Node.js version constraints to package.json (`>=18.0.0 <25.0.0`)
+  - Missing `title` variable in route handlers
+  - Admin interface mounting in server.js
+  - Error handling with contextual logging
 
 ### Added
-
-**express_micro stack**:
 - Environment variable support with dotenv
-- Generated `.env.example` file with all configuration options
-- Contextual error messages for better debugging
-- Error logging with `console.error()` in all catch blocks
-
-### Changed
-
-**express_micro stack**:
-- Server now loads `.env` file automatically on startup
-- Admin interface only shows URL in console if successfully loaded
-- Error messages now more user-friendly ("Please try again later")
-- README regeneration instructions simplified
-
----
-
-## [0.3.0] - Planned
-
-### Planned Features
-
-**Pattern Support** (Phase 1):
-- Add `@pattern` annotation syntax to DSL for explicit architectural pattern modeling
-- Support 5 core patterns: repository, service, ports_and_adapters, cqrs, observer
-- Implement pattern-aware code generation in django_micro_modular and express_micro stacks
-- Pattern annotations are optional - apps work without them
-- Documentation: Pattern usage guide and examples
-
-**Design Pattern DSL Evaluation**:
-- Comprehensive evaluation of proposed Design Pattern DSL (DP-DSL) layer completed
-- Full implementation roadmap defined across v0.3.0 - v0.5.0
-- Phased approach: Pattern Annotations (v0.3.0) → DP-DSL Prototype (v0.4.0) → Full DP-DSL (v0.5.0)
-- See `dev_docs/architecture/dp_dsl_evaluation_and_roadmap.md` for complete analysis and roadmap
-
-**Additional Planned**:
-- Enhanced pattern detection and architectural linting
-- Stack compatibility matrix for pattern support
-- Pattern-based example projects
-- Design spike: ports-and-adapters implementation for UserRegistration use case
-
-**Status**: Under evaluation for Q1 2026 release
-
----
-
-## [0.2.0] - Planned
-
-### Planned Features
-
-**Testing Infrastructure** (Priority 1):
-- Generate Jest/pytest test structure for all CRUD operations
-- Model tests with fixtures and validation
-- Route/endpoint tests with supertest/pytest-django
-- Test coverage reporting
-
-**Database Migrations** (Priority 2):
-- Replace `sync({force: true})` with proper migration system
-- Sequelize CLI integration for express_micro
-- Django migrations already supported in django stacks
-- Migration history and rollback support
-
-**Production Features** (Priority 3-7):
-- Health check endpoint with database connectivity checks
-- Security headers (helmet/django-csp)
-- Pagination support for list views
-- Auto-generated database indexes on foreign keys
-- Logging framework (winston/python logging)
-
-**Timeline**: 7-8 weeks estimated
-**Status**: See `dev_docs/roadmap_v0_2_0.md` for detailed specifications
+- Generated `.env.example` file
 
 ---
 
 ## [0.1.0] - 2025-11-22
 
 ### Added
-
-**Core Features**:
-- Complete DSL parser supporting entities, surfaces, experiences, services, integrations, tests
-- Internal Representation (IR) with full Pydantic type system (900+ lines)
-- Module system with dependency resolution, cycle detection, topological sorting
-- Linker with symbol table building and cross-reference validation
-- Comprehensive validation and linting system
-- Pattern detection (CRUD, integrations, experience flows)
-
-**Stacks** (6 production-ready):
-- `django_micro_modular`: Django apps with admin, forms, views, templates
-- `django_api`: Django REST Framework with OpenAPI integration
-- `express_micro`: Node.js/Express with Sequelize ORM and AdminJS
-- `openapi`: OpenAPI 3.0 specification generation
-- `docker`: Docker Compose multi-service orchestration
-- `terraform`: AWS infrastructure (ECS, RDS, VPC, ALB)
-
-**CLI Commands**:
-- `init`: Initialize new project
-- `validate`: Parse, link, and validate DSL
-- `lint`: Extended validation with naming conventions
-- `build`: Generate code from AppSpec
-- `inspect`: Show module interfaces and patterns
-- `analyze-spec`: Parse natural language specifications with LLM
-- `clone`: Clone example projects
-- `demo`: Create demo project
-- `example`: Build in-place examples
-
-**LLM Integration**:
-- Spec analysis (natural language → structured requirements)
-- DSL generation (requirements → .dsl files)
-- Interactive Q&A for clarifications
-- Cost estimation and safety checks
-- Support for Anthropic Claude and OpenAI GPT
-
-**IDE & Tooling**:
-- LSP server with real-time diagnostics, hover, completions, go-to-definition
-- VS Code extension with syntax highlighting and validation
-- Test suite with 59+ tests (unit, integration, LLM)
-
-**Examples**:
-- `simple_task`: Minimal starter project (1 entity, 4 surfaces)
-- `support_tickets`: Production-like complexity (3 entities, relationships, workflows)
-
-### Documentation
-- Complete DSL reference (`docs/DAZZLE_DSL_REFERENCE_0_1.md`)
-- EBNF grammar (`docs/DAZZLE_DSL_GRAMMAR_0_1.ebnf`)
-- IR documentation (`docs/DAZZLE_IR_0_1.md`)
-- VS Code extension user guide
-- Stack development guides
+- **Initial Release**
+  - Complete DSL parser (800+ lines)
+  - Full Internal Representation (900+ lines, Pydantic models)
+  - Module system with dependency resolution
+  - 6 code generation stacks (Django, Express, OpenAPI, Docker, Terraform)
+  - LLM integration (spec analysis, DSL generation)
+  - LSP server with VS Code extension
+  - Homebrew distribution
+  - MCP server integration
 
 ---
+
+## Deprecated Features
+
+The following are deprecated as of v0.3.0 in favor of DNR:
+
+| Stack | Status | Recommendation |
+|-------|--------|----------------|
+| `django_micro` | Deprecated | Use DNR |
+| `django_micro_modular` | Deprecated | Use DNR |
+| `django_api` | Deprecated | Use DNR |
+| `express_micro` | Deprecated | Use DNR |
+| `nextjs_onebox` | Deprecated | Use DNR |
+| `nextjs_semantic` | Deprecated | Use DNR |
+| `openapi` | Available | For API spec export only |
+| `terraform` | Available | For infrastructure |
+| `docker` | Available | For DNR deployment |
