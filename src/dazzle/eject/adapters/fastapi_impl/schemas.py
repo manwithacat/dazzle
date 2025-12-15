@@ -6,8 +6,9 @@ Generates Pydantic request/response schemas from entity specifications.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from dazzle.eject.generator import GeneratorResult
 

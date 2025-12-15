@@ -6,9 +6,10 @@ Generates main application file and configuration from AppSpec.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from dazzle.eject.generator import GeneratorResult
 
