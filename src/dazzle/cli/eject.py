@@ -13,9 +13,11 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core import ir
 from dazzle.core.errors import ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
+from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
 eject_app = typer.Typer(
@@ -24,10 +26,22 @@ eject_app = typer.Typer(
 )
 
 
-def _load_appspec(project_dir: Path):
+def _load_appspec(project_dir: Path) -> ir.AppSpec:
     """Load and build AppSpec from DSL files."""
+    # Load manifest
+    manifest_path = project_dir / "dazzle.toml"
+    if not manifest_path.exists():
+        typer.echo(f"No dazzle.toml found in {project_dir}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        manifest = load_manifest(manifest_path)
+    except Exception as e:
+        typer.echo(f"Error loading manifest: {e}", err=True)
+        raise typer.Exit(code=1)
+
     # Find DSL files
-    dsl_files = discover_dsl_files(project_dir)
+    dsl_files = discover_dsl_files(project_dir, manifest)
     if not dsl_files:
         typer.echo(f"No DSL files found in {project_dir}", err=True)
         raise typer.Exit(code=1)
@@ -41,7 +55,7 @@ def _load_appspec(project_dir: Path):
 
     # Build AppSpec
     try:
-        spec = build_appspec(modules)
+        spec = build_appspec(modules, manifest.project_root)
     except Exception as e:
         typer.echo(f"Error building spec: {e}", err=True)
         raise typer.Exit(code=1)
@@ -155,7 +169,7 @@ def eject_run(
     spec = _load_appspec(project_path)
 
     typer.echo(f"Specification loaded: {spec.name}")
-    typer.echo(f"  Entities: {len(spec.entities)}")
+    typer.echo(f"  Entities: {len(spec.domain.entities)}")
     typer.echo(f"  Surfaces: {len(spec.surfaces)}")
     typer.echo("")
 
@@ -532,7 +546,7 @@ def eject_verify(
                 result.add_error(f"{rel_path}:{line_num}: Runtime loader: {match.group()}")
 
     # Scan JS/TS files
-    js_files = []
+    js_files: list[Path] = []
     for pattern in ["*.js", "*.ts", "*.tsx", "*.jsx"]:
         js_files.extend(output_path.rglob(pattern))
     typer.echo(f"Scanning {len(js_files)} JavaScript/TypeScript files...")
@@ -553,7 +567,7 @@ def eject_verify(
                 )
 
     # Scan for template markers
-    all_files = []
+    all_files: list[Path] = []
     for pattern in ["*.py", "*.js", "*.ts", "*.tsx", "*.jsx", "*.html", "*.yaml", "*.yml"]:
         all_files.extend(output_path.rglob(pattern))
 

@@ -101,16 +101,20 @@ def _get_runtime_files() -> dict[str, str]:
 # plus the polish layer for modern SaaS aesthetics
 _CSS_SOURCE_FILES = [
     "dazzle-layer.css",  # Semantic aliases on top of DaisyUI + Tailwind
+    "site-sections.css",  # Site section components (v0.16.0)
     "polish.css",  # Modern SaaS polish layer (v0.8.11)
 ]
 
 
-def _get_bundled_css() -> str:
+def _get_bundled_css(theme_css: str | None = None) -> str:
     """
     Load and concatenate CSS files from static/css/.
 
     With DaisyUI loaded via CDN, this only includes the thin DAZZLE
     semantic layer that provides app structure and semantic aliases.
+
+    Args:
+        theme_css: Optional generated theme CSS to prepend (from ThemeSpec)
 
     Returns:
         CSS content for the DAZZLE semantic layer
@@ -123,6 +127,13 @@ def _get_bundled_css() -> str:
         "   ============================================================================= */",
         "",
     ]
+
+    # Prepend generated theme CSS if provided
+    if theme_css:
+        parts.append("/* --- theme.css (generated) --- */")
+        parts.append(theme_css)
+        parts.append("")
+
     for filename in _CSS_SOURCE_FILES:
         parts.append(f"/* --- {filename} --- */")
         parts.append(_load_static_css(filename))

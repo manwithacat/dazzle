@@ -5,7 +5,7 @@
 
 import { registerComponent, getComponent } from './components.js';
 import { registerState } from './state.js';
-import { applyTheme } from './theme.js';
+import { initTheme, applyTheme } from './theme.js';
 import { renderViewNode } from './renderer.js';
 import { render } from './dom.js';
 import { createShell, updateActiveNav, checkAuthState } from './shell.js';
@@ -100,7 +100,11 @@ export function createApp(uiSpec) {
     }
   });
 
-  // Apply default theme
+  // Initialize theme system (v0.16.0)
+  // This sets up light/dark mode based on user preference or system setting
+  initTheme();
+
+  // Apply legacy theme tokens if specified (backwards compatibility)
   if (uiSpec.default_theme || uiSpec.defaultTheme) {
     const themeName = uiSpec.default_theme || uiSpec.defaultTheme;
     const theme = (uiSpec.themes || []).find(t => t.name === themeName);

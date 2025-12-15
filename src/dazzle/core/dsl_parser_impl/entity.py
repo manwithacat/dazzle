@@ -905,6 +905,13 @@ class EntityParserMixin:
             self.advance()
             return ir.InvariantLiteral(value=False)
 
+        # Check for null literal (handle as identifier with value "null" or "None")
+        if self.match(TokenType.IDENTIFIER):
+            token = self.current_token()
+            if token.value in ("null", "None"):
+                self.advance()
+                return ir.InvariantLiteral(value=None)
+
         # Must be a field reference
         field_path = self._parse_field_path()
         return ir.InvariantFieldRef(path=field_path)

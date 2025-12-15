@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from dazzle.eject.generator import GeneratorResult
 
 from .utils import snake_case
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import EntitySpec
+    from dazzle.core.ir import AppSpec, EntitySpec
 
 
 def generate_entity_service(entity: EntitySpec) -> str:
@@ -141,7 +141,13 @@ def generate_entity_service(entity: EntitySpec) -> str:
 class ServiceGenerator:
     """Generates business logic services for FastAPI adapter."""
 
-    def __init__(self, spec, output_dir: Path, write_file_fn, ensure_dir_fn):
+    def __init__(
+        self,
+        spec: AppSpec,
+        output_dir: Path,
+        write_file_fn: Callable[[Path, str], None],
+        ensure_dir_fn: Callable[[Path], None],
+    ) -> None:
         self.spec = spec
         self.output_dir = output_dir
         self.backend_dir = output_dir / "backend"

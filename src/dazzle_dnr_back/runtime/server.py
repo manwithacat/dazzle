@@ -75,6 +75,10 @@ class ServerConfig:
     security_profile: str = "basic"  # basic | standard | strict
     cors_origins: list[str] | None = None  # Custom CORS origins
 
+    # SiteSpec (v0.16.0) - Public site shell
+    sitespec_data: dict[str, Any] | None = None  # SiteSpec as dict
+    project_root: Path | None = None  # For content file loading
+
 
 # Runtime import
 try:
@@ -133,6 +137,9 @@ class DNRBackendApp:
         feedback_dir: str | Path | None = None,
         personas: list[dict[str, Any]] | None = None,
         scenarios: list[dict[str, Any]] | None = None,
+        # SiteSpec (v0.16.0)
+        sitespec_data: dict[str, Any] | None = None,
+        project_root: str | Path | None = None,
     ):
         """
         Initialize the backend application.
@@ -155,6 +162,8 @@ class DNRBackendApp:
             feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
             personas: List of persona configurations for Dazzle Bar
             scenarios: List of scenario configurations for Dazzle Bar
+            sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
+            project_root: Project root for content file loading (v0.16.0)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -185,6 +194,9 @@ class DNRBackendApp:
         self._feedback_dir = Path(feedback_dir) if feedback_dir else config.feedback_dir
         self._personas = personas if personas is not None else config.personas
         self._scenarios = scenarios if scenarios is not None else config.scenarios
+        # SiteSpec (v0.16.0)
+        self._sitespec_data = sitespec_data if sitespec_data is not None else config.sitespec_data
+        self._project_root = Path(project_root) if project_root else config.project_root
         self._app: FastAPI | None = None
         self._models: dict[str, type[BaseModel]] = {}
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
@@ -203,6 +215,9 @@ class DNRBackendApp:
         # Security (v0.11.0)
         self._security_profile = config.security_profile
         self._cors_origins = config.cors_origins
+        # SiteSpec (v0.16.0)
+        self._sitespec_data = config.sitespec_data
+        self._project_root = config.project_root
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -504,6 +519,16 @@ class DNRBackendApp:
                 start_time=self._start_time,
             )
             self._app.include_router(debug_router)
+
+        # Initialize site routes (v0.16.0)
+        if self._sitespec_data:
+            from dazzle_dnr_back.runtime.site_routes import create_site_routes
+
+            site_router = create_site_routes(
+                sitespec_data=self._sitespec_data,
+                project_root=self._project_root,
+            )
+            self._app.include_router(site_router)
 
         # Initialize messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:

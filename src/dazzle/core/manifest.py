@@ -179,6 +179,41 @@ class InfraConfig:
     terraform: TerraformConfig = field(default_factory=TerraformConfig)
 
 
+# =============================================================================
+# Theme Configuration
+# =============================================================================
+
+
+@dataclass
+class ThemeConfig:
+    """Theme configuration for visual styling.
+
+    Controls the visual appearance of both the app workspace UI and
+    public site pages (SiteSpec).
+
+    Examples in dazzle.toml:
+
+        # Use a preset theme
+        [theme]
+        preset = "saas-default"  # or "minimal"
+
+        # Override specific tokens
+        [theme.colors]
+        hero-bg-from = "oklch(0.50 0.18 280)"
+        sidebar-from = "oklch(0.30 0.02 200)"
+
+        [theme.spacing]
+        section-y = 100
+    """
+
+    preset: str = "saas-default"  # "saas-default" | "minimal"
+    colors: dict[str, str] = field(default_factory=dict)
+    shadows: dict[str, str] = field(default_factory=dict)
+    spacing: dict[str, int] = field(default_factory=dict)
+    radii: dict[str, int] = field(default_factory=dict)
+    custom: dict[str, str] = field(default_factory=dict)
+
+
 @dataclass
 class StackConfig:
     """Stack configuration - preset combination of backends."""
@@ -194,7 +229,7 @@ class ProjectManifest:
     Project manifest loaded from dazzle.toml.
 
     Contains project metadata, module paths, and optional infrastructure,
-    stack, shell, and authentication configuration.
+    stack, shell, theme, and authentication configuration.
     """
 
     name: str
@@ -204,6 +239,7 @@ class ProjectManifest:
     infra: InfraConfig | None = None
     stack: StackConfig | None = None
     shell: ShellConfig = field(default_factory=ShellConfig)
+    theme: ThemeConfig = field(default_factory=ThemeConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
 
 
@@ -296,6 +332,17 @@ def load_manifest(path: Path) -> ProjectManifest:
         pages=pages_config,
     )
 
+    # Parse theme config (v0.16.0)
+    theme_data = data.get("theme", {})
+    theme_config = ThemeConfig(
+        preset=theme_data.get("preset", "saas-default"),
+        colors=theme_data.get("colors", {}),
+        shadows=theme_data.get("shadows", {}),
+        spacing=theme_data.get("spacing", {}),
+        radii=theme_data.get("radii", {}),
+        custom=theme_data.get("custom", {}),
+    )
+
     # Parse auth config
     auth_data = data.get("auth", {})
     session_data = auth_data.get("session", {})
@@ -348,5 +395,6 @@ def load_manifest(path: Path) -> ProjectManifest:
         infra=infra_config,
         stack=stack_config,
         shell=shell_config,
+        theme=theme_config,
         auth=auth_config,
     )

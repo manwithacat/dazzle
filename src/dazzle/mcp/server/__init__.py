@@ -54,6 +54,7 @@ from .tool_handlers import (
     get_env_vars_for_packs_handler,
     get_mcp_status_handler,
     get_runtime_coverage_gaps_handler,
+    get_sitespec_handler,
     get_stories_handler,
     get_surfaces,
     get_test_designs_handler,
@@ -74,10 +75,12 @@ from .tool_handlers import (
     save_runtime_coverage_handler,
     save_stories_handler,
     save_test_designs_handler,
+    scaffold_site_handler,
     search_api_packs_handler,
     select_project,
     validate_all_projects,
     validate_dsl,
+    validate_sitespec_handler,
 )
 from .tools import get_all_tools
 
@@ -240,6 +243,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "build",
         "analyze_patterns",
         "lint_project",
+        # SiteSpec tools
+        "get_sitespec",
+        "validate_sitespec",
+        "scaffold_site",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -279,6 +286,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = analyze_patterns(project_path)
             elif name == "lint_project":
                 result = lint_project(project_path, arguments)
+            # SiteSpec tools
+            elif name == "get_sitespec":
+                result = get_sitespec_handler(project_path, arguments)
+            elif name == "validate_sitespec":
+                result = validate_sitespec_handler(project_path, arguments)
+            elif name == "scaffold_site":
+                result = scaffold_site_handler(project_path, arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
     else:

@@ -317,14 +317,14 @@ def _generate_test_function(
 
     return f'''
 {marks_str}
-def {test_name}(page, page_diagnostics, track_route, track_crud, base_url):
+def {test_name}(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     {docstring}
     """
     test_name = "{test_name}"
 
     # Fixture data
-    fixtures = {_generate_fixtures_dict(fixture_refs, fixtures)}
+    fixtures: dict[str, Any] = {_generate_fixtures_dict(fixture_refs, fixtures)}
 
     # Execute flow steps
     {step_code}
@@ -420,6 +420,7 @@ Test Count: {len(testspec.flows)}
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect

@@ -95,16 +95,16 @@ class LayoutPlanCache:
                 data = json.load(f)
 
             # Reconstruct LayoutPlan
-            from .types import LayoutArchetype, LayoutSurface
+            from dazzle.core.ir import LayoutSurface, Stage
 
             plan = LayoutPlan(
                 workspace_id=data["workspace_id"],
                 persona_id=data.get("persona_id"),
-                archetype=LayoutArchetype(data["archetype"]),
+                stage=Stage(data["stage"]),
                 surfaces=[
                     LayoutSurface(
                         id=s["id"],
-                        archetype=s["archetype"],
+                        stage=Stage(s["stage"]),
                         capacity=s["capacity"],
                         priority=s["priority"],
                         assigned_signals=s["assigned_signals"],
@@ -137,11 +137,11 @@ class LayoutPlanCache:
         data = {
             "workspace_id": plan.workspace_id,
             "persona_id": plan.persona_id,
-            "archetype": plan.archetype.value,
+            "stage": plan.stage.value,
             "surfaces": [
                 {
                     "id": s.id,
-                    "archetype": s.archetype,
+                    "stage": s.stage.value,
                     "capacity": s.capacity,
                     "priority": s.priority,
                     "assigned_signals": s.assigned_signals,

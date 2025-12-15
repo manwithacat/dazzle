@@ -2,8 +2,6 @@
 
 from pathlib import Path
 
-import pytest
-
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.ir import (
     TimeUnit,
@@ -113,12 +111,8 @@ entity Task "Task":
         assert t.auto_spec.delay_unit == TimeUnit.HOURS
         assert t.auto_spec.delay_seconds == 24 * 3600
 
-    @pytest.mark.skip(reason="OR manual syntax not yet implemented")
     def test_auto_with_manual_override(self) -> None:
-        """Test parsing auto transitions that also allow manual trigger.
-
-        TODO: Implement the 'OR manual' syntax to allow both auto and manual triggers.
-        """
+        """Test parsing auto transitions that also allow manual trigger."""
         dsl = """
 module test.core
 app test_app "Test App"
@@ -128,7 +122,7 @@ entity Task "Task":
   status: enum[review, approved]
 
   transitions:
-    review -> approved: auto after 7 days OR manual
+    review -> approved: auto after 7 days or manual
 """
         _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
 

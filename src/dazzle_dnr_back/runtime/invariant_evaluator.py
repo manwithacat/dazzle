@@ -120,10 +120,18 @@ def _evaluate_comparison(
 
     left = evaluate_invariant_expr(expr.comparison_left, record)
     right = evaluate_invariant_expr(expr.comparison_right, record)
+    op = expr.comparison_op
 
-    # Handle None values - comparisons with None always return False
+    # Handle None comparisons specially for equality operators
+    # This allows expressions like: field != null, field == null
     if left is None or right is None:
-        return False
+        if op == InvariantComparisonKind.EQ:
+            return left is None and right is None
+        elif op == InvariantComparisonKind.NE:
+            return not (left is None and right is None)
+        else:
+            # For ordered comparisons (>, <, >=, <=), None makes no sense
+            return False
 
     # Normalize values for comparison
     left = _normalize_for_comparison(left)
@@ -131,8 +139,6 @@ def _evaluate_comparison(
 
     # Handle date/datetime + timedelta arithmetic
     left, right = _handle_date_arithmetic(left, right)
-
-    op = expr.comparison_op
 
     try:
         result: bool

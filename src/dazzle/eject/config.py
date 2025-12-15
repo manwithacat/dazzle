@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 try:
     import tomllib
 except ImportError:
-    import tomli as tomllib  # type: ignore[import-not-found]
+    import tomli as tomllib  # type: ignore[no-redef]
 
 
 class BackendFramework(str, Enum):
@@ -185,11 +185,13 @@ def load_ejection_config(toml_path: Path) -> EjectionConfig:
     # Backend config
     if "backend" in ejection_data:
         backend_data = ejection_data["backend"]
-        config_dict["backend"] = EjectionBackendConfig(
-            framework=backend_data.get("framework", "fastapi"),
-            models=backend_data.get("models", "pydantic-v2"),
-            async_handlers=backend_data.get("async", True),
-            routing=backend_data.get("routing", "router-modules"),
+        config_dict["backend"] = EjectionBackendConfig.model_validate(
+            {
+                "framework": backend_data.get("framework", "fastapi"),
+                "models": backend_data.get("models", "pydantic-v2"),
+                "async": backend_data.get("async", True),
+                "routing": backend_data.get("routing", "router-modules"),
+            }
         )
 
     # Frontend config

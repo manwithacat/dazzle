@@ -52,7 +52,7 @@ entity Task "Task":
     done -> todo: role(admin)
 
   # Invariant: urgent tasks must have a due date
-  invariant: priority != urgent or due_date != null
+  invariant: priority != "urgent" or due_date != null
 
   # Access control
   access:

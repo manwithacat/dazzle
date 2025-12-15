@@ -59,7 +59,7 @@ def generate_openapi(spec: AppSpec) -> dict[str, Any]:
     return openapi
 
 
-def _add_entity_schemas(openapi: dict, entity: EntitySpec) -> None:
+def _add_entity_schemas(openapi: dict[str, Any], entity: EntitySpec) -> None:
     """Add schemas for an entity (Base, Create, Update, Read)."""
     schemas = openapi["components"]["schemas"]
     entity_name = entity.name
@@ -147,7 +147,7 @@ def _field_to_schema(field: FieldSpec, entity_name: str) -> dict[str, Any]:
     schema: dict[str, Any] = {}
 
     # Map DAZZLE types to JSON Schema types
-    type_mapping = {
+    type_mapping: dict[str, dict[str, Any]] = {
         "uuid": {"type": "string", "format": "uuid"},
         "str": {"type": "string"},
         "text": {"type": "string"},
@@ -204,7 +204,7 @@ def _field_to_schema(field: FieldSpec, entity_name: str) -> dict[str, Any]:
     return schema
 
 
-def _add_entity_paths(openapi: dict, entity: EntitySpec) -> None:
+def _add_entity_paths(openapi: dict[str, Any], entity: EntitySpec) -> None:
     """Add CRUD paths for an entity."""
     paths = openapi["paths"]
     entity_name = entity.name
@@ -365,7 +365,7 @@ def _add_entity_paths(openapi: dict, entity: EntitySpec) -> None:
 
 
 def _add_transition_paths(
-    openapi: dict,
+    openapi: dict[str, Any],
     entity: EntitySpec,
 ) -> None:
     """Add state transition endpoints."""
@@ -421,7 +421,7 @@ def _pascal_case(name: str) -> str:
     return "".join(word.capitalize() for word in name.split("_"))
 
 
-def openapi_to_yaml(openapi: dict) -> str:
+def openapi_to_yaml(openapi: dict[str, Any]) -> str:
     """Convert OpenAPI dict to YAML string."""
     try:
         import yaml
@@ -434,7 +434,7 @@ def openapi_to_yaml(openapi: dict) -> str:
         return json.dumps(openapi, indent=2)
 
 
-def openapi_to_json(openapi: dict) -> str:
+def openapi_to_json(openapi: dict[str, Any]) -> str:
     """Convert OpenAPI dict to JSON string."""
     import json
 

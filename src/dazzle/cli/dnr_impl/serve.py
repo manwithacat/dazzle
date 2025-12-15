@@ -19,6 +19,7 @@ import os
 import socketserver
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -28,6 +29,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
 
 from .ports import (
     clear_runtime_file,
@@ -233,6 +235,17 @@ def dnr_serve(
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
 
+    # Load SiteSpec if available (v0.16.0)
+    sitespec_data = None
+    if sitespec_exists(project_root):
+        try:
+            sitespec = load_sitespec(project_root)
+            sitespec_data = sitespec.model_dump()
+            typer.echo(f"  • SiteSpec: loaded ({len(sitespec.pages)} pages)")
+        except Exception as e:
+            typer.echo(f"Warning: Failed to load sitespec.yaml: {e}", err=True)
+            # Continue without SiteSpec - it's optional
+
     if ui_only:
         # Serve UI only with simple HTTP server
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
@@ -285,6 +298,8 @@ def dnr_serve(
             enable_test_mode=test_mode,
             enable_graphql=graphql,
             host=host,
+            sitespec_data=sitespec_data,
+            project_root=project_root,
         )
         return
 
@@ -329,6 +344,19 @@ def dnr_serve(
     if watch:
         typer.echo("  • Hot reload: ENABLED (watching DSL files)")
 
+    # Build theme overrides from manifest (v0.16.0)
+    theme_overrides: dict[str, Any] = {}
+    if mf.theme.colors:
+        theme_overrides["colors"] = mf.theme.colors
+    if mf.theme.shadows:
+        theme_overrides["shadows"] = mf.theme.shadows
+    if mf.theme.spacing:
+        theme_overrides["spacing"] = mf.theme.spacing
+    if mf.theme.radii:
+        theme_overrides["radii"] = mf.theme.radii
+    if mf.theme.custom:
+        theme_overrides["custom"] = mf.theme.custom
+
     run_combined_server(
         backend_spec=backend_spec,
         ui_spec=ui_spec,
@@ -342,4 +370,7 @@ def dnr_serve(
         project_root=project_root,
         personas=personas,
         scenarios=scenarios,
+        sitespec_data=sitespec_data,
+        theme_preset=mf.theme.preset,
+        theme_overrides=theme_overrides if theme_overrides else None,
     )

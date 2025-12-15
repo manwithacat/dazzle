@@ -60,14 +60,16 @@ class InvariantLiteral(BaseModel):
     """
     A literal value in an invariant expression.
 
-    Supports numeric, string, and boolean literals.
+    Supports numeric, string, boolean, and null literals.
     """
 
-    value: int | float | str | bool = Field(description="The literal value")
+    value: int | float | str | bool | None = Field(description="The literal value")
 
     model_config = ConfigDict(frozen=True)
 
     def __str__(self) -> str:
+        if self.value is None:
+            return "null"
         if isinstance(self.value, str):
             return f'"{self.value}"'
         return str(self.value)

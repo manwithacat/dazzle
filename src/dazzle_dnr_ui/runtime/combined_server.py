@@ -89,6 +89,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
     dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
     api_route_prefixes: set[str] = set()  # Entity route prefixes (e.g., "/tasks", "/users")
+    theme_css: str | None = None  # Generated theme CSS (v0.16.0)
 
     def _is_api_path(self, path: str) -> bool:
         """Check if a path should be proxied to the backend API."""
@@ -322,11 +323,11 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, f"Failed to load Dazzle Bar: {e}")
 
     def _serve_css(self) -> None:
-        """Serve the bundled CSS (v0.8.11)."""
+        """Serve the bundled CSS (v0.8.11, v0.16.0 theme support)."""
         try:
             from dazzle_dnr_ui.runtime.vite_generator import _get_bundled_css
 
-            css_content = _get_bundled_css()
+            css_content = _get_bundled_css(theme_css=self.theme_css)
             self._send_response(css_content, "text/css")
         except Exception as e:
             self.send_error(500, f"Failed to load CSS: {e}")
@@ -454,6 +455,9 @@ class DNRCombinedServer:
         project_root: Path | None = None,
         personas: list[dict[str, Any]] | None = None,
         scenarios: list[dict[str, Any]] | None = None,
+        sitespec_data: dict[str, Any] | None = None,
+        theme_preset: str = "saas-default",
+        theme_overrides: dict[str, Any] | None = None,
     ):
         """
         Initialize the combined server.
@@ -472,6 +476,9 @@ class DNRCombinedServer:
             project_root: Project root directory (required for hot reload)
             personas: List of persona configurations for Dazzle Bar (v0.8.5)
             scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
+            sitespec_data: SiteSpec data as dict for public site shell (v0.16.0)
+            theme_preset: Theme preset name (v0.16.0)
+            theme_overrides: Custom theme token overrides (v0.16.0)
         """
         self.backend_spec = backend_spec
         self.ui_spec = ui_spec
@@ -486,6 +493,9 @@ class DNRCombinedServer:
         self.project_root = project_root or Path.cwd()
         self.personas = personas or []
         self.scenarios = scenarios or []
+        self.sitespec_data = sitespec_data
+        self.theme_preset = theme_preset
+        self.theme_overrides = theme_overrides or {}
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
@@ -554,6 +564,8 @@ class DNRCombinedServer:
         enable_auth = self.enable_auth
         personas = self.personas
         scenarios = self.scenarios
+        sitespec_data = self.sitespec_data
+        project_root = self.project_root
 
         def run_backend() -> None:
             try:
@@ -568,6 +580,8 @@ class DNRCombinedServer:
                     enable_dev_mode=True,  # Enable Dazzle Bar control plane (v0.8.5)
                     personas=personas,
                     scenarios=scenarios,
+                    sitespec_data=sitespec_data,
+                    project_root=project_root,
                 )
                 app = app_builder.build()
 
@@ -621,6 +635,18 @@ class DNRCombinedServer:
         for entity in self.backend_spec.entities:
             api_prefixes.add(f"/{to_api_plural(entity.name)}")
         DNRCombinedHandler.api_route_prefixes = api_prefixes
+
+        # Generate theme CSS (v0.16.0)
+        try:
+            from dazzle_dnr_ui.themes import generate_theme_css, resolve_theme
+
+            theme = resolve_theme(
+                preset_name=self.theme_preset,
+                manifest_overrides=self.theme_overrides,
+            )
+            DNRCombinedHandler.theme_css = generate_theme_css(theme)
+        except ImportError:
+            DNRCombinedHandler.theme_css = None
 
         # Create server with threading for concurrent SSE connections
         socketserver.TCPServer.allow_reuse_address = True
@@ -682,6 +708,9 @@ def run_combined_server(
     project_root: Path | None = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
+    sitespec_data: dict[str, Any] | None = None,
+    theme_preset: str = "saas-default",
+    theme_overrides: dict[str, Any] | None = None,
 ) -> None:
     """
     Run a combined DNR development server.
@@ -699,6 +728,9 @@ def run_combined_server(
         project_root: Project root directory (for hot reload)
         personas: List of persona configurations for Dazzle Bar (v0.8.5)
         scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
+        sitespec_data: SiteSpec data as dict for public site shell (v0.16.0)
+        theme_preset: Theme preset name (v0.16.0)
+        theme_overrides: Custom theme token overrides (v0.16.0)
     """
     server = DNRCombinedServer(
         backend_spec=backend_spec,
@@ -714,6 +746,9 @@ def run_combined_server(
         project_root=project_root,
         personas=personas,
         scenarios=scenarios,
+        sitespec_data=sitespec_data,
+        theme_preset=theme_preset,
+        theme_overrides=theme_overrides,
     )
     server.start()
 
@@ -770,6 +805,8 @@ def run_backend_only(
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     enable_graphql: bool = False,
+    sitespec_data: dict[str, Any] | None = None,
+    project_root: Path | None = None,
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -781,6 +818,8 @@ def run_backend_only(
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
         enable_graphql: Enable GraphQL endpoint at /graphql
+        sitespec_data: SiteSpec data as dict for public site shell (v0.16.0)
+        project_root: Project root directory for content file loading
     """
     try:
         import uvicorn
@@ -801,6 +840,8 @@ def run_backend_only(
         db_path=db_path,
         use_database=True,
         enable_test_mode=enable_test_mode,
+        sitespec_data=sitespec_data,
+        project_root=project_root,
     )
     app = app_builder.build()
 

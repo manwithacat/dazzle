@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from dazzle.eject.generator import GeneratorResult
 
 from .utils import get_column_type, pascal_case, snake_case
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import EntitySpec, FieldSpec
+    from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
 
 
 def generate_base_model() -> str:
@@ -133,14 +133,14 @@ def _generate_column(field: FieldSpec, entity: EntitySpec) -> str:
 
     # Handle relationships
     if kind == "ref":
-        ref_entity = field.type.ref_entity
+        ref_entity = field.type.ref_entity or "unknown"
         ref_table = snake_case(ref_entity) + "s"
         nullable = "False" if field.is_required else "True"
         return f'{field.name}_id = Column(PGUUID(as_uuid=True), ForeignKey("{ref_table}.id"), nullable={nullable})'
 
     if kind in ("has_many", "has_one", "belongs_to"):
         # These are relationship fields, handled separately
-        ref_entity = field.type.ref_entity
+        ref_entity = field.type.ref_entity or "unknown"
         if kind == "has_many":
             return f'{field.name} = relationship("{ref_entity}", back_populates="{snake_case(entity.name)}")'
         elif kind == "belongs_to":
@@ -151,7 +151,8 @@ def _generate_column(field: FieldSpec, entity: EntitySpec) -> str:
     if kind == "enum":
         enum_name = f"{entity.name}{pascal_case(field.name)}"
         nullable = "False" if field.is_required else "True"
-        default = f", default={enum_name}.{field.default.upper()}" if field.default else ""
+        default_val = str(field.default).upper() if field.default else ""
+        default = f", default={enum_name}.{default_val}" if default_val else ""
         return f"{field.name} = Column(SQLEnum({enum_name}), nullable={nullable}{default})"
 
     # Handle basic types
@@ -165,7 +166,13 @@ def _generate_column(field: FieldSpec, entity: EntitySpec) -> str:
 class ModelGenerator:
     """Generates SQLAlchemy models for FastAPI adapter."""
 
-    def __init__(self, spec, output_dir: Path, write_file_fn, ensure_dir_fn):
+    def __init__(
+        self,
+        spec: AppSpec,
+        output_dir: Path,
+        write_file_fn: Callable[[Path, str], None],
+        ensure_dir_fn: Callable[[Path], None],
+    ) -> None:
         self.spec = spec
         self.output_dir = output_dir
         self.backend_dir = output_dir / "backend"

@@ -11,39 +11,10 @@
    - Better typography hierarchy
    - Accent color highlights
    - Card and table refinements
+
+   Note: CSS custom properties (--dz-*) are now generated from ThemeSpec
+   by the theme system (v0.16.0). See src/dazzle_dnr_ui/themes/presets.py
    ============================================================================= */
-
-/* =============================================================================
-   CSS Custom Properties - Polish Theme
-   ============================================================================= */
-
-:root {
-  /* Gradient stops for sidebar */
-  --dz-sidebar-from: oklch(0.25 0.02 260);
-  --dz-sidebar-to: oklch(0.20 0.03 250);
-
-  /* Accent glow for interactive elements */
-  --dz-accent-glow: oklch(0.65 0.20 250 / 0.15);
-
-  /* Refined shadows */
-  --dz-shadow-sm: 0 1px 2px oklch(0 0 0 / 0.05);
-  --dz-shadow-md: 0 4px 6px -1px oklch(0 0 0 / 0.07), 0 2px 4px -2px oklch(0 0 0 / 0.05);
-  --dz-shadow-lg: 0 10px 15px -3px oklch(0 0 0 / 0.08), 0 4px 6px -4px oklch(0 0 0 / 0.05);
-  --dz-shadow-card: 0 1px 3px oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06);
-
-  /* Transitions */
-  --dz-transition-fast: 150ms ease;
-  --dz-transition-normal: 200ms ease;
-  --dz-transition-slow: 300ms ease;
-}
-
-/* Dark mode adjustments */
-[data-theme="dark"] {
-  --dz-sidebar-from: oklch(0.18 0.02 260);
-  --dz-sidebar-to: oklch(0.14 0.025 255);
-  --dz-accent-glow: oklch(0.60 0.22 250 / 0.20);
-  --dz-shadow-card: 0 1px 3px oklch(0 0 0 / 0.2), 0 1px 2px -1px oklch(0 0 0 / 0.15);
-}
 
 /* =============================================================================
    Global Refinements

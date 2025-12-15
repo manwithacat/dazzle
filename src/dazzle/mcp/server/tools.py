@@ -842,6 +842,61 @@ Use this after a test run to persist the coverage report so it can be used by ge
     ]
 
 
+def get_sitespec_tools() -> list[Tool]:
+    """Get SiteSpec tools for public site shell management."""
+    return [
+        Tool(
+            name="get_sitespec",
+            description="Load the SiteSpec (public site shell configuration) from sitespec.yaml. Returns brand, layout, pages, navigation, and content source references. Use use_defaults=true to get default spec when file doesn't exist.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "use_defaults": {
+                        "type": "boolean",
+                        "description": "If true (default), return default SiteSpec when file doesn't exist. If false, error when missing.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="validate_sitespec",
+            description="Validate the SiteSpec for semantic correctness. Checks route uniqueness, content file existence, navigation consistency, and production readiness.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "check_content_files": {
+                        "type": "boolean",
+                        "description": "If true (default), check that referenced content files exist.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="scaffold_site",
+            description="Create default site structure including sitespec.yaml and content templates (terms.md, privacy.md, about.md). Use for new projects.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "product_name": {
+                        "type": "string",
+                        "description": "Product name to use in templates (default: 'My App')",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "If true, overwrite existing files. If false (default), skip existing.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -928,6 +983,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add UX Coverage Test Design tools (always available)
     tools.extend(get_test_design_tools())
+
+    # Add SiteSpec tools (always available)
+    tools.extend(get_sitespec_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

@@ -7,8 +7,18 @@ and verify that:
 2. CRUD operations function properly
 3. The frontend is served correctly
 
-Uses Docker-first approach for consistent, reliable testing.
+Test Mode Configuration:
+    DNR_E2E_MODE=local  - Use local Python server (default, most reliable)
+    DNR_E2E_MODE=docker - Use Docker containers (requires Docker)
+
+The default is local mode because:
+- It's faster (no container build/startup overhead)
+- It's more reliable in CI environments
+- It doesn't require Docker to be installed
+- Better error messages when things fail
 """
+
+from __future__ import annotations
 
 import os
 import signal
@@ -16,9 +26,13 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import requests
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 # List of examples to test - these use the DNR stack
 DNR_EXAMPLES = [
@@ -27,13 +41,16 @@ DNR_EXAMPLES = [
 ]
 
 # Timeout for server startup
-SERVER_STARTUP_TIMEOUT = 60  # Increased for Docker builds
+SERVER_STARTUP_TIMEOUT = 60
 # Request timeout
 REQUEST_TIMEOUT = 10
 
+# Test mode configuration
+E2E_MODE = os.environ.get("DNR_E2E_MODE", "local").lower()
+
 
 @pytest.fixture(scope="module")
-def dazzle_root():
+def dazzle_root() -> Path:
     """Get the dazzle project root directory."""
     return Path(__file__).parent.parent.parent
 
@@ -53,7 +70,7 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
 
 
 def is_docker_available() -> bool:
-    """Check if Docker is available."""
+    """Check if Docker is available and running."""
     try:
         result = subprocess.run(
             ["docker", "info"],
@@ -65,122 +82,37 @@ def is_docker_available() -> bool:
         return False
 
 
-class DNRDockerServerManager:
-    """Context manager for running DNR server in Docker container.
+class DNRLocalServerManager:
+    """Context manager for running DNR server locally.
 
-    Note: The Docker container uses a self-contained entrypoint that serves
-    both API and static UI files on the same port (api_port). The ui_port
-    parameter is passed for compatibility but the UI is served from api_port.
+    This is the default and most reliable mode for E2E tests.
     """
 
     def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
         self.example_dir = example_dir
         self.api_port = api_port
-        self.ui_port = ui_port  # Kept for interface compatibility
-        self.container_name = f"dazzle-test-{example_dir.name}-{api_port}"
-        self.api_url = f"http://127.0.0.1:{api_port}"
-        # Docker entrypoint serves UI on same port as API
-        self.ui_url = f"http://127.0.0.1:{api_port}"
-
-    def __enter__(self):
-        # Stop any existing container with same name
-        subprocess.run(
-            ["docker", "stop", self.container_name],
-            capture_output=True,
-            timeout=10,
-        )
-        subprocess.run(
-            ["docker", "rm", self.container_name],
-            capture_output=True,
-            timeout=10,
-        )
-
-        # Start the DNR server in Docker with detach mode
-        env = os.environ.copy()
-        env["PYTHONUNBUFFERED"] = "1"
-
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "dazzle",
-                "dnr",
-                "serve",
-                "--port",
-                str(self.ui_port),
-                "--api-port",
-                str(self.api_port),
-                "--test-mode",
-                # Note: Docker mode runs detached by default (no --detach flag needed)
-            ],
-            cwd=self.example_dir,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=300,  # 5 minutes for Docker build
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to start Docker container: {result.stderr}")
-
-        # Wait for API to be ready
-        if not wait_for_server(f"{self.api_url}/health"):
-            # Try to get container logs
-            logs = subprocess.run(
-                ["docker", "logs", self.container_name],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            self._cleanup()
-            raise RuntimeError(
-                f"DNR server failed to become healthy within {SERVER_STARTUP_TIMEOUT}s. "
-                f"Container logs: {logs.stdout}\n{logs.stderr}"
-            )
-
-        return self
-
-    def _cleanup(self):
-        """Stop and remove the Docker container."""
-        try:
-            subprocess.run(
-                ["docker", "stop", self.container_name],
-                capture_output=True,
-                timeout=15,
-            )
-        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-            pass
-        try:
-            subprocess.run(
-                ["docker", "rm", "-f", self.container_name],
-                capture_output=True,
-                timeout=10,
-            )
-        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-            pass
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self._cleanup()
-
-
-class DNRLocalServerManager:
-    """Context manager for running DNR server locally (fallback)."""
-
-    def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
-        self.example_dir = example_dir
-        self.api_port = api_port
         self.ui_port = ui_port
-        self.process = None
+        self.process: subprocess.Popen | None = None
         self.api_url = f"http://127.0.0.1:{api_port}"
         self.ui_url = f"http://127.0.0.1:{ui_port}"
 
-    def __enter__(self):
+    def __enter__(self) -> DNRLocalServerManager:
         # Start the DNR server locally
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
+        # Clear any existing runtime file and database from previous runs
+        dazzle_dir = self.example_dir / ".dazzle"
+        runtime_file = dazzle_dir / "runtime.json"
+        if runtime_file.exists():
+            runtime_file.unlink()
+        # Clear database for clean test state
+        data_db = dazzle_dir / "data.db"
+        if data_db.exists():
+            data_db.unlink()
+
         # Platform-specific process group handling
-        kwargs = {}
+        kwargs: dict = {}
         if sys.platform != "win32":
             kwargs["preexec_fn"] = os.setsid  # Create new process group (Unix)
         else:
@@ -209,19 +141,39 @@ class DNRLocalServerManager:
             **kwargs,
         )
 
+        # Wait for runtime file to be written (contains actual ports)
+        runtime_file = self.example_dir / ".dazzle" / "runtime.json"
+        for _ in range(SERVER_STARTUP_TIMEOUT * 2):
+            if runtime_file.exists():
+                try:
+                    import json
+
+                    data = json.loads(runtime_file.read_text())
+                    # Update URLs to use actual allocated ports
+                    self.api_port = data["api_port"]
+                    self.ui_port = data["ui_port"]
+                    self.api_url = f"http://127.0.0.1:{self.api_port}"
+                    self.ui_url = f"http://127.0.0.1:{self.ui_port}"
+                    break
+                except (json.JSONDecodeError, KeyError):
+                    pass
+            time.sleep(0.5)
+
         # Wait for API to be ready
         if not wait_for_server(f"{self.api_url}/health"):
             # Get any error output
-            self.process.terminate()
-            _, stderr = self.process.communicate(timeout=5)
-            raise RuntimeError(
-                f"DNR server failed to start within {SERVER_STARTUP_TIMEOUT}s. "
-                f"stderr: {stderr.decode()}"
-            )
+            if self.process:
+                self.process.terminate()
+                _, stderr = self.process.communicate(timeout=5)
+                raise RuntimeError(
+                    f"DNR server failed to start within {SERVER_STARTUP_TIMEOUT}s. "
+                    f"stderr: {stderr.decode()}"
+                )
+            raise RuntimeError(f"DNR server failed to start within {SERVER_STARTUP_TIMEOUT}s.")
 
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
         if self.process:
             # Kill the process and its children
             try:
@@ -238,24 +190,138 @@ class DNRLocalServerManager:
                 self.process.wait(timeout=2)
 
 
-def DNRServerManager(example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
-    """Factory function to get appropriate server manager (Docker-first)."""
-    if is_docker_available():
+class DNRDockerServerManager:
+    """Context manager for running DNR server in Docker containers.
+
+    Uses docker-compose with the split container setup (backend + frontend).
+    Container names follow the pattern: dazzle-{project_name}-backend/frontend
+    """
+
+    def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
+        self.example_dir = example_dir
+        self.api_port = api_port
+        self.ui_port = ui_port
+        # Container name matches what the Docker runner actually uses
+        self.project_name = example_dir.name.replace("_", "-")
+        self.container_prefix = f"dazzle-{self.project_name}"
+        self.api_url = f"http://127.0.0.1:{api_port}"
+        # In Docker split mode, frontend is on ui_port, backend on api_port
+        self.ui_url = f"http://127.0.0.1:{ui_port}"
+
+    def __enter__(self) -> DNRDockerServerManager:
+        # Clean up any existing containers from previous runs
+        self._cleanup()
+
+        # Start the DNR server in Docker
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "dazzle",
+                "dnr",
+                "serve",
+                "--port",
+                str(self.ui_port),
+                "--api-port",
+                str(self.api_port),
+                "--test-mode",
+                # Docker mode runs detached by default
+            ],
+            cwd=self.example_dir,
+            capture_output=True,
+            text=True,
+            env=env,
+            timeout=300,  # 5 minutes for Docker build
+        )
+
+        if result.returncode != 0:
+            raise RuntimeError(f"Failed to start Docker containers: {result.stderr}")
+
+        # Wait for API to be ready
+        if not wait_for_server(f"{self.api_url}/health"):
+            # Try to get container logs for debugging
+            logs = self._get_container_logs()
+            self._cleanup()
+            raise RuntimeError(
+                f"DNR server failed to become healthy within {SERVER_STARTUP_TIMEOUT}s. "
+                f"Container logs:\n{logs}"
+            )
+
+        return self
+
+    def _get_container_logs(self) -> str:
+        """Get logs from the backend container."""
+        logs_parts = []
+        for suffix in ["backend", "frontend"]:
+            container_name = f"{self.container_prefix}-{suffix}"
+            try:
+                result = subprocess.run(
+                    ["docker", "logs", "--tail", "50", container_name],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if result.stdout or result.stderr:
+                    logs_parts.append(f"=== {container_name} ===\n{result.stdout}\n{result.stderr}")
+            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+                logs_parts.append(f"=== {container_name} === (failed to get logs)")
+        return "\n".join(logs_parts) if logs_parts else "(no logs available)"
+
+    def _cleanup(self) -> None:
+        """Stop and remove Docker containers."""
+        for suffix in ["backend", "frontend"]:
+            container_name = f"{self.container_prefix}-{suffix}"
+            try:
+                subprocess.run(
+                    ["docker", "stop", container_name],
+                    capture_output=True,
+                    timeout=15,
+                )
+            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+                pass
+            try:
+                subprocess.run(
+                    ["docker", "rm", "-f", container_name],
+                    capture_output=True,
+                    timeout=10,
+                )
+            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+                pass
+
+    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
+        self._cleanup()
+
+
+def get_server_manager(
+    example_dir: Path, api_port: int = 8000, ui_port: int = 3000
+) -> DNRLocalServerManager | DNRDockerServerManager:
+    """Factory function to get appropriate server manager based on E2E_MODE.
+
+    Default is local mode (more reliable). Set DNR_E2E_MODE=docker for Docker mode.
+    """
+    if E2E_MODE == "docker":
+        if not is_docker_available():
+            pytest.skip("Docker mode requested but Docker is not available")
         return DNRDockerServerManager(example_dir, api_port, ui_port)
     else:
-        # Fallback to local if Docker not available
+        # Default to local mode
         return DNRLocalServerManager(example_dir, api_port, ui_port)
 
 
 @pytest.fixture(scope="module")
-def simple_task_server(dazzle_root):
+def simple_task_server(
+    dazzle_root: Path,
+) -> Iterator[DNRLocalServerManager | DNRDockerServerManager]:
     """Start DNR server for simple_task example."""
     example_dir = dazzle_root / "examples" / "simple_task"
     if not example_dir.exists():
         pytest.skip(f"Example directory not found: {example_dir}")
 
-    # Use unique ports to avoid conflicts
-    with DNRServerManager(example_dir, api_port=8001, ui_port=3001) as server:
+    # Use unique ports to avoid conflicts with other running servers
+    with get_server_manager(example_dir, api_port=8001, ui_port=3001) as server:
         yield server
 
 
@@ -263,14 +329,18 @@ class TestSimpleTaskE2E:
     """E2E tests for the simple_task example."""
 
     @pytest.mark.e2e
-    def test_api_docs_available(self, simple_task_server):
+    def test_api_docs_available(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test that OpenAPI docs are served."""
         resp = requests.get(f"{simple_task_server.api_url}/docs", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
         assert "swagger" in resp.text.lower() or "openapi" in resp.text.lower()
 
     @pytest.mark.e2e
-    def test_openapi_schema_available(self, simple_task_server):
+    def test_openapi_schema_available(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test that OpenAPI JSON schema is available."""
         resp = requests.get(f"{simple_task_server.api_url}/openapi.json", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
@@ -279,7 +349,9 @@ class TestSimpleTaskE2E:
         assert "paths" in data
 
     @pytest.mark.e2e
-    def test_api_endpoints_respond(self, simple_task_server):
+    def test_api_endpoints_respond(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test that API endpoints respond correctly."""
         api = simple_task_server.api_url
 
@@ -294,9 +366,10 @@ class TestSimpleTaskE2E:
         assert "items" in data or isinstance(data, list)
 
         # Test create endpoint accepts data (response validation only)
+        # Note: simple_task has an invariant that urgent tasks require a due_date
+        # Use minimal data and let defaults apply
         task_data = {
             "title": "E2E Test Task",
-            "status": "todo",
         }
         resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
@@ -305,12 +378,13 @@ class TestSimpleTaskE2E:
         assert created["title"] == "E2E Test Task"
 
     @pytest.mark.e2e
-    def test_task_crud_persistence(self, simple_task_server):
+    def test_task_crud_persistence(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test Create, Read, Update, List operations with persistence."""
         api = simple_task_server.api_url
 
         # Create a task (POST to /tasks)
-        # Note: assigned_to is required by state machine for todo->in_progress transition
         task_data = {
             "title": "E2E Test Task",
             "description": "Created by E2E test",
@@ -330,7 +404,6 @@ class TestSimpleTaskE2E:
         assert fetched["title"] == "E2E Test Task"
 
         # Update the task (PUT /tasks/{id})
-        # Only update title and priority - status change requires assigned_to per state machine
         update_data = {"title": "Updated E2E Task", "priority": "medium"}
         resp = requests.put(f"{api}/tasks/{task_id}", json=update_data, timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200, f"Update failed: {resp.text}"
@@ -355,28 +428,25 @@ class TestSimpleTaskE2E:
         assert persisted["priority"] == "medium"
 
     @pytest.mark.e2e
-    def test_frontend_serves_html(self, simple_task_server):
-        """Test that frontend serves HTML or static files endpoint exists.
+    def test_frontend_serves_html(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
+        """Test that frontend serves HTML content.
 
-        Note: In Docker mode, the UI may be served at a subpath rather than root.
-        In local mode with split containers, frontend serves at ui_port.
-        This test verifies some form of UI serving is available.
+        Note: In local mode, frontend is served via Vite dev server.
+        In Docker mode, it may be served at a different path.
         """
         resp = requests.get(simple_task_server.ui_url, timeout=REQUEST_TIMEOUT)
-        # Frontend might be served at root, or at a subpath, or via a proxy
-        # In Docker mode, root may return 404 if UI is at /static/ or similar
-        # Accept 404 as valid since API tests prove the server is healthy
+        # Frontend might be served at root, or at a subpath
         if resp.status_code == 404:
-            # Try /static/ or /index.html as fallbacks
+            # Try common fallback paths
             for path in ["/index.html", "/static/", "/app/"]:
                 resp = requests.get(f"{simple_task_server.ui_url}{path}", timeout=REQUEST_TIMEOUT)
                 if resp.status_code in (200, 302, 304):
                     break
-            # If still 404, that's acceptable - UI may not be served by backend in all modes
+            # If still 404, skip - UI serving varies by mode
             if resp.status_code == 404:
-                pytest.skip(
-                    "UI not served at root or common paths (Docker mode may not serve static files)"
-                )
+                pytest.skip("UI not served at root or common paths")
         else:
             assert resp.status_code in (200, 302, 304), f"Frontend failed: {resp.status_code}"
             if resp.status_code == 200:
@@ -387,7 +457,7 @@ class TestSimpleTaskE2E:
 # Parametrized tests for multiple examples
 @pytest.mark.e2e
 @pytest.mark.parametrize("example_name", DNR_EXAMPLES)
-def test_example_validates(dazzle_root, example_name):
+def test_example_validates(dazzle_root: Path, example_name: str) -> None:
     """Test that each example validates successfully."""
     example_dir = dazzle_root / "examples" / example_name
     if not example_dir.exists():
@@ -405,7 +475,7 @@ def test_example_validates(dazzle_root, example_name):
 
 @pytest.mark.e2e
 @pytest.mark.parametrize("example_name", DNR_EXAMPLES)
-def test_example_builds_ui(dazzle_root, example_name):
+def test_example_builds_ui(dazzle_root: Path, example_name: str) -> None:
     """Test that each example can build UI artifacts."""
     example_dir = dazzle_root / "examples" / example_name
     if not example_dir.exists():
@@ -425,7 +495,9 @@ class TestAuthDisabled:
     """Tests for auth stub endpoints when AUTH_ENABLED=0."""
 
     @pytest.mark.e2e
-    def test_auth_me_returns_401_when_disabled(self, simple_task_server):
+    def test_auth_me_returns_401_when_disabled(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test that /auth/me returns 401 (not 404) when auth is disabled.
 
         This ensures the UI doesn't get console errors for 404s.
@@ -437,7 +509,9 @@ class TestAuthDisabled:
         assert resp.status_code in (401, 200), f"Expected 401 or 200, got {resp.status_code}"
 
     @pytest.mark.e2e
-    def test_crud_works_without_auth(self, simple_task_server):
+    def test_crud_works_without_auth(
+        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+    ) -> None:
         """Test that CRUD operations work without authentication.
 
         Even with auth enabled by default, the API should allow CRUD

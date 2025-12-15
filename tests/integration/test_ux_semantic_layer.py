@@ -156,7 +156,6 @@ workspace volunteer_dashboard "My Tasks":
 """
 
 
-@pytest.mark.skip(reason="AttentionSignal IR model changed - needs DSL parser update")
 class TestUXParsing:
     """Test UX DSL parsing."""
 
@@ -240,7 +239,6 @@ class TestUXParsing:
         assert urgent_region.filter is not None
 
 
-@pytest.mark.skip(reason="AttentionSignal IR model changed - needs DSL parser update")
 class TestUXLinking:
     """Test UX linking and validation."""
 
@@ -272,7 +270,6 @@ class TestUXLinking:
         assert len(task_list.ux.attention_signals) == 3
 
 
-@pytest.mark.skip(reason="AttentionSignal IR model changed - needs DSL parser update")
 class TestUXValidation:
     """Test UX validation rules."""
 

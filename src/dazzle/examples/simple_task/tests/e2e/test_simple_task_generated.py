@@ -16,9 +16,10 @@ Test Count: 12
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import pytest
-from playwright.sync_api import expect
+from playwright.sync_api import Page, expect
 
 # =============================================================================
 # Test Configuration
@@ -43,7 +44,7 @@ def base_url() -> str:
 @pytest.mark.high_priority
 @pytest.mark.auth
 @pytest.mark.login
-def test_auth_login(page, page_diagnostics, track_route, track_crud, base_url):
+def test_auth_login(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Login with valid credentials
     Tags: auth, login
@@ -51,7 +52,7 @@ def test_auth_login(page, page_diagnostics, track_route, track_crud, base_url):
     test_name = "test_auth_login"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to login page
@@ -81,7 +82,7 @@ def test_auth_login(page, page_diagnostics, track_route, track_crud, base_url):
 @pytest.mark.high_priority
 @pytest.mark.auth
 @pytest.mark.logout
-def test_auth_logout(page, page_diagnostics, track_route, track_crud, base_url):
+def test_auth_logout(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Logout after being logged in
     Tags: auth, logout
@@ -89,7 +90,7 @@ def test_auth_logout(page, page_diagnostics, track_route, track_crud, base_url):
     test_name = "test_auth_logout"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Open user menu
@@ -114,7 +115,7 @@ def test_auth_logout(page, page_diagnostics, track_route, track_crud, base_url):
 @pytest.mark.crud
 @pytest.mark.create
 @pytest.mark.task
-def test_Task_create_valid(page, page_diagnostics, track_route, track_crud, base_url):
+def test_Task_create_valid(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Create a valid Task entity
 
@@ -124,7 +125,7 @@ def test_Task_create_valid(page, page_diagnostics, track_route, track_crud, base
     test_name = "test_Task_create_valid"
 
     # Fixture data
-    fixtures = {
+    fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
             "description": "Sample text content for description.",
@@ -187,7 +188,7 @@ def test_Task_create_valid(page, page_diagnostics, track_route, track_crud, base
 @pytest.mark.crud
 @pytest.mark.update
 @pytest.mark.task
-def test_Task_update_valid(page, page_diagnostics, track_route, track_crud, base_url):
+def test_Task_update_valid(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Update a Task entity
 
@@ -197,7 +198,7 @@ def test_Task_update_valid(page, page_diagnostics, track_route, track_crud, base
     test_name = "test_Task_update_valid"
 
     # Fixture data
-    fixtures = {
+    fixtures: dict[str, Any] = {
         "Task_updated": {
             "title": "Test Title_updated",
             "description": "Sample text content for description_updated.",
@@ -239,7 +240,7 @@ def test_Task_update_valid(page, page_diagnostics, track_route, track_crud, base
 @pytest.mark.e2e
 @pytest.mark.auth
 @pytest.mark.protection
-def test_auth_protected_route(page, page_diagnostics, track_route, track_crud, base_url):
+def test_auth_protected_route(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Unauthenticated user redirected to login
     Tags: auth, protection
@@ -247,7 +248,7 @@ def test_auth_protected_route(page, page_diagnostics, track_route, track_crud, b
     test_name = "test_auth_protected_route"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to protected task list
@@ -266,7 +267,7 @@ def test_auth_protected_route(page, page_diagnostics, track_route, track_crud, b
 @pytest.mark.crud
 @pytest.mark.read
 @pytest.mark.task
-def test_Task_view_detail(page, page_diagnostics, track_route, track_crud, base_url):
+def test_Task_view_detail(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     View a Task entity detail
 
@@ -276,7 +277,7 @@ def test_Task_view_detail(page, page_diagnostics, track_route, track_crud, base_
     test_name = "test_Task_view_detail"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -300,7 +301,7 @@ def test_Task_view_detail(page, page_diagnostics, track_route, track_crud, base_
 @pytest.mark.crud
 @pytest.mark.delete
 @pytest.mark.task
-def test_Task_delete(page, page_diagnostics, track_route, track_crud, base_url):
+def test_Task_delete(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Delete a Task entity
 
@@ -310,7 +311,7 @@ def test_Task_delete(page, page_diagnostics, track_route, track_crud, base_url):
     test_name = "test_Task_delete"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -339,7 +340,7 @@ def test_Task_delete(page, page_diagnostics, track_route, track_crud, base_url):
 @pytest.mark.validation
 @pytest.mark.required
 @pytest.mark.task
-def test_Task_validation_required_title(page, page_diagnostics, track_route, track_crud, base_url):
+def test_Task_validation_required_title(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Validation error when title is missing
 
@@ -349,7 +350,7 @@ def test_Task_validation_required_title(page, page_diagnostics, track_route, tra
     test_name = "test_Task_validation_required_title"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -377,7 +378,7 @@ def test_Task_validation_required_title(page, page_diagnostics, track_route, tra
 @pytest.mark.e2e
 @pytest.mark.navigation
 @pytest.mark.task_list
-def test_navigate_task_list(page, page_diagnostics, track_route, track_crud, base_url):
+def test_navigate_task_list(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Navigate to Task List
 
@@ -387,7 +388,7 @@ def test_navigate_task_list(page, page_diagnostics, track_route, track_crud, bas
     test_name = "test_navigate_task_list"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Task List
@@ -406,7 +407,7 @@ def test_navigate_task_list(page, page_diagnostics, track_route, track_crud, bas
 @pytest.mark.e2e
 @pytest.mark.navigation
 @pytest.mark.task_detail
-def test_navigate_task_detail(page, page_diagnostics, track_route, track_crud, base_url):
+def test_navigate_task_detail(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Navigate to Task Detail
 
@@ -416,7 +417,7 @@ def test_navigate_task_detail(page, page_diagnostics, track_route, track_crud, b
     test_name = "test_navigate_task_detail"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Task Detail
@@ -435,7 +436,7 @@ def test_navigate_task_detail(page, page_diagnostics, track_route, track_crud, b
 @pytest.mark.e2e
 @pytest.mark.navigation
 @pytest.mark.task_create
-def test_navigate_task_create(page, page_diagnostics, track_route, track_crud, base_url):
+def test_navigate_task_create(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Navigate to Create Task
 
@@ -445,7 +446,7 @@ def test_navigate_task_create(page, page_diagnostics, track_route, track_crud, b
     test_name = "test_navigate_task_create"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Create Task
@@ -464,7 +465,7 @@ def test_navigate_task_create(page, page_diagnostics, track_route, track_crud, b
 @pytest.mark.e2e
 @pytest.mark.navigation
 @pytest.mark.task_edit
-def test_navigate_task_edit(page, page_diagnostics, track_route, track_crud, base_url):
+def test_navigate_task_edit(page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str) -> None:
     """
     Navigate to Edit Task
 
@@ -474,7 +475,7 @@ def test_navigate_task_edit(page, page_diagnostics, track_route, track_crud, bas
     test_name = "test_navigate_task_edit"
 
     # Fixture data
-    fixtures = {}
+    fixtures: dict[str, Any] = {}
 
     # Execute flow steps
     # Navigate to Edit Task

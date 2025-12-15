@@ -250,9 +250,9 @@ def get_logger(component: str, color: str = Colors.DAZZLE) -> logging.Logger:
     class ComponentFilter(logging.Filter):
         def filter(self, record: logging.LogRecord) -> bool:
             if not hasattr(record, "component"):
-                record.component = component  # type: ignore[attr-defined]
+                record.component = component
             if not hasattr(record, "component_color"):
-                record.component_color = color  # type: ignore[attr-defined]
+                record.component_color = color
             return True
 
     logger.addFilter(ComponentFilter())

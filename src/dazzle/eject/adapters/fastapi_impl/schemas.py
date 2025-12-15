@@ -7,14 +7,14 @@ Generates Pydantic request/response schemas from entity specifications.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from dazzle.eject.generator import GeneratorResult
 
 from .utils import pascal_case, snake_case
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import EntitySpec, FieldSpec
+    from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
 
 
 def generate_entity_schemas(entity: EntitySpec) -> str:
@@ -167,7 +167,13 @@ def _get_python_type(field: FieldSpec, entity: EntitySpec) -> str:
 class SchemaGenerator:
     """Generates Pydantic schemas for FastAPI adapter."""
 
-    def __init__(self, spec, output_dir: Path, write_file_fn, ensure_dir_fn):
+    def __init__(
+        self,
+        spec: AppSpec,
+        output_dir: Path,
+        write_file_fn: Callable[[Path, str], None],
+        ensure_dir_fn: Callable[[Path], None],
+    ) -> None:
         self.spec = spec
         self.output_dir = output_dir
         self.backend_dir = output_dir / "backend"

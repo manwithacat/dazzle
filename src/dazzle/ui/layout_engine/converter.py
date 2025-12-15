@@ -107,7 +107,7 @@ def _extract_attention_signals_from_regions(
             id=region.name,
             kind=signal_kind,
             label=region.name,  # WorkspaceRegion doesn't have title field
-            source=region.source if hasattr(region, "source") else "unknown",
+            source=region.source or "unknown",
             attention_weight=attention_weight,
         )
 
