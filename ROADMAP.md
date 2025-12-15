@@ -32,18 +32,18 @@ Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
 
 ## Roadmap
 
-### v0.16.0 - Messaging Channels
+### v0.16.0 - SiteSpec: Public Site Shell
 
-**Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
-**Status**: Planned
+**Issue**: [#24](https://github.com/manwithacat/dazzle/issues/24)
+**Status**: Next
 
-Unified messaging abstraction for email, queues, and event streams.
+Public-facing site shell pages without polluting the App DSL.
 
-- `message` construct for typed, reusable message schemas
-- `channel` construct with `kind: email | queue | stream`
-- Provider auto-detection (Mailpit locally, SendGrid/SQS/Kafka in prod)
-- Transactional outbox pattern
-- DSL-native template language
+- YAML-based `sitespec.yaml` for home, about, pricing, terms, privacy pages
+- Section-based landing pages (hero, features, cta, faq, testimonials)
+- Markdown content with template variables
+- Zero-config default generation
+- MCP tools: `site_spec`, `site_content`
 
 ---
 
@@ -61,22 +61,7 @@ Curated API definitions and LLM-assisted integration setup.
 
 ---
 
-### v0.18.0 - SiteSpec: Public Site Shell
-
-**Issue**: [#24](https://github.com/manwithacat/dazzle/issues/24)
-**Status**: Planned
-
-Public-facing site shell pages without polluting the App DSL.
-
-- YAML-based `sitespec.yaml` for home, about, pricing, terms, privacy pages
-- Section-based landing pages (hero, features, cta, faq, testimonials)
-- Markdown content with template variables
-- Zero-config default generation
-- MCP tools: `site_spec`, `site_content`
-
----
-
-### v0.20.0 - Event-First Architecture
+### v0.18.0 - Event-First Architecture
 
 **Issue**: [#25](https://github.com/manwithacat/dazzle/issues/25)
 **Status**: Planned
@@ -85,11 +70,27 @@ Events as the invisible substrate - correctness by construction.
 
 - EventBus interface (Kafka-shaped) with DevBrokerSQLite (zero-Docker)
 - Transactional outbox + idempotent inbox (at-least-once, dedupe)
-- DSL: `topic`, `event`, `publish when`, `subscribe`, `project`
+- DSL: `event_model`, `topic`, `event`, `publish when`, `subscribe`, `project`
 - Replay capability for projection rebuild
-- CLI: `dazzle bus info/tail/replay`, `dazzle outbox drain`
-- AsyncAPI generation (Swagger for events)
+- Developer Observability Pack: CLI + Event Explorer + AsyncAPI
 - Optional data product boundaries with classification policies
+
+---
+
+### v0.19.0 - Messaging Channels
+
+**Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
+**Status**: Planned (depends on v0.18.0)
+
+Unified messaging built on the event substrate.
+
+- `message` construct for typed, reusable message schemas
+- `channel` construct with `kind: email | queue | stream`
+- Provider auto-detection (Mailpit locally, SendGrid/SQS/Kafka in prod)
+- Email as events: `email.send.requested` → `email.sent/failed`
+- DSL-native template language
+
+*Note: Messaging runtime deferred until after Event-First to avoid duplicate outbox/channel systems.*
 
 ---
 
