@@ -393,7 +393,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
                 link_label = link.get("label", "")
                 link_href = link.get("href", "#")
                 footer_html += f'<li><a href="{link_href}">{link_label}</a></li>'
-            footer_html += '</ul></div>'
+            footer_html += "</ul></div>"
 
         copyright_text = footer.get("copyright", f"© 2025 {product_name}")
 
@@ -438,7 +438,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
     def _serve_site_js(self) -> None:
         """Serve the site page JavaScript (v0.16.0)."""
-        js = '''
+        js = """
 /**
  * Dazzle Site Page Renderer
  * Fetches page data from /_site/page/{route} and renders sections.
@@ -707,7 +707,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
     init();
 })();
-'''
+"""
         self._send_response(js, "application/javascript")
 
     def _serve_auth_page(self, page_type: str) -> None:
@@ -731,13 +731,13 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         # Build form fields
         fields_html = ""
         if not is_login:
-            fields_html += '''
+            fields_html += """
             <div class="dz-auth-field">
                 <label for="name">Full Name</label>
                 <input type="text" id="name" name="name" required autocomplete="name">
-            </div>'''
+            </div>"""
 
-        fields_html += '''
+        fields_html += """
             <div class="dz-auth-field">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" required autocomplete="email">
@@ -745,14 +745,14 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             <div class="dz-auth-field">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required autocomplete="current-password">
-            </div>'''
+            </div>"""
 
         if not is_login:
-            fields_html += '''
+            fields_html += """
             <div class="dz-auth-field">
                 <label for="confirm_password">Confirm Password</label>
                 <input type="password" id="confirm_password" name="confirm_password" required>
-            </div>'''
+            </div>"""
 
         html = f'''<!DOCTYPE html>
 <html lang="en">
