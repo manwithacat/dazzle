@@ -1,0 +1,13 @@
+[project]
+name = "pra"
+version = "0.1.0"
+root = "pra"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = false
