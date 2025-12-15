@@ -106,6 +106,29 @@ from .eventing import (
     TopicSpec,
 )
 
+# Experiences
+from .experiences import (
+    ExperienceSpec,
+    ExperienceStep,
+    StepKind,
+    StepTransition,
+    TransitionEvent,
+)
+from .fields import (
+    FieldModifier,
+    FieldSpec,
+    FieldType,
+    FieldTypeKind,
+    RelationshipBehavior,
+)
+
+# Foreign Models
+from .foreign_models import (
+    ForeignConstraint,
+    ForeignConstraintKind,
+    ForeignModelSpec,
+)
+
 # HLESS - High-Level Event Semantics (v0.19.0)
 from .hless import (
     DerivationLineage,
@@ -133,29 +156,6 @@ from .hless_validator import (
     ValidationResult,
     validate_stream,
     validate_streams_with_cross_references,
-)
-
-# Experiences
-from .experiences import (
-    ExperienceSpec,
-    ExperienceStep,
-    StepKind,
-    StepTransition,
-    TransitionEvent,
-)
-from .fields import (
-    FieldModifier,
-    FieldSpec,
-    FieldType,
-    FieldTypeKind,
-    RelationshipBehavior,
-)
-
-# Foreign Models
-from .foreign_models import (
-    ForeignConstraint,
-    ForeignConstraintKind,
-    ForeignModelSpec,
 )
 
 # Integrations
@@ -237,6 +237,20 @@ from .module import (
     AppConfigSpec,
     ModuleFragment,
     ModuleIR,
+)
+
+# Money Value Object (v0.20.0)
+from .money import (
+    CURRENCY_SCALES,
+    DEFAULT_CURRENCY_SCALE,
+    MONEY_FIELD_PATTERNS,
+    Money,
+    MoneyWithScale,
+    from_money,
+    get_currency_scale,
+    is_money_field_name,
+    money_from_dict,
+    to_money,
 )
 
 # Personas (v0.8.5 Dazzle Bar)
@@ -594,6 +608,17 @@ __all__ = [
     "PublishSpec",
     "SubscribeSpec",
     "TopicSpec",
+    # Money Value Object (v0.20.0)
+    "CURRENCY_SCALES",
+    "DEFAULT_CURRENCY_SCALE",
+    "MONEY_FIELD_PATTERNS",
+    "Money",
+    "MoneyWithScale",
+    "from_money",
+    "get_currency_scale",
+    "is_money_field_name",
+    "money_from_dict",
+    "to_money",
     # HLESS - High-Level Event Semantics (v0.19.0)
     "DerivationLineage",
     "DerivationType",

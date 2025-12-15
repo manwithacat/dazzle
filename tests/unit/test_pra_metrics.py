@@ -2,9 +2,7 @@
 Unit tests for PRA metrics infrastructure.
 """
 
-import time
 
-import pytest
 
 from dazzle_dnr_back.metrics import (
     BacklogTracker,

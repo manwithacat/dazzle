@@ -7,14 +7,13 @@ for snapshot testing.
 
 from __future__ import annotations
 
-import json
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.errors import DazzleError, ParseError
+from dazzle.core.errors import DazzleError
 from dazzle.core.ir import ModuleFragment
 
 
