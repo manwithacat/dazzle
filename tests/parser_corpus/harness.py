@@ -122,9 +122,7 @@ def _remove_empty(obj: Any) -> Any:
     """Recursively remove None and empty list/dict values."""
     if isinstance(obj, dict):
         return {
-            k: _remove_empty(v)
-            for k, v in obj.items()
-            if v is not None and v != [] and v != {}
+            k: _remove_empty(v) for k, v in obj.items() if v is not None and v != [] and v != {}
         }
     elif isinstance(obj, list):
         return [_remove_empty(item) for item in obj if item is not None]

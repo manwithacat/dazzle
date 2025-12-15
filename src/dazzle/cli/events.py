@@ -96,10 +96,14 @@ async def _event_status(db_path: str) -> None:
 @events_app.command("replay")
 def replay_events(
     topic: Annotated[str, typer.Argument(help="Topic to replay events from")],
-    from_time: Annotated[str | None, typer.Option("--from", help="Start timestamp (ISO format)")] = None,
+    from_time: Annotated[
+        str | None, typer.Option("--from", help="Start timestamp (ISO format)")
+    ] = None,
     to_time: Annotated[str | None, typer.Option("--to", help="End timestamp (ISO format)")] = None,
     key: Annotated[str | None, typer.Option("--key", help="Filter by partition key")] = None,
-    dry_run: Annotated[bool, typer.Option("--dry-run", help="Show events without processing")] = False,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show events without processing")
+    ] = False,
     db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Replay events from a topic."""
@@ -205,7 +209,9 @@ async def _dlq_replay(event_id: str, group: str, db_path: str) -> None:
 
 @dlq_app.command("clear")
 def dlq_clear(
-    topic: Annotated[str | None, typer.Option("--topic", help="Clear only events for this topic")] = None,
+    topic: Annotated[
+        str | None, typer.Option("--topic", help="Clear only events for this topic")
+    ] = None,
     confirm: Annotated[bool, typer.Option("--confirm", help="Confirm deletion")] = False,
     db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:

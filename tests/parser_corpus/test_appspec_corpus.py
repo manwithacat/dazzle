@@ -40,8 +40,7 @@ class TestValidAppSpec:
         """Valid files must parse without errors."""
         result = parse_corpus_file(dsl_file, EmitMode.IR)
         assert result["diagnostics"] == [], (
-            f"Expected no diagnostics for valid file {dsl_file.name}, "
-            f"got: {result['diagnostics']}"
+            f"Expected no diagnostics for valid file {dsl_file.name}, got: {result['diagnostics']}"
         )
         assert result["result"] is not None, f"Expected IR result for {dsl_file.name}"
 

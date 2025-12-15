@@ -549,7 +549,9 @@ class DevBrokerSQLite(EventBus):
                 cursor = await conn.execute(
                     "SELECT topic, group_id FROM _dazzle_consumer_offsets ORDER BY topic, group_id"
                 )
-                return [{"topic": row["topic"], "group_id": row["group_id"]} async for row in cursor]
+                return [
+                    {"topic": row["topic"], "group_id": row["group_id"]} async for row in cursor
+                ]
 
     async def get_consumer_info(self, group_id: str, topic: str) -> dict[str, Any]:
         """Get detailed info for a specific consumer group."""

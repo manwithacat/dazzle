@@ -141,18 +141,23 @@
     ]),
     'e2e_flows': list([
     ]),
+    'event_model': None,
     'experiences': list([
     ]),
     'fixtures': list([
     ]),
     'foreign_models': list([
     ]),
+    'hless_mode': <HLESSMode.STRICT: 'strict'>,
+    'hless_pragma': None,
     'integrations': list([
     ]),
     'messages': list([
     ]),
     'name': 'simple_test',
     'personas': list([
+    ]),
+    'projections': list([
     ]),
     'scenarios': list([
     ]),
@@ -166,6 +171,10 @@
       'require_auth_by_default': False,
       'tenant_isolation': False,
     }),
+    'streams': list([
+    ]),
+    'subscriptions': list([
+    ]),
     'surfaces': list([
       dict({
         'access': None,

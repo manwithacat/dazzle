@@ -417,9 +417,7 @@ class TestDevBrokerSQLite:
         async with DevBrokerSQLite(db_path):
             # Tables should be created
             async with aiosqlite.connect(db_path) as conn:
-                cursor = await conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                )
+                cursor = await conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
                 tables = {row[0] for row in await cursor.fetchall()}
 
         assert "_dazzle_events" in tables
@@ -676,9 +674,7 @@ class TestEventInbox:
         assert should_process_again is False
 
     @pytest.mark.asyncio
-    async def test_different_consumers_independent(
-        self, inbox: EventInbox, tmp_path: Path
-    ) -> None:
+    async def test_different_consumers_independent(self, inbox: EventInbox, tmp_path: Path) -> None:
         """Test that different consumers track independently."""
         db_path = str(tmp_path / "test.db")
 
@@ -697,9 +693,7 @@ class TestEventInbox:
         assert should_process is True
 
     @pytest.mark.asyncio
-    async def test_mark_error_blocks_reprocessing(
-        self, inbox: EventInbox, tmp_path: Path
-    ) -> None:
+    async def test_mark_error_blocks_reprocessing(self, inbox: EventInbox, tmp_path: Path) -> None:
         """Test that marking error still marks as processed (for DLQ handling)."""
         db_path = str(tmp_path / "test.db")
 
