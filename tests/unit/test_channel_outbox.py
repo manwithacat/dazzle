@@ -361,3 +361,59 @@ class TestOutboxRepository:
         # Verify still there after commit
         retrieved = outbox_repo.get(msg.id)
         assert retrieved is not None
+
+    def test_get_recent_messages(self, outbox_repo):
+        """Test getting recent messages across all statuses."""
+        import time
+
+        # Create messages with different statuses
+        statuses = [
+            OutboxStatus.PENDING,
+            OutboxStatus.SENT,
+            OutboxStatus.FAILED,
+            OutboxStatus.DEAD_LETTER,
+        ]
+        for i, status in enumerate(statuses):
+            msg = OutboxMessage(
+                id=f"recent-{i}",
+                channel_name="notifications",
+                operation_name="test",
+                message_type="TestMessage",
+                payload={"index": i},
+                recipient=f"user{i}@example.com",
+                status=status,
+            )
+            outbox_repo.create(msg)
+            time.sleep(0.01)  # Small delay to ensure distinct timestamps
+
+        # Get recent messages
+        recent = outbox_repo.get_recent(limit=10)
+        assert len(recent) == 4
+
+        # Should be ordered by created_at DESC (newest first)
+        assert recent[0].id == "recent-3"
+        assert recent[3].id == "recent-0"
+
+        # Should include all statuses
+        statuses_found = {m.status for m in recent}
+        assert OutboxStatus.PENDING in statuses_found
+        assert OutboxStatus.SENT in statuses_found
+        assert OutboxStatus.FAILED in statuses_found
+        assert OutboxStatus.DEAD_LETTER in statuses_found
+
+    def test_get_recent_with_limit(self, outbox_repo):
+        """Test that get_recent respects the limit parameter."""
+        # Create 5 messages
+        for i in range(5):
+            msg = create_outbox_message(
+                channel_name="notifications",
+                operation_name="test",
+                message_type="TestMessage",
+                payload={"index": i},
+                recipient=f"user{i}@example.com",
+            )
+            outbox_repo.create(msg)
+
+        # Get only 3
+        recent = outbox_repo.get_recent(limit=3)
+        assert len(recent) == 3

@@ -303,6 +303,42 @@ class TestOutboxStats:
         stats = manager.get_outbox_stats()
         assert stats == {}
 
+    @pytest.mark.asyncio
+    async def test_get_recent_messages(self, db_manager, email_channel_spec):
+        """Test getting recent messages."""
+        manager = ChannelManager(
+            db_manager=db_manager,
+            channel_specs=[email_channel_spec],
+        )
+
+        await manager.initialize()
+
+        # Send some messages
+        for i in range(3):
+            await manager.send(
+                channel="notifications",
+                operation="test",
+                message_type="Test",
+                payload={"subject": f"Test {i}"},
+                recipient=f"test{i}@example.com",
+            )
+
+        recent = manager.get_recent_messages(limit=10)
+        assert len(recent) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_recent_messages_without_db(self, email_channel_spec):
+        """Test getting recent messages without database."""
+        manager = ChannelManager(
+            db_manager=None,
+            channel_specs=[email_channel_spec],
+        )
+
+        await manager.initialize()
+
+        recent = manager.get_recent_messages()
+        assert recent == []
+
 
 class TestTemplateRendering:
     """Tests for template rendering through manager."""

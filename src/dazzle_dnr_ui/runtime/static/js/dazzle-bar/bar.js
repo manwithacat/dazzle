@@ -20,6 +20,7 @@ import {
   fetchState,
   DazzleRuntime
 } from './runtime.js';
+import { initEmailPanel, toggleEmailPanel } from './email-panel.js';
 
 // =============================================================================
 // Constants
@@ -414,6 +415,9 @@ function createBarElement() {
     <div class="dazzle-spacer"></div>
 
     <div class="dazzle-section">
+      <button class="dazzle-btn" id="dazzle-email-btn" title="View email outbox" data-dazzle-action="email" data-dazzle-action-role="secondary">
+        <span class="dazzle-btn-icon">&#x2709;</span><span class="dazzle-btn-text">Email</span>
+      </button>
       <button class="dazzle-btn primary" id="dazzle-feedback-btn" data-dazzle-action="feedback" data-dazzle-action-role="primary">
         <span class="dazzle-btn-icon">&#x1F4AC;</span><span class="dazzle-btn-text">Feedback</span>
       </button>
@@ -700,6 +704,12 @@ function setupEventHandlers() {
     });
   }
 
+  // Email button
+  const emailBtn = document.getElementById('dazzle-email-btn');
+  if (emailBtn) {
+    emailBtn.addEventListener('click', toggleEmailPanel);
+  }
+
   // Feedback button
   const feedbackBtn = document.getElementById('dazzle-feedback-btn');
   if (feedbackBtn) {
@@ -762,6 +772,9 @@ export function initDazzleBar() {
 
   // Set up event handlers
   setupEventHandlers();
+
+  // Initialize email panel
+  initEmailPanel();
 
   // Set up reactive updates
   createEffect(() => {

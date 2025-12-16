@@ -364,6 +364,19 @@ class ChannelManager:
             return {}
         return self._outbox.get_stats()
 
+    def get_recent_messages(self, limit: int = 20) -> list[OutboxMessage]:
+        """Get recent outbox messages for the email panel.
+
+        Args:
+            limit: Maximum messages to return
+
+        Returns:
+            List of recent messages, newest first
+        """
+        if not self._outbox:
+            return []
+        return self._outbox.get_recent(limit)
+
     async def health_check_all(self) -> dict[str, bool]:
         """Run health checks on all adapters."""
         results = {}

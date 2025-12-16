@@ -332,6 +332,26 @@ class DNRBackendApp:
             results = await channel_manager.health_check_all()
             return {"health": results}
 
+        @self._app.get("/_dazzle/channels/outbox/recent", tags=["Channels"])
+        async def get_recent_outbox(limit: int = 20) -> dict[str, Any]:
+            """Get recent outbox messages for the email panel."""
+            messages = channel_manager.get_recent_messages(limit)
+            return {
+                "messages": [
+                    {
+                        "id": m.id,
+                        "channel": m.channel_name,
+                        "recipient": m.recipient,
+                        "subject": m.payload.get("subject", m.message_type),
+                        "status": m.status.value,
+                        "created_at": m.created_at.isoformat(),
+                        "last_error": m.last_error,
+                    }
+                    for m in messages
+                ],
+                "stats": channel_manager.get_outbox_stats(),
+            }
+
     def _init_event_framework(self) -> None:
         """Initialize the event framework for event-driven features (v0.18.0)."""
         if not self._app:

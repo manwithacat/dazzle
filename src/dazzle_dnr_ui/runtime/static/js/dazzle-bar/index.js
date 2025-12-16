@@ -20,6 +20,15 @@ import {
   error,
   fetchState
 } from './runtime.js';
+import {
+  toggleEmailPanel,
+  openEmailPanel,
+  closeEmailPanel,
+  refreshEmailData,
+  isPanelOpen as isEmailPanelOpen,
+  messages as emailMessages,
+  stats as emailStats
+} from './email-panel.js';
 
 // =============================================================================
 // Auto-initialization
@@ -73,6 +82,15 @@ export {
   // Functions
   fetchState,
   showToast,
+
+  // Email panel
+  toggleEmailPanel,
+  openEmailPanel,
+  closeEmailPanel,
+  refreshEmailData,
+  isEmailPanelOpen,
+  emailMessages,
+  emailStats,
 
   // Constants
   BAR_HEIGHT,

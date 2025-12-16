@@ -359,6 +359,28 @@ class OutboxRepository:
             cursor = conn.execute(sql)
             return {row[0]: row[1] for row in cursor.fetchall()}
 
+    def get_recent(self, limit: int = 20) -> list[OutboxMessage]:
+        """Get recent messages across all statuses.
+
+        Args:
+            limit: Maximum messages to return
+
+        Returns:
+            List of recent messages, newest first
+        """
+        sql = f"""
+            SELECT * FROM {self.TABLE_NAME}
+            ORDER BY created_at DESC
+            LIMIT ?
+        """
+        with self.db.connection() as conn:
+            cursor = conn.execute(sql, (limit,))
+            columns = [desc[0] for desc in cursor.description]
+            return [
+                OutboxMessage.from_dict(dict(zip(columns, row, strict=False)))
+                for row in cursor.fetchall()
+            ]
+
     def cleanup_sent(self, older_than_days: int = 7) -> int:
         """Remove old sent messages.
 
