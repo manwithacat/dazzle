@@ -24,7 +24,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/ops_dashboard/dsl/app.dsl`](../../../examples/ops_dashboard/dsl/app.dsl)
+**Source**: [examples/ops_dashboard/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/ops_dashboard/dsl/app.dsl)
 
 ### Entity: System
 
@@ -136,13 +136,13 @@ The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER arche
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/ops_dashboard/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/ops_dashboard/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/ops_dashboard/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/ops_dashboard/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -166,5 +166,5 @@ The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER arche
 
 ## Related Examples
 
-- [Email Client](../email_client/) - MONITOR_WALL archetype (3-5 signals)
-- [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC archetype (single KPI)
+- [Email Client](email-client.md) - MONITOR_WALL archetype (3-5 signals)
+- [Uptime Monitor](uptime-monitor.md) - FOCUS_METRIC archetype (single KPI)

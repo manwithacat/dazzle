@@ -1,0 +1,4178 @@
+# Dazzle Documentation - Full Export
+# Generated for LLM ingestion
+# Site: https://manwithacat.github.io/dazzle/
+
+================================================================================
+## Table of Contents
+
+1. Getting Started
+2. DSL Reference
+3. Architecture
+4. Examples
+5. Contributing
+
+================================================================================
+
+# SECTION 1: GETTING STARTED
+================================================================================
+
+## installation
+
+# Installation Guide
+
+This guide covers multiple ways to install DAZZLE on your system.
+
+## Prerequisites
+
+- **Python 3.11 or higher** (Python 3.12 recommended)
+- **pip** (usually comes with Python)
+- **git** (for installation from source)
+
+## Installation Methods
+
+### Method 1: Install from PyPI (Recommended)
+
+Once DAZZLE is published to PyPI, you can install it with:
+
+```bash
+pip install dazzle
+```
+
+To install with LLM support (for DSL generation features):
+
+```bash
+pip install dazzle[llm]
+```
+
+To install for development:
+
+```bash
+pip install dazzle[dev]
+```
+
+### Method 2: Install from Source
+
+For the latest development version or to contribute:
+
+```bash
+# Clone the repository
+git clone https://github.com/manwithacat/dazzle.git
+cd dazzle
+
+# Install in editable mode
+pip install -e .
+
+# Or with all extras
+pip install -e ".[dev,llm]"
+```
+
+### Method 3: Homebrew (macOS)
+
+Install via our Homebrew tap:
+
+```bash
+brew install manwithacat/tap/dazzle
+```
+
+This installs DAZZLE with Python 3.12 in an isolated environment.
+
+**Post-installation** - For LLM features (optional):
+```bash
+# Install LLM providers if needed
+/opt/homebrew/opt/dazzle/libexec/bin/pip install anthropic openai
+```
+
+**VS Code integration**:
+```bash
+# Install the DAZZLE DSL extension
+code --install-extension dazzle.dazzle-dsl
+
+# Set Python path in VS Code settings
+# "dazzle.pythonPath": "/opt/homebrew/opt/dazzle/libexec/bin/python"
+```
+
+### Method 4: Using pipx (Isolated Environment)
+
+To install DAZZLE in an isolated environment:
+
+```bash
+# Install pipx if you don't have it
+python -m pip install --user pipx
+python -m pipx ensurepath
+
+# Install DAZZLE
+pipx install dazzle
+
+# Or from source
+pipx install git+https://github.com/manwithacat/dazzle.git
+```
+
+### Method 5: Docker (Coming Soon)
+
+Docker images will be available in a future release:
+
+```bash
+# Future command (not yet available)
+docker pull ghcr.io/manwithacat/dazzle:latest
+docker run -v $(pwd):/workspace ghcr.io/manwithacat/dazzle:latest validate
+```
+
+## Verification
+
+After installation, verify DAZZLE is working:
+
+```bash
+# Check version
+dazzle --version
+
+# Get help
+dazzle --help
+
+# Run a quick validation (if you have a DSL file)
+dazzle validate
+```
+
+## Updating
+
+### Update PyPI Installation
+
+```bash
+pip install --upgrade dazzle
+```
+
+### Update Source Installation
+
+```bash
+cd dazzle
+git pull
+pip install -e .
+```
+
+### Update Homebrew Installation
+
+```bash
+brew update
+brew upgrade manwithacat/tap/dazzle
+```
+
+## Uninstallation
+
+### Remove PyPI Installation
+
+```bash
+pip uninstall dazzle
+```
+
+### Remove Homebrew Installation
+
+```bash
+brew uninstall manwithacat/tap/dazzle
+```
+
+## Troubleshooting
+
+### Python Version Issues
+
+If you have multiple Python versions:
+
+```bash
+# Use specific Python version
+python3.11 -m pip install dazzle
+
+# Or create a virtual environment
+python3.11 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install dazzle
+```
+
+### Permission Errors
+
+If you get permission errors:
+
+```bash
+# Install to user directory
+pip install --user dazzle
+
+# Or use a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate
+pip install dazzle
+```
+
+### Command Not Found
+
+If `dazzle` command is not found after installation:
+
+```bash
+# Check if pip bin directory is in PATH
+python -m dazzle.cli --version
+
+# Add pip bin directory to PATH
+export PATH="$HOME/.local/bin:$PATH"  # On Linux/macOS
+```
+
+### Import Errors
+
+If you get import errors:
+
+```bash
+# Reinstall with all dependencies
+pip install --force-reinstall dazzle
+
+# Or install with verbose output to see what's missing
+pip install -v dazzle
+```
+
+## Development Installation
+
+For contributing to DAZZLE, see [CONTRIBUTING.md](../CONTRIBUTING.md) for detailed setup instructions including:
+
+- Setting up pre-commit hooks
+- Installing development dependencies
+- Running tests
+- Code quality tools
+
+## Platform-Specific Notes
+
+### macOS
+
+```bash
+# Install Python 3.11+ via Homebrew
+brew install python@3.11
+
+# Install DAZZLE
+pip3.11 install dazzle
+```
+
+### Linux (Ubuntu/Debian)
+
+```bash
+# Install Python 3.11+
+sudo apt update
+sudo apt install python3.11 python3.11-venv python3-pip
+
+# Install DAZZLE
+pip3 install dazzle
+```
+
+### Windows
+
+```powershell
+# Install Python 3.11+ from python.org
+# Then install DAZZLE
+pip install dazzle
+```
+
+## Next Steps
+
+After installation:
+
+1. **Read the Quick Start** in [README.md](../README.md)
+2. **Try the Examples** in `examples/`
+3. **Set Up IDE Integration** (VSCode extension)
+4. **Join the Community** on GitHub Discussions
+
+## Getting Help
+
+- **Installation Issues**: [GitHub Issues](https://github.com/manwithacat/dazzle/issues)
+- **Questions**: [GitHub Discussions](https://github.com/manwithacat/dazzle/discussions)
+- **Documentation**: [docs/](./README.md)
+
+--------------------------------------------------------------------------------
+
+## quickstart
+
+# DNR Quick Start Guide
+
+Get a working application from your Dazzle DSL in under 5 minutes.
+
+## Prerequisites
+
+- Dazzle 0.4.0+ installed
+- A Dazzle project with `dazzle.toml`
+
+## Step 1: Check Your Setup
+
+```bash
+dazzle dnr info
+```
+
+You should see:
+```
+Dazzle Native Runtime (DNR) Status
+==================================================
+DNR Backend:   ✓ installed
+DNR UI:        ✓ installed
+```
+
+## Step 2: Validate Your DSL
+
+```bash
+dazzle validate
+```
+
+Fix any errors before proceeding.
+
+## Step 3: Generate UI
+
+### Option A: Single HTML Preview (Fastest)
+
+```bash
+dazzle dnr build-ui --format html -o ./preview
+```
+
+Open `./preview/index.html` in your browser.
+
+### Option B: Vite Project (Recommended)
+
+```bash
+dazzle dnr build-ui --format vite -o ./my-app
+cd my-app
+npm install
+npm run dev
+```
+
+Visit `http://localhost:5173`
+
+### Option C: Split JS Files
+
+```bash
+dazzle dnr build-ui --format js -o ./app
+cd app
+python -m http.server 8000
+```
+
+Visit `http://localhost:8000`
+
+## Step 4: Generate API (Optional)
+
+```bash
+dazzle dnr build-api -o ./api
+```
+
+Creates `backend-spec.json` with your API definition.
+
+## Step 5: Run Full Stack Server
+
+If you have FastAPI installed:
+
+```bash
+pip install fastapi uvicorn
+dazzle dnr serve
+```
+
+This starts:
+- UI at `http://localhost:8000/`
+- API at `http://localhost:8000/api/`
+- Docs at `http://localhost:8000/docs`
+
+## Example: Simple Task Manager
+
+Given this DSL:
+
+```dsl
+app simple_task "Simple Task Manager"
+
+module simple_task
+
+entity Task "Task":
+    id: uuid pk
+    title: str(200) required
+    status: str = "pending"
+    created_at: datetime auto_add
+
+surface task_list "Task List" -> Task list:
+    section main:
+        field title
+        field status
+```
+
+Generate and run:
+
+```bash
+dazzle dnr build-ui --format html -o ./task-app
+open ./task-app/index.html
+```
+
+## What Gets Generated
+
+### Vite Project Structure
+
+```
+my-app/
+├── package.json
+├── vite.config.js
+└── src/
+    ├── index.html
+    ├── main.js
+    ├── ui-spec.json
+    └── dnr/
+        ├── signals.js      # Reactive state
+        ├── state.js        # State management
+        ├── dom.js          # DOM utilities
+        ├── bindings.js     # Data binding
+        ├── components.js   # Component system
+        ├── renderer.js     # View rendering
+        ├── theme.js        # Theme engine
+        ├── actions.js      # Action handlers
+        ├── app.js          # App initialization
+        └── index.js        # Entry point
+```
+
+### API Spec Structure
+
+```json
+{
+  "name": "simple_task",
+  "entities": [...],
+  "services": [...],
+  "endpoints": [...]
+}
+```
+
+## Next Steps
+
+- [CLI Reference](./CLI.md) - All command options
+- [Architecture](./ARCHITECTURE.md) - How DNR works internally
+- [UISpec Reference](./UI_SPEC.md) - Customize your UI
+
+--------------------------------------------------------------------------------
+
+## first-app
+
+# Your First App
+
+Build a complete task manager from scratch in 10 minutes.
+
+## Prerequisites
+
+- Dazzle installed ([Installation Guide](installation.md))
+- A terminal
+
+## Step 1: Create Project
+
+```bash
+dazzle init my_tasks
+cd my_tasks
+```
+
+This creates:
+
+```
+my_tasks/
+├── dazzle.toml          # Project configuration
+└── dsl/
+    └── app.dsl          # Main DSL file
+```
+
+## Step 2: Define Your Entity
+
+Open `dsl/app.dsl` and add a Task entity:
+
+```dsl
+module my_tasks
+app my_tasks "My Tasks"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  description: text
+  status: enum[todo, in_progress, done] = todo
+  priority: enum[low, medium, high] = medium
+  due_date: date
+  created_at: datetime auto_add
+```
+
+### Understanding the DSL
+
+| Element | Meaning |
+|---------|---------|
+| `entity Task` | Defines a data model |
+| `id: uuid pk` | UUID primary key |
+| `str(200)` | String with max 200 chars |
+| `required` | Field cannot be null |
+| `enum[...]` | Enumeration type |
+| `= todo` | Default value |
+| `auto_add` | Automatically set on creation |
+
+## Step 3: Add Surfaces
+
+Surfaces define how users interact with entities:
+
+```dsl
+surface task_list "Task List" -> Task list:
+  section main:
+    field title "Title"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due"
+
+surface task_detail "Task Detail" -> Task view:
+  section header:
+    field title "Title"
+    field status "Status"
+  section content:
+    field description "Description"
+    field priority "Priority"
+    field due_date "Due Date"
+    field created_at "Created"
+
+surface task_create "New Task" -> Task create:
+  section main:
+    field title "Title" required
+    field description "Description"
+    field priority "Priority"
+    field due_date "Due Date"
+
+surface task_edit "Edit Task" -> Task edit:
+  section main:
+    field title "Title"
+    field description "Description"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due Date"
+```
+
+### Surface Modes
+
+| Mode | Purpose |
+|------|---------|
+| `list` | Display multiple records |
+| `view` | Display single record (read-only) |
+| `create` | Form for new records |
+| `edit` | Form for updating records |
+
+## Step 4: Create Workspace
+
+Workspaces organize surfaces into a layout:
+
+```dsl
+workspace dashboard "Dashboard":
+  region main:
+    surface task_list
+  region panel:
+    surface task_detail
+```
+
+## Step 5: Validate
+
+Check your DSL for errors:
+
+```bash
+dazzle validate
+```
+
+Expected output:
+
+```
+Validating my_tasks...
+✓ 1 module, 1 entity, 4 surfaces, 1 workspace
+All valid!
+```
+
+## Step 6: Run
+
+Start the development server:
+
+```bash
+dazzle dnr serve
+```
+
+Open your browser:
+
+- **UI**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
+
+## Step 7: Test the API
+
+Try creating a task via the API:
+
+```bash
+curl -X POST http://localhost:8000/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Learn Dazzle", "priority": "high"}'
+```
+
+## Complete DSL
+
+Here's the full `app.dsl`:
+
+```dsl
+module my_tasks
+app my_tasks "My Tasks"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  description: text
+  status: enum[todo, in_progress, done] = todo
+  priority: enum[low, medium, high] = medium
+  due_date: date
+  created_at: datetime auto_add
+
+surface task_list "Task List" -> Task list:
+  section main:
+    field title "Title"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due"
+
+surface task_detail "Task Detail" -> Task view:
+  section header:
+    field title "Title"
+    field status "Status"
+  section content:
+    field description "Description"
+    field priority "Priority"
+    field due_date "Due Date"
+    field created_at "Created"
+
+surface task_create "New Task" -> Task create:
+  section main:
+    field title "Title" required
+    field description "Description"
+    field priority "Priority"
+    field due_date "Due Date"
+
+surface task_edit "Edit Task" -> Task edit:
+  section main:
+    field title "Title"
+    field description "Description"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due Date"
+
+workspace dashboard "Dashboard":
+  region main:
+    surface task_list
+  region panel:
+    surface task_detail
+```
+
+## Next Steps
+
+- Add [relationships](../reference/entities.md) between entities
+- Create [personas](../reference/workspaces.md) for different user roles
+- Set up [services](../reference/services.md) for business logic
+- Explore [examples](../examples/index.md) for more complex patterns
+
+## Troubleshooting
+
+### "Port already in use"
+
+```bash
+dazzle dnr serve --port 3001
+```
+
+### Validation errors
+
+```bash
+dazzle validate --verbose
+```
+
+### Need help?
+
+```bash
+dazzle --help
+```
+
+--------------------------------------------------------------------------------
+
+# SECTION 2: DSL REFERENCE
+================================================================================
+
+## modules
+
+# Modules and App Declaration
+
+Every DAZZLE file must declare its module and optionally define app metadata.
+
+## Module Declaration
+
+```dsl
+module module_name
+```
+
+The module name must be a valid identifier (letters, numbers, underscores). All constructs in the file belong to this module.
+
+### Multi-Module Projects
+
+Large projects can span multiple modules. Use `use` declarations to reference constructs from other modules:
+
+```dsl
+module billing
+
+use inventory.core      # Import all from inventory.core module
+use crm.customers       # Import all from crm.customers module
+
+entity Invoice "Invoice":
+  id: uuid pk
+  customer: ref Customer   # From crm.customers
+  items: has_many LineItem
+```
+
+**Use Declaration Syntax:**
+```dsl
+use other_module.name     # Import from another module
+use parent.child.name     # Import from nested module path
+```
+
+## App Declaration
+
+Define application metadata (typically in the main module):
+
+```dsl
+app app_name "Display Title"
+```
+
+### Example
+
+```dsl
+module my_company.inventory
+app inventory_tracker "Inventory Tracker"
+
+# Constructs follow...
+```
+
+## File Organization
+
+Recommended structure for multi-module projects:
+
+```
+dsl/
+  core.dsl           # module my_app.core - shared entities
+  customers.dsl      # module my_app.customers - customer management
+  billing.dsl        # module my_app.billing - billing (uses core, customers)
+  app.dsl            # module my_app - app declaration, workspaces
+```
+
+## Cross-Module References
+
+When referencing entities from other modules:
+
+1. Add `use` declaration at top of file
+2. Reference by simple name (not qualified)
+
+```dsl
+module my_app.orders
+
+use my_app.core         # Contains Product entity
+use my_app.customers    # Contains Customer entity
+
+entity Order "Order":
+  id: uuid pk
+  customer: ref Customer    # Resolved via use declaration
+  items: has_many OrderItem
+
+entity OrderItem "Order Item":
+  id: uuid pk
+  order: belongs_to Order
+  product: ref Product      # From core module
+  quantity: int required
+```
+
+--------------------------------------------------------------------------------
+
+## entities
+
+# Entities
+
+Entities are the core data models in DAZZLE. They define structure, relationships, and constraints.
+
+## Basic Syntax
+
+```dsl
+entity EntityName "Display Title":
+  field_name: type modifiers
+```
+
+## Field Types
+
+### Primitive Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `str(N)` | String with max length N | `name: str(100)` |
+| `text` | Unlimited text | `description: text` |
+| `int` | Integer | `quantity: int` |
+| `decimal(P,S)` | Decimal with precision P, scale S | `price: decimal(10,2)` |
+| `bool` | Boolean | `active: bool` |
+| `date` | Date only | `birth_date: date` |
+| `datetime` | Date and time | `created_at: datetime` |
+| `uuid` | UUID identifier | `id: uuid` |
+| `email` | Email address (validated) | `contact: email` |
+| `json` | Flexible JSON data | `metadata: json` |
+
+### Enum Type
+
+Define inline enumeration values:
+
+```dsl
+status: enum[draft,pending,approved,rejected]
+priority: enum[low,medium,high,critical]
+```
+
+Enum values can include reserved keywords:
+
+```dsl
+status: enum[draft,submitted,approved] = draft
+```
+
+### Reference Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `ref Entity` | Foreign key reference | `author: ref User` |
+| `has_many Entity` | One-to-many relationship | `items: has_many OrderItem` |
+| `has_one Entity` | One-to-one relationship | `profile: has_one UserProfile` |
+| `belongs_to Entity` | Inverse of has_many/has_one | `order: belongs_to Order` |
+| `embeds Entity` | Embedded/nested entity | `address: embeds Address` |
+
+## Field Modifiers
+
+| Modifier | Description |
+|----------|-------------|
+| `required` | Field cannot be null |
+| `optional` | Field can be null (default) |
+| `pk` | Primary key |
+| `unique` | Unique constraint |
+| `unique?` | Unique but nullable |
+| `auto_add` | Auto-set on creation (datetime) |
+| `auto_update` | Auto-set on update (datetime) |
+| `= value` | Default value |
+
+## Relationship Modifiers
+
+For `has_many` and `has_one`:
+
+| Modifier | Description |
+|----------|-------------|
+| `cascade` | Delete children when parent deleted |
+| `restrict` | Prevent deletion if children exist |
+| `nullify` | Set foreign key to null on delete |
+| `readonly` | Relationship is read-only |
+
+```dsl
+items: has_many OrderItem cascade
+profile: has_one UserProfile restrict
+comments: has_many Comment nullify readonly
+```
+
+## Complete Example
+
+```dsl
+entity Order "Customer Order":
+  # Primary key
+  id: uuid pk
+
+  # Simple fields
+  order_number: str(20) required unique
+  notes: text optional
+
+  # Numeric
+  subtotal: decimal(10,2) required
+  tax_rate: decimal(5,4) = 0.0825
+  item_count: int = 0
+
+  # Enum with default
+  status: enum[draft,submitted,processing,shipped,delivered,cancelled] = draft
+  priority: enum[low,normal,high] = normal
+
+  # Dates
+  order_date: date required
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  # Boolean
+  is_gift: bool = false
+  requires_signature: bool = false
+
+  # References
+  customer: ref Customer required
+  shipping_address: embeds Address
+  billing_address: embeds Address
+
+  # Relationships
+  items: has_many OrderItem cascade
+  shipments: has_many Shipment restrict
+  notes: has_many OrderNote nullify
+
+entity OrderItem "Order Line Item":
+  id: uuid pk
+  order: belongs_to Order
+  product: ref Product required
+  quantity: int required
+  unit_price: decimal(10,2) required
+  line_total: decimal(10,2) required
+
+entity Address "Address":
+  street: str(200) required
+  city: str(100) required
+  state: str(50)
+  postal_code: str(20) required
+  country: str(2) required = "US"
+```
+
+## Embedded Entities
+
+Use `embeds` for nested data that doesn't need its own table:
+
+```dsl
+entity Contact "Contact":
+  id: uuid pk
+  name: str(100) required
+  work_address: embeds Address
+  home_address: embeds Address
+
+entity Address "Address":
+  street: str(200)
+  city: str(100)
+  postal_code: str(20)
+```
+
+Embedded entities are stored inline (as JSON or flattened columns depending on backend).
+
+## Self-Referential Relationships
+
+Entities can reference themselves:
+
+```dsl
+entity Category "Category":
+  id: uuid pk
+  name: str(100) required
+  parent: ref Category optional
+  children: has_many Category cascade
+
+entity Employee "Employee":
+  id: uuid pk
+  name: str(100) required
+  manager: ref Employee optional
+  direct_reports: has_many Employee nullify
+```
+
+## Best Practices
+
+1. **Always define a primary key** - Use `id: uuid pk` by convention
+2. **Use timestamps** - Add `created_at` and `updated_at` with auto modifiers
+3. **Choose relationship behavior** - Specify cascade/restrict/nullify explicitly
+4. **Use enums for fixed sets** - Better than strings for status fields
+5. **Keep embedded entities simple** - Complex nested data should be separate entities
+
+--------------------------------------------------------------------------------
+
+## surfaces
+
+# Surfaces
+
+Surfaces define UI screens and forms for interacting with entities.
+
+## Basic Syntax
+
+```dsl
+surface surface_name "Display Title":
+  uses entity EntityName
+  mode: view|create|edit|list|custom
+
+  section section_name "Section Title":
+    field field_name "Label"
+
+  action action_name "Label":
+    on trigger -> outcome
+```
+
+## Surface Modes
+
+| Mode | Description |
+|------|-------------|
+| `view` | Read-only display of single record |
+| `create` | Form for creating new record |
+| `edit` | Form for editing existing record |
+| `list` | Table/list of multiple records |
+| `custom` | Fully custom layout |
+
+## Sections
+
+Group related fields into sections:
+
+```dsl
+surface customer_detail "Customer Details":
+  uses entity Customer
+  mode: view
+
+  section info "Basic Information":
+    field name "Full Name"
+    field email "Email Address"
+    field phone "Phone"
+
+  section billing "Billing Details":
+    field billing_address "Address"
+    field payment_method "Payment Method"
+```
+
+## Actions
+
+Define interactive actions with triggers and outcomes:
+
+```dsl
+surface task_form "Create Task":
+  uses entity Task
+  mode: create
+
+  section main:
+    field title "Title"
+    field description "Description"
+    field due_date "Due Date"
+
+  action save "Save Task":
+    on submit -> surface task_list
+
+  action cancel "Cancel":
+    on click -> surface task_list
+```
+
+### Triggers
+
+| Trigger | Description |
+|---------|-------------|
+| `submit` | Form submission |
+| `click` | Button click |
+| `auto` | Automatic (on load) |
+
+### Outcomes
+
+Navigate to another surface, experience, or trigger integration:
+
+```dsl
+# Navigate to surface
+on submit -> surface task_list
+
+# Navigate to experience at specific step
+on submit -> experience onboarding step welcome
+
+# Trigger integration action
+on submit -> integration payment action process_payment
+```
+
+## UX Semantic Layer
+
+Add UX hints for smarter UI generation:
+
+```dsl
+surface invoice_list "Invoices":
+  uses entity Invoice
+  mode: list
+
+  section main:
+    field invoice_number "Number"
+    field customer "Customer"
+    field total "Total"
+    field status "Status"
+    field due_date "Due Date"
+
+  ux:
+    purpose: "View and manage customer invoices"
+    show: invoice_number, customer, total, status, due_date
+    sort: due_date asc
+    filter: status, customer
+    search: invoice_number, customer
+    empty: "No invoices found. Create your first invoice to get started."
+
+    attention critical:
+      when: status == "overdue" and total > 1000
+      message: "High-value invoice is overdue!"
+      action: invoice_detail
+
+    attention warning:
+      when: due_date < today and status != "paid"
+      message: "Invoice payment is overdue"
+```
+
+## Complete Example
+
+```dsl
+# List view
+surface order_list "Orders":
+  uses entity Order
+  mode: list
+
+  section main:
+    field order_number "Order #"
+    field customer "Customer"
+    field order_date "Date"
+    field status "Status"
+    field subtotal "Total"
+
+  action new "New Order":
+    on click -> surface order_create
+
+  action view "View":
+    on click -> surface order_detail
+
+  ux:
+    purpose: "Browse and manage customer orders"
+    sort: order_date desc
+    filter: status, customer
+    search: order_number, customer
+
+# Create form
+surface order_create "Create Order":
+  uses entity Order
+  mode: create
+
+  section customer "Customer Info":
+    field customer "Customer"
+    field order_date "Order Date"
+
+  section items "Order Items":
+    field items "Line Items"
+
+  section options "Options":
+    field is_gift "Gift Order?"
+    field notes "Notes"
+
+  action save "Create Order":
+    on submit -> surface order_detail
+
+  action cancel "Cancel":
+    on click -> surface order_list
+
+# Detail view
+surface order_detail "Order Details":
+  uses entity Order
+  mode: view
+
+  section header "Order Information":
+    field order_number "Order Number"
+    field customer "Customer"
+    field status "Status"
+    field order_date "Order Date"
+
+  section financial "Financial":
+    field subtotal "Subtotal"
+    field tax_rate "Tax Rate"
+    field items "Line Items"
+
+  section dates "Timestamps":
+    field created_at "Created"
+    field updated_at "Last Updated"
+
+  action edit "Edit":
+    on click -> surface order_edit
+
+  action back "Back to List":
+    on click -> surface order_list
+
+# Edit form
+surface order_edit "Edit Order":
+  uses entity Order
+  mode: edit
+
+  section main:
+    field status "Status"
+    field notes "Notes"
+    field is_gift "Gift Order?"
+
+  action save "Save Changes":
+    on submit -> surface order_detail
+
+  action cancel "Cancel":
+    on click -> surface order_detail
+```
+
+## Persona Variants
+
+Customize surfaces per persona:
+
+```dsl
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title "Title"
+    field assignee "Assignee"
+    field status "Status"
+    field due_date "Due"
+
+  ux:
+    for manager:
+      scope: all
+      purpose: "Monitor team task progress"
+      show: title, assignee, status, due_date
+      show_aggregate: total_tasks, overdue_count
+      action_primary: task_detail
+
+    for team_member:
+      scope: assignee == current_user
+      purpose: "View and complete my assigned tasks"
+      show: title, status, due_date
+      hide: assignee
+      action_primary: task_edit
+      read_only: false
+```
+
+--------------------------------------------------------------------------------
+
+## workspaces
+
+# Workspaces
+
+Workspaces are data-centric dashboard views with regions, filtering, and aggregates.
+
+## Basic Syntax
+
+```dsl
+workspace workspace_name "Display Title":
+  purpose: "Description of the workspace"
+  stage: "archetype_name"
+
+  region_name:
+    source: EntityName
+    filter: condition
+    sort: field direction
+    limit: number
+    display: list|grid|timeline|map
+    action: surface_name
+    empty: "Empty state message"
+    group_by: field_name
+    aggregate:
+      metric_name: expression
+```
+
+## Workspace Properties
+
+| Property | Description |
+|----------|-------------|
+| `purpose` | Human-readable description |
+| `stage` | UI archetype hint (e.g., "dashboard", "kanban") |
+
+## Region Properties
+
+| Property | Description | Required |
+|----------|-------------|----------|
+| `source` | Entity to display | Yes |
+| `filter` | Condition expression | No |
+| `sort` | Sort expression(s) | No |
+| `limit` | Max records to show | No |
+| `display` | Display mode | No (default: list) |
+| `action` | Surface to navigate to on click | No |
+| `empty` | Message when no records | No |
+| `group_by` | Field to group records by | No |
+| `aggregate` | Computed metrics | No |
+
+## Display Modes
+
+| Mode | Description |
+|------|-------------|
+| `list` | Table/list view |
+| `grid` | Card grid layout |
+| `timeline` | Chronological timeline |
+| `map` | Geographic map (requires location data) |
+
+## Filter Expressions
+
+Filter uses simple condition expressions:
+
+```dsl
+# Equality
+filter: status == "active"
+
+# Comparison
+filter: due_date < today
+
+# Field references
+filter: assignee == current_user
+
+# Combined conditions
+filter: status == "pending" and priority == "high"
+```
+
+## Sort Expressions
+
+```dsl
+# Single field
+sort: created_at desc
+
+# Multiple fields (comma-separated)
+sort: priority desc, due_date asc
+```
+
+## Aggregates
+
+Define computed metrics for regions:
+
+```dsl
+aggregate:
+  total_value: sum(amount)
+  average_score: avg(rating)
+  item_count: count(*)
+  max_priority: max(priority)
+```
+
+## Complete Example
+
+```dsl
+workspace sales_dashboard "Sales Dashboard":
+  purpose: "Monitor sales performance and pipeline"
+  stage: "dashboard"
+
+  # Summary metrics region
+  summary:
+    source: Order
+    filter: order_date >= first_day_of_month
+    display: grid
+    aggregate:
+      total_revenue: sum(subtotal)
+      order_count: count(*)
+      avg_order_value: avg(subtotal)
+
+  # Recent orders
+  recent_orders:
+    source: Order
+    sort: order_date desc
+    limit: 10
+    display: list
+    action: order_detail
+    empty: "No orders yet this period"
+
+  # Orders by status
+  by_status:
+    source: Order
+    filter: order_date >= first_day_of_month
+    group_by: status
+    display: grid
+    aggregate:
+      count: count(*)
+      value: sum(subtotal)
+
+  # Overdue invoices alert
+  overdue:
+    source: Invoice
+    filter: status == "overdue"
+    sort: due_date asc
+    limit: 5
+    display: list
+    action: invoice_detail
+    empty: "No overdue invoices"
+
+workspace task_board "Task Board":
+  purpose: "Kanban-style task management"
+  stage: "kanban"
+
+  # Backlog column
+  backlog:
+    source: Task
+    filter: status == "backlog"
+    sort: priority desc, created_at asc
+    display: list
+    action: task_detail
+    empty: "Backlog is empty"
+    aggregate:
+      count: count(*)
+
+  # In Progress column
+  in_progress:
+    source: Task
+    filter: status == "in_progress"
+    sort: priority desc
+    display: list
+    action: task_detail
+    empty: "Nothing in progress"
+    aggregate:
+      count: count(*)
+
+  # Review column
+  review:
+    source: Task
+    filter: status == "review"
+    sort: updated_at desc
+    display: list
+    action: task_detail
+    aggregate:
+      count: count(*)
+
+  # Done column
+  done:
+    source: Task
+    filter: status == "done" and completed_at >= week_start
+    sort: completed_at desc
+    limit: 20
+    display: list
+    action: task_detail
+    aggregate:
+      count: count(*)
+
+workspace team_calendar "Team Calendar":
+  purpose: "View team schedules and deadlines"
+  stage: "calendar"
+
+  # Upcoming deadlines
+  deadlines:
+    source: Task
+    filter: due_date != null and status != "done"
+    sort: due_date asc
+    display: timeline
+    action: task_detail
+
+  # Team meetings
+  meetings:
+    source: Meeting
+    filter: start_time >= today
+    sort: start_time asc
+    display: timeline
+    action: meeting_detail
+    empty: "No upcoming meetings"
+
+  # Out of office
+  time_off:
+    source: TimeOff
+    filter: start_date <= next_week and end_date >= today
+    sort: start_date asc
+    display: timeline
+```
+
+## UX Semantic Layer
+
+Workspaces support the UX block for additional customization:
+
+```dsl
+workspace inventory_overview "Inventory":
+  purpose: "Monitor stock levels"
+
+  low_stock:
+    source: Product
+    filter: quantity < reorder_point
+    sort: quantity asc
+    display: list
+    action: product_detail
+    empty: "All stock levels healthy"
+
+  ux:
+    attention critical:
+      when: quantity == 0
+      message: "Out of stock!"
+      action: product_reorder
+
+    attention warning:
+      when: quantity < reorder_point
+      message: "Stock running low"
+
+    for warehouse_manager:
+      scope: all
+      focus: low_stock, recent_orders
+      action_primary: product_detail
+
+    for sales_rep:
+      scope: all
+      focus: low_stock
+      read_only: true
+```
+
+--------------------------------------------------------------------------------
+
+## services
+
+# Services
+
+DAZZLE supports two types of services: External APIs and Domain Services.
+
+## External APIs
+
+External APIs define connections to third-party services via OpenAPI/Swagger specs.
+
+### Syntax
+
+```dsl
+service service_name "Display Title":
+  spec: url "https://api.example.com/openapi.json"
+  auth_profile: auth_kind option=value
+  owner: "team@example.com"
+```
+
+### Auth Profile Types
+
+| Type | Description | Options |
+|------|-------------|---------|
+| `api_key` | API key authentication | `header`, `name` |
+| `bearer` | Bearer token | `token_url` |
+| `oauth2` | OAuth 2.0 | `client_id_env`, `client_secret_env`, `token_url` |
+| `basic` | Basic auth | `username_env`, `password_env` |
+| `none` | No authentication | - |
+
+### Examples
+
+```dsl
+# API key authentication
+service stripe "Stripe Payments":
+  spec: url "https://api.stripe.com/openapi.yaml"
+  auth_profile: api_key header="Authorization" name="Bearer"
+  owner: "payments@company.com"
+
+# OAuth2 authentication
+service salesforce "Salesforce CRM":
+  spec: url "https://developer.salesforce.com/openapi.json"
+  auth_profile: oauth2 client_id_env="SF_CLIENT_ID" client_secret_env="SF_CLIENT_SECRET" token_url="https://login.salesforce.com/services/oauth2/token"
+  owner: "crm-team@company.com"
+
+# Basic auth
+service legacy_api "Legacy System":
+  spec: url "https://internal.company.com/api/swagger.json"
+  auth_profile: basic username_env="LEGACY_USER" password_env="LEGACY_PASS"
+  owner: "devops@company.com"
+
+# Inline spec (for small APIs)
+service webhook "Webhook Service":
+  spec: inline "{ paths: { /notify: { post: {} } } }"
+  auth_profile: none
+```
+
+## Domain Services
+
+Domain services define internal business logic operations with typed inputs/outputs.
+
+### Syntax
+
+```dsl
+service service_name "Display Title":
+  kind: domain_logic|validation|integration|workflow
+
+  input:
+    field_name: type_name [required]
+
+  output:
+    field_name: type_name
+
+  guarantees:
+    - "Guarantee statement"
+
+  stub: python|typescript
+```
+
+### Service Kinds
+
+| Kind | Description |
+|------|-------------|
+| `domain_logic` | Core business rules and calculations |
+| `validation` | Complex validation logic |
+| `integration` | Orchestration between systems |
+| `workflow` | Multi-step business processes |
+
+### Examples
+
+```dsl
+# VAT calculation service
+service calculate_vat "Calculate VAT":
+  kind: domain_logic
+
+  input:
+    invoice_id: uuid required
+    country_code: str(2) required
+
+  output:
+    vat_amount: decimal(10,2)
+    vat_rate: decimal(5,4)
+    breakdown: json
+
+  guarantees:
+    - "Must not mutate the invoice record"
+    - "Returns zero VAT for exempt categories"
+    - "Supports all EU country codes"
+
+  stub: python
+
+# Order validation service
+service validate_order "Validate Order":
+  kind: validation
+
+  input:
+    order_id: uuid required
+
+  output:
+    is_valid: bool
+    errors: json
+
+  guarantees:
+    - "Checks inventory availability"
+    - "Validates customer credit limit"
+    - "Returns all errors, not just first"
+
+  stub: python
+
+# Payment processing service
+service process_payment "Process Payment":
+  kind: integration
+
+  input:
+    order_id: uuid required
+    payment_method: str(50) required
+    amount: decimal(10,2) required
+
+  output:
+    transaction_id: str(100)
+    status: str(20)
+    error_message: str(500)
+
+  guarantees:
+    - "Idempotent - safe to retry"
+    - "Logs all attempts for audit"
+    - "Times out after 30 seconds"
+
+  stub: python
+
+# Onboarding workflow
+service customer_onboarding "Customer Onboarding":
+  kind: workflow
+
+  input:
+    customer_id: uuid required
+    onboarding_type: str(20) required
+
+  output:
+    completed_steps: json
+    next_step: str(50)
+    is_complete: bool
+
+  guarantees:
+    - "Can be resumed from any step"
+    - "Sends notifications at key milestones"
+    - "Creates audit trail"
+
+  stub: python
+```
+
+## Foreign Models
+
+Foreign models define data structures from external APIs that you want to work with:
+
+```dsl
+foreign_model ModelName from service_name "Display Title":
+  key: key_field[, key_field2]
+
+  constraint constraint_type option=value
+
+  field_name: type modifiers
+```
+
+### Constraint Types
+
+| Type | Description | Options |
+|------|-------------|---------|
+| `cache` | Cache responses | `ttl` |
+| `rate_limit` | Rate limiting | `per_minute` |
+| `retry` | Retry failed requests | `attempts`, `backoff` |
+
+### Example
+
+```dsl
+service hmrc "HMRC API":
+  spec: url "https://api.hmrc.gov.uk/openapi.json"
+  auth_profile: oauth2 client_id_env="HMRC_CLIENT_ID" client_secret_env="HMRC_SECRET" token_url="https://api.hmrc.gov.uk/oauth/token"
+  owner: "tax-team@company.com"
+
+foreign_model VATObligation from hmrc "VAT Obligation":
+  key: period_key
+
+  constraint cache ttl="3600"
+  constraint rate_limit per_minute="60"
+  constraint retry attempts="3" backoff="exponential"
+
+  period_key: str(20) required
+  start_date: date required
+  end_date: date required
+  due_date: date required
+  status: enum[open,fulfilled,overdue]
+  received_date: date optional
+
+foreign_model CompanyInfo from companies_house "Company Information":
+  key: company_number
+
+  constraint cache ttl="86400"
+
+  company_number: str(10) required pk
+  company_name: str(200) required
+  company_status: str(50)
+  date_of_creation: date
+  registered_office: embeds Address
+```
+
+## Best Practices
+
+1. **Use domain services for business logic** - Keep complex rules testable and isolated
+2. **Define guarantees** - Document what callers can rely on
+3. **Choose appropriate service kind** - Helps with code generation and testing
+4. **Cache foreign models** - Reduce API calls with appropriate TTLs
+5. **Handle rate limits** - Configure constraints to stay within API quotas
+
+--------------------------------------------------------------------------------
+
+## integrations
+
+# Integrations
+
+Integrations orchestrate data flow between your application and external services.
+
+## Basic Syntax
+
+```dsl
+integration integration_name "Display Title":
+  uses service ServiceName
+  uses foreign ForeignModelName
+
+  action action_name:
+    # Action definition
+
+  sync sync_name:
+    # Sync definition
+```
+
+## Integration Components
+
+### Uses Declarations
+
+Reference services and foreign models:
+
+```dsl
+integration tax_integration "Tax Integration":
+  uses service hmrc
+  uses service companies_house
+  uses foreign VATObligation, CompanyInfo
+```
+
+## Actions
+
+Actions define request-response operations triggered by user interactions.
+
+### Action Syntax
+
+```dsl
+action action_name:
+  when surface surface_name
+  call service service_name
+  call operation /api/path
+  call mapping:
+    target -> source_path
+  response foreign ForeignModelName
+  response entity EntityName
+  response mapping:
+    target -> source_path
+```
+
+### Action Properties
+
+| Property | Description |
+|----------|-------------|
+| `when surface` | Surface that triggers this action |
+| `call service` | External service to call |
+| `call operation` | API endpoint path |
+| `call mapping` | Map form data to API request |
+| `response foreign` | Expected response model |
+| `response entity` | Entity to create/update from response |
+| `response mapping` | Map response to entity fields |
+
+### Action Example
+
+```dsl
+integration crm_integration "CRM Integration":
+  uses service salesforce
+  uses foreign SalesforceContact
+
+  action sync_contact:
+    when surface customer_form
+    call service salesforce
+    call operation /services/data/v52.0/sobjects/Contact
+    call mapping:
+      FirstName -> form.first_name
+      LastName -> form.last_name
+      Email -> form.email
+      Phone -> form.phone
+    response foreign SalesforceContact
+    response entity Customer
+    response mapping:
+      salesforce_id -> Id
+      last_synced -> SystemModstamp
+```
+
+## Syncs
+
+Syncs define scheduled or event-driven data synchronization.
+
+### Sync Syntax
+
+```dsl
+sync sync_name:
+  mode: scheduled "cron_expression" | event_driven
+  from service service_name
+  from operation /api/path
+  from foreign ForeignModelName
+  into entity EntityName
+  match rules:
+    foreign_field <-> entity_field
+```
+
+### Sync Properties
+
+| Property | Description |
+|----------|-------------|
+| `mode` | `scheduled "cron"` or `event_driven` |
+| `from service` | Source service |
+| `from operation` | API endpoint to call |
+| `from foreign` | Foreign model defining response shape |
+| `into entity` | Target entity to update |
+| `match rules` | Bidirectional field mappings for matching |
+
+### Sync Example
+
+```dsl
+integration inventory_sync "Inventory Sync":
+  uses service warehouse_api
+  uses foreign WarehouseItem
+
+  sync daily_inventory:
+    mode: scheduled "0 2 * * *"
+    from service warehouse_api
+    from operation /api/inventory/list
+    from foreign WarehouseItem
+    into entity Product
+    match rules:
+      sku <-> product_sku
+      warehouse_id <-> external_id
+
+  sync stock_updates:
+    mode: event_driven
+    from service warehouse_api
+    from operation /api/inventory/changes
+    from foreign WarehouseItem
+    into entity Product
+    match rules:
+      sku <-> product_sku
+```
+
+## Complete Example
+
+```dsl
+# External service definition
+service hmrc "HMRC VAT API":
+  spec: url "https://api.hmrc.gov.uk/vat/openapi.json"
+  auth_profile: oauth2 client_id_env="HMRC_CLIENT_ID" client_secret_env="HMRC_SECRET" token_url="https://api.hmrc.gov.uk/oauth/token"
+  owner: "finance@company.com"
+
+# Foreign model from external service
+foreign_model VATObligation from hmrc "VAT Obligation":
+  key: period_key
+  constraint cache ttl="3600"
+
+  period_key: str(20) required
+  start_date: date required
+  end_date: date required
+  due_date: date required
+  status: enum[open,fulfilled,overdue]
+
+foreign_model VATReturn from hmrc "VAT Return":
+  key: period_key
+  period_key: str(20) required
+  vat_due_sales: decimal(10,2)
+  vat_due_acquisitions: decimal(10,2)
+  total_vat_due: decimal(10,2)
+  vat_reclaimed: decimal(10,2)
+  net_vat_due: decimal(10,2)
+
+# Integration orchestration
+integration vat_integration "VAT Integration":
+  uses service hmrc
+  uses foreign VATObligation, VATReturn
+
+  # Triggered when user submits VAT return form
+  action submit_return:
+    when surface vat_return_form
+    call service hmrc
+    call operation /organisations/vat/{vrn}/returns
+    call mapping:
+      vrn -> entity.company.vat_number
+      periodKey -> form.period_key
+      vatDueSales -> form.vat_due_sales
+      vatDueAcquisitions -> form.vat_due_acquisitions
+      totalVatDue -> form.total_vat_due
+      vatReclaimedCurrPeriod -> form.vat_reclaimed
+      netVatDue -> form.net_vat_due
+    response foreign VATReturn
+    response entity TaxReturn
+    response mapping:
+      submission_id -> processingDate
+      status -> "submitted"
+
+  # Scheduled sync of VAT obligations
+  sync obligations:
+    mode: scheduled "0 6 * * *"
+    from service hmrc
+    from operation /organisations/vat/{vrn}/obligations
+    from foreign VATObligation
+    into entity TaxPeriod
+    match rules:
+      period_key <-> hmrc_period_key
+      start_date <-> period_start
+      end_date <-> period_end
+
+  # Event-driven updates when HMRC pushes changes
+  sync obligation_updates:
+    mode: event_driven
+    from service hmrc
+    from operation /webhook/obligations
+    from foreign VATObligation
+    into entity TaxPeriod
+    match rules:
+      period_key <-> hmrc_period_key
+```
+
+## Mapping Expressions
+
+### Source Paths
+
+| Path | Description |
+|------|-------------|
+| `form.field_name` | Form field value |
+| `entity.field_name` | Current entity field |
+| `entity.relation.field` | Related entity field |
+| `foreign.field_name` | Foreign model field |
+| `"literal"` | Literal string value |
+
+### Examples
+
+```dsl
+call mapping:
+  # From form fields
+  email -> form.email_address
+
+  # From entity
+  customer_id -> entity.id
+
+  # From related entity
+  company_name -> entity.company.name
+
+  # Literal value
+  source -> "web_app"
+
+response mapping:
+  # From API response
+  external_id -> id
+
+  # Nested response path
+  address_line -> address.street
+```
+
+## Best Practices
+
+1. **Define foreign models** - Type your external API responses
+2. **Use match rules** - Enable bidirectional sync with clear field mapping
+3. **Set appropriate schedules** - Balance freshness vs. API rate limits
+4. **Handle errors** - Integrations should be resilient to API failures
+5. **Log operations** - Track sync history for debugging
+
+--------------------------------------------------------------------------------
+
+## messaging
+
+# Messaging
+
+DAZZLE v0.9 introduces a comprehensive messaging system for email, queues, and notifications.
+
+## Overview
+
+The messaging system consists of:
+- **Messages**: Typed message schemas
+- **Channels**: Communication pathways
+- **Templates**: Reusable message templates
+- **Assets**: Static file attachments
+- **Documents**: Dynamic document generators
+
+## Messages
+
+Define typed message schemas:
+
+```dsl
+message MessageName "Display Title":
+  "Optional description"
+  field_name: type_name [required] [=default]
+```
+
+### Message Field Types
+
+| Type | Description |
+|------|-------------|
+| `str` / `str(N)` | String (optionally bounded) |
+| `email` | Email address |
+| `uuid` | UUID identifier |
+| `bool` | Boolean |
+| `datetime` | Timestamp |
+| `json` | JSON object |
+| `list[Type]` | List of items |
+| `ref Entity` | Reference to entity |
+
+### Example
+
+```dsl
+message WelcomeEmail "Welcome Email":
+  "Sent to new users after registration"
+  to: email required
+  user_name: str(100) required
+  activation_link: str(500) required
+  trial_end_date: date
+
+message OrderConfirmation "Order Confirmation":
+  to: email required
+  order_number: str(20) required
+  items: list[OrderItem] required
+  subtotal: decimal(10,2) required
+  tax: decimal(10,2) required
+  total: decimal(10,2) required
+  estimated_delivery: date
+
+message InboundEmail "Inbound Email":
+  from: email required
+  to: email required
+  subject: str(500)
+  body: text
+  attachments: json
+```
+
+## Channels
+
+Channels define communication pathways:
+
+```dsl
+channel channel_name "Title":
+  kind: email|queue|stream
+  provider: auto|mailpit|sendgrid|ses|...
+
+  config:
+    option: "value"
+
+  provider_config:
+    max_per_minute: 100
+    max_concurrent: 10
+
+  send operation_name:
+    # Send operation
+
+  receive operation_name:
+    # Receive operation
+```
+
+### Channel Kinds
+
+| Kind | Description |
+|------|-------------|
+| `email` | Email messages |
+| `queue` | Message queue (async) |
+| `stream` | Event stream |
+
+### Providers
+
+| Provider | Kind | Description |
+|----------|------|-------------|
+| `auto` | email | Auto-detect (Mailpit in dev, configured in prod) |
+| `mailpit` | email | Local development mail server |
+| `sendgrid` | email | SendGrid email service |
+| `ses` | email | AWS SES |
+| `smtp` | email | Generic SMTP |
+
+### Send Operations
+
+Define outbound message operations:
+
+```dsl
+send operation_name:
+  message: MessageName
+  when: trigger
+  delivery_mode: outbox|direct
+  mapping:
+    field -> source_path
+  throttle:
+    per_recipient:
+      window: 1h
+      max_messages: 5
+      on_exceed: drop|queue|error
+```
+
+#### Send Triggers
+
+| Trigger | Syntax | Description |
+|---------|--------|-------------|
+| Entity created | `entity Order created` | When entity is created |
+| Entity updated | `entity Order updated` | When entity is updated |
+| Entity deleted | `entity Order deleted` | When entity is deleted |
+| Status transition | `entity Order status -> shipped` | When status changes to value |
+| Field changed | `entity Order.priority changed` | When specific field changes |
+| Service called | `service process_payment called` | When service is invoked |
+| Service succeeded | `service process_payment succeeded` | When service succeeds |
+| Service failed | `service process_payment failed` | When service fails |
+| Schedule | `every 1h` | Periodic (1h, 30m, 1d) |
+| Cron | `cron "0 9 * * *"` | Cron expression |
+
+### Receive Operations
+
+Define inbound message handling:
+
+```dsl
+receive operation_name:
+  message: MessageName
+  match:
+    field: "pattern"
+    field: regex("pattern")
+    field: in("val1", "val2")
+  action: create Entity | update Entity | upsert Entity on field | call service Name
+  mapping:
+    source_field -> target_field
+```
+
+### Complete Channel Example
+
+```dsl
+channel notifications "Email Notifications":
+  kind: email
+  provider: auto
+
+  config:
+    from_address: "noreply@example.com"
+    from_name: "Example App"
+    reply_to: "support@example.com"
+
+  provider_config:
+    max_per_minute: 60
+    max_concurrent: 5
+
+  # Send welcome email on user creation
+  send welcome:
+    message: WelcomeEmail
+    when: entity User created
+    delivery_mode: outbox
+    mapping:
+      to -> User.email
+      user_name -> User.name
+      activation_link -> "https://app.example.com/activate/{{User.activation_token}}"
+
+  # Send order confirmation on order status change
+  send order_confirmation:
+    message: OrderConfirmation
+    when: entity Order status -> confirmed
+    delivery_mode: outbox
+    mapping:
+      to -> Order.customer.email
+      order_number -> Order.order_number
+      items -> Order.items
+      subtotal -> Order.subtotal
+      tax -> Order.tax
+      total -> Order.total
+    throttle:
+      per_recipient:
+        window: 24h
+        max_messages: 10
+        on_exceed: queue
+
+  # Receive support emails
+  receive support_ticket:
+    message: InboundEmail
+    match:
+      to: "support@example.com"
+    action: create SupportTicket
+    mapping:
+      from -> requester_email
+      subject -> title
+      body -> description
+```
+
+## Templates
+
+Define reusable email templates:
+
+```dsl
+template template_name:
+  subject: "Subject with {{variables}}"
+  body: "Plain text body with {{variables}}"
+  html_body: "<html>HTML body with {{variables}}</html>"
+  attachments:
+    - asset: asset_name
+      filename: "attachment.pdf"
+    - document: document_name
+      entity: Order
+      filename: "invoice_{{Order.number}}.pdf"
+```
+
+### Example
+
+```dsl
+template welcome_email:
+  subject: "Welcome to {{app.name}}, {{user.name}}!"
+  body: |
+    Hi {{user.name}},
+
+    Welcome to {{app.name}}! We're excited to have you.
+
+    Your account has been created with email: {{user.email}}
+
+    To get started, click here: {{activation_link}}
+
+    Best regards,
+    The {{app.name}} Team
+  attachments:
+    - asset: getting_started_guide
+      filename: "getting-started.pdf"
+
+template invoice_email:
+  subject: "Invoice #{{invoice.number}} from {{company.name}}"
+  body: |
+    Dear {{customer.name}},
+
+    Please find attached your invoice #{{invoice.number}}.
+
+    Amount due: {{invoice.total}}
+    Due date: {{invoice.due_date}}
+
+    Thank you for your business.
+  attachments:
+    - document: invoice_pdf
+      entity: Invoice
+      filename: "invoice_{{invoice.number}}.pdf"
+```
+
+## Assets
+
+Define static file attachments:
+
+```dsl
+asset asset_name:
+  kind: file|image|pdf
+  path: "relative/path/to/file.ext"
+  description: "Description of the asset"
+```
+
+### Example
+
+```dsl
+asset terms_of_service:
+  kind: pdf
+  path: "assets/legal/terms-of-service.pdf"
+  description: "Current Terms of Service document"
+
+asset company_logo:
+  kind: image
+  path: "assets/images/logo.png"
+  description: "Company logo for email headers"
+
+asset getting_started_guide:
+  kind: pdf
+  path: "assets/docs/getting-started.pdf"
+  description: "New user getting started guide"
+```
+
+## Documents
+
+Define dynamic document generators:
+
+```dsl
+document document_name:
+  for_entity: EntityName
+  format: pdf|html|csv
+  layout: layout_name
+  description: "Description"
+```
+
+### Example
+
+```dsl
+document invoice_pdf:
+  for_entity: Invoice
+  format: pdf
+  layout: invoice_layout
+  description: "PDF invoice for customer"
+
+document order_packing_slip:
+  for_entity: Order
+  format: pdf
+  layout: packing_slip_layout
+  description: "Packing slip for warehouse"
+
+document monthly_report:
+  for_entity: Report
+  format: pdf
+  layout: report_layout
+  description: "Monthly summary report"
+```
+
+## Complete Messaging Example
+
+```dsl
+# Message schemas
+message WelcomeEmail:
+  to: email required
+  user_name: str(100) required
+  activation_link: str(500) required
+
+message PasswordReset:
+  to: email required
+  reset_link: str(500) required
+  expires_at: datetime required
+
+message OrderShipped:
+  to: email required
+  order_number: str(20) required
+  tracking_number: str(100)
+  carrier: str(50)
+  estimated_delivery: date
+
+# Assets
+asset logo:
+  kind: image
+  path: "assets/logo.png"
+
+asset terms:
+  kind: pdf
+  path: "assets/terms.pdf"
+
+# Documents
+document invoice_pdf:
+  for_entity: Invoice
+  format: pdf
+  layout: invoice_layout
+
+# Templates
+template welcome:
+  subject: "Welcome to Our App!"
+  body: |
+    Hi {{user_name}},
+    Click here to activate: {{activation_link}}
+  attachments:
+    - asset: terms
+      filename: "terms-of-service.pdf"
+
+# Channel with operations
+channel transactional "Transactional Emails":
+  kind: email
+  provider: auto
+
+  config:
+    from_address: "noreply@app.com"
+
+  send welcome:
+    message: WelcomeEmail
+    when: entity User created
+    mapping:
+      to -> User.email
+      user_name -> User.name
+      activation_link -> "https://app.com/activate/{{User.token}}"
+
+  send password_reset:
+    message: PasswordReset
+    when: service request_password_reset succeeded
+    mapping:
+      to -> User.email
+      reset_link -> "https://app.com/reset/{{reset_token}}"
+      expires_at -> expiry_time
+
+  send order_shipped:
+    message: OrderShipped
+    when: entity Order status -> shipped
+    mapping:
+      to -> Order.customer.email
+      order_number -> Order.number
+      tracking_number -> Order.tracking_number
+      carrier -> Order.carrier
+```
+
+--------------------------------------------------------------------------------
+
+## ux
+
+# UX Semantic Layer
+
+The UX semantic layer provides hints for intelligent UI generation, including attention signals and persona-specific customizations.
+
+## UX Block Syntax
+
+The `ux:` block can appear in surfaces and workspaces:
+
+```dsl
+ux:
+  purpose: "Description"
+  show: field1, field2
+  sort: field1 desc, field2 asc
+  filter: field1, field2
+  search: field1, field2
+  empty: "Empty state message"
+
+  attention level:
+    when: condition
+    message: "Alert message"
+    action: surface_name
+
+  for persona_name:
+    scope: condition | all
+    # persona-specific overrides
+```
+
+## UX Properties
+
+| Property | Description |
+|----------|-------------|
+| `purpose` | Human-readable description of the view's purpose |
+| `show` | Fields to display (comma-separated) |
+| `sort` | Default sort order |
+| `filter` | Fields available for filtering |
+| `search` | Fields to include in search |
+| `empty` | Message when no records found |
+
+## Attention Signals
+
+Attention signals highlight important conditions to users:
+
+```dsl
+attention level:
+  when: condition_expression
+  message: "Alert message"
+  action: surface_name
+```
+
+### Signal Levels
+
+| Level | Description | Typical Use |
+|-------|-------------|-------------|
+| `critical` | Requires immediate action | Overdue invoices, system errors |
+| `warning` | Important but not urgent | Approaching deadlines, low stock |
+| `notice` | Informational alert | Status changes, new items |
+| `info` | General information | Tips, suggestions |
+
+### Condition Expressions
+
+| Expression | Description |
+|------------|-------------|
+| `field == value` | Equality check |
+| `field != value` | Inequality check |
+| `field < value` | Less than |
+| `field > value` | Greater than |
+| `field <= value` | Less than or equal |
+| `field >= value` | Greater than or equal |
+| `condition and condition` | Logical AND |
+| `condition or condition` | Logical OR |
+
+### Built-in Values
+
+| Value | Description |
+|-------|-------------|
+| `today` | Current date |
+| `now` | Current datetime |
+| `current_user` | Logged-in user |
+| `week_start` | Start of current week |
+| `month_start` | Start of current month |
+| `first_day_of_month` | First day of current month |
+
+### Attention Signal Examples
+
+```dsl
+ux:
+  # Critical: Requires immediate action
+  attention critical:
+    when: status == "overdue" and amount > 10000
+    message: "High-value invoice is critically overdue!"
+    action: invoice_detail
+
+  # Warning: Important but not urgent
+  attention warning:
+    when: due_date < today and status != "paid"
+    message: "Invoice payment is overdue"
+    action: invoice_detail
+
+  # Notice: Status change notification
+  attention notice:
+    when: status == "pending_review"
+    message: "Invoice ready for review"
+    action: invoice_review
+
+  # Info: General information
+  attention info:
+    when: created_at > week_start
+    message: "New this week"
+```
+
+## Persona Variants
+
+Customize views for different user types:
+
+```dsl
+for persona_name:
+  scope: condition | all
+  purpose: "Role-specific purpose"
+  show: field1, field2
+  hide: field1, field2
+  show_aggregate: metric1, metric2
+  action_primary: surface_name
+  read_only: true|false
+  defaults:
+    field: value
+  focus: region1, region2
+```
+
+### Persona Variant Properties
+
+| Property | Description |
+|----------|-------------|
+| `scope` | Filter condition or `all` for full access |
+| `purpose` | Role-specific description |
+| `show` | Fields to display for this persona |
+| `hide` | Fields to hide from this persona |
+| `show_aggregate` | Aggregate metrics to display |
+| `action_primary` | Default action surface |
+| `read_only` | Whether persona can only view |
+| `defaults` | Default field values for new records |
+| `focus` | Regions to emphasize (workspaces) |
+
+### Persona Variant Examples
+
+```dsl
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title "Title"
+    field assignee "Assignee"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due Date"
+
+  ux:
+    purpose: "View and manage tasks"
+
+    # Manager sees all tasks with team metrics
+    for manager:
+      scope: all
+      purpose: "Monitor team task progress and workload"
+      show: title, assignee, status, priority, due_date
+      show_aggregate: total_tasks, completed_this_week, overdue_count
+      action_primary: task_detail
+
+    # Team member sees only their tasks
+    for team_member:
+      scope: assignee == current_user
+      purpose: "View and complete my assigned tasks"
+      show: title, status, priority, due_date
+      hide: assignee
+      action_primary: task_edit
+      defaults:
+        assignee: current_user
+
+    # Observer has read-only access
+    for stakeholder:
+      scope: project.stakeholders contains current_user
+      purpose: "Track project task progress"
+      show: title, status, due_date
+      hide: assignee, priority
+      read_only: true
+
+workspace project_dashboard "Project Dashboard":
+  purpose: "Project overview and task tracking"
+
+  tasks:
+    source: Task
+    filter: project == current_project
+    display: list
+    action: task_detail
+
+  metrics:
+    source: Task
+    filter: project == current_project
+    aggregate:
+      total: count(*)
+      completed: count(status == "done")
+      overdue: count(due_date < today and status != "done")
+
+  ux:
+    # Project manager focuses on all regions
+    for project_manager:
+      scope: all
+      focus: metrics, tasks
+      action_primary: task_create
+
+    # Developer focuses on task list
+    for developer:
+      scope: assignee == current_user
+      focus: tasks
+      action_primary: task_edit
+```
+
+## Complete UX Example
+
+```dsl
+surface invoice_list "Invoices":
+  uses entity Invoice
+  mode: list
+
+  section main:
+    field invoice_number "Invoice #"
+    field customer "Customer"
+    field issue_date "Issued"
+    field due_date "Due Date"
+    field total "Amount"
+    field status "Status"
+
+  action new "Create Invoice":
+    on click -> surface invoice_create
+
+  action view "View":
+    on click -> surface invoice_detail
+
+  ux:
+    purpose: "Browse, filter, and manage customer invoices"
+    show: invoice_number, customer, due_date, total, status
+    sort: due_date asc
+    filter: status, customer, due_date
+    search: invoice_number, customer
+    empty: "No invoices found. Create your first invoice to get started."
+
+    # Critical: High-value overdue
+    attention critical:
+      when: status == "overdue" and total > 5000
+      message: "High-value invoice requires immediate attention!"
+      action: invoice_detail
+
+    # Warning: Any overdue
+    attention warning:
+      when: due_date < today and status != "paid"
+      message: "Invoice payment is overdue"
+      action: invoice_detail
+
+    # Notice: Due soon
+    attention notice:
+      when: due_date < today + 7 and due_date >= today and status == "sent"
+      message: "Invoice due within 7 days"
+
+    # Finance team has full access
+    for finance:
+      scope: all
+      purpose: "Manage all company invoices and payments"
+      show: invoice_number, customer, issue_date, due_date, total, status
+      show_aggregate: total_outstanding, overdue_amount
+      action_primary: invoice_detail
+
+    # Sales sees their customer invoices
+    for sales:
+      scope: customer.account_manager == current_user
+      purpose: "Track invoices for my accounts"
+      show: invoice_number, customer, due_date, total, status
+      hide: issue_date
+      read_only: true
+      action_primary: invoice_detail
+
+    # Customer portal - limited view
+    for customer:
+      scope: customer == current_user.company
+      purpose: "View my invoices and payment history"
+      show: invoice_number, due_date, total, status
+      hide: customer
+      read_only: true
+```
+
+--------------------------------------------------------------------------------
+
+## cli
+
+# DNR CLI Reference
+
+Complete reference for `dazzle dnr` commands.
+
+## Commands Overview
+
+| Command | Description |
+|---------|-------------|
+| `dazzle dnr info` | Show installation status |
+| `dazzle dnr build-ui` | Generate UI artifacts |
+| `dazzle dnr build-api` | Generate API specification |
+| `dazzle dnr serve` | Run development server |
+
+---
+
+## dazzle dnr info
+
+Show DNR installation status and available features.
+
+```bash
+dazzle dnr info
+```
+
+**Output:**
+```
+Dazzle Native Runtime (DNR) Status
+==================================================
+DNR Backend:   ✓ installed
+DNR UI:        ✓ installed
+FastAPI:       ✓ installed
+Uvicorn:       ✓ installed
+
+Available Commands:
+  dazzle dnr build-ui   Generate UI (Vite/JS/HTML)
+  dazzle dnr build-api  Generate API spec
+  dazzle dnr serve      Run development server
+```
+
+---
+
+## dazzle dnr build-ui
+
+Generate UI artifacts from your AppSpec.
+
+```bash
+dazzle dnr build-ui [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--manifest` | `-m` | `dazzle.toml` | Path to manifest file |
+| `--out` | `-o` | `./dnr-ui` | Output directory |
+| `--format` | `-f` | `vite` | Output format |
+
+### Formats
+
+#### vite (default)
+Full Vite project with ES modules. Production-ready.
+
+```bash
+dazzle dnr build-ui --format vite -o ./my-app
+```
+
+Generated structure:
+```
+my-app/
+├── package.json
+├── vite.config.js
+└── src/
+    ├── index.html
+    ├── main.js
+    ├── ui-spec.json
+    └── dnr/
+        ├── signals.js
+        ├── state.js
+        ├── dom.js
+        ├── bindings.js
+        ├── components.js
+        ├── renderer.js
+        ├── theme.js
+        ├── actions.js
+        ├── app.js
+        └── index.js
+```
+
+To run:
+```bash
+cd my-app
+npm install
+npm run dev
+```
+
+#### js
+Split HTML/JS files. Good for development without Node.js.
+
+```bash
+dazzle dnr build-ui --format js -o ./app
+```
+
+Generated files:
+- `index.html` - Main HTML file
+- `dnr-runtime.js` - Combined runtime
+- `app.js` - Application code
+- `ui-spec.json` - UI specification
+
+To run:
+```bash
+cd app
+python -m http.server 8000
+```
+
+#### html
+Single HTML file with embedded runtime. Quickest preview.
+
+```bash
+dazzle dnr build-ui --format html -o ./preview
+```
+
+Generated file:
+- `index.html` - Self-contained application
+
+Open directly in browser - no server needed.
+
+### Examples
+
+```bash
+# Default: Vite project
+dazzle dnr build-ui
+
+# Single HTML for quick preview
+dazzle dnr build-ui --format html -o ./preview
+
+# Use different manifest
+dazzle dnr build-ui -m path/to/dazzle.toml
+
+# Split JS files
+dazzle dnr build-ui --format js -o ./dev-app
+```
+
+---
+
+## dazzle dnr build-api
+
+Generate API specification from your AppSpec.
+
+```bash
+dazzle dnr build-api [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--manifest` | `-m` | `dazzle.toml` | Path to manifest file |
+| `--out` | `-o` | `./dnr-api` | Output directory |
+| `--format` | `-f` | `json` | Output format |
+
+### Formats
+
+#### json (default)
+BackendSpec as JSON file.
+
+```bash
+dazzle dnr build-api --format json -o ./api
+```
+
+Generated file:
+- `backend-spec.json` - Complete API specification
+
+#### python
+Python stub module with JSON spec.
+
+```bash
+dazzle dnr build-api --format python -o ./api
+```
+
+Generated files:
+- `api_stub.py` - Runnable FastAPI stub
+- `backend-spec.json` - API specification
+
+To run:
+```bash
+cd api
+pip install fastapi uvicorn
+uvicorn api_stub:app --reload
+```
+
+### Examples
+
+```bash
+# JSON spec only
+dazzle dnr build-api
+
+# Python stub for quick server
+dazzle dnr build-api --format python -o ./server
+
+# Custom manifest location
+dazzle dnr build-api -m ../project/dazzle.toml
+```
+
+---
+
+## dazzle dnr serve
+
+Run development server with API and UI preview.
+
+```bash
+dazzle dnr serve [OPTIONS]
+```
+
+### Options
+
+| Option | Short | Default | Description |
+|--------|-------|---------|-------------|
+| `--manifest` | `-m` | `dazzle.toml` | Path to manifest file |
+| `--port` | `-p` | `8000` | Port to serve on |
+| `--host` | | `127.0.0.1` | Host to bind to |
+| `--reload` | `-r` | `false` | Enable auto-reload |
+| `--ui-only` | | `false` | Serve UI only (no API) |
+
+### Requirements
+
+Full server requires:
+- FastAPI
+- Uvicorn
+
+Install with:
+```bash
+pip install fastapi uvicorn
+```
+
+### Endpoints
+
+When running with full API:
+
+| Endpoint | Description |
+|----------|-------------|
+| `/` | UI preview |
+| `/ui` | UI preview (alternate) |
+| `/api/` | API root |
+| `/docs` | Interactive API documentation |
+| `/redoc` | Alternative API documentation |
+
+### Examples
+
+```bash
+# Default server on localhost:8000
+dazzle dnr serve
+
+# Different port
+dazzle dnr serve --port 3000
+
+# Auto-reload on DSL changes
+dazzle dnr serve --reload
+
+# Bind to all interfaces (for Docker/remote access)
+dazzle dnr serve --host 0.0.0.0
+
+# UI only (no FastAPI required)
+dazzle dnr serve --ui-only
+```
+
+### UI-Only Mode
+
+If FastAPI is not installed, use `--ui-only` to serve just the UI:
+
+```bash
+dazzle dnr serve --ui-only
+```
+
+This uses Python's built-in HTTP server and doesn't require any additional packages.
+
+---
+
+## Common Workflows
+
+### Development Preview
+
+Quick preview while editing DSL:
+
+```bash
+# Terminal 1: Serve with reload
+dazzle dnr serve --reload
+
+# Terminal 2: Edit your DSL
+vim dsl/app.dsl
+```
+
+### Production Build
+
+Generate production-ready artifacts:
+
+```bash
+# Build Vite project
+dazzle dnr build-ui --format vite -o ./dist/frontend
+
+# Build API spec
+dazzle dnr build-api --format python -o ./dist/backend
+
+# Deploy frontend
+cd dist/frontend && npm install && npm run build
+
+# Deploy backend
+cd dist/backend && uvicorn api_stub:app
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+steps:
+  - name: Validate DSL
+    run: dazzle validate
+
+  - name: Build UI
+    run: dazzle dnr build-ui --format vite -o ./build
+
+  - name: Build API
+    run: dazzle dnr build-api -o ./api
+```
+
+--------------------------------------------------------------------------------
+
+# SECTION 3: ARCHITECTURE
+================================================================================
+
+## overview
+
+# DNR Architecture
+
+How Dazzle Native Runtime works internally.
+
+## Overview
+
+DNR transforms your Dazzle DSL into working applications through a multi-stage pipeline:
+
+```
+DSL Files (.dsl)
+    ↓ parse
+AppSpec (Dazzle IR)
+    ↓ convert
+    ├── BackendSpec ──→ DNR-Back ──→ FastAPI App
+    └── UISpec ──→ DNR-UI ──→ JavaScript Runtime
+```
+
+## Core Principles
+
+### 1. Spec-First
+
+**BackendSpec** and **UISpec** are the source of truth:
+- Language-agnostic specifications
+- Multiple runtimes can consume them
+- No framework lock-in
+
+### 2. LLM-First
+
+Specifications are structured for:
+- Deterministic generation
+- Easy patching by LLMs
+- Semantic clarity
+
+### 3. Framework-Agnostic
+
+Backend and frontend frameworks are outputs, not inputs:
+- FastAPI is one possible backend (Django planned)
+- Pure JS is the frontend (React optional)
+
+## Backend Architecture (DNR-Back)
+
+### Layers
+
+```
+BackendSpec (language-agnostic specification)
+    ↓
+Runtime Generators
+    ├── Model Generator → Pydantic models
+    ├── Service Generator → CRUD + custom services
+    ├── Route Generator → FastAPI routes
+    └── Server → Complete FastAPI application
+```
+
+### BackendSpec Structure
+
+```python
+BackendSpec:
+    name: str
+    version: str
+    entities: list[EntitySpec]      # Data models
+    services: list[ServiceSpec]     # Business logic
+    endpoints: list[EndpointSpec]   # HTTP routes
+    auth_rules: list[AuthRuleSpec]  # Security
+```
+
+### Runtime Generation
+
+The runtime generates:
+
+1. **Pydantic Models** from EntitySpec
+   - Field types mapped to Python types
+   - Validators from constraints
+   - Create/Update schemas auto-generated
+
+2. **Services** from ServiceSpec
+   - CRUD operations with in-memory storage
+   - Custom operations with handlers
+   - Business rule enforcement
+
+3. **FastAPI Routes** from EndpointSpec
+   - RESTful endpoints
+   - Request/response validation
+   - OpenAPI documentation
+
+## Frontend Architecture (DNR-UI)
+
+### Design Decision: Pure JavaScript
+
+**Why pure JS (no React/Vue)**:
+- Maximum control over rendering
+- Minimum bundle size
+- No build step required
+- Easy to understand and modify
+- Aligns with LLM-first architecture
+
+### Layers
+
+```
+UISpec (declarative specification)
+    ↓
+Runtime Modules
+    ├── Signals → Reactive state primitives
+    ├── State Manager → Scoped state (local/workspace/app)
+    ├── Renderer → ViewNode → DOM
+    ├── Components → Reusable UI elements
+    ├── Actions → Event handling
+    └── Theme Engine → CSS variables
+```
+
+### UISpec Structure
+
+```python
+UISpec:
+    name: str
+    workspaces: list[WorkspaceSpec]   # Pages/layouts
+    components: list[ComponentSpec]    # Reusable UI
+    themes: list[ThemeSpec]           # Styling
+    default_theme: str
+```
+
+### Signals-Based Reactivity
+
+DNR-UI uses a lightweight signals pattern:
+
+```javascript
+// Create reactive state
+const [count, setCount] = createSignal(0);
+
+// Automatic updates
+createEffect(() => {
+    document.getElementById('counter').textContent = count();
+});
+
+// Update triggers re-render
+setCount(count() + 1);
+```
+
+Benefits:
+- No virtual DOM overhead
+- Fine-grained reactivity
+- Simple mental model
+
+### State Scopes
+
+| Scope | Lifetime | Use Case |
+|-------|----------|----------|
+| `local` | Component | Form fields, toggles |
+| `workspace` | Page/workspace | Filters, selections |
+| `app` | Application | User settings, auth |
+| `session` | Browser session | Temporary preferences |
+
+### View Rendering
+
+ViewNodes are rendered to DOM:
+
+```python
+# UISpec ViewNode
+ElementNode(
+    tag="div",
+    props={"class": LiteralBinding("card")},
+    children=[
+        ElementNode(tag="h2", children=[...]),
+        ConditionalNode(condition=..., then_branch=..., else_branch=...),
+        LoopNode(source=..., item_name="task", body=...)
+    ]
+)
+```
+
+Becomes:
+```html
+<div class="card">
+    <h2>...</h2>
+    <!-- conditional content -->
+    <!-- loop content -->
+</div>
+```
+
+## Output Formats
+
+### Vite (Production)
+
+Complete project with ES modules:
+
+```
+src/
+├── dnr/
+│   ├── signals.js      # createSignal, createEffect, createMemo
+│   ├── state.js        # StateManager, scoped state
+│   ├── dom.js          # createElement, text, attr utilities
+│   ├── bindings.js     # resolveBinding for data binding
+│   ├── components.js   # ComponentRegistry
+│   ├── renderer.js     # renderViewNode, patch updates
+│   ├── theme.js        # ThemeEngine, CSS variables
+│   ├── actions.js      # ActionDispatcher
+│   ├── app.js          # createApp initialization
+│   └── index.js        # Main exports
+├── main.js             # Application entry
+└── ui-spec.json        # Generated specification
+```
+
+### JS (Development)
+
+Split files for quick iteration:
+
+```
+├── index.html
+├── dnr-runtime.js      # Combined runtime (IIFE)
+├── app.js              # Application bootstrap
+└── ui-spec.json        # Generated specification
+```
+
+### HTML (Preview)
+
+Single self-contained file:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>/* Theme CSS */</style>
+</head>
+<body>
+    <div id="app"></div>
+    <script>/* DNR Runtime */</script>
+    <script>/* UI Spec */</script>
+    <script>/* App Bootstrap */</script>
+</body>
+</html>
+```
+
+## Conversion Pipeline
+
+### AppSpec → BackendSpec
+
+```python
+from dazzle_dnr_back.converters import convert_appspec_to_backend
+
+backend_spec = convert_appspec_to_backend(appspec)
+```
+
+Transforms:
+- `EntitySpec` → `BackendEntitySpec` with field types
+- `SurfaceSpec` → `ServiceSpec` + `EndpointSpec`
+- Infers CRUD operations from surface modes
+
+### AppSpec → UISpec
+
+```python
+from dazzle_dnr_ui.converters import convert_appspec_to_ui
+
+ui_spec = convert_appspec_to_ui(appspec)
+```
+
+Transforms:
+- `WorkspaceSpec` → `UIWorkspaceSpec` with layouts
+- `SurfaceSpec` → `ComponentSpec` with views
+- Generates default theme from app metadata
+
+## Extensibility
+
+### Adding New Runtimes
+
+Backend runtimes implement:
+```python
+def create_app(spec: BackendSpec) -> Application:
+    """Generate application from BackendSpec."""
+```
+
+UI runtimes implement:
+```python
+def generate(spec: UISpec, output_dir: str) -> list[Path]:
+    """Generate UI artifacts from UISpec."""
+```
+
+### Custom Components
+
+Register custom components in UISpec:
+```python
+ComponentSpec(
+    name="CustomWidget",
+    category="custom",
+    props_schema=PropsSchema(fields=[...]),
+    view=ElementNode(...)
+)
+```
+
+## Performance Considerations
+
+### Backend
+
+- In-memory storage by default (plug in database adapters)
+- Async route handlers
+- Pydantic validation caching
+
+### Frontend
+
+- No virtual DOM (direct DOM manipulation)
+- Fine-grained signal subscriptions
+- CSS variables for theme switching (no recomputation)
+- Lazy component rendering
+
+## Future Directions
+
+- **Django adapter**: BackendSpec → Django/DRF
+- **React builder**: UISpec → React components
+- **Mobile runtime**: UISpec → React Native / Flutter
+- **WebSocket support**: Real-time updates in specs
+
+--------------------------------------------------------------------------------
+
+## dsl-to-appspec
+
+# DSL to AppSpec Pipeline
+
+How Dazzle transforms DSL files into running applications.
+
+## Pipeline Overview
+
+```mermaid
+graph TD
+    DSL[DSL Files] --> Parser
+    Parser --> IR[AppSpec IR]
+    IR --> Linker
+    Linker --> Validator
+    Validator --> Runtime{Runtime}
+    Runtime --> Back[DNR Backend]
+    Runtime --> UI[DNR UI]
+    Back --> API[FastAPI App]
+    UI --> JS[JavaScript Runtime]
+```
+
+## Stage 1: Parsing
+
+The parser reads `.dsl` files and produces an abstract syntax tree (AST).
+
+```python
+from dazzle.core.dsl_parser import parse_dsl
+
+ast = parse_dsl("""
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+""")
+```
+
+Key features:
+
+- Line-by-line parsing with column tracking
+- Meaningful error messages with location
+- Support for multi-file projects
+
+## Stage 2: IR Generation
+
+The AST is transformed into the Intermediate Representation (IR), called AppSpec.
+
+```python
+from dazzle.core.ir import AppSpec, EntitySpec
+
+appspec = AppSpec(
+    name="my_app",
+    entities=[EntitySpec(...)],
+    surfaces=[...],
+    workspaces=[...]
+)
+```
+
+The IR is:
+
+- **Language-agnostic** - can be serialized to JSON
+- **Normalized** - defaults filled in, references resolved
+- **Validated** - semantic checks applied
+
+## Stage 3: Linking
+
+Multi-module projects are linked together:
+
+```python
+from dazzle.core.linker import link_modules
+
+linked = link_modules([module1, module2, module3])
+```
+
+The linker:
+
+- Resolves cross-module references
+- Checks for circular dependencies
+- Merges shared definitions
+
+## Stage 4: Validation
+
+Semantic validation ensures the spec is sound:
+
+```python
+from dazzle.core.validator import validate_appspec
+
+errors = validate_appspec(appspec)
+```
+
+Validation checks:
+
+- Entity field type compatibility
+- Surface-entity bindings
+- Workspace layout constraints
+- Access rule consistency
+
+## Stage 5: Runtime Generation
+
+The validated AppSpec feeds into runtime generators:
+
+### Backend (DNR-Back)
+
+```python
+from dazzle_dnr_back.converters import convert_appspec_to_backend
+
+backend_spec = convert_appspec_to_backend(appspec)
+```
+
+Produces:
+
+- Pydantic models from EntitySpec
+- Services from ServiceSpec
+- FastAPI routes from EndpointSpec
+
+### Frontend (DNR-UI)
+
+```python
+from dazzle_dnr_ui.converters import convert_appspec_to_ui
+
+ui_spec = convert_appspec_to_ui(appspec)
+```
+
+Produces:
+
+- Workspaces with layouts
+- Components from surfaces
+- Reactive state bindings
+
+## Data Flow
+
+| Stage | Input | Output |
+|-------|-------|--------|
+| Parse | `.dsl` files | AST |
+| IR | AST | AppSpec |
+| Link | AppSpec[] | Linked AppSpec |
+| Validate | AppSpec | Validated AppSpec |
+| Backend | AppSpec | BackendSpec → FastAPI |
+| UI | AppSpec | UISpec → JavaScript |
+
+## Error Handling
+
+Errors at each stage include:
+
+- **Line/column** for parse errors
+- **Entity/field** path for validation errors
+- **Cross-reference** info for linking errors
+
+```
+Error at line 15, column 3:
+  Entity 'Task' references unknown entity 'User' in field 'assigned_to'
+```
+
+## See Also
+
+- [Architecture Overview](overview.md)
+- [CLI Reference](../reference/cli.md)
+
+--------------------------------------------------------------------------------
+
+## event-semantics
+
+# Event-First Architecture
+
+Dazzle supports event-first patterns through the High-Level Event Semantics Specification (HLESS).
+
+## Overview
+
+HLESS defines a **technology-agnostic semantic layer** that:
+
+- Allows humans to specify events **casually and quickly**
+- Enables LLM agents to **safely translate** specifications
+- Produces **formal, machine-validated event definitions**
+- Prevents **semantic drift** over time
+
+## Core Principles
+
+### 1. Append-Only Truth
+
+All records written to an event log are **immutable facts**. They may describe:
+
+- Outcomes
+- Observations
+- Facts about intent
+
+They must not describe something that can later be "undone".
+
+### 2. Logs Are Primary, State Is Derived
+
+Current state, views, projections, and caches are **derived artifacts**. They may be deleted and rebuilt at any time from logs.
+
+### 3. Ordering Is Explicit and Local
+
+Total ordering exists **only within an explicitly declared ordering scope**. Any invariant that relies on order must declare the scope it depends on.
+
+### 4. Semantics Must Be Declared, Not Inferred
+
+No log, stream, or topic may exist without an explicit semantic contract.
+
+## Record Kinds
+
+Every record must be classified as exactly one of these:
+
+### INTENT
+
+A fact that an actor *requested* or *attempted* an action.
+
+```dsl
+# Valid
+event OrderPlacementRequested
+event UserRequestedPasswordReset
+
+# Invalid (imperative, not intent)
+event PlaceOrder
+event CreateInvoice
+```
+
+### FACT
+
+A fact about the domain that is now **permanently true**.
+
+```dsl
+# Valid
+event OrderPlaced
+event InvoiceIssued
+event OrderPlacementRejected
+
+# Invalid (uncertain/retractable)
+event OrderPending
+event ProvisionalInvoice
+```
+
+### OBSERVATION
+
+A fact that something was observed, measured, or reported.
+
+```dsl
+# Valid
+event TemperatureRecorded
+event UserActivityLogged
+event HealthCheckCompleted
+```
+
+### DERIVATION
+
+A computed or derived fact based on other records.
+
+```dsl
+# Valid
+event DailyRevenueCalculated
+event RiskScoreUpdated
+```
+
+## Stream Definitions
+
+Streams are declared with explicit semantics:
+
+```dsl
+stream orders:
+  record_kind: FACT
+  partition_key: order_id
+  retention: 90d
+
+stream order_requests:
+  record_kind: INTENT
+  partition_key: user_id
+  retention: 7d
+```
+
+## Time Semantics
+
+Every record has three timestamps:
+
+| Timestamp | Meaning |
+|-----------|---------|
+| `t_event` | When the event occurred in the real world |
+| `t_log` | When the event was written to the log |
+| `t_process` | When a consumer processed the event |
+
+## See Also
+
+- [Architecture Overview](overview.md)
+- [Messaging Reference](../reference/messaging.md)
+
+--------------------------------------------------------------------------------
+
+## mcp-server
+
+# MCP Server
+
+Dazzle includes a built-in Model Context Protocol (MCP) server for seamless integration with Claude Code and other AI assistants.
+
+## Setup
+
+```bash
+# Homebrew (auto-registered)
+brew install manwithacat/tap/dazzle
+
+# PyPI (manual registration)
+pip install dazzle
+dazzle mcp-setup
+
+# Verify
+dazzle mcp-check
+```
+
+## Available MCP Tools
+
+### Core Tools
+
+| Tool | Purpose |
+|------|---------|
+| `validate_dsl` | Parse and validate DSL files |
+| `list_modules` | List project modules |
+| `inspect_entity` | Examine entity definitions |
+| `inspect_surface` | Examine surface definitions |
+| `analyze_patterns` | Detect CRUD and integration patterns |
+| `lint_project` | Extended validation with style checks |
+| `lookup_concept` | Look up DSL concepts and syntax |
+| `find_examples` | Search example projects by features |
+| `get_workflow_guide` | Get step-by-step workflow guides |
+| `get_cli_help` | Get CLI command help and examples |
+
+### DNR Backend Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_dnr_entities` | List entities in BackendSpec |
+| `get_dnr_entity` | Get detailed EntitySpec |
+| `list_backend_services` | List available backend services |
+| `get_backend_service_spec` | Get full ServiceSpec JSON |
+
+### DNR UI Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_dnr_components` | List UI components (primitives/patterns) |
+| `get_dnr_component_spec` | Get ComponentSpec details |
+| `list_workspace_layouts` | List available layout types |
+| `create_uispec_component` | Create new ComponentSpec |
+| `patch_uispec_component` | Modify existing ComponentSpec |
+| `compose_workspace` | Wire components into workspace layout |
+
+### GraphQL Tools
+
+| Tool | Purpose |
+|------|---------|
+| `get_graphql_schema` | Get generated GraphQL SDL |
+| `list_graphql_types` | List GraphQL types from BackendSpec |
+
+### External API Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_adapters` | List external API adapter patterns |
+| `get_adapter_guide` | Get adapter implementation guide |
+
+## Usage Examples
+
+**Validating a project:**
+
+```
+User: "Validate my DAZZLE project"
+Claude: [Uses validate_dsl tool]
+        "Found 3 modules, 5 entities, 8 surfaces. All valid."
+```
+
+**Understanding structure:**
+
+```
+User: "What patterns do you see?"
+Claude: [Uses analyze_patterns tool]
+        "User management (full CRUD), Task tracking (list/view only)"
+```
+
+**Learning DSL:**
+
+```
+User: "How do I define a workspace?"
+Claude: [Uses lookup_concept with term="workspace"]
+        "A workspace composes regions for user-centric views..."
+```
+
+## Configuration
+
+The MCP server configuration is stored at `~/.config/claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "dazzle": {
+      "command": "dazzle",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+For Homebrew installations, this is configured automatically.
+
+## Troubleshooting
+
+### Server not starting
+
+```bash
+# Check MCP status
+dazzle mcp-check
+
+# View logs
+dazzle mcp --debug
+```
+
+### Tool not found
+
+Ensure you have the latest version:
+
+```bash
+brew upgrade manwithacat/tap/dazzle
+# or
+pip install --upgrade dazzle
+```
+
+## See Also
+
+- [CLI Reference](../reference/cli.md)
+- [Architecture Overview](overview.md)
+
+--------------------------------------------------------------------------------
+
+# SECTION 4: EXAMPLES
+================================================================================
+
+## simple-task
+
+# Simple Task Manager
+
+> The "Hello World" of DAZZLE - a minimal CRUD application demonstrating core DSL concepts.
+
+## Quick Start
+
+```bash
+cd examples/simple_task
+dazzle dnr serve
+# UI: http://localhost:3000
+# API: http://localhost:8000/docs
+```
+
+## Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Complexity** | Beginner |
+| **CI Priority** | P0 (blocks PRs) |
+| **Entities** | Task |
+| **Surfaces** | list, view, create, edit |
+| **Workspaces** | dashboard, my_work |
+
+## DSL Specification
+
+**Source**: [`examples/simple_task/dsl/app.dsl`](../../../examples/simple_task/dsl/app.dsl)
+
+### Entity: Task
+
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  description: text
+  status: enum[todo,in_progress,done]=todo
+  priority: enum[low,medium,high]=medium
+  due_date: date
+  assigned_to: str(100)
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+```
+
+### Surfaces
+
+- **task_list** - Main task overview (list mode)
+- **task_detail** - Individual task view (view mode)
+- **task_create** - New task form (create mode)
+- **task_edit** - Edit existing task (edit mode)
+
+### Workspaces
+
+#### Task Dashboard
+```dsl
+workspace dashboard "Task Dashboard":
+  purpose: "Overview of all tasks with key metrics"
+
+  task_count:
+    source: Task
+    aggregate:
+      total: count(Task)
+
+  urgent_tasks:
+    source: Task
+    limit: 5
+
+  all_tasks:
+    source: Task
+```
+
+#### My Work
+```dsl
+workspace my_work "My Work":
+  purpose: "Personal task view for assigned work"
+
+  in_progress:
+    source: Task
+    limit: 10
+
+  upcoming:
+    source: Task
+    limit: 5
+```
+
+## E2E Test Coverage
+
+| Metric | Coverage |
+|--------|----------|
+| Routes | 4 |
+| CRUD Operations | Full |
+| Components | 4 |
+
+### Test Commands
+
+```bash
+# Generate test specification
+dazzle test generate -o testspec.json
+
+# Run E2E tests
+dazzle test run --verbose
+
+# List available test flows
+dazzle test list
+```
+
+## Screenshots
+
+### Dashboard
+![Dashboard](../../../examples/simple_task/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/simple_task/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/simple_task/screenshots/create_form.png)
+
+## API Endpoints
+
+When running, the following endpoints are available:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tasks` | List all tasks |
+| POST | `/api/tasks` | Create a task |
+| GET | `/api/tasks/{id}` | Get task by ID |
+| PUT | `/api/tasks/{id}` | Update task |
+| DELETE | `/api/tasks/{id}` | Delete task |
+
+## Related Examples
+
+- [Contact Manager](../contact_manager/) - Multi-entity with relationships
+- [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC workspace archetype
+
+--------------------------------------------------------------------------------
+
+## contact-manager
+
+# Contact Manager
+
+> Multi-entity CRUD with the DUAL_PANE_FLOW archetype - list + detail pattern.
+
+## Quick Start
+
+```bash
+cd examples/contact_manager
+dazzle dnr serve
+# UI: http://localhost:3000
+# API: http://localhost:8000/docs
+```
+
+## Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Complexity** | Beginner |
+| **CI Priority** | P0 (blocks PRs) |
+| **Archetype** | DUAL_PANE_FLOW |
+| **Entities** | Contact |
+| **Workspaces** | contacts |
+
+## DSL Specification
+
+**Source**: [`examples/contact_manager/dsl/app.dsl`](../../../examples/contact_manager/dsl/app.dsl)
+
+### Entity: Contact
+
+```dsl
+entity Contact "Contact":
+  id: uuid pk
+  first_name: str(100) required
+  last_name: str(100) required
+  email: email unique required
+  phone: str(20)
+  company: str(200)
+  job_title: str(150)
+  notes: text
+  is_favorite: bool=false
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+
+  index email
+  index last_name,first_name
+```
+
+### Workspace: Contacts
+
+```dsl
+workspace contacts "Contacts":
+  purpose: "Browse contacts and view details"
+
+  # List signal - browsable contact list
+  contact_list:
+    source: Contact
+    limit: 20
+
+  # Detail signal - selected contact details
+  contact_detail:
+    source: Contact
+    display: detail
+```
+
+## Archetype Analysis
+
+This example demonstrates the **DUAL_PANE_FLOW** archetype:
+
+- **List Signal Weight**: 0.6 (base 0.5 + limit 0.1)
+- **Detail Signal Weight**: 0.7 (base 0.5 + detail display 0.2)
+
+**Layout Behavior**:
+- Desktop: Side-by-side list and detail panes
+- Mobile: Stacked view, detail slides over list on selection
+
+## E2E Test Coverage
+
+| Metric | Coverage |
+|--------|----------|
+| Routes | 6 |
+| CRUD Operations | Full |
+| Components | 6 |
+
+### Test Commands
+
+```bash
+dazzle test generate -o testspec.json
+dazzle test run --verbose
+dazzle test list
+```
+
+## Screenshots
+
+### Dashboard
+![Dashboard](../../../examples/contact_manager/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/contact_manager/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/contact_manager/screenshots/create_form.png)
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/contacts` | List all contacts |
+| POST | `/api/contacts` | Create a contact |
+| GET | `/api/contacts/{id}` | Get contact by ID |
+| PUT | `/api/contacts/{id}` | Update contact |
+| DELETE | `/api/contacts/{id}` | Delete contact |
+
+## Related Examples
+
+- [Simple Task](../simple_task/) - Basic CRUD app
+- [Email Client](../email_client/) - MONITOR_WALL archetype
+
+--------------------------------------------------------------------------------
+
+## ops-dashboard
+
+# Operations Dashboard
+
+> COMMAND_CENTER workspace archetype - dense expert interface for operations monitoring.
+
+## Quick Start
+
+```bash
+cd examples/ops_dashboard
+dazzle dnr serve
+# UI: http://localhost:3000
+# API: http://localhost:8000/docs
+```
+
+## Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Complexity** | Advanced |
+| **CI Priority** | P2 |
+| **Archetype** | COMMAND_CENTER |
+| **Entities** | System, Alert |
+| **Workspaces** | command_center |
+| **Personas** | ops_engineer |
+
+## DSL Specification
+
+**Source**: [`examples/ops_dashboard/dsl/app.dsl`](../../../examples/ops_dashboard/dsl/app.dsl)
+
+### Entity: System
+
+```dsl
+entity System "System":
+  id: uuid pk
+  name: str(200) required
+  service_type: enum[web,api,database,cache,queue]=web
+  status: enum[healthy,degraded,critical,offline]=healthy
+  response_time_ms: int
+  error_rate: decimal(5,2)
+  cpu_usage: decimal(5,2)
+  memory_usage: decimal(5,2)
+  last_check: datetime auto_update
+  created_at: datetime auto_add
+```
+
+### Entity: Alert
+
+```dsl
+entity Alert "Alert":
+  id: uuid pk
+  system: ref System required
+  severity: enum[low,medium,high,critical]=low
+  message: str(500) required
+  triggered_at: datetime auto_add
+  acknowledged: bool = false
+  acknowledged_by: str(200)
+```
+
+### Persona: Operations Engineer
+
+```dsl
+persona ops_engineer "Operations Engineer":
+  goals:
+    - "Monitor system health in real-time"
+    - "Respond quickly to alerts"
+  proficiency_level: expert
+  session_style: deep_work
+```
+
+### Workspace: Command Center
+
+```dsl
+workspace command_center "Command Center":
+  purpose: "Real-time operations monitoring and incident response"
+  engine_hint: "command_center"
+
+  active_alerts:
+    source: Alert
+    filter: acknowledged = false
+    sort: severity desc, triggered_at desc
+    limit: 20
+
+  system_status:
+    source: System
+    sort: status asc, name asc
+
+  health_summary:
+    source: System
+    aggregate:
+      total_systems: count(System)
+      healthy_count: count(System WHERE status = 'healthy')
+      critical_count: count(System WHERE status = 'critical')
+      avg_response_time: avg(response_time_ms)
+
+  ux:
+    for ops_engineer:
+      scope: all
+      purpose: "Full visibility into all systems and alerts"
+```
+
+## Archetype Analysis
+
+This example demonstrates the **COMMAND_CENTER** archetype:
+
+- 8+ signals with high information density
+- Expert-oriented interface
+- Real-time monitoring focus
+- Persona-driven UX customization
+
+**Use Cases**:
+- DevOps monitoring
+- Network operations centers
+- System health dashboards
+- Incident response interfaces
+
+## Advanced Features
+
+### Persona Integration
+
+The `ops_engineer` persona influences:
+- Information density (expert level)
+- Session style (deep work - extended monitoring)
+- UX scope (full visibility)
+
+### Engine Hints
+
+The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER archetype for maximum information density.
+
+## E2E Test Coverage
+
+| Metric | Coverage |
+|--------|----------|
+| Routes | 8 |
+| CRUD Operations | Partial |
+| Components | 8 |
+
+## Screenshots
+
+### Dashboard
+![Dashboard](../../../examples/ops_dashboard/screenshots/dashboard.png)
+
+### List View
+![List View](../../../examples/ops_dashboard/screenshots/list_view.png)
+
+### Create Form
+![Create Form](../../../examples/ops_dashboard/screenshots/create_form.png)
+
+## API Endpoints
+
+### Systems
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/systems` | List all systems |
+| POST | `/api/systems` | Create a system |
+| GET | `/api/systems/{id}` | Get system by ID |
+| PUT | `/api/systems/{id}` | Update system |
+| DELETE | `/api/systems/{id}` | Delete system |
+
+### Alerts
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/alerts` | List all alerts |
+| POST | `/api/alerts` | Create an alert |
+| GET | `/api/alerts/{id}` | Get alert by ID |
+| PUT | `/api/alerts/{id}` | Update/acknowledge alert |
+| DELETE | `/api/alerts/{id}` | Delete alert |
+
+## Related Examples
+
+- [Email Client](../email_client/) - MONITOR_WALL archetype (3-5 signals)
+- [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC archetype (single KPI)
+
+--------------------------------------------------------------------------------
+

@@ -23,7 +23,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/uptime_monitor/dsl/app.dsl`](../../../examples/uptime_monitor/dsl/app.dsl)
+**Source**: [examples/uptime_monitor/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/uptime_monitor/dsl/app.dsl)
 
 ### Entity: Service
 
@@ -77,13 +77,13 @@ This example demonstrates the **FOCUS_METRIC** archetype:
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/uptime_monitor/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/uptime_monitor/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/uptime_monitor/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/uptime_monitor/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/uptime_monitor/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/uptime_monitor/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -97,5 +97,5 @@ This example demonstrates the **FOCUS_METRIC** archetype:
 
 ## Related Examples
 
-- [Ops Dashboard](../ops_dashboard/) - COMMAND_CENTER archetype (8+ signals)
-- [Inventory Scanner](../inventory_scanner/) - SCANNER_TABLE archetype
+- [Ops Dashboard](ops-dashboard.md) - COMMAND_CENTER archetype (8+ signals)
+- [Inventory Scanner](inventory-scanner.md) - SCANNER_TABLE archetype

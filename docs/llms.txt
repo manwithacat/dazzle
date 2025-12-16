@@ -1,0 +1,124 @@
+# Dazzle - LLM Agent Index
+
+> This file helps AI agents navigate Dazzle documentation.
+> For full content export, see llms-full.txt
+
+## Quick Facts
+
+- **What**: DSL-first toolkit for building apps from specifications
+- **Language**: Python 3.11+, JavaScript (vanilla)
+- **Repository**: https://github.com/manwithacat/dazzle
+- **Docs Site**: https://manwithacat.github.io/dazzle/
+
+## Key Commands
+
+```bash
+dazzle init my_app        # Create new project
+dazzle validate           # Validate DSL files
+dazzle dnr serve          # Run development server
+dazzle dnr serve --local  # Run without Docker
+```
+
+## Essential Pages
+
+### Getting Started
+- /getting-started/installation/  - Install Dazzle
+- /getting-started/quickstart/    - 5-minute guide
+- /getting-started/first-app/     - Tutorial
+
+### DSL Reference
+- /reference/entities/     - Data models (entity, fields, types)
+- /reference/surfaces/     - UI views (list, detail, create, edit)
+- /reference/workspaces/   - Layout composition
+- /reference/services/     - Business logic
+- /reference/integrations/ - External APIs
+
+### Architecture
+- /architecture/overview/       - How DNR works
+- /architecture/dsl-to-appspec/ - Pipeline explanation
+- /architecture/mcp-server/     - AI integration
+
+### Examples
+- /examples/simple-task/      - Beginner CRUD app
+- /examples/contact-manager/  - Relationships
+- /examples/ops-dashboard/    - Dashboards, metrics
+
+## Core DSL Concepts
+
+### Entity (Data Model)
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[todo, done] = todo
+```
+
+### Surface (UI View)
+```dsl
+surface task_list "Tasks" -> Task list:
+  section main:
+    field title "Title"
+    field status "Status"
+```
+
+### Workspace (Layout)
+```dsl
+workspace dashboard "Dashboard":
+  region main:
+    surface task_list
+  region panel:
+    surface task_detail
+```
+
+## MCP Tools
+
+When working with Dazzle projects, these MCP tools are available:
+
+| Tool | Purpose |
+|------|---------|
+| validate_dsl | Check DSL syntax and semantics |
+| list_modules | List project modules |
+| inspect_entity | Examine entity definition |
+| analyze_patterns | Detect CRUD patterns |
+| lookup_concept | Look up DSL syntax |
+
+## File Locations
+
+| Path | Contents |
+|------|----------|
+| dsl/*.dsl | DSL source files |
+| dazzle.toml | Project configuration |
+| .dazzle/ | Generated artifacts |
+
+## Common Patterns
+
+### Full CRUD Entity
+```dsl
+entity Item:
+  id: uuid pk
+  name: str(200) required
+
+surface item_list -> Item list
+surface item_detail -> Item view
+surface item_create -> Item create
+surface item_edit -> Item edit
+```
+
+### Relationship
+```dsl
+entity Order:
+  customer: Customer.id required  # FK reference
+```
+
+### Computed Field
+```dsl
+entity Order:
+  subtotal: decimal(10,2)
+  tax: decimal(10,2)
+  total: computed = subtotal + tax
+```
+
+## Getting Help
+
+- GitHub Issues: https://github.com/manwithacat/dazzle/issues
+- Documentation: https://manwithacat.github.io/dazzle/

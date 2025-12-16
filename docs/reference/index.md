@@ -1,21 +1,23 @@
-# DAZZLE DSL Reference Guide v0.9
+# DSL Reference
 
-Complete reference for the DAZZLE Domain-Specific Language.
+Complete reference for the DAZZLE Domain-Specific Language v0.9.
 
-## Document Structure
+## Reference Documents
 
-| File | Description |
-|------|-------------|
-| [01-modules.md](./01-modules.md) | Module declarations, app metadata, use statements |
-| [02-entities.md](./02-entities.md) | Entity definitions, fields, types, relationships |
-| [03-surfaces.md](./03-surfaces.md) | UI surfaces, sections, actions, outcomes |
-| [04-workspaces.md](./04-workspaces.md) | Data-centric views with regions and aggregates |
-| [05-services.md](./05-services.md) | External APIs and domain services |
-| [06-integrations.md](./06-integrations.md) | API integrations, actions, syncs, mappings |
-| [07-messaging.md](./07-messaging.md) | Channels, messages, templates, assets |
-| [08-ux.md](./08-ux.md) | UX semantic layer, attention signals, persona variants |
-| [09-scenarios.md](./09-scenarios.md) | Personas, scenarios, demo fixtures |
-| [10-experiences.md](./10-experiences.md) | Multi-step user flows |
+| Section | Description |
+|---------|-------------|
+| [Modules](modules.md) | Module declarations, app metadata, use statements |
+| [Entities](entities.md) | Entity definitions, fields, types, relationships |
+| [Surfaces](surfaces.md) | UI surfaces, sections, actions, outcomes |
+| [Workspaces](workspaces.md) | Data-centric views with regions and aggregates |
+| [Services](services.md) | External APIs and domain services |
+| [Integrations](integrations.md) | API integrations, actions, syncs, mappings |
+| [Messaging](messaging.md) | Channels, messages, templates, assets |
+| [UX Layer](ux.md) | UX semantic layer, attention signals, persona variants |
+| [Scenarios](scenarios.md) | Personas, scenarios, demo fixtures |
+| [Experiences](experiences.md) | Multi-step user flows |
+| [CLI](cli.md) | Command-line interface reference |
+| [Grammar](grammar.md) | Formal EBNF grammar specification |
 
 ## Quick Start
 

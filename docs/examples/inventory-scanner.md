@@ -23,7 +23,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/inventory_scanner/dsl/app.dsl`](../../../examples/inventory_scanner/dsl/app.dsl)
+**Source**: [examples/inventory_scanner/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/inventory_scanner/dsl/app.dsl)
 
 ### Entity: Product
 
@@ -77,13 +77,13 @@ This example demonstrates the **SCANNER_TABLE** archetype:
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/inventory_scanner/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/inventory_scanner/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/inventory_scanner/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/inventory_scanner/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/inventory_scanner/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/inventory_scanner/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -97,5 +97,5 @@ This example demonstrates the **SCANNER_TABLE** archetype:
 
 ## Related Examples
 
-- [Ops Dashboard](../ops_dashboard/) - COMMAND_CENTER archetype
-- [Contact Manager](../contact_manager/) - DUAL_PANE_FLOW archetype
+- [Ops Dashboard](ops-dashboard.md) - COMMAND_CENTER archetype
+- [Contact Manager](contact-manager.md) - DUAL_PANE_FLOW archetype

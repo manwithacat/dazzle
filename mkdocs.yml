@@ -1,0 +1,115 @@
+site_name: Dazzle Developer Docs
+site_description: Developer documentation for Dazzle - DSL-first toolkit for building apps from high-level specifications.
+site_url: https://manwithacat.github.io/dazzle/
+repo_url: https://github.com/manwithacat/dazzle
+repo_name: manwithacat/dazzle
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    - search.highlight
+    - search.share
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Start Here: index.md
+  - Getting Started:
+      - Overview: getting-started/index.md
+      - Installation: getting-started/installation.md
+      - Quickstart: getting-started/quickstart.md
+      - Your First App: getting-started/first-app.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Event Semantics: architecture/event-semantics.md
+      - DSL to AppSpec: architecture/dsl-to-appspec.md
+      - MCP Server: architecture/mcp-server.md
+  - DSL Reference:
+      - Overview: reference/index.md
+      - Modules: reference/modules.md
+      - Entities: reference/entities.md
+      - Surfaces: reference/surfaces.md
+      - Workspaces: reference/workspaces.md
+      - Services: reference/services.md
+      - Integrations: reference/integrations.md
+      - Messaging: reference/messaging.md
+      - UX Layer: reference/ux.md
+      - Scenarios: reference/scenarios.md
+      - Experiences: reference/experiences.md
+      - CLI: reference/cli.md
+      - Grammar: reference/grammar.md
+  - Examples:
+      - Overview: examples/index.md
+      - Simple Task: examples/simple-task.md
+      - Contact Manager: examples/contact-manager.md
+      - Email Client: examples/email-client.md
+      - Ops Dashboard: examples/ops-dashboard.md
+      - Uptime Monitor: examples/uptime-monitor.md
+      - Inventory Scanner: examples/inventory-scanner.md
+  - Contributing:
+      - Dev Setup: contributing/dev-setup.md
+      - Testing: contributing/testing.md
+      - Adding a Feature: contributing/adding-a-feature.md
+  - ADRs:
+      - "0001: Docs Site": adr/0001-docs-site.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+
+plugins:
+  - search
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/manwithacat/dazzle
+
+extra_javascript:
+  - javascripts/mermaid.js

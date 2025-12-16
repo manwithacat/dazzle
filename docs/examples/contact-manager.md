@@ -23,7 +23,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/contact_manager/dsl/app.dsl`](../../../examples/contact_manager/dsl/app.dsl)
+**Source**: [examples/contact_manager/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/contact_manager/dsl/app.dsl)
 
 ### Entity: Contact
 
@@ -92,13 +92,13 @@ dazzle test list
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/contact_manager/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/contact_manager/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/contact_manager/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/contact_manager/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/contact_manager/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/contact_manager/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -112,5 +112,5 @@ dazzle test list
 
 ## Related Examples
 
-- [Simple Task](../simple_task/) - Basic CRUD app
-- [Email Client](../email_client/) - MONITOR_WALL archetype
+- [Simple Task](simple-task.md) - Basic CRUD app
+- [Email Client](email-client.md) - MONITOR_WALL archetype

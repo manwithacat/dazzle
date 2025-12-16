@@ -1,3 +1,31 @@
+# DSL Grammar Specification
+
+Formal EBNF grammar for DAZZLE DSL v0.9.
+
+## Overview
+
+This grammar defines the complete syntax for the DAZZLE Domain-Specific Language. It extends the base DSL with:
+
+- State machines (`transitions` block) for entity lifecycle
+- Computed fields with aggregate expressions
+- Entity invariants for data integrity rules
+- Access rules (inline read/write permissions)
+- Intent declarations for semantic documentation
+- Domain and patterns tags for LLM guidance
+- Archetypes with `extends` inheritance
+- Relationship semantics (`has_many`, `has_one`, `embeds`, `belongs_to`)
+
+## Anti-Turing Enforcement
+
+DAZZLE intentionally limits computational expressiveness to ensure:
+
+- Aggregate functions only in computed expressions
+- `AGGREGATE_FN` explicitly enumerates allowed functions
+- Turing-complete logic lives in service stubs (not DSL)
+
+## Full Grammar
+
+```ebnf
 (*
   DAZZLE DSL 0.7 – Informal EBNF Grammar
   --------------------------------------
@@ -646,3 +674,4 @@ assertion_check ::= "visible" | "hidden" | "enabled" | "disabled"
                   | "text" "=" STRING
                   | "value" "=" literal
                   | "count" "=" NUMBER ;
+```

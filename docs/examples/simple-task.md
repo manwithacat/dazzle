@@ -23,7 +23,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/simple_task/dsl/app.dsl`](../../../examples/simple_task/dsl/app.dsl)
+**Source**: [examples/simple_task/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/simple_task/dsl/app.dsl)
 
 ### Entity: Task
 
@@ -105,13 +105,13 @@ dazzle test list
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/simple_task/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/simple_task/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/simple_task/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/simple_task/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -127,5 +127,5 @@ When running, the following endpoints are available:
 
 ## Related Examples
 
-- [Contact Manager](../contact_manager/) - Multi-entity with relationships
-- [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC workspace archetype
+- [Contact Manager](contact-manager.md) - Multi-entity with relationships
+- [Uptime Monitor](uptime-monitor.md) - FOCUS_METRIC workspace archetype

@@ -23,7 +23,7 @@ dazzle dnr serve
 
 ## DSL Specification
 
-**Source**: [`examples/email_client/dsl/app.dsl`](../../../examples/email_client/dsl/app.dsl)
+**Source**: [examples/email_client/dsl/app.dsl](https://github.com/manwithacat/dazzle/blob/main/examples/email_client/dsl/app.dsl)
 
 ### Entity: Message
 
@@ -93,13 +93,13 @@ This example demonstrates the **MONITOR_WALL** archetype:
 ## Screenshots
 
 ### Dashboard
-![Dashboard](../../../examples/email_client/screenshots/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/email_client/screenshots/dashboard.png)
 
 ### List View
-![List View](../../../examples/email_client/screenshots/list_view.png)
+![List View](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/email_client/screenshots/list_view.png)
 
 ### Create Form
-![Create Form](../../../examples/email_client/screenshots/create_form.png)
+![Create Form](https://raw.githubusercontent.com/manwithacat/dazzle/main/examples/email_client/screenshots/create_form.png)
 
 ## API Endpoints
 
@@ -113,5 +113,5 @@ This example demonstrates the **MONITOR_WALL** archetype:
 
 ## Related Examples
 
-- [Ops Dashboard](../ops_dashboard/) - COMMAND_CENTER archetype (8+ signals)
-- [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC archetype
+- [Ops Dashboard](ops-dashboard.md) - COMMAND_CENTER archetype (8+ signals)
+- [Uptime Monitor](uptime-monitor.md) - FOCUS_METRIC archetype

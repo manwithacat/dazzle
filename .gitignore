@@ -61,3 +61,7 @@ examples/*/dnr-ui/
 node_modules/
 dev_docs/
 tmp/
+
+# MkDocs build output
+site/
+docs_archive_backup/
