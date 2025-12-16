@@ -9,6 +9,7 @@
     ]),
     'channels': list([
     ]),
+    'data_products': None,
     'documents': list([
     ]),
     'domain': dict({
@@ -152,11 +153,13 @@
     'hless_pragma': None,
     'integrations': list([
     ]),
+    'interfaces': None,
     'messages': list([
     ]),
     'name': 'simple_test',
     'personas': list([
     ]),
+    'policies': None,
     'projections': list([
     ]),
     'scenarios': list([
@@ -311,6 +314,7 @@
     ]),
     'templates': list([
     ]),
+    'tenancy': None,
     'tests': list([
     ]),
     'title': 'Simple Test App',

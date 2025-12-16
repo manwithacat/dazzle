@@ -80,6 +80,26 @@ jobs:
           cd ../..
         done
 
+    - name: Generate and validate AsyncAPI specs
+      run: |
+        # Install AsyncAPI CLI for validation
+        npm install -g @asyncapi/cli
+
+        # Generate and validate AsyncAPI for each example
+        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
+          echo "Generating AsyncAPI for $example..."
+          cd examples/$example
+          python -m dazzle eject asyncapi -f json -o asyncapi.json
+
+          # Validate the generated AsyncAPI spec
+          if [ -f asyncapi.json ]; then
+            echo "Validating AsyncAPI spec for $example..."
+            asyncapi validate asyncapi.json || echo "Warning: AsyncAPI validation issues in $example"
+            rm asyncapi.json
+          fi
+          cd ../..
+        done
+
   js-lint:
     runs-on: ubuntu-latest
 

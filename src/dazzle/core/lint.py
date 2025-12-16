@@ -2,6 +2,7 @@ from . import ir
 from .validator import (
     extended_lint,
     validate_entities,
+    validate_event_payload_secrets,
     validate_experiences,
     validate_foreign_models,
     validate_integrations,
@@ -77,6 +78,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # Money field validation (FACT/INTENT streams must use Money type)
     errors, warnings = validate_money_fields(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Event payload secrets validation
+    errors, warnings = validate_event_payload_secrets(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
