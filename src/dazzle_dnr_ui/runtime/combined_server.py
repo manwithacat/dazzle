@@ -384,6 +384,16 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             cta_href = cta.get("href", "/app")
             nav_items_html += f'<a href="{cta_href}" class="dz-nav-cta">{cta_label}</a>\n'
 
+        # Add theme toggle button (v0.16.0 - Issue #26)
+        nav_items_html += """<button class="dz-theme-toggle" id="dz-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                    <svg class="dz-theme-toggle__icon dz-theme-toggle__sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <svg class="dz-theme-toggle__icon dz-theme-toggle__moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>\n"""
+
         # Build footer HTML
         footer_html = ""
         for col in footer.get("columns", []):
@@ -445,6 +455,78 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
  */
 (function() {
     'use strict';
+
+    // ==========================================================================
+    // Theme System (v0.16.0 - Issue #26)
+    // ==========================================================================
+
+    const STORAGE_KEY = 'dz-theme-variant';
+    const THEME_LIGHT = 'light';
+    const THEME_DARK = 'dark';
+
+    function getSystemPreference() {
+        if (typeof window === 'undefined') return THEME_LIGHT;
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        return mediaQuery.matches ? THEME_DARK : THEME_LIGHT;
+    }
+
+    function getStoredPreference() {
+        if (typeof localStorage === 'undefined') return null;
+        return localStorage.getItem(STORAGE_KEY);
+    }
+
+    function storePreference(variant) {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(STORAGE_KEY, variant);
+    }
+
+    function applyTheme(variant) {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', variant);
+        root.style.colorScheme = variant;
+        root.classList.remove('dz-theme-light', 'dz-theme-dark');
+        root.classList.add('dz-theme-' + variant);
+    }
+
+    function initTheme() {
+        const stored = getStoredPreference();
+        const system = getSystemPreference();
+        const variant = stored || system || THEME_LIGHT;
+        applyTheme(variant);
+
+        // Listen for system preference changes
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', function(e) {
+            if (!getStoredPreference()) {
+                applyTheme(e.matches ? THEME_DARK : THEME_LIGHT);
+            }
+        });
+
+        return variant;
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme') || THEME_LIGHT;
+        const newVariant = current === THEME_LIGHT ? THEME_DARK : THEME_LIGHT;
+        applyTheme(newVariant);
+        storePreference(newVariant);
+        return newVariant;
+    }
+
+    // Initialize theme immediately (before DOMContentLoaded)
+    initTheme();
+
+    // Set up toggle button
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('dz-theme-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleTheme);
+        }
+    });
+
+    // ==========================================================================
+    // Page Rendering
+    // ==========================================================================
 
     const main = document.getElementById('dz-site-main');
     const route = main?.dataset.route || '/';
