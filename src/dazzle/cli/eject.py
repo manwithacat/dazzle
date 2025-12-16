@@ -482,6 +482,70 @@ def eject_openapi(
         typer.echo(content)
 
 
+@eject_app.command(name="asyncapi")
+def eject_asyncapi(
+    project_dir: Path = typer.Option(  # noqa: B008
+        Path("."),
+        "--project",
+        "-p",
+        help="Project directory (default: current directory)",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file (default: stdout)",
+    ),
+    format: str = typer.Option(
+        "yaml",
+        "--format",
+        "-f",
+        help="Output format (yaml or json)",
+    ),
+) -> None:
+    """
+    Generate AsyncAPI specification from DAZZLE spec.
+
+    Generates an AsyncAPI 3.0 specification from your DAZZLE
+    event model, including topics, events, and subscriptions.
+
+    Examples:
+        dazzle eject asyncapi                     # Print to stdout
+        dazzle eject asyncapi -o asyncapi.yaml    # Save to file
+        dazzle eject asyncapi -f json             # Output as JSON
+    """
+    from dazzle.eject import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
+
+    project_path = project_dir.resolve()
+
+    # Load AppSpec
+    spec = _load_appspec(project_path)
+
+    # Check for event model or HLESS streams
+    if not spec.event_model and not spec.streams:
+        typer.echo(
+            "Warning: No event_model or HLESS streams defined in DSL. "
+            "AsyncAPI will only contain entity schemas.",
+            err=True,
+        )
+
+    # Generate AsyncAPI
+    asyncapi = generate_asyncapi(spec)
+
+    # Format output
+    if format.lower() == "json":
+        content = asyncapi_to_json(asyncapi)
+    else:
+        content = asyncapi_to_yaml(asyncapi)
+
+    # Write output
+    if output:
+        output.write_text(content)
+        typer.echo(f"AsyncAPI specification written to {output}")
+    else:
+        typer.echo(content)
+
+
 @eject_app.command(name="verify")
 def eject_verify(
     output_dir: Path = typer.Argument(  # noqa: B008
