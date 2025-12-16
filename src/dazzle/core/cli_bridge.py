@@ -540,9 +540,10 @@ def db_seed_json(
         app_spec, manifest = load_project_with_manifest(project_path)
 
         try:
+            from dazzle_dnr_back.runtime.seeder import seed_demo_data
+
             from dazzle_dnr_back.converters import convert_appspec_to_backend
             from dazzle_dnr_back.runtime.repository import DatabaseManager
-            from dazzle_dnr_back.runtime.seeder import seed_demo_data
         except ImportError as e:
             raise RuntimeError(f"DNR backend not available: {e}") from e
 

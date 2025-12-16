@@ -13,8 +13,9 @@ import typer
 from dazzle.core.strings import to_api_plural
 
 if TYPE_CHECKING:
-    from dazzle.core import ir
     from dazzle_dnr_back.specs.backend import BackendSpec
+
+    from dazzle.core import ir
 
 
 def run_api_contract_tests(
