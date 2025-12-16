@@ -6,7 +6,10 @@ This package provides the core event infrastructure for Dazzle applications:
 - EventBus: Abstract interface for event publish/subscribe
 - DevBusMemory: In-memory bus for tests
 - DevBrokerSQLite: Zero-Docker SQLite-backed broker for development
+- KafkaBus: Production Kafka adapter (v0.18.0 Phase I)
 - Outbox/Inbox: Transactional guarantees for at-least-once delivery
+- Multi-tenancy strategies (v0.18.0 Phase I)
+- Topology drift detection (v0.18.0 Phase I)
 """
 
 from dazzle_dnr_back.events.bus import (
@@ -47,6 +50,42 @@ from dazzle_dnr_back.events.service_mixin import (
     EventEmittingCRUDService,
     EventEmittingMixin,
 )
+
+# v0.18.0 Phase I additions
+from dazzle_dnr_back.events.kafka_bus import (
+    KAFKA_AVAILABLE,
+    KafkaConfig,
+)
+from dazzle_dnr_back.events.multi_tenancy import (
+    HybridTenancyStrategy,
+    NamespacePerTenantStrategy,
+    SharedTopicsStrategy,
+    TenancyMode,
+    TenancyStrategy,
+    TenantContext,
+    TenantEventConsumer,
+    TenantEventPublisher,
+    create_strategy,
+)
+from dazzle_dnr_back.events.topology_drift import (
+    DriftIssue,
+    DriftReport,
+    DriftSeverity,
+    DriftType,
+    ExpectedConsumer,
+    ExpectedTopic,
+    ExpectedTopology,
+    TopologyDriftDetector,
+    TopologyExtractor,
+    TopologyFingerprint,
+    check_topology_drift,
+)
+
+# Conditional import for KafkaBus
+if KAFKA_AVAILABLE:
+    from dazzle_dnr_back.events.kafka_bus import KafkaBus
+else:
+    KafkaBus = None  # type: ignore[misc,assignment]
 
 __all__ = [
     # Envelope
@@ -94,4 +133,30 @@ __all__ = [
     "EventNotFoundError",
     "PublishError",
     "SubscriptionError",
+    # v0.18.0 Phase I - Kafka adapter
+    "KAFKA_AVAILABLE",
+    "KafkaBus",
+    "KafkaConfig",
+    # v0.18.0 Phase I - Multi-tenancy
+    "TenancyMode",
+    "TenancyStrategy",
+    "TenantContext",
+    "SharedTopicsStrategy",
+    "NamespacePerTenantStrategy",
+    "HybridTenancyStrategy",
+    "TenantEventPublisher",
+    "TenantEventConsumer",
+    "create_strategy",
+    # v0.18.0 Phase I - Topology drift detection
+    "DriftType",
+    "DriftSeverity",
+    "DriftIssue",
+    "DriftReport",
+    "TopologyFingerprint",
+    "ExpectedTopic",
+    "ExpectedConsumer",
+    "ExpectedTopology",
+    "TopologyExtractor",
+    "TopologyDriftDetector",
+    "check_topology_drift",
 ]
