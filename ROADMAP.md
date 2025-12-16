@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2025-12-16
-**Current Version**: v0.16.0
+**Current Version**: v0.17.0
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
@@ -32,20 +32,6 @@ Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
 
 ## Roadmap
 
-### v0.17.0 - API Knowledgebase & Integration Assistant
-
-**Issue**: [#21](https://github.com/manwithacat/dazzle/issues/21)
-**Status**: Next Sprint
-
-Curated API definitions and LLM-assisted integration setup.
-
-- Pre-baked API packs for common services (Stripe, HMRC, Xero)
-- `.env.example` generation from service requirements
-- MCP tools: `lookup_api_pack`, `suggest_integration`
-- Zero hallucinated endpoints - all from curated packs
-
----
-
 ### v0.18.0 - Multi-Platform Support
 
 **Issue**: [#23](https://github.com/manwithacat/dazzle/issues/23)
@@ -75,6 +61,15 @@ Hosted control plane for production app management.
 ---
 
 ## Completed Milestones
+
+### v0.17.0 - API Knowledgebase & Integration Assistant ✅
+
+Completed 2025-12-16. Issue [#21](https://github.com/manwithacat/dazzle/issues/21).
+
+- 12 curated API packs (Stripe, HMRC×6, Companies House, Xero, Ordnance Survey, SumSub, DocuSeal)
+- MCP tools: `list_api_packs`, `search_api_packs`, `get_api_pack`, `generate_service_dsl`
+- DSL generation from packs (service blocks, foreign_models, .env.example)
+- Zero hallucinated endpoints - all from curated TOML packs
 
 ### v0.16.0 - Documentation, Event-First, SiteSpec, Messaging ✅
 
