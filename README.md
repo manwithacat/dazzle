@@ -53,7 +53,7 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 - `analyze_patterns` - Detect CRUD and integration patterns
 - And more! Ask Claude: "What DAZZLE tools do you have access to?"
 
-See [Tooling Guide](docs/TOOLING.md) for details.
+See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
 ## Version Status
 
@@ -331,26 +331,44 @@ my_project/
 
 ## Documentation
 
+**Full documentation**: [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle/)
+
+### Getting Started
+- [Installation](docs/getting-started/installation.md) - Install DAZZLE
+- [Quickstart](docs/getting-started/quickstart.md) - First steps
+- [First App Tutorial](docs/getting-started/first-app.md) - Build your first app
+
 ### DSL Reference
 - [DSL Reference Guide](docs/reference/) - Complete DSL documentation
-  - [Modules](docs/reference/01-modules.md) - Module and app declarations
-  - [Entities](docs/reference/02-entities.md) - Data modeling
-  - [Surfaces](docs/reference/03-surfaces.md) - UI screens
-  - [Workspaces](docs/reference/04-workspaces.md) - Dashboards
-  - [Services](docs/reference/05-services.md) - External and domain services
-  - [Integrations](docs/reference/06-integrations.md) - API orchestration
-  - [Messaging](docs/reference/07-messaging.md) - Channels and templates
-  - [UX Layer](docs/reference/08-ux.md) - Attention signals and personas
-  - [Scenarios](docs/reference/09-scenarios.md) - Test data and personas
-  - [Experiences](docs/reference/10-experiences.md) - Multi-step flows
+  - [Modules](docs/reference/modules.md) - Module and app declarations
+  - [Entities](docs/reference/entities.md) - Data modeling
+  - [Surfaces](docs/reference/surfaces.md) - UI screens
+  - [Workspaces](docs/reference/workspaces.md) - Dashboards
+  - [Services](docs/reference/services.md) - External and domain services
+  - [Integrations](docs/reference/integrations.md) - API orchestration
+  - [Messaging](docs/reference/messaging.md) - Channels and templates
+  - [UX Layer](docs/reference/ux.md) - Attention signals and personas
+  - [Scenarios](docs/reference/scenarios.md) - Test data and personas
+  - [Experiences](docs/reference/experiences.md) - Multi-step flows
+  - [CLI Reference](docs/reference/cli.md) - Command-line interface
+  - [DSL Grammar](docs/reference/grammar.md) - Formal EBNF grammar
 
-### Technical
-- [DSL Grammar](docs/v0.9/DAZZLE_DSL_GRAMMAR.ebnf) - Formal EBNF grammar
-- [Example Projects](docs/examples/) - Live demos
+### Architecture
+- [Architecture Overview](docs/architecture/overview.md) - System design
+- [DSL to AppSpec](docs/architecture/dsl-to-appspec.md) - Compilation pipeline
+- [MCP Server](docs/architecture/mcp-server.md) - Claude Code integration
 
-### Tooling
-- [Tooling Guide](docs/TOOLING.md) - MCP server, IDE integration
-- [Contributing](CONTRIBUTING.md) - Contribution guidelines
+### Examples
+- [Simple Task](docs/examples/simple-task.md) - Basic todo app
+- [Contact Manager](docs/examples/contact-manager.md) - CRM example
+- [Ops Dashboard](docs/examples/ops-dashboard.md) - Monitoring dashboard
+- [Support Tickets](docs/examples/support-tickets.md) - Ticket system
+- [FieldTest Hub](docs/examples/fieldtest-hub.md) - Full-featured demo
+
+### Contributing
+- [Development Setup](docs/contributing/dev-setup.md) - Local development
+- [Testing Guide](docs/contributing/testing.md) - Running tests
+- [Adding Features](docs/contributing/adding-a-feature.md) - Extending DAZZLE
 
 ## Contributing
 
