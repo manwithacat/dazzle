@@ -1,0 +1,83 @@
+# HMRC CIS Deductions (MTD) Pack
+# Construction Industry Scheme deductions management
+#
+# Capabilities:
+# - Retrieve CIS deductions position
+# - Create deduction amendments
+# - Amend existing submissions
+# - Delete submissions
+#
+# Source: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api/3.0
+# GitHub: https://github.com/hmrc/cis-deductions-api (verified via engineering.hmrc.gov.uk)
+
+[pack]
+name = "hmrc_cis"
+provider = "HMRC"
+category = "tax"
+version = "3.0"
+description = "Construction Industry Scheme (CIS) Deductions for MTD"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/cis-deductions-api/3.0"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:self-assessment", "write:self-assessment"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_NINO = { required = false, description = "Default National Insurance Number", example = "AB123456C" }
+
+[operations]
+# Retrieve current CIS deductions position
+get_current_position = { method = "GET", path = "/individuals/deductions/cis/{nino}/current-position/{tax_year}/{source}", description = "Retrieve CIS deductions for tax year" }
+
+# Create new deduction amendment
+create_amendment = { method = "POST", path = "/individuals/deductions/cis/{nino}/amendments", description = "Create CIS deduction amendment" }
+
+# Amend existing submission
+amend_submission = { method = "PUT", path = "/individuals/deductions/cis/{nino}/amendments/{submission_id}", description = "Amend CIS deduction submission" }
+
+# Delete submission
+delete_submission = { method = "DELETE", path = "/individuals/deductions/cis/{nino}/amendments/{submission_id}/{tax_year}", description = "Delete CIS deduction submission" }
+
+[foreign_models.CISDeduction]
+description = "A CIS deduction record from contractor payments"
+key = "submission_id"
+
+[foreign_models.CISDeduction.fields]
+submission_id = { type = "uuid", required = true, pk = true }
+contractor_name = { type = "str(200)", required = true }
+employer_ref = { type = "str(20)", description = "Contractor PAYE reference" }
+period_from = { type = "date", required = true }
+period_to = { type = "date", required = true }
+deduction_amount = { type = "decimal(13,2)", required = true }
+cost_of_materials = { type = "decimal(13,2)" }
+gross_amount_paid = { type = "decimal(13,2)" }
+source = { type = "enum[customer,contractor,all]", description = "Data source" }
+
+[foreign_models.CISAmendment]
+description = "Amendment to CIS deductions"
+key = "submission_id"
+
+[foreign_models.CISAmendment.fields]
+submission_id = { type = "uuid", required = true, pk = true }
+tax_year = { type = "str(10)", required = true, description = "Tax year e.g. 2024-25" }
+contractor_name = { type = "str(200)" }
+employer_ref = { type = "str(20)" }
+period_data = { type = "json", description = "Array of period deduction details" }
+
+[integration_hints]
+on_contractor_payment = "create_amendment with deduction details"
+on_year_end = "get_current_position to reconcile total deductions"
+on_correction_needed = "amend_submission with corrected figures"
+on_duplicate_entry = "delete_submission to remove erroneous record"
+
+[notes]
+fraud_headers = "All requests require Gov-Client-* fraud prevention headers"
+sandbox = "Test at: https://test-api.service.hmrc.gov.uk"
+subcontractor = "Used by subcontractors to manage CIS deductions made by contractors"
+tax_year_format = "Use format YYYY-YY e.g. 2024-25"
+sources = "source parameter: 'customer' (self-reported), 'contractor' (from contractor returns), 'all' (both)"

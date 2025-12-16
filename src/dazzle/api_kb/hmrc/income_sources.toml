@@ -1,0 +1,140 @@
+# HMRC Individual Income Sources (MTD) Pack
+# Comprehensive income reporting for MTD Income Tax Self Assessment
+#
+# Capabilities:
+# - Dividends income (UK and foreign)
+# - Savings income (UK accounts, interest)
+# - Pensions income
+# - State benefits
+# - Foreign income
+#
+# These APIs feed into the MTD ITSA calculation
+# Source: https://developer.service.hmrc.gov.uk/api-documentation/docs/api
+# GitHub: https://github.com/hmrc (verified via engineering.hmrc.gov.uk)
+
+[pack]
+name = "hmrc_income_sources"
+provider = "HMRC"
+category = "tax"
+version = "1.0"
+description = "Individual Income Sources for MTD (dividends, savings, pensions, benefits, foreign)"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/guides/income-tax-mtd-end-to-end-service-guide/"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:self-assessment", "write:self-assessment"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_NINO = { required = false, description = "Default National Insurance Number", example = "AB123456C" }
+
+[operations]
+# Dividends Income
+get_dividends = { method = "GET", path = "/individuals/dividends-income/{nino}/{tax_year}", description = "Retrieve dividends income" }
+create_dividends = { method = "PUT", path = "/individuals/dividends-income/{nino}/{tax_year}", description = "Create or amend dividends income" }
+delete_dividends = { method = "DELETE", path = "/individuals/dividends-income/{nino}/{tax_year}", description = "Delete dividends income" }
+
+# UK Dividends (specific)
+get_uk_dividends = { method = "GET", path = "/individuals/dividends-income/uk/{nino}/{tax_year}", description = "Retrieve UK dividends" }
+create_uk_dividends = { method = "PUT", path = "/individuals/dividends-income/uk/{nino}/{tax_year}", description = "Create or amend UK dividends" }
+delete_uk_dividends = { method = "DELETE", path = "/individuals/dividends-income/uk/{nino}/{tax_year}", description = "Delete UK dividends" }
+
+# Savings Income - UK Accounts
+list_savings_accounts = { method = "GET", path = "/individuals/savings-income/uk-accounts/{nino}", description = "List UK savings accounts" }
+add_savings_account = { method = "POST", path = "/individuals/savings-income/uk-accounts/{nino}", description = "Add UK savings account" }
+get_savings_account = { method = "GET", path = "/individuals/savings-income/uk-accounts/{nino}/{tax_year}/{savings_id}", description = "Get savings account annual summary" }
+amend_savings_account = { method = "PUT", path = "/individuals/savings-income/uk-accounts/{nino}/{tax_year}/{savings_id}", description = "Amend savings account summary" }
+
+# Savings Income - Other
+get_other_savings = { method = "GET", path = "/individuals/savings-income/other/{nino}/{tax_year}", description = "Retrieve other savings income" }
+create_other_savings = { method = "PUT", path = "/individuals/savings-income/other/{nino}/{tax_year}", description = "Create or amend other savings" }
+delete_other_savings = { method = "DELETE", path = "/individuals/savings-income/other/{nino}/{tax_year}", description = "Delete other savings income" }
+
+# Pensions Income
+get_pensions = { method = "GET", path = "/individuals/pensions-income/{nino}/{tax_year}", description = "Retrieve pensions income" }
+create_pensions = { method = "PUT", path = "/individuals/pensions-income/{nino}/{tax_year}", description = "Create or amend pensions income" }
+delete_pensions = { method = "DELETE", path = "/individuals/pensions-income/{nino}/{tax_year}", description = "Delete pensions income" }
+
+# State Benefits
+list_state_benefits = { method = "GET", path = "/individuals/state-benefits/{nino}/{tax_year}", description = "List state benefits" }
+create_state_benefit = { method = "POST", path = "/individuals/state-benefits/{nino}/{tax_year}", description = "Create state benefit" }
+amend_state_benefit = { method = "PUT", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}", description = "Amend state benefit" }
+delete_state_benefit = { method = "DELETE", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}", description = "Delete state benefit" }
+amend_benefit_amounts = { method = "PUT", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}/amounts", description = "Amend benefit amounts" }
+delete_benefit_amounts = { method = "DELETE", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}/amounts", description = "Delete benefit amounts" }
+ignore_state_benefit = { method = "POST", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}/ignore", description = "Ignore HMRC-held benefit" }
+unignore_state_benefit = { method = "DELETE", path = "/individuals/state-benefits/{nino}/{tax_year}/{benefit_id}/unignore", description = "Unignore benefit" }
+
+# Foreign Income
+get_foreign_income = { method = "GET", path = "/individuals/foreign-income/{nino}/{tax_year}", description = "Retrieve foreign income" }
+create_foreign_income = { method = "PUT", path = "/individuals/foreign-income/{nino}/{tax_year}", description = "Create or amend foreign income" }
+delete_foreign_income = { method = "DELETE", path = "/individuals/foreign-income/{nino}/{tax_year}", description = "Delete foreign income" }
+
+[foreign_models.DividendsIncome]
+description = "Dividends income for tax year"
+key = "nino_tax_year"
+
+[foreign_models.DividendsIncome.fields]
+uk_dividends = { type = "decimal(13,2)", description = "UK company dividends" }
+other_uk_dividends = { type = "decimal(13,2)", description = "Other UK dividends" }
+stock_dividends = { type = "decimal(13,2)", description = "Stock dividends" }
+redeemable_shares = { type = "decimal(13,2)", description = "Redeemable shares" }
+close_company_loans = { type = "decimal(13,2)", description = "Close company loans written off" }
+
+[foreign_models.SavingsAccount]
+description = "UK savings account"
+key = "savings_id"
+
+[foreign_models.SavingsAccount.fields]
+savings_id = { type = "str(50)", required = true, pk = true }
+account_name = { type = "str(200)", required = true }
+taxed_uk_interest = { type = "decimal(13,2)" }
+untaxed_uk_interest = { type = "decimal(13,2)" }
+
+[foreign_models.PensionsIncome]
+description = "Pensions income for tax year"
+key = "nino_tax_year"
+
+[foreign_models.PensionsIncome.fields]
+foreign_pensions = { type = "json", description = "Array of foreign pension details" }
+overseas_pension_contributions = { type = "json", description = "Overseas pension contributions" }
+
+[foreign_models.StateBenefit]
+description = "State benefit record"
+key = "benefit_id"
+
+[foreign_models.StateBenefit.fields]
+benefit_id = { type = "uuid", required = true, pk = true }
+benefit_type = { type = "enum[statePension,statePensionLumpSum,employmentSupportAllowance,jobSeekersAllowance,bereavementAllowance,otherStateBenefits]", required = true }
+start_date = { type = "date", required = true }
+end_date = { type = "date" }
+amount = { type = "decimal(13,2)" }
+tax_paid = { type = "decimal(13,2)" }
+submission_source = { type = "enum[customer,hmrcHeld]" }
+
+[foreign_models.ForeignIncome]
+description = "Foreign income for tax year"
+key = "nino_tax_year"
+
+[foreign_models.ForeignIncome.fields]
+foreign_earnings = { type = "json", description = "Employment income from abroad" }
+unremittable_foreign_income = { type = "json", description = "Income that cannot be remitted to UK" }
+
+[integration_hints]
+on_dividend_received = "create_dividends or create_uk_dividends"
+on_interest_statement = "amend_savings_account with annual interest totals"
+on_pension_payment = "create_pensions with pension details"
+on_benefit_notification = "create_state_benefit for customer-reported benefits"
+on_foreign_employment = "create_foreign_income with earnings details"
+on_year_end_reconciliation = "GET all income sources before triggering calculation"
+
+[notes]
+fraud_headers = "All requests require Gov-Client-* fraud prevention headers"
+sandbox = "Test at: https://test-api.service.hmrc.gov.uk"
+hmrc_held = "HMRC pre-populates some data (e.g. state benefits) - use ignore/unignore to manage"
+tax_year_format = "Use format YYYY-YY e.g. 2024-25"
+calculation = "After submitting income sources, use ITSA pack to trigger calculation"

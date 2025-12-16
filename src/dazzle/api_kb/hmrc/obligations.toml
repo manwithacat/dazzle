@@ -1,0 +1,84 @@
+# HMRC Obligations (MTD) Pack
+# Track filing deadlines and submission status
+#
+# Capabilities:
+# - Retrieve business income source obligations
+# - Retrieve crystallisation (final declaration) obligations
+# - Retrieve End of Period Statement obligations
+# - Monitor compliance status
+#
+# Source: https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/obligations-api
+# GitHub: https://github.com/hmrc (verified via engineering.hmrc.gov.uk)
+
+[pack]
+name = "hmrc_obligations"
+provider = "HMRC"
+category = "tax"
+version = "2.0"
+description = "MTD Obligations - filing deadlines and compliance status"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/obligations-api"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:self-assessment"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_NINO = { required = false, description = "Default National Insurance Number", example = "AB123456C" }
+
+[operations]
+# Business Income Source Obligations (quarterly updates)
+get_income_obligations = { method = "GET", path = "/obligations/details/{nino}/income-and-expenditure", description = "Retrieve business income source obligations" }
+
+# Crystallisation Obligations (final declaration)
+get_crystallisation_obligations = { method = "GET", path = "/obligations/details/{nino}/crystallisation", description = "Retrieve final declaration obligations" }
+
+# End of Period Statement Obligations
+get_eops_obligations = { method = "GET", path = "/obligations/details/{nino}/end-of-period-statement", description = "Retrieve EOPS obligations" }
+
+# All obligations combined
+get_all_obligations = { method = "GET", path = "/obligations/details/{nino}", description = "Retrieve all obligations for taxpayer" }
+
+[foreign_models.Obligation]
+description = "A filing obligation/deadline"
+key = "obligation_id"
+
+[foreign_models.Obligation.fields]
+obligation_id = { type = "str(50)", required = true, pk = true }
+type = { type = "enum[Quarterly,Annual,Crystallisation,EOPS]", required = true }
+status = { type = "enum[Open,Fulfilled]", required = true }
+period_start = { type = "date", required = true }
+period_end = { type = "date", required = true }
+due = { type = "date", required = true }
+received = { type = "date", description = "Date obligation was met" }
+business_id = { type = "str(50)", description = "Associated business ID" }
+
+[foreign_models.ObligationsSummary]
+description = "Summary of all obligations for taxpayer"
+key = "nino"
+
+[foreign_models.ObligationsSummary.fields]
+nino = { type = "str(9)", required = true, pk = true }
+obligations = { type = "json", description = "Array of Obligation objects" }
+open_count = { type = "int", description = "Number of unfulfilled obligations" }
+overdue_count = { type = "int", description = "Number of overdue obligations" }
+next_due = { type = "date", description = "Next upcoming deadline" }
+
+[integration_hints]
+on_daily_check = "get_all_obligations to monitor compliance"
+on_dashboard_load = "get_all_obligations for deadline overview"
+on_quarterly_reminder = "get_income_obligations filtered by status=Open"
+on_year_end = "get_crystallisation_obligations for final declaration deadline"
+on_business_created = "get_income_obligations for new business deadlines"
+
+[notes]
+fraud_headers = "All requests require Gov-Client-* fraud prevention headers"
+sandbox = "Test at: https://test-api.service.hmrc.gov.uk"
+query_params = "Filter by: from, to, status (O=Open, F=Fulfilled)"
+quarterly = "Business income obligations are quarterly (Q1-Q4)"
+crystallisation = "Final declaration due by 31 January following tax year end"
+eops_note = "EOPS may be deprecated - check latest HMRC guidance"
