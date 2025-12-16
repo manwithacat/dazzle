@@ -32,18 +32,18 @@ repos:
       # Run the formatter
       - id: ruff-format
 
-  # Type checking with mypy (matches CI: only core, cli, mcp)
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
-    hooks:
-      - id: mypy
-        additional_dependencies:
-          - pydantic>=2.0
-          - typer>=0.9
-          - types-PyYAML
-        args: ['--config-file=pyproject.toml', '--ignore-missing-imports']
-        files: ^src/dazzle/(core|cli|mcp)/
-        exclude: ^src/dazzle/(core|cli|mcp)/.*eject
+  # Type checking - disabled in pre-commit, CI handles this properly
+  # mypy follows imports which causes it to check files outside the pattern
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.13.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - pydantic>=2.0
+  #         - typer>=0.9
+  #         - types-PyYAML
+  #       args: ['--config-file=pyproject.toml', '--ignore-missing-imports']
+  #       files: ^src/dazzle/(core|cli|mcp)/
 
   # Security checks
   - repo: https://github.com/PyCQA/bandit
