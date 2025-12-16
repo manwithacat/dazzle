@@ -184,21 +184,21 @@ class FilterCondition:
                 return f"{field_ref} IS NOT NULL", []
 
         elif self.operator == FilterOperator.IN:
-            if not isinstance(converted_value, (list, tuple)):
+            if not isinstance(converted_value, list | tuple):
                 converted_value = [converted_value]
             placeholders = ", ".join("?" * len(converted_value))
             sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.NOT_IN:
-            if not isinstance(converted_value, (list, tuple)):
+            if not isinstance(converted_value, list | tuple):
                 converted_value = [converted_value]
             placeholders = ", ".join("?" * len(converted_value))
             sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.BETWEEN:
-            if not isinstance(converted_value, (list, tuple)) or len(converted_value) != 2:
+            if not isinstance(converted_value, list | tuple) or len(converted_value) != 2:
                 raise ValueError("BETWEEN operator requires a list of two values")
             sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, list(converted_value)
@@ -243,7 +243,7 @@ class FilterCondition:
             return float(value)
         elif isinstance(value, bool):
             return 1 if value else 0
-        elif isinstance(value, (list, tuple)):
+        elif isinstance(value, list | tuple):
             return [self._convert_value(v) for v in value]
         else:
             return value

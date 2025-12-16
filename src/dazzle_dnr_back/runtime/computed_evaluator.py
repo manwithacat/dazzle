@@ -82,7 +82,7 @@ def _evaluate_field_ref(
         if value is None:
             return None
         # Convert to numeric if possible
-        if isinstance(value, (int, float, Decimal)):
+        if isinstance(value, int | float | Decimal):
             return value
         try:
             return float(value)
@@ -190,7 +190,7 @@ def _aggregate_values(
     for item in items:
         val = item.get(field_name)
         if val is not None:
-            if isinstance(val, (int, float, Decimal)):
+            if isinstance(val, int | float | Decimal):
                 values.append(float(val) if isinstance(val, Decimal) else val)
             else:
                 try:

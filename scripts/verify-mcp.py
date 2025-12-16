@@ -30,6 +30,7 @@ def test_imports() -> bool:
             tools,  # noqa: F401
         )
         from dazzle.mcp.server import run_server  # noqa: F401
+
         print("  ✓ All MCP modules imported successfully")
         return True
     except ImportError as e:
@@ -182,6 +183,7 @@ async def test_tool_registration() -> bool:
     except Exception as e:
         print(f"  ✗ Tool registration error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

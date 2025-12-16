@@ -15,9 +15,9 @@ def _to_dict(obj: Any) -> Any:
     """Convert object to JSON-serializable dict."""
     if obj is None:
         return None
-    if isinstance(obj, (str, int, float, bool)):
+    if isinstance(obj, str | int | float | bool):
         return obj
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         return [_to_dict(item) for item in obj]
     if isinstance(obj, dict):
         return {k: _to_dict(v) for k, v in obj.items()}
@@ -540,10 +540,9 @@ def db_seed_json(
         app_spec, manifest = load_project_with_manifest(project_path)
 
         try:
-            from dazzle_dnr_back.runtime.seeder import seed_demo_data
-
             from dazzle_dnr_back.converters import convert_appspec_to_backend
             from dazzle_dnr_back.runtime.repository import DatabaseManager
+            from dazzle_dnr_back.runtime.seeder import seed_demo_data
         except ImportError as e:
             raise RuntimeError(f"DNR backend not available: {e}") from e
 

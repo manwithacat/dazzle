@@ -15,12 +15,11 @@ from __future__ import annotations
 
 import argparse
 import ast
-import hashlib
 import json
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -173,7 +172,7 @@ def extract_python_facts(path: Path) -> dict[str, Any]:
     # 3. assert statements with meaningful conditions
     assert_pattern = re.compile(r"^\s*assert\s+(.+?)(?:,\s*['\"](.+)['\"])?$")
 
-    for i, line in enumerate(lines, 1):
+    for _i, line in enumerate(lines, 1):
         # Comment-based invariants
         if invariant_comment_pattern.search(line):
             facts["invariants"].append(line.strip())
@@ -213,13 +212,17 @@ def extract_python_facts(path: Path) -> dict[str, Any]:
     )
 
     # 3. Topic strings near emit calls
-    topic_pattern = re.compile(r"['\"]([a-z_]+\.(?:created|updated|deleted|failed|sent|received))['\"]")
+    topic_pattern = re.compile(
+        r"['\"]([a-z_]+\.(?:created|updated|deleted|failed|sent|received))['\"]"
+    )
 
     # 4. Event class names (e.g., TaskCreatedEvent, OrderSubmittedEvent)
     event_class_pattern = re.compile(r"\b([A-Z][a-zA-Z]+(?:Event|Message|Command))\b")
 
     # 5. @subscribe, @handler, @on_event decorators
-    handler_decorator_pattern = re.compile(r"@(?:subscribe|handler|on_event|handles)\s*\(\s*['\"]([^'\"]+)['\"]")
+    handler_decorator_pattern = re.compile(
+        r"@(?:subscribe|handler|on_event|handles)\s*\(\s*['\"]([^'\"]+)['\"]"
+    )
 
     for line in lines:
         # Check for emit calls
@@ -250,10 +253,15 @@ def extract_python_facts(path: Path) -> dict[str, Any]:
     # Look for event class usage throughout file
     for match in event_class_pattern.finditer(content):
         event_name = match.group(1)
-        context = content[max(0, match.start() - 100):match.end() + 50].lower()
+        context = content[max(0, match.start() - 100) : match.end() + 50].lower()
         if "emit" in context or "publish" in context or "send" in context:
             emits.add(event_name)
-        elif "handle" in context or "consume" in context or "subscribe" in context or "receive" in context:
+        elif (
+            "handle" in context
+            or "consume" in context
+            or "subscribe" in context
+            or "receive" in context
+        ):
             consumes.add(event_name)
 
     facts["events"]["emits"] = sorted(emits)[:10]
@@ -313,7 +321,6 @@ def extract_facts(path: Path) -> dict[str, Any]:
 
 def find_related_tests(path: Path) -> list[str]:
     """Find test files related to this source file."""
-    rel_path = path.relative_to(ROOT)
     name = path.stem
     parent_name = path.parent.name
 
@@ -382,7 +389,7 @@ def generate_page(path: Path, facts: dict[str, Any], git_sha: str) -> str:
     rel_path = path.relative_to(ROOT)
     lang = detect_language(path)
     scope = determine_scope(path)
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
     tests = find_related_tests(path)
 
     # Build purpose section
@@ -604,7 +611,7 @@ Auto-generated reference documentation for the Dazzle codebase.
 def write_meta(output_dir: Path, files: list[Path], git_sha: str) -> None:
     """Write generation metadata."""
     meta = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "git_sha": git_sha,
         "generator_version": "1.0",
         "file_count": len(files),
@@ -686,7 +693,7 @@ def main() -> int:
 
     # Write metadata
     write_meta(output_dir, all_files, git_sha)
-    print(f"  Generated: docs/api-reference/_meta.json")
+    print("  Generated: docs/api-reference/_meta.json")
 
     # CI mode: check for uncommitted changes
     if args.mode == "ci":

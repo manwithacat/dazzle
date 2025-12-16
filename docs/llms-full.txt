@@ -4175,4 +4175,3 @@ The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER arche
 - [Uptime Monitor](../uptime_monitor/) - FOCUS_METRIC archetype (single KPI)
 
 --------------------------------------------------------------------------------
-

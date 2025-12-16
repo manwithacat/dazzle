@@ -125,7 +125,7 @@ entity User "User":
   intent: "Authenticate and authorize system access with role-based permissions"
 
 entity AuditLog "Audit Log":
-  intent: "Track all data modifications for compliance and debugging" 
+  intent: "Track all data modifications for compliance and debugging"
 '''
 related = ["entity", "archetype", "examples"]
 v0_7_1_changes = "NEW in v0.7.1"

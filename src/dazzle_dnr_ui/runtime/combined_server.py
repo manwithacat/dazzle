@@ -407,7 +407,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         copyright_text = footer.get("copyright", f"© 2025 {product_name}")
 
-        html = f'''<!DOCTYPE html>
+        html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -442,7 +442,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
     <script src="/site.js"></script>
 </body>
-</html>'''
+</html>"""
 
         self._send_response(html, "text/html")
 
@@ -836,7 +836,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
                 <input type="password" id="confirm_password" name="confirm_password" required>
             </div>"""
 
-        html = f'''<!DOCTYPE html>
+        html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -906,7 +906,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     }})();
     </script>
 </body>
-</html>'''
+</html>"""
 
         self._send_response(html, "text/html")
 

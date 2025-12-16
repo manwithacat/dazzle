@@ -160,13 +160,13 @@ def _compare(record_value: Any, operator: str, resolved_value: Any) -> bool:
     # Handle boolean comparisons (SQLite stores bools as 0/1)
     if isinstance(resolved_value, bool):
         # Convert record value to bool for comparison
-        if isinstance(record_value, (int, float)):
+        if isinstance(record_value, int | float):
             record_value = bool(record_value)
         elif isinstance(record_value, str):
             record_value = record_value.lower() in ("true", "1", "yes")
     elif isinstance(record_value, bool):
         # Convert resolved value to bool for comparison
-        if isinstance(resolved_value, (int, float)):
+        if isinstance(resolved_value, int | float):
             resolved_value = bool(resolved_value)
         elif isinstance(resolved_value, str):
             resolved_value = resolved_value.lower() in ("true", "1", "yes")
@@ -190,11 +190,11 @@ def _compare(record_value: Any, operator: str, resolved_value: Any) -> bool:
     if operator in ("le", "<="):
         return record_value <= resolved_value
     if operator == "in":
-        if isinstance(resolved_value, (list, tuple)):
+        if isinstance(resolved_value, list | tuple):
             return record_value in resolved_value
         return False
     if operator == "not_in":
-        if isinstance(resolved_value, (list, tuple)):
+        if isinstance(resolved_value, list | tuple):
             return record_value not in resolved_value
         return True
 

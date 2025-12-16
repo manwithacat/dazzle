@@ -316,7 +316,7 @@ def _get_latency_value(latency_data: dict[str, Any], key: str) -> float | None:
     """Extract latency value from nested structure."""
     if key in latency_data:
         val = latency_data[key]
-        if isinstance(val, (int, float)):
+        if isinstance(val, int | float):
             return float(val)
         if isinstance(val, dict):
             return val.get("value") or val.get(key)

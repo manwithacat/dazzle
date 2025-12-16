@@ -248,7 +248,7 @@ class IdempotentConsumer:
             # Nack to bus if configured
             if self._bus:
                 # Decide if retryable based on exception type
-                retryable = not isinstance(e, (ValueError, TypeError))
+                retryable = not isinstance(e, ValueError | TypeError)
                 await self._bus.nack(
                     event.topic,
                     self._config.consumer_name,

@@ -24,7 +24,11 @@ from pathlib import Path
 # Files that contain version strings to update
 VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
-    ("src/dazzle/cli_legacy.py", r'^__version__\s*=\s*["\']([^"\']+)["\']', '__version__ = "{version}"'),
+    (
+        "src/dazzle/cli_legacy.py",
+        r'^__version__\s*=\s*["\']([^"\']+)["\']',
+        '__version__ = "{version}"',
+    ),
     ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("homebrew/dazzle-simple.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("cli/package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
@@ -32,8 +36,8 @@ VERSION_FILES = [
 
 # Files where version appears in URLs/comments (update tag references)
 TAG_FILES = [
-    ("homebrew/dazzle.rb", r'v[\d]+\.[\d]+\.[\d]+'),
-    ("homebrew/dazzle-simple.rb", r'v[\d]+\.[\d]+\.[\d]+'),
+    ("homebrew/dazzle.rb", r"v[\d]+\.[\d]+\.[\d]+"),
+    ("homebrew/dazzle-simple.rb", r"v[\d]+\.[\d]+\.[\d]+"),
 ]
 
 
@@ -153,6 +157,7 @@ def main() -> int:
     # Reinstall editable package to update metadata
     print("\nReinstalling package...")
     import subprocess
+
     result = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-e", ".", "--quiet"],
         capture_output=True,

@@ -559,7 +559,7 @@ class BaseExternalAdapter(ABC, Generic[ConfigT]):
                 e.service_name = self.service_name
 
                 # Check if we should retry
-                if isinstance(e, (RateLimitError, TimeoutError)):
+                if isinstance(e, RateLimitError | TimeoutError):
                     should_retry = attempt < retry_config.max_retries
                 elif e.status_code and e.status_code in retry_config.retry_on:
                     should_retry = attempt < retry_config.max_retries

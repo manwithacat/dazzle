@@ -228,7 +228,7 @@ def apply_variant_to_style(
         if key in result:
             # Try to scale numeric values
             value = result[key]
-            if isinstance(value, (int, float)):
+            if isinstance(value, int | float):
                 result[key] = value * config.spacing_scale
             elif isinstance(value, str) and value.endswith("rem"):
                 try:
@@ -240,7 +240,7 @@ def apply_variant_to_style(
     # Scale font sizes
     if "fontSize" in result:
         value = result["fontSize"]
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             result["fontSize"] = value * config.font_scale
 
     return result

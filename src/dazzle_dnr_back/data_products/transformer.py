@@ -210,7 +210,7 @@ class DataProductTransformer:
             return self._mask_generic_string(str_value)
 
         # Number masking - return 0 for privacy
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             return 0
 
         return "[MASKED]"
