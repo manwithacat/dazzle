@@ -70,6 +70,8 @@ nav:
       - Dev Setup: contributing/dev-setup.md
       - Testing: contributing/testing.md
       - Adding a Feature: contributing/adding-a-feature.md
+  - API Reference:
+      - Overview: api-reference/index.md
   - ADRs:
       - "0001: Docs Site": adr/0001-docs-site.md
 
@@ -101,6 +103,9 @@ markdown_extensions:
   - pymdownx.keys
   - pymdownx.mark
   - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 plugins:
   - search

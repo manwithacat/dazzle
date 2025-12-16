@@ -65,3 +65,6 @@ tmp/
 # MkDocs build output
 site/
 docs_archive_backup/
+
+# Generated API reference docs (built in CI)
+docs/api-reference/

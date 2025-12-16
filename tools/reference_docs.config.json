@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "output_dir": "docs/api-reference/files",
+  "meta_file": "docs/api-reference/_meta.json",
+  "include": [
+    "src/dazzle/**/*.py",
+    "src/dazzle_dnr_back/**/*.py",
+    "src/dazzle_dnr_ui/**/*.py",
+    "src/dazzle_dnr_ui/runtime/static/js/**/*.js"
+  ],
+  "exclude": [
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/tests/**",
+    "**/.venv/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.git/**",
+    "**/vendor/**",
+    "**/.env*",
+    "**/*secret*",
+    "**/*key*",
+    "**/*token*",
+    "**/node_modules/**",
+    "**/*.min.*",
+    "**/*.test.js",
+    "**/types.js"
+  ],
+  "max_snippet_lines": 50,
+  "llm_annotation": false,
+  "incremental": true
+}

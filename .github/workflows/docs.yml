@@ -31,6 +31,9 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements-docs.txt ]; then pip install -r requirements-docs.txt; else pip install .[docs]; fi
 
+      - name: Generate API reference docs
+        run: python tools/gen_reference_docs.py
+
       - name: Build docs
         run: mkdocs build --strict
 
