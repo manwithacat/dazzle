@@ -61,6 +61,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Screenshot tests for fieldtest_hub (16 screenshots)
   - Semantic DOM contract validation
 
+- **Messaging Channels** (Issue #20) - Complete email workflow
+  - DSL parser for `message`, `channel`, `asset`, `document`, `template`
+  - IR types: MessageSpec, ChannelSpec, SendOperationSpec, ThrottleSpec
+  - Outbox pattern: transactional persistence, status tracking, retry logic, dead letter handling
+  - Background dispatcher: `ChannelManager.start_processor()` processes outbox every 5s
+  - Email adapters: MailpitAdapter (SMTP), FileEmailAdapter (disk fallback)
+  - Provider detection framework for email, queue, stream providers
+  - Template engine with variable substitution and conditionals
+  - Server integration: API routes at `/_dnr/channels/*`
+  - MCP tools: `list_channels`, `get_channel_status`, `list_messages`, `get_outbox_status`
+  - 95 unit tests
+
 ### Changed
 - Examples reorganized: removed obsolete examples, added support_tickets and fieldtest_hub
 - Consolidated `tools/` into `scripts/` directory

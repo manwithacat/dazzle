@@ -32,33 +32,10 @@ Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
 
 ## Roadmap
 
-### v0.17.0 - Messaging Channels
-
-**Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
-**Status**: In Progress (Next Sprint)
-
-Unified messaging built on the event substrate.
-
-**Completed:**
-- DSL parser for `message`, `channel`, `asset`, `document`, `template`
-- IR types: `MessageSpec`, `ChannelSpec`, `SendOperationSpec`, `ReceiveOperationSpec`, `ThrottleSpec`
-- Provider detection framework with Mailpit, SendGrid, SQS detectors
-- Outbox table structure with status tracking
-- MCP tools: `list_channels`, `get_channel_status`, `list_messages`, `get_outbox_status`
-
-**Remaining:**
-- [ ] Background outbox dispatcher worker
-- [ ] Actual email sending via detected provider
-- [ ] In-memory queue/stream providers
-- [ ] RabbitMQ and Redis Streams providers
-- [ ] Dazzle Bar Mailpit panel
-
----
-
-### v0.18.0 - API Knowledgebase & Integration Assistant
+### v0.17.0 - API Knowledgebase & Integration Assistant
 
 **Issue**: [#21](https://github.com/manwithacat/dazzle/issues/21)
-**Status**: Planned
+**Status**: Next Sprint
 
 Curated API definitions and LLM-assisted integration setup.
 
@@ -66,6 +43,20 @@ Curated API definitions and LLM-assisted integration setup.
 - `.env.example` generation from service requirements
 - MCP tools: `lookup_api_pack`, `suggest_integration`
 - Zero hallucinated endpoints - all from curated packs
+
+---
+
+### v0.18.0 - Multi-Platform Support
+
+**Issue**: [#23](https://github.com/manwithacat/dazzle/issues/23)
+**Status**: Planned
+
+Beyond web applications.
+
+- React Native runtime (mobile)
+- Desktop app packaging (Electron/Tauri)
+- Offline-first patterns
+- Cross-platform sync
 
 ---
 
@@ -83,29 +74,16 @@ Hosted control plane for production app management.
 
 ---
 
-### v1.1.0 - Multi-Platform Support
-
-**Issue**: [#23](https://github.com/manwithacat/dazzle/issues/23)
-**Status**: Planned
-
-Beyond web applications.
-
-- React Native runtime (mobile)
-- Desktop app packaging (Electron/Tauri)
-- Offline-first patterns
-- Cross-platform sync
-
----
-
 ## Completed Milestones
 
-### v0.16.0 - Documentation, Event-First, SiteSpec ✅
+### v0.16.0 - Documentation, Event-First, SiteSpec, Messaging ✅
 
 Released 2025-12-16. See [CHANGELOG.md](CHANGELOG.md#0160---2025-12-16).
 
 - MkDocs Material documentation site at [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle)
 - Event-First Architecture (Issue #25) - events as invisible substrate
 - SiteSpec: Public Site Shell (Issue #24) - YAML-based public pages
+- Messaging Channels (Issue #20) - outbox pattern, email adapters, provider detection
 - Performance & Reliability Analysis (PRA) framework
 - HLESS (High-Level Event Semantics Specification)
 - Playwright E2E tests
@@ -133,8 +111,8 @@ Released 2025-12-14.
 
 **Current Opportunities**:
 
-1. **Messaging Channels**: Help complete the dispatcher and providers
-2. **API Packs**: Contribute curated API pack definitions
+1. **API Packs**: Contribute curated API pack definitions (Stripe, HMRC, Xero, etc.)
+2. **Queue/Stream Adapters**: Add RabbitMQ, Redis Streams send adapters
 3. **Documentation**: Improve guides and tutorials
 4. **Example Projects**: Create domain-specific examples
 
