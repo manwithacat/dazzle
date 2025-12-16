@@ -408,8 +408,6 @@ class TopologyDriftDetector:
         """Check for consumer drift."""
         issues: list[DriftIssue] = []
 
-        expected_groups = {c.group_id for c in expected.consumers}
-
         # Check each topic's consumers
         for topic in expected.topics:
             try:

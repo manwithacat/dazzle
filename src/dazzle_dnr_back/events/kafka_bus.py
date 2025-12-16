@@ -38,7 +38,7 @@ import os
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from dazzle_dnr_back.events.bus import (
@@ -47,7 +47,6 @@ from dazzle_dnr_back.events.bus import (
     EventBus,
     EventBusError,
     EventHandler,
-    EventNotFoundError,
     NackReason,
     PublishError,
     SubscriptionError,
@@ -686,7 +685,6 @@ class KafkaBus(EventBus):
         if not self._admin:
             return []
 
-        metadata = await self._admin.describe_cluster()
         topics = await self._admin.list_topics()
 
         # Filter out internal topics
