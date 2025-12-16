@@ -104,15 +104,17 @@ class RabbitMQAdapter(QueueAdapter):
             await self._ensure_queue(message.channel_name)
 
             # Build message
-            body = json.dumps({
-                "id": message.id,
-                "operation": message.operation_name,
-                "type": message.message_type,
-                "payload": message.payload,
-                "recipient": message.recipient,
-                "correlation_id": message.correlation_id,
-                "metadata": message.metadata,
-            }).encode()
+            body = json.dumps(
+                {
+                    "id": message.id,
+                    "operation": message.operation_name,
+                    "type": message.message_type,
+                    "payload": message.payload,
+                    "recipient": message.recipient,
+                    "correlation_id": message.correlation_id,
+                    "metadata": message.metadata,
+                }
+            ).encode()
 
             amqp_message = aio_pika.Message(
                 body=body,
@@ -164,7 +166,9 @@ class RabbitMQAdapter(QueueAdapter):
 
         messages: list[dict[str, Any]] = []
         try:
-            queue = await self._channel.get_queue(self.detection_result.metadata.get("queue_name", "default"))
+            queue = await self._channel.get_queue(
+                self.detection_result.metadata.get("queue_name", "default")
+            )
 
             async with asyncio.timeout(timeout):
                 async for incoming in queue.iterator():

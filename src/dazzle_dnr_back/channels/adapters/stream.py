@@ -181,9 +181,12 @@ class RedisStreamAdapter(StreamAdapter):
                             msg = {
                                 "_stream_id": entry_id,
                                 "_stream": stream,
-                                **{k.decode() if isinstance(k, bytes) else k:
-                                   v.decode() if isinstance(v, bytes) else v
-                                   for k, v in fields.items()}
+                                **{
+                                    k.decode() if isinstance(k, bytes) else k: v.decode()
+                                    if isinstance(v, bytes)
+                                    else v
+                                    for k, v in fields.items()
+                                },
                             }
 
                             # Parse JSON fields
@@ -465,7 +468,9 @@ class InMemoryStreamAdapter(StreamAdapter):
 
     # Class-level shared streams (deque for each stream)
     _streams: ClassVar[dict[str, deque[dict[str, Any]]]] = {}
-    _subscribers: ClassVar[dict[str, list[Callable[[dict[str, Any]], Coroutine[Any, Any, None]]]]] = {}
+    _subscribers: ClassVar[
+        dict[str, list[Callable[[dict[str, Any]], Coroutine[Any, Any, None]]]]
+    ] = {}
     _lock: ClassVar[asyncio.Lock | None] = None
     _counter: ClassVar[int] = 0
 
