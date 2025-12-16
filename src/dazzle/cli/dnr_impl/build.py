@@ -413,7 +413,7 @@ def dnr_build(
     docker: bool = typer.Option(True, "--docker/--no-docker", help="Generate Dockerfile"),
     env_template: bool = typer.Option(True, "--env/--no-env", help="Generate environment template"),
     frontend: bool = typer.Option(True, "--frontend/--no-frontend", help="Include frontend"),
-    minify: bool = typer.Option(True, "--minify/--no-minify", help="Minify frontend assets"),
+    _minify: bool = typer.Option(True, "--minify/--no-minify", help="Minify frontend assets"),
 ) -> None:
     """
     Build a production-ready DNR deployment bundle.

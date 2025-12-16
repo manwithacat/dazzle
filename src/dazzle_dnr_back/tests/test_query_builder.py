@@ -153,7 +153,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
         sql, params = cond.to_sql()
 
-        assert sql == "status = ?"
+        assert sql == '"status" = ?'
         assert params == ["active"]
 
     def test_to_sql_contains(self):
@@ -161,7 +161,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="title", operator=FilterOperator.CONTAINS, value="urgent")
         sql, params = cond.to_sql()
 
-        assert sql == "title LIKE ?"
+        assert sql == '"title" LIKE ?'
         assert params == ["%urgent%"]
 
     def test_to_sql_startswith(self):
@@ -169,7 +169,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="name", operator=FilterOperator.STARTSWITH, value="Bug:")
         sql, params = cond.to_sql()
 
-        assert sql == "name LIKE ?"
+        assert sql == '"name" LIKE ?'
         assert params == ["Bug:%"]
 
     def test_to_sql_endswith(self):
@@ -177,7 +177,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="email", operator=FilterOperator.ENDSWITH, value="@test.com")
         sql, params = cond.to_sql()
 
-        assert sql == "email LIKE ?"
+        assert sql == '"email" LIKE ?'
         assert params == ["%@test.com"]
 
     def test_to_sql_in(self):
@@ -185,7 +185,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.IN, value=["a", "b", "c"])
         sql, params = cond.to_sql()
 
-        assert sql == "status IN (?, ?, ?)"
+        assert sql == '"status" IN (?, ?, ?)'
         assert params == ["a", "b", "c"]
 
     def test_to_sql_isnull_true(self):
@@ -193,7 +193,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="deleted_at", operator=FilterOperator.ISNULL, value=True)
         sql, params = cond.to_sql()
 
-        assert sql == "deleted_at IS NULL"
+        assert sql == '"deleted_at" IS NULL'
         assert params == []
 
     def test_to_sql_isnull_false(self):
@@ -201,7 +201,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="deleted_at", operator=FilterOperator.ISNULL, value=False)
         sql, params = cond.to_sql()
 
-        assert sql == "deleted_at IS NOT NULL"
+        assert sql == '"deleted_at" IS NOT NULL'
         assert params == []
 
     def test_to_sql_with_table_alias(self):
@@ -209,7 +209,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
         sql, params = cond.to_sql(table_alias="t")
 
-        assert sql == "t.status = ?"
+        assert sql == 't."status" = ?'
         assert params == ["active"]
 
     def test_to_sql_uuid_conversion(self):
@@ -218,7 +218,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="user_id", operator=FilterOperator.EQ, value=uuid_val)
         sql, params = cond.to_sql()
 
-        assert sql == "user_id = ?"
+        assert sql == '"user_id" = ?'
         assert params == [str(uuid_val)]
 
 
@@ -267,21 +267,21 @@ class TestSortField:
         sort = SortField(field="created_at", descending=False)
         sql = sort.to_sql()
 
-        assert sql == "created_at ASC"
+        assert sql == '"created_at" ASC'
 
     def test_to_sql_descending(self):
         """Test SQL generation for descending sort."""
         sort = SortField(field="created_at", descending=True)
         sql = sort.to_sql()
 
-        assert sql == "created_at DESC"
+        assert sql == '"created_at" DESC'
 
     def test_to_sql_with_alias(self):
         """Test SQL generation with table alias."""
         sort = SortField(field="name", descending=True)
         sql = sort.to_sql(table_alias="t")
 
-        assert sql == "t.name DESC"
+        assert sql == 't."name" DESC'
 
 
 # =============================================================================
@@ -297,7 +297,7 @@ class TestQueryBuilder:
         builder = QueryBuilder(table_name="Task")
         sql, params = builder.build_select()
 
-        assert "SELECT * FROM Task" in sql
+        assert 'SELECT * FROM "Task"' in sql
         assert "LIMIT" in sql
         assert "OFFSET" in sql
 
@@ -310,8 +310,8 @@ class TestQueryBuilder:
         sql, params = builder.build_select()
 
         assert "WHERE" in sql
-        assert "status = ?" in sql
-        assert "priority >= ?" in sql
+        assert '"status" = ?' in sql
+        assert '"priority" >= ?' in sql
         assert "active" in params
         assert 5 in params
 
@@ -324,8 +324,8 @@ class TestQueryBuilder:
         sql, params = builder.build_select()
 
         assert "ORDER BY" in sql
-        assert "created_at DESC" in sql
-        assert "priority ASC" in sql
+        assert '"created_at" DESC' in sql
+        assert '"priority" ASC' in sql
 
     def test_with_pagination(self):
         """Test pagination."""
@@ -345,7 +345,7 @@ class TestQueryBuilder:
 
         sql, params = builder.build_count()
 
-        assert "SELECT COUNT(*) FROM Task" in sql
+        assert 'SELECT COUNT(*) FROM "Task"' in sql
         assert "WHERE" in sql
         assert "LIMIT" not in sql
         assert "ORDER BY" not in sql
@@ -511,7 +511,7 @@ class TestEdgeCases:
         )
         sql, params = cond.to_sql()
 
-        assert sql == "created_at BETWEEN ? AND ?"
+        assert sql == '"created_at" BETWEEN ? AND ?'
         assert params == ["2024-01-01", "2024-12-31"]
 
     def test_between_operator_invalid_value(self):

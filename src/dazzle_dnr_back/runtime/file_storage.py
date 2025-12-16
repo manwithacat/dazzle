@@ -666,7 +666,7 @@ class FileValidator:
         self,
         file: BinaryIO,
         filename: str,
-        declared_content_type: str | None = None,
+        _declared_content_type: str | None = None,
     ) -> tuple[bool, str | None, str]:
         """
         Validate a file.

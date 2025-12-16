@@ -101,7 +101,7 @@ def _entity_to_schema(
     include_id: bool = True,
     for_create: bool = False,
     all_optional: bool = False,
-    include_computed: bool = False,
+    include_computed: bool = False,  # TODO: implement computed field inclusion
 ) -> dict[str, Any]:
     """Convert entity to JSON Schema."""
     from dazzle.core.ir import FieldModifier

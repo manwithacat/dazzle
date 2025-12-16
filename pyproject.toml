@@ -107,7 +107,7 @@ dazzle = ["py.typed"]
 "dazzle_dnr_ui.runtime.static" = ["**/*.js", "**/*.css"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "src/dazzle_dnr_back/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

@@ -42,7 +42,7 @@ except ImportError:
 
 def create_list_handler(
     service: Any,
-    response_schema: type[BaseModel] | None = None,
+    _response_schema: type[BaseModel] | None = None,
     access_spec: dict[str, Any] | None = None,
     get_auth_context: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
@@ -109,7 +109,7 @@ def create_list_handler(
 
 def create_read_handler(
     service: Any,
-    response_schema: type[BaseModel] | None = None,
+    _response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for read operations."""
 
@@ -125,7 +125,7 @@ def create_read_handler(
 def create_create_handler(
     service: Any,
     input_schema: type[BaseModel],
-    response_schema: type[BaseModel] | None = None,
+    _response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
 
@@ -145,7 +145,7 @@ def create_create_handler(
 def create_update_handler(
     service: Any,
     input_schema: type[BaseModel],
-    response_schema: type[BaseModel] | None = None,
+    _response_schema: type[BaseModel] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
 
