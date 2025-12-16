@@ -42,6 +42,7 @@ nav:
   - Architecture:
       - Overview: architecture/overview.md
       - Event Semantics: architecture/event-semantics.md
+      - HLESS Deep Dive: architecture/hless-deep-dive.md
       - DSL to AppSpec: architecture/dsl-to-appspec.md
       - MCP Server: architecture/mcp-server.md
   - DSL Reference:

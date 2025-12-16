@@ -2,6 +2,9 @@
 
 Dazzle supports event-first patterns through the High-Level Event Semantics Specification (HLESS).
 
+!!! info "Want the full story?"
+    This page is a quick reference. For the philosophy, rationale, and detailed rules, see the [HLESS Deep Dive](hless-deep-dive.md).
+
 ## Overview
 
 HLESS defines a **technology-agnostic semantic layer** that:
@@ -117,5 +120,6 @@ Every record has three timestamps:
 
 ## See Also
 
+- [HLESS Deep Dive](hless-deep-dive.md) - Philosophy, rationale, and detailed rules
 - [Architecture Overview](overview.md)
 - [Messaging Reference](../reference/messaging.md)
