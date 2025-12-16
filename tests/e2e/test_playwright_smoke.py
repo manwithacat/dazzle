@@ -271,7 +271,7 @@ class TestPlaywrightSmokeSimpleTask:
         # Check for critical errors after test
         if diagnostics.has_critical_errors():
             errors = diagnostics.get_errors()
-            print(f"\nJavaScript errors detected:\n" + "\n".join(errors[:5]))
+            print("\nJavaScript errors detected:\n" + "\n".join(errors[:5]))
 
         page.close()
         context.close()
@@ -395,7 +395,7 @@ class TestPlaywrightSmokeContactManager:
 
         if diagnostics.has_critical_errors():
             errors = diagnostics.get_errors()
-            print(f"\nJavaScript errors detected:\n" + "\n".join(errors[:5]))
+            print("\nJavaScript errors detected:\n" + "\n".join(errors[:5]))
 
         page.close()
         context.close()
@@ -453,7 +453,7 @@ class TestPlaywrightSmokeContactManager:
         if diagnostics.has_critical_errors():
             errors = diagnostics.get_errors()
             take_screenshot(page, "contact_manager", "js_errors")
-            pytest.fail(f"Critical JavaScript errors found:\n" + "\n".join(errors[:5]))
+            pytest.fail("Critical JavaScript errors found:\n" + "\n".join(errors[:5]))
 
 
 # Mark all tests as e2e
