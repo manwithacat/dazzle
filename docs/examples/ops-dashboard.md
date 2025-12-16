@@ -166,5 +166,5 @@ The `engine_hint: "command_center"` explicitly requests the COMMAND_CENTER arche
 
 ## Related Examples
 
-- [Email Client](email-client.md) - MONITOR_WALL archetype (3-5 signals)
-- [Uptime Monitor](uptime-monitor.md) - FOCUS_METRIC archetype (single KPI)
+- [Support Tickets](support-tickets.md) - Multi-entity relationships
+- [FieldTest Hub](fieldtest-hub.md) - Advanced persona scoping and multiple workspaces

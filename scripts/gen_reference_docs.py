@@ -6,9 +6,9 @@ Generates per-file reference documentation from source code.
 Implements Section 12 of the MkDocs Material spec.
 
 Usage:
-    python tools/gen_reference_docs.py           # Full generation
-    python tools/gen_reference_docs.py --mode=ci # CI mode (fail if changes)
-    python tools/gen_reference_docs.py --incremental # Only changed files
+    python scripts/gen_reference_docs.py           # Full generation
+    python scripts/gen_reference_docs.py --mode=ci # CI mode (fail if changes)
+    python scripts/gen_reference_docs.py --incremental # Only changed files
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ ROOT = Path(__file__).parent.parent
 
 def load_config() -> dict[str, Any]:
     """Load generator configuration."""
-    config_path = ROOT / "tools" / "reference_docs.config.json"
+    config_path = ROOT / "scripts" / "reference_docs.config.json"
     if not config_path.exists():
         raise FileNotFoundError(f"Config not found: {config_path}")
     with open(config_path) as f:
@@ -156,22 +156,108 @@ def extract_python_facts(path: Path) -> dict[str, Any]:
                 facts["functions"].append({"name": node.name, "doc": doc[:100]})
                 facts["exports"].append(node.name)
 
-    # Find invariants (lines with MUST, MUST NOT, invariant, idempotent)
-    invariant_pattern = re.compile(
-        r"#.*\b(MUST|MUST NOT|invariant|idempotent)\b", re.IGNORECASE
+    # Find invariants from multiple sources
+    lines = content.split("\n")
+
+    # 1. Comment-based invariants (MUST, invariant, idempotent, etc.)
+    invariant_comment_pattern = re.compile(
+        r"#.*\b(MUST|MUST NOT|invariant|idempotent|precondition|postcondition)\b", re.IGNORECASE
     )
-    for i, line in enumerate(content.split("\n"), 1):
-        if invariant_pattern.search(line):
+
+    # 2. raise ValueError/TypeError patterns (validation)
+    # Handles both regular strings and f-strings (f"..." or f'...')
+    validation_raise_pattern = re.compile(
+        r"raise\s+(?:ValueError|TypeError|AssertionError)\s*\(\s*f?['\"]([^'\"]+)['\"]"
+    )
+
+    # 3. assert statements with meaningful conditions
+    assert_pattern = re.compile(r"^\s*assert\s+(.+?)(?:,\s*['\"](.+)['\"])?$")
+
+    for i, line in enumerate(lines, 1):
+        # Comment-based invariants
+        if invariant_comment_pattern.search(line):
             facts["invariants"].append(line.strip())
 
-    # Find event patterns
-    event_pattern = re.compile(r"['\"]([A-Z][a-zA-Z]+(?:Requested|Completed|Created|Updated|Deleted|Failed))['\"]")
-    for match in event_pattern.finditer(content):
+        # Validation raises
+        raise_match = validation_raise_pattern.search(line)
+        if raise_match:
+            msg = raise_match.group(1)
+            if len(msg) > 10:  # Skip trivial messages
+                facts["invariants"].append(f"Validates: {msg[:80]}")
+
+        # Assert statements (only if they have a message or meaningful condition)
+        assert_match = assert_pattern.match(line)
+        if assert_match:
+            condition = assert_match.group(1).strip()
+            message = assert_match.group(2)
+            if message:
+                facts["invariants"].append(f"Assert: {message[:60]}")
+            elif len(condition) > 5 and "==" in condition or "is not" in condition:
+                facts["invariants"].append(f"Assert: {condition[:60]}")
+
+    # Deduplicate invariants
+    facts["invariants"] = list(dict.fromkeys(facts["invariants"]))[:10]
+
+    # Find event patterns - expanded detection
+    emits: set[str] = set()
+    consumes: set[str] = set()
+
+    # 1. Direct emit_event, _emit_event, emit_created/updated/deleted calls
+    emit_call_pattern = re.compile(
+        r"(?:await\s+)?(?:self\.)?_?emit_(?:event|created|updated|deleted|failed)\s*\("
+    )
+
+    # 2. Event bus emit patterns
+    bus_emit_pattern = re.compile(
+        r"(?:event_?bus|bus)\.(?:emit|publish|send)\s*\(\s*['\"]([^'\"]+)['\"]"
+    )
+
+    # 3. Topic strings near emit calls
+    topic_pattern = re.compile(r"['\"]([a-z_]+\.(?:created|updated|deleted|failed|sent|received))['\"]")
+
+    # 4. Event class names (e.g., TaskCreatedEvent, OrderSubmittedEvent)
+    event_class_pattern = re.compile(r"\b([A-Z][a-zA-Z]+(?:Event|Message|Command))\b")
+
+    # 5. @subscribe, @handler, @on_event decorators
+    handler_decorator_pattern = re.compile(r"@(?:subscribe|handler|on_event|handles)\s*\(\s*['\"]([^'\"]+)['\"]")
+
+    for line in lines:
+        # Check for emit calls
+        if emit_call_pattern.search(line):
+            # Look for topic string on same line or nearby context
+            topic_match = topic_pattern.search(line)
+            if topic_match:
+                emits.add(topic_match.group(1))
+            else:
+                # Generic emit detected
+                if "created" in line.lower():
+                    emits.add("entity.created")
+                elif "updated" in line.lower():
+                    emits.add("entity.updated")
+                elif "deleted" in line.lower():
+                    emits.add("entity.deleted")
+
+        # Bus emit patterns
+        bus_match = bus_emit_pattern.search(line)
+        if bus_match:
+            emits.add(bus_match.group(1))
+
+        # Handler decorators
+        handler_match = handler_decorator_pattern.search(line)
+        if handler_match:
+            consumes.add(handler_match.group(1))
+
+    # Look for event class usage throughout file
+    for match in event_class_pattern.finditer(content):
         event_name = match.group(1)
-        if "emit" in content[max(0, match.start() - 50) : match.start()].lower():
-            facts["events"]["emits"].append(event_name)
-        else:
-            facts["events"]["consumes"].append(event_name)
+        context = content[max(0, match.start() - 100):match.end() + 50].lower()
+        if "emit" in context or "publish" in context or "send" in context:
+            emits.add(event_name)
+        elif "handle" in context or "consume" in context or "subscribe" in context or "receive" in context:
+            consumes.add(event_name)
+
+    facts["events"]["emits"] = sorted(emits)[:10]
+    facts["events"]["consumes"] = sorted(consumes)[:10]
 
     return facts
 
@@ -229,21 +315,55 @@ def find_related_tests(path: Path) -> list[str]:
     """Find test files related to this source file."""
     rel_path = path.relative_to(ROOT)
     name = path.stem
+    parent_name = path.parent.name
 
-    test_patterns = [
-        ROOT / "tests" / "unit" / f"test_{name}.py",
-        ROOT / "tests" / "integration" / f"test_{name}.py",
-        path.parent / "tests" / f"test_{name}.py",
-        path.with_name(f"{name}.test.js"),
-        path.with_name(f"{name}.test.ts"),
+    found: list[str] = []
+
+    # Direct name patterns across test directories
+    direct_patterns = [
+        f"tests/**/test_{name}.py",
+        f"tests/**/test_{name}_*.py",
+        f"tests/**/*_{name}_test.py",
+        f"tests/**/*{name}*.py",
     ]
 
-    found = []
-    for test_path in test_patterns:
+    for pattern in direct_patterns:
+        for test_path in ROOT.glob(pattern):
+            if test_path.is_file():
+                rel = str(test_path.relative_to(ROOT))
+                if rel not in found:
+                    found.append(rel)
+
+    # Check for tests in the same package's tests directory
+    pkg_tests = path.parent / "tests"
+    if pkg_tests.exists():
+        for test_file in pkg_tests.glob(f"test_{name}*.py"):
+            rel = str(test_file.relative_to(ROOT))
+            if rel not in found:
+                found.append(rel)
+
+    # Check for module-level tests matching parent directory name
+    if parent_name and parent_name != "src":
+        for pattern in [f"tests/**/test_{parent_name}*.py"]:
+            for test_path in ROOT.glob(pattern):
+                if test_path.is_file():
+                    rel = str(test_path.relative_to(ROOT))
+                    if rel not in found:
+                        found.append(rel)
+
+    # JavaScript test files
+    js_test_patterns = [
+        path.with_suffix(".test.js"),
+        path.with_suffix(".test.ts"),
+        path.with_name(f"{name}.spec.js"),
+        path.with_name(f"{name}.spec.ts"),
+    ]
+    for test_path in js_test_patterns:
         if test_path.exists():
             found.append(str(test_path.relative_to(ROOT)))
 
-    return found
+    # Limit to 5 most relevant tests
+    return found[:5]
 
 
 def determine_scope(path: Path) -> str:

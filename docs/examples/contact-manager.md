@@ -113,4 +113,4 @@ dazzle test list
 ## Related Examples
 
 - [Simple Task](simple-task.md) - Basic CRUD app
-- [Email Client](email-client.md) - MONITOR_WALL archetype
+- [Support Tickets](support-tickets.md) - Foreign key relationships

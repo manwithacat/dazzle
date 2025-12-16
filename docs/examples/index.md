@@ -7,11 +7,17 @@ Explore complete DAZZLE applications demonstrating various features and complexi
 | Example | Complexity | Key Features |
 |---------|------------|--------------|
 | [Simple Task](simple-task.md) | Beginner | CRUD, surfaces, workspaces |
-| [Contact Manager](contact-manager.md) | Beginner | Relationships, search |
-| [Ops Dashboard](ops-dashboard.md) | Intermediate | Dashboards, metrics, charts |
-| [Email Client](email-client.md) | Intermediate | Messaging, threads |
-| [Uptime Monitor](uptime-monitor.md) | Intermediate | Services, integrations, scenarios |
-| [Inventory Scanner](inventory-scanner.md) | Advanced | Experiences, state machines |
+| [Contact Manager](contact-manager.md) | Beginner+ | Indexes, search, workspace layouts |
+| [Support Tickets](support-tickets.md) | Intermediate | Foreign keys, entity relationships |
+| [Ops Dashboard](ops-dashboard.md) | Intermediate+ | Personas, dashboards, engine hints |
+| [FieldTest Hub](fieldtest-hub.md) | Advanced | Persona scoping, attention signals, multi-workspace |
+
+## Learning Path
+
+```
+simple_task → contact_manager → support_tickets → ops_dashboard → fieldtest_hub
+  (Beginner)    (Beginner+)      (Intermediate)   (Intermediate+)   (Advanced)
+```
 
 ## Running Examples
 
@@ -46,8 +52,8 @@ Examples are tested in CI with different priority levels:
 | Priority | Examples | CI Behavior |
 |----------|----------|-------------|
 | **P0** | simple_task, contact_manager | Blocks PRs |
-| **P1** | ops_dashboard, email_client | Warnings only |
-| **P2** | uptime_monitor, inventory_scanner | Main branch only |
+| **P1** | support_tickets, ops_dashboard | Warnings only |
+| **P2** | fieldtest_hub | Main branch only |
 
 ## Creating Your Own
 

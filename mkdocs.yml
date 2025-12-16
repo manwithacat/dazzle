@@ -62,10 +62,9 @@ nav:
       - Overview: examples/index.md
       - Simple Task: examples/simple-task.md
       - Contact Manager: examples/contact-manager.md
-      - Email Client: examples/email-client.md
+      - Support Tickets: examples/support-tickets.md
       - Ops Dashboard: examples/ops-dashboard.md
-      - Uptime Monitor: examples/uptime-monitor.md
-      - Inventory Scanner: examples/inventory-scanner.md
+      - FieldTest Hub: examples/fieldtest-hub.md
   - Contributing:
       - Dev Setup: contributing/dev-setup.md
       - Testing: contributing/testing.md

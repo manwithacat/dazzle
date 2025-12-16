@@ -128,4 +128,4 @@ When running, the following endpoints are available:
 ## Related Examples
 
 - [Contact Manager](contact-manager.md) - Multi-entity with relationships
-- [Uptime Monitor](uptime-monitor.md) - FOCUS_METRIC workspace archetype
+- [Ops Dashboard](ops-dashboard.md) - COMMAND_CENTER workspace archetype
