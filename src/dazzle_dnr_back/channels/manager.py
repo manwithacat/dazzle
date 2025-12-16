@@ -29,7 +29,16 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from .adapters import FileEmailAdapter, MailpitAdapter, SendResult
+from .adapters import (
+    FileEmailAdapter,
+    InMemoryQueueAdapter,
+    InMemoryStreamAdapter,
+    KafkaAdapter,
+    MailpitAdapter,
+    RabbitMQAdapter,
+    RedisAdapter,
+    SendResult,
+)
 from .adapters.base import BaseChannelAdapter
 from .detection import ProviderStatus
 from .outbox import OutboxMessage, OutboxRepository, create_outbox_message
@@ -180,9 +189,16 @@ class ChannelManager:
     def _create_adapter(self, resolution: ChannelResolution) -> BaseChannelAdapter | None:
         """Create an adapter for a channel resolution."""
         adapter_map: dict[str, type[BaseChannelAdapter]] = {
+            # Email adapters
             "mailpit": MailpitAdapter,
             "file": FileEmailAdapter,
-            # Add more adapters as implemented
+            # Queue adapters
+            "rabbitmq": RabbitMQAdapter,
+            "memory_queue": InMemoryQueueAdapter,
+            # Stream adapters
+            "redis": RedisAdapter,
+            "kafka": KafkaAdapter,
+            "memory_stream": InMemoryStreamAdapter,
         }
 
         adapter_class = adapter_map.get(resolution.provider.provider_name)
