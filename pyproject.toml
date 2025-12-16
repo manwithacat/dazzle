@@ -68,6 +68,16 @@ dev = [
     "requests>=2.31",
     "aiosqlite>=0.19.0",
 ]
+# Messaging adapters (v0.16.0 - Issue #29)
+rabbitmq = ["aio-pika>=9.0"]
+redis = ["redis>=5.0"]
+kafka = ["aiokafka>=0.9"]
+# All messaging adapters
+messaging = [
+    "aio-pika>=9.0",
+    "redis>=5.0",
+    "aiokafka>=0.9",
+]
 
 [project.urls]
 Homepage = "https://github.com/manwithacat/dazzle"
