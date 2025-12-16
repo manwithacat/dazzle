@@ -388,7 +388,9 @@ class S3BlobStore(BlobStore):
                 sha256=s3_meta.get("sha256", ""),
                 size_bytes=response.get("ContentLength", 0),
                 content_type=response.get("ContentType", "application/octet-stream"),
-                created_at=datetime.fromisoformat(s3_meta.get("created_at", datetime.now(UTC).isoformat())),
+                created_at=datetime.fromisoformat(
+                    s3_meta.get("created_at", datetime.now(UTC).isoformat())
+                ),
                 metadata={k: v for k, v in s3_meta.items() if k not in ("sha256", "created_at")},
             )
         except Exception:

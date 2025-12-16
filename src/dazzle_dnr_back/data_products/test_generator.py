@@ -168,9 +168,7 @@ class PolicyTestGenerator:
                         test_type="classification",
                         input_payload=payload,
                         expected_allowed_fields=expected_allowed,
-                        expected_denied_fields={
-                            f.field_name for f in filters if not f.allowed
-                        },
+                        expected_denied_fields={f.field_name for f in filters if not f.allowed},
                         assertion_message=f"Expected fields {expected_allowed} to be in output",
                     )
                 )
@@ -433,52 +431,60 @@ class PolicyTestGenerator:
         ]
 
         if case.test_type == "classification":
-            method_lines.extend([
-                f"        payload = {case.input_payload!r}",
-                "        # Transform payload using config",
-                "        transformer = DataProductTransformer()",
-                "        # Result should have only allowed fields",
-                f"        expected_allowed = {case.expected_allowed_fields!r}",
-                f"        expected_denied = {case.expected_denied_fields!r}",
-                "        # TODO: Wire up actual transform call",
-                f"        assert True, {case.assertion_message!r}",
-            ])
+            method_lines.extend(
+                [
+                    f"        payload = {case.input_payload!r}",
+                    "        # Transform payload using config",
+                    "        transformer = DataProductTransformer()",
+                    "        # Result should have only allowed fields",
+                    f"        expected_allowed = {case.expected_allowed_fields!r}",
+                    f"        expected_denied = {case.expected_denied_fields!r}",
+                    "        # TODO: Wire up actual transform call",
+                    f"        assert True, {case.assertion_message!r}",
+                ]
+            )
 
         elif case.test_type == "transform":
-            method_lines.extend([
-                f"        payload = {case.input_payload!r}",
-                "        transformer = DataProductTransformer()",
-                "        # Apply transform",
-                f"        # Expected patterns: {case.expected_transformed_fields!r}",
-                f"        assert True, {case.assertion_message!r}",
-            ])
+            method_lines.extend(
+                [
+                    f"        payload = {case.input_payload!r}",
+                    "        transformer = DataProductTransformer()",
+                    "        # Apply transform",
+                    f"        # Expected patterns: {case.expected_transformed_fields!r}",
+                    f"        assert True, {case.assertion_message!r}",
+                ]
+            )
 
         elif case.test_type == "cross_tenant":
             if case.should_pass:
-                method_lines.extend([
-                    "        validator = CrossTenantValidator()",
-                    "        policy = CrossTenantPolicy(",
-                    f'            tenant_id={case.input_payload["requesting_tenant"]!r},',
-                    "            permission=CrossTenantPermission.READ_AGGREGATED,",
-                    "        )",
-                    "        validator.add_policy(policy)",
-                    "        result = validator.check_access(",
-                    f'            requesting_tenant={case.input_payload["requesting_tenant"]!r},',
-                    f'            target_tenants={case.input_payload["target_tenants"]!r},',
-                    f'            product_name={case.product_name!r},',
-                    "        )",
-                    "        assert result.permitted",
-                ])
+                method_lines.extend(
+                    [
+                        "        validator = CrossTenantValidator()",
+                        "        policy = CrossTenantPolicy(",
+                        f"            tenant_id={case.input_payload['requesting_tenant']!r},",
+                        "            permission=CrossTenantPermission.READ_AGGREGATED,",
+                        "        )",
+                        "        validator.add_policy(policy)",
+                        "        result = validator.check_access(",
+                        f"            requesting_tenant={case.input_payload['requesting_tenant']!r},",
+                        f"            target_tenants={case.input_payload['target_tenants']!r},",
+                        f"            product_name={case.product_name!r},",
+                        "        )",
+                        "        assert result.permitted",
+                    ]
+                )
             else:
-                method_lines.extend([
-                    "        validator = CrossTenantValidator()  # No policy added",
-                    "        result = validator.check_access(",
-                    f'            requesting_tenant={case.input_payload["requesting_tenant"]!r},',
-                    f'            target_tenants={case.input_payload["target_tenants"]!r},',
-                    f'            product_name={case.product_name!r},',
-                    "        )",
-                    "        assert not result.permitted",
-                ])
+                method_lines.extend(
+                    [
+                        "        validator = CrossTenantValidator()  # No policy added",
+                        "        result = validator.check_access(",
+                        f"            requesting_tenant={case.input_payload['requesting_tenant']!r},",
+                        f"            target_tenants={case.input_payload['target_tenants']!r},",
+                        f"            product_name={case.product_name!r},",
+                        "        )",
+                        "        assert not result.permitted",
+                    ]
+                )
 
         return method_lines
 

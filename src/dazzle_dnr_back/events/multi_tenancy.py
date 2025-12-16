@@ -95,9 +95,7 @@ class TenancyStrategy(ABC):
         ...
 
     @abstractmethod
-    def get_partition_key(
-        self, base_key: str, tenant: TenantContext
-    ) -> str:
+    def get_partition_key(self, base_key: str, tenant: TenantContext) -> str:
         """
         Get the partition key for an event.
 
@@ -111,9 +109,7 @@ class TenancyStrategy(ABC):
         ...
 
     @abstractmethod
-    def enrich_envelope(
-        self, envelope: EventEnvelope, tenant: TenantContext
-    ) -> EventEnvelope:
+    def enrich_envelope(self, envelope: EventEnvelope, tenant: TenantContext) -> EventEnvelope:
         """
         Enrich an event envelope with tenant information.
 
@@ -140,9 +136,7 @@ class TenancyStrategy(ABC):
         ...
 
     @abstractmethod
-    def validate_access(
-        self, envelope: EventEnvelope, expected_tenant: TenantContext
-    ) -> bool:
+    def validate_access(self, envelope: EventEnvelope, expected_tenant: TenantContext) -> bool:
         """
         Validate that an event belongs to the expected tenant.
 
@@ -204,9 +198,7 @@ class SharedTopicsStrategy(TenancyStrategy):
             return f"{tenant.tenant_id}:{base_key}"
         return base_key
 
-    def enrich_envelope(
-        self, envelope: EventEnvelope, tenant: TenantContext
-    ) -> EventEnvelope:
+    def enrich_envelope(self, envelope: EventEnvelope, tenant: TenantContext) -> EventEnvelope:
         """Add tenant ID to event headers."""
         new_headers = dict(envelope.headers)
         new_headers[self._header_key] = tenant.tenant_id
@@ -237,9 +229,7 @@ class SharedTopicsStrategy(TenancyStrategy):
             tenant_name=envelope.headers.get("x-tenant-name"),
         )
 
-    def validate_access(
-        self, envelope: EventEnvelope, expected_tenant: TenantContext
-    ) -> bool:
+    def validate_access(self, envelope: EventEnvelope, expected_tenant: TenantContext) -> bool:
         """Validate tenant ID matches expected tenant."""
         actual = self.extract_tenant(envelope)
         if not actual:
@@ -293,9 +283,7 @@ class NamespacePerTenantStrategy(TenancyStrategy):
         """Partition key doesn't need tenant prefix - topic is isolated."""
         return base_key
 
-    def enrich_envelope(
-        self, envelope: EventEnvelope, tenant: TenantContext
-    ) -> EventEnvelope:
+    def enrich_envelope(self, envelope: EventEnvelope, tenant: TenantContext) -> EventEnvelope:
         """Add tenant metadata to headers (for audit/tracing)."""
         new_headers = dict(envelope.headers)
         new_headers["x-tenant-id"] = tenant.tenant_id
@@ -326,9 +314,7 @@ class NamespacePerTenantStrategy(TenancyStrategy):
             tenant_name=envelope.headers.get("x-tenant-name"),
         )
 
-    def validate_access(
-        self, envelope: EventEnvelope, expected_tenant: TenantContext
-    ) -> bool:
+    def validate_access(self, envelope: EventEnvelope, expected_tenant: TenantContext) -> bool:
         """Validate tenant - should always match since topics are isolated."""
         actual = self.extract_tenant(envelope)
         if not actual:
@@ -366,9 +352,7 @@ class HybridTenancyStrategy(TenancyStrategy):
         self._external_prefixes = external_prefixes or ["external.", "partner.", "api."]
         self._topic_separator = topic_separator
         self._shared_strategy = SharedTopicsStrategy()
-        self._namespaced_strategy = NamespacePerTenantStrategy(
-            topic_separator=topic_separator
-        )
+        self._namespaced_strategy = NamespacePerTenantStrategy(topic_separator=topic_separator)
 
     @property
     def mode(self) -> TenancyMode:
@@ -394,9 +378,7 @@ class HybridTenancyStrategy(TenancyStrategy):
         """Internal topics need tenant prefix for ordering."""
         return self._shared_strategy.get_partition_key(base_key, tenant)
 
-    def enrich_envelope(
-        self, envelope: EventEnvelope, tenant: TenantContext
-    ) -> EventEnvelope:
+    def enrich_envelope(self, envelope: EventEnvelope, tenant: TenantContext) -> EventEnvelope:
         """Enrich with tenant info."""
         return self._shared_strategy.enrich_envelope(envelope, tenant)
 
@@ -404,9 +386,7 @@ class HybridTenancyStrategy(TenancyStrategy):
         """Extract tenant from envelope."""
         return self._shared_strategy.extract_tenant(envelope)
 
-    def validate_access(
-        self, envelope: EventEnvelope, expected_tenant: TenantContext
-    ) -> bool:
+    def validate_access(self, envelope: EventEnvelope, expected_tenant: TenantContext) -> bool:
         """Validate tenant access."""
         return self._shared_strategy.validate_access(envelope, expected_tenant)
 
@@ -486,16 +466,12 @@ class TenantEventConsumer:
         # Wrap handler with tenant validation
         async def validated_handler(envelope: EventEnvelope) -> None:
             if not self.strategy.validate_access(envelope, self.tenant):
-                logger.warning(
-                    f"Rejected event {envelope.event_id} - tenant mismatch"
-                )
+                logger.warning(f"Rejected event {envelope.event_id} - tenant mismatch")
                 return
             await handler(envelope)
 
         # Subscribe with validated handler
-        return await self.bus.subscribe(
-            physical_topic, physical_group, validated_handler
-        )
+        return await self.bus.subscribe(physical_topic, physical_group, validated_handler)
 
 
 def create_strategy(mode: TenancyMode, **kwargs: Any) -> TenancyStrategy:

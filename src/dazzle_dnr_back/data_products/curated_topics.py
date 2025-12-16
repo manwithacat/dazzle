@@ -173,9 +173,7 @@ class CuratedTopicGenerator:
                 )
 
                 # Determine transform to apply
-                transform = self._get_transform_for_field(
-                    classification, product.transforms
-                )
+                transform = self._get_transform_for_field(classification, product.transforms)
 
                 field_filter = FieldFilter(
                     field_name=field_spec.name,
@@ -193,10 +191,7 @@ class CuratedTopicGenerator:
                     denied_fields.add(qualified_name)
 
         # Build source topics from source entities
-        source_topics = [
-            f"app.{entity_name}"
-            for entity_name in product.source_entities
-        ]
+        source_topics = [f"app.{entity_name}" for entity_name in product.source_entities]
 
         # Add source streams directly
         source_topics.extend(product.source_streams)

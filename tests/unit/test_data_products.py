@@ -121,9 +121,7 @@ def sample_appspec(
 class TestCuratedTopicGenerator:
     """Tests for CuratedTopicGenerator."""
 
-    def test_generate_creates_topics_for_all_products(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_generate_creates_topics_for_all_products(self, sample_appspec: AppSpec) -> None:
         """Test that topics are generated for all data products."""
         generator = CuratedTopicGenerator(sample_appspec)
         configs = generator.generate()
@@ -132,18 +130,14 @@ class TestCuratedTopicGenerator:
         assert configs[0].product_name == "analytics_v1"
         assert configs[1].product_name == "aggregate_report"
 
-    def test_topic_naming_uses_namespace(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_topic_naming_uses_namespace(self, sample_appspec: AppSpec) -> None:
         """Test that topics use the curated namespace."""
         configs = generate_curated_topics(sample_appspec)
 
         assert configs[0].topic_name == "curated.analytics_v1"
         assert configs[1].topic_name == "curated.aggregate_report"
 
-    def test_denied_fields_are_excluded(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_denied_fields_are_excluded(self, sample_appspec: AppSpec) -> None:
         """Test that PII_DIRECT fields are excluded when denied."""
         configs = generate_curated_topics(sample_appspec)
 
@@ -155,9 +149,7 @@ class TestCuratedTopicGenerator:
         assert "email" in denied_names
         assert "phone" in denied_names
 
-    def test_allowed_fields_based_on_classification(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_allowed_fields_based_on_classification(self, sample_appspec: AppSpec) -> None:
         """Test that fields are allowed based on classification."""
         configs = generate_curated_topics(sample_appspec)
 
@@ -172,9 +164,7 @@ class TestCuratedTopicGenerator:
         assert total_filter is not None
         assert total_filter.allowed
 
-    def test_cross_tenant_flag_is_set(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_cross_tenant_flag_is_set(self, sample_appspec: AppSpec) -> None:
         """Test that cross_tenant flag is propagated."""
         configs = generate_curated_topics(sample_appspec)
 
@@ -240,9 +230,7 @@ class TestDataProductTransformer:
 
         assert result == 123.46
 
-    def test_transform_filters_denied_fields(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_transform_filters_denied_fields(self, sample_appspec: AppSpec) -> None:
         """Test that transform excludes denied fields."""
         configs = generate_curated_topics(sample_appspec)
         transformer = DataProductTransformer()
@@ -389,9 +377,7 @@ class TestPolicyTestGenerator:
         for suite in suites:
             assert len(suite.test_cases) > 0
 
-    def test_generates_classification_tests(
-        self, sample_appspec: AppSpec
-    ) -> None:
+    def test_generates_classification_tests(self, sample_appspec: AppSpec) -> None:
         """Test that classification tests are generated."""
         generator = PolicyTestGenerator(sample_appspec)
         suites = generator.generate_all()

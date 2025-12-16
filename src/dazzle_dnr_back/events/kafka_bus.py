@@ -73,9 +73,7 @@ logger = logging.getLogger("dazzle.events.kafka")
 def _check_kafka_available() -> None:
     """Raise an error if aiokafka is not installed."""
     if not KAFKA_AVAILABLE:
-        raise ImportError(
-            "KafkaBus requires aiokafka. Install it with: pip install aiokafka"
-        )
+        raise ImportError("KafkaBus requires aiokafka. Install it with: pip install aiokafka")
 
 
 @dataclass
@@ -112,9 +110,7 @@ class KafkaConfig:
             client_id=os.getenv("KAFKA_CLIENT_ID", "dazzle"),
             dlq_suffix=os.getenv("KAFKA_DLQ_SUFFIX", ".dlq"),
             default_partitions=int(os.getenv("KAFKA_DEFAULT_PARTITIONS", "3")),
-            default_replication_factor=int(
-                os.getenv("KAFKA_DEFAULT_REPLICATION_FACTOR", "1")
-            ),
+            default_replication_factor=int(os.getenv("KAFKA_DEFAULT_REPLICATION_FACTOR", "1")),
         )
 
     def get_common_config(self) -> dict[str, Any]:
@@ -226,9 +222,7 @@ class KafkaBus(EventBus):
         await self._admin.start()
 
         self._started = True
-        logger.info(
-            f"KafkaBus started, connected to {self._config.bootstrap_servers}"
-        )
+        logger.info(f"KafkaBus started, connected to {self._config.bootstrap_servers}")
 
     async def stop(self) -> None:
         """Stop the Kafka bus (disconnect all clients)."""
@@ -350,9 +344,7 @@ class KafkaBus(EventBus):
         key = (topic, group_id)
         async with self._lock:
             if key in self._subscriptions:
-                raise SubscriptionError(
-                    topic, group_id, "Subscription already exists"
-                )
+                raise SubscriptionError(topic, group_id, "Subscription already exists")
 
             # Ensure topic exists
             await self._ensure_topic_exists(topic)
@@ -429,9 +421,7 @@ class KafkaBus(EventBus):
                     await self.ack(sub.topic, sub.group_id, envelope.event_id)
 
                 except Exception as e:
-                    logger.error(
-                        f"Error processing message in {sub.topic}/{sub.group_id}: {e}"
-                    )
+                    logger.error(f"Error processing message in {sub.topic}/{sub.group_id}: {e}")
                     # Nack with retryable error
                     try:
                         envelope_id = UUID(msg.value.get("event_id", ""))
@@ -540,17 +530,13 @@ class KafkaBus(EventBus):
                     value=dlq_message,
                 )
 
-                logger.warning(
-                    f"Moved event {event_id} to DLQ: {reason.message}"
-                )
+                logger.warning(f"Moved event {event_id} to DLQ: {reason.message}")
 
             # Still commit offset to avoid reprocessing
             await self.ack(topic, group_id, event_id)
         else:
             # For retryable errors, don't commit - will be redelivered
-            logger.warning(
-                f"Event {event_id} will be retried: {reason.message}"
-            )
+            logger.warning(f"Event {event_id} will be retried: {reason.message}")
 
     async def replay(
         self,
@@ -688,10 +674,7 @@ class KafkaBus(EventBus):
         topics = await self._admin.list_topics()
 
         # Filter out internal topics
-        return [
-            t for t in topics
-            if not t.startswith("_") and not t.startswith("__")
-        ]
+        return [t for t in topics if not t.startswith("_") and not t.startswith("__")]
 
     async def list_consumer_groups(self, topic: str) -> list[str]:
         """List all consumer groups for a topic."""

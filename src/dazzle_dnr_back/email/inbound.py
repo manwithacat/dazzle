@@ -272,7 +272,9 @@ class MailpitInboundAdapter(InboundMailAdapter):
                     )
                     artifacts.append(artifact)
 
-                    logger.info(f"Fetched mail from Mailpit: {artifact.from_address} -> {artifact.to_addresses}")
+                    logger.info(
+                        f"Fetched mail from Mailpit: {artifact.from_address} -> {artifact.to_addresses}"
+                    )
 
                 self._last_poll = datetime.now(UTC)
 

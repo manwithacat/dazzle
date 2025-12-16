@@ -147,7 +147,9 @@ class EmailNormalizer:
             from_display_name=from_name if from_name else None,
             to_count=len(raw_event.to_addresses),
             cc_count=len(raw_event.cc_addresses),
-            subject_redacted=self._redact_sensitive(raw_event.subject or "") if self._redact_pii else (raw_event.subject or ""),
+            subject_redacted=self._redact_sensitive(raw_event.subject or "")
+            if self._redact_pii
+            else (raw_event.subject or ""),
             body_excerpt_redacted=body_excerpt,
             body_length=len(body_text),
             has_html=has_html,
@@ -233,7 +235,12 @@ class EmailNormalizer:
         # Remove tags
         html = re.sub(r"<[^>]+>", " ", html)
         # Decode HTML entities
-        html = html.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+        html = (
+            html.replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+        )
         # Normalize whitespace
         html = re.sub(r"\s+", " ", html).strip()
         return html

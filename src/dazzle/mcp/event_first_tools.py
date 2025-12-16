@@ -64,11 +64,13 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
             if hasattr(rel_field.type, "kind"):
                 kind = rel_field.type.kind.value
                 if kind in ("ref", "has_many", "has_one", "belongs_to", "embeds"):
-                    relationships.append({
-                        "field": rel_field.name,
-                        "type": kind,
-                        "target": rel_field.type.ref_entity,
-                    })
+                    relationships.append(
+                        {
+                            "field": rel_field.name,
+                            "type": kind,
+                            "target": rel_field.type.ref_entity,
+                        }
+                    )
 
         entity_info: dict[str, Any] = {
             "name": entity.name,
@@ -91,72 +93,88 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
     # Extract commands from surfaces
     for surface in appspec.surfaces:
         if surface.mode.value in ("create", "edit", "form") and surface.entity_ref:
-            result.commands.append({
-                "name": f"{surface.entity_ref}_{surface.mode.value}",
-                "entity": surface.entity_ref,
-                "type": surface.mode.value,
-                "source": f"surface:{surface.name}",
-            })
+            result.commands.append(
+                {
+                    "name": f"{surface.entity_ref}_{surface.mode.value}",
+                    "entity": surface.entity_ref,
+                    "type": surface.mode.value,
+                    "source": f"surface:{surface.name}",
+                }
+            )
 
     # Extract events from HLESS streams
     if appspec.streams:
         for stream in appspec.streams:
-            result.events.append({
-                "stream": stream.name,
-                "record_kind": stream.record_kind.value if stream.record_kind else "unknown",
-                "partition_key": stream.partition_key,
-                "idempotency": stream.idempotency.strategy_type.value if stream.idempotency else None,
-            })
+            result.events.append(
+                {
+                    "stream": stream.name,
+                    "record_kind": stream.record_kind.value if stream.record_kind else "unknown",
+                    "partition_key": stream.partition_key,
+                    "idempotency": stream.idempotency.strategy_type.value
+                    if stream.idempotency
+                    else None,
+                }
+            )
 
     # Infer events from entities (CRUD operations)
     for entity in appspec.domain.entities:
         for action in ["created", "updated", "deleted"]:
-            result.events.append({
-                "stream": f"app.{entity.name}.{action}",
-                "record_kind": "FACT",
-                "partition_key": "id",
-                "idempotency": "event_id",
-                "inferred": True,
-            })
+            result.events.append(
+                {
+                    "stream": f"app.{entity.name}.{action}",
+                    "record_kind": "FACT",
+                    "partition_key": "id",
+                    "idempotency": "event_id",
+                    "inferred": True,
+                }
+            )
 
     # Extract projections from AppSpec
     if appspec.projections:
         for proj in appspec.projections:
-            result.projections.append({
-                "name": proj.name,
-                "entity": proj.target_entity,
-                "source_topic": proj.source_topic,
-            })
+            result.projections.append(
+                {
+                    "name": proj.name,
+                    "entity": proj.target_entity,
+                    "source_topic": proj.source_topic,
+                }
+            )
 
     # Extract tenancy signals
     if appspec.tenancy:
-        result.tenancy_signals.append({
-            "type": "explicit_config",
-            "mode": appspec.tenancy.isolation.mode.value,
-            "partition_key": appspec.tenancy.isolation.partition_key,
-            "topic_namespace": appspec.tenancy.isolation.topic_namespace.value,
-        })
+        result.tenancy_signals.append(
+            {
+                "type": "explicit_config",
+                "mode": appspec.tenancy.isolation.mode.value,
+                "partition_key": appspec.tenancy.isolation.partition_key,
+                "topic_namespace": appspec.tenancy.isolation.topic_namespace.value,
+            }
+        )
 
     # Check for tenant_id fields
     for entity in appspec.domain.entities:
         for f in entity.fields:
             if f.name == "tenant_id" or f.name.endswith("_tenant_id"):
-                result.tenancy_signals.append({
-                    "type": "field_indicator",
-                    "entity": entity.name,
-                    "field": f.name,
-                })
+                result.tenancy_signals.append(
+                    {
+                        "type": "field_indicator",
+                        "entity": entity.name,
+                        "field": f.name,
+                    }
+                )
 
     # Extract compliance signals from policies
     if appspec.policies:
         for cls in appspec.policies.classifications:
-            result.compliance_signals.append({
-                "type": "classification",
-                "entity": cls.entity,
-                "field": cls.field,
-                "classification": cls.classification.value,
-                "retention": cls.retention.value if cls.retention else None,
-            })
+            result.compliance_signals.append(
+                {
+                    "type": "classification",
+                    "entity": cls.entity,
+                    "field": cls.field,
+                    "classification": cls.classification.value,
+                    "retention": cls.retention.value if cls.retention else None,
+                }
+            )
 
     # Infer compliance from field names
     pii_patterns = ["email", "phone", "ssn", "address", "name", "dob", "birth"]
@@ -167,24 +185,28 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
             field_lower = f.name.lower()
             for pattern in pii_patterns:
                 if pattern in field_lower:
-                    result.compliance_signals.append({
-                        "type": "inferred_pii",
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                        "confidence": 0.8,
-                    })
+                    result.compliance_signals.append(
+                        {
+                            "type": "inferred_pii",
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                            "confidence": 0.8,
+                        }
+                    )
                     break
 
             for pattern in financial_patterns:
                 if pattern in field_lower:
-                    result.compliance_signals.append({
-                        "type": "inferred_financial",
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                        "confidence": 0.8,
-                    })
+                    result.compliance_signals.append(
+                        {
+                            "type": "inferred_financial",
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                            "confidence": 0.8,
+                        }
+                    )
                     break
 
     return result
@@ -231,23 +253,27 @@ def validate_event_naming(appspec: ir.AppSpec) -> list[ValidationIssue]:
         # Check naming pattern
         parts = stream.name.split(".")
         if len(parts) < 2:
-            issues.append(ValidationIssue(
-                code="E_EVENT_NAMING",
-                severity=ValidationSeverity.ERROR,
-                message=f"Stream '{stream.name}' should follow domain.entity[.action] pattern",
-                location=f"stream:{stream.name}",
-                suggestion="Use format like 'app.order.created' or 'office.mail.raw'",
-            ))
+            issues.append(
+                ValidationIssue(
+                    code="E_EVENT_NAMING",
+                    severity=ValidationSeverity.ERROR,
+                    message=f"Stream '{stream.name}' should follow domain.entity[.action] pattern",
+                    location=f"stream:{stream.name}",
+                    suggestion="Use format like 'app.order.created' or 'office.mail.raw'",
+                )
+            )
 
         # Check for schema definitions
         if not stream.schemas:
-            issues.append(ValidationIssue(
-                code="W_NO_SCHEMA",
-                severity=ValidationSeverity.WARNING,
-                message=f"Stream '{stream.name}' has no schema definitions",
-                location=f"stream:{stream.name}",
-                suggestion="Add schemas field for schema evolution support",
-            ))
+            issues.append(
+                ValidationIssue(
+                    code="W_NO_SCHEMA",
+                    severity=ValidationSeverity.WARNING,
+                    message=f"Stream '{stream.name}' has no schema definitions",
+                    location=f"stream:{stream.name}",
+                    suggestion="Add schemas field for schema evolution support",
+                )
+            )
 
     return issues
 
@@ -267,24 +293,28 @@ def detect_idempotency_hazards(appspec: ir.AppSpec) -> list[ValidationIssue]:
     if appspec.streams:
         for stream in appspec.streams:
             if not stream.idempotency:
-                issues.append(ValidationIssue(
-                    code="W_NO_IDEMPOTENCY",
-                    severity=ValidationSeverity.WARNING,
-                    message=f"Stream '{stream.name}' has no idempotency strategy",
-                    location=f"stream:{stream.name}",
-                    suggestion="Add idempotency (event_id, source_dedup, provider_dedup)",
-                ))
+                issues.append(
+                    ValidationIssue(
+                        code="W_NO_IDEMPOTENCY",
+                        severity=ValidationSeverity.WARNING,
+                        message=f"Stream '{stream.name}' has no idempotency strategy",
+                        location=f"stream:{stream.name}",
+                        suggestion="Add idempotency (event_id, source_dedup, provider_dedup)",
+                    )
+                )
 
     # Check subscriptions for idempotency
     for sub in appspec.subscriptions:
         # Subscriptions are assumed to need idempotency handling
-        issues.append(ValidationIssue(
-            code="I_SUBSCRIPTION_IDEMPOTENCY",
-            severity=ValidationSeverity.INFO,
-            message=f"Subscription '{sub.group_id}' should use inbox deduplication",
-            location=f"subscription:{sub.group_id}",
-            suggestion="Ensure handlers are idempotent or use inbox pattern",
-        ))
+        issues.append(
+            ValidationIssue(
+                code="I_SUBSCRIPTION_IDEMPOTENCY",
+                severity=ValidationSeverity.INFO,
+                message=f"Subscription '{sub.group_id}' should use inbox deduplication",
+                location=f"subscription:{sub.group_id}",
+                suggestion="Ensure handlers are idempotent or use inbox pattern",
+            )
+        )
 
     # Note: external_effect and idempotency_key are future IntegrationAction fields
     # For now, we skip external effect checking until the IR supports it
@@ -313,23 +343,27 @@ def check_projection_necessity(appspec: ir.AppSpec) -> list[ValidationIssue]:
         if proj.target_entity:
             entity = appspec.domain.get_entity(proj.target_entity)
             if entity and proj.target_entity.lower() == entity.name.lower():
-                issues.append(ValidationIssue(
-                    code="W_PROJECTION_DUPLICATES_ENTITY",
-                    severity=ValidationSeverity.WARNING,
-                    message=f"Projection '{proj.name}' targets same table as entity",
-                    location=f"projection:{proj.name}",
-                    suggestion="Consider if projection adds value or use entity table directly",
-                ))
+                issues.append(
+                    ValidationIssue(
+                        code="W_PROJECTION_DUPLICATES_ENTITY",
+                        severity=ValidationSeverity.WARNING,
+                        message=f"Projection '{proj.name}' targets same table as entity",
+                        location=f"projection:{proj.name}",
+                        suggestion="Consider if projection adds value or use entity table directly",
+                    )
+                )
 
             # Check if projection is used
             if proj.target_entity not in surface_entities:
-                issues.append(ValidationIssue(
-                    code="I_PROJECTION_NOT_USED",
-                    severity=ValidationSeverity.INFO,
-                    message=f"Projection '{proj.name}' entity not used in any surface",
-                    location=f"projection:{proj.name}",
-                    suggestion="Verify projection is needed or will be used by API",
-                ))
+                issues.append(
+                    ValidationIssue(
+                        code="I_PROJECTION_NOT_USED",
+                        severity=ValidationSeverity.INFO,
+                        message=f"Projection '{proj.name}' entity not used in any surface",
+                        location=f"projection:{proj.name}",
+                        suggestion="Verify projection is needed or will be used by API",
+                    )
+                )
 
     return issues
 
@@ -422,18 +456,18 @@ def diff_appspecs(old: ir.AppSpec, new: ir.AppSpec) -> AppSpecDiff:
         removed_fields = set(old_fields.keys()) - set(new_fields.keys())
 
         if added_fields or removed_fields:
-            diff.modified_entities.append({
-                "entity": name,
-                "added_fields": list(added_fields),
-                "removed_fields": list(removed_fields),
-            })
+            diff.modified_entities.append(
+                {
+                    "entity": name,
+                    "added_fields": list(added_fields),
+                    "removed_fields": list(removed_fields),
+                }
+            )
 
             # Removing required fields is breaking
             for field_name in removed_fields:
                 if old_fields[field_name].is_required:
-                    diff.breaking_changes.append(
-                        f"Removed required field '{name}.{field_name}'"
-                    )
+                    diff.breaking_changes.append(f"Removed required field '{name}.{field_name}'")
                     diff.migration_steps.append(
                         f"Migrate data from '{name}.{field_name}' before removal"
                     )
@@ -451,16 +485,12 @@ def diff_appspecs(old: ir.AppSpec, new: ir.AppSpec) -> AppSpecDiff:
     # Removing streams with active consumers is breaking
     for stream_name in diff.removed_streams:
         diff.breaking_changes.append(f"Removed stream '{stream_name}'")
-        diff.migration_steps.append(
-            f"Ensure no consumers depend on '{stream_name}' before removal"
-        )
+        diff.migration_steps.append(f"Ensure no consumers depend on '{stream_name}' before removal")
 
     # Check for entity removal (always breaking)
     for entity_name in diff.removed_entities:
         diff.breaking_changes.append(f"Removed entity '{entity_name}'")
-        diff.migration_steps.append(
-            f"Migrate or archive data from '{entity_name}' before removal"
-        )
+        diff.migration_steps.append(f"Migrate or archive data from '{entity_name}' before removal")
 
     return diff
 
@@ -496,20 +526,24 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
         for f in entity.fields:
             if f.name == "tenant_id":
                 entities_with_tenant.append(entity.name)
-                signals.append({
-                    "type": "tenant_id_field",
-                    "entity": entity.name,
-                    "confidence": 0.9,
-                })
+                signals.append(
+                    {
+                        "type": "tenant_id_field",
+                        "entity": entity.name,
+                        "confidence": 0.9,
+                    }
+                )
 
     # Check for Tenant/Organization entity
     for entity in appspec.domain.entities:
         if entity.name.lower() in ("tenant", "organization", "company", "account"):
-            signals.append({
-                "type": "tenant_entity",
-                "entity": entity.name,
-                "confidence": 0.85,
-            })
+            signals.append(
+                {
+                    "type": "tenant_entity",
+                    "entity": entity.name,
+                    "confidence": 0.85,
+                }
+            )
 
     # Determine recommendation
     if len(entities_with_tenant) > len(appspec.domain.entities) * 0.5:
@@ -580,30 +614,36 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
 
             for pattern, confidence in pii_patterns.items():
                 if pattern in field_lower:
-                    pii_fields.append({
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                        "confidence": confidence,
-                    })
+                    pii_fields.append(
+                        {
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                            "confidence": confidence,
+                        }
+                    )
 
             for pattern, confidence in financial_patterns.items():
                 if pattern in field_lower:
-                    financial_fields.append({
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                        "confidence": confidence,
-                    })
+                    financial_fields.append(
+                        {
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                            "confidence": confidence,
+                        }
+                    )
 
             for pattern, confidence in health_patterns.items():
                 if pattern in field_lower:
-                    health_fields.append({
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                        "confidence": confidence,
-                    })
+                    health_fields.append(
+                        {
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                            "confidence": confidence,
+                        }
+                    )
 
     # Determine compliance frameworks
     frameworks: list[str] = []
@@ -629,7 +669,8 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
             }
             for f in pii_fields
             if f["confidence"] > 0.8
-        ] + [
+        ]
+        + [
             {
                 "entity": f["entity"],
                 "field": f["field"],
@@ -659,57 +700,61 @@ def infer_analytics_intent(appspec: ir.AppSpec) -> dict[str, Any]:
         for f in entity.fields:
             for pattern in aggregate_patterns:
                 if pattern in f.name.lower():
-                    signals.append({
-                        "type": "aggregate_field",
-                        "entity": entity.name,
-                        "field": f.name,
-                        "pattern": pattern,
-                    })
+                    signals.append(
+                        {
+                            "type": "aggregate_field",
+                            "entity": entity.name,
+                            "field": f.name,
+                            "pattern": pattern,
+                        }
+                    )
 
     # Check for time-series data
     for entity in appspec.domain.entities:
         has_timestamp = any(
-            f.name in ("created_at", "timestamp", "recorded_at")
-            for f in entity.fields
+            f.name in ("created_at", "timestamp", "recorded_at") for f in entity.fields
         )
-        has_value = any(
-            f.name in ("value", "amount", "count", "metric")
-            for f in entity.fields
-        )
+        has_value = any(f.name in ("value", "amount", "count", "metric") for f in entity.fields)
         if has_timestamp and has_value:
-            signals.append({
-                "type": "time_series_entity",
-                "entity": entity.name,
-            })
+            signals.append(
+                {
+                    "type": "time_series_entity",
+                    "entity": entity.name,
+                }
+            )
 
     # Check for dashboard surfaces
     for surface in appspec.surfaces:
         if surface.mode == "dashboard" or "dashboard" in surface.name.lower():
-            signals.append({
-                "type": "dashboard_surface",
-                "surface": surface.name,
-            })
+            signals.append(
+                {
+                    "type": "dashboard_surface",
+                    "surface": surface.name,
+                }
+            )
 
     # Check for reporting workspaces
     for ws in appspec.workspaces:
         if "report" in ws.name.lower() or "analytics" in ws.name.lower():
-            signals.append({
-                "type": "analytics_workspace",
-                "workspace": ws.name,
-            })
+            signals.append(
+                {
+                    "type": "analytics_workspace",
+                    "workspace": ws.name,
+                }
+            )
 
     # Generate recommendations
     if signals:
-        entities_for_analytics = list({
-            s.get("entity") for s in signals if s.get("entity")
-        })
+        entities_for_analytics = list({s.get("entity") for s in signals if s.get("entity")})
         if entities_for_analytics:
-            recommended_products.append({
-                "name": "app_analytics",
-                "source_entities": entities_for_analytics,
-                "transforms": ["aggregate"],
-                "refresh": "hourly",
-            })
+            recommended_products.append(
+                {
+                    "name": "app_analytics",
+                    "source_entities": entities_for_analytics,
+                    "transforms": ["aggregate"],
+                    "refresh": "hourly",
+                }
+            )
 
     return {
         "signals": signals,
@@ -844,20 +889,23 @@ def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
 
         extraction = extract_semantics(appspec)
 
-        return json.dumps({
-            "entities": extraction.entities,
-            "commands": extraction.commands,
-            "events": extraction.events,
-            "projections": extraction.projections,
-            "tenancy_signals": extraction.tenancy_signals,
-            "compliance_signals": extraction.compliance_signals,
-            "summary": {
-                "entity_count": len(extraction.entities),
-                "command_count": len(extraction.commands),
-                "event_count": len(extraction.events),
-                "projection_count": len(extraction.projections),
+        return json.dumps(
+            {
+                "entities": extraction.entities,
+                "commands": extraction.commands,
+                "events": extraction.events,
+                "projections": extraction.projections,
+                "tenancy_signals": extraction.tenancy_signals,
+                "compliance_signals": extraction.compliance_signals,
+                "summary": {
+                    "entity_count": len(extraction.entities),
+                    "command_count": len(extraction.commands),
+                    "event_count": len(extraction.events),
+                    "projection_count": len(extraction.projections),
+                },
             },
-        }, indent=2)
+            indent=2,
+        )
 
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -883,9 +931,9 @@ def handle_diff_appspec(args: dict[str, Any], project_path: Path) -> str:
     """Handle diff_appspec tool call."""
     # This would need two AppSpec versions to compare
     # For now, return a placeholder
-    return json.dumps({
-        "error": "diff_appspec requires two AppSpec versions. Use with version control."
-    })
+    return json.dumps(
+        {"error": "diff_appspec requires two AppSpec versions. Use with version control."}
+    )
 
 
 def handle_infer_tenancy(args: dict[str, Any], project_path: Path) -> str:
@@ -954,10 +1002,12 @@ def handle_add_feedback(args: dict[str, Any], project_path: Path) -> str:
 
         get_feedback_store().add(entry)
 
-        return json.dumps({
-            "id": entry.id,
-            "message": "Feedback recorded",
-        })
+        return json.dumps(
+            {
+                "id": entry.id,
+                "message": "Feedback recorded",
+            }
+        )
 
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -982,22 +1032,25 @@ def handle_list_feedback(args: dict[str, Any], project_path: Path) -> str:
             resolved=resolved,
         )
 
-        return json.dumps({
-            "count": len(entries),
-            "entries": [
-                {
-                    "id": e.id,
-                    "pain_point": e.pain_point,
-                    "expected": e.expected,
-                    "observed": e.observed,
-                    "severity": e.severity.value,
-                    "scope": e.scope.value,
-                    "hypothesis": e.hypothesis,
-                    "resolved": e.resolved,
-                }
-                for e in entries
-            ],
-        }, indent=2)
+        return json.dumps(
+            {
+                "count": len(entries),
+                "entries": [
+                    {
+                        "id": e.id,
+                        "pain_point": e.pain_point,
+                        "expected": e.expected,
+                        "observed": e.observed,
+                        "severity": e.severity.value,
+                        "scope": e.scope.value,
+                        "hypothesis": e.hypothesis,
+                        "resolved": e.resolved,
+                    }
+                    for e in entries
+                ],
+            },
+            indent=2,
+        )
 
     except Exception as e:
         return json.dumps({"error": str(e)})

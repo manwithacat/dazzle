@@ -194,20 +194,24 @@ class TopologyExtractor:
 
         # Extract from subscriptions
         for sub in appspec.subscriptions:
-            consumers.append(ExpectedConsumer(
-                group_id=sub.group_id,
-                topics=[sub.topic],
-                idempotent=True,
-            ))
+            consumers.append(
+                ExpectedConsumer(
+                    group_id=sub.group_id,
+                    topics=[sub.topic],
+                    idempotent=True,
+                )
+            )
 
         # Extract from projections
         for proj in appspec.projections:
             group_id = f"projection-{proj.name}"
-            consumers.append(ExpectedConsumer(
-                group_id=group_id,
-                topics=[proj.source_topic],
-                idempotent=True,
-            ))
+            consumers.append(
+                ExpectedConsumer(
+                    group_id=group_id,
+                    topics=[proj.source_topic],
+                    idempotent=True,
+                )
+            )
 
         # Infer entity CRUD topics
         for entity in appspec.domain.entities:
@@ -227,9 +231,7 @@ class TopologyExtractor:
         consumer_list = consumers
 
         # Generate fingerprint
-        fingerprint = self._generate_fingerprint(
-            topic_list, consumer_list, appspec.version
-        )
+        fingerprint = self._generate_fingerprint(topic_list, consumer_list, appspec.version)
 
         return ExpectedTopology(
             topics=topic_list,
@@ -266,13 +268,9 @@ class TopologyExtractor:
         """Generate a fingerprint for the topology."""
         # Create canonical representation
         topic_dicts = [
-            {"name": t.name, "partitions": t.partitions, "events": sorted(t.events)}
-            for t in topics
+            {"name": t.name, "partitions": t.partitions, "events": sorted(t.events)} for t in topics
         ]
-        consumer_dicts = [
-            {"group_id": c.group_id, "topics": sorted(c.topics)}
-            for c in consumers
-        ]
+        consumer_dicts = [{"group_id": c.group_id, "topics": sorted(c.topics)} for c in consumers]
         canonical = {
             "topics": sorted(topic_dicts, key=lambda x: str(x["name"])),
             "consumers": sorted(consumer_dicts, key=lambda x: str(x["group_id"])),
@@ -336,9 +334,7 @@ class TopologyDriftDetector:
 
         return issues
 
-    async def _check_topics(
-        self, expected_topics: list[ExpectedTopic]
-    ) -> list[DriftIssue]:
+    async def _check_topics(self, expected_topics: list[ExpectedTopic]) -> list[DriftIssue]:
         """Check for topic drift."""
         issues: list[DriftIssue] = []
 
@@ -348,8 +344,7 @@ class TopologyDriftDetector:
         # Filter internal topics if configured
         if self._ignore_internal_topics:
             actual_topics = {
-                t for t in actual_topics
-                if not t.startswith("_") and not t.startswith("__")
+                t for t in actual_topics if not t.startswith("_") and not t.startswith("__")
             }
 
         expected_names = {t.name for t in expected_topics}
@@ -357,28 +352,32 @@ class TopologyDriftDetector:
         # Check for missing topics
         for topic in expected_topics:
             if topic.name not in actual_topics:
-                issues.append(DriftIssue(
-                    drift_type=DriftType.MISSING_TOPIC,
-                    severity=DriftSeverity.CRITICAL,
-                    resource=topic.name,
-                    message=f"Topic '{topic.name}' defined in AppSpec but not found in bus",
-                    expected=topic.name,
-                    actual=None,
-                    suggestion=f"Create topic with: partitions={topic.partitions}",
-                ))
+                issues.append(
+                    DriftIssue(
+                        drift_type=DriftType.MISSING_TOPIC,
+                        severity=DriftSeverity.CRITICAL,
+                        resource=topic.name,
+                        message=f"Topic '{topic.name}' defined in AppSpec but not found in bus",
+                        expected=topic.name,
+                        actual=None,
+                        suggestion=f"Create topic with: partitions={topic.partitions}",
+                    )
+                )
 
         # Check for extra topics (excluding DLQ topics)
         for topic_name in actual_topics:
             if topic_name not in expected_names and not topic_name.endswith(".dlq"):
-                issues.append(DriftIssue(
-                    drift_type=DriftType.EXTRA_TOPIC,
-                    severity=DriftSeverity.INFO,
-                    resource=topic_name,
-                    message=f"Topic '{topic_name}' exists but not defined in AppSpec",
-                    expected=None,
-                    actual=topic_name,
-                    suggestion="Add topic to AppSpec or remove if unused",
-                ))
+                issues.append(
+                    DriftIssue(
+                        drift_type=DriftType.EXTRA_TOPIC,
+                        severity=DriftSeverity.INFO,
+                        resource=topic_name,
+                        message=f"Topic '{topic_name}' exists but not defined in AppSpec",
+                        expected=None,
+                        actual=topic_name,
+                        suggestion="Add topic to AppSpec or remove if unused",
+                    )
+                )
 
         # Check topic configurations
         for topic in expected_topics:
@@ -388,23 +387,23 @@ class TopologyDriftDetector:
                     actual_partitions = info.get("partitions", 0)
 
                     if actual_partitions != topic.partitions:
-                        issues.append(DriftIssue(
-                            drift_type=DriftType.PARTITION_MISMATCH,
-                            severity=DriftSeverity.WARNING,
-                            resource=topic.name,
-                            message=f"Topic '{topic.name}' has {actual_partitions} partitions, expected {topic.partitions}",
-                            expected=topic.partitions,
-                            actual=actual_partitions,
-                            suggestion="Note: Kafka topics cannot reduce partitions",
-                        ))
+                        issues.append(
+                            DriftIssue(
+                                drift_type=DriftType.PARTITION_MISMATCH,
+                                severity=DriftSeverity.WARNING,
+                                resource=topic.name,
+                                message=f"Topic '{topic.name}' has {actual_partitions} partitions, expected {topic.partitions}",
+                                expected=topic.partitions,
+                                actual=actual_partitions,
+                                suggestion="Note: Kafka topics cannot reduce partitions",
+                            )
+                        )
                 except Exception as e:
                     logger.warning(f"Could not get info for topic {topic.name}: {e}")
 
         return issues
 
-    async def _check_consumers(
-        self, expected: ExpectedTopology
-    ) -> list[DriftIssue]:
+    async def _check_consumers(self, expected: ExpectedTopology) -> list[DriftIssue]:
         """Check for consumer drift."""
         issues: list[DriftIssue] = []
 
@@ -415,28 +414,25 @@ class TopologyDriftDetector:
 
                 # Filter internal consumers
                 if self._ignore_internal_consumers:
-                    actual_groups = {
-                        g for g in actual_groups if not g.startswith("_")
-                    }
+                    actual_groups = {g for g in actual_groups if not g.startswith("_")}
 
                 # Find expected consumers for this topic
-                topic_expected = {
-                    c.group_id for c in expected.consumers
-                    if topic.name in c.topics
-                }
+                topic_expected = {c.group_id for c in expected.consumers if topic.name in c.topics}
 
                 # Check for missing consumers
                 for group_id in topic_expected:
                     if group_id not in actual_groups:
-                        issues.append(DriftIssue(
-                            drift_type=DriftType.MISSING_CONSUMER,
-                            severity=DriftSeverity.WARNING,
-                            resource=f"{topic.name}/{group_id}",
-                            message=f"Consumer group '{group_id}' not active on topic '{topic.name}'",
-                            expected=group_id,
-                            actual=None,
-                            suggestion="Check if consumer is running",
-                        ))
+                        issues.append(
+                            DriftIssue(
+                                drift_type=DriftType.MISSING_CONSUMER,
+                                severity=DriftSeverity.WARNING,
+                                resource=f"{topic.name}/{group_id}",
+                                message=f"Consumer group '{group_id}' not active on topic '{topic.name}'",
+                                expected=group_id,
+                                actual=None,
+                                suggestion="Check if consumer is running",
+                            )
+                        )
 
             except Exception as e:
                 logger.warning(f"Could not check consumers for {topic.name}: {e}")
@@ -464,10 +460,13 @@ class TopologyDriftDetector:
         consumers = list(set(consumers))
 
         # Generate hash
-        canonical = json.dumps({
-            "topics": sorted(topics),
-            "consumers": sorted(consumers),
-        }, sort_keys=True)
+        canonical = json.dumps(
+            {
+                "topics": sorted(topics),
+                "consumers": sorted(consumers),
+            },
+            sort_keys=True,
+        )
         hash_value = hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
         return TopologyFingerprint(

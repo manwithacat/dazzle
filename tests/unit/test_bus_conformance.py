@@ -229,6 +229,7 @@ class TestPublishSubscribe:
 
     async def test_subscription_returns_info(self, any_bus: EventBus) -> None:
         """Test that subscribe returns subscription info."""
+
         async def handler(event: EventEnvelope) -> None:
             pass
 
@@ -407,6 +408,7 @@ class TestConsumerStatus:
 
     async def test_get_consumer_status(self, any_bus: EventBus) -> None:
         """Test getting consumer status."""
+
         async def handler(event: EventEnvelope) -> None:
             pass
 
@@ -426,9 +428,7 @@ class TestConsumerStatus:
         assert status.topic == "test.status"
         assert status.group_id == "status-group"
 
-    async def test_get_consumer_status_nonexistent_raises(
-        self, any_bus: EventBus
-    ) -> None:
+    async def test_get_consumer_status_nonexistent_raises(self, any_bus: EventBus) -> None:
         """Test that getting status for nonexistent consumer raises."""
         with pytest.raises(ConsumerNotFoundError):
             await any_bus.get_consumer_status("nonexistent", "nonexistent")
@@ -451,6 +451,7 @@ class TestTopicListing:
 
     async def test_list_consumer_groups(self, any_bus: EventBus) -> None:
         """Test listing consumer groups for a topic."""
+
         async def handler(event: EventEnvelope) -> None:
             pass
 
@@ -521,6 +522,7 @@ class TestConcurrency:
 
     async def test_concurrent_publish(self, any_bus: EventBus) -> None:
         """Test that concurrent publishes work correctly."""
+
         # Publish many events concurrently
         async def publish_one(i: int) -> None:
             envelope = create_test_envelope(
