@@ -4,13 +4,21 @@ End-to-end tests for DNR Backend server.
 Tests the complete flow from spec to running API.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
-try:
+if TYPE_CHECKING:
     from fastapi.testclient import TestClient
+
+try:
+    from fastapi.testclient import TestClient as _TestClient  # noqa: F811
 
     TESTCLIENT_AVAILABLE = True
 except ImportError:
+    _TestClient = None  # type: ignore[misc,assignment]
     TESTCLIENT_AVAILABLE = False
 
 from dazzle_dnr_back.runtime.server import create_app
@@ -118,7 +126,7 @@ class TestE2EEndpoints:
         """Create a test client."""
         db_path = tmp_path / "test.db"
         app = create_app(task_spec, db_path=db_path, use_database=True)
-        return TestClient(app)
+        return _TestClient(app)
 
     def test_health_endpoint(self, client: TestClient):
         """Test health endpoint."""
