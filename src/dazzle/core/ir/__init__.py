@@ -129,6 +129,29 @@ from .foreign_models import (
     ForeignModelSpec,
 )
 
+# Governance (v0.18.0 Event-First Architecture - Issue #25)
+from .governance import (
+    ClassificationSpec,
+    DataClassification,
+    DataProductsSpec,
+    DataProductSpec,
+    DataProductTransform,
+    ErasurePolicy,
+    ErasureSpec,
+    InterfaceAuthMethod,
+    InterfaceEndpointSpec,
+    InterfaceFormat,
+    InterfacesSpec,
+    InterfaceSpec,
+    PoliciesSpec,
+    RetentionPolicy,
+    TenancyMode,
+    TenancySpec,
+    TenantIsolationSpec,
+    TenantProvisioningSpec,
+    TopicNamespaceMode,
+)
+
 # HLESS - High-Level Event Semantics (v0.19.0)
 from .hless import (
     DerivationLineage,
@@ -643,6 +666,26 @@ __all__ = [
     "get_default_idempotency",
     "validate_stream",
     "validate_streams_with_cross_references",
+    # Governance (v0.18.0 Event-First Architecture - Issue #25)
+    "ClassificationSpec",
+    "DataClassification",
+    "DataProductsSpec",
+    "DataProductSpec",
+    "DataProductTransform",
+    "ErasurePolicy",
+    "ErasureSpec",
+    "InterfaceAuthMethod",
+    "InterfaceEndpointSpec",
+    "InterfaceFormat",
+    "InterfacesSpec",
+    "InterfaceSpec",
+    "PoliciesSpec",
+    "RetentionPolicy",
+    "TenancyMode",
+    "TenancySpec",
+    "TenantIsolationSpec",
+    "TenantProvisioningSpec",
+    "TopicNamespaceMode",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

@@ -222,6 +222,14 @@ class TokenType(Enum):
     PROJECT = "project"
     TOPIC = "topic"
     RETENTION = "retention"
+    # v0.18.0 Governance Keywords (Issue #25)
+    POLICIES = "policies"
+    TENANCY = "tenancy"
+    INTERFACES = "interfaces"
+    DATA_PRODUCTS = "data_products"
+    CLASSIFY = "classify"
+    ERASURE = "erasure"
+    DATA_PRODUCT = "data_product"
 
     # v0.19.0 HLESS (High-Level Event Semantics) Keywords
     # RecordKind types (INTENT already exists in v0.7.1 LLM Cognition)
@@ -586,6 +594,14 @@ KEYWORDS = {
     "project",
     "topic",
     "retention",
+    # v0.18.0 Governance keywords (Issue #25)
+    "policies",
+    "tenancy",
+    "interfaces",
+    "data_products",
+    "classify",
+    "erasure",
+    "data_product",
     # v0.19.0 HLESS (High-Level Event Semantics) keywords
     "FACT",
     "OBSERVATION",

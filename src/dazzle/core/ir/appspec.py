@@ -19,6 +19,12 @@ from .eventing import (
     ProjectionSpec,
     SubscribeSpec,
 )
+from .governance import (
+    DataProductsSpec,
+    InterfacesSpec,
+    PoliciesSpec,
+    TenancySpec,
+)
 from .experiences import ExperienceSpec
 from .fields import FieldType
 from .foreign_models import ForeignModelSpec
@@ -106,6 +112,11 @@ class AppSpec(BaseModel):
     streams: list[StreamSpec] = Field(default_factory=list)
     hless_mode: HLESSMode = Field(default=HLESSMode.STRICT)
     hless_pragma: HLESSPragma | None = None
+    # Governance sections (v0.18.0 Event-First Architecture - Issue #25)
+    policies: PoliciesSpec | None = None
+    tenancy: TenancySpec | None = None
+    interfaces: InterfacesSpec | None = None
+    data_products: DataProductsSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

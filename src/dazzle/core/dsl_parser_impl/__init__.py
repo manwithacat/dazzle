@@ -24,6 +24,7 @@ from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
 from .eventing import EventingParserMixin
 from .flow import FlowParserMixin
+from .governance import GovernanceParserMixin
 from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
 from .messaging import MessagingParserMixin
@@ -52,6 +53,7 @@ class Parser(
     MessagingParserMixin,
     EventingParserMixin,
     HLESSParserMixin,
+    GovernanceParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -650,6 +652,139 @@ class Parser(
                     projections=fragment.projections,
                     streams=fragment.streams,
                     hless_pragma=hless_pragma,
+                )
+
+            # v0.18.0 Governance sections (Issue #25)
+            elif self.match(TokenType.POLICIES):
+                policies = self.parse_policies()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                )
+
+            elif self.match(TokenType.TENANCY):
+                tenancy = self.parse_tenancy()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                )
+
+            elif self.match(TokenType.INTERFACES):
+                interfaces = self.parse_interfaces()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=interfaces,
+                    data_products=fragment.data_products,
+                )
+
+            elif self.match(TokenType.DATA_PRODUCTS):
+                data_products = self.parse_data_products()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=data_products,
                 )
 
             else:
