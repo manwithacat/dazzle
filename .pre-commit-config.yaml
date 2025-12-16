@@ -106,6 +106,15 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
+      # PRA unit tests (catches PRA regressions before CI stress tests)
+      - id: pra-unit
+        name: pra-unit
+        entry: pytest tests/unit/test_pra*.py -x -q --tb=short -m "not slow"
+        language: system
+        files: ^(src/dazzle_dnr_back/pra/|src/dazzle_dnr_back/events/|src/dazzle_dnr_back/metrics/|tests/unit/test_pra)
+        pass_filenames: false
+        stages: [pre-commit]
+
       # Verify MCP server functionality (tools are published correctly)
       - id: mcp-verify
         name: mcp-verify
