@@ -91,6 +91,20 @@ from .e2e import (
     UsabilityRule,
 )
 
+# Email Events (v0.18.0 Phase F)
+from .email import (
+    BusinessReference,
+    EmailAttachmentRef,
+    EmailBouncedEvent,
+    EmailFailedEvent,
+    EmailProvider,
+    EmailSendRequestedEvent,
+    EmailSentEvent,
+    NormalizedMailEvent,
+    RawMailEvent,
+    get_email_stream_definitions,
+)
+
 # Eventing (v0.18.0 Event-First Architecture)
 from .eventing import (
     EventFieldSpec,
@@ -133,16 +147,16 @@ from .foreign_models import (
 from .governance import (
     ClassificationSpec,
     DataClassification,
-    DataProductsSpec,
     DataProductSpec,
+    DataProductsSpec,
     DataProductTransform,
     ErasurePolicy,
     ErasureSpec,
     InterfaceAuthMethod,
     InterfaceEndpointSpec,
     InterfaceFormat,
-    InterfacesSpec,
     InterfaceSpec,
+    InterfacesSpec,
     PoliciesSpec,
     RetentionPolicy,
     TenancyMode,
@@ -179,20 +193,6 @@ from .hless_validator import (
     ValidationResult,
     validate_stream,
     validate_streams_with_cross_references,
-)
-
-# Email Events (v0.18.0 Phase F)
-from .email import (
-    BusinessReference,
-    EmailAttachmentRef,
-    EmailBouncedEvent,
-    EmailFailedEvent,
-    EmailProvider,
-    EmailSendRequestedEvent,
-    EmailSentEvent,
-    NormalizedMailEvent,
-    RawMailEvent,
-    get_email_stream_definitions,
 )
 
 # Integrations
