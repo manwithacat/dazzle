@@ -72,6 +72,9 @@ nav:
       - Adding a Feature: contributing/adding-a-feature.md
   - API Reference:
       - Overview: api-reference/index.md
+      - dazzle: api-reference/modules/dazzle.md
+      - dazzle_dnr_back: api-reference/modules/dazzle_dnr_back.md
+      - dazzle_dnr_ui: api-reference/modules/dazzle_dnr_ui.md
   - ADRs:
       - "0001: Docs Site": adr/0001-docs-site.md
 

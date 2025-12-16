@@ -24,7 +24,9 @@
     "**/node_modules/**",
     "**/*.min.*",
     "**/*.test.js",
-    "**/types.js"
+    "**/types.js",
+    "**/.dazzle/**",
+    "**/examples/**"
   ],
   "max_snippet_lines": 50,
   "llm_annotation": false,
