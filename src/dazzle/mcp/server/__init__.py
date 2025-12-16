@@ -84,6 +84,17 @@ from .tool_handlers import (
 )
 from .tools import get_all_tools
 
+# Import event-first tool handlers (Phase H)
+from dazzle.mcp.event_first_tools import (
+    handle_extract_semantics,
+    handle_validate_events,
+    handle_infer_tenancy,
+    handle_infer_compliance,
+    handle_infer_analytics,
+    handle_add_feedback,
+    handle_list_feedback,
+)
+
 # Configure logging to stderr only (stdout is reserved for JSON-RPC protocol)
 logging.basicConfig(
     level=logging.DEBUG,
@@ -139,6 +150,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     elif name == "get_dnr_logs":
         result = get_dnr_logs_handler(arguments)
 
+    # Feedback tools (always available, no project context needed)
+    elif name == "add_feedback":
+        result = handle_add_feedback(arguments, get_project_root())
+    elif name == "list_feedback":
+        result = handle_list_feedback(arguments, get_project_root())
+
     # API Knowledgebase tools (always available)
     elif name == "list_api_packs":
         result = list_api_packs_handler(arguments)
@@ -172,6 +189,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "get_test_gaps",
         "save_test_designs",
         "get_test_designs",
+        # Event-First Architecture tools (Phase H)
+        "extract_semantics",
+        "validate_events",
+        "infer_tenancy",
+        "infer_compliance",
+        "infer_analytics",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -231,6 +254,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = get_runtime_coverage_gaps_handler(project_path, arguments)
             elif name == "save_runtime_coverage":
                 result = save_runtime_coverage_handler(project_path, arguments)
+            # Event-First Architecture tools (Phase H)
+            elif name == "extract_semantics":
+                result = handle_extract_semantics(arguments, project_path)
+            elif name == "validate_events":
+                result = handle_validate_events(arguments, project_path)
+            elif name == "infer_tenancy":
+                result = handle_infer_tenancy(arguments, project_path)
+            elif name == "infer_compliance":
+                result = handle_infer_compliance(arguments, project_path)
+            elif name == "infer_analytics":
+                result = handle_infer_analytics(arguments, project_path)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
 

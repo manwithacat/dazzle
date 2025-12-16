@@ -897,6 +897,121 @@ def get_sitespec_tools() -> list[Tool]:
     ]
 
 
+def get_event_first_tools() -> list[Tool]:
+    """Get Event-First Architecture tools (Phase H)."""
+    return [
+        Tool(
+            name="extract_semantics",
+            description="Extract semantic elements from AppSpec: entities, commands, events, projections, tenancy signals, and compliance signals. Use for understanding the event-first structure of an application.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="validate_events",
+            description="Validate event-first architecture: event naming conventions, idempotency hazards, and projection necessity. Returns issues with severity and suggestions.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="infer_tenancy",
+            description="Infer multi-tenancy requirements from AppSpec. Detects tenant_id fields, tenant entities, and recommends tenancy mode (single, shared_schema, etc.).",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="infer_compliance",
+            description="Infer compliance requirements from AppSpec. Detects PII fields, financial data, and recommends classification and compliance frameworks (GDPR, PCI-DSS, etc.).",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="infer_analytics",
+            description="Infer analytics intent from AppSpec. Detects aggregate fields, time-series entities, and dashboard surfaces. Recommends data products.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="add_feedback",
+            description="Record feedback about the DSL or generated code. Use the structured model: pain_point, expected, observed, severity, scope, hypothesis.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pain_point": {
+                        "type": "string",
+                        "description": "What is the problem or friction point?",
+                    },
+                    "expected": {
+                        "type": "string",
+                        "description": "What was expected to happen?",
+                    },
+                    "observed": {
+                        "type": "string",
+                        "description": "What actually happened?",
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": ["critical", "high", "medium", "low"],
+                        "description": "Severity of the issue",
+                    },
+                    "scope": {
+                        "type": "string",
+                        "enum": ["global", "module", "entity", "field", "surface"],
+                        "description": "Scope of the issue's impact",
+                    },
+                    "hypothesis": {
+                        "type": "string",
+                        "description": "Hypothesis about the root cause",
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Location in DSL or code (e.g., 'entity:Order.status')",
+                    },
+                },
+                "required": ["pain_point", "expected", "observed", "severity", "scope"],
+            },
+        ),
+        Tool(
+            name="list_feedback",
+            description="List recorded feedback entries. Filter by severity, scope, or resolution status.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "severity": {
+                        "type": "string",
+                        "enum": ["critical", "high", "medium", "low"],
+                        "description": "Filter by severity",
+                    },
+                    "scope": {
+                        "type": "string",
+                        "enum": ["global", "module", "entity", "field", "surface"],
+                        "description": "Filter by scope",
+                    },
+                    "resolved": {
+                        "type": "boolean",
+                        "description": "Filter by resolution status",
+                    },
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -986,6 +1101,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add SiteSpec tools (always available)
     tools.extend(get_sitespec_tools())
+
+    # Add Event-First Architecture tools (Phase H)
+    tools.extend(get_event_first_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())
