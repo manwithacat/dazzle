@@ -15,9 +15,10 @@ from __future__ import annotations
 import asyncio
 import os
 import tempfile
+from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -33,10 +34,9 @@ from dazzle_dnr_back.events.dev_memory import DevBusMemory
 from dazzle_dnr_back.events.dev_sqlite import DevBrokerSQLite
 from dazzle_dnr_back.events.envelope import EventEnvelope
 
-
 # Check if Kafka is available for testing
 try:
-    from dazzle_dnr_back.events.kafka_bus import KafkaBus, KafkaConfig, KAFKA_AVAILABLE
+    from dazzle_dnr_back.events.kafka_bus import KAFKA_AVAILABLE, KafkaBus, KafkaConfig
 
     KAFKA_TEST_ENABLED = KAFKA_AVAILABLE and os.getenv("KAFKA_BOOTSTRAP_SERVERS")
 except ImportError:

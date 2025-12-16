@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING
 from dazzle.core.ir.governance import (
     DataClassification,
     DataProductSpec,
-    DataProductsSpec,
     DataProductTransform,
 )
 

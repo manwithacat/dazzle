@@ -12,6 +12,7 @@ Usage:
     dazzle eject --dry-run    # Preview without writing
 """
 
+from .asyncapi import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
 from .config import (
     EjectionBackendConfig,
     EjectionCIConfig,
@@ -22,7 +23,6 @@ from .config import (
     load_ejection_config,
 )
 from .generator import CompositeGenerator, Generator, GeneratorResult
-from .asyncapi import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
 from .openapi import generate_openapi, openapi_to_json, openapi_to_yaml
 from .runner import EJECTION_VERSION, EjectionResult, EjectionRunner, VerificationResult
 

@@ -11,19 +11,18 @@ Implementations:
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from email import message_from_bytes
 from email.message import Message
 from email.utils import parseaddr
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .blob_store import BlobStore, BlobMetadata
+    from .blob_store import BlobStore
 
 logger = logging.getLogger("dazzle.email.inbound")
 

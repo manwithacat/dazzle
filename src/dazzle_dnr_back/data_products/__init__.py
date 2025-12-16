@@ -10,25 +10,25 @@ Provides curated data pipelines with:
 Part of v0.18.0 Event-First Architecture (Issue #25, Phase G).
 """
 
+from dazzle_dnr_back.data_products.cross_tenant import (
+    CrossTenantPolicy,
+    CrossTenantValidator,
+)
 from dazzle_dnr_back.data_products.curated_topics import (
     CuratedTopicConfig,
     CuratedTopicGenerator,
     FieldFilter,
     generate_curated_topics,
 )
-from dazzle_dnr_back.data_products.transformer import (
-    DataProductTransformer,
-    TransformResult,
-)
-from dazzle_dnr_back.data_products.cross_tenant import (
-    CrossTenantPolicy,
-    CrossTenantValidator,
-)
 from dazzle_dnr_back.data_products.test_generator import (
     PolicyTestCase,
     PolicyTestGenerator,
     PolicyTestSuite,
     generate_policy_tests,
+)
+from dazzle_dnr_back.data_products.transformer import (
+    DataProductTransformer,
+    TransformResult,
 )
 
 __all__ = [

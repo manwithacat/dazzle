@@ -11,6 +11,9 @@ Part of v0.18.0 Event-First Architecture (Issue #25, Phase G).
 
 import pytest
 
+from dazzle.core.ir import AppSpec
+from dazzle.core.ir.domain import DomainSpec, EntitySpec, FieldSpec
+from dazzle.core.ir.fields import FieldType, FieldTypeKind
 from dazzle.core.ir.governance import (
     ClassificationSpec,
     DataClassification,
@@ -19,14 +22,10 @@ from dazzle.core.ir.governance import (
     DataProductTransform,
     PoliciesSpec,
 )
-from dazzle.core.ir.domain import DomainSpec, EntitySpec, FieldSpec
-from dazzle.core.ir.fields import FieldType, FieldTypeKind
-from dazzle.core.ir import AppSpec
 from dazzle_dnr_back.data_products import (
-    CuratedTopicConfig,
-    CuratedTopicGenerator,
     CrossTenantPolicy,
     CrossTenantValidator,
+    CuratedTopicGenerator,
     DataProductTransformer,
     PolicyTestGenerator,
     generate_curated_topics,

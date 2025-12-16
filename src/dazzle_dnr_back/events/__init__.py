@@ -44,12 +44,6 @@ from dazzle_dnr_back.events.framework import (
     shutdown_framework,
 )
 from dazzle_dnr_back.events.inbox import EventInbox, InboxEntry, ProcessingResult
-from dazzle_dnr_back.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
-from dazzle_dnr_back.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
-from dazzle_dnr_back.events.service_mixin import (
-    EventEmittingCRUDService,
-    EventEmittingMixin,
-)
 
 # v0.18.0 Phase I additions
 from dazzle_dnr_back.events.kafka_bus import (
@@ -66,6 +60,12 @@ from dazzle_dnr_back.events.multi_tenancy import (
     TenantEventConsumer,
     TenantEventPublisher,
     create_strategy,
+)
+from dazzle_dnr_back.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
+from dazzle_dnr_back.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
+from dazzle_dnr_back.events.service_mixin import (
+    EventEmittingCRUDService,
+    EventEmittingMixin,
 )
 from dazzle_dnr_back.events.topology_drift import (
     DriftIssue,

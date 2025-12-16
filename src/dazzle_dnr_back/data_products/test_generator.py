@@ -17,8 +17,6 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.governance import (
-    DataClassification,
-    DataProductSpec,
     DataProductTransform,
 )
 

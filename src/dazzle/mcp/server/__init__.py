@@ -23,6 +23,17 @@ from mcp.types import Resource, TextContent, Tool
 from pydantic import AnyUrl
 
 from dazzle.mcp.dnr_tools_impl import DNR_TOOL_NAMES, handle_dnr_tool
+
+# Import event-first tool handlers (Phase H)
+from dazzle.mcp.event_first_tools import (
+    handle_add_feedback,
+    handle_extract_semantics,
+    handle_infer_analytics,
+    handle_infer_compliance,
+    handle_infer_tenancy,
+    handle_list_feedback,
+    handle_validate_events,
+)
 from dazzle.mcp.examples import get_example_metadata
 from dazzle.mcp.resources import create_resources
 from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
@@ -83,17 +94,6 @@ from .tool_handlers import (
     validate_sitespec_handler,
 )
 from .tools import get_all_tools
-
-# Import event-first tool handlers (Phase H)
-from dazzle.mcp.event_first_tools import (
-    handle_extract_semantics,
-    handle_validate_events,
-    handle_infer_tenancy,
-    handle_infer_compliance,
-    handle_infer_analytics,
-    handle_add_feedback,
-    handle_list_feedback,
-)
 
 # Configure logging to stderr only (stdout is reserved for JSON-RPC protocol)
 logging.basicConfig(

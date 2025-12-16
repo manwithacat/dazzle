@@ -17,11 +17,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from dazzle.core import ir
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core import ir
 
 logger = logging.getLogger("dazzle.mcp.event_first")
 

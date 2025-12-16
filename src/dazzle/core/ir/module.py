@@ -20,14 +20,14 @@ from .eventing import (
     ProjectionSpec,
     SubscribeSpec,
 )
+from .experiences import ExperienceSpec
+from .foreign_models import ForeignModelSpec
 from .governance import (
     DataProductsSpec,
     InterfacesSpec,
     PoliciesSpec,
     TenancySpec,
 )
-from .experiences import ExperienceSpec
-from .foreign_models import ForeignModelSpec
 from .hless import (
     HLESSPragma,
     StreamSpec,

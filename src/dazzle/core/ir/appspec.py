@@ -19,15 +19,15 @@ from .eventing import (
     ProjectionSpec,
     SubscribeSpec,
 )
+from .experiences import ExperienceSpec
+from .fields import FieldType
+from .foreign_models import ForeignModelSpec
 from .governance import (
     DataProductsSpec,
     InterfacesSpec,
     PoliciesSpec,
     TenancySpec,
 )
-from .experiences import ExperienceSpec
-from .fields import FieldType
-from .foreign_models import ForeignModelSpec
 from .hless import (
     HLESSMode,
     HLESSPragma,

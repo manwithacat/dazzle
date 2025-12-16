@@ -13,10 +13,8 @@ The normalizer is a consumer that:
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
-import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email import message_from_bytes
