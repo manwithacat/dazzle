@@ -12,8 +12,16 @@ export interface InitWizardResult {
   template: string
   description: string
   features: string[]
+  integrations: string[]
   git: boolean
   install: boolean
+}
+
+export interface ApiPack {
+  name: string
+  provider: string
+  category: string
+  description: string
 }
 
 const TEMPLATES = [
@@ -62,10 +70,17 @@ const FEATURES = [
   },
 ]
 
-export async function runInitWizard(defaultName?: string): Promise<InitWizardResult | null> {
+export async function runInitWizard(defaultName?: string, availablePacks?: ApiPack[]): Promise<InitWizardResult | null> {
   console.clear()
 
   p.intro(pc.bgCyan(pc.black(' DAZZLE ')))
+
+  // Build integration options from available packs
+  const integrationOptions = (availablePacks || []).map(pack => ({
+    value: pack.name,
+    label: `${pack.provider} - ${pack.name.replace(/_/g, ' ')}`,
+    hint: pack.description,
+  }))
 
   const project = await p.group(
     {
@@ -108,6 +123,17 @@ export async function runInitWizard(defaultName?: string): Promise<InitWizardRes
         })
       },
 
+      integrations: () => {
+        if (integrationOptions.length === 0) {
+          return Promise.resolve([])
+        }
+        return p.multiselect({
+          message: 'Select API integrations (generates .env.example)',
+          options: integrationOptions,
+          required: false,
+        })
+      },
+
       git: () =>
         p.confirm({
           message: 'Initialize a git repository?',
@@ -137,6 +163,7 @@ export async function runInitWizard(defaultName?: string): Promise<InitWizardRes
     template: project.template as string,
     description: (project.description as string) || '',
     features: (project.features as string[]) || [],
+    integrations: (project.integrations as string[]) || [],
     git: project.git as boolean,
     install: project.install as boolean,
   }

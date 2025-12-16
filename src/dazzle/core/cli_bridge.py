@@ -703,3 +703,53 @@ def run_tests_json(
         }
     except Exception as e:
         raise RuntimeError(f"Tests failed: {e}") from e
+
+
+def list_api_packs_json() -> dict[str, Any]:
+    """
+    List available API packs for integration selection.
+
+    Returns:
+        Dict with list of available packs
+    """
+    try:
+        from dazzle.api_kb.loader import list_packs
+
+        packs = list_packs()
+        return {
+            "packs": [
+                {
+                    "name": p.name,
+                    "provider": p.provider,
+                    "category": p.category,
+                    "description": p.description,
+                }
+                for p in packs
+            ]
+        }
+    except Exception as e:
+        return {"packs": [], "error": str(e)}
+
+
+def generate_env_example_json(
+    pack_names: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Generate .env.example content from selected API packs.
+
+    Args:
+        pack_names: List of pack names to include (None for all)
+
+    Returns:
+        Dict with generated content
+    """
+    try:
+        from dazzle.api_kb.loader import generate_env_example
+
+        content = generate_env_example(pack_names)
+        return {
+            "content": content,
+            "pack_count": len(pack_names) if pack_names else 0,
+        }
+    except Exception as e:
+        return {"content": "", "error": str(e)}
