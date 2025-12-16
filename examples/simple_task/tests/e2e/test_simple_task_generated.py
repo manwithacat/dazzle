@@ -48,10 +48,8 @@ def test_auth_login(page, page_diagnostics, track_route, track_crud, base_url):
     Login with valid credentials
     Tags: auth, login
     """
-    test_name = "test_auth_login"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to login page
@@ -86,10 +84,8 @@ def test_auth_logout(page, page_diagnostics, track_route, track_crud, base_url):
     Logout after being logged in
     Tags: auth, logout
     """
-    test_name = "test_auth_logout"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Open user menu
@@ -121,7 +117,6 @@ def test_Task_create_valid(page, page_diagnostics, track_route, track_crud, base
     Entity: Task
     Tags: crud, create, task
     """
-    test_name = "test_Task_create_valid"
 
     # Fixture data
     fixtures = {
@@ -194,7 +189,6 @@ def test_Task_update_valid(page, page_diagnostics, track_route, track_crud, base
     Entity: Task
     Tags: crud, update, task
     """
-    test_name = "test_Task_update_valid"
 
     # Fixture data
     fixtures = {
@@ -244,10 +238,8 @@ def test_auth_protected_route(page, page_diagnostics, track_route, track_crud, b
     Unauthenticated user redirected to login
     Tags: auth, protection
     """
-    test_name = "test_auth_protected_route"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to protected task list
@@ -273,10 +265,8 @@ def test_Task_view_detail(page, page_diagnostics, track_route, track_crud, base_
     Entity: Task
     Tags: crud, read, task
     """
-    test_name = "test_Task_view_detail"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -307,10 +297,8 @@ def test_Task_delete(page, page_diagnostics, track_route, track_crud, base_url):
     Entity: Task
     Tags: crud, delete, task
     """
-    test_name = "test_Task_delete"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -346,10 +334,8 @@ def test_Task_validation_required_title(page, page_diagnostics, track_route, tra
     Entity: Task
     Tags: validation, required, task
     """
-    test_name = "test_Task_validation_required_title"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Task list
@@ -384,10 +370,8 @@ def test_navigate_task_list(page, page_diagnostics, track_route, track_crud, bas
     Entity: Task
     Tags: navigation, task_list
     """
-    test_name = "test_navigate_task_list"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Task List
@@ -413,10 +397,8 @@ def test_navigate_task_detail(page, page_diagnostics, track_route, track_crud, b
     Entity: Task
     Tags: navigation, task_detail
     """
-    test_name = "test_navigate_task_detail"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Task Detail
@@ -442,10 +424,8 @@ def test_navigate_task_create(page, page_diagnostics, track_route, track_crud, b
     Entity: Task
     Tags: navigation, task_create
     """
-    test_name = "test_navigate_task_create"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Create Task
@@ -471,10 +451,8 @@ def test_navigate_task_edit(page, page_diagnostics, track_route, track_crud, bas
     Entity: Task
     Tags: navigation, task_edit
     """
-    test_name = "test_navigate_task_edit"
 
     # Fixture data
-    fixtures = {}
 
     # Execute flow steps
     # Navigate to Edit Task

@@ -123,8 +123,7 @@ class FieldTestHubPage:
         # Target forms specifically (most common case for create/edit views)
         # or use :first-child pattern to get the container, not children
         return self.page.locator(
-            f'form[data-dazzle-view="{view_name}"], '
-            f'div[data-dazzle-view="{view_name}"]'
+            f'form[data-dazzle-view="{view_name}"], div[data-dazzle-view="{view_name}"]'
         ).first
 
     def field(self, field_name: str, entity: str | None = None) -> Locator:

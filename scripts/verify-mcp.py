@@ -13,7 +13,6 @@ Run before committing to ensure MCP functionality is not broken.
 from __future__ import annotations
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -25,9 +24,11 @@ def test_imports() -> bool:
     """Test that MCP modules can be imported."""
     print("Testing MCP imports...")
     try:
-        from dazzle.mcp import server  # noqa: F401
-        from dazzle.mcp import tools  # noqa: F401
-        from dazzle.mcp import setup  # noqa: F401
+        from dazzle.mcp import (
+            server,  # noqa: F401
+            setup,  # noqa: F401
+            tools,  # noqa: F401
+        )
         from dazzle.mcp.server import run_server  # noqa: F401
         print("  ✓ All MCP modules imported successfully")
         return True
@@ -63,7 +64,7 @@ def test_setup_functions() -> bool:
     """Test that setup functions work."""
     print("Testing setup functions...")
     try:
-        from dazzle.mcp.setup import get_claude_config_path, check_mcp_server
+        from dazzle.mcp.setup import check_mcp_server, get_claude_config_path
 
         config_path = get_claude_config_path()
         print(f"  ✓ Config path: {config_path or 'Not found (OK for CI)'}")
@@ -82,7 +83,7 @@ async def test_server_initialization() -> bool:
     """Test that the MCP server can be initialized."""
     print("Testing server initialization...")
     try:
-        from dazzle.mcp.server import server, list_tools_handler
+        from dazzle.mcp.server import list_tools_handler, server
 
         if server is None:
             print("  ✗ Server instance is None")
@@ -105,7 +106,7 @@ async def test_tool_registration() -> bool:
     """Test that all expected tools are registered and published."""
     print("Testing tool registration...")
     try:
-        from dazzle.mcp.server import list_tools_handler, is_dev_mode
+        from dazzle.mcp.server import is_dev_mode, list_tools_handler
         from dazzle.mcp.server.tools import get_all_tools
 
         # Get tools from the definition

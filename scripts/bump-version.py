@@ -21,7 +21,6 @@ import re
 import sys
 from pathlib import Path
 
-
 # Files that contain version strings to update
 VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
@@ -164,11 +163,11 @@ def main() -> int:
     else:
         print(f"  ⚠ pip install failed: {result.stderr}")
 
-    print(f"\nNext steps:")
-    print(f"  1. Review changes: git diff")
+    print("\nNext steps:")
+    print("  1. Review changes: git diff")
     print(f"  2. Commit: git commit -am 'chore: bump version to {new_version}'")
     print(f"  3. Tag: git tag v{new_version}")
-    print(f"  4. Push: git push && git push --tags")
+    print("  4. Push: git push && git push --tags")
 
     return 0
 
