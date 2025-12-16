@@ -17,7 +17,6 @@ from dazzle_dnr_ui.themes import (
     list_theme_presets,
     resolve_theme,
 )
-from dazzle_dnr_ui.specs.theme import ThemeSpec, ThemeTokens
 
 
 class TestThemePresets:
