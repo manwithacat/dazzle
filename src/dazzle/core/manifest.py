@@ -191,11 +191,18 @@ class ThemeConfig:
     Controls the visual appearance of both the app workspace UI and
     public site pages (SiteSpec).
 
+    Available presets:
+        - saas-default: Modern SaaS styling with gradient sidebars (default)
+        - minimal: Clean, minimal styling with subtle shadows
+        - corporate: Professional blue/gray palette for enterprise
+        - startup: Bold gradients with vibrant accent colors
+        - docs: Documentation-focused, optimized for readability
+
     Examples in dazzle.toml:
 
         # Use a preset theme
         [theme]
-        preset = "saas-default"  # or "minimal"
+        preset = "corporate"
 
         # Override specific tokens
         [theme.colors]
@@ -206,7 +213,7 @@ class ThemeConfig:
         section-y = 100
     """
 
-    preset: str = "saas-default"  # "saas-default" | "minimal"
+    preset: str = "saas-default"
     colors: dict[str, str] = field(default_factory=dict)
     shadows: dict[str, str] = field(default_factory=dict)
     spacing: dict[str, int] = field(default_factory=dict)

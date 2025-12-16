@@ -28,8 +28,11 @@ Usage:
 
 from .css_generator import generate_theme_css
 from .presets import (
+    CORPORATE_THEME,
+    DOCS_THEME,
     MINIMAL_THEME,
     SAAS_DEFAULT_THEME,
+    STARTUP_THEME,
     get_theme_preset,
     list_theme_presets,
 )
@@ -39,6 +42,9 @@ __all__ = [
     # Presets
     "SAAS_DEFAULT_THEME",
     "MINIMAL_THEME",
+    "CORPORATE_THEME",
+    "STARTUP_THEME",
+    "DOCS_THEME",
     "get_theme_preset",
     "list_theme_presets",
     # CSS Generation
