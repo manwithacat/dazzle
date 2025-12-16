@@ -39,9 +39,9 @@ class TestValidStreamSpec:
     def test_valid_streamspec_parses_without_errors(self, dsl_file: Path):
         """Valid files must parse without errors."""
         result = parse_streamspec_file(dsl_file, EmitMode.IR)
-        assert (
-            result["diagnostics"] == []
-        ), f"Expected no diagnostics for valid file {dsl_file.name}, got: {result['diagnostics']}"
+        assert result["diagnostics"] == [], (
+            f"Expected no diagnostics for valid file {dsl_file.name}, got: {result['diagnostics']}"
+        )
         assert result["result"] is not None, f"Expected IR result for {dsl_file.name}"
 
     @pytest.mark.corpus
@@ -76,9 +76,9 @@ class TestInvalidStreamSpec:
     def test_invalid_streamspec_produces_errors(self, dsl_file: Path):
         """Invalid files must produce at least one error."""
         result = parse_streamspec_file(dsl_file, EmitMode.DIAG)
-        assert (
-            len(result["diagnostics"]) > 0
-        ), f"Expected errors for invalid file {dsl_file.name}, got none"
+        assert len(result["diagnostics"]) > 0, (
+            f"Expected errors for invalid file {dsl_file.name}, got none"
+        )
 
     @pytest.mark.corpus
     @pytest.mark.parametrize("dsl_file", get_invalid_files(), ids=lambda p: p.stem)
