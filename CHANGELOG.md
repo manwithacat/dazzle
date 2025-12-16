@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.16.0] - 2025-12-16
+
+### Added
+- **MkDocs Material Documentation Site** ([manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle))
+  - Complete DSL reference with 10 sections (modules, entities, surfaces, workspaces, services, integrations, messaging, ux, scenarios, experiences)
+  - Architecture guides (overview, event semantics, DSL to AppSpec, MCP server)
+  - 5 example walkthroughs (simple_task, contact_manager, support_tickets, ops_dashboard, fieldtest_hub)
+  - Getting started guides (installation, quickstart, first app)
+  - Contributing guides (dev setup, testing, adding features)
+  - Auto-generated API reference from source code analysis (315 files)
+  - GitHub Pages deployment via GitHub Actions
+
+- **Event-First Architecture** (Issue #25) - Events as invisible substrate
+  - EventBus interface (Kafka-shaped) with DevBrokerSQLite (zero-Docker development)
+  - Transactional outbox for at-least-once delivery (no dual writes)
+  - Idempotent inbox for consumer deduplication
+  - DSL extensions: `event_model`, `topic`, `event`, `publish when`, `subscribe`, `project`
+  - Replay capability for projection rebuild
+  - Developer Observability Pack:
+    - CLI commands: `dazzle events status|tail|replay`, `dazzle dlq list|replay|clear`, `dazzle outbox status|drain`
+    - Event Explorer API at `/_dnr/events/`
+    - AsyncAPI 3.0 generation from AppSpec
+  - Email as events: raw stream, normalized stream, outbound events
+  - Data products module: field classification, curated topics, policy transforms
+  - 12 Stability Rules (Constitution) for event-first systems
+  - KafkaBus adapter for production
+  - Multi-tenancy strategies and topology drift detection
+
+- **SiteSpec: Public Site Shell** (Issue #24)
+  - YAML-based `sitespec.yaml` for public pages (home, about, pricing, terms, privacy)
+  - 10 section types: hero, features, feature_grid, cta, faq, testimonials, stats, steps, logo_cloud, pricing
+  - Template variable substitution (`{{product_name}}`, `{{year}}`, etc.)
+  - Legal page templates (terms.md, privacy.md with full boilerplate)
+  - Generated auth pages (login, signup) with working forms
+  - Theme presets (`saas-default`, `minimal`)
+  - MCP tools: `get_sitespec`, `validate_sitespec`, `scaffold_site`
+
+- **Performance & Reliability Analysis (PRA)**
+  - Load generator with configurable event profiles
+  - Throughput and latency metrics collection
+  - CI integration with stress test scenarios
+  - Pre-commit hook for PRA unit tests
+
+- **HLESS (High-Level Event Semantics Specification)**
+  - RecordKind enum: INTENT, FACT, OBSERVATION, DERIVATION
+  - StreamSpec model with IDL fields
+  - HLESSValidator enforcing semantic rules
+  - Cross-stream reference validation
+
+- **Playwright E2E Tests**
+  - Smoke tests for P0 examples (simple_task, contact_manager)
+  - Screenshot tests for fieldtest_hub (16 screenshots)
+  - Semantic DOM contract validation
+
+### Changed
+- Examples reorganized: removed obsolete examples, added support_tickets and fieldtest_hub
+- Consolidated `tools/` into `scripts/` directory
+- API reference generator now excludes `__init__.py` files and detects events/invariants
+
+---
+
 ## [0.15.0] - 2025-12-15
 
 ### Added

@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-15
-**Current Version**: v0.15.0
+**Last Updated**: 2025-12-16
+**Current Version**: v0.16.0
 **Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
@@ -32,22 +32,30 @@ Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
 
 ## Roadmap
 
-### v0.16.0 - SiteSpec: Public Site Shell
+### v0.17.0 - Messaging Channels
 
-**Issue**: [#24](https://github.com/manwithacat/dazzle/issues/24)
-**Status**: Next
+**Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
+**Status**: In Progress (Next Sprint)
 
-Public-facing site shell pages without polluting the App DSL.
+Unified messaging built on the event substrate.
 
-- YAML-based `sitespec.yaml` for home, about, pricing, terms, privacy pages
-- Section-based landing pages (hero, features, cta, faq, testimonials)
-- Markdown content with template variables
-- Zero-config default generation
-- MCP tools: `site_spec`, `site_content`
+**Completed:**
+- DSL parser for `message`, `channel`, `asset`, `document`, `template`
+- IR types: `MessageSpec`, `ChannelSpec`, `SendOperationSpec`, `ReceiveOperationSpec`, `ThrottleSpec`
+- Provider detection framework with Mailpit, SendGrid, SQS detectors
+- Outbox table structure with status tracking
+- MCP tools: `list_channels`, `get_channel_status`, `list_messages`, `get_outbox_status`
+
+**Remaining:**
+- [ ] Background outbox dispatcher worker
+- [ ] Actual email sending via detected provider
+- [ ] In-memory queue/stream providers
+- [ ] RabbitMQ and Redis Streams providers
+- [ ] Dazzle Bar Mailpit panel
 
 ---
 
-### v0.17.0 - API Knowledgebase & Integration Assistant
+### v0.18.0 - API Knowledgebase & Integration Assistant
 
 **Issue**: [#21](https://github.com/manwithacat/dazzle/issues/21)
 **Status**: Planned
@@ -58,39 +66,6 @@ Curated API definitions and LLM-assisted integration setup.
 - `.env.example` generation from service requirements
 - MCP tools: `lookup_api_pack`, `suggest_integration`
 - Zero hallucinated endpoints - all from curated packs
-
----
-
-### v0.18.0 - Event-First Architecture
-
-**Issue**: [#25](https://github.com/manwithacat/dazzle/issues/25)
-**Status**: Planned
-
-Events as the invisible substrate - correctness by construction.
-
-- EventBus interface (Kafka-shaped) with DevBrokerSQLite (zero-Docker)
-- Transactional outbox + idempotent inbox (at-least-once, dedupe)
-- DSL: `event_model`, `topic`, `event`, `publish when`, `subscribe`, `project`
-- Replay capability for projection rebuild
-- Developer Observability Pack: CLI + Event Explorer + AsyncAPI
-- Optional data product boundaries with classification policies
-
----
-
-### v0.19.0 - Messaging Channels
-
-**Issue**: [#20](https://github.com/manwithacat/dazzle/issues/20)
-**Status**: Planned (depends on v0.18.0)
-
-Unified messaging built on the event substrate.
-
-- `message` construct for typed, reusable message schemas
-- `channel` construct with `kind: email | queue | stream`
-- Provider auto-detection (Mailpit locally, SendGrid/SQS/Kafka in prod)
-- Email as events: `email.send.requested` → `email.sent/failed`
-- DSL-native template language
-
-*Note: Messaging runtime deferred until after Event-First to avoid duplicate outbox/channel systems.*
 
 ---
 
@@ -122,14 +97,46 @@ Beyond web applications.
 
 ---
 
+## Completed Milestones
+
+### v0.16.0 - Documentation, Event-First, SiteSpec ✅
+
+Released 2025-12-16. See [CHANGELOG.md](CHANGELOG.md#0160---2025-12-16).
+
+- MkDocs Material documentation site at [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle)
+- Event-First Architecture (Issue #25) - events as invisible substrate
+- SiteSpec: Public Site Shell (Issue #24) - YAML-based public pages
+- Performance & Reliability Analysis (PRA) framework
+- HLESS (High-Level Event Semantics Specification)
+- Playwright E2E tests
+
+### v0.15.0 - Interactive CLI ✅
+
+Released 2025-12-15.
+
+- `dazzle init`: Interactive project wizard
+- `dazzle doctor`: Environment diagnostics
+- `dazzle explore`: Interactive DSL explorer
+- `dazzle kb`: Knowledgebase browser
+
+### v0.14.0 - MCP Commands Restored ✅
+
+Released 2025-12-14.
+
+- Full MCP server functionality in Bun CLI
+- Deterministic port allocation for DNR serve
+- Semantic E2E attributes for testability
+
+---
+
 ## Contributing
 
 **Current Opportunities**:
 
-1. **DNR Testing**: Run your projects with DNR, report issues
-2. **Example Projects**: Create domain-specific examples
+1. **Messaging Channels**: Help complete the dispatcher and providers
+2. **API Packs**: Contribute curated API pack definitions
 3. **Documentation**: Improve guides and tutorials
-4. **API Packs**: Contribute curated API pack definitions
+4. **Example Projects**: Create domain-specific examples
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
@@ -138,6 +145,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Resources
 
 - **Repository**: https://github.com/manwithacat/dazzle
-- **Documentation**: `docs/` directory
+- **Documentation**: https://manwithacat.github.io/dazzle/
 - **Examples**: `examples/` directory
 - **Issues**: [GitHub Issues](https://github.com/manwithacat/dazzle/issues)

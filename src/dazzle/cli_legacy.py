@@ -14,7 +14,7 @@ from pathlib import Path
 import typer
 
 # Version fallback - primary source is pyproject.toml via importlib.metadata
-__version__ = "0.14.0"
+__version__ = "0.16.0"
 
 
 def get_version() -> str:
