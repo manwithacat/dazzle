@@ -217,9 +217,8 @@ class DNRBackendApp:
         self._cors_origins = config.cors_origins
         # Event system (v0.18.0)
         self._event_framework: Any | None = None  # EventFramework type
-        # SiteSpec (v0.16.0)
-        self._sitespec_data = config.sitespec_data
-        self._project_root = config.project_root
+        # NOTE: _sitespec_data and _project_root are already set above (lines 201-203)
+        # with proper parameter precedence over config defaults
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
