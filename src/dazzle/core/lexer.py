@@ -257,6 +257,36 @@ class TokenType(Enum):
     WARN = "warn"
     OFF = "off"
 
+    # v0.21.0 LLM Jobs as First-Class Events (Issue #33)
+    LLM_MODEL = "llm_model"
+    LLM_CONFIG = "llm_config"
+    LLM_INTENT = "llm_intent"
+    TIER = "tier"
+    MAX_TOKENS = "max_tokens"
+    COST_PER_1K_INPUT = "cost_per_1k_input"
+    COST_PER_1K_OUTPUT = "cost_per_1k_output"
+    MODEL_ID = "model_id"
+    ARTIFACT_STORE = "artifact_store"
+    LOGGING = "logging"
+    LOG_PROMPTS = "log_prompts"
+    LOG_COMPLETIONS = "log_completions"
+    REDACT_PII = "redact_pii"
+    RATE_LIMITS = "rate_limits"
+    DEFAULT_MODEL = "default_model"
+    PROMPT = "prompt"
+    OUTPUT_SCHEMA = "output_schema"
+    TIMEOUT = "timeout"
+    RETRY = "retry"
+    PII = "pii"
+    MAX_ATTEMPTS = "max_attempts"
+    BACKOFF = "backoff"
+    INITIAL_DELAY_MS = "initial_delay_ms"
+    MAX_DELAY_MS = "max_delay_ms"
+    SCAN = "scan"
+    MODEL = "model"
+    # Note: PIIAction values (warn, redact, reject) and RetryBackoff values
+    # (linear, exponential) are parsed as identifiers, not keywords
+
     # v0.9.0 Messaging Channel Keywords
     # Note: MESSAGE already defined above in UX keywords
     CHANNEL = "channel"
@@ -623,6 +653,34 @@ KEYWORDS = {
     "strict",
     "warn",
     "off",
+    # v0.21.0 LLM Jobs as First-Class Events (Issue #33)
+    "llm_model",
+    "llm_config",
+    "llm_intent",
+    "tier",
+    "max_tokens",
+    "cost_per_1k_input",
+    "cost_per_1k_output",
+    "model_id",
+    "artifact_store",
+    "logging",
+    "log_prompts",
+    "log_completions",
+    "redact_pii",
+    "rate_limits",
+    "default_model",
+    "prompt",
+    "output_schema",
+    "timeout",
+    "retry",
+    "pii",
+    "max_attempts",
+    "backoff",
+    "initial_delay_ms",
+    "max_delay_ms",
+    "scan",
+    "model",
+    # Note: enum values (redact, reject, linear, exponential) not in keywords
     # v0.9.0 Messaging Channel keywords
     # Note: "message" already in UX keywords
     "channel",

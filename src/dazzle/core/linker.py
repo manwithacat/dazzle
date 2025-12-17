@@ -121,6 +121,9 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         personas=merged_fragment.personas,  # v0.8.5 Dazzle Bar
         scenarios=merged_fragment.scenarios,  # v0.8.5 Dazzle Bar
         security=security_config,  # v0.11.0 Security
+        llm_config=merged_fragment.llm_config,  # v0.21.0 LLM Jobs
+        llm_models=merged_fragment.llm_models,  # v0.21.0 LLM Jobs
+        llm_intents=merged_fragment.llm_intents,  # v0.21.0 LLM Jobs
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

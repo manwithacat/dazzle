@@ -726,13 +726,6 @@
               ]),
               'target_stream': 'order_facts',
             }),
-            dict({
-              'condition': 'timeout',
-              'emits': list([
-                'OrderPlacementTimedOut',
-              ]),
-              'target_stream': 'order_facts',
-            }),
           ]),
           'idempotency': dict({
             'derivation': 'hash(stream, order_id, customer_id, requested_at)',
@@ -1049,13 +1042,6 @@
               'condition': 'failure',
               'emits': list([
                 'PaymentFailed',
-              ]),
-              'target_stream': 'payment_facts',
-            }),
-            dict({
-              'condition': 'timeout',
-              'emits': list([
-                'PaymentTimedOut',
               ]),
               'target_stream': 'payment_facts',
             }),

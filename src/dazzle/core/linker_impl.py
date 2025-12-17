@@ -31,9 +31,14 @@ class SymbolTable:
     personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)  # v0.8.5
     scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)  # v0.8.5
     archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
+    llm_models: dict[str, ir.LLMModelSpec] = field(default_factory=dict)  # v0.21.0
+    llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
+
+    # Track LLM config (only one per app, from root module)
+    llm_config: ir.LLMConfigSpec | None = None  # v0.21.0
 
     def add_entity(self, entity: ir.EntitySpec, module_name: str) -> None:
         """Add entity to symbol table, checking for duplicates."""
@@ -155,6 +160,37 @@ class SymbolTable:
             )
         self.archetypes[archetype.name] = archetype
         self.symbol_sources[archetype.name] = module_name
+
+    def add_llm_model(self, llm_model: ir.LLMModelSpec, module_name: str) -> None:
+        """Add LLM model to symbol table, checking for duplicates (v0.21.0)."""
+        if llm_model.name in self.llm_models:
+            existing_module = self.symbol_sources.get(llm_model.name, "unknown")
+            raise LinkError(
+                f"Duplicate llm_model '{llm_model.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.llm_models[llm_model.name] = llm_model
+        self.symbol_sources[llm_model.name] = module_name
+
+    def add_llm_intent(self, llm_intent: ir.LLMIntentSpec, module_name: str) -> None:
+        """Add LLM intent to symbol table, checking for duplicates (v0.21.0)."""
+        if llm_intent.name in self.llm_intents:
+            existing_module = self.symbol_sources.get(llm_intent.name, "unknown")
+            raise LinkError(
+                f"Duplicate llm_intent '{llm_intent.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.llm_intents[llm_intent.name] = llm_intent
+        self.symbol_sources[llm_intent.name] = module_name
+
+    def set_llm_config(self, config: ir.LLMConfigSpec, module_name: str) -> None:
+        """Set LLM config (v0.21.0). Only one config per app allowed."""
+        if self.llm_config is not None:
+            raise LinkError(
+                f"Duplicate llm_config defined in module '{module_name}'. "
+                "Only one llm_config block is allowed per app."
+            )
+        self.llm_config = config
 
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
@@ -286,6 +322,18 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add archetypes (v0.10.3)
         for archetype in module.fragment.archetypes:
             symbols.add_archetype(archetype, module.name)
+
+        # Add LLM models (v0.21.0)
+        for llm_model in module.fragment.llm_models:
+            symbols.add_llm_model(llm_model, module.name)
+
+        # Add LLM intents (v0.21.0)
+        for llm_intent in module.fragment.llm_intents:
+            symbols.add_llm_intent(llm_intent, module.name)
+
+        # Set LLM config if present (v0.21.0)
+        if module.fragment.llm_config is not None:
+            symbols.set_llm_config(module.fragment.llm_config, module.name)
 
     return symbols
 
@@ -700,6 +748,54 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     f"Integration '{integration_name}' references unknown foreign model '{fm_ref}'"
                 )
 
+    # v0.21.0: Validate LLM intent references
+    for intent_name, llm_intent in symbols.llm_intents.items():
+        # Check model reference
+        if llm_intent.model_ref and llm_intent.model_ref not in symbols.llm_models:
+            errors.append(
+                f"llm_intent '{intent_name}' references unknown llm_model '{llm_intent.model_ref}'"
+            )
+
+        # Check output_schema reference (should be a valid entity)
+        if llm_intent.output_schema and llm_intent.output_schema not in symbols.entities:
+            errors.append(
+                f"llm_intent '{intent_name}' output_schema references "
+                f"unknown entity '{llm_intent.output_schema}'"
+            )
+
+    # v0.21.0: Validate LLM config references
+    if symbols.llm_config:
+        config = symbols.llm_config
+        # Check default_model reference
+        if config.default_model and config.default_model not in symbols.llm_models:
+            errors.append(
+                f"llm_config default_model references unknown llm_model '{config.default_model}'"
+            )
+
+        # Check rate_limits model references
+        if config.rate_limits:
+            for model_name in config.rate_limits:
+                if model_name not in symbols.llm_models:
+                    errors.append(
+                        f"llm_config rate_limits references unknown llm_model '{model_name}'"
+                    )
+
+    # v0.21.0: Validate that intents have a model (either explicit or default)
+    if symbols.llm_intents and not symbols.llm_models:
+        errors.append(
+            "llm_intent(s) defined but no llm_model(s) are available. "
+            "Define at least one llm_model for intents to use."
+        )
+    elif symbols.llm_intents:
+        default_model = symbols.llm_config.default_model if symbols.llm_config else None
+        for intent_name, llm_intent in symbols.llm_intents.items():
+            if not llm_intent.model_ref and not default_model:
+                errors.append(
+                    f"llm_intent '{intent_name}' has no model reference and no default_model "
+                    "is set in llm_config. Either specify model: in the intent or set "
+                    "default_model: in llm_config."
+                )
+
     return errors
 
 
@@ -725,4 +821,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         tests=list(symbols.tests.values()),
         personas=list(symbols.personas.values()),  # v0.8.5
         scenarios=list(symbols.scenarios.values()),  # v0.8.5
+        llm_config=symbols.llm_config,  # v0.21.0
+        llm_models=list(symbols.llm_models.values()),  # v0.21.0
+        llm_intents=list(symbols.llm_intents.values()),  # v0.21.0
     )

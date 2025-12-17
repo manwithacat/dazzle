@@ -35,6 +35,11 @@ from .hless import (
 )
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
+from .llm import (
+    LLMConfigSpec,
+    LLMIntentSpec,
+    LLMModelSpec,
+)
 from .messaging import (
     AssetSpec,
     ChannelSpec,
@@ -117,6 +122,10 @@ class AppSpec(BaseModel):
     tenancy: TenancySpec | None = None
     interfaces: InterfacesSpec | None = None
     data_products: DataProductsSpec | None = None
+    # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
+    llm_config: LLMConfigSpec | None = None
+    llm_models: list[LLMModelSpec] = Field(default_factory=list)
+    llm_intents: list[LLMIntentSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -267,6 +276,22 @@ class AppSpec(BaseModel):
         for stream in self.streams:
             if stream.name == name:
                 return stream
+        return None
+
+    # LLM getters (v0.21.0 - Issue #33)
+
+    def get_llm_model(self, name: str) -> LLMModelSpec | None:
+        """Get LLM model by name."""
+        for model in self.llm_models:
+            if model.name == name:
+                return model
+        return None
+
+    def get_llm_intent(self, name: str) -> LLMIntentSpec | None:
+        """Get LLM intent by name."""
+        for intent in self.llm_intents:
+            if intent.name == name:
+                return intent
         return None
 
     @property

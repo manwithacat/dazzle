@@ -238,6 +238,37 @@ from .layout import (
     WorkspaceLayout,
 )
 
+# LLM - Large Language Model (v0.21.0 - Issue #33)
+from .llm import (
+    ArtifactKind,
+    ArtifactRefSpec,
+    ArtifactStore,
+    LLMConfigSpec,
+    LLMIntentSpec,
+    LLMModelSpec,
+    LLMProvider,
+    LoggingPolicySpec,
+    ModelTier,
+    PIIAction,
+    PIIPolicySpec,
+    RetryBackoff,
+    RetryPolicySpec,
+)
+
+# LLM Event Streams (v0.21.0 - Issue #33)
+from .llm_events import (
+    LLM_DERIVATION_STREAM,
+    LLM_FACT_STREAM,
+    LLM_INTENT_STREAM,
+    LLM_OBSERVATION_STREAM,
+    LLM_SCHEMAS,
+    create_llm_derivation_stream,
+    create_llm_fact_stream,
+    create_llm_intent_stream,
+    create_llm_observation_stream,
+    get_all_llm_streams,
+)
+
 # Messaging Channels (v0.9.0)
 from .messaging import (
     AssetKind,
@@ -680,6 +711,20 @@ __all__ = [
     "get_default_idempotency",
     "validate_stream",
     "validate_streams_with_cross_references",
+    # LLM - Large Language Model (v0.21.0 - Issue #33)
+    "ArtifactKind",
+    "ArtifactRefSpec",
+    "ArtifactStore",
+    "LLMConfigSpec",
+    "LLMIntentSpec",
+    "LLMModelSpec",
+    "LLMProvider",
+    "LoggingPolicySpec",
+    "ModelTier",
+    "PIIAction",
+    "PIIPolicySpec",
+    "RetryBackoff",
+    "RetryPolicySpec",
     # Governance (v0.18.0 Event-First Architecture - Issue #25)
     "ClassificationSpec",
     "DataClassification",

@@ -33,6 +33,11 @@ from .hless import (
     StreamSpec,
 )
 from .integrations import IntegrationSpec
+from .llm import (
+    LLMConfigSpec,
+    LLMIntentSpec,
+    LLMModelSpec,
+)
 from .messaging import (
     AssetSpec,
     ChannelSpec,
@@ -130,6 +135,10 @@ class ModuleFragment(BaseModel):
     tenancy: TenancySpec | None = None
     interfaces: InterfacesSpec | None = None
     data_products: DataProductsSpec | None = None
+    # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
+    llm_config: LLMConfigSpec | None = None
+    llm_models: list[LLMModelSpec] = Field(default_factory=list)
+    llm_intents: list[LLMIntentSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

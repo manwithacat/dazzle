@@ -27,6 +27,7 @@ from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
+from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
@@ -54,6 +55,7 @@ class Parser(
     EventingParserMixin,
     HLESSParserMixin,
     GovernanceParserMixin,
+    LLMParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -785,6 +787,115 @@ class Parser(
                     tenancy=fragment.tenancy,
                     interfaces=fragment.interfaces,
                     data_products=data_products,
+                )
+
+            # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
+            elif self.match(TokenType.LLM_MODEL):
+                llm_model = self.parse_llm_model()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=[*fragment.llm_models, llm_model],
+                    llm_intents=fragment.llm_intents,
+                )
+
+            elif self.match(TokenType.LLM_CONFIG):
+                llm_config = self.parse_llm_config()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=fragment.llm_intents,
+                )
+
+            elif self.match(TokenType.LLM_INTENT):
+                llm_intent = self.parse_llm_intent()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=[*fragment.llm_intents, llm_intent],
                 )
 
             else:
