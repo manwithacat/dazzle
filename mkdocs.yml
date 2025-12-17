@@ -120,6 +120,3 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/manwithacat/dazzle
-
-extra_javascript:
-  - javascripts/mermaid.js
