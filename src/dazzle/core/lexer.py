@@ -283,7 +283,8 @@ class TokenType(Enum):
     INITIAL_DELAY_MS = "initial_delay_ms"
     MAX_DELAY_MS = "max_delay_ms"
     SCAN = "scan"
-    MODEL = "model"
+    # Note: 'model' is NOT a keyword - it's a common field name.
+    # Within llm_intent blocks, 'model:' is parsed as an identifier.
     # Note: PIIAction values (warn, redact, reject) and RetryBackoff values
     # (linear, exponential) are parsed as identifiers, not keywords
 
@@ -679,7 +680,7 @@ KEYWORDS = {
     "initial_delay_ms",
     "max_delay_ms",
     "scan",
-    "model",
+    # Note: 'model' is not a keyword - it's a common field name
     # Note: enum values (redact, reject, linear, exponential) not in keywords
     # v0.9.0 Messaging Channel keywords
     # Note: "message" already in UX keywords

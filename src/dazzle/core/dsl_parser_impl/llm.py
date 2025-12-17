@@ -375,8 +375,8 @@ class LLMParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            # model: model_name
-            if self.match(TokenType.MODEL):
+            # model: model_name (note: 'model' is an identifier, not a keyword)
+            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "model":
                 self.advance()
                 self.expect(TokenType.COLON)
                 model_ref = self.expect_identifier_or_keyword().value
