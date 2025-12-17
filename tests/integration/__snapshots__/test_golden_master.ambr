@@ -154,6 +154,11 @@
     'integrations': list([
     ]),
     'interfaces': None,
+    'llm_config': None,
+    'llm_intents': list([
+    ]),
+    'llm_models': list([
+    ]),
     'messages': list([
     ]),
     'name': 'simple_test',

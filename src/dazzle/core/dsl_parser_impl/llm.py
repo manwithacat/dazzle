@@ -102,7 +102,7 @@ class LLMParserMixin:
                 except ValueError:
                     token = self.current_token()
                     raise make_parse_error(
-                        f"Invalid model tier: {tier_str}. " "Must be: fast, balanced, or quality",
+                        f"Invalid model tier: {tier_str}. Must be: fast, balanced, or quality",
                         self.file,
                         token.line,
                         token.column,
@@ -232,7 +232,7 @@ class LLMParserMixin:
                 except ValueError:
                     token = self.current_token()
                     raise make_parse_error(
-                        f"Invalid artifact store: {store_str}. " "Must be: local, s3, or gcs",
+                        f"Invalid artifact store: {store_str}. Must be: local, s3, or gcs",
                         self.file,
                         token.line,
                         token.column,
@@ -473,8 +473,7 @@ class LLMParserMixin:
                 except ValueError:
                     token = self.current_token()
                     raise make_parse_error(
-                        f"Invalid backoff strategy: {backoff_str}. "
-                        "Must be: linear or exponential",
+                        f"Invalid backoff strategy: {backoff_str}. Must be: linear or exponential",
                         self.file,
                         token.line,
                         token.column,
@@ -534,7 +533,7 @@ class LLMParserMixin:
                 except ValueError:
                     token = self.current_token()
                     raise make_parse_error(
-                        f"Invalid PII action: {action_str}. " "Must be: warn, redact, or reject",
+                        f"Invalid PII action: {action_str}. Must be: warn, redact, or reject",
                         self.file,
                         token.line,
                         token.column,
