@@ -145,7 +145,8 @@ class TestSitePageToggleButton:
         """Test that site page HTML includes toggle button."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_dnr_ui/runtime/combined_server.py")
+        # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
+        py_path = Path("src/dazzle_dnr_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check toggle button is included
@@ -156,7 +157,8 @@ class TestSitePageToggleButton:
         """Test that toggle button has sun and moon icons."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_dnr_ui/runtime/combined_server.py")
+        # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
+        py_path = Path("src/dazzle_dnr_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check for sun and moon SVG icons

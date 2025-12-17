@@ -51,18 +51,38 @@ npx tsc --noEmit -p src/dazzle_dnr_ui/runtime/static/js/
 ```
 dazzle/
 ├── src/
-│   ├── dazzle/              # Core package
-│   │   ├── cli/             # CLI commands
-│   │   ├── core/            # Parser, IR, validator
-│   │   └── eject/           # Code generation
-│   ├── dazzle_dnr_back/     # FastAPI backend runtime
-│   └── dazzle_dnr_ui/       # JavaScript UI runtime
+│   ├── dazzle/                    # Core package
+│   │   ├── cli/                   # CLI commands
+│   │   ├── core/                  # Parser, IR, validator
+│   │   │   ├── ir/                # Internal representation types
+│   │   │   ├── dsl_parser_impl/   # Parser implementation modules
+│   │   │   └── lexer.py           # Tokenizer (KEYWORDS auto-generated)
+│   │   ├── mcp/                   # MCP server
+│   │   │   └── server/
+│   │   │       └── handlers/      # Tool handlers by domain
+│   │   │           ├── project.py   # Project management
+│   │   │           ├── dsl.py       # DSL validation/inspection
+│   │   │           ├── knowledge.py # Concept lookup
+│   │   │           ├── status.py    # MCP/DNR status
+│   │   │           ├── api_packs.py # External API packs
+│   │   │           └── stories.py   # Story generation
+│   │   └── eject/                 # Code generation adapters
+│   ├── dazzle_dnr_back/           # FastAPI backend runtime
+│   │   ├── runtime/               # Server and API generation
+│   │   └── converters/            # AppSpec → BackendSpec
+│   └── dazzle_dnr_ui/             # JavaScript UI runtime
+│       ├── runtime/
+│       │   ├── combined_server.py # HTTP server
+│       │   ├── site_renderer.py   # Site/auth page HTML generation
+│       │   └── static/            # JS/CSS assets
+│       └── converters/            # AppSpec → UISpec
 ├── tests/
-│   ├── unit/                # Unit tests
-│   ├── integration/         # Integration tests
-│   └── e2e/                 # End-to-end tests
-├── examples/                # Example projects
-└── docs/                    # Documentation
+│   ├── unit/                      # Unit tests
+│   ├── integration/               # Integration tests
+│   ├── e2e/                       # End-to-end tests
+│   └── parser_corpus/             # DSL parser test cases
+├── examples/                      # Example projects
+└── docs/                          # Documentation
 ```
 
 ## Development Workflow

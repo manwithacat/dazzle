@@ -93,6 +93,25 @@ Claude: [Uses lookup_concept with term="workspace"]
         "A workspace composes regions for user-centric views..."
 ```
 
+## Internal Architecture
+
+The MCP server is organized into domain-specific handler modules for maintainability:
+
+```
+src/dazzle/mcp/server/
+├── handlers/
+│   ├── __init__.py      # Re-exports all handlers
+│   ├── project.py       # Project selection, validation
+│   ├── dsl.py           # DSL parsing, entity/surface inspection
+│   ├── knowledge.py     # Concept lookup, workflow guides
+│   ├── status.py        # MCP status, DNR logs
+│   ├── api_packs.py     # External API integrations
+│   └── stories.py       # Story generation, stubs
+└── tool_registry.py     # Tool definitions and routing
+```
+
+Each handler module contains related tool implementations, making it easier to extend and maintain.
+
 ## Configuration
 
 The MCP server configuration is stored at `~/.config/claude/claude_desktop_config.json`:
