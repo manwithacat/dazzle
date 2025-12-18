@@ -33,6 +33,58 @@ dazzle mcp-check
 | `get_workflow_guide` | Get step-by-step workflow guides |
 | `get_cli_help` | Get CLI command help and examples |
 
+### Behaviour Layer Tools
+
+Tools for working with stories, test designs, and process workflows.
+
+| Tool | Purpose |
+|------|---------|
+| `get_dsl_spec` | Get complete DSL specification for story analysis |
+| `propose_stories_from_dsl` | Generate behavioural stories from DSL entities |
+| `save_stories` | Persist stories to project |
+| `get_stories` | Retrieve stories by status |
+| `generate_story_stubs` | Generate Python handler stubs from stories |
+| `generate_tests_from_stories` | Convert stories to test designs |
+
+### Process Tools
+
+Tools for inspecting and visualizing workflow processes.
+
+| Tool | Purpose |
+|------|---------|
+| `stories_coverage` | Analyze story coverage by processes |
+| `propose_processes_from_stories` | Generate process definitions from stories |
+| `list_processes` | List all defined processes |
+| `inspect_process` | Inspect process structure and steps |
+| `list_process_runs` | List process execution runs |
+| `get_process_run` | Get details of a specific run |
+| `get_process_diagram` | Generate Mermaid diagrams for processes |
+
+### Test Design Tools
+
+Tools for managing UX test coverage and test designs.
+
+| Tool | Purpose |
+|------|---------|
+| `propose_persona_tests` | Generate tests from persona goals |
+| `get_test_gaps` | Identify untested areas |
+| `save_test_designs` | Persist test designs |
+| `get_test_designs` | Retrieve test designs by status |
+| `get_coverage_actions` | Get prioritized actions to increase coverage |
+| `get_runtime_coverage_gaps` | Analyze runtime coverage report |
+| `save_runtime_coverage` | Save runtime coverage report |
+
+### Demo Data Tools
+
+Tools for generating demo/seed data from DSL.
+
+| Tool | Purpose |
+|------|---------|
+| `propose_demo_blueprint` | Generate demo data blueprint from DSL |
+| `save_demo_blueprint` | Save blueprint to project |
+| `get_demo_blueprint` | Retrieve current blueprint |
+| `generate_demo_data` | Generate CSV/JSONL demo data files |
+
 ### DNR Backend Tools
 
 | Tool | Purpose |
@@ -60,12 +112,44 @@ dazzle mcp-check
 | `get_graphql_schema` | Get generated GraphQL SDL |
 | `list_graphql_types` | List GraphQL types from BackendSpec |
 
+### Messaging Tools
+
+| Tool | Purpose |
+|------|---------|
+| `list_channels` | List messaging channels with resolution status |
+| `get_channel_status` | Get detailed channel health status |
+| `list_messages` | List message schemas and validation rules |
+| `get_outbox_status` | Get outbox statistics |
+
 ### External API Tools
 
 | Tool | Purpose |
 |------|---------|
+| `list_api_packs` | List available API packs |
+| `search_api_packs` | Search for integrations by category |
+| `get_api_pack` | Get full API pack details |
+| `generate_service_dsl` | Generate DSL from API pack |
+| `get_env_vars_for_packs` | Get .env.example content |
 | `list_adapters` | List external API adapter patterns |
 | `get_adapter_guide` | Get adapter implementation guide |
+
+### Event-First Architecture Tools
+
+| Tool | Purpose |
+|------|---------|
+| `extract_semantics` | Extract semantic elements from AppSpec |
+| `validate_events` | Validate event naming and idempotency |
+| `infer_tenancy` | Infer multi-tenancy requirements |
+| `infer_compliance` | Infer compliance requirements (GDPR, PCI) |
+| `infer_analytics` | Infer analytics intent and data products |
+
+### Site Tools
+
+| Tool | Purpose |
+|------|---------|
+| `get_sitespec` | Get public site configuration |
+| `validate_sitespec` | Validate site for semantic correctness |
+| `scaffold_site` | Create default site structure |
 
 ## Usage Examples
 
@@ -93,6 +177,32 @@ Claude: [Uses lookup_concept with term="workspace"]
         "A workspace composes regions for user-centric views..."
 ```
 
+**Generating stories from DSL:**
+
+```
+User: "Propose user stories for my app"
+Claude: [Uses propose_stories_from_dsl tool]
+        "Generated 12 stories covering Task CRUD operations and status transitions..."
+```
+
+**Converting stories to test designs:**
+
+```
+User: "Generate tests from my accepted stories"
+Claude: [Uses generate_tests_from_stories tool]
+        "Created 8 test designs from accepted stories. Each includes login step,
+        action steps, and expected outcomes derived from story acceptance criteria."
+```
+
+**Visualizing a process:**
+
+```
+User: "Show me the order fulfillment workflow"
+Claude: [Uses get_process_diagram tool]
+        "Here's a Mermaid flowchart showing the 5-step process with human approval
+        step and error handling branches..."
+```
+
 ## Internal Architecture
 
 The MCP server is organized into domain-specific handler modules for maintainability:
@@ -106,8 +216,10 @@ src/dazzle/mcp/server/
 │   ├── knowledge.py     # Concept lookup, workflow guides
 │   ├── status.py        # MCP status, DNR logs
 │   ├── api_packs.py     # External API integrations
-│   └── stories.py       # Story generation, stubs
-└── tool_registry.py     # Tool definitions and routing
+│   ├── stories.py       # Story generation, test conversion, stubs
+│   └── process.py       # Process inspection, diagrams, coverage
+├── tools.py             # Tool definitions
+└── __init__.py          # Server setup and routing
 ```
 
 Each handler module contains related tool implementations, making it easier to extend and maintain.

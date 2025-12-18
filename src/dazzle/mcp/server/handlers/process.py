@@ -26,6 +26,18 @@ if TYPE_CHECKING:
 
 
 # =============================================================================
+# Constants
+# =============================================================================
+
+# Flow control keywords used in step transitions
+FLOW_COMPLETE_KEYWORDS = ("complete", "end")
+FLOW_FAILURE_KEYWORDS = ("fail", "error")
+
+# Minimum word length for meaningful coverage matching
+MIN_MEANINGFUL_WORD_LENGTH = 4
+
+
+# =============================================================================
 # Data Classes for Coverage Results
 # =============================================================================
 
@@ -914,7 +926,7 @@ def _generate_state_diagram(proc: ProcessSpec, include_compensations: bool) -> s
         next_step = proc.steps[i + 1].name if i + 1 < len(proc.steps) else "[*]"
 
         if step.on_success:
-            if step.on_success == "complete" or step.on_success == "end":
+            if step.on_success in FLOW_COMPLETE_KEYWORDS:
                 lines.append(f"    {step.name} --> [*]: success")
             else:
                 lines.append(f"    {step.name} --> {step.on_success}: success")
@@ -922,7 +934,7 @@ def _generate_state_diagram(proc: ProcessSpec, include_compensations: bool) -> s
             lines.append(f"    {step.name} --> {next_step}")
 
         if step.on_failure:
-            if step.on_failure == "fail" or step.on_failure == "error":
+            if step.on_failure in FLOW_FAILURE_KEYWORDS:
                 lines.append(f"    {step.name} --> [*]: failure")
             else:
                 lines.append(f"    {step.name} --> {step.on_failure}: failure")
@@ -931,7 +943,7 @@ def _generate_state_diagram(proc: ProcessSpec, include_compensations: bool) -> s
         if step.kind == StepKind.HUMAN_TASK and step.human_task:
             for outcome in step.human_task.outcomes:
                 if outcome.goto:
-                    if outcome.goto in ("complete", "end"):
+                    if outcome.goto in FLOW_COMPLETE_KEYWORDS:
                         lines.append(f"    {step.name} --> [*]: {outcome.name}")
                     else:
                         lines.append(f"    {step.name} --> {outcome.goto}: {outcome.name}")
@@ -1041,9 +1053,9 @@ def _step_edges(step: ProcessStepSpec, index: int, steps: list[ProcessStepSpec])
         # Conditional branching
         true_target = step.on_true or next_step
         false_target = step.on_false or "FAILED"
-        if true_target in ("complete", "end"):
+        if true_target in FLOW_COMPLETE_KEYWORDS:
             true_target = "COMPLETE"
-        if false_target in ("fail", "error"):
+        if false_target in FLOW_FAILURE_KEYWORDS:
             false_target = "FAILED"
         lines.append(f"    {step.name} -->|Yes| {true_target}")
         lines.append(f"    {step.name} -->|No| {false_target}")
@@ -1051,9 +1063,9 @@ def _step_edges(step: ProcessStepSpec, index: int, steps: list[ProcessStepSpec])
         # Human task outcomes as branches
         for outcome in step.human_task.outcomes:
             target = outcome.goto or next_step
-            if target in ("complete", "end"):
+            if target in FLOW_COMPLETE_KEYWORDS:
                 target = "COMPLETE"
-            elif target in ("fail", "error"):
+            elif target in FLOW_FAILURE_KEYWORDS:
                 target = "FAILED"
             label = outcome.label or outcome.name
             lines.append(f"    {step.name} -->|{label}| {target}")
@@ -1061,7 +1073,7 @@ def _step_edges(step: ProcessStepSpec, index: int, steps: list[ProcessStepSpec])
         # Normal flow
         if step.on_success:
             target = step.on_success
-            if target in ("complete", "end"):
+            if target in FLOW_COMPLETE_KEYWORDS:
                 target = "COMPLETE"
             lines.append(f"    {step.name} --> {target}")
         else:
@@ -1070,7 +1082,7 @@ def _step_edges(step: ProcessStepSpec, index: int, steps: list[ProcessStepSpec])
         # Error flow
         if step.on_failure:
             target = step.on_failure
-            if target in ("fail", "error"):
+            if target in FLOW_FAILURE_KEYWORDS:
                 target = "FAILED"
             lines.append(f"    {step.name} -.->|error| {target}")
 
