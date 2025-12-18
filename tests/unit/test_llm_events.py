@@ -232,10 +232,10 @@ class TestLLMDerivationStream:
 class TestGetAllLLMStreams:
     """Tests for get_all_llm_streams helper."""
 
-    def test_returns_all_four_streams(self):
+    def test_returns_all_streams(self):
         """Test all streams are returned."""
         streams = get_all_llm_streams()
-        assert len(streams) == 4
+        assert len(streams) == 5  # intent, fact, tool, observation, derivation
 
     def test_returns_correct_stream_types(self):
         """Test stream types are correct."""

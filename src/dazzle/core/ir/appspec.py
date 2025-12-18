@@ -48,9 +48,14 @@ from .messaging import (
     TemplateSpec,
 )
 from .personas import PersonaSpec
+from .process import (
+    ProcessSpec,
+    ScheduleSpec,
+)
 from .scenarios import ScenarioSpec
 from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
+from .stories import StorySpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
@@ -100,6 +105,8 @@ class AppSpec(BaseModel):
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    # Stories (v0.22.0 DSL syntax)
+    stories: list[StorySpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)
     messages: list[MessageSpec] = Field(default_factory=list)
     channels: list[ChannelSpec] = Field(default_factory=list)
@@ -126,6 +133,9 @@ class AppSpec(BaseModel):
     llm_config: LLMConfigSpec | None = None
     llm_models: list[LLMModelSpec] = Field(default_factory=list)
     llm_intents: list[LLMIntentSpec] = Field(default_factory=list)
+    # Process Workflows (v0.23.0)
+    processes: list[ProcessSpec] = Field(default_factory=list)
+    schedules: list[ScheduleSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -232,6 +242,23 @@ class AppSpec(BaseModel):
                 return scenario
         return None
 
+    # Story getters (v0.22.0)
+
+    def get_story(self, story_id: str) -> StorySpec | None:
+        """Get story by ID."""
+        for story in self.stories:
+            if story.story_id == story_id:
+                return story
+        return None
+
+    def get_stories_by_actor(self, actor: str) -> list[StorySpec]:
+        """Get all stories for a given actor/persona."""
+        return [s for s in self.stories if s.actor == actor]
+
+    def get_stories_by_entity(self, entity_name: str) -> list[StorySpec]:
+        """Get all stories involving a specific entity."""
+        return [s for s in self.stories if entity_name in s.scope]
+
     # Messaging getters (v0.9.0)
 
     def get_message(self, name: str) -> MessageSpec | None:
@@ -293,6 +320,30 @@ class AppSpec(BaseModel):
             if intent.name == name:
                 return intent
         return None
+
+    # Process getters (v0.23.0)
+
+    def get_process(self, name: str) -> ProcessSpec | None:
+        """Get process by name."""
+        for process in self.processes:
+            if process.name == name:
+                return process
+        return None
+
+    def get_schedule(self, name: str) -> ScheduleSpec | None:
+        """Get schedule by name."""
+        for schedule in self.schedules:
+            if schedule.name == name:
+                return schedule
+        return None
+
+    def get_processes_by_story(self, story_id: str) -> list[ProcessSpec]:
+        """Get all processes that implement a specific story."""
+        return [p for p in self.processes if story_id in p.implements]
+
+    def get_schedules_by_story(self, story_id: str) -> list[ScheduleSpec]:
+        """Get all schedules that implement a specific story."""
+        return [s for s in self.schedules if story_id in s.implements]
 
     @property
     def type_catalog(self) -> dict[str, list[FieldType]]:

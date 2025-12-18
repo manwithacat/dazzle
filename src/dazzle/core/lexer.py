@@ -215,6 +215,40 @@ class TokenType(Enum):
     SEED_SCRIPT = "seed_script"
     START_ROUTE = "start_route"
 
+    # v0.22.0 Story DSL Keywords
+    STORY = "story"
+    ACTOR = "actor"
+    TRIGGER = "trigger"
+    UNLESS = "unless"
+
+    # v0.23.0 Process Workflow Keywords
+    # Note: Many tokens already defined elsewhere:
+    #   SCHEDULE, INPUT, OUTPUT, SERVICE, CHANNEL, STEP, MAPPING,
+    #   CRON, RETRY, WAIT, MAX_ATTEMPTS, BACKOFF, TIMEOUT, STEPS
+    PROCESS = "process"
+    IMPLEMENTS = "implements"
+    PARALLEL = "parallel"
+    COMPENSATIONS = "compensations"
+    COMPENSATE = "compensate"
+    ON_SUCCESS = "on_success"
+    ON_FAILURE = "on_failure"
+    ON_ANY_FAILURE = "on_any_failure"
+    OVERLAP = "overlap"
+    CATCH_UP = "catch_up"
+    GOTO = "goto"
+    SUBPROCESS = "subprocess"
+    HUMAN_TASK = "human_task"
+    ASSIGNEE = "assignee"
+    ASSIGNEE_ROLE = "assignee_role"
+    INTERVAL = "interval"
+    TIMEZONE = "timezone"
+    SETS = "sets"
+    CONFIRM = "confirm"
+    INPUTS = "inputs"
+    CONDITION = "condition"
+    ON_TRUE = "on_true"
+    ON_FALSE = "on_false"
+
     # v0.18.0 Event-First Architecture Keywords
     EVENT_MODEL = "event_model"
     PUBLISH = "publish"
@@ -348,6 +382,7 @@ class TokenType(Enum):
     SNAPSHOT = "snapshot"
     PRECONDITIONS = "preconditions"
     AUTHENTICATED = "authenticated"
+    PUBLIC = "public"
     USER_ROLE = "user_role"
     FIXTURES = "fixtures"
     VIEW = "view"

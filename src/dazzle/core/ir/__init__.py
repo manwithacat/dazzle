@@ -326,6 +326,28 @@ from .personas import (
     PersonaSpec,
 )
 
+# Process Workflows (v0.23.0)
+from .process import (
+    CompensationSpec,
+    FieldAssignment,
+    HumanTaskOutcome,
+    HumanTaskSpec,
+    InputMapping,
+    OverlapPolicy,
+    ParallelFailurePolicy,
+    ProcessEventEmission,
+    ProcessInputField,
+    ProcessOutputField,
+    ProcessSpec,
+    ProcessStepSpec,
+    ProcessTriggerKind,
+    ProcessTriggerSpec,
+    RetryConfig,
+    ScheduleSpec,
+)
+from .process import RetryBackoff as ProcessRetryBackoff
+from .process import StepKind as ProcessStepKind
+
 # Scenarios (v0.8.5 Dazzle Bar)
 from .scenarios import (
     DemoFixture,
@@ -399,9 +421,11 @@ from .state_machine import (
     TransitionTrigger,
 )
 
-# Stories (v0.12.0 Behaviour Layer)
+# Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
 from .stories import (
     StoriesContainer,
+    StoryCondition,
+    StoryException,
     StorySpec,
     StoryStatus,
     StoryTrigger,
@@ -455,6 +479,8 @@ from .ux import (
 # Workspaces
 from .workspaces import (
     DisplayMode,
+    WorkspaceAccessLevel,
+    WorkspaceAccessSpec,
     WorkspaceRegion,
     WorkspaceSpec,
 )
@@ -506,6 +532,8 @@ __all__ = [
     "SurfaceSpec",
     # Workspaces
     "DisplayMode",
+    "WorkspaceAccessLevel",
+    "WorkspaceAccessSpec",
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences
@@ -607,6 +635,25 @@ __all__ = [
     "InvariantSpec",
     # Personas (v0.8.5 Dazzle Bar)
     "PersonaSpec",
+    # Process Workflows (v0.23.0)
+    "CompensationSpec",
+    "FieldAssignment",
+    "HumanTaskOutcome",
+    "HumanTaskSpec",
+    "InputMapping",
+    "OverlapPolicy",
+    "ParallelFailurePolicy",
+    "ProcessEventEmission",
+    "ProcessInputField",
+    "ProcessOutputField",
+    "ProcessRetryBackoff",
+    "ProcessSpec",
+    "ProcessStepSpec",
+    "ProcessStepKind",
+    "ProcessTriggerKind",
+    "ProcessTriggerSpec",
+    "RetryConfig",
+    "ScheduleSpec",
     # Scenarios (v0.8.5 Dazzle Bar)
     "DemoFixture",
     "PersonaScenarioEntry",
@@ -614,8 +661,10 @@ __all__ = [
     # Security (v0.11.0)
     "SecurityConfig",
     "SecurityProfile",
-    # Stories (v0.12.0 Behaviour Layer)
+    # Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
     "StoriesContainer",
+    "StoryCondition",
+    "StoryException",
     "StorySpec",
     "StoryStatus",
     "StoryTrigger",

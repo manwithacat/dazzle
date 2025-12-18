@@ -31,8 +31,11 @@ class SymbolTable:
     personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)  # v0.8.5
     scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)  # v0.8.5
     archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
+    stories: dict[str, ir.StorySpec] = field(default_factory=dict)  # v0.22.0
     llm_models: dict[str, ir.LLMModelSpec] = field(default_factory=dict)  # v0.21.0
     llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
+    processes: dict[str, ir.ProcessSpec] = field(default_factory=dict)  # v0.23.0
+    schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -161,6 +164,17 @@ class SymbolTable:
         self.archetypes[archetype.name] = archetype
         self.symbol_sources[archetype.name] = module_name
 
+    def add_story(self, story: ir.StorySpec, module_name: str) -> None:
+        """Add story to symbol table, checking for duplicates (v0.22.0)."""
+        if story.story_id in self.stories:
+            existing_module = self.symbol_sources.get(story.story_id, "unknown")
+            raise LinkError(
+                f"Duplicate story '{story.story_id}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.stories[story.story_id] = story
+        self.symbol_sources[story.story_id] = module_name
+
     def add_llm_model(self, llm_model: ir.LLMModelSpec, module_name: str) -> None:
         """Add LLM model to symbol table, checking for duplicates (v0.21.0)."""
         if llm_model.name in self.llm_models:
@@ -191,6 +205,28 @@ class SymbolTable:
                 "Only one llm_config block is allowed per app."
             )
         self.llm_config = config
+
+    def add_process(self, process: ir.ProcessSpec, module_name: str) -> None:
+        """Add process to symbol table, checking for duplicates (v0.23.0)."""
+        if process.name in self.processes:
+            existing_module = self.symbol_sources.get(process.name, "unknown")
+            raise LinkError(
+                f"Duplicate process '{process.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.processes[process.name] = process
+        self.symbol_sources[process.name] = module_name
+
+    def add_schedule(self, schedule: ir.ScheduleSpec, module_name: str) -> None:
+        """Add schedule to symbol table, checking for duplicates (v0.23.0)."""
+        if schedule.name in self.schedules:
+            existing_module = self.symbol_sources.get(schedule.name, "unknown")
+            raise LinkError(
+                f"Duplicate schedule '{schedule.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.schedules[schedule.name] = schedule
+        self.symbol_sources[schedule.name] = module_name
 
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
@@ -323,6 +359,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         for archetype in module.fragment.archetypes:
             symbols.add_archetype(archetype, module.name)
 
+        # Add stories (v0.22.0)
+        for story in module.fragment.stories:
+            symbols.add_story(story, module.name)
+
         # Add LLM models (v0.21.0)
         for llm_model in module.fragment.llm_models:
             symbols.add_llm_model(llm_model, module.name)
@@ -334,6 +374,14 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Set LLM config if present (v0.21.0)
         if module.fragment.llm_config is not None:
             symbols.set_llm_config(module.fragment.llm_config, module.name)
+
+        # Add processes (v0.23.0)
+        for process in module.fragment.processes:
+            symbols.add_process(process, module.name)
+
+        # Add schedules (v0.23.0)
+        for schedule in module.fragment.schedules:
+            symbols.add_schedule(schedule, module.name)
 
     return symbols
 
@@ -748,6 +796,30 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     f"Integration '{integration_name}' references unknown foreign model '{fm_ref}'"
                 )
 
+    # v0.22.0: Validate story references
+    for story_id, story in symbols.stories.items():
+        # Check actor reference (should be a valid persona id or label)
+        # Note: actor can be a persona id or label - we validate against personas
+        if story.actor and symbols.personas:
+            # Only validate if personas are defined
+            if story.actor not in symbols.personas:
+                # Check if it could be a label in any persona
+                found_label = False
+                for persona in symbols.personas.values():
+                    if story.actor == persona.label:
+                        found_label = True
+                        break
+                if not found_label:
+                    errors.append(
+                        f"Story '{story_id}' actor '{story.actor}' is not a defined persona "
+                        f"id or label. Available personas: {list(symbols.personas.keys())}"
+                    )
+
+        # Check scope references (should be valid entities)
+        for entity_name in story.scope:
+            if entity_name not in symbols.entities:
+                errors.append(f"Story '{story_id}' scope references unknown entity '{entity_name}'")
+
     # v0.21.0: Validate LLM intent references
     for intent_name, llm_intent in symbols.llm_intents.items():
         # Check model reference
@@ -821,7 +893,10 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         tests=list(symbols.tests.values()),
         personas=list(symbols.personas.values()),  # v0.8.5
         scenarios=list(symbols.scenarios.values()),  # v0.8.5
+        stories=list(symbols.stories.values()),  # v0.22.0
         llm_config=symbols.llm_config,  # v0.21.0
         llm_models=list(symbols.llm_models.values()),  # v0.21.0
         llm_intents=list(symbols.llm_intents.values()),  # v0.21.0
+        processes=list(symbols.processes.values()),  # v0.23.0
+        schedules=list(symbols.schedules.values()),  # v0.23.0
     )

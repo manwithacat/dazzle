@@ -29,8 +29,10 @@ from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
+from .process import ProcessParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
+from .story import StoryParserMixin
 from .surface import SurfaceParserMixin
 from .test import TestParserMixin
 from .types import TypeParserMixin
@@ -51,11 +53,13 @@ class Parser(
     UXParserMixin,
     WorkspaceParserMixin,
     ScenarioParserMixin,
+    StoryParserMixin,
     MessagingParserMixin,
     EventingParserMixin,
     HLESSParserMixin,
     GovernanceParserMixin,
     LLMParserMixin,
+    ProcessParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -109,6 +113,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.ENTITY):
@@ -128,6 +135,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.SURFACE):
@@ -147,6 +157,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.EXPERIENCE):
@@ -166,6 +179,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.SERVICE):
@@ -187,6 +203,9 @@ class Parser(
                         fixtures=fragment.fixtures,
                         personas=fragment.personas,
                         scenarios=fragment.scenarios,
+                        stories=fragment.stories,
+                        processes=fragment.processes,
+                        schedules=fragment.schedules,
                     )
                 else:
                     fragment = ir.ModuleFragment(
@@ -204,6 +223,9 @@ class Parser(
                         fixtures=fragment.fixtures,
                         personas=fragment.personas,
                         scenarios=fragment.scenarios,
+                        stories=fragment.stories,
+                        processes=fragment.processes,
+                        schedules=fragment.schedules,
                     )
 
             elif self.match(TokenType.FOREIGN_MODEL):
@@ -223,6 +245,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.INTEGRATION):
@@ -242,6 +267,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.TEST):
@@ -261,6 +289,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.WORKSPACE):
@@ -280,6 +311,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.FLOW):
@@ -299,6 +333,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.PERSONA):
@@ -318,6 +355,9 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas + [persona],
                     scenarios=fragment.scenarios,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.SCENARIO):
@@ -337,6 +377,33 @@ class Parser(
                     fixtures=fragment.fixtures,
                     personas=fragment.personas,
                     scenarios=fragment.scenarios + [scenario],
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
+                )
+
+            # v0.22.0 Stories DSL
+            elif self.match(TokenType.STORY):
+                self.advance()  # consume 'story' token
+                story = self.parse_story()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    stories=fragment.stories + [story],
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             # v0.9.0 Messaging Channels
@@ -362,6 +429,9 @@ class Parser(
                     assets=fragment.assets,
                     documents=fragment.documents,
                     templates=fragment.templates,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.CHANNEL):
@@ -386,6 +456,9 @@ class Parser(
                     assets=fragment.assets,
                     documents=fragment.documents,
                     templates=fragment.templates,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.ASSET):
@@ -410,6 +483,9 @@ class Parser(
                     assets=fragment.assets + [asset],
                     documents=fragment.documents,
                     templates=fragment.templates,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.DOCUMENT):
@@ -434,6 +510,9 @@ class Parser(
                     assets=fragment.assets,
                     documents=fragment.documents + [document],
                     templates=fragment.templates,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.TEMPLATE):
@@ -458,6 +537,9 @@ class Parser(
                     assets=fragment.assets,
                     documents=fragment.documents,
                     templates=fragment.templates + [template],
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.DEMO):
@@ -489,6 +571,9 @@ class Parser(
                         fixtures=fragment.fixtures,
                         personas=fragment.personas,
                         scenarios=fragment.scenarios[:-1] + [updated_scenario],
+                        stories=fragment.stories,
+                        processes=fragment.processes,
+                        schedules=fragment.schedules,
                     )
                 else:
                     # Create a default scenario for standalone demo blocks
@@ -513,6 +598,9 @@ class Parser(
                         fixtures=fragment.fixtures,
                         personas=fragment.personas,
                         scenarios=[default_scenario],
+                        stories=fragment.stories,
+                        processes=fragment.processes,
+                        schedules=fragment.schedules,
                     )
 
             # v0.18.0 Event-First Architecture
@@ -541,6 +629,9 @@ class Parser(
                     event_model=event_model,
                     subscriptions=fragment.subscriptions,
                     projections=fragment.projections,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.SUBSCRIBE):
@@ -568,6 +659,9 @@ class Parser(
                     event_model=fragment.event_model,
                     subscriptions=fragment.subscriptions + [subscription],
                     projections=fragment.projections,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.PROJECT):
@@ -595,6 +689,9 @@ class Parser(
                     event_model=fragment.event_model,
                     subscriptions=fragment.subscriptions,
                     projections=fragment.projections + [projection],
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             # v0.19.0 HLESS - High-Level Event Semantics
@@ -625,6 +722,9 @@ class Parser(
                     projections=fragment.projections,
                     streams=fragment.streams + [stream],
                     hless_pragma=fragment.hless_pragma,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.HLESS):
@@ -654,6 +754,9 @@ class Parser(
                     projections=fragment.projections,
                     streams=fragment.streams,
                     hless_pragma=hless_pragma,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             # v0.18.0 Governance sections (Issue #25)
@@ -688,6 +791,9 @@ class Parser(
                     tenancy=fragment.tenancy,
                     interfaces=fragment.interfaces,
                     data_products=fragment.data_products,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.TENANCY):
@@ -721,6 +827,9 @@ class Parser(
                     tenancy=tenancy,
                     interfaces=fragment.interfaces,
                     data_products=fragment.data_products,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.INTERFACES):
@@ -754,6 +863,9 @@ class Parser(
                     tenancy=fragment.tenancy,
                     interfaces=interfaces,
                     data_products=fragment.data_products,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.DATA_PRODUCTS):
@@ -787,6 +899,9 @@ class Parser(
                     tenancy=fragment.tenancy,
                     interfaces=fragment.interfaces,
                     data_products=data_products,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
@@ -824,6 +939,9 @@ class Parser(
                     llm_config=fragment.llm_config,
                     llm_models=[*fragment.llm_models, llm_model],
                     llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.LLM_CONFIG):
@@ -860,6 +978,9 @@ class Parser(
                     llm_config=llm_config,
                     llm_models=fragment.llm_models,
                     llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
                 )
 
             elif self.match(TokenType.LLM_INTENT):
@@ -896,6 +1017,88 @@ class Parser(
                     llm_config=fragment.llm_config,
                     llm_models=fragment.llm_models,
                     llm_intents=[*fragment.llm_intents, llm_intent],
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
+                )
+
+            # v0.23.0 Process Workflows
+            elif self.match(TokenType.PROCESS):
+                process = self.parse_process()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=[*fragment.processes, process],
+                    schedules=fragment.schedules,
+                )
+
+            elif self.match(TokenType.SCHEDULE):
+                schedule = self.parse_schedule()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=[*fragment.schedules, schedule],
                 )
 
             else:
@@ -949,7 +1152,9 @@ __all__ = [
     "UXParserMixin",
     "WorkspaceParserMixin",
     "ScenarioParserMixin",
+    "StoryParserMixin",
     "MessagingParserMixin",
     "EventingParserMixin",
     "HLESSParserMixin",
+    "ProcessParserMixin",
 ]

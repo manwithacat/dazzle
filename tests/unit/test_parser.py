@@ -313,5 +313,690 @@ entity User "User":
         assert app_config is None
 
 
+class TestStoryParsing:
+    """Tests for story DSL parsing (v0.22.0)."""
+
+    def test_basic_story(self):
+        """Test basic story parsing with actor and trigger."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+  status: enum[draft,sent,paid]
+
+story ST-001 "Staff sends invoice to client":
+  actor: StaffUser
+  trigger: status_changed
+  scope: [Invoice]
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.stories) == 1
+        story = fragment.stories[0]
+        assert story.story_id == "ST-001"
+        assert story.title == "Staff sends invoice to client"
+        assert story.actor == "StaffUser"
+        assert story.trigger.value == "status_changed"
+        assert story.scope == ["Invoice"]
+
+    def test_story_with_given_when_then(self):
+        """Test story with Gherkin-style conditions."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+  status: enum[draft,sent]
+
+story ST-002 "Invoice status changes":
+  actor: Admin
+  trigger: form_submitted
+  scope: [Invoice]
+
+  given:
+    - "Invoice.status is draft"
+
+  when:
+    - "User submits form"
+
+  then:
+    - "Invoice.status changes to sent"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.stories) == 1
+        story = fragment.stories[0]
+        assert len(story.given) == 1
+        assert story.given[0].expression == "Invoice.status is draft"
+        assert len(story.when) == 1
+        assert story.when[0].expression == "User submits form"
+        assert len(story.then) == 1
+        assert story.then[0].expression == "Invoice.status changes to sent"
+
+    def test_story_with_unless(self):
+        """Test story with unless exception branch."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Invoice "Invoice":
+  id: uuid pk
+
+entity FollowupTask "Followup":
+  id: uuid pk
+
+story ST-003 "Send invoice with fallback":
+  actor: Staff
+  trigger: user_click
+  scope: [Invoice, FollowupTask]
+
+  then:
+    - "Invoice is sent"
+
+  unless:
+    - "Client.email is missing":
+        then: "FollowupTask is created"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.stories) == 1
+        story = fragment.stories[0]
+        assert len(story.unless) == 1
+        assert story.unless[0].condition == "Client.email is missing"
+        assert len(story.unless[0].then_outcomes) == 1
+        assert story.unless[0].then_outcomes[0] == "FollowupTask is created"
+
+    def test_story_all_triggers(self):
+        """Test all supported story triggers."""
+        triggers = [
+            "form_submitted",
+            "status_changed",
+            "timer_elapsed",
+            "external_event",
+            "user_click",
+            "cron_daily",
+            "cron_hourly",
+        ]
+        for trigger in triggers:
+            dsl = f"""
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+story ST-TRIG "Test trigger":
+  actor: User
+  trigger: {trigger}
+"""
+            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+            assert len(fragment.stories) == 1
+            assert fragment.stories[0].trigger.value == trigger
+
+    def test_multiple_stories(self):
+        """Test parsing multiple stories in one module."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+story ST-001 "First story":
+  actor: Admin
+  trigger: form_submitted
+
+story ST-002 "Second story":
+  actor: User
+  trigger: user_click
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.stories) == 2
+        assert fragment.stories[0].story_id == "ST-001"
+        assert fragment.stories[1].story_id == "ST-002"
+
+
+class TestProcessParsing:
+    """Tests for process DSL parsing (v0.23.0)."""
+
+    def test_basic_process(self):
+        """Test basic process parsing with trigger and step."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[pending,confirmed,shipped]=pending
+
+process OrderFulfillment "Order Fulfillment":
+  trigger: entity Order status -> confirmed
+  implements: [ST-001]
+  steps:
+    - step CheckInventory:
+        service: InventoryService
+        timeout: 30s
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.processes) == 1
+        process = fragment.processes[0]
+        assert process.name == "OrderFulfillment"
+        assert process.title == "Order Fulfillment"
+        assert "ST-001" in process.implements
+
+        # Check trigger
+        assert process.trigger is not None
+        assert process.trigger.kind.value == "entity_status_transition"
+        assert process.trigger.entity_name == "Order"
+        assert process.trigger.from_status is None
+        assert process.trigger.to_status == "confirmed"
+
+        # Check step
+        assert len(process.steps) == 1
+        step = process.steps[0]
+        assert step.name == "CheckInventory"
+        assert step.kind.value == "service"
+        assert step.service == "InventoryService"
+        assert step.timeout_seconds == 30
+
+    def test_process_with_entity_event_trigger(self):
+        """Test process with entity event trigger."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process OrderCreated "Handle Order Created":
+  trigger: entity Order created
+  implements: [ST-002]
+  steps:
+    - step NotifyAdmin:
+        channel: email
+        message: new_order_notification
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert process.trigger.kind.value == "entity_event"
+        assert process.trigger.entity_name == "Order"
+        assert process.trigger.event_type == "created"
+
+        step = process.steps[0]
+        assert step.kind.value == "send"
+        assert step.channel == "email"
+        assert step.message == "new_order_notification"
+
+    def test_process_with_wait_step(self):
+        """Test process with WAIT step."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process OrderWithWait "Order With Wait":
+  trigger: entity Order created
+  steps:
+    - step WaitForPayment:
+        wait: 24h
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "wait"
+        assert step.wait_duration_seconds == 86400  # 24 hours in seconds
+
+    def test_process_with_wait_for_signal(self):
+        """Test process with WAIT step waiting for signal."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process OrderWithSignalWait "Order With Signal Wait":
+  trigger: entity Order created
+  steps:
+    - step WaitForPayment:
+        wait: PaymentReceived
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "wait"
+        assert step.wait_for_signal == "PaymentReceived"
+
+    def test_process_with_human_task(self):
+        """Test process with HUMAN_TASK step."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process OrderApproval "Order Approval":
+  trigger: entity Order created
+  steps:
+    - step ApproveOrder:
+        human_task:
+          assignee: manager
+          surface: ApprovalForm
+          timeout: 2d
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "human_task"
+        assert step.human_task is not None
+        assert step.human_task.assignee_expression == "manager"
+        assert step.human_task.surface == "ApprovalForm"
+        assert step.human_task.timeout_seconds == 172800  # 2 days
+
+    def test_process_with_subprocess(self):
+        """Test process with SUBPROCESS step."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process MainProcess "Main Process":
+  trigger: entity Order created
+  steps:
+    - step RunSubProcess:
+        subprocess: PaymentProcess
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "subprocess"
+        assert step.subprocess == "PaymentProcess"
+
+    def test_process_with_condition_step(self):
+        """Test process with CONDITION step."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process ConditionalProcess "Conditional Process":
+  trigger: entity Order created
+  steps:
+    - step CheckAmount:
+        condition: "Order.total > 1000"
+        on_true: HighValueApproval
+        on_false: AutoApprove
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "condition"
+        assert step.condition == "Order.total > 1000"
+        assert step.on_true == "HighValueApproval"
+        assert step.on_false == "AutoApprove"
+
+    def test_process_with_parallel_steps(self):
+        """Test process with PARALLEL step containing multiple branches."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process ParallelProcess "Parallel Process":
+  trigger: entity Order created
+  steps:
+    - parallel ParallelNotifications:
+        - step NotifyCustomer:
+            channel: email
+            message: customer_notification
+        - step NotifyWarehouse:
+            channel: email
+            message: warehouse_notification
+        - step UpdateAnalytics:
+            service: AnalyticsService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.kind.value == "parallel"
+        assert len(step.parallel_steps) == 3
+        # Parallel steps are ProcessStepSpec objects with names
+        step_names = [s.name for s in step.parallel_steps]
+        assert "NotifyCustomer" in step_names
+        assert "NotifyWarehouse" in step_names
+        assert "UpdateAnalytics" in step_names
+
+    def test_process_with_multiple_steps(self):
+        """Test process with multiple sequential steps."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process MultiStepProcess "Multi Step Process":
+  trigger: entity Order created
+  implements: [ST-001, ST-002]
+  steps:
+    - step Step1:
+        service: Service1
+        timeout: 30s
+    - step Step2:
+        service: Service2
+        timeout: 1m
+    - step Step3:
+        channel: email
+        message: completion_notification
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert len(process.steps) == 3
+        assert process.steps[0].name == "Step1"
+        assert process.steps[1].name == "Step2"
+        assert process.steps[2].name == "Step3"
+        assert process.steps[1].timeout_seconds == 60  # 1 minute
+
+    def test_process_with_inputs(self):
+        """Test process with input parameters."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process ProcessWithInputs "Process With Inputs":
+  trigger: entity Order created
+  input:
+    order_id: uuid
+    priority: str
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert len(process.inputs) == 2
+        assert process.inputs[0].name == "order_id"
+        assert process.inputs[0].type == "uuid"
+        assert process.inputs[1].name == "priority"
+        assert process.inputs[1].type == "str"
+
+    def test_process_with_manual_trigger(self):
+        """Test process with manual trigger."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process ManualProcess "Manual Process":
+  trigger: manual
+  steps:
+    - step DoWork:
+        service: WorkService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert process.trigger.kind.value == "manual"
+
+    def test_process_with_signal_trigger(self):
+        """Test process with signal trigger."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process SignalProcess "Signal Process":
+  trigger: signal PaymentComplete
+  steps:
+    - step ProcessPayment:
+        service: PaymentService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert process.trigger.kind.value == "signal"
+        assert process.trigger.process_name == "PaymentComplete"
+
+    def test_process_with_timeout(self):
+        """Test process with overall timeout."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process TimedProcess "Timed Process":
+  trigger: entity Order created
+  timeout: 1h
+  steps:
+    - step DoWork:
+        service: WorkService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        process = fragment.processes[0]
+        assert process.timeout_seconds == 3600  # 1 hour
+
+    def test_process_with_step_compensate(self):
+        """Test process step with compensation handler."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+process SagaProcess "Saga Process":
+  trigger: entity Order created
+  steps:
+    - step ReserveInventory:
+        service: InventoryService
+        compensate: ReleaseInventory
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        step = fragment.processes[0].steps[0]
+        assert step.compensate_with == "ReleaseInventory"
+
+
+class TestScheduleParsing:
+    """Tests for schedule DSL parsing (v0.23.0)."""
+
+    def test_basic_cron_schedule(self):
+        """Test basic schedule with cron expression."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Report "Report":
+  id: uuid pk
+
+schedule DailyReport "Daily Report Generation":
+  cron: "0 6 * * *"
+  implements: [ST-010]
+  steps:
+    - step GenerateReport:
+        service: ReportService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.schedules) == 1
+        schedule = fragment.schedules[0]
+        assert schedule.name == "DailyReport"
+        assert schedule.title == "Daily Report Generation"
+        assert schedule.cron == "0 6 * * *"
+        assert "ST-010" in schedule.implements
+
+    def test_interval_schedule(self):
+        """Test schedule with interval."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+schedule HealthCheck "Health Check":
+  interval: 5m
+  steps:
+    - step Check:
+        service: HealthService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        schedule = fragment.schedules[0]
+        assert schedule.interval_seconds == 300  # 5 minutes
+        assert schedule.cron is None
+
+    def test_schedule_with_timezone(self):
+        """Test schedule with timezone specification."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+schedule TimezoneJob "Timezone Job":
+  cron: "0 9 * * 1-5"
+  timezone: "Europe/London"
+  steps:
+    - step Work:
+        service: WorkService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        schedule = fragment.schedules[0]
+        assert schedule.timezone == "Europe/London"
+
+    def test_schedule_with_catch_up(self):
+        """Test schedule with catch_up enabled."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+schedule CatchUpJob "Catch Up Job":
+  cron: "0 0 * * *"
+  catch_up: true
+  steps:
+    - step Work:
+        service: WorkService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        schedule = fragment.schedules[0]
+        assert schedule.catch_up is True
+
+    def test_multiple_schedules(self):
+        """Test parsing multiple schedules."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+schedule Schedule1 "First Schedule":
+  cron: "0 0 * * *"
+  steps:
+    - step Work1:
+        service: Service1
+
+schedule Schedule2 "Second Schedule":
+  interval: 1h
+  steps:
+    - step Work2:
+        service: Service2
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.schedules) == 2
+        assert fragment.schedules[0].name == "Schedule1"
+        assert fragment.schedules[1].name == "Schedule2"
+        assert fragment.schedules[0].cron == "0 0 * * *"
+        assert fragment.schedules[1].interval_seconds == 3600
+
+
+class TestProcessAndScheduleIntegration:
+    """Tests for process and schedule integration with other DSL constructs."""
+
+    def test_process_and_schedule_together(self):
+        """Test process and schedule in same module."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+process TaskProcess "Task Process":
+  trigger: entity Task created
+  steps:
+    - step ProcessTask:
+        service: TaskService
+        timeout: 30s
+
+schedule TaskCleanup "Task Cleanup":
+  cron: "0 0 * * *"
+  steps:
+    - step Cleanup:
+        service: CleanupService
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.processes) == 1
+        assert len(fragment.schedules) == 1
+        assert fragment.processes[0].name == "TaskProcess"
+        assert fragment.schedules[0].name == "TaskCleanup"
+
+    def test_process_with_story_link(self):
+        """Test process implements multiple stories."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+
+story ST-001 "Create order":
+  actor: Customer
+  trigger: form_submitted
+  scope: [Order]
+
+story ST-002 "Fulfill order":
+  actor: System
+  trigger: status_changed
+  scope: [Order]
+
+process OrderWorkflow "Order Workflow":
+  trigger: entity Order created
+  implements: [ST-001, ST-002]
+  steps:
+    - step ProcessOrder:
+        service: OrderService
+        timeout: 30s
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.stories) == 2
+        assert len(fragment.processes) == 1
+        process = fragment.processes[0]
+        assert "ST-001" in process.implements
+        assert "ST-002" in process.implements
+
+
 if __name__ == "__main__":
     main()

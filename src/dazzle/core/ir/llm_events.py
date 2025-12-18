@@ -5,14 +5,16 @@ This module defines the event streams for LLM job lifecycle management,
 following HLESS (High-Level Event Semantics Specification) principles.
 
 HLESS RecordKind Mappings:
-- LLMJobRequested    → INTENT     (User/system wants LLM work done)
-- LLMJobClaimed      → FACT       (System has accepted the job)
-- LLMRouteSelected   → FACT       (Model routing decision made)
-- LLMJobCompleted    → FACT       (LLM returned a response)
-- LLMJobFailed       → FACT       (Job failed: timeout, error, etc.)
-- LLMArtifactStored  → FACT       (Prompt/completion stored)
-- LLMTokensConsumed  → OBSERVATION (Usage metrics observed)
-- LLMCostEstimate    → DERIVATION  (Cost computed from tokens + pricing)
+- LLMJobRequested           → INTENT     (User/system wants LLM work done)
+- LLMJobClaimed             → FACT       (System has accepted the job)
+- LLMRouteSelected          → FACT       (Model routing decision made)
+- LLMJobCompleted           → FACT       (LLM returned a response)
+- LLMJobFailed              → FACT       (Job failed: timeout, error, etc.)
+- LLMArtifactStored         → FACT       (Prompt/completion stored)
+- LLMToolInvocationRequested → INTENT    (LLM wants to call a tool)
+- LLMToolInvocationCompleted → FACT      (Tool returned result)
+- LLMTokensConsumed         → OBSERVATION (Usage metrics observed)
+- LLMCostEstimate           → DERIVATION  (Cost computed from tokens + pricing)
 
 Part of Issue #33: LLM Jobs as First-Class Events.
 """
@@ -199,6 +201,49 @@ def _llm_cost_estimate_schema() -> StreamSchema:
 
 
 # =============================================================================
+# Tool Invocation Schemas (Agentic Behavior)
+# =============================================================================
+
+
+def _llm_tool_invocation_requested_schema() -> StreamSchema:
+    """Schema for LLMToolInvocationRequested - INTENT for LLM to call a tool."""
+    return StreamSchema(
+        name="LLMToolInvocationRequested",
+        version="v1",
+        description="LLM requested to invoke a tool (agentic behavior)",
+        fields=[
+            _field("invocation_id", FieldTypeKind.UUID),
+            _field("job_id", FieldTypeKind.UUID),
+            _field("tool_name", FieldTypeKind.STR, max_length=100),
+            _field("tool_input", FieldTypeKind.JSON),
+            _field("tool_input_hash", FieldTypeKind.STR, max_length=100),
+            _field("sequence_number", FieldTypeKind.INT),  # Order within job
+            _field("t_requested", FieldTypeKind.DATETIME),
+        ],
+    )
+
+
+def _llm_tool_invocation_completed_schema() -> StreamSchema:
+    """Schema for LLMToolInvocationCompleted - FACT that tool returned result."""
+    return StreamSchema(
+        name="LLMToolInvocationCompleted",
+        version="v1",
+        description="Tool invocation completed with result",
+        fields=[
+            _field("invocation_id", FieldTypeKind.UUID),
+            _field("job_id", FieldTypeKind.UUID),
+            _field("tool_name", FieldTypeKind.STR, max_length=100),
+            _field("tool_output", FieldTypeKind.JSON, required=False),
+            _field("tool_output_hash", FieldTypeKind.STR, max_length=100),
+            _field("success", FieldTypeKind.BOOL),
+            _field("error_message", FieldTypeKind.STR, required=False, max_length=2000),
+            _field("latency_ms", FieldTypeKind.INT),
+            _field("t_completed", FieldTypeKind.DATETIME),
+        ],
+    )
+
+
+# =============================================================================
 # Stream Definitions
 # =============================================================================
 
@@ -348,11 +393,43 @@ def create_llm_derivation_stream() -> StreamSpec:
     )
 
 
+def create_llm_tool_stream() -> StreamSpec:
+    """
+    Create the LLM tool invocation stream (INTENT + FACT for tool calls).
+
+    Contains: LLMToolInvocationRequested, LLMToolInvocationCompleted
+    """
+    return StreamSpec(
+        name="llm.tool.v1",
+        record_kind=RecordKind.FACT,  # Mixed: requests are intents, completions are facts
+        description="LLM tool invocations - agentic tool use within a job",
+        schemas=[
+            _llm_tool_invocation_requested_schema(),
+            _llm_tool_invocation_completed_schema(),
+        ],
+        partition_key="job_id",
+        ordering_scope="per_job",
+        time_semantics=TimeSemantics(t_event_field="t_requested"),
+        idempotency=IdempotencyStrategy(
+            strategy_type=IdempotencyType.DETERMINISTIC_ID,
+            field="invocation_id",
+            derivation="hash(job_id, tool_name, tool_input_hash, sequence_number)",
+        ),
+        invariants=[
+            "Tool invocation requires active (claimed, not completed) job",
+            "LLMToolInvocationCompleted requires prior LLMToolInvocationRequested",
+            "sequence_number must be monotonically increasing per job",
+            "Tool invocations are ordered within a job execution",
+        ],
+    )
+
+
 def get_all_llm_streams() -> list[StreamSpec]:
     """Get all LLM event stream specifications."""
     return [
         create_llm_intent_stream(),
         create_llm_fact_stream(),
+        create_llm_tool_stream(),
         create_llm_observation_stream(),
         create_llm_derivation_stream(),
     ]
@@ -365,6 +442,7 @@ def get_all_llm_streams() -> list[StreamSpec]:
 
 LLM_INTENT_STREAM = "llm.intent.v1"
 LLM_FACT_STREAM = "llm.fact.v1"
+LLM_TOOL_STREAM = "llm.tool.v1"
 LLM_OBSERVATION_STREAM = "llm.observation.v1"
 LLM_DERIVATION_STREAM = "llm.derivation.v1"
 
@@ -377,6 +455,8 @@ LLM_SCHEMAS = {
     "LLMJobCompleted": LLM_FACT_STREAM,
     "LLMJobFailed": LLM_FACT_STREAM,
     "LLMArtifactStored": LLM_FACT_STREAM,
+    "LLMToolInvocationRequested": LLM_TOOL_STREAM,
+    "LLMToolInvocationCompleted": LLM_TOOL_STREAM,
     "LLMTokensConsumed": LLM_OBSERVATION_STREAM,
     "LLMCostEstimate": LLM_DERIVATION_STREAM,
 }

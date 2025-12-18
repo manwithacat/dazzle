@@ -46,8 +46,13 @@ from .messaging import (
     TemplateSpec,
 )
 from .personas import PersonaSpec
+from .process import (
+    ProcessSpec,
+    ScheduleSpec,
+)
 from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
+from .stories import StorySpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
 from .workspaces import WorkspaceSpec
@@ -116,6 +121,8 @@ class ModuleFragment(BaseModel):
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
     personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    # Stories (v0.22.0 DSL syntax)
+    stories: list[StorySpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)
     messages: list[MessageSpec] = Field(default_factory=list)
     channels: list[ChannelSpec] = Field(default_factory=list)
@@ -139,6 +146,9 @@ class ModuleFragment(BaseModel):
     llm_config: LLMConfigSpec | None = None
     llm_models: list[LLMModelSpec] = Field(default_factory=list)
     llm_intents: list[LLMIntentSpec] = Field(default_factory=list)
+    # Process Workflows (v0.23.0)
+    processes: list[ProcessSpec] = Field(default_factory=list)
+    schedules: list[ScheduleSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

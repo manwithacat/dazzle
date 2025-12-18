@@ -120,10 +120,13 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         tests=merged_fragment.tests,
         personas=merged_fragment.personas,  # v0.8.5 Dazzle Bar
         scenarios=merged_fragment.scenarios,  # v0.8.5 Dazzle Bar
+        stories=merged_fragment.stories,  # v0.22.0 Stories
         security=security_config,  # v0.11.0 Security
         llm_config=merged_fragment.llm_config,  # v0.21.0 LLM Jobs
         llm_models=merged_fragment.llm_models,  # v0.21.0 LLM Jobs
         llm_intents=merged_fragment.llm_intents,  # v0.21.0 LLM Jobs
+        processes=merged_fragment.processes,  # v0.23.0 Process Workflows
+        schedules=merged_fragment.schedules,  # v0.23.0 Process Workflows
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

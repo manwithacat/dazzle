@@ -15,6 +15,36 @@ from .conditions import ConditionExpr
 from .ux import SortSpec, UXSpec
 
 
+class WorkspaceAccessLevel(str, Enum):
+    """Access levels for workspaces."""
+
+    PUBLIC = "public"  # No authentication required
+    AUTHENTICATED = "authenticated"  # Any logged-in user
+    PERSONA = "persona"  # Specific personas only
+
+
+class WorkspaceAccessSpec(BaseModel):
+    """
+    Access control specification for workspaces.
+
+    Defines authentication and authorization requirements for accessing a workspace.
+    Default is deny (authenticated required) when auth is enabled globally.
+
+    Attributes:
+        level: Access level (public, authenticated, persona)
+        allow_personas: List of personas that can access (when level=persona)
+        deny_personas: List of personas explicitly denied access
+        redirect_unauthenticated: Where to redirect unauthenticated users
+    """
+
+    level: WorkspaceAccessLevel = WorkspaceAccessLevel.AUTHENTICATED
+    allow_personas: list[str] = Field(default_factory=list)
+    deny_personas: list[str] = Field(default_factory=list)
+    redirect_unauthenticated: str = "/login"
+
+    model_config = ConfigDict(frozen=True)
+
+
 class DisplayMode(str, Enum):
     """Display modes for workspace regions."""
 
@@ -80,6 +110,7 @@ class WorkspaceSpec(BaseModel):
         stage: Layout stage hint (e.g., "focus_metric", "dual_pane_flow", "command_center")
         regions: List of data regions in the workspace
         ux: Optional workspace-level UX customization
+        access: Access control specification (v0.22.0)
     """
 
     name: str
@@ -88,6 +119,7 @@ class WorkspaceSpec(BaseModel):
     stage: str | None = None  # v0.8.0: Layout stage (formerly engine_hint)
     regions: list[WorkspaceRegion] = Field(default_factory=list)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
+    access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
 
     model_config = ConfigDict(frozen=True)
 
