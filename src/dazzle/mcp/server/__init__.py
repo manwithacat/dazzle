@@ -42,6 +42,7 @@ from .glossary import get_glossary
 
 # Import process tool handlers (Phase 7)
 from .handlers.process import (
+    get_process_diagram_handler,
     get_process_run_handler,
     inspect_process_handler,
     list_process_runs_handler,
@@ -214,6 +215,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "inspect_process",
         "list_process_runs",
         "get_process_run",
+        "get_process_diagram",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -299,6 +301,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = list_process_runs_handler(project_path, arguments)
             elif name == "get_process_run":
                 result = get_process_run_handler(project_path, arguments)
+            elif name == "get_process_diagram":
+                result = get_process_diagram_handler(project_path, arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
 

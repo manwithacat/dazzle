@@ -1133,6 +1133,30 @@ def get_process_tools() -> list[Tool]:
                 "required": ["run_id"],
             },
         ),
+        Tool(
+            name="get_process_diagram",
+            description="Generate a Mermaid diagram for a process. Returns flowchart or state diagram showing process steps, flow control, human task outcomes, and optionally compensation handlers. Useful for documentation and visualization.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "process_name": {
+                        "type": "string",
+                        "description": "Name of the process to visualize",
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["flowchart", "stateDiagram"],
+                        "description": "Diagram type: flowchart (default) or stateDiagram",
+                    },
+                    "include_compensations": {
+                        "type": "boolean",
+                        "description": "Include saga compensation handlers in diagram (default: false)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["process_name"],
+            },
+        ),
     ]
 
 
