@@ -165,9 +165,13 @@
     'personas': list([
     ]),
     'policies': None,
+    'processes': list([
+    ]),
     'projections': list([
     ]),
     'scenarios': list([
+    ]),
+    'schedules': list([
     ]),
     'security': dict({
       'cors_origins': list([
@@ -179,6 +183,8 @@
       'require_auth_by_default': False,
       'tenant_isolation': False,
     }),
+    'stories': list([
+    ]),
     'streams': list([
     ]),
     'subscriptions': list([

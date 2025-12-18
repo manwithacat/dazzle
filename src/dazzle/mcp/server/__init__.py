@@ -39,6 +39,16 @@ from dazzle.mcp.resources import create_resources
 from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
 
 from .glossary import get_glossary
+
+# Import process tool handlers (Phase 7)
+from .handlers.process import (
+    get_process_run_handler,
+    inspect_process_handler,
+    list_process_runs_handler,
+    list_processes_handler,
+    propose_processes_handler,
+    stories_coverage_handler,
+)
 from .state import (
     get_active_project_path,
     get_available_projects,
@@ -195,6 +205,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "infer_tenancy",
         "infer_compliance",
         "infer_analytics",
+        # ProcessSpec and coverage tools (Phase 7)
+        "stories_coverage",
+        "propose_processes_from_stories",
+        "list_processes",
+        "inspect_process",
+        "list_process_runs",
+        "get_process_run",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -265,6 +282,19 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = handle_infer_compliance(arguments, project_path)
             elif name == "infer_analytics":
                 result = handle_infer_analytics(arguments, project_path)
+            # ProcessSpec and coverage tools (Phase 7)
+            elif name == "stories_coverage":
+                result = stories_coverage_handler(project_path, arguments)
+            elif name == "propose_processes_from_stories":
+                result = propose_processes_handler(project_path, arguments)
+            elif name == "list_processes":
+                result = list_processes_handler(project_path, arguments)
+            elif name == "inspect_process":
+                result = inspect_process_handler(project_path, arguments)
+            elif name == "list_process_runs":
+                result = list_process_runs_handler(project_path, arguments)
+            elif name == "get_process_run":
+                result = get_process_run_handler(project_path, arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
 

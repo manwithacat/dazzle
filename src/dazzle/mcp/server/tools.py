@@ -1012,6 +1012,110 @@ def get_event_first_tools() -> list[Tool]:
     ]
 
 
+def get_process_tools() -> list[Tool]:
+    """Get ProcessSpec and coverage tools for workflow management."""
+    return [
+        Tool(
+            name="stories_coverage",
+            description="Analyze which stories are implemented by processes. Returns coverage percentage and identifies uncovered or partially covered stories. Use after defining processes to verify all acceptance criteria are met.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="propose_processes_from_stories",
+            description="Analyze uncovered stories and propose ProcessSpec implementations. Returns draft DSL code for each proposed process. Use after stories_coverage shows uncovered stories.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "story_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional: Specific story IDs to generate processes for. If omitted, generates for all uncovered/partial stories.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="list_processes",
+            description="List all process definitions in the project. Shows process names, triggers, step counts, and linked stories.",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="inspect_process",
+            description="Get detailed information about a process definition. Shows trigger, steps, compensations, inputs/outputs, and linked stories. Use to understand process structure before execution.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "process_name": {
+                        "type": "string",
+                        "description": "Name of the process to inspect",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["process_name"],
+            },
+        ),
+        Tool(
+            name="list_process_runs",
+            description="List process runs with optional filtering by status or process name. Use to monitor running workflows and debug failures. Returns recent runs sorted by start time.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "process_name": {
+                        "type": "string",
+                        "description": "Filter by process name",
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "running",
+                            "draining",
+                            "suspended",
+                            "waiting",
+                            "completed",
+                            "failed",
+                            "compensating",
+                            "cancelled",
+                        ],
+                        "description": "Filter by run status",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of runs to return (default: 50)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_process_run",
+            description="Get detailed information about a specific process run. Includes step history, context, inputs/outputs, and any errors. Use to debug specific workflow executions.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "run_id": {
+                        "type": "string",
+                        "description": "The unique run ID to retrieve",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["run_id"],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -1104,6 +1208,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add Event-First Architecture tools (Phase H)
     tools.extend(get_event_first_tools())
+
+    # Add ProcessSpec and coverage tools (Phase 7)
+    tools.extend(get_process_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())
