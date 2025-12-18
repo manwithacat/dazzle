@@ -75,14 +75,22 @@ class WorkspaceParserMixin:
         stage = None
         regions: list[ir.WorkspaceRegion] = []
         ux_spec = None
+        access_spec = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
 
+            # access: public | authenticated | persona(name1, name2)
+            if self.match(TokenType.ACCESS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                access_spec = self._parse_workspace_access()
+                self.skip_newlines()
+
             # purpose: "..."
-            if self.match(TokenType.PURPOSE):
+            elif self.match(TokenType.PURPOSE):
                 self.advance()
                 self.expect(TokenType.COLON)
                 purpose = self.expect(TokenType.STRING).value
@@ -117,6 +125,49 @@ class WorkspaceParserMixin:
             stage=stage,
             regions=regions,
             ux=ux_spec,
+            access=access_spec,
+        )
+
+    def _parse_workspace_access(self) -> ir.WorkspaceAccessSpec:
+        """
+        Parse workspace access specification.
+
+        Syntax:
+            access: public
+            access: authenticated
+            access: persona(name1, name2, ...)
+        """
+        # Check for access level keywords
+        if self.match(TokenType.PUBLIC):
+            self.advance()
+            return ir.WorkspaceAccessSpec(level=ir.WorkspaceAccessLevel.PUBLIC)
+
+        if self.match(TokenType.AUTHENTICATED):
+            self.advance()
+            return ir.WorkspaceAccessSpec(level=ir.WorkspaceAccessLevel.AUTHENTICATED)
+
+        # persona(name1, name2, ...)
+        if self.match(TokenType.PERSONA):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            personas: list[str] = []
+            personas.append(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.COMMA):
+                self.advance()
+                personas.append(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.RPAREN)
+            return ir.WorkspaceAccessSpec(
+                level=ir.WorkspaceAccessLevel.PERSONA,
+                allow_personas=personas,
+            )
+
+        # Default to authenticated if unrecognized
+        token = self.current_token()
+        raise make_parse_error(
+            f"Expected 'public', 'authenticated', or 'persona(...)' but got '{token.value}'",
+            self.file,
+            token.line,
+            token.column,
         )
 
     def parse_workspace_region(self) -> ir.WorkspaceRegion:

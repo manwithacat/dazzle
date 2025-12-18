@@ -23,6 +23,11 @@ from typing import Any
 
 import typer
 
+from dazzle.core.environment import (
+    get_dazzle_env,
+    should_enable_dazzle_bar,
+    should_enable_test_endpoints,
+)
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
@@ -52,16 +57,27 @@ def dnr_serve(
         help="Serve backend API only (no frontend UI)",
     ),
     db_path: str = typer.Option(".dazzle/data.db", "--db", help="SQLite database path"),
-    test_mode: bool = typer.Option(
-        True,
+    test_mode: bool | None = typer.Option(
+        None,
         "--test-mode/--no-test-mode",
-        help="Enable test endpoints (/__test__/seed, /__test__/reset, etc.). Enabled by default.",
+        help="Enable test endpoints. Default based on DAZZLE_ENV (enabled in development/test).",
+    ),
+    dev_mode: bool | None = typer.Option(
+        None,
+        "--dev-mode/--no-dev-mode",
+        help="Enable Dazzle Bar. Default based on DAZZLE_ENV (enabled in development only).",
     ),
     watch: bool = typer.Option(
         False,
         "--watch",
         "-w",
         help="Enable hot reload: watch DSL files and auto-refresh browser on changes",
+    ),
+    watch_source: bool = typer.Option(
+        False,
+        "--watch-source",
+        "-W",
+        help="Also watch framework source files (Python, CSS, JS). Implies --watch.",
     ),
     local: bool = typer.Option(
         False,
@@ -125,13 +141,39 @@ def dnr_serve(
     project_root = manifest_path.parent
 
     # Load manifest to get auth config and project name
+    dev_config_override_bar: bool | None = None
+    dev_config_override_test: bool | None = None
     try:
         mf = load_manifest(manifest_path)
         auth_enabled = mf.auth.enabled
         project_name = mf.name or project_root.name
+        # Get manifest dev config overrides (v0.24.0)
+        dev_config_override_bar = mf.dev.dazzle_bar
+        dev_config_override_test = mf.dev.test_endpoints
     except Exception:
         auth_enabled = False
         project_name = project_root.name
+
+    # Resolve dev_mode and test_mode based on:
+    # 1. CLI option (if explicitly set)
+    # 2. Manifest [dev] section (if set)
+    # 3. Environment defaults (based on DAZZLE_ENV)
+    # (v0.24.0 - environment-aware dev features)
+    env = get_dazzle_env()
+
+    if dev_mode is None:
+        # CLI not set - use manifest or environment default
+        enable_dev_mode = should_enable_dazzle_bar(dev_config_override_bar)
+    else:
+        # CLI explicitly set - honor it
+        enable_dev_mode = dev_mode
+
+    if test_mode is None:
+        # CLI not set - use manifest or environment default
+        enable_test_mode = should_enable_test_endpoints(dev_config_override_test)
+    else:
+        # CLI explicitly set - honor it
+        enable_test_mode = test_mode
 
     # Allocate ports based on project name (deterministic hashing)
     # This prevents collisions when running multiple DNR instances
@@ -160,6 +202,10 @@ def dnr_serve(
 
     atexit.register(cleanup_runtime)
 
+    # --watch-source implies --watch
+    if watch_source:
+        watch = True
+
     # Warn if --watch is used without --local
     if watch and not local:
         typer.echo(
@@ -185,11 +231,12 @@ def dnr_serve(
                     project_path=project_root,
                     frontend_port=port,
                     api_port=api_port,
-                    test_mode=test_mode,
+                    test_mode=enable_test_mode,
                     auth_enabled=auth_enabled,
                     rebuild=rebuild,
                     detach=detach,
                     project_name=project_name,
+                    dev_mode=enable_dev_mode,
                 )
                 raise typer.Exit(code=exit_code)
             else:
@@ -203,7 +250,7 @@ def dnr_serve(
     try:
         from dazzle_dnr_back.converters import convert_appspec_to_backend
         from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE
-        from dazzle_dnr_ui.converters import convert_appspec_to_ui
+        from dazzle_dnr_ui.converters import compute_persona_default_routes, convert_appspec_to_ui
         from dazzle_dnr_ui.runtime import generate_single_html, run_combined_server
     except ImportError as e:
         typer.echo(f"DNR runtime not available: {e}", err=True)
@@ -277,7 +324,7 @@ def dnr_serve(
         typer.echo(f"  • {len(backend_spec.entities)} entities")
         typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
         typer.echo(f"  • Database: {db_path}")
-        if test_mode:
+        if enable_test_mode:
             typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
         if graphql:
             typer.echo("  • GraphQL: ENABLED (/graphql endpoint)")
@@ -295,7 +342,8 @@ def dnr_serve(
             backend_spec=backend_spec,
             port=api_port,
             db_path=db_file,
-            enable_test_mode=test_mode,
+            enable_test_mode=enable_test_mode,
+            enable_dev_mode=enable_dev_mode,
             enable_graphql=graphql,
             host=host,
             sitespec_data=sitespec_data,
@@ -316,8 +364,16 @@ def dnr_serve(
     typer.echo(f"  • Database: {db_path}")
 
     # Extract personas and scenarios for Dazzle Bar (v0.8.5)
+    # Compute default routes from workspace access rules (v0.23.0)
+    persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
     personas = [
-        {"id": p.id, "label": p.label, "description": p.description, "goals": p.goals}
+        {
+            "id": p.id,
+            "label": p.label,
+            "description": p.description,
+            "goals": p.goals,
+            "default_route": persona_routes.get(p.id),
+        }
         for p in appspec.personas
     ]
     scenarios = [
@@ -336,8 +392,13 @@ def dnr_serve(
     db_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Run combined server
-    # Show test mode status
-    if test_mode:
+    # Show environment and mode status (v0.24.0)
+    typer.echo(f"  • Environment: {env.value.upper()}")
+    if enable_dev_mode:
+        typer.echo(
+            "  • Dazzle Bar: ENABLED (use --no-dev-mode or DAZZLE_ENV=production to disable)"
+        )
+    if enable_test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
 
     # Show hot reload status
@@ -363,10 +424,12 @@ def dnr_serve(
         backend_port=api_port,
         frontend_port=port,
         db_path=db_file,
-        enable_test_mode=test_mode,
+        enable_test_mode=enable_test_mode,
+        enable_dev_mode=enable_dev_mode,
         enable_auth=auth_enabled,
         host=host,
         enable_watch=watch,
+        watch_source=watch_source,
         project_root=project_root,
         personas=personas,
         scenarios=scenarios,

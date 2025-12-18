@@ -230,6 +230,46 @@ class StackConfig:
     description: str | None = None
 
 
+# =============================================================================
+# Dev Configuration (v0.24.0)
+# =============================================================================
+
+
+@dataclass
+class DevConfig:
+    """Development mode configuration.
+
+    Controls dev-only features like the Dazzle Bar and test endpoints.
+    These features are automatically disabled when DAZZLE_ENV=production.
+
+    The DAZZLE_ENV environment variable controls the runtime environment:
+        - development (default): Dazzle Bar enabled, test endpoints enabled
+        - test: Test endpoints enabled, Dazzle Bar optional (for E2E tests)
+        - production: Both disabled for security
+
+    Explicit settings in dazzle.toml override the environment defaults.
+
+    Examples in dazzle.toml:
+
+        # Force-disable Dazzle Bar even in development
+        [dev]
+        dazzle_bar = false
+
+        # Force-enable test endpoints in production (NOT RECOMMENDED)
+        [dev]
+        test_endpoints = true
+
+        # Typical production config (usually just use DAZZLE_ENV=production)
+        [dev]
+        dazzle_bar = false
+        test_endpoints = false
+    """
+
+    # None means "use environment default"
+    dazzle_bar: bool | None = None
+    test_endpoints: bool | None = None
+
+
 @dataclass
 class ProjectManifest:
     """
@@ -248,6 +288,7 @@ class ProjectManifest:
     shell: ShellConfig = field(default_factory=ShellConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    dev: DevConfig = field(default_factory=DevConfig)
 
 
 def load_manifest(path: Path) -> ProjectManifest:
@@ -394,6 +435,13 @@ def load_manifest(path: Path) -> ProjectManifest:
         audit_enabled=auth_data.get("audit_enabled", True),
     )
 
+    # Parse dev config (v0.24.0)
+    dev_data = data.get("dev", {})
+    dev_config = DevConfig(
+        dazzle_bar=dev_data.get("dazzle_bar"),  # None if not set
+        test_endpoints=dev_data.get("test_endpoints"),  # None if not set
+    )
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -404,4 +452,5 @@ def load_manifest(path: Path) -> ProjectManifest:
         shell=shell_config,
         theme=theme_config,
         auth=auth_config,
+        dev=dev_config,
     )
