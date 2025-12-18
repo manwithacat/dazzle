@@ -484,3 +484,241 @@ class TestStoryStubGenerator:
 
         # Should compile without errors
         compile(code, "<test>", "exec")
+
+
+class TestGenerateTestsFromStories:
+    """Tests for story-to-test generation."""
+
+    @pytest.fixture
+    def temp_project(self):
+        """Create a temporary project directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    def test_generate_tests_no_stories(self, temp_project):
+        """Test generating tests with no stories."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert data["status"] == "no_stories"
+
+    def test_generate_tests_from_accepted_story(self, temp_project):
+        """Test generating tests from an accepted story."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        # Create an accepted story
+        story = StorySpec(
+            story_id="ST-001",
+            title="User creates a task",
+            actor="User",
+            trigger=StoryTrigger.FORM_SUBMITTED,
+            scope=["Task"],
+            preconditions=["User is logged in"],
+            happy_path_outcome=["Task is saved", "User sees confirmation"],
+            status=StoryStatus.ACCEPTED,
+        )
+        save_stories(temp_project, [story])
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert data["status"] == "generated"
+        assert data["count"] == 1
+        assert len(data["test_designs"]) == 1
+
+        test = data["test_designs"][0]
+        assert test["test_id"] == "TD-001"  # ST -> TD conversion
+        assert test["persona"] == "User"
+        assert test["trigger"] == "form_submitted"
+        assert "Task" in test["entities"]
+        assert len(test["steps"]) > 0
+        assert len(test["expected_outcomes"]) == 2
+
+    def test_generate_tests_filters_draft(self, temp_project):
+        """Test that draft stories are excluded by default."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        # Create one accepted and one draft story
+        stories = [
+            StorySpec(
+                story_id="ST-001",
+                title="Accepted story",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                status=StoryStatus.ACCEPTED,
+            ),
+            StorySpec(
+                story_id="ST-002",
+                title="Draft story",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                status=StoryStatus.DRAFT,
+            ),
+        ]
+        save_stories(temp_project, stories)
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert data["count"] == 1
+        assert data["test_designs"][0]["test_id"] == "TD-001"
+
+    def test_generate_tests_include_draft(self, temp_project):
+        """Test including draft stories."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        stories = [
+            StorySpec(
+                story_id="ST-001",
+                title="Accepted story",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                status=StoryStatus.ACCEPTED,
+            ),
+            StorySpec(
+                story_id="ST-002",
+                title="Draft story",
+                actor="Admin",
+                trigger=StoryTrigger.USER_CLICK,
+                status=StoryStatus.DRAFT,
+            ),
+        ]
+        save_stories(temp_project, stories)
+
+        result = generate_tests_from_stories_handler(temp_project, {"include_draft": True})
+        data = json.loads(result)
+
+        assert data["count"] == 2
+        test_ids = [t["test_id"] for t in data["test_designs"]]
+        assert "TD-001" in test_ids
+        assert "TD-002" in test_ids
+
+    def test_generate_tests_filter_by_story_ids(self, temp_project):
+        """Test filtering by specific story IDs."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        stories = [
+            StorySpec(
+                story_id="ST-001",
+                title="Story 1",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                status=StoryStatus.ACCEPTED,
+            ),
+            StorySpec(
+                story_id="ST-002",
+                title="Story 2",
+                actor="Admin",
+                trigger=StoryTrigger.STATUS_CHANGED,
+                status=StoryStatus.ACCEPTED,
+            ),
+            StorySpec(
+                story_id="ST-003",
+                title="Story 3",
+                actor="User",
+                trigger=StoryTrigger.USER_CLICK,
+                status=StoryStatus.ACCEPTED,
+            ),
+        ]
+        save_stories(temp_project, stories)
+
+        result = generate_tests_from_stories_handler(
+            temp_project, {"story_ids": ["ST-001", "ST-003"]}
+        )
+        data = json.loads(result)
+
+        assert data["count"] == 2
+        test_ids = [t["test_id"] for t in data["test_designs"]]
+        assert "TD-001" in test_ids
+        assert "TD-003" in test_ids
+        assert "TD-002" not in test_ids
+
+    def test_generate_tests_status_changed_trigger(self, temp_project):
+        """Test generating tests for status_changed trigger."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        story = StorySpec(
+            story_id="ST-001",
+            title="User completes a task",
+            actor="User",
+            trigger=StoryTrigger.STATUS_CHANGED,
+            scope=["Task"],
+            preconditions=["Task.status is 'pending'"],
+            happy_path_outcome=["Task.status becomes 'completed'"],
+            status=StoryStatus.ACCEPTED,
+        )
+        save_stories(temp_project, [story])
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert data["count"] == 1
+        test = data["test_designs"][0]
+        assert test["trigger"] == "status_changed"
+        # Should have a trigger_transition step
+        actions = [s["action"] for s in test["steps"]]
+        assert "trigger_transition" in actions
+
+    def test_generate_tests_includes_login_step(self, temp_project):
+        """Test that generated tests start with login step."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        story = StorySpec(
+            story_id="ST-001",
+            title="Admin creates a user",
+            actor="Admin",
+            trigger=StoryTrigger.FORM_SUBMITTED,
+            status=StoryStatus.ACCEPTED,
+        )
+        save_stories(temp_project, [story])
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        test = data["test_designs"][0]
+        first_step = test["steps"][0]
+        assert first_step["action"] == "login_as"
+        assert first_step["target"] == "Admin"
+
+    def test_generate_tests_side_effects_in_outcomes(self, temp_project):
+        """Test that side effects are included in expected outcomes."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        story = StorySpec(
+            story_id="ST-001",
+            title="User sends email",
+            actor="User",
+            trigger=StoryTrigger.FORM_SUBMITTED,
+            happy_path_outcome=["Email is sent"],
+            side_effects=["send_notification"],
+            status=StoryStatus.ACCEPTED,
+        )
+        save_stories(temp_project, [story])
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        test = data["test_designs"][0]
+        assert "Email is sent" in test["expected_outcomes"]
+        assert any("send_notification" in o for o in test["expected_outcomes"])
+
+    def test_generate_tests_tags_include_story_id(self, temp_project):
+        """Test that generated tests are tagged with source story ID."""
+        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+
+        story = StorySpec(
+            story_id="ST-042",
+            title="Test",
+            actor="User",
+            trigger=StoryTrigger.USER_CLICK,
+            status=StoryStatus.ACCEPTED,
+        )
+        save_stories(temp_project, [story])
+
+        result = generate_tests_from_stories_handler(temp_project, {})
+        data = json.loads(result)
+
+        test = data["test_designs"][0]
+        assert "story:ST-042" in test["tags"]

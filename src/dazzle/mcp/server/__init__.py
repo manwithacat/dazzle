@@ -64,6 +64,7 @@ from .tool_handlers import (
     generate_demo_data_handler,
     generate_service_dsl_handler,
     generate_story_stubs_handler,
+    generate_tests_from_stories_handler,
     get_active_project_info,
     get_api_pack_handler,
     get_cli_help_handler,
@@ -189,6 +190,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "save_stories",
         "get_stories",
         "generate_story_stubs",
+        "generate_tests_from_stories",
         # Demo Data Blueprint tools
         "propose_demo_blueprint",
         "save_demo_blueprint",
@@ -247,6 +249,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = get_stories_handler(project_path, arguments)
             elif name == "generate_story_stubs":
                 result = generate_story_stubs_handler(project_path, arguments)
+            elif name == "generate_tests_from_stories":
+                result = generate_tests_from_stories_handler(project_path, arguments)
             # Demo Data Blueprint tools
             elif name == "propose_demo_blueprint":
                 result = propose_demo_blueprint_handler(project_path, arguments)

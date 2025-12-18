@@ -429,6 +429,26 @@ def get_story_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="generate_tests_from_stories",
+            description="Generate test designs from accepted stories. Converts behavioural stories (WHAT should happen) into test designs (HOW to verify it). Returns proposed test designs for review before saving with save_test_designs.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "story_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of story IDs to generate tests for. If omitted, generates for all accepted stories.",
+                    },
+                    "include_draft": {
+                        "type": "boolean",
+                        "description": "If true, also include draft stories (default: false, only accepted stories).",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
     ]
 
 

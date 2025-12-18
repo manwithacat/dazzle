@@ -388,3 +388,274 @@ def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> st
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
+
+
+def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate test designs from accepted stories.
+
+    Converts behavioural stories (what should happen) into test designs
+    (how to verify it happens). This bridges the gap between story
+    acceptance criteria and executable test cases.
+    """
+    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.core.stories_persistence import get_stories_by_status
+
+    story_ids = args.get("story_ids")
+    include_draft = args.get("include_draft", False)
+
+    try:
+        # Get stories to convert
+        stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
+
+        # Optionally include draft stories
+        if include_draft:
+            draft_stories = get_stories_by_status(project_root, StoryStatus.DRAFT)
+            stories = stories + draft_stories
+
+        # Filter by specific story IDs if provided
+        if story_ids:
+            stories = [s for s in stories if s.story_id in story_ids]
+
+        if not stories:
+            return json.dumps(
+                {
+                    "status": "no_stories",
+                    "message": "No stories found. Use propose_stories_from_dsl or save_stories first.",
+                }
+            )
+
+        # Map StoryTrigger to TestDesignTrigger
+        trigger_map: dict[StoryTrigger, TestDesignTrigger] = {
+            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+            StoryTrigger.TIMER_ELAPSED: TestDesignTrigger.TIMER_ELAPSED,
+            StoryTrigger.EXTERNAL_EVENT: TestDesignTrigger.EXTERNAL_EVENT,
+            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+            StoryTrigger.CRON_DAILY: TestDesignTrigger.CRON_DAILY,
+            StoryTrigger.CRON_HOURLY: TestDesignTrigger.CRON_HOURLY,
+        }
+
+        def story_to_test_design(story: StorySpec, index: int) -> TestDesignSpec:
+            """Convert a single story to a test design."""
+            # Convert story ID format: ST-001 -> TD-001
+            test_id = story.story_id.replace("ST-", "TD-")
+
+            # Build steps from story structure
+            steps: list[TestDesignStep] = []
+
+            # Step 1: Login as the actor
+            steps.append(
+                TestDesignStep(
+                    action=TestDesignAction.LOGIN_AS,
+                    target=story.actor,
+                    rationale=f"Test from {story.actor}'s perspective",
+                )
+            )
+
+            # Step 2: Setup steps from given/preconditions
+            for condition in story.effective_given:
+                # Parse condition to determine appropriate action
+                if "is set" in condition.lower() or "exists" in condition.lower():
+                    # Existence check - create or navigate
+                    entity = _extract_entity_from_condition(condition, story.scope)
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.ASSERT_VISIBLE,
+                            target=entity,
+                            rationale=f"Precondition: {condition}",
+                        )
+                    )
+                elif "is '" in condition or 'is "' in condition:
+                    # State check - assert current state
+                    entity = _extract_entity_from_condition(condition, story.scope)
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.ASSERT_TEXT,
+                            target=entity,
+                            data={"condition": condition},
+                            rationale=f"Precondition: {condition}",
+                        )
+                    )
+                else:
+                    # Generic precondition - navigate to entity
+                    entity = _extract_entity_from_condition(condition, story.scope)
+                    if entity:
+                        steps.append(
+                            TestDesignStep(
+                                action=TestDesignAction.NAVIGATE_TO,
+                                target=entity,
+                                rationale=f"Setup: {condition}",
+                            )
+                        )
+
+            # Step 3: Action steps from when conditions
+            when_conditions = [c.expression for c in story.when] if story.when else []
+            for condition in when_conditions:
+                if "changes to" in condition.lower():
+                    # State transition
+                    entity = _extract_entity_from_condition(condition, story.scope)
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.TRIGGER_TRANSITION,
+                            target=entity,
+                            data={"transition": condition},
+                            rationale=f"Trigger: {condition}",
+                        )
+                    )
+                elif "submit" in condition.lower() or "form" in condition.lower():
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="submit_button",
+                            rationale=f"Action: {condition}",
+                        )
+                    )
+                elif "click" in condition.lower():
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target=_extract_target_from_condition(condition),
+                            rationale=f"Action: {condition}",
+                        )
+                    )
+
+            # If no when conditions, infer action from trigger
+            if not when_conditions:
+                if story.trigger == StoryTrigger.FORM_SUBMITTED:
+                    # Navigate to create form and submit
+                    entity = story.scope[0] if story.scope else "form"
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target=f"{entity}_create",
+                            rationale="Navigate to creation form",
+                        )
+                    )
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.FILL,
+                            target="form",
+                            data={"fields": "required_fields"},
+                            rationale="Fill form with test data",
+                        )
+                    )
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="submit_button",
+                            rationale="Submit the form",
+                        )
+                    )
+                elif story.trigger == StoryTrigger.STATUS_CHANGED:
+                    entity = story.scope[0] if story.scope else "entity"
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.TRIGGER_TRANSITION,
+                            target=entity,
+                            rationale="Trigger status change",
+                        )
+                    )
+                elif story.trigger == StoryTrigger.USER_CLICK:
+                    steps.append(
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="action_button",
+                            rationale="Perform user action",
+                        )
+                    )
+
+            # Expected outcomes from then/happy_path_outcome
+            expected_outcomes = story.effective_then.copy()
+
+            # Add side effects as outcomes
+            for effect in story.side_effects:
+                expected_outcomes.append(f"Side effect: {effect}")
+
+            return TestDesignSpec(
+                test_id=test_id,
+                title=f"Verify: {story.title}",
+                description=f"Test generated from story {story.story_id}",
+                persona=story.actor,
+                trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
+                steps=steps,
+                expected_outcomes=expected_outcomes,
+                entities=story.scope.copy(),
+                tags=[f"story:{story.story_id}"],
+                status=TestDesignStatus.PROPOSED,
+            )
+
+        # Convert all stories to test designs
+        test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
+
+        # Serialize to JSON
+        designs_data = [
+            {
+                "test_id": td.test_id,
+                "title": td.title,
+                "description": td.description,
+                "persona": td.persona,
+                "trigger": td.trigger.value,
+                "steps": [
+                    {
+                        "action": step.action.value,
+                        "target": step.target,
+                        "data": step.data,
+                        "rationale": step.rationale,
+                    }
+                    for step in td.steps
+                ],
+                "expected_outcomes": td.expected_outcomes,
+                "entities": td.entities,
+                "tags": td.tags,
+                "status": td.status.value,
+            }
+            for td in test_designs
+        ]
+
+        return json.dumps(
+            {
+                "status": "generated",
+                "count": len(designs_data),
+                "note": "Review these designs and call save_test_designs to persist them.",
+                "test_designs": designs_data,
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def _extract_entity_from_condition(condition: str, scope: list[str]) -> str:
+    """Extract entity name from a condition string."""
+    # Check if any scope entity is mentioned
+    for entity in scope:
+        if entity.lower() in condition.lower():
+            return entity
+    # Look for Entity.field pattern
+    if "." in condition:
+        return condition.split(".")[0].strip()
+    # Default to first entity in scope
+    return scope[0] if scope else "entity"
+
+
+def _extract_target_from_condition(condition: str) -> str:
+    """Extract target element from a condition like 'click the submit button'."""
+    # Simple extraction - look for quoted strings or common patterns
+    import re
+
+    # Look for quoted strings
+    quoted: list[str] = re.findall(r"['\"]([^'\"]+)['\"]", condition)
+    if quoted:
+        return quoted[0]
+    # Look for "the X" pattern
+    the_match = re.search(r"the\s+(\w+)", condition.lower())
+    if the_match:
+        return the_match.group(1)
+    return "button"

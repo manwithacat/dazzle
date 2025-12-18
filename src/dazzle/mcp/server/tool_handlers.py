@@ -1330,6 +1330,13 @@ def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> st
         return json.dumps({"error": str(e)}, indent=2)
 
 
+def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate test designs from accepted stories."""
+    from .handlers.stories import generate_tests_from_stories_handler as impl
+
+    return impl(project_root, args)
+
+
 # ============================================================================
 # Demo Data Blueprint Tool Implementations
 # ============================================================================
