@@ -1,0 +1,130 @@
+# DAZZLE Temporal Infrastructure
+#
+# Docker Compose template for production-grade workflow execution using Temporal.
+#
+# Usage:
+#   # Start all services
+#   docker-compose -f docker-compose.temporal.yml up -d
+#
+#   # View Temporal UI
+#   open http://localhost:8080
+#
+#   # Stop services
+#   docker-compose -f docker-compose.temporal.yml down
+#
+# Services:
+#   - temporal: Temporal server (gRPC on port 7233)
+#   - temporal-db: PostgreSQL for Temporal persistence
+#   - temporal-ui: Web UI for workflow visibility
+#   - temporal-worker: DAZZLE process worker
+
+version: "3.8"
+
+services:
+  # Temporal Server with auto-setup
+  # This is the core workflow orchestration engine
+  temporal:
+    image: temporalio/auto-setup:1.22
+    container_name: dazzle-temporal
+    ports:
+      - "7233:7233"  # gRPC port for workers and clients
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-db
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development.yaml
+    volumes:
+      - ./temporal-config:/etc/temporal/config/dynamicconfig:ro
+    depends_on:
+      temporal-db:
+        condition: service_healthy
+    networks:
+      - dazzle-temporal
+    healthcheck:
+      test: ["CMD", "temporal", "workflow", "list", "--namespace", "default"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL database for Temporal persistence
+  temporal-db:
+    image: postgres:15-alpine
+    container_name: dazzle-temporal-db
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    volumes:
+      - temporal-db-data:/var/lib/postgresql/data
+    networks:
+      - dazzle-temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Temporal Web UI for workflow visibility
+  temporal-ui:
+    image: temporalio/ui:2.21
+    container_name: dazzle-temporal-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+      - TEMPORAL_UI_PORT=8080
+    depends_on:
+      - temporal
+    networks:
+      - dazzle-temporal
+
+  # DAZZLE Process Worker
+  # Executes workflows generated from ProcessSpec DSL
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: dazzle-temporal-worker
+    command: python -m dazzle.process.worker
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=dazzle
+      - DAZZLE_PROJECT_ROOT=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount DSL files for hot reload during development
+      - ./dsl:/app/dsl:ro
+      - ./dazzle.toml:/app/dazzle.toml:ro
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - dazzle-temporal
+    restart: unless-stopped
+
+  # Optional: Redis for distributed caching
+  # Uncomment if your workflows need shared state
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: dazzle-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis-data:/data
+  #   networks:
+  #     - dazzle-temporal
+
+volumes:
+  temporal-db-data:
+    driver: local
+  # redis-data:
+  #   driver: local
+
+networks:
+  dazzle-temporal:
+    driver: bridge

@@ -1,0 +1,49 @@
+# DAZZLE Temporal Worker Dockerfile
+#
+# Builds a container image for running DAZZLE process workers
+# that execute Temporal workflows generated from ProcessSpec DSL.
+#
+# Build:
+#   docker build -f Dockerfile.worker -t dazzle-worker .
+#
+# Run:
+#   docker run -e TEMPORAL_ADDRESS=temporal:7233 dazzle-worker
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt pyproject.toml ./
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e ".[temporal]"
+
+# Copy project files
+COPY . .
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV TEMPORAL_ADDRESS=localhost:7233
+ENV TEMPORAL_NAMESPACE=default
+ENV TEMPORAL_TASK_QUEUE=dazzle
+ENV DAZZLE_PROJECT_ROOT=/app
+
+# Create non-root user for security
+RUN useradd -m -u 1000 dazzle && chown -R dazzle:dazzle /app
+USER dazzle
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import dazzle; print('healthy')" || exit 1
+
+# Run the worker
+CMD ["python", "-m", "dazzle.process.worker"]
