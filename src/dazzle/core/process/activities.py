@@ -52,7 +52,7 @@ except ImportError:
 
 if _TEMPORAL_AVAILABLE:
 
-    @activity.defn(name="create_human_task")  # type: ignore[misc]
+    @activity.defn(name="create_human_task")  # type: ignore[untyped-decorator]
     async def create_human_task(params: dict[str, Any]) -> str:
         """
         Create a ProcessTask record for a human task step.
@@ -97,7 +97,7 @@ if _TEMPORAL_AVAILABLE:
 
         return task_id
 
-    @activity.defn(name="escalate_human_task")  # type: ignore[misc]
+    @activity.defn(name="escalate_human_task")  # type: ignore[untyped-decorator]
     async def escalate_human_task(params: dict[str, Any]) -> None:
         """
         Escalate an overdue human task.

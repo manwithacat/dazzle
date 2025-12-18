@@ -125,7 +125,7 @@ class TemporalAdapter(ProcessAdapter):
 
         self._initialized = True
         logger.info(
-            f"Connected to Temporal at {self._host}:{self._port}, " f"namespace={self._namespace}"
+            f"Connected to Temporal at {self._host}:{self._port}, namespace={self._namespace}"
         )
 
     async def start_worker(self) -> None:
@@ -657,8 +657,7 @@ class TemporalAdapter(ProcessAdapter):
     async def resume_process(self, run_id: str) -> None:
         """Resume is not directly supported in Temporal."""
         logger.warning(
-            "Resume not supported for Temporal workflows. "
-            "Use signals for pause/resume semantics."
+            "Resume not supported for Temporal workflows. Use signals for pause/resume semantics."
         )
 
     # Signals

@@ -188,8 +188,7 @@ def drain_command(
             await vm.complete_migration(migration_id)
         else:
             console.print(
-                f"[red]Timeout reached. {final_check.runs_remaining} processes "
-                "still running.[/red]"
+                f"[red]Timeout reached. {final_check.runs_remaining} processes still running.[/red]"
             )
             console.print("Use --force to suspend remaining processes")
             raise typer.Exit(1)

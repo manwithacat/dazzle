@@ -161,7 +161,7 @@ def _create_temporal_adapter(config: ProcessConfig) -> ProcessAdapter:
 
     if not _temporal_available(config.temporal):
         raise ValueError(
-            f"Temporal server not reachable at " f"{config.temporal.host}:{config.temporal.port}"
+            f"Temporal server not reachable at {config.temporal.host}:{config.temporal.port}"
         )
 
     return TemporalAdapter(

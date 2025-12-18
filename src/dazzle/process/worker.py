@@ -49,7 +49,7 @@ async def main() -> None:
         from temporalio.client import Client
         from temporalio.worker import Worker
     except ImportError:
-        logger.error("Temporal SDK not installed. " "Install with: pip install dazzle[temporal]")
+        logger.error("Temporal SDK not installed. Install with: pip install dazzle[temporal]")
         sys.exit(1)
 
     # Load DSL and build AppSpec
