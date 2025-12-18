@@ -93,6 +93,35 @@ class RouteSpec(BaseModel):
 
 
 # =============================================================================
+# Access Specifications
+# =============================================================================
+
+
+class WorkspaceAccessLevel(str, Enum):
+    """Access levels for workspaces."""
+
+    PUBLIC = "public"  # No authentication required
+    AUTHENTICATED = "authenticated"  # Any logged-in user
+    PERSONA = "persona"  # Specific personas only
+
+
+class WorkspaceAccessSpec(BaseModel):
+    """
+    Access control specification for workspaces.
+
+    Defines authentication and authorization requirements for accessing a workspace.
+    Default is deny (authenticated required) when auth is enabled globally.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    level: WorkspaceAccessLevel = WorkspaceAccessLevel.AUTHENTICATED
+    allow_personas: list[str] = Field(default_factory=list)
+    deny_personas: list[str] = Field(default_factory=list)
+    redirect_unauthenticated: str = "/login"
+
+
+# =============================================================================
 # Workspace Specifications
 # =============================================================================
 
@@ -115,7 +144,8 @@ class WorkspaceSpec(BaseModel):
             routes=[
                 RouteSpec(path="/", component="Overview"),
                 RouteSpec(path="/metrics", component="MetricsView"),
-            ]
+            ],
+            access=WorkspaceAccessSpec(level=WorkspaceAccessLevel.PERSONA, allow_personas=["manager"])
         )
     """
 
@@ -129,6 +159,9 @@ class WorkspaceSpec(BaseModel):
     routes: list[RouteSpec] = Field(default_factory=list, description="Route definitions")
     state: list[Any] = Field(default_factory=list, description="Workspace-level state declarations")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    access: WorkspaceAccessSpec | None = Field(
+        default=None, description="Access control specification"
+    )
 
     def get_route(self, path: str) -> RouteSpec | None:
         """Get route by path."""

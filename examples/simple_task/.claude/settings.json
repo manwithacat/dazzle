@@ -9,7 +9,15 @@
       "Bash(dazzle test:*)",
       "Bash(dazzle show:*)",
       "Bash(dazzle eject:*)",
-      "Bash(dazzle db:*)"
+      "Bash(dazzle db:*)",
+      "Bash(pkill:*)",
+      "Bash(nohup:*)",
+      "Bash(sleep:*)",
+      "Bash(rm /tmp/:*)",
+      "Bash(rm -f /tmp/:*)",
+      "Bash(rm -rf /tmp/:*)",
+      "Bash(cat:*)",
+      "Bash(echo:*)"
     ],
     "deny": [
       "Read(./.env)",

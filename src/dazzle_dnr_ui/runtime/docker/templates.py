@@ -82,6 +82,7 @@ services:
       - {volume_name}:/app/.dazzle
     environment:
       - DNR_TEST_MODE={test_mode}
+      - DNR_DEV_MODE={dev_mode}
       - DNR_API_PORT={api_port}
       - DNR_AUTH_ENABLED={auth_enabled}
     healthcheck:
@@ -99,6 +100,7 @@ services:
       - "{frontend_port}:{frontend_port}"
     environment:
       - VITE_API_URL=http://host.docker.internal:{api_port}
+      - DNR_DEV_MODE={dev_mode}
     depends_on:
       backend:
         condition: service_healthy

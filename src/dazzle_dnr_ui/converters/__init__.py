@@ -13,7 +13,10 @@ from dazzle_dnr_ui.converters.surface_converter import (
     _generate_component_name,
     convert_surfaces_to_components,
 )
-from dazzle_dnr_ui.converters.workspace_converter import convert_workspaces
+from dazzle_dnr_ui.converters.workspace_converter import (
+    compute_persona_default_routes,
+    convert_workspaces,
+)
 from dazzle_dnr_ui.specs import (
     FooterLinkSpec,
     FooterSpec,
@@ -229,4 +232,5 @@ __all__ = [
     "convert_shell_config",
     "convert_workspaces",
     "convert_surfaces_to_components",
+    "compute_persona_default_routes",
 ]

@@ -166,10 +166,15 @@ async function setCurrentPersona(personaId) {
     });
     setCurrentPersonaSignal(result.persona_id);
 
-    // Find persona and navigate to default route if available
-    const persona = availablePersonas().find((p) => p.id === personaId);
-    if (persona?.default_route && window.location.pathname !== persona.default_route) {
-      window.location.pathname = persona.default_route;
+    // v0.23.0: Store session token as cookie if provided (for auth)
+    if (result.session_token) {
+      document.cookie = `dnr_session=${result.session_token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+    }
+
+    // Navigate to default route if available (from response or persona data)
+    const defaultRoute = result.default_route;
+    if (defaultRoute && window.location.pathname !== defaultRoute) {
+      window.location.pathname = defaultRoute;
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to set persona';

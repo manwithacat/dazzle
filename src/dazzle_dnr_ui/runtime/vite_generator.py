@@ -141,6 +141,16 @@ def _get_bundled_css(theme_css: str | None = None) -> str:
     return "\n".join(parts)
 
 
+def clear_css_cache() -> None:
+    """
+    Clear CSS cache (for hot reload support).
+
+    Currently CSS is loaded fresh from disk each time, so this is a no-op.
+    Kept for API consistency with clear_runtime_cache().
+    """
+    pass  # CSS files are read fresh from disk - no caching to clear
+
+
 # =============================================================================
 # Configuration Templates
 # =============================================================================

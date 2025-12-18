@@ -54,6 +54,8 @@ from dazzle_dnr_ui.specs.workspace import (
     RouteSpec,
     SingleColumnLayout,
     TwoColumnWithHeaderLayout,
+    WorkspaceAccessLevel,
+    WorkspaceAccessSpec,
     WorkspaceSpec,
 )
 
@@ -68,6 +70,8 @@ __all__ = [
     "StaticPageSpec",
     # Workspace types
     "WorkspaceSpec",
+    "WorkspaceAccessLevel",
+    "WorkspaceAccessSpec",
     "LayoutSpec",
     "RouteSpec",
     "SingleColumnLayout",

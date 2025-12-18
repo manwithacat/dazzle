@@ -10,6 +10,8 @@ from dazzle_dnr_ui.specs import (
     AppShellLayout,
     RouteSpec,
     SingleColumnLayout,
+    WorkspaceAccessLevel,
+    WorkspaceAccessSpec,
     WorkspaceSpec,
 )
 
@@ -279,6 +281,16 @@ def convert_workspace(
         # Use the first persona variant as the primary persona
         persona = workspace.ux.persona_variants[0].persona
 
+    # Convert access spec if present
+    access_spec = None
+    if workspace.access:
+        access_spec = WorkspaceAccessSpec(
+            level=WorkspaceAccessLevel(workspace.access.level.value),
+            allow_personas=workspace.access.allow_personas,
+            deny_personas=workspace.access.deny_personas,
+            redirect_unauthenticated=workspace.access.redirect_unauthenticated,
+        )
+
     return WorkspaceSpec(
         name=workspace.name,
         label=workspace.title,
@@ -286,6 +298,7 @@ def convert_workspace(
         persona=persona,
         layout=layout,
         routes=routes,
+        access=access_spec,
     )
 
 
@@ -310,3 +323,78 @@ def convert_workspaces(
         convert_workspace(w, surfaces, surface_component_map, is_primary=(i == 0))
         for i, w in enumerate(workspaces)
     ]
+
+
+# =============================================================================
+# Persona Route Resolution
+# =============================================================================
+
+
+def compute_persona_default_routes(
+    personas: list[ir.PersonaSpec],
+    workspaces: list[ir.WorkspaceSpec],
+) -> dict[str, str]:
+    """
+    Compute default routes for personas based on workspace access rules.
+
+    Resolution order:
+    1. Persona's explicit default_route (if set in DSL)
+    2. First route of persona's default_workspace (if set)
+    3. First workspace where access.allow_personas includes this persona
+    4. First workspace with access.level == AUTHENTICATED
+    5. First workspace (fallback)
+
+    Args:
+        personas: List of persona specifications
+        workspaces: List of workspace specifications (IR, not UISpec)
+
+    Returns:
+        Dict mapping persona_id to their default route
+    """
+    result: dict[str, str] = {}
+
+    for persona in personas:
+        route = _resolve_persona_route(persona, workspaces)
+        if route:
+            result[persona.id] = route
+
+    return result
+
+
+def _resolve_persona_route(
+    persona: ir.PersonaSpec,
+    workspaces: list[ir.WorkspaceSpec],
+) -> str | None:
+    """Resolve the default route for a single persona."""
+    # 1. Explicit default_route
+    if persona.default_route:
+        return persona.default_route
+
+    # 2. Default workspace
+    if persona.default_workspace:
+        for i, ws in enumerate(workspaces):
+            if ws.name == persona.default_workspace:
+                return _workspace_root_route(ws, is_primary=(i == 0))
+
+    # 3. First workspace with explicit persona access
+    for i, ws in enumerate(workspaces):
+        if ws.access and persona.id in ws.access.allow_personas:
+            return _workspace_root_route(ws, is_primary=(i == 0))
+
+    # 4. First workspace with AUTHENTICATED access (any logged-in user)
+    for i, ws in enumerate(workspaces):
+        if ws.access and ws.access.level == ir.WorkspaceAccessLevel.AUTHENTICATED:
+            return _workspace_root_route(ws, is_primary=(i == 0))
+
+    # 5. Fallback to first workspace
+    if workspaces:
+        return _workspace_root_route(workspaces[0], is_primary=True)
+
+    return None
+
+
+def _workspace_root_route(workspace: ir.WorkspaceSpec, is_primary: bool) -> str:
+    """Get the root route for a workspace."""
+    if is_primary:
+        return "/"
+    return f"/{workspace.name.replace('_', '-')}"

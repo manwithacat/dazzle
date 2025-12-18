@@ -62,7 +62,7 @@ const [mailpitUrl, setMailpitUrl] = createSignal(/** @type {string|null} */ (nul
 const [isPanelOpen, setIsPanelOpen] = createSignal(false);
 
 /** @type {import('../signals.js').Signal<boolean>} */
-const [isLoading, setIsLoading] = createSignal(false);
+const [emailIsLoading, setEmailIsLoading] = createSignal(false);
 
 /** @type {import('../signals.js').Signal<string|null>} */
 const [panelError, setPanelError] = createSignal(/** @type {string|null} */ (null));
@@ -100,7 +100,7 @@ async function fetchChannelStatus() {
  * Refresh email panel data.
  */
 async function refreshEmailData() {
-  setIsLoading(true);
+  setEmailIsLoading(true);
   setPanelError(null);
 
   try {
@@ -125,7 +125,7 @@ async function refreshEmailData() {
     setPanelError(message);
     console.error('[Email Panel] Error:', err);
   } finally {
-    setIsLoading(false);
+    setEmailIsLoading(false);
   }
 }
 
@@ -385,7 +385,7 @@ function updatePanelContent(panel) {
   const msgList = messages();
   const statsData = stats();
   const mailpit = mailpitUrl();
-  const loading = isLoading();
+  const loading = emailIsLoading();
   const err = panelError();
 
   const sentCount = statsData.sent || 0;
@@ -532,7 +532,7 @@ function initEmailPanel() {
     messages();
     stats();
     mailpitUrl();
-    isLoading();
+    emailIsLoading();
     panelError();
 
     if (panelElement) {

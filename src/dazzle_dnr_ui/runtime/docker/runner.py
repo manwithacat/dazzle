@@ -57,6 +57,7 @@ class DockerRunConfig:
     project_name: str | None = None  # From manifest [project].name - used for stack naming
     image_name: str = "dazzle-dnr"
     test_mode: bool = False
+    dev_mode: bool = True  # v0.24.0: Enable Dazzle Bar (env-aware)
     auth_enabled: bool = True  # Enable authentication by default
     rebuild: bool = False
     detach: bool = False
@@ -219,6 +220,7 @@ class DockerRunner:
             api_port=self.config.api_port,
             frontend_port=self.config.frontend_port,
             test_mode="1" if self.config.test_mode else "0",
+            dev_mode="1" if self.config.dev_mode else "0",
             auth_enabled="1" if self.config.auth_enabled else "0",
             volume_name=volume_name,
         )
@@ -289,6 +291,7 @@ def run_in_docker(
     frontend_port: int = 3000,
     api_port: int = 8000,
     test_mode: bool = False,
+    dev_mode: bool = True,  # v0.24.0: Enable Dazzle Bar (env-aware)
     auth_enabled: bool = True,  # Enable authentication by default
     rebuild: bool = False,
     detach: bool = False,
@@ -304,6 +307,7 @@ def run_in_docker(
         frontend_port: Frontend server port
         api_port: Backend API port
         test_mode: Enable test endpoints
+        dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
         auth_enabled: Enable authentication endpoints
         rebuild: Force rebuild of Docker image
         detach: Run in background
@@ -317,6 +321,7 @@ def run_in_docker(
         frontend_port=frontend_port,
         api_port=api_port,
         test_mode=test_mode,
+        dev_mode=dev_mode,
         auth_enabled=auth_enabled,
         rebuild=rebuild,
         detach=detach,

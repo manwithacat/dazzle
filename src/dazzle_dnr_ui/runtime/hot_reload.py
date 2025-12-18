@@ -1,7 +1,11 @@
 """
 Hot reload support for DNR development server.
 
-Watches DSL files for changes and triggers browser refresh via Server-Sent Events.
+Watches DSL files and source files for changes and triggers browser refresh via SSE.
+
+Two watch modes:
+1. DSL files (*.dsl, dazzle.toml) - regenerates specs on change
+2. Source files (*.py, *.css, *.js) - clears caches and triggers reload
 """
 
 from __future__ import annotations
@@ -15,6 +19,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
     from dazzle_dnr_ui.specs import UISpec
+
+
+# Source file patterns to watch
+SOURCE_PATTERNS = ["*.py", "*.css", "*.js"]
 
 
 class FileWatcher:
@@ -128,12 +136,16 @@ class HotReloadManager:
     Manages hot reload for DNR development server.
 
     Coordinates file watching, spec regeneration, and browser notification.
+    Supports two watch modes:
+    - DSL files: regenerate specs on change
+    - Source files: clear caches and reload (for framework development)
     """
 
     def __init__(
         self,
         project_root: Path,
         on_reload: Callable[[], tuple[BackendSpec, UISpec] | None] | None = None,
+        watch_source: bool = False,
     ):
         """
         Initialize hot reload manager.
@@ -141,9 +153,11 @@ class HotReloadManager:
         Args:
             project_root: Root directory of the DAZZLE project
             on_reload: Callback to regenerate specs. Returns (BackendSpec, UISpec) or None on error.
+            watch_source: If True, also watch framework source files (Python, CSS, JS)
         """
         self.project_root = project_root
         self.on_reload = on_reload
+        self.watch_source = watch_source
 
         # SSE clients waiting for reload signals
         self._sse_clients: list[threading.Event] = []
@@ -154,8 +168,9 @@ class HotReloadManager:
         self._debounce_delay: float = 0.3  # seconds
         self._pending_reload = threading.Event()
 
-        # File watcher
+        # File watchers (DSL and source)
         self._watcher: FileWatcher | None = None
+        self._source_watcher: FileWatcher | None = None
 
         # Current specs (can be updated on reload)
         self._backend_spec: BackendSpec | None = None
@@ -164,6 +179,7 @@ class HotReloadManager:
 
     def start(self) -> None:
         """Start watching for file changes."""
+        # DSL file watcher
         watch_paths = [
             self.project_root / "dsl",
             self.project_root / "dazzle.toml",
@@ -174,21 +190,76 @@ class HotReloadManager:
 
         if not existing_paths:
             print("[DNR] Warning: No DSL files found to watch")
+        else:
+            self._watcher = FileWatcher(
+                paths=existing_paths,
+                on_change=self._on_file_change,
+                patterns=["*.dsl", "dazzle.toml"],
+            )
+            self._watcher.start()
+            print(f"[DNR] Hot reload: watching {len(existing_paths)} path(s)")
+
+        # Source file watcher (for framework development)
+        if self.watch_source:
+            self._start_source_watcher()
+
+    def _start_source_watcher(self) -> None:
+        """Start watching framework source files."""
+        # Find the dazzle_dnr_ui package directory
+        source_paths: list[Path] = []
+
+        # Try to find installed package location
+        try:
+            import dazzle_dnr_ui
+
+            pkg_path = Path(dazzle_dnr_ui.__file__).parent
+            runtime_path = pkg_path / "runtime"
+            if runtime_path.exists():
+                source_paths.append(runtime_path)
+        except ImportError:
+            pass
+
+        # Also check common development locations
+        dev_locations = [
+            Path(__file__).parent,  # Current runtime directory
+            self.project_root.parent / "src" / "dazzle_dnr_ui" / "runtime",
+            Path.cwd() / "src" / "dazzle_dnr_ui" / "runtime",
+        ]
+
+        for loc in dev_locations:
+            if loc.exists() and loc not in source_paths:
+                source_paths.append(loc)
+
+        if not source_paths:
+            print("[DNR] Warning: No source paths found to watch")
             return
 
-        self._watcher = FileWatcher(
-            paths=existing_paths,
-            on_change=self._on_file_change,
-            patterns=["*.dsl", "dazzle.toml"],
+        # Deduplicate by resolving paths
+        unique_paths: list[Path] = []
+        seen_resolved: set[Path] = set()
+        for p in source_paths:
+            resolved = p.resolve()
+            if resolved not in seen_resolved:
+                seen_resolved.add(resolved)
+                unique_paths.append(p)
+
+        self._source_watcher = FileWatcher(
+            paths=unique_paths,
+            on_change=self._on_source_change,
+            patterns=SOURCE_PATTERNS,
+            poll_interval=0.3,  # Faster polling for source changes
         )
-        self._watcher.start()
-        print(f"[DNR] Hot reload: watching {len(existing_paths)} path(s)")
+        self._source_watcher.start()
+        print(f"[DNR] Source reload: watching {len(unique_paths)} path(s)")
 
     def stop(self) -> None:
         """Stop watching for file changes."""
         if self._watcher:
             self._watcher.stop()
             self._watcher = None
+        if self._source_watcher:
+            self._source_watcher.stop()
+            self._source_watcher = None
 
     def register_sse_client(self) -> threading.Event:
         """
@@ -220,7 +291,7 @@ class HotReloadManager:
             self._ui_spec = ui_spec
 
     def _on_file_change(self, file_path: Path) -> None:
-        """Handle file change event with debouncing."""
+        """Handle DSL file change event with debouncing."""
         current_time = time.time()
 
         # Debounce rapid changes
@@ -248,6 +319,89 @@ class HotReloadManager:
 
         # Notify all SSE clients
         self._notify_clients()
+
+    def _on_source_change(self, file_path: Path) -> None:
+        """Handle source file change event (Python, CSS, JS)."""
+        current_time = time.time()
+
+        # Debounce rapid changes
+        if current_time - self._last_change_time < self._debounce_delay:
+            return
+
+        self._last_change_time = current_time
+
+        suffix = file_path.suffix.lower()
+        print(f"[DNR] Source changed: {file_path.name}")
+
+        # Clear appropriate caches based on file type
+        try:
+            if suffix == ".py":
+                # Reload Python modules and clear caches
+                self._reload_python_modules(file_path)
+                self._clear_runtime_cache()
+                print("[DNR] Python modules reloaded")
+            elif suffix == ".css":
+                # Clear CSS cache (CSS is read fresh from disk)
+                self._clear_css_cache()
+                print("[DNR] CSS cache cleared")
+            elif suffix == ".js":
+                # Clear JS runtime cache
+                self._clear_runtime_cache()
+                print("[DNR] JS cache cleared")
+        except Exception as e:
+            print(f"[DNR] Error during reload: {e}")
+
+        # Notify browsers to reload
+        self._notify_clients()
+
+    def _reload_python_modules(self, changed_file: Path) -> None:
+        """
+        Reload Python modules affected by a file change.
+
+        Uses importlib.reload() to refresh module code without restarting.
+        """
+        import importlib
+        import sys
+
+        # Map of filename patterns to modules that should be reloaded
+        # Order matters - reload dependencies first
+        modules_to_reload = [
+            "dazzle_dnr_ui.runtime.site_renderer",
+            "dazzle_dnr_ui.runtime.vite_generator",
+            "dazzle_dnr_ui.runtime.js_generator",
+            "dazzle_dnr_ui.runtime.js_loader",
+        ]
+
+        reloaded = []
+        for module_name in modules_to_reload:
+            if module_name in sys.modules:
+                try:
+                    module = sys.modules[module_name]
+                    importlib.reload(module)
+                    reloaded.append(module_name.split(".")[-1])
+                except Exception as e:
+                    print(f"[DNR] Failed to reload {module_name}: {e}")
+
+        if reloaded:
+            print(f"[DNR] Reloaded: {', '.join(reloaded)}")
+
+    def _clear_runtime_cache(self) -> None:
+        """Clear the JS runtime cache."""
+        try:
+            from dazzle_dnr_ui.runtime.js_generator import clear_runtime_cache
+
+            clear_runtime_cache()
+        except ImportError:
+            pass
+
+    def _clear_css_cache(self) -> None:
+        """Clear the CSS cache."""
+        try:
+            from dazzle_dnr_ui.runtime.vite_generator import clear_css_cache
+
+            clear_css_cache()
+        except (ImportError, AttributeError):
+            pass
 
     def _notify_clients(self) -> None:
         """Notify all SSE clients to reload."""

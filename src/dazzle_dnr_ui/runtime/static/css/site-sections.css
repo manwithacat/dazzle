@@ -692,17 +692,20 @@
   color: oklch(0.65 0 0);
 }
 
-/* Auth pages */
+/* Auth pages - works with both DaisyUI card and legacy dz-auth-card */
 [data-theme="dark"] .dz-auth-card {
   background: oklch(0.18 0.01 260);
 }
 
 [data-theme="dark"] .dz-auth-card h1,
-[data-theme="dark"] .dz-auth-field label {
+[data-theme="dark"] .dz-auth-card .card-title,
+[data-theme="dark"] .dz-auth-field label,
+[data-theme="dark"] .dz-auth-card .label-text {
   color: oklch(0.9 0 0);
 }
 
-[data-theme="dark"] .dz-auth-field input {
+[data-theme="dark"] .dz-auth-field input,
+[data-theme="dark"] .dz-auth-card .input {
   background: oklch(0.12 0.01 260);
   border-color: oklch(1 0 0 / 0.15);
   color: oklch(0.95 0 0);
@@ -740,13 +743,15 @@
   opacity: 0.8;
 }
 
-/* Buttons */
-[data-theme="dark"] .dz-btn-secondary {
+/* Buttons - works with both DaisyUI btn and legacy dz-btn classes */
+[data-theme="dark"] .dz-btn-secondary,
+[data-theme="dark"] .btn-outline {
   color: oklch(0.85 0 0);
   border-color: oklch(0.85 0 0);
 }
 
-[data-theme="dark"] .dz-btn-secondary:hover {
+[data-theme="dark"] .dz-btn-secondary:hover,
+[data-theme="dark"] .btn-outline:hover {
   background: oklch(1 0 0 / 0.1);
 }
 
@@ -980,6 +985,8 @@
   margin-bottom: 0.375rem;
 }
 
+/* NOTE: Auth form fields now use DaisyUI input input-bordered classes */
+/* These styles kept for backwards compatibility */
 .dz-auth-field input {
   width: 100%;
   padding: 0.625rem 0.75rem;
@@ -996,9 +1003,19 @@
   box-shadow: 0 0 0 3px oklch(0.50 0.18 270 / 0.15);
 }
 
-.dz-btn-full {
-  width: 100%;
-  margin-top: 0.5rem;
+/* NOTE: .dz-btn-full replaced by Tailwind w-full class */
+
+/* Auth page primary button - ensure visibility with DaisyUI + Tailwind Browser */
+.dz-auth-card .btn-primary,
+.dz-auth-card .btn.btn-primary {
+  background: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
+  color: white;
+  border: none;
+}
+
+.dz-auth-card .btn-primary:hover,
+.dz-auth-card .btn.btn-primary:hover {
+  background: var(--dz-hero-bg-to, oklch(0.45 0.18 270));
 }
 
 .dz-auth-switch {
@@ -1019,41 +1036,34 @@
 
 /* =============================================================================
    Button Styles for Site Pages
+
+   NOTE: Most button styling is now handled by DaisyUI btn classes (btn, btn-primary, etc.)
+   These are kept for backwards compatibility and site-specific overrides.
    ============================================================================= */
 
-.dz-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border-radius: var(--dz-radius-button, 0.5rem);
-  text-decoration: none;
-  cursor: pointer;
-  border: none;
-  transition: all var(--dz-transition-fast, 150ms);
-}
-
-.dz-btn-primary {
-  background: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
-  color: white;
-}
-
-.dz-btn-primary:hover {
-  background: var(--dz-hero-bg-to, oklch(0.45 0.18 270));
-  transform: translateY(-1px);
-}
-
-.dz-btn-secondary {
-  background: transparent;
+/* Hero section CTA buttons need special styling to stand out on gradient background */
+.dz-section-hero .btn-primary {
+  background: white;
   color: var(--dz-hero-bg-from, oklch(0.50 0.18 270));
-  border: 2px solid var(--dz-hero-bg-from, oklch(0.50 0.18 270));
+  border: none;
 }
 
-.dz-btn-secondary:hover {
-  background: oklch(0.50 0.18 270 / 0.1);
+.dz-section-hero .btn-primary:hover {
+  background: oklch(0.98 0 0);
+  transform: translateY(-2px);
+}
+
+.dz-section-hero .btn-secondary,
+.dz-section-hero .btn-outline {
+  background: transparent;
+  color: white;
+  border-color: oklch(1 0 0 / 0.5);
+}
+
+.dz-section-hero .btn-secondary:hover,
+.dz-section-hero .btn-outline:hover {
+  background: oklch(1 0 0 / 0.1);
+  border-color: oklch(1 0 0 / 0.7);
 }
 
 /* =============================================================================

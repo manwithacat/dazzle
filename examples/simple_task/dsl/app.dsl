@@ -289,6 +289,7 @@ surface user_create "Add Team Member":
 # =============================================================================
 
 workspace admin_dashboard "Admin Dashboard":
+  access: persona(admin)
   purpose: "System-wide overview and management"
 
   metrics:
@@ -325,6 +326,7 @@ workspace admin_dashboard "Admin Dashboard":
     empty: "No overdue tasks"
 
 workspace team_overview "Team Overview":
+  access: persona(admin, manager)
   purpose: "Monitor team progress and workload"
 
   metrics:
@@ -363,6 +365,7 @@ workspace team_overview "Team Overview":
     empty: "All tasks are assigned"
 
 workspace my_work "My Work":
+  access: authenticated
   purpose: "Personal task view for assigned work"
 
   my_in_progress:

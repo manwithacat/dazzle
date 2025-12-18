@@ -367,6 +367,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = render_site_page_html(self.sitespec_data, path)
+
+        # Inject Dazzle Bar script in dev mode (v0.23.0 - site pages too)
+        if self.dev_mode:
+            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
+            html = html.replace("</body>", dazzle_bar_script)
+
         self._send_response(html, "text/html")
 
     def _serve_site_js(self) -> None:
@@ -477,10 +483,11 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         let ctaHtml = '';
         if (primaryCta) {
-            ctaHtml += `<a href="${primaryCta.href || '#'}" class="dz-btn dz-btn-primary">${primaryCta.label || 'Get Started'}</a>`;
+            // Use DaisyUI btn classes for consistency with workspace
+            ctaHtml += `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>`;
         }
         if (secondaryCta) {
-            ctaHtml += `<a href="${secondaryCta.href || '#'}" class="dz-btn dz-btn-secondary">${secondaryCta.label || 'Learn More'}</a>`;
+            ctaHtml += `<a href="${secondaryCta.href || '#'}" class="btn btn-secondary btn-outline">${secondaryCta.label || 'Learn More'}</a>`;
         }
 
         return `
@@ -527,7 +534,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
                 <div class="dz-section-content">
                     <h2>${headline}</h2>
                     ${body ? `<p>${body}</p>` : ''}
-                    ${primaryCta ? `<a href="${primaryCta.href || '#'}" class="dz-btn dz-btn-primary">${primaryCta.label || 'Get Started'}</a>` : ''}
+                    ${primaryCta ? `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>` : ''}
                 </div>
             </section>
         `;
@@ -635,6 +642,8 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         const tiersHtml = tiers.map(tier => {
             const features = (tier.features || []).map(f => `<li>${f}</li>`).join('');
             const highlighted = tier.highlighted ? ' dz-pricing-highlighted' : '';
+            // Use DaisyUI btn classes - use btn-secondary for highlighted tiers (white on colored bg)
+            const btnClass = tier.highlighted ? 'btn btn-secondary' : 'btn btn-primary';
             return `
                 <div class="dz-pricing-tier${highlighted}">
                     <h3>${tier.name || ''}</h3>
@@ -643,7 +652,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
                         ${tier.period ? `<span class="dz-period">/${tier.period}</span>` : ''}
                     </div>
                     <ul class="dz-pricing-features">${features}</ul>
-                    ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="dz-btn dz-btn-primary">${tier.cta.label || 'Get Started'}</a>` : ''}
+                    ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="${btnClass}">${tier.cta.label || 'Get Started'}</a>` : ''}
                 </div>
             `;
         }).join('');
@@ -724,6 +733,12 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = render_auth_page_html(self.sitespec_data, page_type)
+
+        # Inject Dazzle Bar script in dev mode (v0.23.0 - auth pages too)
+        if self.dev_mode:
+            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
+            html = html.replace("</body>", dazzle_bar_script)
+
         self._send_response(html, "text/html")
 
     def _serve_asset(self, path: str) -> None:
@@ -844,8 +859,10 @@ class DNRCombinedServer:
         frontend_port: int = 3000,
         db_path: str | Path | None = None,
         enable_test_mode: bool = False,
+        enable_dev_mode: bool = True,  # Enable Dazzle Bar (v0.24.0 - env-aware)
         enable_auth: bool = True,  # Enable authentication by default
         enable_watch: bool = False,
+        watch_source: bool = False,
         project_root: Path | None = None,
         personas: list[dict[str, Any]] | None = None,
         scenarios: list[dict[str, Any]] | None = None,
@@ -865,8 +882,10 @@ class DNRCombinedServer:
             frontend_port: Frontend server port
             db_path: Path to SQLite database
             enable_test_mode: Enable test endpoints (/__test__/*)
+            enable_dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
             enable_auth: Enable authentication endpoints (/auth/*)
             enable_watch: Enable hot reload file watching
+            watch_source: Also watch framework source files (Python, CSS, JS)
             project_root: Project root directory (required for hot reload)
             personas: List of persona configurations for Dazzle Bar (v0.8.5)
             scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
@@ -882,8 +901,10 @@ class DNRCombinedServer:
         self.frontend_port = frontend_port
         self.db_path = Path(db_path) if db_path else Path(".dazzle/data.db")
         self.enable_test_mode = enable_test_mode
+        self.enable_dev_mode = enable_dev_mode
         self.enable_auth = enable_auth
         self.enable_watch = enable_watch
+        self.watch_source = watch_source
         self.project_root = project_root or Path.cwd()
         self.personas = personas or []
         self.scenarios = scenarios or []
@@ -936,6 +957,7 @@ class DNRCombinedServer:
         self._hot_reload_manager = HotReloadManager(
             project_root=self.project_root,
             on_reload=reload_callback,
+            watch_source=self.watch_source,
         )
 
         # Set initial specs
@@ -943,7 +965,10 @@ class DNRCombinedServer:
 
         # Start watching
         self._hot_reload_manager.start()
-        print("[DNR] Hot reload: ENABLED (watching DSL files)")
+        msg = "DSL files"
+        if self.watch_source:
+            msg += " + source files"
+        print(f"[DNR] Hot reload: ENABLED (watching {msg})")
 
     def _start_backend(self) -> None:
         """Start the FastAPI backend in a background thread."""
@@ -971,7 +996,7 @@ class DNRCombinedServer:
                     use_database=True,
                     enable_test_mode=enable_test_mode,
                     enable_auth=enable_auth,
-                    enable_dev_mode=True,  # Enable Dazzle Bar control plane (v0.8.5)
+                    enable_dev_mode=self.enable_dev_mode,  # v0.24.0: env-aware
                     personas=personas,
                     scenarios=scenarios,
                     sitespec_data=sitespec_data,
@@ -1022,6 +1047,7 @@ class DNRCombinedServer:
         DNRCombinedHandler.generator = JSGenerator(self.ui_spec)
         DNRCombinedHandler.backend_url = f"http://{self.backend_host}:{self.backend_port}"
         DNRCombinedHandler.test_mode = self.enable_test_mode
+        DNRCombinedHandler.dev_mode = self.enable_dev_mode  # v0.24.0: env-aware
         DNRCombinedHandler.hot_reload_manager = self._hot_reload_manager
 
         # Build API route prefixes from backend spec entities
@@ -1125,9 +1151,11 @@ def run_combined_server(
     frontend_port: int = 3000,
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    enable_dev_mode: bool = True,  # v0.24.0: Enable Dazzle Bar (env-aware)
     enable_auth: bool = True,  # Enable authentication by default
     host: str = "127.0.0.1",
     enable_watch: bool = False,
+    watch_source: bool = False,
     project_root: Path | None = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
@@ -1145,9 +1173,11 @@ def run_combined_server(
         frontend_port: Frontend server port
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
+        enable_dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
         enable_auth: Enable authentication endpoints (/auth/*)
         host: Host to bind both servers to
         enable_watch: Enable hot reload file watching
+        watch_source: Also watch framework source files (Python, CSS, JS)
         project_root: Project root directory (for hot reload)
         personas: List of persona configurations for Dazzle Bar (v0.8.5)
         scenarios: List of scenario configurations for Dazzle Bar (v0.8.5)
@@ -1164,8 +1194,10 @@ def run_combined_server(
         frontend_port=frontend_port,
         db_path=db_path,
         enable_test_mode=enable_test_mode,
+        enable_dev_mode=enable_dev_mode,
         enable_auth=enable_auth,
         enable_watch=enable_watch,
+        watch_source=watch_source,
         project_root=project_root,
         personas=personas,
         scenarios=scenarios,
@@ -1227,6 +1259,7 @@ def run_backend_only(
     port: int = 8000,
     db_path: str | Path | None = None,
     enable_test_mode: bool = False,
+    enable_dev_mode: bool = True,  # v0.24.0: Enable Dazzle Bar (env-aware)
     enable_graphql: bool = False,
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
@@ -1240,6 +1273,7 @@ def run_backend_only(
         port: Port to bind to
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
+        enable_dev_mode: Enable Dazzle Bar control plane (v0.24.0 - controlled by DAZZLE_ENV)
         enable_graphql: Enable GraphQL endpoint at /graphql
         sitespec_data: SiteSpec data as dict for public site shell (v0.16.0)
         project_root: Project root directory for content file loading
@@ -1263,6 +1297,7 @@ def run_backend_only(
         db_path=db_path,
         use_database=True,
         enable_test_mode=enable_test_mode,
+        enable_dev_mode=enable_dev_mode,
         sitespec_data=sitespec_data,
         project_root=project_root,
     )
