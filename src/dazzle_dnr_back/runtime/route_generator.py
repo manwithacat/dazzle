@@ -45,8 +45,17 @@ def create_list_handler(
     _response_schema: type[BaseModel] | None = None,
     access_spec: dict[str, Any] | None = None,
     get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
-    """Create a handler for list operations with optional access control."""
+    """Create a handler for list operations with optional access control.
+
+    Args:
+        service: Service instance for data operations
+        _response_schema: Response schema (unused, kept for compatibility)
+        access_spec: Access control specification for this entity
+        get_auth_context: Callable to get auth context from request
+        require_auth_by_default: If True, require authentication when no access_spec is defined
+    """
     from dazzle_dnr_back.runtime.condition_evaluator import (
         build_visibility_filter,
         filter_records_by_condition,
@@ -71,6 +80,13 @@ def create_list_handler(
             except Exception:
                 # Auth not available or failed - treat as anonymous
                 pass
+
+        # Deny-default: require authentication when enabled and no explicit access rules
+        if require_auth_by_default and not access_spec and not is_authenticated:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required",
+            )
 
         # Build visibility filters
         sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
@@ -110,15 +126,29 @@ def create_list_handler(
 def create_read_handler(
     service: Any,
     _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for read operations."""
 
-    async def handler(id: UUID) -> Any:
+    async def handler(id: UUID, request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
         result = await service.execute(operation="read", id=id)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         return result
 
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return handler
 
 
@@ -126,19 +156,29 @@ def create_create_handler(
     service: Any,
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
 
-    # Request is auto-injected by FastAPI when typed correctly
     async def handler(request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
         body = await request.json()
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
         return result
 
-    # Override annotations with the proper type so FastAPI recognizes it
     handler.__annotations__ = {"request": Request, "return": Any}
-
     return handler
 
 
@@ -146,10 +186,23 @@ def create_update_handler(
     service: Any,
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
 
     async def handler(id: UUID, request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
         body = await request.json()
         data = input_schema.model_validate(body)
         result = await service.execute(operation="update", id=id, data=data)
@@ -157,23 +210,35 @@ def create_update_handler(
             raise HTTPException(status_code=404, detail="Not found")
         return result
 
-    # Override annotations with the proper types so FastAPI recognizes them
     handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-
     return handler
 
 
 def create_delete_handler(
     service: Any,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for delete operations."""
 
-    async def handler(id: UUID) -> dict[str, bool]:
+    async def handler(id: UUID, request: Request) -> dict[str, bool]:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
         return {"deleted": True}
 
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": dict[str, bool]}
     return handler
 
 
@@ -222,6 +287,7 @@ class RouteGenerator:
         schemas: dict[str, dict[str, type[BaseModel]]] | None = None,
         entity_access_specs: dict[str, dict[str, Any]] | None = None,
         get_auth_context: Callable[..., Any] | None = None,
+        require_auth_by_default: bool = False,
     ):
         """
         Initialize the route generator.
@@ -232,6 +298,7 @@ class RouteGenerator:
             schemas: Optional dictionary with create/update schemas per entity
             entity_access_specs: Optional dictionary mapping entity names to access specs
             get_auth_context: Optional callable to get auth context from request
+            require_auth_by_default: If True, require auth for all routes when no access spec
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -241,6 +308,7 @@ class RouteGenerator:
         self.schemas = schemas or {}
         self.entity_access_specs = entity_access_specs or {}
         self.get_auth_context = get_auth_context
+        self.require_auth_by_default = require_auth_by_default
         self._router = _APIRouter()
 
     def generate_route(
@@ -284,7 +352,13 @@ class RouteGenerator:
         if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
             create_schema = entity_schemas.get("create", model)
             if create_schema:
-                handler = create_create_handler(service, create_schema, model)
+                handler = create_create_handler(
+                    service,
+                    create_schema,
+                    model,
+                    get_auth_context=self.get_auth_context,
+                    require_auth_by_default=self.require_auth_by_default,
+                )
                 self._add_route(endpoint, handler, response_model=model)
             else:
                 raise ValueError(f"No create schema for endpoint: {endpoint.name}")
@@ -293,7 +367,12 @@ class RouteGenerator:
         elif (
             endpoint.method == HttpMethod.GET and "{id}" in endpoint.path
         ) or operation_kind == OperationKind.READ:
-            handler = create_read_handler(service, model)
+            handler = create_read_handler(
+                service,
+                model,
+                get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
+            )
             self._add_route(endpoint, handler, response_model=model)
 
         # GET without {id} -> LIST
@@ -307,6 +386,7 @@ class RouteGenerator:
                 model,
                 access_spec=access_spec,
                 get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
             )
             self._add_route(endpoint, handler, response_model=None)
 
@@ -317,14 +397,24 @@ class RouteGenerator:
         ):
             update_schema = entity_schemas.get("update", model)
             if update_schema:
-                handler = create_update_handler(service, update_schema, model)
+                handler = create_update_handler(
+                    service,
+                    update_schema,
+                    model,
+                    get_auth_context=self.get_auth_context,
+                    require_auth_by_default=self.require_auth_by_default,
+                )
                 self._add_route(endpoint, handler, response_model=model)
             else:
                 raise ValueError(f"No update schema for endpoint: {endpoint.name}")
 
         # DELETE -> DELETE
         elif endpoint.method == HttpMethod.DELETE or operation_kind == OperationKind.DELETE:
-            handler = create_delete_handler(service)
+            handler = create_delete_handler(
+                service,
+                get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
+            )
             self._add_route(endpoint, handler, response_model=None)
 
         else:

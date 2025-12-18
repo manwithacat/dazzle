@@ -79,6 +79,10 @@ class ServerConfig:
     sitespec_data: dict[str, Any] | None = None  # SiteSpec as dict
     project_root: Path | None = None  # For content file loading
 
+    # Process/workflow support (v0.24.0)
+    enable_processes: bool = True  # Enable process workflow execution
+    process_db_path: Path = field(default_factory=lambda: Path(".dazzle/processes.db"))
+
 
 # Runtime import
 try:
@@ -219,6 +223,11 @@ class DNRBackendApp:
         self._event_framework: Any | None = None  # EventFramework type
         # NOTE: _sitespec_data and _project_root are already set above (lines 201-203)
         # with proper parameter precedence over config defaults
+        # Process/workflow support (v0.24.0)
+        self._enable_processes = config.enable_processes
+        self._process_db_path = config.process_db_path
+        self._process_manager: Any | None = None  # ProcessManager type
+        self._process_adapter: Any | None = None  # ProcessAdapter type
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -296,7 +305,8 @@ class DNRBackendApp:
             status = channel_manager.get_channel_status(channel_name)
             if not status:
                 return {"error": f"Channel '{channel_name}' not found"}
-            return status.to_dict()
+            result: dict[str, Any] = status.to_dict()
+            return result
 
         @self._app.post("/_dazzle/channels/{channel_name}/send", tags=["Channels"])
         async def send_message(
@@ -388,6 +398,60 @@ class DNRBackendApp:
             import logging
 
             logging.getLogger("dazzle.server").warning(f"Failed to init event framework: {e}")
+
+    def _init_process_manager(self) -> None:
+        """Initialize process manager for workflow execution (v0.24.0)."""
+        if not self._app:
+            return
+
+        try:
+            from dazzle.core.process import LiteProcessAdapter
+            from dazzle_dnr_back.runtime.process_manager import ProcessManager
+            from dazzle_dnr_back.runtime.task_routes import router as task_router
+            from dazzle_dnr_back.runtime.task_routes import set_process_manager
+
+            # Create the LiteProcessAdapter
+            self._process_adapter = LiteProcessAdapter(db_path=str(self._process_db_path))
+
+            # Create ProcessManager
+            self._process_manager = ProcessManager(adapter=self._process_adapter)
+
+            # Set process manager dependency for task routes
+            set_process_manager(self._process_manager)
+
+            # Include task router
+            self._app.include_router(task_router, prefix="/api")
+
+            # Capture for closures
+            process_adapter = self._process_adapter
+
+            @self._app.on_event("startup")
+            async def startup_processes() -> None:
+                """Initialize process adapter on app startup."""
+                await process_adapter.initialize()
+                # Scheduler is started automatically in initialize()
+
+            @self._app.on_event("shutdown")
+            async def shutdown_processes() -> None:
+                """Cleanup process adapter on app shutdown."""
+                await process_adapter.shutdown()
+
+            import logging
+
+            logging.getLogger("dazzle.server").info(
+                f"Process manager initialized with DB: {self._process_db_path}"
+            )
+
+        except ImportError as e:
+            # Process module not available - skip
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Process module not available: {e}")
+        except Exception as e:
+            # Log but don't fail startup
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init process manager: {e}")
 
     def build(self) -> FastAPI:
         """
@@ -510,6 +574,7 @@ class DNRBackendApp:
                 entity_access_specs[entity.name] = entity.metadata["access"]
 
         # Generate routes
+        # When auth is enabled, require authentication by default (deny-default)
         service_specs = {svc.name: svc for svc in self.spec.services}
         route_generator = RouteGenerator(
             services=self._services,
@@ -517,6 +582,7 @@ class DNRBackendApp:
             schemas=self._schemas,
             entity_access_specs=entity_access_specs,
             get_auth_context=get_auth_context,
+            require_auth_by_default=self._enable_auth,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
@@ -563,6 +629,7 @@ class DNRBackendApp:
                 personas=self._personas,
                 scenarios=self._scenarios,
                 feedback_dir=self._feedback_dir,
+                auth_store=self._auth_store,  # v0.23.0: Enable persona login
             )
             self._app.include_router(control_plane_router)
 
@@ -602,6 +669,10 @@ class DNRBackendApp:
         # Initialize messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:
             self._init_channel_manager()
+
+        # Initialize process manager (v0.24.0)
+        if self._enable_processes:
+            self._init_process_manager()
 
         # Load domain service stubs
         self._service_loader = ServiceLoader(services_dir=self._services_dir)
@@ -757,6 +828,21 @@ class DNRBackendApp:
     def channels_enabled(self) -> bool:
         """Check if messaging channels are enabled."""
         return self._enable_channels and self._channel_manager is not None
+
+    @property
+    def process_manager(self) -> Any | None:
+        """Get the process manager (None if processes not enabled)."""
+        return self._process_manager
+
+    @property
+    def process_adapter(self) -> Any | None:
+        """Get the process adapter (None if processes not enabled)."""
+        return self._process_adapter
+
+    @property
+    def processes_enabled(self) -> bool:
+        """Check if process workflows are enabled."""
+        return self._enable_processes and self._process_manager is not None
 
 
 # =============================================================================

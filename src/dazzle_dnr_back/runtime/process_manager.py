@@ -13,7 +13,13 @@ from typing import Any
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.process import ProcessSpec, ProcessTriggerKind, ScheduleSpec
-from dazzle.core.process.adapter import ProcessAdapter, ProcessRun, ProcessStatus, ProcessTask
+from dazzle.core.process.adapter import (
+    ProcessAdapter,
+    ProcessRun,
+    ProcessStatus,
+    ProcessTask,
+    TaskStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +35,29 @@ class ProcessManager:
     - Connect entity lifecycle events to process triggers
     """
 
-    def __init__(self, app_spec: AppSpec, adapter: ProcessAdapter):
+    def __init__(
+        self,
+        adapter: ProcessAdapter,
+        app_spec: AppSpec | None = None,
+        process_specs: list[ProcessSpec] | None = None,
+    ):
         """
         Initialize the process manager.
 
         Args:
-            app_spec: Application specification with processes and schedules
             adapter: Process execution adapter (Lite or Temporal)
+            app_spec: Application specification with processes and schedules (optional)
+            process_specs: List of process specs to register (alternative to app_spec)
         """
         self._app_spec = app_spec
         self._adapter = adapter
+        self._process_specs = process_specs or []
+        self._schedule_specs: list[ScheduleSpec] = []
+
+        # If app_spec provided, extract processes and schedules from it
+        if app_spec:
+            self._process_specs = list(app_spec.processes)
+            self._schedule_specs = list(app_spec.schedules)
 
         # Trigger mappings
         self._entity_event_triggers: dict[str, list[ProcessSpec]] = {}
@@ -47,19 +66,19 @@ class ProcessManager:
     async def initialize(self) -> None:
         """Register all processes and set up triggers."""
         # Register processes
-        for proc in self._app_spec.processes:
+        for proc in self._process_specs:
             await self._adapter.register_process(proc)
             self._register_trigger(proc)
             logger.debug(f"Registered process: {proc.name}")
 
         # Register schedules
-        for sched in self._app_spec.schedules:
+        for sched in self._schedule_specs:
             await self._adapter.register_schedule(sched)
             logger.debug(f"Registered schedule: {sched.name}")
 
         logger.info(
-            f"ProcessManager initialized with {len(self._app_spec.processes)} processes "
-            f"and {len(self._app_spec.schedules)} schedules"
+            f"ProcessManager initialized with {len(self._process_specs)} processes "
+            f"and {len(self._schedule_specs)} schedules"
         )
 
     async def shutdown(self) -> None:
@@ -250,10 +269,17 @@ class ProcessManager:
         self,
         run_id: str | None = None,
         assignee_id: str | None = None,
+        status: TaskStatus | None = None,
         limit: int = 100,
     ) -> list[ProcessTask]:
-        """List human tasks."""
-        return await self._adapter.list_tasks(run_id, assignee_id, limit=limit)
+        """List human tasks with optional filtering."""
+        tasks = await self._adapter.list_tasks(run_id, assignee_id, limit=limit)
+
+        # Filter by status if specified
+        if status is not None:
+            tasks = [t for t in tasks if t.status == status]
+
+        return tasks
 
     async def complete_task(
         self,
@@ -277,22 +303,30 @@ class ProcessManager:
     # Introspection
     def get_process_spec(self, name: str) -> ProcessSpec | None:
         """Get process specification by name."""
-        for proc in self._app_spec.processes:
+        for proc in self._process_specs:
             if proc.name == name:
                 return proc
         return None
 
     def get_schedule_spec(self, name: str) -> ScheduleSpec | None:
         """Get schedule specification by name."""
-        for sched in self._app_spec.schedules:
+        for sched in self._schedule_specs:
             if sched.name == name:
                 return sched
         return None
 
     def list_process_names(self) -> list[str]:
         """List all registered process names."""
-        return [proc.name for proc in self._app_spec.processes]
+        return [proc.name for proc in self._process_specs]
 
     def list_schedule_names(self) -> list[str]:
         """List all registered schedule names."""
-        return [sched.name for sched in self._app_spec.schedules]
+        return [sched.name for sched in self._schedule_specs]
+
+    def register_process(self, spec: ProcessSpec) -> None:
+        """Register a new process spec (for dynamic registration)."""
+        self._process_specs.append(spec)
+
+    def register_schedule(self, spec: ScheduleSpec) -> None:
+        """Register a new schedule spec (for dynamic registration)."""
+        self._schedule_specs.append(spec)

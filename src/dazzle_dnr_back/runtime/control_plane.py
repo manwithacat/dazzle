@@ -29,6 +29,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from dazzle_dnr_back.runtime.auth import AuthStore
     from dazzle_dnr_back.runtime.repository import DatabaseManager, SQLiteRepository
     from dazzle_dnr_back.specs.entity import EntitySpec
 
@@ -43,6 +44,8 @@ class PersonaContext(BaseModel):
 
     persona_id: str
     label: str | None = None
+    session_token: str | None = None  # v0.23.0: Auth token for demo login
+    default_route: str | None = None  # v0.23.0: Where to navigate
 
 
 class ScenarioContext(BaseModel):
@@ -244,6 +247,7 @@ def create_control_plane_routes(
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
     feedback_dir: Path | None = None,
+    auth_store: AuthStore | None = None,
 ) -> APIRouter:
     """
     Create Dazzle Bar control plane routes.
@@ -255,6 +259,7 @@ def create_control_plane_routes(
         personas: List of persona configurations
         scenarios: List of scenario configurations
         feedback_dir: Directory for feedback logs
+        auth_store: Auth store for persona login (v0.23.0)
 
     Returns:
         APIRouter with control plane endpoints
@@ -325,17 +330,50 @@ def create_control_plane_routes(
         Set the current persona.
 
         Updates the active persona for the Dazzle Bar session.
+        If auth is enabled, creates/logs in as a demo user for this persona.
         """
+        from datetime import timedelta
+
         state["current_persona"] = request.persona_id
 
         # Find persona details
         label = None
+        default_route = None
         for p in available_personas:
             if p.get("id") == request.persona_id:
                 label = p.get("label")
+                default_route = p.get("default_route")
                 break
 
-        return PersonaContext(persona_id=request.persona_id, label=label)
+        # If auth is available, create/login demo user for this persona
+        session_token = None
+        if auth_store is not None:
+            demo_email = f"{request.persona_id}@demo.dazzle.local"
+            demo_password = f"demo_{request.persona_id}_password"
+
+            # Get or create demo user
+            user = auth_store.get_user_by_email(demo_email)
+            if not user:
+                user = auth_store.create_user(
+                    email=demo_email,
+                    password=demo_password,
+                    username=label or request.persona_id,
+                    roles=[request.persona_id],
+                )
+
+            # Create session
+            session = auth_store.create_session(
+                user,
+                expires_in=timedelta(days=7),
+            )
+            session_token = session.id
+
+        return PersonaContext(
+            persona_id=request.persona_id,
+            label=label,
+            session_token=session_token,
+            default_route=default_route,
+        )
 
     # -------------------------------------------------------------------------
     # Scenario Endpoints

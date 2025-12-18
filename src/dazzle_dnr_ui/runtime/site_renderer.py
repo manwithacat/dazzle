@@ -2,11 +2,40 @@
 Site page renderer for DNR runtime.
 
 Extracts HTML/JS template generation from combined_server.py for better maintainability.
+Includes support for TaskContext injection when rendering surfaces as human tasks.
 """
 
 from __future__ import annotations
 
+import json
 from typing import Any
+
+from dazzle_dnr_ui.runtime.task_context import TaskContext
+
+
+def get_shared_head_html(title: str) -> str:
+    """
+    Return shared <head> content for all DNR pages.
+
+    Provides unified styling between site pages and workspace pages by including
+    the same DaisyUI + Tailwind CSS/JS as the workspace renderer.
+
+    Args:
+        title: Page title
+
+    Returns:
+        HTML string for the <head> section (without opening/closing tags)
+    """
+    return f"""<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <link rel="icon" href="/assets/dazzle-favicon.svg" type="image/svg+xml">
+    <!-- DaisyUI - semantic component classes (same as workspace) -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
+    <!-- Tailwind Browser - minimal utilities for layout -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- DAZZLE semantic + polish layer -->
+    <link rel="stylesheet" href="/styles/dnr.css">"""
 
 
 def render_site_page_html(
@@ -37,15 +66,11 @@ def render_site_page_html(
     copyright_text = footer.get("copyright", f"© 2025 {product_name}")
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{product_name}</title>
-    <link rel="icon" href="/assets/dazzle-favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles/dnr.css">
+    {get_shared_head_html(product_name)}
 </head>
-<body class="dz-site">
+<body class="dz-site bg-base-100">
     <header class="dz-site-header">
         <nav class="dz-site-nav">
             <a href="/" class="dz-site-logo">{product_name}</a>
@@ -80,21 +105,22 @@ def _build_nav_items(nav: dict[str, Any]) -> str:
     for item in nav.get("items", []):
         label = item.get("label", "")
         href = item.get("href", "#")
+        # Use DaisyUI-compatible link styling
         nav_items_html += f'<a href="{href}" class="dz-nav-link">{label}</a>\n'
 
-    # Add CTA button if present
+    # Add CTA button if present - use DaisyUI btn classes
     cta = nav.get("cta")
     if cta:
         cta_label = cta.get("label", "Get Started")
         cta_href = cta.get("href", "/app")
-        nav_items_html += f'<a href="{cta_href}" class="dz-nav-cta">{cta_label}</a>\n'
+        nav_items_html += f'<a href="{cta_href}" class="btn btn-primary btn-sm">{cta_label}</a>\n'
 
-    # Add theme toggle button
-    nav_items_html += """<button class="dz-theme-toggle" id="dz-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
-                <svg class="dz-theme-toggle__icon dz-theme-toggle__sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    # Add theme toggle button - use DaisyUI btn-ghost for consistency
+    nav_items_html += """<button class="btn btn-ghost btn-sm btn-circle dz-theme-toggle" id="dz-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <svg class="dz-theme-toggle__icon dz-theme-toggle__sun w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <svg class="dz-theme-toggle__icon dz-theme-toggle__moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="dz-theme-toggle__icon dz-theme-toggle__moon w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                 </svg>
             </button>\n"""
@@ -144,33 +170,31 @@ def render_auth_page_html(
     fields_html = _build_auth_fields(is_login)
 
     return f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - {product_name}</title>
-    <link rel="icon" href="/assets/dazzle-favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="/styles/dnr.css">
+    {get_shared_head_html(f"{title} - {product_name}")}
 </head>
-<body class="dz-site dz-auth-page">
+<body class="dz-site dz-auth-page bg-base-200">
     <div class="dz-auth-container">
-        <div class="dz-auth-card">
-            <a href="/" class="dz-auth-logo">{product_name}</a>
-            <h1>{title}</h1>
+        <div class="card bg-base-100 shadow-xl dz-auth-card">
+            <div class="card-body">
+                <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{product_name}</a>
+                <h1 class="card-title text-2xl justify-center">{title}</h1>
 
-            <div id="dz-auth-error" class="dz-auth-error hidden"></div>
+                <div id="dz-auth-error" class="alert alert-error hidden"></div>
 
-            <form id="dz-auth-form" method="POST" action="{action_url}">
-                {fields_html}
+                <form id="dz-auth-form" method="POST" action="{action_url}">
+                    {fields_html}
 
-                <button type="submit" class="dz-btn dz-btn-primary dz-btn-full">
-                    {button_text}
-                </button>
-            </form>
+                    <button type="submit" class="btn btn-primary w-full mt-4">
+                        {button_text}
+                    </button>
+                </form>
 
-            <p class="dz-auth-switch">
-                <a href="{other_page}">{other_link_text}</a>
-            </p>
+                <p class="dz-auth-switch text-center text-sm mt-4">
+                    <a href="{other_page}" class="link link-primary">{other_link_text}</a>
+                </p>
+            </div>
         </div>
     </div>
 
@@ -182,31 +206,39 @@ def render_auth_page_html(
 
 
 def _build_auth_fields(is_login: bool) -> str:
-    """Build authentication form fields HTML."""
+    """Build authentication form fields HTML using DaisyUI form-control."""
     fields_html = ""
 
     if not is_login:
         fields_html += """
-            <div class="dz-auth-field">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" required autocomplete="name">
+            <div class="form-control w-full">
+                <label class="label" for="name">
+                    <span class="label-text">Full Name</span>
+                </label>
+                <input type="text" id="name" name="name" required autocomplete="name" class="input input-bordered w-full">
             </div>"""
 
     fields_html += """
-            <div class="dz-auth-field">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required autocomplete="email">
+            <div class="form-control w-full">
+                <label class="label" for="email">
+                    <span class="label-text">Email</span>
+                </label>
+                <input type="email" id="email" name="email" required autocomplete="email" class="input input-bordered w-full">
             </div>
-            <div class="dz-auth-field">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+            <div class="form-control w-full">
+                <label class="label" for="password">
+                    <span class="label-text">Password</span>
+                </label>
+                <input type="password" id="password" name="password" required autocomplete="current-password" class="input input-bordered w-full">
             </div>"""
 
     if not is_login:
         fields_html += """
-            <div class="dz-auth-field">
-                <label for="confirm_password">Confirm Password</label>
-                <input type="password" id="confirm_password" name="confirm_password" required>
+            <div class="form-control w-full">
+                <label class="label" for="confirm_password">
+                    <span class="label-text">Confirm Password</span>
+                </label>
+                <input type="password" id="confirm_password" name="confirm_password" required class="input input-bordered w-full">
             </div>"""
 
     return fields_html
@@ -250,3 +282,99 @@ def _get_auth_form_script() -> str:
             }
         });
     })();"""
+
+
+# Task Context Injection Functions
+
+
+def render_task_context_script(task_context: TaskContext | None) -> str:
+    """
+    Render a script tag containing task context data.
+
+    This script tag is injected into pages that are rendered as part
+    of a human task workflow, enabling the task-header.js component
+    to display task information and outcome buttons.
+
+    Args:
+        task_context: TaskContext instance or None
+
+    Returns:
+        HTML script tag with task context JSON, or empty string
+    """
+    if not task_context:
+        return ""
+
+    context_json = json.dumps(task_context.to_dict())
+
+    return f"""<script type="application/json" id="task-context">
+{context_json}
+</script>
+<script src="/js/components/task-header.js" type="module"></script>"""
+
+
+def render_task_surface_page(
+    surface_name: str,
+    entity_id: str,
+    task_context: TaskContext,
+    surface_html: str,
+    product_name: str = "My App",
+) -> str:
+    """
+    Render a surface page with task context for human task workflow.
+
+    This wraps a surface's HTML content with task header/footer components
+    and injects the TaskContext for JavaScript to use.
+
+    Args:
+        surface_name: Name of the surface being rendered
+        entity_id: ID of the entity being displayed
+        task_context: TaskContext with task information and outcomes
+        surface_html: The rendered surface HTML content
+        product_name: Application name for title
+
+    Returns:
+        Complete HTML page with task context injection
+    """
+    task_script = render_task_context_script(task_context)
+    title = f"Task: {task_context.step_name} - {product_name}"
+
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    {get_shared_head_html(title)}
+    <style>
+        .task-surface-container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+    </style>
+</head>
+<body class="dz-site bg-base-100">
+    <header class="dz-site-header">
+        <nav class="dz-site-nav">
+            <a href="/workspaces/tasks" class="dz-site-logo">{product_name}</a>
+            <div class="dz-nav-items">
+                <a href="/workspaces/tasks" class="dz-nav-link">My Tasks</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="task-surface-container">
+        <div class="surface-container" data-surface="{surface_name}" data-entity-id="{entity_id}">
+            {surface_html}
+        </div>
+    </main>
+
+    {task_script}
+</body>
+</html>"""
+
+
+def get_task_header_script_tag() -> str:
+    """
+    Get script tag for task header component.
+
+    Include this in pages that may render with task context.
+    """
+    return '<script src="/js/components/task-header.js" type="module" defer></script>'

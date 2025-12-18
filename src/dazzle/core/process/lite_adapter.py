@@ -957,6 +957,8 @@ class LiteProcessAdapter(ProcessAdapter):
                     break
 
                 now = datetime.utcnow()
+
+                # Check scheduled processes
                 for name, spec in self._schedule_registry.items():
                     if await self._should_run_schedule(spec, now):
                         try:
@@ -964,6 +966,9 @@ class LiteProcessAdapter(ProcessAdapter):
                             await self._update_schedule_run(name, run_id)
                         except Exception as e:
                             await self._record_schedule_error(name, str(e))
+
+                # Check for task escalations
+                await self._check_pending_escalations()
 
             except asyncio.CancelledError:
                 break
@@ -1188,6 +1193,40 @@ class LiteProcessAdapter(ProcessAdapter):
             (TaskStatus.ESCALATED.value, task_id),
         )
         await self._db.commit()
+
+    async def _check_pending_escalations(self) -> None:
+        """
+        Check all pending tasks for escalation.
+
+        Called periodically by the scheduler to escalate overdue tasks.
+        """
+        if not self._db:
+            return
+
+        now = datetime.utcnow().isoformat()
+
+        # Find pending tasks past their due date that haven't been escalated
+        async with self._db.execute(
+            """
+            SELECT task_id, run_id, step_name
+            FROM process_tasks
+            WHERE status = ?
+              AND escalated_at IS NULL
+              AND due_at < ?
+            """,
+            (TaskStatus.PENDING.value, now),
+        ) as cursor:
+            tasks = await cursor.fetchall()
+
+        for task in tasks:
+            try:
+                await self._escalate_task(task["task_id"])
+                logger.info(
+                    f"Escalated task {task['task_id']} "
+                    f"(run={task['run_id']}, step={task['step_name']})"
+                )
+            except Exception as e:
+                logger.error(f"Failed to escalate task {task['task_id']}: {e}")
 
     async def _check_signal(self, run_id: str, signal_name: str) -> dict[str, Any] | None:
         """Check for an unprocessed signal."""
