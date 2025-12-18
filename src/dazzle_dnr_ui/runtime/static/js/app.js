@@ -165,6 +165,15 @@ export function createApp(uiSpec) {
       updateActiveNav(shellContainer, path);
     }
 
+    // Check for built-in system routes (v0.24.0)
+    if (path === '/workspaces/tasks') {
+      const TaskInbox = getComponent('TaskInbox');
+      if (TaskInbox) {
+        render(appContainer, () => TaskInbox({}, []));
+        return true;
+      }
+    }
+
     // Check for static page first
     const staticPage = findStaticPage(path);
     if (staticPage) {

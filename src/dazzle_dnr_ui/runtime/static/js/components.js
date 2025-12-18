@@ -1088,6 +1088,220 @@ registerComponent('StaticPage', (props) => {
 });
 
 // =============================================================================
+// Task Inbox Component (v0.24.0 - Process Human Tasks)
+// =============================================================================
+
+/**
+ * Task Inbox - displays pending human tasks from workflow processes.
+ * Uses DaisyUI card and alert components.
+ */
+registerComponent('TaskInbox', (props) => {
+  const container = createElement('div', { className: 'task-inbox p-6' });
+
+  // State
+  let tasks = [];
+  let loading = true;
+  let error = null;
+  let filter = props.filter || 'pending';
+
+  // Add styles
+  if (!document.getElementById('task-inbox-styles')) {
+    const styles = document.createElement('style');
+    styles.id = 'task-inbox-styles';
+    styles.textContent = `
+      .task-inbox { max-width: 900px; margin: 0 auto; }
+      .task-inbox-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+      .task-inbox-actions { display: flex; align-items: center; gap: 0.5rem; }
+      .task-inbox-loading { display: flex; flex-direction: column; align-items: center; padding: 3rem; }
+      .task-inbox-empty { text-align: center; padding: 3rem; background: oklch(var(--b1)); border-radius: 0.75rem; border: 1px dashed oklch(var(--bc)/0.2); }
+      .task-inbox-list { display: flex; flex-direction: column; gap: 0.75rem; }
+      .task-item { border-left: 4px solid transparent; cursor: pointer; transition: transform 0.15s; }
+      .task-item:hover { transform: translateX(4px); }
+      .task-item[data-urgency="critical"] { border-left-color: oklch(var(--er)); }
+      .task-item[data-urgency="high"] { border-left-color: oklch(var(--wa)); }
+      .task-item[data-urgency="medium"] { border-left-color: oklch(var(--in)); }
+      .task-item[data-urgency="low"] { border-left-color: oklch(var(--su)); }
+    `;
+    document.head.appendChild(styles);
+  }
+
+  // Render function
+  const render = () => {
+    let contentHtml;
+
+    if (loading) {
+      contentHtml = `
+        <div class="task-inbox-loading">
+          <span class="loading loading-spinner loading-lg"></span>
+          <p class="mt-4 opacity-60">Loading tasks...</p>
+        </div>
+      `;
+    } else if (error) {
+      contentHtml = `
+        <div class="alert alert-error">
+          <span>${escapeHtml(error)}</span>
+          <button class="btn btn-sm" data-action="retry">Retry</button>
+        </div>
+      `;
+    } else if (tasks.length === 0) {
+      contentHtml = `
+        <div class="task-inbox-empty">
+          <div class="text-6xl mb-4">✓</div>
+          <h2 class="text-xl font-semibold">No pending tasks</h2>
+          <p class="opacity-60 mt-2">You're all caught up!</p>
+        </div>
+      `;
+    } else {
+      const taskItems = tasks.map(task => {
+        const urgency = getUrgency(task);
+        const urgencyIcon = { critical: '🔴', high: '🟠', medium: '🟡', low: '🟢' }[urgency];
+        const timeInfo = task.is_overdue ? 'Overdue' : getTimeLeft(task.due_at);
+        const surfaceUrl = `/surfaces/${task.surface_name}/${task.entity_id}?task_id=${task.task_id}&return_url=/workspaces/tasks`;
+
+        return `
+          <div class="task-item card bg-base-100 shadow-sm hover:shadow-md"
+               data-task-id="${task.task_id}"
+               data-surface-url="${surfaceUrl}"
+               data-urgency="${urgency}">
+            <div class="card-body p-4">
+              <div class="flex items-start gap-3">
+                <div class="text-2xl" title="${urgency}">${urgencyIcon}</div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-semibold text-lg truncate">${escapeHtml(task.step_name)}</h3>
+                  <p class="text-sm opacity-60 truncate">
+                    ${task.process_name ? escapeHtml(task.process_name) + ' • ' : ''}${escapeHtml(task.entity_name)}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="${task.is_overdue ? 'text-error font-semibold' : 'opacity-60'}">${timeInfo}</div>
+                  ${task.status === 'escalated' ? '<span class="badge badge-warning badge-sm">Escalated</span>' : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      contentHtml = `<div class="task-inbox-list">${taskItems}</div>`;
+    }
+
+    container.innerHTML = `
+      <div class="task-inbox-header">
+        <h1 class="text-2xl font-bold">My Tasks</h1>
+        <div class="task-inbox-actions">
+          <select class="select select-bordered select-sm" data-action="filter">
+            <option value="pending" ${filter === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="escalated" ${filter === 'escalated' ? 'selected' : ''}>Escalated</option>
+            <option value="all" ${filter === 'all' ? 'selected' : ''}>All</option>
+          </select>
+          <button class="btn btn-sm btn-ghost" data-action="refresh" title="Refresh">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      ${contentHtml}
+    `;
+
+    // Attach event handlers
+    container.querySelector('[data-action="filter"]')?.addEventListener('change', (e) => {
+      filter = e.target.value;
+      fetchTasks();
+    });
+    container.querySelector('[data-action="refresh"]')?.addEventListener('click', fetchTasks);
+    container.querySelector('[data-action="retry"]')?.addEventListener('click', fetchTasks);
+
+    // Task click handlers
+    container.querySelectorAll('.task-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const url = item.getAttribute('data-surface-url');
+        if (url) {
+          window.dispatchEvent(new CustomEvent('dnr-navigate', { detail: { url } }));
+        }
+      });
+    });
+  };
+
+  // Fetch tasks from API
+  const fetchTasks = async () => {
+    loading = true;
+    error = null;
+    render();
+
+    try {
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') {
+        params.set('status', filter);
+      }
+
+      const response = await fetch(`/api/tasks?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to load tasks: ${response.status}`);
+      }
+
+      const data = await response.json();
+      tasks = data.tasks || [];
+      loading = false;
+      render();
+    } catch (e) {
+      loading = false;
+      error = e.message;
+      render();
+    }
+  };
+
+  // Helper functions
+  const getUrgency = (task) => {
+    if (task.is_overdue) return 'critical';
+    const dueAt = new Date(task.due_at);
+    const now = new Date();
+    const hoursLeft = (dueAt - now) / (1000 * 60 * 60);
+    if (hoursLeft < 2) return 'high';
+    if (hoursLeft < 24) return 'medium';
+    return 'low';
+  };
+
+  const getTimeLeft = (dueAt) => {
+    const due = new Date(dueAt);
+    const now = new Date();
+    const diffMs = due - now;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 60) return `${diffMins}m left`;
+    if (diffHours < 24) return `${diffHours}h left`;
+    return `${diffDays}d left`;
+  };
+
+  const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  };
+
+  // Initial render and fetch
+  render();
+  setTimeout(fetchTasks, 0);
+
+  // Refresh every 30 seconds
+  const refreshInterval = setInterval(fetchTasks, 30000);
+
+  // Cleanup on removal
+  const originalRemove = container.remove?.bind(container);
+  container.remove = function() {
+    clearInterval(refreshInterval);
+    if (originalRemove) originalRemove();
+  };
+
+  return withDazzleAttrs(container, {
+    view: 'task-inbox',
+    ...props.dazzle
+  });
+});
+
+// =============================================================================
 // Export
 // =============================================================================
 
