@@ -263,7 +263,7 @@ class TemporalAdapter(ProcessAdapter):
                 self._task_results: dict[str, dict[str, Any]] = {}
                 self._signals_received: dict[str, Any] = {}
 
-            @workflow.run  # type: ignore[misc]
+            @workflow.run  # type: ignore  # Temporal decorator
             async def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
                 """Execute the workflow."""
                 self._context = dict(inputs)
@@ -407,7 +407,7 @@ class TemporalAdapter(ProcessAdapter):
 
                 raise HumanTaskTimeout(step.name)
 
-            @workflow.signal  # type: ignore[misc]
+            @workflow.signal  # type: ignore  # Temporal decorator
             async def task_completed(
                 self, step_name: str, outcome: str, outcome_data: dict[str, Any] | None = None
             ) -> None:
@@ -418,13 +418,13 @@ class TemporalAdapter(ProcessAdapter):
                 }
                 workflow.logger.info(f"Task '{step_name}' completed with outcome '{outcome}'")
 
-            @workflow.signal  # type: ignore[misc]
+            @workflow.signal  # type: ignore  # Temporal decorator
             async def external_signal(self, signal_name: str, payload: dict[str, Any]) -> None:
                 """Generic signal handler for external events."""
                 self._signals_received[signal_name] = payload
                 workflow.logger.info(f"Received signal '{signal_name}'")
 
-            @workflow.query  # type: ignore[misc]
+            @workflow.query  # type: ignore  # Temporal decorator
             def get_status(self) -> dict[str, Any]:
                 """Query handler for workflow status."""
                 return {
@@ -503,7 +503,7 @@ class TemporalAdapter(ProcessAdapter):
         activity_name = f"{process_name}.{step.name}"
         service_name = step.service or step.name  # Use step.service, fallback to step name
 
-        @activity.defn(name=activity_name)  # type: ignore[misc]
+        @activity.defn(name=activity_name)  # type: ignore  # Temporal decorator
         async def service_activity(inputs: dict[str, Any]) -> dict[str, Any]:
             """Execute service for step."""
             # TODO: Integrate with service registry

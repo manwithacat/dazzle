@@ -52,7 +52,7 @@ except ImportError:
 
 if _TEMPORAL_AVAILABLE:
 
-    @activity.defn(name="create_human_task")  # type: ignore[untyped-decorator]
+    @activity.defn(name="create_human_task")  # type: ignore  # Temporal decorator
     async def create_human_task(params: dict[str, Any]) -> str:
         """
         Create a ProcessTask record for a human task step.
@@ -97,7 +97,7 @@ if _TEMPORAL_AVAILABLE:
 
         return task_id
 
-    @activity.defn(name="escalate_human_task")  # type: ignore[untyped-decorator]
+    @activity.defn(name="escalate_human_task")  # type: ignore  # Temporal decorator
     async def escalate_human_task(params: dict[str, Any]) -> None:
         """
         Escalate an overdue human task.
@@ -119,7 +119,7 @@ if _TEMPORAL_AVAILABLE:
         else:
             activity.logger.error(f"Task {task_id} not found for escalation")
 
-    @activity.defn(name="emit_hless_event")  # type: ignore[misc]
+    @activity.defn(name="emit_hless_event")  # type: ignore  # Temporal decorator
     async def emit_hless_event(event: dict[str, Any]) -> None:
         """
         Emit an HLESS (Human-Loop Event Sourcing) event.
@@ -138,7 +138,7 @@ if _TEMPORAL_AVAILABLE:
         # TODO: Integrate with event bus / message queue
         # await event_bus.publish(event_type, event["payload"])
 
-    @activity.defn(name="execute_service")  # type: ignore[misc]
+    @activity.defn(name="execute_service")  # type: ignore  # Temporal decorator
     async def execute_service(params: dict[str, Any]) -> dict[str, Any]:
         """
         Execute a service from the service registry.
