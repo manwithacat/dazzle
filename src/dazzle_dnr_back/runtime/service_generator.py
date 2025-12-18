@@ -50,6 +50,13 @@ class BaseService(ABC, Generic[T]):
         ...
 
 
+# Callback type for entity lifecycle events
+EntityEventCallback = Callable[
+    [str, str, dict[str, Any], dict[str, Any] | None],  # entity_name, entity_id, data, old_data
+    Any,  # Return type (usually Awaitable[list[str]] for process IDs)
+]
+
+
 class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
     """
     Generic CRUD service implementation.
@@ -57,6 +64,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
     Provides standard create, read, update, delete, and list operations.
     Supports both in-memory storage (for testing) and SQLite persistence
     via the repository pattern.
+
+    Entity lifecycle events (v0.24.0):
+    Services can register callbacks to be notified when entities are
+    created, updated, or deleted. This enables process triggering.
     """
 
     def __init__(
@@ -81,6 +92,76 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         # In-memory store as fallback (for testing without database)
         self._store: dict[UUID, T] = {}
+
+        # Lifecycle event callbacks (v0.24.0)
+        self._on_created_callbacks: list[EntityEventCallback] = []
+        self._on_updated_callbacks: list[EntityEventCallback] = []
+        self._on_deleted_callbacks: list[EntityEventCallback] = []
+
+    def on_created(self, callback: EntityEventCallback) -> None:
+        """Register a callback to be called after entity creation."""
+        self._on_created_callbacks.append(callback)
+
+    def on_updated(self, callback: EntityEventCallback) -> None:
+        """Register a callback to be called after entity update."""
+        self._on_updated_callbacks.append(callback)
+
+    def on_deleted(self, callback: EntityEventCallback) -> None:
+        """Register a callback to be called after entity deletion."""
+        self._on_deleted_callbacks.append(callback)
+
+    async def _notify_created(self, entity_id: str, entity_data: dict[str, Any]) -> None:
+        """Notify all on_created callbacks."""
+        import asyncio
+
+        for callback in self._on_created_callbacks:
+            try:
+                result = callback(self.entity_name, entity_id, entity_data, None)
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception as e:
+                # Log but don't fail the operation
+                import logging
+
+                logging.getLogger("dazzle.service").warning(
+                    f"Entity created callback failed for {self.entity_name}: {e}"
+                )
+
+    async def _notify_updated(
+        self, entity_id: str, entity_data: dict[str, Any], old_data: dict[str, Any]
+    ) -> None:
+        """Notify all on_updated callbacks."""
+        import asyncio
+
+        for callback in self._on_updated_callbacks:
+            try:
+                result = callback(self.entity_name, entity_id, entity_data, old_data)
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception as e:
+                # Log but don't fail the operation
+                import logging
+
+                logging.getLogger("dazzle.service").warning(
+                    f"Entity updated callback failed for {self.entity_name}: {e}"
+                )
+
+    async def _notify_deleted(self, entity_id: str, entity_data: dict[str, Any]) -> None:
+        """Notify all on_deleted callbacks."""
+        import asyncio
+
+        for callback in self._on_deleted_callbacks:
+            try:
+                result = callback(self.entity_name, entity_id, entity_data, None)
+                if asyncio.iscoroutine(result):
+                    await result
+            except Exception as e:
+                # Log but don't fail the operation
+                import logging
+
+                logging.getLogger("dazzle.service").warning(
+                    f"Entity deleted callback failed for {self.entity_name}: {e}"
+                )
 
     def set_repository(self, repository: "SQLiteRepository[T]") -> None:
         """
@@ -146,11 +227,15 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         # Use repository if available
         if self._repository:
-            return await self._repository.create(entity_data)
+            entity = await self._repository.create(entity_data)
+        else:
+            # Fallback to in-memory
+            entity = self.model_class(**entity_data)
+            self._store[entity_id] = entity
 
-        # Fallback to in-memory
-        entity = self.model_class(**entity_data)
-        self._store[entity_id] = entity
+        # Notify callbacks (v0.24.0 - process triggering)
+        await self._notify_created(str(entity_id), entity_data)
+
         return entity
 
     async def read(self, id: UUID) -> T | None:
@@ -231,31 +316,51 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             await self._validate_references(update_data)
 
         if self._repository:
-            return await self._repository.update(id, update_data)
+            updated = await self._repository.update(id, update_data)
+        else:
+            # Fallback to in-memory
+            existing = self._store.get(id)
+            if not existing:
+                return None
 
-        # Fallback to in-memory
-        existing = self._store.get(id)
-        if not existing:
-            return None
+            # Merge with existing
+            merged_data = {**existing.model_dump(), **update_data}
 
-        # Merge with existing
-        merged_data = {**existing.model_dump(), **update_data}
+            # Create updated instance
+            updated = self.model_class(**merged_data)
+            self._store[id] = updated
 
-        # Create updated instance
-        updated = self.model_class(**merged_data)
-        self._store[id] = updated
+        if updated is not None:
+            # Get updated entity data for notification
+            updated_data = updated.model_dump() if hasattr(updated, "model_dump") else dict(updated)
+            # Notify callbacks (v0.24.0 - process triggering)
+            await self._notify_updated(str(id), updated_data, current_data)
 
         return updated
 
     async def delete(self, id: UUID) -> bool:
         """Delete an entity by ID."""
-        if self._repository:
-            return await self._repository.delete(id)
+        # Read entity data before deletion for notification
+        entity = await self.read(id)
+        if entity is None:
+            return False
 
-        if id in self._store:
-            del self._store[id]
-            return True
-        return False
+        entity_data = entity.model_dump() if hasattr(entity, "model_dump") else dict(entity)
+
+        if self._repository:
+            deleted = await self._repository.delete(id)
+        else:
+            if id in self._store:
+                del self._store[id]
+                deleted = True
+            else:
+                deleted = False
+
+        if deleted:
+            # Notify callbacks (v0.24.0 - process triggering)
+            await self._notify_deleted(str(id), entity_data)
+
+        return deleted
 
     async def list(
         self,

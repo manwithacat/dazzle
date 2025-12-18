@@ -422,6 +422,9 @@ class DNRBackendApp:
             # Include task router
             self._app.include_router(task_router, prefix="/api")
 
+            # Wire entity lifecycle events to ProcessManager
+            self._wire_entity_events_to_processes()
+
             # Capture for closures
             process_adapter = self._process_adapter
 
@@ -452,6 +455,62 @@ class DNRBackendApp:
             import logging
 
             logging.getLogger("dazzle.server").warning(f"Failed to init process manager: {e}")
+
+    def _wire_entity_events_to_processes(self) -> None:
+        """Wire entity lifecycle events from CRUD services to ProcessManager.
+
+        This enables automatic process triggering when entities are created,
+        updated, or deleted.
+        """
+        if not self._process_manager:
+            return
+
+        process_manager = self._process_manager
+
+        # Create callback functions that delegate to ProcessManager
+        async def on_created_callback(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            _old_data: dict[str, Any] | None,
+        ) -> Any:
+            """Callback for entity creation events."""
+            return await process_manager.on_entity_created(entity_name, entity_id, entity_data)
+
+        async def on_updated_callback(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            old_data: dict[str, Any] | None,
+        ) -> Any:
+            """Callback for entity update events."""
+            return await process_manager.on_entity_updated(
+                entity_name, entity_id, entity_data, old_data
+            )
+
+        async def on_deleted_callback(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            _old_data: dict[str, Any] | None,
+        ) -> Any:
+            """Callback for entity deletion events."""
+            return await process_manager.on_entity_deleted(entity_name, entity_id, entity_data)
+
+        # Register callbacks with all CRUD services
+        wired_count = 0
+        for _service_name, service in self._services.items():
+            if isinstance(service, CRUDService):
+                service.on_created(on_created_callback)
+                service.on_updated(on_updated_callback)
+                service.on_deleted(on_deleted_callback)
+                wired_count += 1
+
+        import logging
+
+        logging.getLogger("dazzle.server").debug(
+            f"Wired entity events to ProcessManager for {wired_count} services"
+        )
 
     def build(self) -> FastAPI:
         """
