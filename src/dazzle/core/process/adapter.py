@@ -125,6 +125,7 @@ class ProcessAdapter(ABC):
         process_name: str,
         inputs: dict[str, Any],
         idempotency_key: str | None = None,
+        dsl_version: str | None = None,
     ) -> str:
         """
         Start a process instance.
@@ -133,6 +134,7 @@ class ProcessAdapter(ABC):
             process_name: Name of the registered process
             inputs: Input values for the process
             idempotency_key: Optional key for deduplication
+            dsl_version: DSL version to bind this run to (for migrations)
 
         Returns:
             run_id: Unique identifier for this run
@@ -217,4 +219,43 @@ class ProcessAdapter(ABC):
         reason: str | None = None,
     ) -> None:
         """Reassign a human task to another user."""
+        pass
+
+    # Version Management
+    @abstractmethod
+    async def list_runs_by_version(
+        self,
+        dsl_version: str,
+        status: ProcessStatus | None = None,
+        limit: int = 100,
+    ) -> list[ProcessRun]:
+        """
+        List runs for a specific DSL version.
+
+        Args:
+            dsl_version: DSL version to filter by
+            status: Optional status filter
+            limit: Maximum number of results
+
+        Returns:
+            List of ProcessRun instances
+        """
+        pass
+
+    @abstractmethod
+    async def count_active_runs_by_version(
+        self,
+        dsl_version: str,
+    ) -> int:
+        """
+        Count active (non-terminal) runs for a DSL version.
+
+        Used for migration drain monitoring.
+
+        Args:
+            dsl_version: DSL version to count
+
+        Returns:
+            Number of active runs
+        """
         pass

@@ -524,6 +524,7 @@ class TemporalAdapter(ProcessAdapter):
         process_name: str,
         inputs: dict[str, Any],
         idempotency_key: str | None = None,
+        dsl_version: str | None = None,
     ) -> str:
         """
         Start a workflow execution.
@@ -532,6 +533,7 @@ class TemporalAdapter(ProcessAdapter):
             process_name: Name of the registered process
             inputs: Input values for the workflow
             idempotency_key: Optional workflow ID for deduplication
+            dsl_version: DSL version to bind this workflow to (uses versioned task queue)
 
         Returns:
             workflow_id (run_id): Unique identifier for this execution
@@ -544,14 +546,28 @@ class TemporalAdapter(ProcessAdapter):
 
         workflow_id = idempotency_key or f"{process_name}-{uuid4()}"
 
+        # Use versioned task queue for version isolation
+        task_queue = self._task_queue
+        if dsl_version:
+            task_queue = f"{self._task_queue}_{dsl_version}"
+
+        # Include DSL version in search attributes for querying
+        search_attributes = {}
+        if dsl_version:
+            search_attributes["DslVersion"] = [dsl_version]
+
         await self._client.start_workflow(
             process_name,
             inputs,
             id=workflow_id,
-            task_queue=self._task_queue,
+            task_queue=task_queue,
+            search_attributes=search_attributes if search_attributes else None,
         )
 
-        logger.info(f"Started workflow '{process_name}' with ID: {workflow_id}")
+        logger.info(
+            f"Started workflow '{process_name}' with ID: {workflow_id}"
+            + (f" (version: {dsl_version})" if dsl_version else "")
+        )
 
         return workflow_id
 
@@ -753,3 +769,57 @@ class TemporalAdapter(ProcessAdapter):
             ProcessStatus.PENDING: "Running",  # Temporal doesn't have pending
         }
         return status_map.get(status, "Running")
+
+    # Version Management
+    async def list_runs_by_version(
+        self,
+        dsl_version: str,
+        status: ProcessStatus | None = None,
+        limit: int = 100,
+    ) -> list[ProcessRun]:
+        """List runs for a specific DSL version using search attributes."""
+        if not self._client:
+            return []
+
+        # Build Temporal query using DslVersion search attribute
+        query_parts = [f'DslVersion = "{dsl_version}"']
+        if status:
+            temporal_status = self._map_to_temporal_status(status)
+            query_parts.append(f'ExecutionStatus = "{temporal_status}"')
+
+        query = " AND ".join(query_parts)
+
+        runs: list[ProcessRun] = []
+        async for workflow in self._client.list_workflows(query=query):
+            if len(runs) >= limit:
+                break
+
+            runs.append(
+                ProcessRun(
+                    run_id=workflow.id,
+                    process_name=workflow.workflow_type or "unknown",
+                    dsl_version=dsl_version,
+                    status=self._map_status(workflow.status),
+                    started_at=workflow.start_time or datetime.utcnow(),
+                    completed_at=workflow.close_time,
+                )
+            )
+
+        return runs
+
+    async def count_active_runs_by_version(
+        self,
+        dsl_version: str,
+    ) -> int:
+        """Count active (running) workflows for a DSL version."""
+        if not self._client:
+            return 0
+
+        # Query for running workflows with this version
+        query = f'DslVersion = "{dsl_version}" AND ExecutionStatus = "Running"'
+
+        count = 0
+        async for _ in self._client.list_workflows(query=query):
+            count += 1
+
+        return count

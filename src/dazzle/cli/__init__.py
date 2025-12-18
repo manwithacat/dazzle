@@ -25,6 +25,7 @@ from dazzle.cli.dnr_impl import dnr_app
 from dazzle.cli.e2e import e2e_app
 from dazzle.cli.events import dlq_app, events_app, outbox_app
 from dazzle.cli.mcp import mcp_app
+from dazzle.cli.migrate import migrate_app
 from dazzle.cli.testing import test_app
 
 # Re-export utilities (no dazzle imports, safe)
@@ -76,6 +77,7 @@ __all__ = [
     "test_app",
     "e2e_app",
     "mcp_app",
+    "migrate_app",
     "events_app",
     "dlq_app",
     "outbox_app",

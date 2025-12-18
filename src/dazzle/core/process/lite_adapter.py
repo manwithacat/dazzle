@@ -211,6 +211,7 @@ class LiteProcessAdapter(ProcessAdapter):
         process_name: str,
         inputs: dict[str, Any],
         idempotency_key: str | None = None,
+        dsl_version: str | None = None,
     ) -> str:
         """Start a process instance."""
         spec = self._process_registry.get(process_name)
@@ -243,6 +244,7 @@ class LiteProcessAdapter(ProcessAdapter):
         run = ProcessRun(
             run_id=run_id,
             process_name=process_name,
+            dsl_version=dsl_version or "0.1",
             inputs=inputs,
             idempotency_key=idempotency_key,
         )
@@ -463,6 +465,52 @@ class LiteProcessAdapter(ProcessAdapter):
         await self._db.commit()
 
         logger.info(f"Task {task_id} reassigned to {new_assignee_id}")
+
+    # Version Management
+    async def list_runs_by_version(
+        self,
+        dsl_version: str,
+        status: ProcessStatus | None = None,
+        limit: int = 100,
+    ) -> list[ProcessRun]:
+        """List runs for a specific DSL version."""
+        if not self._db:
+            return []
+
+        query = "SELECT * FROM process_runs WHERE dsl_version = ?"
+        params: list[Any] = [dsl_version]
+
+        if status:
+            query += " AND status = ?"
+            params.append(status.value)
+
+        query += " ORDER BY started_at DESC LIMIT ?"
+        params.append(limit)
+
+        runs = []
+        async with self._db.execute(query, params) as cursor:
+            async for row in cursor:
+                runs.append(self._row_to_run(row))
+        return runs
+
+    async def count_active_runs_by_version(
+        self,
+        dsl_version: str,
+    ) -> int:
+        """Count active (non-terminal) runs for a DSL version."""
+        if not self._db:
+            return 0
+
+        async with self._db.execute(
+            """
+            SELECT COUNT(*) as count FROM process_runs
+            WHERE dsl_version = ?
+              AND status IN ('pending', 'running', 'suspended', 'waiting', 'draining')
+            """,
+            (dsl_version,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row["count"] if row else 0
 
     # Internal: Process Execution
     async def _execute_process(

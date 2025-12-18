@@ -125,3 +125,34 @@ CREATE TRIGGER IF NOT EXISTS update_schedule_runs_timestamp
 BEGIN
     UPDATE schedule_runs SET updated_at = CURRENT_TIMESTAMP WHERE schedule_name = NEW.schedule_name;
 END;
+
+-- ============================================================
+-- Version Management Tables (Phase 6: Migration and Versioning)
+-- ============================================================
+
+-- Track DSL versions for process versioning
+CREATE TABLE IF NOT EXISTS dsl_versions (
+    version_id TEXT PRIMARY KEY,
+    deployed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dsl_hash TEXT NOT NULL,
+    manifest_json JSON NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active'  -- active, draining, archived
+);
+
+-- Track version transitions during migrations
+CREATE TABLE IF NOT EXISTS version_migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_version TEXT REFERENCES dsl_versions(version_id),
+    to_version TEXT NOT NULL,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'in_progress',  -- in_progress, completed, failed, rolled_back
+    runs_drained INTEGER DEFAULT 0,
+    runs_remaining INTEGER DEFAULT 0
+);
+
+-- Indexes for version management queries
+CREATE INDEX IF NOT EXISTS idx_versions_status ON dsl_versions(status);
+CREATE INDEX IF NOT EXISTS idx_versions_deployed ON dsl_versions(deployed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_migrations_status ON version_migrations(status);
+CREATE INDEX IF NOT EXISTS idx_runs_dsl_version ON process_runs(dsl_version) WHERE dsl_version IS NOT NULL;
