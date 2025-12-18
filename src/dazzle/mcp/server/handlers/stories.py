@@ -9,12 +9,115 @@ from __future__ import annotations
 import json
 from datetime import UTC
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.stories import StorySpec
+
+# =============================================================================
+# Constants
+# =============================================================================
+
+# Maximum number of constraints to include per story (prevents overwhelming test cases)
+MAX_CONSTRAINTS_PER_STORY = 3
+
+# Maximum number of state machine transitions to generate stories for (per entity)
+MAX_TRANSITIONS_PER_ENTITY = 3
+
+
+# =============================================================================
+# Trigger Mappings
+# =============================================================================
+
+# Lazy-initialized trigger mapping (imports aren't available at module load time)
+_TRIGGER_MAP: dict[Any, Any] | None = None
+
+
+def _get_trigger_map() -> dict[Any, Any]:
+    """Get or create the StoryTrigger to TestDesignTrigger mapping.
+
+    Uses lazy initialization since the IR types aren't available at module load.
+    """
+    global _TRIGGER_MAP
+    if _TRIGGER_MAP is None:
+        from dazzle.core.ir.stories import StoryTrigger
+        from dazzle.core.ir.test_design import TestDesignTrigger
+
+        _TRIGGER_MAP = {
+            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+            StoryTrigger.TIMER_ELAPSED: TestDesignTrigger.TIMER_ELAPSED,
+            StoryTrigger.EXTERNAL_EVENT: TestDesignTrigger.EXTERNAL_EVENT,
+            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+            StoryTrigger.CRON_DAILY: TestDesignTrigger.CRON_DAILY,
+            StoryTrigger.CRON_HOURLY: TestDesignTrigger.CRON_HOURLY,
+        }
+    return _TRIGGER_MAP
+
+
+# =============================================================================
+# Serialization Helpers
+# =============================================================================
+
+
+def _serialize_story(story: StorySpec) -> dict[str, Any]:
+    """Convert a StorySpec to a JSON-serializable dictionary.
+
+    This is the canonical serialization format for stories used across
+    all story-related handlers.
+    """
+    return {
+        "story_id": story.story_id,
+        "title": story.title,
+        "actor": story.actor,
+        "trigger": story.trigger.value,
+        "scope": story.scope,
+        "preconditions": story.preconditions,
+        "happy_path_outcome": story.happy_path_outcome,
+        "side_effects": story.side_effects,
+        "constraints": story.constraints,
+        "variants": story.variants,
+        "status": story.status.value,
+        "created_at": story.created_at,
+        "accepted_at": story.accepted_at,
+    }
+
+
+def _serialize_test_design(td: Any) -> dict[str, Any]:
+    """Convert a TestDesignSpec to a JSON-serializable dictionary.
+
+    This is the canonical serialization format for test designs.
+    """
+    return {
+        "test_id": td.test_id,
+        "title": td.title,
+        "description": td.description,
+        "persona": td.persona,
+        "trigger": td.trigger.value,
+        "steps": [
+            {
+                "action": step.action.value,
+                "target": step.target,
+                "data": step.data,
+                "rationale": step.rationale,
+            }
+            for step in td.steps
+        ],
+        "expected_outcomes": td.expected_outcomes,
+        "entities": td.entities,
+        "tags": td.tags,
+        "status": td.status.value,
+    }
+
+
+# =============================================================================
+# Handler Functions
+# =============================================================================
 
 
 def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
@@ -178,7 +281,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                     ],
                     side_effects=[],
                     constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][
-                        :3
+                        :MAX_CONSTRAINTS_PER_STORY
                     ],
                     variants=["Validation error on required field"],
                     status=StoryStatus.DRAFT,
@@ -189,7 +292,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
             # Story: State machine transitions
             if entity.state_machine and story_count < max_stories:
                 sm = entity.state_machine
-                for transition in sm.transitions[:3]:  # Limit transitions
+                for transition in sm.transitions[:MAX_TRANSITIONS_PER_ENTITY]:
                     if story_count >= max_stories:
                         break
 
@@ -215,24 +318,8 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                         )
                     )
 
-        # Convert to JSON-serializable format
-        stories_data = [
-            {
-                "story_id": s.story_id,
-                "title": s.title,
-                "actor": s.actor,
-                "trigger": s.trigger.value,
-                "scope": s.scope,
-                "preconditions": s.preconditions,
-                "happy_path_outcome": s.happy_path_outcome,
-                "side_effects": s.side_effects,
-                "constraints": s.constraints,
-                "variants": s.variants,
-                "status": s.status.value,
-                "created_at": s.created_at,
-            }
-            for s in stories
-        ]
+        # Convert to JSON-serializable format using shared helper
+        stories_data = [_serialize_story(s) for s in stories]
 
         return json.dumps(
             {
@@ -312,24 +399,8 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         stories = get_stories_by_status(project_root, status)
         stories_file = get_stories_file(project_root)
 
-        stories_data = [
-            {
-                "story_id": s.story_id,
-                "title": s.title,
-                "actor": s.actor,
-                "trigger": s.trigger.value,
-                "scope": s.scope,
-                "preconditions": s.preconditions,
-                "happy_path_outcome": s.happy_path_outcome,
-                "side_effects": s.side_effects,
-                "constraints": s.constraints,
-                "variants": s.variants,
-                "status": s.status.value,
-                "created_at": s.created_at,
-                "accepted_at": s.accepted_at,
-            }
-            for s in stories
-        ]
+        # Use shared serialization helper
+        stories_data = [_serialize_story(s) for s in stories]
 
         return json.dumps(
             {
@@ -397,7 +468,7 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
     (how to verify it happens). This bridges the gap between story
     acceptance criteria and executable test cases.
     """
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.stories import StoryStatus, StoryTrigger
     from dazzle.core.ir.test_design import (
         TestDesignAction,
         TestDesignSpec,
@@ -431,16 +502,8 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
                 }
             )
 
-        # Map StoryTrigger to TestDesignTrigger
-        trigger_map: dict[StoryTrigger, TestDesignTrigger] = {
-            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
-            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
-            StoryTrigger.TIMER_ELAPSED: TestDesignTrigger.TIMER_ELAPSED,
-            StoryTrigger.EXTERNAL_EVENT: TestDesignTrigger.EXTERNAL_EVENT,
-            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
-            StoryTrigger.CRON_DAILY: TestDesignTrigger.CRON_DAILY,
-            StoryTrigger.CRON_HOURLY: TestDesignTrigger.CRON_HOURLY,
-        }
+        # Get trigger mapping (lazily initialized)
+        trigger_map = _get_trigger_map()
 
         def story_to_test_design(story: StorySpec, index: int) -> TestDesignSpec:
             """Convert a single story to a test design."""
@@ -594,30 +657,8 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
         # Convert all stories to test designs
         test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
 
-        # Serialize to JSON
-        designs_data = [
-            {
-                "test_id": td.test_id,
-                "title": td.title,
-                "description": td.description,
-                "persona": td.persona,
-                "trigger": td.trigger.value,
-                "steps": [
-                    {
-                        "action": step.action.value,
-                        "target": step.target,
-                        "data": step.data,
-                        "rationale": step.rationale,
-                    }
-                    for step in td.steps
-                ],
-                "expected_outcomes": td.expected_outcomes,
-                "entities": td.entities,
-                "tags": td.tags,
-                "status": td.status.value,
-            }
-            for td in test_designs
-        ]
+        # Use shared serialization helper
+        designs_data = [_serialize_test_design(td) for td in test_designs]
 
         return json.dumps(
             {
