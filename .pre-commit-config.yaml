@@ -24,7 +24,7 @@ repos:
 
   # Ruff - Fast Python linter and formatter
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.2
+    rev: v0.14.10
     hooks:
       # Run the linter (use --unsafe-fixes to auto-fix pyupgrade rules like UP038)
       - id: ruff

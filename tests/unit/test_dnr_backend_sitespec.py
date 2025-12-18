@@ -71,9 +71,9 @@ class TestDNRBackendAppSitespec:
         )
 
         # Verify sitespec_data was preserved
-        assert (
-            app_builder._sitespec_data is not None
-        ), "sitespec_data should not be None when explicitly passed"
+        assert app_builder._sitespec_data is not None, (
+            "sitespec_data should not be None when explicitly passed"
+        )
         assert app_builder._sitespec_data == sitespec_data
         assert app_builder._sitespec_data["brand"]["product_name"] == "Test App"
 
@@ -133,6 +133,6 @@ class TestDNRBackendAppSitespec:
         # Check that site routes were NOT registered
         route_paths = [route.path for route in app.routes]
 
-        assert (
-            "/_site/pages" not in route_paths
-        ), "/_site/pages should not be registered without sitespec"
+        assert "/_site/pages" not in route_paths, (
+            "/_site/pages should not be registered without sitespec"
+        )

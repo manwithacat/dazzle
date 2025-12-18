@@ -190,9 +190,9 @@ class TestComputedFieldConsistency:
 
                 # Should match
                 if list_value and detail_value:
-                    assert (
-                        list_value.strip() == detail_value.strip()
-                    ), f"List: {list_value}, Detail: {detail_value}"
+                    assert list_value.strip() == detail_value.strip(), (
+                        f"List: {list_value}, Detail: {detail_value}"
+                    )
 
     def test_task_days_open_same_in_list_and_detail(
         self, as_engineer: FieldTestHubPage, demo_data: dict
@@ -217,9 +217,9 @@ class TestComputedFieldConsistency:
                 detail_value = detail_days.first.inner_text() if detail_days.count() > 0 else None
 
                 if list_value and detail_value:
-                    assert (
-                        list_value.strip() == detail_value.strip()
-                    ), f"List: {list_value}, Detail: {detail_value}"
+                    assert list_value.strip() == detail_value.strip(), (
+                        f"List: {list_value}, Detail: {detail_value}"
+                    )
 
 
 # =============================================================================
