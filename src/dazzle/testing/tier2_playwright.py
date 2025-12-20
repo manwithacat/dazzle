@@ -48,7 +48,6 @@ from dazzle.core.ir import (
     SurfaceSpec,
 )
 
-
 # =============================================================================
 # Selector Builder - The Semantic DOM Contract
 # =============================================================================
@@ -228,9 +227,7 @@ class PlaywrightTest:
 # =============================================================================
 
 
-def _get_sample_value_for_field(
-    field_spec: Any, field_name: str
-) -> tuple[str, str] | None:
+def _get_sample_value_for_field(field_spec: Any, field_name: str) -> tuple[str, str] | None:
     """Generate a sample value for a field based on its type.
 
     Returns (value, interaction_type) where interaction_type is 'fill' or 'select'.
@@ -238,7 +235,11 @@ def _get_sample_value_for_field(
     if field_spec is None:
         return (f"Test {field_name.replace('_', ' ').title()}", "fill")
 
-    kind = field_spec.type.kind.value if hasattr(field_spec.type.kind, "value") else str(field_spec.type.kind)
+    kind = (
+        field_spec.type.kind.value
+        if hasattr(field_spec.type.kind, "value")
+        else str(field_spec.type.kind)
+    )
     if kind == "str":
         return (f"Test {field_name.replace('_', ' ').title()}", "fill")
     elif kind == "text":
@@ -269,16 +270,16 @@ def _get_fillable_fields(entity: EntitySpec) -> list[tuple[str, str, str]]:
     Returns list of (field_name, value, interaction_type).
     """
     fillable = []
-    for field in entity.fields:
-        if field.is_primary_key:
+    for field_spec in entity.fields:
+        if field_spec.is_primary_key:
             continue
-        if field.name in ("created_at", "updated_at"):
+        if field_spec.name in ("created_at", "updated_at"):
             continue
 
-        result = _get_sample_value_for_field(field, field.name)
+        result = _get_sample_value_for_field(field_spec, field_spec.name)
         if result:
             value, interaction = result
-            fillable.append((field.name, value, interaction))
+            fillable.append((field_spec.name, value, interaction))
 
     return fillable
 
@@ -546,7 +547,7 @@ def generate_delete_flow(
 
     # Confirm if dialog appears
     dialog_sel = S.dialog()
-    confirm_sel = f'{S.dialog()} {S.action_by_role("destructive")}'
+    confirm_sel = f"{S.dialog()} {S.action_by_role('destructive')}"
     confirm_code = (
         f"if page.locator('{dialog_sel}').is_visible():\n"
         f"        page.locator('{confirm_sel}').click()\n"
@@ -573,22 +574,30 @@ def generate_scenario_setup(scenario_id: str) -> list[PlaywrightStep]:
     steps = []
 
     # First navigate to app root to access the Dazzle Bar
-    steps.append(PlaywrightStep(
-        code='page.goto(base_url)',
-        comment="Navigate to app to access Dazzle Bar",
-    ))
-    steps.append(PlaywrightStep(
-        code='page.wait_for_load_state("networkidle")',
-    ))
+    steps.append(
+        PlaywrightStep(
+            code="page.goto(base_url)",
+            comment="Navigate to app to access Dazzle Bar",
+        )
+    )
+    steps.append(
+        PlaywrightStep(
+            code='page.wait_for_load_state("networkidle")',
+        )
+    )
 
     # Select scenario via the scenario dropdown
-    steps.append(PlaywrightStep(
-        code=f"page.locator('{S.scenario_select()}').select_option('{scenario_id}')",
-        comment=f"Set scenario to '{scenario_id}' via Dazzle Bar",
-    ))
-    steps.append(PlaywrightStep(
-        code='page.wait_for_load_state("networkidle")',
-    ))
+    steps.append(
+        PlaywrightStep(
+            code=f"page.locator('{S.scenario_select()}').select_option('{scenario_id}')",
+            comment=f"Set scenario to '{scenario_id}' via Dazzle Bar",
+        )
+    )
+    steps.append(
+        PlaywrightStep(
+            code='page.wait_for_load_state("networkidle")',
+        )
+    )
 
     return steps
 
@@ -597,13 +606,17 @@ def generate_persona_setup(persona_id: str) -> list[PlaywrightStep]:
     """Generate steps to set persona via the Dazzle Bar."""
     steps = []
 
-    steps.append(PlaywrightStep(
-        code=f"page.locator('{S.persona_select()}').select_option('{persona_id}')",
-        comment=f"Set persona to '{persona_id}' via Dazzle Bar",
-    ))
-    steps.append(PlaywrightStep(
-        code='page.wait_for_load_state("networkidle")',
-    ))
+    steps.append(
+        PlaywrightStep(
+            code=f"page.locator('{S.persona_select()}').select_option('{persona_id}')",
+            comment=f"Set persona to '{persona_id}' via Dazzle Bar",
+        )
+    )
+    steps.append(
+        PlaywrightStep(
+            code='page.wait_for_load_state("networkidle")',
+        )
+    )
 
     return steps
 
@@ -657,7 +670,7 @@ def {test.name}({fixture_params}) -> None:
     """
     {test.description}
 
-    Tags: {', '.join(test.tags)}
+    Tags: {", ".join(test.tags)}
     """
 {steps_str}
 '''
@@ -747,10 +760,7 @@ def generate_tier2_tests(
     entities_by_name = {e.name: e for e in appspec.domain.entities}
 
     # Find scenarios that seed data
-    scenarios_with_data = [
-        s.id for s in appspec.scenarios
-        if s.demo_fixtures
-    ]
+    scenarios_with_data = [s.id for s in appspec.scenarios if s.demo_fixtures]
     data_scenario = default_scenario or (scenarios_with_data[0] if scenarios_with_data else None)
 
     # Generate tests for each surface
