@@ -10,6 +10,7 @@ import json
 import logging
 import shutil
 from pathlib import Path
+from typing import Any
 
 from ..state import get_active_project_path, get_project_root
 
@@ -26,7 +27,7 @@ def check_test_infrastructure_handler() -> str:
     Returns:
         JSON with infrastructure status and setup instructions
     """
-    result = {
+    result: dict[str, Any] = {
         "ready": True,
         "components": {},
         "setup_instructions": [],
@@ -178,19 +179,24 @@ def run_e2e_tests_handler(
     """
     try:
         # Resolve project path
+        root: Path
         if project_path:
             root = Path(project_path)
         else:
-            root = get_active_project_path()
-            if not root:
-                root = get_project_root()
-            if not root:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                        "status": "error",
-                    }
-                )
+            active = get_active_project_path()
+            if active:
+                root = active
+            else:
+                project = get_project_root()
+                if project:
+                    root = project
+                else:
+                    return json.dumps(
+                        {
+                            "error": "No project path specified and no active project set",
+                            "status": "error",
+                        }
+                    )
 
         # Import E2E runner
         from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
@@ -273,18 +279,23 @@ def get_e2e_test_coverage_handler(
     """
     try:
         # Resolve project path
+        root: Path
         if project_path:
             root = Path(project_path)
         else:
-            root = get_active_project_path()
-            if not root:
-                root = get_project_root()
-            if not root:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                    }
-                )
+            active = get_active_project_path()
+            if active:
+                root = active
+            else:
+                project = get_project_root()
+                if project:
+                    root = project
+                else:
+                    return json.dumps(
+                        {
+                            "error": "No project path specified and no active project set",
+                        }
+                    )
 
         # Load and generate testspec
         from dazzle.core.fileset import discover_dsl_files
@@ -377,18 +388,23 @@ def list_e2e_flows_handler(
     """
     try:
         # Resolve project path
+        root: Path
         if project_path:
             root = Path(project_path)
         else:
-            root = get_active_project_path()
-            if not root:
-                root = get_project_root()
-            if not root:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                    }
-                )
+            active = get_active_project_path()
+            if active:
+                root = active
+            else:
+                project = get_project_root()
+                if project:
+                    root = project
+                else:
+                    return json.dumps(
+                        {
+                            "error": "No project path specified and no active project set",
+                        }
+                    )
 
         # Generate testspec
         from dazzle.core.fileset import discover_dsl_files

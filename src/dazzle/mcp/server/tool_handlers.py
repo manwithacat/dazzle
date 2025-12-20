@@ -3393,7 +3393,8 @@ def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         # Helper to get entities from design
         def get_entities(design: dict[str, Any]) -> list[str]:
-            return design.get("entities", [])
+            entities = design.get("entities", [])
+            return entities if isinstance(entities, list) else []
 
         designs = test_suite.designs
         if category:

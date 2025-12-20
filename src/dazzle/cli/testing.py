@@ -429,12 +429,12 @@ def test_run(
                 status = "FAIL"
                 error = str(e)
 
-            result = {
+            test_result: dict[str, Any] = {
                 "flow_id": flow_spec.id,
                 "status": status,
                 "error": error,
             }
-            results.append(result)
+            results.append(test_result)
 
             # Output result
             icon = "✓" if status == "PASS" else "✗"
@@ -1537,3 +1537,97 @@ def dsl_coverage(
                     icon = "✓" if count > 0 else "✗"
                     color = typer.colors.GREEN if count > 0 else typer.colors.RED
                     typer.secho(f"    {icon} {persona_id}: {count} tests", fg=color)
+
+
+@test_app.command("agent")
+def test_agent(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    test_id: str = typer.Option(
+        None,
+        "--test",
+        "-t",
+        help="Specific test ID to run (default: all E2E tests)",
+    ),
+    headless: bool = typer.Option(
+        False,
+        "--headless/--no-headless",
+        help="Run browser in headless mode",
+    ),
+    model: str = typer.Option(
+        None,
+        "--model",
+        help="LLM model to use (default: claude-sonnet-4-20250514)",
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """
+    Run E2E tests using an LLM agent.
+
+    The agent uses Claude to observe pages, decide actions, and verify outcomes.
+    This enables testing of complex UI flows that are difficult to script.
+
+    Examples:
+        dazzle test agent                    # Run all E2E tests with visible browser
+        dazzle test agent --headless         # Run headless (faster but no visual)
+        dazzle test agent -t WS_MY_WORK_NAV  # Run specific test
+        dazzle test agent --model claude-3-haiku-20240307  # Use faster/cheaper model
+    """
+    import asyncio
+
+    # Find manifest
+    manifest_path = Path(manifest)
+    if not manifest_path.exists():
+        typer.echo(f"Manifest not found: {manifest_path}", err=True)
+        raise typer.Exit(code=1)
+
+    root = manifest_path.parent
+
+    try:
+        from dazzle.testing.agent_e2e import run_agent_tests
+
+        test_ids = [test_id] if test_id else None
+
+        typer.echo(f"Running agent E2E tests for {root.name}...")
+        if not headless:
+            typer.echo("  Browser will be visible. Use --headless for faster runs.")
+
+        results = asyncio.run(
+            run_agent_tests(
+                project_path=root,
+                test_ids=test_ids,
+                headless=headless,
+                model=model,
+            )
+        )
+
+        # Display results
+        passed = sum(1 for r in results if r.passed)
+        failed = len(results) - passed
+
+        typer.echo()
+        for result in results:
+            icon = "✓" if result.passed else "✗"
+            color = typer.colors.GREEN if result.passed else typer.colors.RED
+            typer.secho(f"  {icon} {result.test_id}", fg=color)
+
+            if verbose or not result.passed:
+                typer.echo(f"    Steps: {len(result.steps)}")
+                typer.echo(f"    Duration: {result.duration_ms:.0f}ms")
+                if result.reasoning:
+                    typer.echo(f"    Reasoning: {result.reasoning}")
+                if result.error:
+                    typer.secho(f"    Error: {result.error}", fg=typer.colors.RED)
+
+        typer.echo()
+        typer.secho(f"Results: {passed}/{len(results)} passed", bold=True)
+
+        if failed > 0:
+            raise typer.Exit(code=1)
+
+    except ImportError as e:
+        typer.echo(f"Missing dependency: {e}", err=True)
+        typer.echo("Install with: pip install playwright anthropic && playwright install chromium")
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)

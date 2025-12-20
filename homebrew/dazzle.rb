@@ -15,7 +15,7 @@ class Dazzle < Formula
 
   desc "DSL-first application framework with LLM-assisted development"
   homepage "https://github.com/manwithacat/dazzle"
-  version "0.16.0"
+  version "0.17.0"
   license "MIT"
 
   # Source tarball for Python package

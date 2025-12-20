@@ -668,7 +668,7 @@ def run_tests_json(
 
         # Try to import test runner
         try:
-            from dazzle.testing import TestRunner  # type: ignore[attr-defined]
+            from dazzle.testing.test_runner import run_project_tests
         except ImportError:
             # Testing module may not be available
             return {
@@ -676,20 +676,17 @@ def run_tests_json(
                 "hint": "E2E testing requires playwright. Install with: pip install playwright",
             }
 
-        runner = TestRunner(app_spec, project_path)
-        results = runner.run(
-            flow=flow,
-            headless=headless,
-            coverage=coverage,
-        )
+        # Run tests for the project
+        results = run_project_tests(project_path)
+        # Note: flow, headless, coverage params not currently supported
 
         return {
             "passed": results.passed,
             "failed": results.failed,
             "skipped": results.skipped,
             "total": results.total,
-            "duration_ms": results.duration_ms,
-            "coverage": results.coverage if coverage else None,
+            "duration_ms": 0.0,  # Not tracked at this level
+            "coverage": None,  # Not tracked at this level
         }
     except ImportError:
         # No testing module - return helpful message

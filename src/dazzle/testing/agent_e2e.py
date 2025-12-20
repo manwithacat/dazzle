@@ -1,0 +1,742 @@
+"""
+LLM-Agent E2E Testing Infrastructure.
+
+This module provides goal-oriented E2E testing using an LLM agent
+to drive browser interactions via Playwright.
+
+The agent:
+1. Observes the current page state (DOM, accessibility tree, screenshot)
+2. Decides what action to take based on test goals
+3. Executes actions via Playwright
+4. Verifies outcomes
+
+Usage:
+    from dazzle.testing.agent_e2e import E2EAgent, run_agent_tests
+
+    async with E2EAgent() as agent:
+        result = await agent.run_test(page, test_spec)
+"""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import json
+import logging
+import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+logger = logging.getLogger("dazzle.testing.agent_e2e")
+
+
+# =============================================================================
+# Data Models
+# =============================================================================
+
+
+class ActionType(str, Enum):
+    """Types of actions the agent can take."""
+
+    CLICK = "click"
+    TYPE = "type"
+    SELECT = "select"
+    SCROLL = "scroll"
+    NAVIGATE = "navigate"
+    WAIT = "wait"
+    ASSERT = "assert"
+    DONE = "done"
+
+
+@dataclass
+class Element:
+    """A UI element on the page."""
+
+    tag: str
+    text: str
+    selector: str
+    role: str | None = None
+    rect: dict[str, float] | None = None
+    attributes: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class PageState:
+    """Captured state of a page for agent observation."""
+
+    url: str
+    title: str
+    clickables: list[Element] = field(default_factory=list)
+    inputs: list[Element] = field(default_factory=list)
+    visible_text: str = ""
+    screenshot_b64: str | None = None
+    timestamp: datetime = field(default_factory=datetime.now)
+
+    def to_prompt(self, include_screenshot: bool = True) -> str:
+        """Convert page state to a prompt for the LLM."""
+        lines = [
+            "## Current Page State",
+            f"URL: {self.url}",
+            f"Title: {self.title}",
+            "",
+            "### Clickable Elements",
+        ]
+
+        for i, el in enumerate(self.clickables[:20]):  # Limit for context
+            text_preview = el.text[:50] + "..." if len(el.text) > 50 else el.text
+            lines.append(f'  [{i}] {el.tag}: "{text_preview}" (selector: {el.selector})')
+
+        lines.append("")
+        lines.append("### Input Fields")
+
+        for i, el in enumerate(self.inputs[:15]):
+            placeholder = el.attributes.get("placeholder", "")
+            lines.append(f"  [{i}] {el.tag}: {placeholder} (selector: {el.selector})")
+
+        if self.visible_text:
+            lines.append("")
+            lines.append("### Visible Text (excerpt)")
+            lines.append(self.visible_text[:500])
+
+        return "\n".join(lines)
+
+
+@dataclass
+class AgentAction:
+    """An action decided by the agent."""
+
+    type: ActionType
+    target: str | None = None  # Selector or URL
+    value: str | None = None  # Text to type, option to select
+    reasoning: str = ""
+    success: bool = True  # For DONE action
+
+
+@dataclass
+class AgentStep:
+    """A single step in the agent's execution."""
+
+    state: PageState
+    action: AgentAction
+    result: str = ""
+    error: str | None = None
+    duration_ms: float = 0.0
+
+
+@dataclass
+class AgentTestResult:
+    """Result of running an agent-based test."""
+
+    test_id: str
+    passed: bool
+    steps: list[AgentStep] = field(default_factory=list)
+    error: str | None = None
+    duration_ms: float = 0.0
+    reasoning: str = ""
+
+
+# =============================================================================
+# Page Observer
+# =============================================================================
+
+
+class PageObserver:
+    """
+    Extracts semantic context from a Playwright page.
+
+    This provides the "eyes" for the LLM agent, converting the DOM
+    into a structured representation suitable for prompting.
+    """
+
+    def __init__(self, include_screenshots: bool = True):
+        self.include_screenshots = include_screenshots
+
+    async def observe(self, page: Any) -> PageState:
+        """
+        Capture the current state of the page.
+
+        Args:
+            page: Playwright Page object
+
+        Returns:
+            PageState with extracted elements and optional screenshot
+        """
+        url = page.url
+        title = await page.title()
+
+        # Get clickable elements
+        clickables = await self._get_clickable_elements(page)
+
+        # Get input fields
+        inputs = await self._get_input_fields(page)
+
+        # Get visible text
+        visible_text = await self._get_visible_text(page)
+
+        # Take screenshot if enabled
+        screenshot_b64 = None
+        if self.include_screenshots:
+            screenshot_b64 = await self._take_screenshot(page)
+
+        return PageState(
+            url=url,
+            title=title,
+            clickables=clickables,
+            inputs=inputs,
+            visible_text=visible_text,
+            screenshot_b64=screenshot_b64,
+        )
+
+    async def _get_clickable_elements(self, page: Any) -> list[Element]:
+        """Get all clickable elements with their labels and selectors."""
+        try:
+            elements = await page.evaluate(
+                """() => {
+                const clickables = document.querySelectorAll(
+                    'button, a, [role="button"], [role="tab"], [role="menuitem"], ' +
+                    '[role="link"], [onclick], input[type="submit"], input[type="button"]'
+                );
+                return Array.from(clickables)
+                    .filter(el => {
+                        const rect = el.getBoundingClientRect();
+                        return rect.width > 0 && rect.height > 0 && el.offsetParent !== null;
+                    })
+                    .slice(0, 50)
+                    .map((el, index) => {
+                        // Generate a reliable selector
+                        let selector = '';
+                        if (el.id) {
+                            selector = '#' + el.id;
+                        } else if (el.dataset.testid) {
+                            selector = `[data-testid="${el.dataset.testid}"]`;
+                        } else {
+                            // Use text content or index-based selector
+                            const text = el.innerText.trim().slice(0, 30);
+                            if (text) {
+                                selector = `${el.tagName.toLowerCase()}:has-text("${text}")`;
+                            } else {
+                                selector = `${el.tagName.toLowerCase()}:nth-of-type(${index + 1})`;
+                            }
+                        }
+
+                        return {
+                            tag: el.tagName.toLowerCase(),
+                            text: el.innerText.trim().slice(0, 100),
+                            selector: selector,
+                            role: el.getAttribute('role'),
+                            rect: el.getBoundingClientRect().toJSON(),
+                            attributes: {
+                                href: el.getAttribute('href') || '',
+                                type: el.getAttribute('type') || '',
+                                'aria-label': el.getAttribute('aria-label') || ''
+                            }
+                        };
+                    });
+            }"""
+            )
+            return [Element(**el) for el in elements]
+        except Exception as e:
+            logger.warning(f"Error getting clickable elements: {e}")
+            return []
+
+    async def _get_input_fields(self, page: Any) -> list[Element]:
+        """Get all input fields with their labels and current values."""
+        try:
+            elements = await page.evaluate(
+                """() => {
+                const inputs = document.querySelectorAll(
+                    'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), ' +
+                    'textarea, select, [contenteditable="true"]'
+                );
+                return Array.from(inputs)
+                    .filter(el => el.offsetParent !== null)
+                    .slice(0, 30)
+                    .map((el, index) => {
+                        // Find associated label
+                        let label = '';
+                        if (el.id) {
+                            const labelEl = document.querySelector(`label[for="${el.id}"]`);
+                            if (labelEl) label = labelEl.innerText.trim();
+                        }
+                        if (!label && el.placeholder) {
+                            label = el.placeholder;
+                        }
+                        if (!label && el.name) {
+                            label = el.name;
+                        }
+
+                        // Generate selector
+                        let selector = '';
+                        if (el.id) {
+                            selector = '#' + el.id;
+                        } else if (el.name) {
+                            selector = `[name="${el.name}"]`;
+                        } else {
+                            selector = `${el.tagName.toLowerCase()}:nth-of-type(${index + 1})`;
+                        }
+
+                        return {
+                            tag: el.tagName.toLowerCase(),
+                            text: label,
+                            selector: selector,
+                            role: el.getAttribute('role'),
+                            attributes: {
+                                type: el.getAttribute('type') || '',
+                                name: el.getAttribute('name') || '',
+                                placeholder: el.getAttribute('placeholder') || '',
+                                value: el.value || '',
+                                required: el.required ? 'true' : 'false'
+                            }
+                        };
+                    });
+            }"""
+            )
+            return [Element(**el) for el in elements]
+        except Exception as e:
+            logger.warning(f"Error getting input fields: {e}")
+            return []
+
+    async def _get_visible_text(self, page: Any) -> str:
+        """Get the visible text content of the page."""
+        try:
+            text = await page.evaluate(
+                """() => {
+                // Get text from main content areas
+                const mainContent = document.querySelector('main, [role="main"], .content, #content');
+                if (mainContent) {
+                    return mainContent.innerText.slice(0, 2000);
+                }
+                return document.body.innerText.slice(0, 2000);
+            }"""
+            )
+            return text.strip()
+        except Exception as e:
+            logger.warning(f"Error getting visible text: {e}")
+            return ""
+
+    async def _take_screenshot(self, page: Any) -> str | None:
+        """Take a screenshot and return as base64."""
+        try:
+            screenshot_bytes = await page.screenshot(type="png", full_page=False)
+            return base64.b64encode(screenshot_bytes).decode("utf-8")
+        except Exception as e:
+            logger.warning(f"Error taking screenshot: {e}")
+            return None
+
+
+# =============================================================================
+# E2E Agent
+# =============================================================================
+
+
+class E2EAgent:
+    """
+    LLM-driven E2E test agent.
+
+    Uses Claude to observe pages and decide actions based on test goals.
+    """
+
+    MAX_STEPS = 15
+    DEFAULT_MODEL = "claude-sonnet-4-20250514"
+
+    def __init__(
+        self,
+        model: str | None = None,
+        api_key: str | None = None,
+        include_screenshots: bool = True,
+    ):
+        self.model = model or self.DEFAULT_MODEL
+        self.api_key = api_key
+        self.observer = PageObserver(include_screenshots=include_screenshots)
+        self._client: Any = None
+
+    async def __aenter__(self) -> E2EAgent:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Async context manager exit."""
+        pass
+
+    def _get_client(self) -> Any:
+        """Get or create Anthropic client."""
+        if self._client is None:
+            try:
+                import anthropic
+
+                self._client = anthropic.Anthropic(api_key=self.api_key)
+            except ImportError:
+                raise RuntimeError(
+                    "anthropic package required for agent E2E tests. "
+                    "Install with: pip install anthropic"
+                )
+        return self._client
+
+    async def run_test(
+        self,
+        page: Any,
+        test_spec: dict[str, Any],
+        base_url: str = "http://localhost:3000",
+    ) -> AgentTestResult:
+        """
+        Run a single E2E test using the agent.
+
+        Args:
+            page: Playwright Page object
+            test_spec: Test specification with goals and expected outcomes
+            base_url: Base URL of the application
+
+        Returns:
+            AgentTestResult with pass/fail status and step details
+        """
+        test_id = test_spec.get("test_id", "unknown")
+        description = test_spec.get("description", test_spec.get("title", ""))
+        expected_outcomes = test_spec.get("expected_outcomes", [])
+
+        start_time = datetime.now()
+        steps: list[AgentStep] = []
+
+        # Build system prompt
+        system = self._build_system_prompt(description, expected_outcomes)
+
+        # Navigate to starting point
+        try:
+            await page.goto(base_url)
+            await page.wait_for_load_state("networkidle")
+        except Exception as e:
+            return AgentTestResult(
+                test_id=test_id,
+                passed=False,
+                error=f"Failed to navigate to {base_url}: {e}",
+                duration_ms=(datetime.now() - start_time).total_seconds() * 1000,
+            )
+
+        # Agent loop
+        for step_num in range(self.MAX_STEPS):
+            step_start = datetime.now()
+
+            # Observe current state
+            state = await self.observer.observe(page)
+
+            # Get action from LLM
+            try:
+                action = await self._get_action(system, state, steps)
+            except Exception as e:
+                return AgentTestResult(
+                    test_id=test_id,
+                    passed=False,
+                    steps=steps,
+                    error=f"LLM error at step {step_num + 1}: {e}",
+                    duration_ms=(datetime.now() - start_time).total_seconds() * 1000,
+                )
+
+            # Execute action
+            result, error = await self._execute_action(page, action)
+
+            step = AgentStep(
+                state=state,
+                action=action,
+                result=result,
+                error=error,
+                duration_ms=(datetime.now() - step_start).total_seconds() * 1000,
+            )
+            steps.append(step)
+
+            # Check if done
+            if action.type == ActionType.DONE:
+                return AgentTestResult(
+                    test_id=test_id,
+                    passed=action.success,
+                    steps=steps,
+                    reasoning=action.reasoning,
+                    duration_ms=(datetime.now() - start_time).total_seconds() * 1000,
+                )
+
+            # Small delay between actions
+            await asyncio.sleep(0.5)
+
+        # Max steps exceeded
+        return AgentTestResult(
+            test_id=test_id,
+            passed=False,
+            steps=steps,
+            error=f"Max steps ({self.MAX_STEPS}) exceeded without completion",
+            duration_ms=(datetime.now() - start_time).total_seconds() * 1000,
+        )
+
+    def _build_system_prompt(self, description: str, expected_outcomes: list[str]) -> str:
+        """Build the system prompt for the agent."""
+        outcomes_text = "\n".join(f"  - {o}" for o in expected_outcomes)
+
+        return f"""You are an E2E test agent. Your goal is to test a web application by navigating and interacting with it.
+
+## Test Goal
+{description}
+
+## Expected Outcomes
+{outcomes_text}
+
+## Available Actions
+You can respond with one of these actions in JSON format:
+
+1. click - Click an element
+   {{"action": "click", "target": "selector", "reasoning": "why"}}
+
+2. type - Type text into an input
+   {{"action": "type", "target": "selector", "value": "text to type", "reasoning": "why"}}
+
+3. select - Select an option from a dropdown
+   {{"action": "select", "target": "selector", "value": "option value", "reasoning": "why"}}
+
+4. navigate - Navigate to a URL
+   {{"action": "navigate", "target": "/path", "reasoning": "why"}}
+
+5. wait - Wait for something to appear
+   {{"action": "wait", "target": "selector or text", "reasoning": "why"}}
+
+6. assert - Verify something is visible/correct
+   {{"action": "assert", "target": "what to check", "reasoning": "why"}}
+
+7. done - Test is complete
+   {{"action": "done", "success": true/false, "reasoning": "summary of what was verified"}}
+
+## Rules
+1. Analyze the current page state carefully
+2. Take one action at a time toward the goal
+3. Use the most reliable selectors (IDs, data-testid, unique text)
+4. Call "done" when the test goal is achieved or you determine it cannot be achieved
+5. Keep reasoning concise but informative
+
+Respond with ONLY valid JSON, no markdown or explanation outside the JSON."""
+
+    async def _get_action(
+        self, system: str, state: PageState, history: list[AgentStep]
+    ) -> AgentAction:
+        """Get the next action from the LLM."""
+        # Build conversation messages
+        messages = []
+
+        # Add history context
+        if history:
+            history_text = "## Previous Actions\n"
+            for i, step in enumerate(history[-5:]):  # Last 5 steps
+                history_text += f"{i + 1}. {step.action.type.value}: {step.action.target}"
+                if step.error:
+                    history_text += f" (ERROR: {step.error})"
+                history_text += "\n"
+            messages.append({"role": "user", "content": history_text})
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": "I understand the history. What's the current state?",
+                }
+            )
+
+        # Add current state
+        content: list[dict[str, Any]] = []
+
+        # Add screenshot if available
+        if state.screenshot_b64:
+            content.append(
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": state.screenshot_b64,
+                    },
+                }
+            )
+
+        # Add text description
+        content.append({"type": "text", "text": state.to_prompt()})
+
+        messages.append({"role": "user", "content": content})
+
+        # Call LLM
+        client = self._get_client()
+        response = client.messages.create(
+            model=self.model,
+            max_tokens=500,
+            system=system,
+            messages=messages,
+        )
+
+        # Parse response
+        response_text = response.content[0].text.strip()
+        return self._parse_action(response_text)
+
+    def _parse_action(self, response: str) -> AgentAction:
+        """Parse the LLM response into an AgentAction."""
+        # Try to extract JSON from the response
+        try:
+            # Handle potential markdown code blocks
+            if "```" in response:
+                match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
+                if match:
+                    response = match.group(1)
+
+            data = json.loads(response)
+
+            action_type = ActionType(data.get("action", "done"))
+            return AgentAction(
+                type=action_type,
+                target=data.get("target"),
+                value=data.get("value"),
+                reasoning=data.get("reasoning", ""),
+                success=data.get("success", True),
+            )
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"Failed to parse action: {e}, response: {response[:200]}")
+            return AgentAction(
+                type=ActionType.DONE,
+                success=False,
+                reasoning=f"Failed to parse LLM response: {response[:100]}",
+            )
+
+    async def _execute_action(self, page: Any, action: AgentAction) -> tuple[str, str | None]:
+        """
+        Execute an action on the page.
+
+        Returns:
+            Tuple of (result message, error message or None)
+        """
+        try:
+            if action.type == ActionType.CLICK:
+                await page.click(action.target, timeout=5000)
+                await page.wait_for_load_state("networkidle", timeout=5000)
+                return f"Clicked {action.target}", None
+
+            elif action.type == ActionType.TYPE:
+                await page.fill(action.target, action.value or "", timeout=5000)
+                return f"Typed '{action.value}' into {action.target}", None
+
+            elif action.type == ActionType.SELECT:
+                await page.select_option(action.target, action.value, timeout=5000)
+                return f"Selected '{action.value}' in {action.target}", None
+
+            elif action.type == ActionType.NAVIGATE:
+                target = action.target or "/"
+                if not target.startswith("http"):
+                    base = page.url.split("/")[0:3]
+                    target = "/".join(base) + target
+                await page.goto(target)
+                await page.wait_for_load_state("networkidle")
+                return f"Navigated to {target}", None
+
+            elif action.type == ActionType.WAIT:
+                await page.wait_for_selector(action.target, timeout=10000)
+                return f"Found {action.target}", None
+
+            elif action.type == ActionType.ASSERT:
+                # Check if element or text is visible
+                try:
+                    await page.wait_for_selector(action.target, timeout=3000)
+                    return f"Assertion passed: {action.target} is visible", None
+                except Exception:
+                    # Try as text
+                    if await page.locator(f"text={action.target}").count() > 0:
+                        return f"Assertion passed: text '{action.target}' found", None
+                    return "", f"Assertion failed: {action.target} not found"
+
+            elif action.type == ActionType.DONE:
+                return "Test completed", None
+
+            elif action.type == ActionType.SCROLL:
+                await page.evaluate("window.scrollBy(0, 300)")
+                return "Scrolled down", None
+
+            else:
+                return "", f"Unknown action type: {action.type}"
+
+        except Exception as e:
+            return "", str(e)
+
+
+# =============================================================================
+# CLI Integration
+# =============================================================================
+
+
+async def run_agent_tests(
+    project_path: Path,
+    test_ids: list[str] | None = None,
+    headless: bool = False,
+    model: str | None = None,
+) -> list[AgentTestResult]:
+    """
+    Run agent-based E2E tests for a project.
+
+    Args:
+        project_path: Path to the Dazzle project
+        test_ids: Specific test IDs to run (None = all E2E tests)
+        headless: Run browser in headless mode
+        model: LLM model to use
+
+    Returns:
+        List of test results
+    """
+    try:
+        from playwright.async_api import async_playwright
+    except ImportError:
+        raise RuntimeError(
+            "playwright package required. Install with: pip install playwright && playwright install chromium"
+        )
+
+    # Load test specs
+    from dazzle.testing.unified_runner import UnifiedTestRunner
+
+    runner = UnifiedTestRunner(project_path)
+
+    # Start server
+    if not runner.start_server():
+        raise RuntimeError("Failed to start server")
+
+    try:
+        # Get E2E tests
+        designs_path = project_path / "dsl" / "tests" / "dsl_generated_tests.json"
+        if not designs_path.exists():
+            raise FileNotFoundError(f"No tests found at {designs_path}")
+
+        import json
+
+        with open(designs_path) as f:
+            data = json.load(f)
+
+        e2e_tests = [d for d in data.get("designs", []) if "e2e" in d.get("tags", [])]
+
+        if test_ids:
+            e2e_tests = [t for t in e2e_tests if t.get("test_id") in test_ids]
+
+        if not e2e_tests:
+            logger.info("No E2E tests to run")
+            return []
+
+        # Run tests
+        results: list[AgentTestResult] = []
+        base_url = f"http://localhost:{runner.ui_port}"
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=headless)
+            context = await browser.new_context(viewport={"width": 1280, "height": 720})
+            page = await context.new_page()
+
+            async with E2EAgent(model=model) as agent:
+                for test in e2e_tests:
+                    logger.info(f"Running: {test.get('test_id')}")
+                    result = await agent.run_test(page, test, base_url)
+                    results.append(result)
+
+                    # Clear state between tests
+                    await page.evaluate("localStorage.clear()")
+                    await page.evaluate("sessionStorage.clear()")
+
+            await browser.close()
+
+        return results
+
+    finally:
+        runner.stop_server()
