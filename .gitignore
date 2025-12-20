@@ -1,3 +1,7 @@
+# Environment
+.env
+.env.local
+
 # Python
 __pycache__/
 *.py[cod]
@@ -46,6 +50,9 @@ build/
 htmlcov/
 .pytest_cache/
 .hypothesis/
+
+# Agent E2E test reports (generated)
+**/dsl/tests/reports/
 
 # DAZZLE runtime data
 .dazzle/
