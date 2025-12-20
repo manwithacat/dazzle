@@ -1,0 +1,1288 @@
+{
+  "version": "2.0",
+  "dsl_hash": "f41b0b2890c9f039",
+  "generated_at": "2025-12-20T07:57:21.149708",
+  "project_name": "support_tickets",
+  "coverage": {
+    "entities": [
+      "Comment",
+      "Ticket",
+      "User"
+    ],
+    "entities_total": 3,
+    "state_machines": [
+      "Ticket"
+    ],
+    "state_machines_total": 1,
+    "personas": [],
+    "personas_total": 0,
+    "workspaces": [
+      "agent_dashboard",
+      "ticket_queue"
+    ],
+    "workspaces_total": 2,
+    "events": [],
+    "events_total": 0,
+    "processes": [],
+    "processes_total": 0
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_USER_CREATE",
+      "title": "Create User",
+      "description": "Test creating a new User",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Create valid User"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:User",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create User succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149535"
+    },
+    {
+      "test_id": "CRUD_USER_READ",
+      "title": "Read User list",
+      "description": "Test reading User list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:User",
+          "rationale": "Fetch User list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:User",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read User list succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149540"
+    },
+    {
+      "test_id": "VAL_USER_REQUIRED",
+      "title": "Validate required fields for User",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:User",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for User succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149544"
+    },
+    {
+      "test_id": "VAL_USER_EMAIL_UNIQUE",
+      "title": "Validate email uniqueness for User",
+      "description": "Test that duplicate email values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Attempt duplicate email"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate email uniqueness for User succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149556"
+    },
+    {
+      "test_id": "CRUD_TICKET_CREATE",
+      "title": "Create Support Ticket",
+      "description": "Test creating a new Support Ticket",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User for ref field 'created_by'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "created_by": "$ref:parent_user.id"
+          },
+          "rationale": "Create valid Support Ticket"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Ticket",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Support Ticket succeeds"
+      ],
+      "entities": [
+        "Ticket",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149571"
+    },
+    {
+      "test_id": "CRUD_TICKET_READ",
+      "title": "Read Support Ticket list",
+      "description": "Test reading Support Ticket list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User for ref field 'created_by'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "created_by": "$ref:parent_user.id"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Ticket",
+          "rationale": "Fetch Support Ticket list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Ticket",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Support Ticket list succeeds"
+      ],
+      "entities": [
+        "Ticket",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149574"
+    },
+    {
+      "test_id": "VAL_TICKET_REQUIRED",
+      "title": "Validate required fields for Support Ticket",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Ticket",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Support Ticket succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149577"
+    },
+    {
+      "test_id": "VAL_TICKET_TICKET_NUMBER_UNIQUE",
+      "title": "Validate ticket_number uniqueness for Support Ticket",
+      "description": "Test that duplicate ticket_number values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description"
+          },
+          "rationale": "Attempt duplicate ticket_number"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate ticket_number uniqueness for Support Ticket succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149589"
+    },
+    {
+      "test_id": "CRUD_COMMENT_CREATE",
+      "title": "Create Comment",
+      "description": "Test creating a new Comment",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket for ref field 'ticket'"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User for ref field 'author'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Comment",
+          "data": {
+            "content": "Test description for content",
+            "ticket": "$ref:parent_ticket.id",
+            "author": "$ref:parent_user.id"
+          },
+          "rationale": "Create valid Comment"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Comment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Comment succeeds"
+      ],
+      "entities": [
+        "Comment",
+        "Ticket",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149605"
+    },
+    {
+      "test_id": "CRUD_COMMENT_READ",
+      "title": "Read Comment list",
+      "description": "Test reading Comment list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket for ref field 'ticket'"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_41149@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent User for ref field 'author'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Comment",
+          "data": {
+            "content": "Test description for content",
+            "ticket": "$ref:parent_ticket.id",
+            "author": "$ref:parent_user.id"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Comment",
+          "rationale": "Fetch Comment list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Comment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Comment list succeeds"
+      ],
+      "entities": [
+        "Comment",
+        "Ticket",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149607"
+    },
+    {
+      "test_id": "VAL_COMMENT_REQUIRED",
+      "title": "Validate required fields for Comment",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Comment",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Comment succeeds"
+      ],
+      "entities": [
+        "Comment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149610"
+    },
+    {
+      "test_id": "SM_TICKET_OPEN_IN_PROGRESS",
+      "title": "Support Ticket: open \u2192 in_progress",
+      "description": "Test valid transition from open to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: open \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149620"
+    },
+    {
+      "test_id": "SM_TICKET_IN_PROGRESS_RESOLVED",
+      "title": "Support Ticket: in_progress \u2192 resolved",
+      "description": "Test valid transition from in_progress to resolved",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "resolved"
+          },
+          "rationale": "Transition to resolved"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: in_progress \u2192 resolved succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149628"
+    },
+    {
+      "test_id": "SM_TICKET_IN_PROGRESS_OPEN",
+      "title": "Support Ticket: in_progress \u2192 open",
+      "description": "Test valid transition from in_progress to open",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: in_progress \u2192 open succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149634"
+    },
+    {
+      "test_id": "SM_TICKET_RESOLVED_CLOSED",
+      "title": "Support Ticket: resolved \u2192 closed",
+      "description": "Test valid transition from resolved to closed",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "closed"
+          },
+          "rationale": "Transition to closed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "closed"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: resolved \u2192 closed succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149640"
+    },
+    {
+      "test_id": "SM_TICKET_RESOLVED_IN_PROGRESS",
+      "title": "Support Ticket: resolved \u2192 in_progress",
+      "description": "Test valid transition from resolved to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: resolved \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149646"
+    },
+    {
+      "test_id": "SM_TICKET_CLOSED_OPEN",
+      "title": "Support Ticket: closed \u2192 open",
+      "description": "Test valid transition from closed to open",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "closed"
+          },
+          "rationale": "Create entity in closed state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: closed \u2192 open succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149652"
+    },
+    {
+      "test_id": "SM_TICKET_OPEN_CLOSED_INVALID",
+      "title": "Support Ticket: open \u2192 closed (invalid)",
+      "description": "Test that invalid transition from open to closed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "closed"
+          },
+          "rationale": "Attempt invalid transition to closed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: open \u2192 closed (invalid) succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149661"
+    },
+    {
+      "test_id": "SM_TICKET_IN_PROGRESS_CLOSED_INVALID",
+      "title": "Support Ticket: in_progress \u2192 closed (invalid)",
+      "description": "Test that invalid transition from in_progress to closed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "closed"
+          },
+          "rationale": "Attempt invalid transition to closed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: in_progress \u2192 closed (invalid) succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149669"
+    },
+    {
+      "test_id": "SM_TICKET_RESOLVED_OPEN_INVALID",
+      "title": "Support Ticket: resolved \u2192 open (invalid)",
+      "description": "Test that invalid transition from resolved to open is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "resolved"
+          },
+          "rationale": "Create entity in resolved state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Attempt invalid transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "resolved"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: resolved \u2192 open (invalid) succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149676"
+    },
+    {
+      "test_id": "SM_TICKET_CLOSED_IN_PROGRESS_INVALID",
+      "title": "Support Ticket: closed \u2192 in_progress (invalid)",
+      "description": "Test that invalid transition from closed to in_progress is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "title": "Test title",
+            "description": "Test description for description",
+            "status": "closed"
+          },
+          "rationale": "Create entity in closed state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Ticket",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Attempt invalid transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Ticket",
+          "data": {
+            "field": "status",
+            "value": "closed"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Ticket: closed \u2192 in_progress (invalid) succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149683"
+    },
+    {
+      "test_id": "WS_TICKET_QUEUE_NAV",
+      "title": "Navigate to Ticket Queue",
+      "description": "E2E test: Verify Ticket Queue workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:ticket_queue",
+          "data": {
+            "route": "/ticket-queue"
+          },
+          "rationale": "Navigate to Ticket Queue workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='ticket_queue']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Ticket Queue succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149688"
+    },
+    {
+      "test_id": "WS_TICKET_QUEUE_ROUTE",
+      "title": "Workspace Ticket Queue route exists",
+      "description": "Verify Ticket Queue workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:ticket_queue",
+          "data": {
+            "route": "/ticket-queue"
+          },
+          "rationale": "Verify route for Ticket Queue is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Ticket Queue route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149690"
+    },
+    {
+      "test_id": "WS_AGENT_DASHBOARD_NAV",
+      "title": "Navigate to Agent Dashboard",
+      "description": "E2E test: Verify Agent Dashboard workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:agent_dashboard",
+          "data": {
+            "route": "/agent-dashboard"
+          },
+          "rationale": "Navigate to Agent Dashboard workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='agent_dashboard']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Agent Dashboard succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149693"
+    },
+    {
+      "test_id": "WS_AGENT_DASHBOARD_ROUTE",
+      "title": "Workspace Agent Dashboard route exists",
+      "description": "Verify Agent Dashboard workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:agent_dashboard",
+          "data": {
+            "route": "/agent-dashboard"
+          },
+          "rationale": "Verify route for Agent Dashboard is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Agent Dashboard route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:21.149695"
+    }
+  ]
+}

@@ -1,0 +1,1049 @@
+{
+  "version": "2.0",
+  "dsl_hash": "14cedbddb9afc2f9",
+  "generated_at": "2025-12-20T07:57:34.039355",
+  "project_name": "ops_dashboard",
+  "coverage": {
+    "entities": [
+      "Alert",
+      "System"
+    ],
+    "entities_total": 2,
+    "state_machines": [
+      "System"
+    ],
+    "state_machines_total": 1,
+    "personas": [
+      "ops_engineer"
+    ],
+    "personas_total": 1,
+    "workspaces": [
+      "command_center"
+    ],
+    "workspaces_total": 1,
+    "events": [],
+    "events_total": 0,
+    "processes": [],
+    "processes_total": 0
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_SYSTEM_CREATE",
+      "title": "Create System",
+      "description": "Test creating a new System",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name"
+          },
+          "rationale": "Create valid System"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:System",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create System succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039220"
+    },
+    {
+      "test_id": "CRUD_SYSTEM_READ",
+      "title": "Read System list",
+      "description": "Test reading System list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:System",
+          "rationale": "Fetch System list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:System",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read System list succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039225"
+    },
+    {
+      "test_id": "VAL_SYSTEM_REQUIRED",
+      "title": "Validate required fields for System",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:System",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for System succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039229"
+    },
+    {
+      "test_id": "CRUD_ALERT_CREATE",
+      "title": "Create Alert",
+      "description": "Test creating a new Alert",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name"
+          },
+          "store_result": "parent_system",
+          "rationale": "Create parent System for ref field 'system'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Alert",
+          "data": {
+            "message": "Test message",
+            "system": "$ref:parent_system.id"
+          },
+          "rationale": "Create valid Alert"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Alert",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Alert succeeds"
+      ],
+      "entities": [
+        "Alert",
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039245"
+    },
+    {
+      "test_id": "CRUD_ALERT_READ",
+      "title": "Read Alert list",
+      "description": "Test reading Alert list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name"
+          },
+          "store_result": "parent_system",
+          "rationale": "Create parent System for ref field 'system'"
+        },
+        {
+          "action": "create",
+          "target": "entity:Alert",
+          "data": {
+            "message": "Test message",
+            "system": "$ref:parent_system.id"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Alert",
+          "rationale": "Fetch Alert list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Alert",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Alert list succeeds"
+      ],
+      "entities": [
+        "Alert",
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039248"
+    },
+    {
+      "test_id": "VAL_ALERT_REQUIRED",
+      "title": "Validate required fields for Alert",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Alert",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Alert succeeds"
+      ],
+      "entities": [
+        "Alert"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039251"
+    },
+    {
+      "test_id": "SM_SYSTEM_HEALTHY_DEGRADED",
+      "title": "System: healthy \u2192 degraded",
+      "description": "Test valid transition from healthy to degraded",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "healthy"
+          },
+          "rationale": "Create entity in healthy state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "degraded"
+          },
+          "rationale": "Transition to degraded"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "degraded"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: healthy \u2192 degraded succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039260"
+    },
+    {
+      "test_id": "SM_SYSTEM_HEALTHY_CRITICAL",
+      "title": "System: healthy \u2192 critical",
+      "description": "Test valid transition from healthy to critical",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "healthy"
+          },
+          "rationale": "Create entity in healthy state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "critical"
+          },
+          "rationale": "Transition to critical"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "critical"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: healthy \u2192 critical succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039267"
+    },
+    {
+      "test_id": "SM_SYSTEM_DEGRADED_HEALTHY",
+      "title": "System: degraded \u2192 healthy",
+      "description": "Test valid transition from degraded to healthy",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "degraded"
+          },
+          "rationale": "Create entity in degraded state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "healthy"
+          },
+          "rationale": "Transition to healthy"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "healthy"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: degraded \u2192 healthy succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039272"
+    },
+    {
+      "test_id": "SM_SYSTEM_DEGRADED_CRITICAL",
+      "title": "System: degraded \u2192 critical",
+      "description": "Test valid transition from degraded to critical",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "degraded"
+          },
+          "rationale": "Create entity in degraded state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "critical"
+          },
+          "rationale": "Transition to critical"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "critical"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: degraded \u2192 critical succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039277"
+    },
+    {
+      "test_id": "SM_SYSTEM_CRITICAL_DEGRADED",
+      "title": "System: critical \u2192 degraded",
+      "description": "Test valid transition from critical to degraded",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "critical"
+          },
+          "rationale": "Create entity in critical state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "degraded"
+          },
+          "rationale": "Transition to degraded"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "degraded"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: critical \u2192 degraded succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039282"
+    },
+    {
+      "test_id": "SM_SYSTEM_CRITICAL_OFFLINE",
+      "title": "System: critical \u2192 offline",
+      "description": "Test valid transition from critical to offline",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "critical"
+          },
+          "rationale": "Create entity in critical state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "offline"
+          },
+          "rationale": "Transition to offline"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "offline"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: critical \u2192 offline succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039287"
+    },
+    {
+      "test_id": "SM_SYSTEM_OFFLINE_HEALTHY",
+      "title": "System: offline \u2192 healthy",
+      "description": "Test valid transition from offline to healthy",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "offline"
+          },
+          "rationale": "Create entity in offline state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "healthy"
+          },
+          "rationale": "Transition to healthy"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "healthy"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: offline \u2192 healthy succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039292"
+    },
+    {
+      "test_id": "SM_SYSTEM_*_OFFLINE",
+      "title": "System: * \u2192 offline",
+      "description": "Test valid transition from * to offline",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "*"
+          },
+          "rationale": "Create entity in * state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:System",
+          "data": {
+            "to_state": "offline"
+          },
+          "rationale": "Transition to offline"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "offline"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "System: * \u2192 offline succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039297"
+    },
+    {
+      "test_id": "SM_SYSTEM_HEALTHY_OFFLINE_INVALID",
+      "title": "System: healthy \u2192 offline (invalid)",
+      "description": "Test that invalid transition from healthy to offline is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "healthy"
+          },
+          "rationale": "Create entity in healthy state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:System",
+          "data": {
+            "to_state": "offline"
+          },
+          "rationale": "Attempt invalid transition to offline"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "healthy"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "System: healthy \u2192 offline (invalid) succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039305"
+    },
+    {
+      "test_id": "SM_SYSTEM_DEGRADED_OFFLINE_INVALID",
+      "title": "System: degraded \u2192 offline (invalid)",
+      "description": "Test that invalid transition from degraded to offline is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "degraded"
+          },
+          "rationale": "Create entity in degraded state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:System",
+          "data": {
+            "to_state": "offline"
+          },
+          "rationale": "Attempt invalid transition to offline"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "degraded"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "System: degraded \u2192 offline (invalid) succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039312"
+    },
+    {
+      "test_id": "SM_SYSTEM_CRITICAL_HEALTHY_INVALID",
+      "title": "System: critical \u2192 healthy (invalid)",
+      "description": "Test that invalid transition from critical to healthy is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "critical"
+          },
+          "rationale": "Create entity in critical state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:System",
+          "data": {
+            "to_state": "healthy"
+          },
+          "rationale": "Attempt invalid transition to healthy"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "critical"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "System: critical \u2192 healthy (invalid) succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039318"
+    },
+    {
+      "test_id": "SM_SYSTEM_OFFLINE_DEGRADED_INVALID",
+      "title": "System: offline \u2192 degraded (invalid)",
+      "description": "Test that invalid transition from offline to degraded is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:System",
+          "data": {
+            "name": "Test name",
+            "status": "offline"
+          },
+          "rationale": "Create entity in offline state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:System",
+          "data": {
+            "to_state": "degraded"
+          },
+          "rationale": "Attempt invalid transition to degraded"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:System",
+          "data": {
+            "field": "status",
+            "value": "offline"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "System: offline \u2192 degraded (invalid) succeeds"
+      ],
+      "entities": [
+        "System"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039324"
+    },
+    {
+      "test_id": "ACL_OPS_ENGINEER_ACCESS",
+      "title": "Operations Engineer can authenticate",
+      "description": "Test that Operations Engineer persona can authenticate",
+      "trigger": "authentication",
+      "persona": "ops_engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "ops_engineer",
+          "rationale": "Authenticate as Operations Engineer"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "ops_engineer",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Operations Engineer can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039333"
+    },
+    {
+      "test_id": "WS_COMMAND_CENTER_NAV",
+      "title": "Navigate to Command Center",
+      "description": "E2E test: Verify Command Center workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:command_center",
+          "data": {
+            "route": "/command-center"
+          },
+          "rationale": "Navigate to Command Center workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='command_center']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Command Center succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039338"
+    },
+    {
+      "test_id": "WS_COMMAND_CENTER_ROUTE",
+      "title": "Workspace Command Center route exists",
+      "description": "Verify Command Center workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:command_center",
+          "data": {
+            "route": "/command-center"
+          },
+          "rationale": "Verify route for Command Center is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Command Center route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:34.039342"
+    }
+  ]
+}

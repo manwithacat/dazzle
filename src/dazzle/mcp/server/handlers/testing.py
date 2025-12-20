@@ -1,0 +1,452 @@
+"""
+MCP Server handlers for E2E testing.
+
+Provides tools for LLM agents to run and analyze E2E tests.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import shutil
+from pathlib import Path
+
+from ..state import get_active_project_path, get_project_root
+
+logger = logging.getLogger("dazzle.mcp.testing")
+
+
+def check_test_infrastructure_handler() -> str:
+    """
+    Check test infrastructure requirements.
+
+    Returns status of required dependencies and install instructions.
+    Use this BEFORE running E2E tests to ensure all dependencies are set up.
+
+    Returns:
+        JSON with infrastructure status and setup instructions
+    """
+    result = {
+        "ready": True,
+        "components": {},
+        "setup_instructions": [],
+    }
+
+    # Check Python availability
+    result["components"]["python"] = {
+        "installed": True,
+        "version": None,
+    }
+    try:
+        import sys
+
+        result["components"]["python"]["version"] = (
+            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        )
+    except Exception:
+        pass
+
+    # Check Playwright
+    playwright_installed = False
+    playwright_browsers = False
+    try:
+        import playwright
+
+        playwright_installed = True
+        result["components"]["playwright"] = {
+            "installed": True,
+            "version": getattr(playwright, "__version__", "unknown"),
+        }
+
+        # Check if browsers are installed
+        try:
+            from playwright.sync_api import sync_playwright
+
+            with sync_playwright() as p:
+                browser_path = p.chromium.executable_path
+                if Path(browser_path).exists():
+                    playwright_browsers = True
+        except Exception:
+            pass
+
+        result["components"]["playwright"]["browsers_installed"] = playwright_browsers
+    except ImportError:
+        playwright_installed = False
+        result["components"]["playwright"] = {
+            "installed": False,
+            "browsers_installed": False,
+        }
+
+    if not playwright_installed:
+        result["ready"] = False
+        result["setup_instructions"].append(
+            {
+                "step": 1,
+                "description": "Install Playwright Python package",
+                "command": "pip install playwright",
+            }
+        )
+        result["setup_instructions"].append(
+            {
+                "step": 2,
+                "description": "Install Chromium browser for Playwright",
+                "command": "playwright install chromium",
+            }
+        )
+    elif not playwright_browsers:
+        result["ready"] = False
+        result["setup_instructions"].append(
+            {
+                "step": 1,
+                "description": "Install Chromium browser for Playwright",
+                "command": "playwright install chromium",
+            }
+        )
+
+    # Check httpx (needed for API tests)
+    try:
+        import httpx
+
+        result["components"]["httpx"] = {
+            "installed": True,
+            "version": httpx.__version__,
+        }
+    except ImportError:
+        result["components"]["httpx"] = {"installed": False}
+        result["ready"] = False
+        result["setup_instructions"].append(
+            {
+                "step": len(result["setup_instructions"]) + 1,
+                "description": "Install httpx for API testing",
+                "command": "pip install httpx",
+            }
+        )
+
+    # Check uvicorn (needed for server)
+    uvicorn_installed = shutil.which("uvicorn") is not None
+    try:
+        import uvicorn
+
+        uvicorn_installed = True
+        result["components"]["uvicorn"] = {
+            "installed": True,
+            "version": getattr(uvicorn, "__version__", "unknown"),
+        }
+    except ImportError:
+        result["components"]["uvicorn"] = {"installed": False}
+        if not uvicorn_installed:
+            result["setup_instructions"].append(
+                {
+                    "step": len(result["setup_instructions"]) + 1,
+                    "description": "Install uvicorn for running the test server",
+                    "command": "pip install uvicorn",
+                }
+            )
+
+    # Add summary
+    if result["ready"]:
+        result["message"] = "All test infrastructure is ready. You can run E2E tests."
+    else:
+        result["message"] = (
+            "Test infrastructure is incomplete. "
+            "Follow the setup_instructions to install missing components."
+        )
+
+    return json.dumps(result, indent=2)
+
+
+def run_e2e_tests_handler(
+    project_path: str | None = None,
+    priority: str | None = None,
+    tag: str | None = None,
+    headless: bool = True,
+) -> str:
+    """
+    Run E2E tests for the project.
+
+    This handler starts the DNR server, runs Playwright-based E2E tests,
+    and returns the results.
+
+    Args:
+        project_path: Optional path to project (uses active project if not specified)
+        priority: Filter by priority (high, medium, low)
+        tag: Filter by tag
+        headless: Run browser in headless mode (default: True)
+
+    Returns:
+        JSON string with test results
+    """
+    try:
+        # Resolve project path
+        if project_path:
+            root = Path(project_path)
+        else:
+            root = get_active_project_path()
+            if not root:
+                root = get_project_root()
+            if not root:
+                return json.dumps(
+                    {
+                        "error": "No project path specified and no active project set",
+                        "status": "error",
+                    }
+                )
+
+        # Import E2E runner
+        from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
+
+        runner = E2ERunner(root)
+
+        # Check Playwright
+        playwright_ok, playwright_msg = runner.ensure_playwright()
+        if not playwright_ok:
+            return json.dumps(
+                {
+                    "error": playwright_msg,
+                    "status": "error",
+                    "hint": "pip install playwright && playwright install chromium",
+                }
+            )
+
+        # Run tests
+        options = E2ERunOptions(
+            headless=headless,
+            priority=priority,
+            tag=tag,
+        )
+
+        result = runner.run_all(options)
+
+        # Format response
+        if result.error:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "error": result.error,
+                    "project": result.project_name,
+                }
+            )
+
+        failures = [
+            {"flow_id": f.flow_id, "error": f.error} for f in result.flows if f.status == "failed"
+        ]
+
+        return json.dumps(
+            {
+                "status": "passed" if result.failed == 0 else "failed",
+                "project": result.project_name,
+                "total": result.total,
+                "passed": result.passed,
+                "failed": result.failed,
+                "success_rate": result.success_rate,
+                "failures": failures,
+                "duration_seconds": (result.completed_at - result.started_at).total_seconds()
+                if result.completed_at
+                else None,
+            },
+            indent=2,
+        )
+
+    except Exception as e:
+        logger.exception("Error running E2E tests")
+        return json.dumps(
+            {
+                "error": str(e),
+                "status": "error",
+            }
+        )
+
+
+def get_e2e_test_coverage_handler(
+    project_path: str | None = None,
+) -> str:
+    """
+    Get E2E test coverage report for the project.
+
+    Analyzes the generated E2ETestSpec to show what's covered.
+
+    Args:
+        project_path: Optional path to project (uses active project if not specified)
+
+    Returns:
+        JSON string with coverage report
+    """
+    try:
+        # Resolve project path
+        if project_path:
+            root = Path(project_path)
+        else:
+            root = get_active_project_path()
+            if not root:
+                root = get_project_root()
+            if not root:
+                return json.dumps(
+                    {
+                        "error": "No project path specified and no active project set",
+                    }
+                )
+
+        # Load and generate testspec
+        from dazzle.core.fileset import discover_dsl_files
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
+        from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+        manifest_path = root / "dazzle.toml"
+        manifest = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+        testspec = generate_e2e_testspec(appspec, manifest)
+
+        # Analyze coverage
+        entities_in_spec = {e.name for e in appspec.domain.entities}
+        surfaces_in_spec = {s.name for s in appspec.surfaces}
+
+        entities_covered = set()
+        surfaces_covered = set()
+        priority_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+        tag_counts: dict[str, int] = {}
+
+        for flow in testspec.flows:
+            if flow.entity:
+                entities_covered.add(flow.entity)
+            for tag in flow.tags:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+                # Check if tag is a surface name
+                if tag in surfaces_in_spec:
+                    surfaces_covered.add(tag)
+            priority_counts[flow.priority.value] = priority_counts.get(flow.priority.value, 0) + 1
+
+        # Build coverage report
+        coverage = {
+            "project": appspec.name,
+            "total_flows": len(testspec.flows),
+            "total_fixtures": len(testspec.fixtures),
+            "entities": {
+                "total": len(entities_in_spec),
+                "covered": len(entities_covered),
+                "coverage_pct": round(len(entities_covered) / len(entities_in_spec) * 100, 1)
+                if entities_in_spec
+                else 0,
+                "covered_list": sorted(entities_covered),
+                "uncovered_list": sorted(entities_in_spec - entities_covered),
+            },
+            "surfaces": {
+                "total": len(surfaces_in_spec),
+                "covered": len(surfaces_covered),
+                "coverage_pct": round(len(surfaces_covered) / len(surfaces_in_spec) * 100, 1)
+                if surfaces_in_spec
+                else 0,
+                "covered_list": sorted(surfaces_covered),
+                "uncovered_list": sorted(surfaces_in_spec - surfaces_covered),
+            },
+            "by_priority": priority_counts,
+            "by_tag": dict(sorted(tag_counts.items(), key=lambda x: -x[1])[:10]),
+        }
+
+        return json.dumps(coverage, indent=2)
+
+    except Exception as e:
+        logger.exception("Error getting E2E test coverage")
+        return json.dumps(
+            {
+                "error": str(e),
+            }
+        )
+
+
+def list_e2e_flows_handler(
+    project_path: str | None = None,
+    priority: str | None = None,
+    tag: str | None = None,
+    limit: int = 20,
+) -> str:
+    """
+    List available E2E test flows.
+
+    Args:
+        project_path: Optional path to project
+        priority: Filter by priority
+        tag: Filter by tag
+        limit: Maximum number of flows to return
+
+    Returns:
+        JSON string with flow list
+    """
+    try:
+        # Resolve project path
+        if project_path:
+            root = Path(project_path)
+        else:
+            root = get_active_project_path()
+            if not root:
+                root = get_project_root()
+            if not root:
+                return json.dumps(
+                    {
+                        "error": "No project path specified and no active project set",
+                    }
+                )
+
+        # Generate testspec
+        from dazzle.core.fileset import discover_dsl_files
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
+        from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+        manifest_path = root / "dazzle.toml"
+        manifest = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+        testspec = generate_e2e_testspec(appspec, manifest)
+
+        # Filter flows
+        flows = testspec.flows
+
+        if priority:
+            from dazzle.core.ir import FlowPriority
+
+            try:
+                priority_enum = FlowPriority(priority)
+                flows = [f for f in flows if f.priority == priority_enum]
+            except ValueError:
+                pass
+
+        if tag:
+            flows = [f for f in flows if tag in f.tags]
+
+        # Build response
+        flow_list = [
+            {
+                "id": f.id,
+                "description": f.description,
+                "priority": f.priority.value,
+                "tags": f.tags[:5],  # Limit tags for readability
+                "steps": len(f.steps),
+                "entity": f.entity,
+            }
+            for f in flows[:limit]
+        ]
+
+        return json.dumps(
+            {
+                "project": appspec.name,
+                "total": len(testspec.flows),
+                "filtered": len(flows),
+                "shown": len(flow_list),
+                "flows": flow_list,
+            },
+            indent=2,
+        )
+
+    except Exception as e:
+        logger.exception("Error listing E2E flows")
+        return json.dumps(
+            {
+                "error": str(e),
+            }
+        )

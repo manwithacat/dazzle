@@ -45,6 +45,11 @@ from .stories import (
     propose_stories_from_dsl_handler,
     save_stories_handler,
 )
+from .testing import (
+    get_e2e_test_coverage_handler,
+    list_e2e_flows_handler,
+    run_e2e_tests_handler,
+)
 
 __all__ = [
     # Project handlers
@@ -81,4 +86,8 @@ __all__ = [
     "save_stories_handler",
     "get_stories_handler",
     "generate_story_stubs_handler",
+    # Testing handlers
+    "run_e2e_tests_handler",
+    "get_e2e_test_coverage_handler",
+    "list_e2e_flows_handler",
 ]

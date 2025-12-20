@@ -1,0 +1,3240 @@
+{
+  "version": "2.0",
+  "dsl_hash": "61a41149c592b5d2",
+  "generated_at": "2025-12-20T07:57:10.799083",
+  "project_name": "fieldtest_hub",
+  "coverage": {
+    "entities": [
+      "Device",
+      "FirmwareRelease",
+      "IssueReport",
+      "Task",
+      "TestSession",
+      "Tester"
+    ],
+    "entities_total": 6,
+    "state_machines": [
+      "Device",
+      "FirmwareRelease",
+      "IssueReport",
+      "Task"
+    ],
+    "state_machines_total": 4,
+    "personas": [
+      "engineer",
+      "manager",
+      "tester"
+    ],
+    "personas_total": 3,
+    "workspaces": [
+      "engineering_dashboard",
+      "tester_dashboard"
+    ],
+    "workspaces_total": 2,
+    "events": [],
+    "events_total": 0,
+    "processes": [],
+    "processes_total": 0
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_DEVICE_CREATE",
+      "title": "Create Device",
+      "description": "Test creating a new Device",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798"
+          },
+          "rationale": "Create valid Device"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Device",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Device succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798504"
+    },
+    {
+      "test_id": "CRUD_DEVICE_READ",
+      "title": "Read Device list",
+      "description": "Test reading Device list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Device",
+          "rationale": "Fetch Device list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Device",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Device list succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798510"
+    },
+    {
+      "test_id": "VAL_DEVICE_REQUIRED",
+      "title": "Validate required fields for Device",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Device",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Device succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798514"
+    },
+    {
+      "test_id": "VAL_DEVICE_SERIAL_NUMBER_UNIQUE",
+      "title": "Validate serial_number uniqueness for Device",
+      "description": "Test that duplicate serial_number values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798"
+          },
+          "rationale": "Attempt duplicate serial_number"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate serial_number uniqueness for Device succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798529"
+    },
+    {
+      "test_id": "CRUD_TESTER_CREATE",
+      "title": "Create Tester",
+      "description": "Test creating a new Tester",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_30798@example.com",
+            "location": "Test location"
+          },
+          "rationale": "Create valid Tester"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Tester",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Tester succeeds"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798538"
+    },
+    {
+      "test_id": "CRUD_TESTER_READ",
+      "title": "Read Tester list",
+      "description": "Test reading Tester list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_30798@example.com",
+            "location": "Test location"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Tester",
+          "rationale": "Fetch Tester list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Tester",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Tester list succeeds"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798541"
+    },
+    {
+      "test_id": "VAL_TESTER_REQUIRED",
+      "title": "Validate required fields for Tester",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Tester",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Tester succeeds"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798544"
+    },
+    {
+      "test_id": "VAL_TESTER_EMAIL_UNIQUE",
+      "title": "Validate email uniqueness for Tester",
+      "description": "Test that duplicate email values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_30798@example.com",
+            "location": "Test location"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:Tester",
+          "data": {
+            "name": "Test name",
+            "email": "test_30798@example.com",
+            "location": "Test location"
+          },
+          "rationale": "Attempt duplicate email"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate email uniqueness for Tester succeeds"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798555"
+    },
+    {
+      "test_id": "CRUD_ISSUEREPORT_CREATE",
+      "title": "Create Issue Report",
+      "description": "Test creating a new Issue Report",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "f630dc16-1217-4471-83b7-97241bbff864",
+            "reported_by_id": "4534ea71-28fd-4dff-8246-0edaf67f2ddc",
+            "description": "Test description for description"
+          },
+          "rationale": "Create valid Issue Report"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:IssueReport",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Issue Report succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798603"
+    },
+    {
+      "test_id": "CRUD_ISSUEREPORT_READ",
+      "title": "Read Issue Report list",
+      "description": "Test reading Issue Report list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "f630dc16-1217-4471-83b7-97241bbff864",
+            "reported_by_id": "4534ea71-28fd-4dff-8246-0edaf67f2ddc",
+            "description": "Test description for description"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:IssueReport",
+          "rationale": "Fetch Issue Report list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:IssueReport",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Issue Report list succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798605"
+    },
+    {
+      "test_id": "VAL_ISSUEREPORT_REQUIRED",
+      "title": "Validate required fields for Issue Report",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:IssueReport",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Issue Report succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798609"
+    },
+    {
+      "test_id": "CRUD_TESTSESSION_CREATE",
+      "title": "Create Test Session",
+      "description": "Test creating a new Test Session",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:TestSession",
+          "data": {
+            "device_id": "979ef241-5518-470e-b9b9-5dde434e78a4",
+            "tester_id": "c6c91c0a-c6ac-43c3-9bba-3130116afca3"
+          },
+          "rationale": "Create valid Test Session"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TestSession",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Test Session succeeds"
+      ],
+      "entities": [
+        "TestSession"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798624"
+    },
+    {
+      "test_id": "CRUD_TESTSESSION_READ",
+      "title": "Read Test Session list",
+      "description": "Test reading Test Session list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:TestSession",
+          "data": {
+            "device_id": "979ef241-5518-470e-b9b9-5dde434e78a4",
+            "tester_id": "c6c91c0a-c6ac-43c3-9bba-3130116afca3"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:TestSession",
+          "rationale": "Fetch Test Session list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TestSession",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Test Session list succeeds"
+      ],
+      "entities": [
+        "TestSession"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798626"
+    },
+    {
+      "test_id": "VAL_TESTSESSION_REQUIRED",
+      "title": "Validate required fields for Test Session",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:TestSession",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Test Session succeeds"
+      ],
+      "entities": [
+        "TestSession"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798629"
+    },
+    {
+      "test_id": "CRUD_FIRMWARERELEASE_CREATE",
+      "title": "Create Firmware Release",
+      "description": "Test creating a new Firmware Release",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798636"
+          },
+          "rationale": "Create valid Firmware Release"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Firmware Release succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798638"
+    },
+    {
+      "test_id": "CRUD_FIRMWARERELEASE_READ",
+      "title": "Read Firmware Release list",
+      "description": "Test reading Firmware Release list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798636"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:FirmwareRelease",
+          "rationale": "Fetch Firmware Release list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Firmware Release list succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798640"
+    },
+    {
+      "test_id": "VAL_FIRMWARERELEASE_REQUIRED",
+      "title": "Validate required fields for Firmware Release",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:FirmwareRelease",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Firmware Release succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798643"
+    },
+    {
+      "test_id": "VAL_FIRMWARERELEASE_VERSION_UNIQUE",
+      "title": "Validate version uniqueness for Firmware Release",
+      "description": "Test that duplicate version values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798649"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798653"
+          },
+          "rationale": "Attempt duplicate version"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate version uniqueness for Firmware Release succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798655"
+    },
+    {
+      "test_id": "CRUD_TASK_CREATE",
+      "title": "Create Task",
+      "description": "Test creating a new Task",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "4e0c16a7-83fd-4344-a39a-3f59fba68644"
+          },
+          "rationale": "Create valid Task"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Task",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Task succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798664"
+    },
+    {
+      "test_id": "CRUD_TASK_READ",
+      "title": "Read Task list",
+      "description": "Test reading Task list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "4e0c16a7-83fd-4344-a39a-3f59fba68644"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Task",
+          "rationale": "Fetch Task list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Task",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Task list succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798666"
+    },
+    {
+      "test_id": "VAL_TASK_REQUIRED",
+      "title": "Validate required fields for Task",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Task",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Task succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798669"
+    },
+    {
+      "test_id": "SM_DEVICE_PROTOTYPE_ACTIVE",
+      "title": "Device: prototype \u2192 active",
+      "description": "Test valid transition from prototype to active",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "prototype"
+          },
+          "rationale": "Create entity in prototype state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "active"
+          },
+          "rationale": "Transition to active"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "active"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: prototype \u2192 active succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798680"
+    },
+    {
+      "test_id": "SM_DEVICE_ACTIVE_RECALLED",
+      "title": "Device: active \u2192 recalled",
+      "description": "Test valid transition from active to recalled",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "active"
+          },
+          "rationale": "Create entity in active state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "recalled"
+          },
+          "rationale": "Transition to recalled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "recalled"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: active \u2192 recalled succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798689"
+    },
+    {
+      "test_id": "SM_DEVICE_ACTIVE_RETIRED",
+      "title": "Device: active \u2192 retired",
+      "description": "Test valid transition from active to retired",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "active"
+          },
+          "rationale": "Create entity in active state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "retired"
+          },
+          "rationale": "Transition to retired"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "retired"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: active \u2192 retired succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798696"
+    },
+    {
+      "test_id": "SM_DEVICE_RECALLED_ACTIVE",
+      "title": "Device: recalled \u2192 active",
+      "description": "Test valid transition from recalled to active",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "recalled"
+          },
+          "rationale": "Create entity in recalled state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "active"
+          },
+          "rationale": "Transition to active"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "active"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: recalled \u2192 active succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798703"
+    },
+    {
+      "test_id": "SM_DEVICE_RETIRED_PROTOTYPE",
+      "title": "Device: retired \u2192 prototype",
+      "description": "Test valid transition from retired to prototype",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "retired"
+          },
+          "rationale": "Create entity in retired state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "prototype"
+          },
+          "rationale": "Transition to prototype"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "prototype"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: retired \u2192 prototype succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798715"
+    },
+    {
+      "test_id": "SM_DEVICE_PROTOTYPE_RECALLED_INVALID",
+      "title": "Device: prototype \u2192 recalled (invalid)",
+      "description": "Test that invalid transition from prototype to recalled is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "prototype"
+          },
+          "rationale": "Create entity in prototype state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "recalled"
+          },
+          "rationale": "Attempt invalid transition to recalled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "prototype"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: prototype \u2192 recalled (invalid) succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798726"
+    },
+    {
+      "test_id": "SM_DEVICE_ACTIVE_PROTOTYPE_INVALID",
+      "title": "Device: active \u2192 prototype (invalid)",
+      "description": "Test that invalid transition from active to prototype is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "active"
+          },
+          "rationale": "Create entity in active state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "prototype"
+          },
+          "rationale": "Attempt invalid transition to prototype"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "active"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: active \u2192 prototype (invalid) succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798736"
+    },
+    {
+      "test_id": "SM_DEVICE_RECALLED_RETIRED_INVALID",
+      "title": "Device: recalled \u2192 retired (invalid)",
+      "description": "Test that invalid transition from recalled to retired is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "recalled"
+          },
+          "rationale": "Create entity in recalled state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "retired"
+          },
+          "rationale": "Attempt invalid transition to retired"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "recalled"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: recalled \u2192 retired (invalid) succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798746"
+    },
+    {
+      "test_id": "SM_DEVICE_RETIRED_ACTIVE_INVALID",
+      "title": "Device: retired \u2192 active (invalid)",
+      "description": "Test that invalid transition from retired to active is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Device",
+          "data": {
+            "name": "Test name",
+            "model": "Test model",
+            "batch_number": "Test batch_number",
+            "serial_number": "SN30798",
+            "status": "retired"
+          },
+          "rationale": "Create entity in retired state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Device",
+          "data": {
+            "to_state": "active"
+          },
+          "rationale": "Attempt invalid transition to active"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Device",
+          "data": {
+            "field": "status",
+            "value": "retired"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Device: retired \u2192 active (invalid) succeeds"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798754"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_OPEN_TRIAGED",
+      "title": "Issue Report: open \u2192 triaged",
+      "description": "Test valid transition from open to triaged",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "ca09e855-75da-4ac9-9ade-05d80face78a",
+            "reported_by_id": "2553e78d-0a3d-4dc2-8cc2-5751ee389bc9",
+            "description": "Test description for description",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "triaged"
+          },
+          "rationale": "Transition to triaged"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "triaged"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: open \u2192 triaged succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798769"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_TRIAGED_IN_PROGRESS",
+      "title": "Issue Report: triaged \u2192 in_progress",
+      "description": "Test valid transition from triaged to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "147f941f-1e5a-43ca-b01a-9b309bb89acd",
+            "reported_by_id": "d7d7ae68-8d45-4d11-827e-f55ffc0783ac",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: triaged \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798782"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_IN_PROGRESS_FIXED",
+      "title": "Issue Report: in_progress \u2192 fixed",
+      "description": "Test valid transition from in_progress to fixed",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "7e3a181e-273d-4a6d-aa8a-bed0f0de354d",
+            "reported_by_id": "a7f90e90-6ee5-4b51-9fce-ad5642cd1595",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "fixed"
+          },
+          "rationale": "Transition to fixed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "fixed"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: in_progress \u2192 fixed succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798794"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_FIXED_VERIFIED",
+      "title": "Issue Report: fixed \u2192 verified",
+      "description": "Test valid transition from fixed to verified",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "899f6229-a1c4-4d05-9260-1e58698daf2f",
+            "reported_by_id": "c1ffeb47-56e6-415c-bd83-d698563d7704",
+            "description": "Test description for description",
+            "status": "fixed"
+          },
+          "rationale": "Create entity in fixed state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "verified"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: fixed \u2192 verified succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798806"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_FIXED_IN_PROGRESS",
+      "title": "Issue Report: fixed \u2192 in_progress",
+      "description": "Test valid transition from fixed to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "8242e52f-153a-4c39-8ed8-dac59499f96b",
+            "reported_by_id": "b075b615-9cfd-4079-bcb3-3f7971e0f2e8",
+            "description": "Test description for description",
+            "status": "fixed"
+          },
+          "rationale": "Create entity in fixed state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: fixed \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798818"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_VERIFIED_CLOSED",
+      "title": "Issue Report: verified \u2192 closed",
+      "description": "Test valid transition from verified to closed",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "aaa30a5e-3733-494d-b092-c9ce60a8ccf9",
+            "reported_by_id": "61bb0886-f52c-4dff-975f-fa8987894af2",
+            "description": "Test description for description",
+            "status": "verified"
+          },
+          "rationale": "Create entity in verified state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "closed"
+          },
+          "rationale": "Transition to closed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "closed"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: verified \u2192 closed succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798830"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_CLOSED_OPEN",
+      "title": "Issue Report: closed \u2192 open",
+      "description": "Test valid transition from closed to open",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "006508e2-ed67-4e60-8f4e-5f0291c7a880",
+            "reported_by_id": "58d50d34-c18b-400e-b4b0-8b2f5fa30e24",
+            "description": "Test description for description",
+            "status": "closed"
+          },
+          "rationale": "Create entity in closed state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: closed \u2192 open succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798842"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_OPEN_FIXED_INVALID",
+      "title": "Issue Report: open \u2192 fixed (invalid)",
+      "description": "Test that invalid transition from open to fixed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "0b6412c0-d9bb-4cb2-bb20-a6c6e29d6ee7",
+            "reported_by_id": "92d5578e-3407-49e4-a470-aeb948cee47e",
+            "description": "Test description for description",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "fixed"
+          },
+          "rationale": "Attempt invalid transition to fixed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: open \u2192 fixed (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798856"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_TRIAGED_FIXED_INVALID",
+      "title": "Issue Report: triaged \u2192 fixed (invalid)",
+      "description": "Test that invalid transition from triaged to fixed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "dc5c4735-97df-4a2f-855c-b105748a8153",
+            "reported_by_id": "db98ebf4-6476-4b30-b3bb-d35a4d3444d0",
+            "description": "Test description for description",
+            "status": "triaged"
+          },
+          "rationale": "Create entity in triaged state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "fixed"
+          },
+          "rationale": "Attempt invalid transition to fixed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "triaged"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: triaged \u2192 fixed (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798869"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_IN_PROGRESS_VERIFIED_INVALID",
+      "title": "Issue Report: in_progress \u2192 verified (invalid)",
+      "description": "Test that invalid transition from in_progress to verified is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "2c1cc3b3-141e-401e-8d19-898b78cff000",
+            "reported_by_id": "c71a1a29-992b-4060-8e85-4b47f28cdb2f",
+            "description": "Test description for description",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "verified"
+          },
+          "rationale": "Attempt invalid transition to verified"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: in_progress \u2192 verified (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798882"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_FIXED_OPEN_INVALID",
+      "title": "Issue Report: fixed \u2192 open (invalid)",
+      "description": "Test that invalid transition from fixed to open is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "36838171-aa34-4882-8f77-65db276adf72",
+            "reported_by_id": "ac071561-a5dc-4479-a5f9-afb852c7b006",
+            "description": "Test description for description",
+            "status": "fixed"
+          },
+          "rationale": "Create entity in fixed state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Attempt invalid transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "fixed"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: fixed \u2192 open (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798895"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_VERIFIED_FIXED_INVALID",
+      "title": "Issue Report: verified \u2192 fixed (invalid)",
+      "description": "Test that invalid transition from verified to fixed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "26e50fc3-3569-4b47-8182-d499232a2e87",
+            "reported_by_id": "40febe64-6df7-4ad0-a9ff-1d5657bc4794",
+            "description": "Test description for description",
+            "status": "verified"
+          },
+          "rationale": "Create entity in verified state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "fixed"
+          },
+          "rationale": "Attempt invalid transition to fixed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "verified"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: verified \u2192 fixed (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798908"
+    },
+    {
+      "test_id": "SM_ISSUEREPORT_CLOSED_FIXED_INVALID",
+      "title": "Issue Report: closed \u2192 fixed (invalid)",
+      "description": "Test that invalid transition from closed to fixed is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:IssueReport",
+          "data": {
+            "device_id": "09d46ec6-3ed6-48d1-a70b-b65c885d995e",
+            "reported_by_id": "739f8405-0751-4175-a912-c286c12ff517",
+            "description": "Test description for description",
+            "status": "closed"
+          },
+          "rationale": "Create entity in closed state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:IssueReport",
+          "data": {
+            "to_state": "fixed"
+          },
+          "rationale": "Attempt invalid transition to fixed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:IssueReport",
+          "data": {
+            "field": "status",
+            "value": "closed"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Issue Report: closed \u2192 fixed (invalid) succeeds"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798920"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_DRAFT_RELEASED",
+      "title": "Firmware Release: draft \u2192 released",
+      "description": "Test valid transition from draft to released",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798926",
+            "status": "draft"
+          },
+          "rationale": "Create entity in draft state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "released"
+          },
+          "rationale": "Transition to released"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "released"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: draft \u2192 released succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798928"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_RELEASED_DEPRECATED",
+      "title": "Firmware Release: released \u2192 deprecated",
+      "description": "Test valid transition from released to deprecated",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798933",
+            "status": "released"
+          },
+          "rationale": "Create entity in released state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "deprecated"
+          },
+          "rationale": "Transition to deprecated"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "deprecated"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: released \u2192 deprecated succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798942"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_DEPRECATED_DRAFT",
+      "title": "Firmware Release: deprecated \u2192 draft",
+      "description": "Test valid transition from deprecated to draft",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798947",
+            "status": "deprecated"
+          },
+          "rationale": "Create entity in deprecated state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "draft"
+          },
+          "rationale": "Transition to draft"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "draft"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: deprecated \u2192 draft succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798950"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_DRAFT_DEPRECATED_INVALID",
+      "title": "Firmware Release: draft \u2192 deprecated (invalid)",
+      "description": "Test that invalid transition from draft to deprecated is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798955",
+            "status": "draft"
+          },
+          "rationale": "Create entity in draft state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "deprecated"
+          },
+          "rationale": "Attempt invalid transition to deprecated"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "draft"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: draft \u2192 deprecated (invalid) succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798958"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_RELEASED_DRAFT_INVALID",
+      "title": "Firmware Release: released \u2192 draft (invalid)",
+      "description": "Test that invalid transition from released to draft is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798963",
+            "status": "released"
+          },
+          "rationale": "Create entity in released state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "draft"
+          },
+          "rationale": "Attempt invalid transition to draft"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "released"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: released \u2192 draft (invalid) succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798965"
+    },
+    {
+      "test_id": "SM_FIRMWARERELEASE_DEPRECATED_RELEASED_INVALID",
+      "title": "Firmware Release: deprecated \u2192 released (invalid)",
+      "description": "Test that invalid transition from deprecated to released is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "version": "1.0.30798",
+            "release_date": "2025-12-20T07:57:10.798970",
+            "status": "deprecated"
+          },
+          "rationale": "Create entity in deprecated state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "to_state": "released"
+          },
+          "rationale": "Attempt invalid transition to released"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:FirmwareRelease",
+          "data": {
+            "field": "status",
+            "value": "deprecated"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Firmware Release: deprecated \u2192 released (invalid) succeeds"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798972"
+    },
+    {
+      "test_id": "SM_TASK_OPEN_IN_PROGRESS",
+      "title": "Task: open \u2192 in_progress",
+      "description": "Test valid transition from open to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "6e338078-4083-4982-927d-13aedc5c05fa",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: open \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798980"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_COMPLETED",
+      "title": "Task: in_progress \u2192 completed",
+      "description": "Test valid transition from in_progress to completed",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "fd6f989d-e41e-4bf9-93af-a1f3151ffc6c",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "completed"
+          },
+          "rationale": "Transition to completed"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "completed"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 completed succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.798993"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_OPEN",
+      "title": "Task: in_progress \u2192 open",
+      "description": "Test valid transition from in_progress to open",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "2d882294-76e5-4359-897b-a1d56de16f29",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 open succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799000"
+    },
+    {
+      "test_id": "SM_TASK_COMPLETED_OPEN",
+      "title": "Task: completed \u2192 open",
+      "description": "Test valid transition from completed to open",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "a2eede27-17e4-4c07-9366-32badf080b6f",
+            "status": "completed"
+          },
+          "rationale": "Create entity in completed state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: completed \u2192 open succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799007"
+    },
+    {
+      "test_id": "SM_TASK_*_CANCELLED",
+      "title": "Task: * \u2192 cancelled",
+      "description": "Test valid transition from * to cancelled",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "fe0ed1b4-b04a-4c34-ad33-95d64489dcc0",
+            "status": "*"
+          },
+          "rationale": "Create entity in * state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "cancelled"
+          },
+          "rationale": "Transition to cancelled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "cancelled"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: * \u2192 cancelled succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799015"
+    },
+    {
+      "test_id": "SM_TASK_OPEN_CANCELLED_INVALID",
+      "title": "Task: open \u2192 cancelled (invalid)",
+      "description": "Test that invalid transition from open to cancelled is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "af067065-aa03-47a2-8e3d-d59bddacafc0",
+            "status": "open"
+          },
+          "rationale": "Create entity in open state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "cancelled"
+          },
+          "rationale": "Attempt invalid transition to cancelled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "open"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: open \u2192 cancelled (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799024"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_CANCELLED_INVALID",
+      "title": "Task: in_progress \u2192 cancelled (invalid)",
+      "description": "Test that invalid transition from in_progress to cancelled is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "34727109-a7ab-4f40-9b34-9801af43d685",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "cancelled"
+          },
+          "rationale": "Attempt invalid transition to cancelled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 cancelled (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799032"
+    },
+    {
+      "test_id": "SM_TASK_COMPLETED_CANCELLED_INVALID",
+      "title": "Task: completed \u2192 cancelled (invalid)",
+      "description": "Test that invalid transition from completed to cancelled is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "beb8a002-7577-4240-aacc-25b385c6c86d",
+            "status": "completed"
+          },
+          "rationale": "Create entity in completed state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "cancelled"
+          },
+          "rationale": "Attempt invalid transition to cancelled"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "completed"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: completed \u2192 cancelled (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799040"
+    },
+    {
+      "test_id": "SM_TASK_CANCELLED_IN_PROGRESS_INVALID",
+      "title": "Task: cancelled \u2192 in_progress (invalid)",
+      "description": "Test that invalid transition from cancelled to in_progress is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "da982198-df8b-4e76-a1dd-8a5c52f62ad8",
+            "status": "cancelled"
+          },
+          "rationale": "Create entity in cancelled state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Attempt invalid transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "cancelled"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: cancelled \u2192 in_progress (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799048"
+    },
+    {
+      "test_id": "ACL_ENGINEER_ACCESS",
+      "title": "Engineer can authenticate",
+      "description": "Test that Engineer persona can authenticate",
+      "trigger": "authentication",
+      "persona": "engineer",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "engineer",
+          "rationale": "Authenticate as Engineer"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "engineer",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Engineer can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799051"
+    },
+    {
+      "test_id": "ACL_TESTER_ACCESS",
+      "title": "Field Tester can authenticate",
+      "description": "Test that Field Tester persona can authenticate",
+      "trigger": "authentication",
+      "persona": "tester",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "tester",
+          "rationale": "Authenticate as Field Tester"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "tester",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Field Tester can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799054"
+    },
+    {
+      "test_id": "ACL_MANAGER_ACCESS",
+      "title": "Manager can authenticate",
+      "description": "Test that Manager persona can authenticate",
+      "trigger": "authentication",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Manager"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "manager",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Manager can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799056"
+    },
+    {
+      "test_id": "WS_ENGINEERING_DASHBOARD_NAV",
+      "title": "Navigate to Engineering Dashboard",
+      "description": "E2E test: Verify Engineering Dashboard workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:engineering_dashboard",
+          "data": {
+            "route": "/engineering-dashboard"
+          },
+          "rationale": "Navigate to Engineering Dashboard workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='engineering_dashboard']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Engineering Dashboard succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799060"
+    },
+    {
+      "test_id": "WS_ENGINEERING_DASHBOARD_ROUTE",
+      "title": "Workspace Engineering Dashboard route exists",
+      "description": "Verify Engineering Dashboard workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:engineering_dashboard",
+          "data": {
+            "route": "/engineering-dashboard"
+          },
+          "rationale": "Verify route for Engineering Dashboard is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Engineering Dashboard route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799064"
+    },
+    {
+      "test_id": "WS_TESTER_DASHBOARD_NAV",
+      "title": "Navigate to Tester Dashboard",
+      "description": "E2E test: Verify Tester Dashboard workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:tester_dashboard",
+          "data": {
+            "route": "/tester-dashboard"
+          },
+          "rationale": "Navigate to Tester Dashboard workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='tester_dashboard']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Tester Dashboard succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799067"
+    },
+    {
+      "test_id": "WS_TESTER_DASHBOARD_ROUTE",
+      "title": "Workspace Tester Dashboard route exists",
+      "description": "Verify Tester Dashboard workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:tester_dashboard",
+          "data": {
+            "route": "/tester-dashboard"
+          },
+          "rationale": "Verify route for Tester Dashboard is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Tester Dashboard route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:10.799069"
+    }
+  ]
+}

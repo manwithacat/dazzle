@@ -1,0 +1,293 @@
+{
+  "version": "2.0",
+  "dsl_hash": "d0269ccefd0ae856",
+  "generated_at": "2025-12-20T08:17:05.801591",
+  "project_name": "contact_manager",
+  "coverage": {
+    "entities": [
+      "Contact"
+    ],
+    "entities_total": 1,
+    "state_machines": [],
+    "state_machines_total": 0,
+    "personas": [],
+    "personas_total": 0,
+    "workspaces": [
+      "contacts"
+    ],
+    "workspaces_total": 1,
+    "events": [],
+    "events_total": 0,
+    "processes": [],
+    "processes_total": 0
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_CONTACT_CREATE",
+      "title": "Create Contact",
+      "description": "Test creating a new Contact",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Contact",
+          "data": {
+            "first_name": "Test first_name",
+            "last_name": "Test last_name",
+            "email": "test_25801@example.com"
+          },
+          "rationale": "Create valid Contact"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Contact",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Contact succeeds"
+      ],
+      "entities": [
+        "Contact"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801549"
+    },
+    {
+      "test_id": "CRUD_CONTACT_READ",
+      "title": "Read Contact list",
+      "description": "Test reading Contact list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Contact",
+          "data": {
+            "first_name": "Test first_name",
+            "last_name": "Test last_name",
+            "email": "test_25801@example.com"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Contact",
+          "rationale": "Fetch Contact list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Contact",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Contact list succeeds"
+      ],
+      "entities": [
+        "Contact"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801554"
+    },
+    {
+      "test_id": "VAL_CONTACT_REQUIRED",
+      "title": "Validate required fields for Contact",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Contact",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Contact succeeds"
+      ],
+      "entities": [
+        "Contact"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801558"
+    },
+    {
+      "test_id": "VAL_CONTACT_EMAIL_UNIQUE",
+      "title": "Validate email uniqueness for Contact",
+      "description": "Test that duplicate email values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Contact",
+          "data": {
+            "first_name": "Test first_name",
+            "last_name": "Test last_name",
+            "email": "test_25801@example.com"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:Contact",
+          "data": {
+            "first_name": "Test first_name",
+            "last_name": "Test last_name",
+            "email": "test_25801@example.com"
+          },
+          "rationale": "Attempt duplicate email"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate email uniqueness for Contact succeeds"
+      ],
+      "entities": [
+        "Contact"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801572"
+    },
+    {
+      "test_id": "WS_CONTACTS_NAV",
+      "title": "Navigate to Contacts",
+      "description": "E2E test: Verify Contacts workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:contacts",
+          "data": {
+            "route": "/contacts"
+          },
+          "rationale": "Navigate to Contacts workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='contacts']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Contacts succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801577"
+    },
+    {
+      "test_id": "WS_CONTACTS_ROUTE",
+      "title": "Workspace Contacts route exists",
+      "description": "Verify Contacts workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:contacts",
+          "data": {
+            "route": "/contacts"
+          },
+          "rationale": "Verify route for Contacts is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Contacts route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T08:17:05.801579"
+    }
+  ]
+}

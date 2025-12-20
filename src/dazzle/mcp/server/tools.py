@@ -1160,6 +1160,120 @@ def get_process_tools() -> list[Tool]:
     ]
 
 
+def get_dsl_test_tools() -> list[Tool]:
+    """Get DSL-driven testing tools for generating and running tests from AppSpec."""
+    return [
+        Tool(
+            name="generate_dsl_tests",
+            description="""Generate tests from DSL/AppSpec definitions.
+
+Analyzes DSL files and generates comprehensive tests covering:
+- CRUD operations for each entity
+- State machine transitions (valid and invalid)
+- Field validation (required fields, unique constraints)
+- Persona access control tests
+- Workspace navigation tests
+
+Returns a test suite with coverage metrics. Tests run against the API without requiring a browser.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "save": {
+                        "type": "boolean",
+                        "description": "If true, save generated tests to .dazzle/tests/. If false (default), just return the test suite.",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["json", "yaml"],
+                        "description": "Output format for saved tests (default: json)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="run_dsl_tests",
+            description="""Run DSL-driven tests against a running DNR server.
+
+Requires the application to be running (use 'dazzle dnr serve').
+Tests are generated from DSL and cached in .dazzle/tests/.
+
+Returns test results with pass/fail status and error details.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Run only tests in this category (crud, validation, state_machine, persona, etc.)",
+                    },
+                    "entity": {
+                        "type": "string",
+                        "description": "Run only tests for this entity",
+                    },
+                    "test_id": {
+                        "type": "string",
+                        "description": "Run only this specific test by ID",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Base URL of the running DNR server (default: http://localhost:8000)",
+                    },
+                    "regenerate": {
+                        "type": "boolean",
+                        "description": "Regenerate tests from DSL before running (default: false)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_dsl_test_coverage",
+            description="""Get test coverage for DSL constructs.
+
+Analyzes your DSL and shows what percentage is covered by generated tests.
+Returns coverage by category (entities, state machines, personas, etc.) and
+identifies gaps in test coverage.
+
+Useful for ensuring comprehensive test coverage before deployment.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "detailed": {
+                        "type": "boolean",
+                        "description": "If true, include per-entity and per-persona breakdown",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="list_dsl_tests",
+            description="""List available DSL-driven tests.
+
+Shows all tests that would be generated from the DSL, grouped by category.
+Useful for understanding what tests exist before running them.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": "Filter by category (crud, validation, state_machine, persona, etc.)",
+                    },
+                    "entity": {
+                        "type": "string",
+                        "description": "Filter by entity name",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_internal_tools() -> list[Tool]:
     """Get internal/development tools for MCP management."""
     return [
@@ -1219,6 +1333,115 @@ The logs are designed for LLM agent consumption - you can tail the log file dire
     ]
 
 
+def get_e2e_test_tools() -> list[Tool]:
+    """Get E2E test execution tools for running Playwright-based browser tests."""
+    return [
+        Tool(
+            name="check_test_infrastructure",
+            description="""Check test infrastructure requirements.
+
+IMPORTANT: Use this tool BEFORE running E2E tests to ensure all dependencies are set up.
+
+Returns:
+- Component status (Python, Playwright, httpx, uvicorn)
+- Whether Playwright browsers are installed
+- Step-by-step setup instructions for any missing components
+
+If this returns ready=false, follow the setup_instructions before running tests.""",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="run_e2e_tests",
+            description="""Run E2E tests using Playwright.
+
+This tool:
+1. Automatically starts the DNR server
+2. Runs Playwright-based E2E tests in headless browser
+3. Stops the server when complete
+
+PREREQUISITE: Run check_test_infrastructure first to ensure Playwright is installed.
+
+Requires Playwright to be installed (pip install playwright && playwright install chromium).
+
+Returns test results with pass/fail counts and any error details.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Run only flows with this priority",
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "Run only flows with this tag (e.g., 'crud', 'validation')",
+                    },
+                    "headless": {
+                        "type": "boolean",
+                        "description": "Run browser in headless mode (default: true)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_e2e_test_coverage",
+            description="""Get E2E test coverage report.
+
+Analyzes the generated E2ETestSpec to show:
+- Entity coverage (which entities have tests)
+- Surface coverage (which UI surfaces are tested)
+- Tests by priority (high/medium/low)
+- Tests by tag
+
+Use this to identify gaps in test coverage.""",
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
+        Tool(
+            name="list_e2e_flows",
+            description="""List available E2E test flows.
+
+Shows all generated E2E test flows with:
+- Flow ID
+- Description
+- Priority
+- Tags
+- Step count
+
+Use with filters to find specific tests.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "priority": {
+                        "type": "string",
+                        "enum": ["high", "medium", "low"],
+                        "description": "Filter by priority",
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "Filter by tag",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum flows to return (default: 20)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+    ]
+
+
 def get_all_tools() -> list[Tool]:
     """Get all available tools based on current mode."""
     from dazzle.mcp.dnr_tools_impl import get_dnr_tools
@@ -1255,6 +1478,12 @@ def get_all_tools() -> list[Tool]:
 
     # Add ProcessSpec and coverage tools (Phase 7)
     tools.extend(get_process_tools())
+
+    # Add DSL-driven testing tools (v0.18.0)
+    tools.extend(get_dsl_test_tools())
+
+    # Add E2E test execution tools (v0.19.0)
+    tools.extend(get_e2e_test_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

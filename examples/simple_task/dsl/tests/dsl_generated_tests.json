@@ -1,0 +1,2163 @@
+{
+  "version": "2.0",
+  "dsl_hash": "e6d9954e976cd6d8",
+  "generated_at": "2025-12-20T07:57:16.027258",
+  "project_name": "simple_task",
+  "coverage": {
+    "entities": [
+      "Task",
+      "TaskComment",
+      "User"
+    ],
+    "entities_total": 3,
+    "state_machines": [
+      "Task"
+    ],
+    "state_machines_total": 1,
+    "personas": [
+      "admin",
+      "manager",
+      "member"
+    ],
+    "personas_total": 3,
+    "workspaces": [
+      "admin_dashboard",
+      "my_work",
+      "team_overview"
+    ],
+    "workspaces_total": 3,
+    "events": [],
+    "events_total": 0,
+    "processes": [
+      "task_auto_assignment",
+      "task_escalation",
+      "urgent_task_approval"
+    ],
+    "processes_total": 3
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_USER_CREATE",
+      "title": "Create Team Member",
+      "description": "Test creating a new Team Member",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Create valid Team Member"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:User",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Team Member succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026921"
+    },
+    {
+      "test_id": "CRUD_USER_READ",
+      "title": "Read Team Member list",
+      "description": "Test reading Team Member list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:User",
+          "rationale": "Fetch Team Member list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:User",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Team Member list succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026927"
+    },
+    {
+      "test_id": "VAL_USER_REQUIRED",
+      "title": "Validate required fields for Team Member",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:User",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Team Member succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026931"
+    },
+    {
+      "test_id": "VAL_USER_EMAIL_UNIQUE",
+      "title": "Validate email uniqueness for Team Member",
+      "description": "Test that duplicate email values are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Create first entity"
+        },
+        {
+          "action": "create_expect_error",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "rationale": "Attempt duplicate email"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "unique_violation"
+          },
+          "rationale": "Verify unique constraint enforced"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate email uniqueness for Team Member succeeds"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "unique",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026943"
+    },
+    {
+      "test_id": "CRUD_TASK_CREATE",
+      "title": "Create Task",
+      "description": "Test creating a new Task",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title"
+          },
+          "rationale": "Create valid Task"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Task",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Task succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026952"
+    },
+    {
+      "test_id": "CRUD_TASK_READ",
+      "title": "Read Task list",
+      "description": "Test reading Task list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Task",
+          "rationale": "Fetch Task list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Task",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Task list succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026954"
+    },
+    {
+      "test_id": "VAL_TASK_REQUIRED",
+      "title": "Validate required fields for Task",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Task",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Task succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026957"
+    },
+    {
+      "test_id": "CRUD_TASKCOMMENT_CREATE",
+      "title": "Create Task Comment",
+      "description": "Test creating a new Task Comment",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title"
+          },
+          "store_result": "parent_task",
+          "rationale": "Create parent Task for ref field 'task'"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent Team Member for ref field 'author'"
+        },
+        {
+          "action": "create",
+          "target": "entity:TaskComment",
+          "data": {
+            "content": "Test description for content",
+            "task": "$ref:parent_task.id",
+            "author": "$ref:parent_user.id"
+          },
+          "rationale": "Create valid Task Comment"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TaskComment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Task Comment succeeds"
+      ],
+      "entities": [
+        "TaskComment",
+        "Task",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026977"
+    },
+    {
+      "test_id": "CRUD_TASKCOMMENT_READ",
+      "title": "Read Task Comment list",
+      "description": "Test reading Task Comment list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title"
+          },
+          "store_result": "parent_task",
+          "rationale": "Create parent Task for ref field 'task'"
+        },
+        {
+          "action": "create",
+          "target": "entity:User",
+          "data": {
+            "email": "test_36026@example.com",
+            "name": "Test name"
+          },
+          "store_result": "parent_user",
+          "rationale": "Create parent Team Member for ref field 'author'"
+        },
+        {
+          "action": "create",
+          "target": "entity:TaskComment",
+          "data": {
+            "content": "Test description for content",
+            "task": "$ref:parent_task.id",
+            "author": "$ref:parent_user.id"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:TaskComment",
+          "rationale": "Fetch Task Comment list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TaskComment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Task Comment list succeeds"
+      ],
+      "entities": [
+        "TaskComment",
+        "Task",
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026979"
+    },
+    {
+      "test_id": "VAL_TASKCOMMENT_REQUIRED",
+      "title": "Validate required fields for Task Comment",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:TaskComment",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Task Comment succeeds"
+      ],
+      "entities": [
+        "TaskComment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026982"
+    },
+    {
+      "test_id": "SM_TASK_TODO_IN_PROGRESS",
+      "title": "Task: todo \u2192 in_progress",
+      "description": "Test valid transition from todo to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "todo"
+          },
+          "rationale": "Create entity in todo state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: todo \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026992"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_REVIEW",
+      "title": "Task: in_progress \u2192 review",
+      "description": "Test valid transition from in_progress to review",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "review"
+          },
+          "rationale": "Transition to review"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "review"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 review succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.026999"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_TODO",
+      "title": "Task: in_progress \u2192 todo",
+      "description": "Test valid transition from in_progress to todo",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "todo"
+          },
+          "rationale": "Transition to todo"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "todo"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 todo succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027004"
+    },
+    {
+      "test_id": "SM_TASK_REVIEW_DONE",
+      "title": "Task: review \u2192 done",
+      "description": "Test valid transition from review to done",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "review"
+          },
+          "rationale": "Create entity in review state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "done"
+          },
+          "rationale": "Transition to done"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "done"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: review \u2192 done succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027009"
+    },
+    {
+      "test_id": "SM_TASK_REVIEW_IN_PROGRESS",
+      "title": "Task: review \u2192 in_progress",
+      "description": "Test valid transition from review to in_progress",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "review"
+          },
+          "rationale": "Create entity in review state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "in_progress"
+          },
+          "rationale": "Transition to in_progress"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: review \u2192 in_progress succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027015"
+    },
+    {
+      "test_id": "SM_TASK_DONE_TODO",
+      "title": "Task: done \u2192 todo",
+      "description": "Test valid transition from done to todo",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "done"
+          },
+          "rationale": "Create entity in done state"
+        },
+        {
+          "action": "transition",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "todo"
+          },
+          "rationale": "Transition to todo"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "todo"
+          },
+          "rationale": "Verify new state"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: done \u2192 todo succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027020"
+    },
+    {
+      "test_id": "SM_TASK_TODO_REVIEW_INVALID",
+      "title": "Task: todo \u2192 review (invalid)",
+      "description": "Test that invalid transition from todo to review is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "todo"
+          },
+          "rationale": "Create entity in todo state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "review"
+          },
+          "rationale": "Attempt invalid transition to review"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "todo"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: todo \u2192 review (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027029"
+    },
+    {
+      "test_id": "SM_TASK_IN_PROGRESS_DONE_INVALID",
+      "title": "Task: in_progress \u2192 done (invalid)",
+      "description": "Test that invalid transition from in_progress to done is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "in_progress"
+          },
+          "rationale": "Create entity in in_progress state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "done"
+          },
+          "rationale": "Attempt invalid transition to done"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "in_progress"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: in_progress \u2192 done (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027036"
+    },
+    {
+      "test_id": "SM_TASK_REVIEW_TODO_INVALID",
+      "title": "Task: review \u2192 todo (invalid)",
+      "description": "Test that invalid transition from review to todo is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "review"
+          },
+          "rationale": "Create entity in review state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "todo"
+          },
+          "rationale": "Attempt invalid transition to todo"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "review"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: review \u2192 todo (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027042"
+    },
+    {
+      "test_id": "SM_TASK_DONE_REVIEW_INVALID",
+      "title": "Task: done \u2192 review (invalid)",
+      "description": "Test that invalid transition from done to review is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "title": "Test title",
+            "status": "done"
+          },
+          "rationale": "Create entity in done state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "review"
+          },
+          "rationale": "Attempt invalid transition to review"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "done"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: done \u2192 review (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027048"
+    },
+    {
+      "test_id": "ACL_ADMIN_ACCESS",
+      "title": "Administrator can authenticate",
+      "description": "Test that Administrator persona can authenticate",
+      "trigger": "authentication",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "admin",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027053"
+    },
+    {
+      "test_id": "GOAL_ADMIN_MANAGE_ALL_TASKS",
+      "title": "Administrator: Manage all tasks",
+      "description": "Test that Administrator can achieve goal: Manage all tasks",
+      "trigger": "user_action",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Manage all tasks",
+          "rationale": "Work towards goal: Manage all tasks"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator: Manage all tasks succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027091"
+    },
+    {
+      "test_id": "GOAL_ADMIN_CONFIGURE_TEAM_SETTI",
+      "title": "Administrator: Configure team settings",
+      "description": "Test that Administrator can achieve goal: Configure team settings",
+      "trigger": "user_action",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Configure team settings",
+          "rationale": "Work towards goal: Configure team settings"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator: Configure team settings succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027096"
+    },
+    {
+      "test_id": "GOAL_ADMIN_VIEW_ANALYTICS",
+      "title": "Administrator: View analytics",
+      "description": "Test that Administrator can achieve goal: View analytics",
+      "trigger": "user_action",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "View analytics",
+          "rationale": "Work towards goal: View analytics"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator: View analytics succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027099"
+    },
+    {
+      "test_id": "ACL_MANAGER_ACCESS",
+      "title": "Team Manager can authenticate",
+      "description": "Test that Team Manager persona can authenticate",
+      "trigger": "authentication",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "manager",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Manager can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027102"
+    },
+    {
+      "test_id": "GOAL_MANAGER_ASSIGN_TASKS_TO_TEAM",
+      "title": "Team Manager: Assign tasks to team",
+      "description": "Test that Team Manager can achieve goal: Assign tasks to team",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Assign tasks to team",
+          "rationale": "Work towards goal: Assign tasks to team"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Manager: Assign tasks to team succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027106"
+    },
+    {
+      "test_id": "GOAL_MANAGER_TRACK_TEAM_PROGRESS",
+      "title": "Team Manager: Track team progress",
+      "description": "Test that Team Manager can achieve goal: Track team progress",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Track team progress",
+          "rationale": "Work towards goal: Track team progress"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Manager: Track team progress succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027109"
+    },
+    {
+      "test_id": "GOAL_MANAGER_REVIEW_COMPLETED_WOR",
+      "title": "Team Manager: Review completed work",
+      "description": "Test that Team Manager can achieve goal: Review completed work",
+      "trigger": "user_action",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Review completed work",
+          "rationale": "Work towards goal: Review completed work"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Manager: Review completed work succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027112"
+    },
+    {
+      "test_id": "ACL_MEMBER_ACCESS",
+      "title": "Team Member can authenticate",
+      "description": "Test that Team Member persona can authenticate",
+      "trigger": "authentication",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "member",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Member can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027114"
+    },
+    {
+      "test_id": "GOAL_MEMBER_COMPLETE_ASSIGNED_TA",
+      "title": "Team Member: Complete assigned tasks",
+      "description": "Test that Team Member can achieve goal: Complete assigned tasks",
+      "trigger": "user_action",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Complete assigned tasks",
+          "rationale": "Work towards goal: Complete assigned tasks"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Member: Complete assigned tasks succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027117"
+    },
+    {
+      "test_id": "GOAL_MEMBER_UPDATE_TASK_STATUS",
+      "title": "Team Member: Update task status",
+      "description": "Test that Team Member can achieve goal: Update task status",
+      "trigger": "user_action",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Update task status",
+          "rationale": "Work towards goal: Update task status"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Member: Update task status succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027120"
+    },
+    {
+      "test_id": "GOAL_MEMBER_REQUEST_HELP",
+      "title": "Team Member: Request help",
+      "description": "Test that Team Member can achieve goal: Request help",
+      "trigger": "user_action",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Request help",
+          "rationale": "Work towards goal: Request help"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Member: Request help succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027123"
+    },
+    {
+      "test_id": "WS_ADMIN_DASHBOARD_NAV",
+      "title": "Navigate to Admin Dashboard",
+      "description": "E2E test: Verify Admin Dashboard workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:admin_dashboard",
+          "data": {
+            "route": "/admin-dashboard"
+          },
+          "rationale": "Navigate to Admin Dashboard workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='admin_dashboard']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Admin Dashboard succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027127"
+    },
+    {
+      "test_id": "WS_ADMIN_DASHBOARD_ROUTE",
+      "title": "Workspace Admin Dashboard route exists",
+      "description": "Verify Admin Dashboard workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:admin_dashboard",
+          "data": {
+            "route": "/admin-dashboard"
+          },
+          "rationale": "Verify route for Admin Dashboard is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Admin Dashboard route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027129"
+    },
+    {
+      "test_id": "WS_TEAM_OVERVIEW_NAV",
+      "title": "Navigate to Team Overview",
+      "description": "E2E test: Verify Team Overview workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:team_overview",
+          "data": {
+            "route": "/team-overview"
+          },
+          "rationale": "Navigate to Team Overview workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='team_overview']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Team Overview succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027132"
+    },
+    {
+      "test_id": "WS_TEAM_OVERVIEW_ROUTE",
+      "title": "Workspace Team Overview route exists",
+      "description": "Verify Team Overview workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:team_overview",
+          "data": {
+            "route": "/team-overview"
+          },
+          "rationale": "Verify route for Team Overview is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Team Overview route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027134"
+    },
+    {
+      "test_id": "WS_MY_WORK_NAV",
+      "title": "Navigate to My Work",
+      "description": "E2E test: Verify My Work workspace loads and displays correctly",
+      "trigger": "e2e",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:my_work",
+          "data": {
+            "route": "/my-work"
+          },
+          "rationale": "Navigate to My Work workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='my_work']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to My Work succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "e2e",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027137"
+    },
+    {
+      "test_id": "WS_MY_WORK_ROUTE",
+      "title": "Workspace My Work route exists",
+      "description": "Verify My Work workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:my_work",
+          "data": {
+            "route": "/my-work"
+          },
+          "rationale": "Verify route for My Work is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace My Work route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027139"
+    },
+    {
+      "test_id": "PROC_TASK_AUTO_ASSIGNMENT_TRIGGER",
+      "title": "Trigger Auto-Assign High Priority Tasks",
+      "description": "Test that task_auto_assignment process starts correctly",
+      "trigger": "process_start",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:task_auto_assignment",
+          "data": {
+            "task_id": "ae7d5371-443b-4980-9547-2b34906b6b4a"
+          },
+          "rationale": "Start task_auto_assignment process"
+        },
+        {
+          "action": "assert_process_started",
+          "target": "process:task_auto_assignment",
+          "rationale": "Verify process started"
+        }
+      ],
+      "expected_outcomes": [
+        "Trigger Auto-Assign High Priority Tasks succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "trigger",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027181"
+    },
+    {
+      "test_id": "PROC_TASK_AUTO_ASSIGNMENT_COMPLETE",
+      "title": "Complete Auto-Assign High Priority Tasks",
+      "description": "Test that task_auto_assignment process completes successfully",
+      "trigger": "process_completion",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:task_auto_assignment",
+          "data": {
+            "task_id": "fb0dc9d5-5411-4292-95fd-8f4d6cb133b5"
+          },
+          "rationale": "Start task_auto_assignment process"
+        },
+        {
+          "action": "wait_for_process",
+          "target": "process:task_auto_assignment",
+          "data": {
+            "timeout_seconds": 300
+          },
+          "rationale": "Wait for process completion"
+        },
+        {
+          "action": "assert_process_completed",
+          "target": "process:task_auto_assignment",
+          "rationale": "Verify process completed"
+        }
+      ],
+      "expected_outcomes": [
+        "Complete Auto-Assign High Priority Tasks succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "completion",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027195"
+    },
+    {
+      "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_FIND_CANDIDATE",
+      "title": "task_auto_assignment: Step find_candidate",
+      "description": "Test that step find_candidate executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:task_auto_assignment",
+          "data": {
+            "step": "find_candidate"
+          },
+          "rationale": "Execute step find_candidate"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:find_candidate",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "task_auto_assignment: Step find_candidate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027198"
+    },
+    {
+      "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_NOTIFY_ASSIGNEE",
+      "title": "task_auto_assignment: Step notify_assignee",
+      "description": "Test that step notify_assignee executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:task_auto_assignment",
+          "data": {
+            "step": "notify_assignee"
+          },
+          "rationale": "Execute step notify_assignee"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:notify_assignee",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "task_auto_assignment: Step notify_assignee succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027201"
+    },
+    {
+      "test_id": "PROC_TASK_ESCALATION_TRIGGER",
+      "title": "Trigger Escalate Overdue Task",
+      "description": "Test that task_escalation process starts correctly",
+      "trigger": "process_start",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:task_escalation",
+          "data": {
+            "task_id": "9a2775c0-797a-40c2-9186-4eee0d665542"
+          },
+          "rationale": "Start task_escalation process"
+        },
+        {
+          "action": "assert_process_started",
+          "target": "process:task_escalation",
+          "rationale": "Verify process started"
+        }
+      ],
+      "expected_outcomes": [
+        "Trigger Escalate Overdue Task succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "trigger",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027210"
+    },
+    {
+      "test_id": "PROC_TASK_ESCALATION_COMPLETE",
+      "title": "Complete Escalate Overdue Task",
+      "description": "Test that task_escalation process completes successfully",
+      "trigger": "process_completion",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:task_escalation",
+          "data": {
+            "task_id": "3bab8fa7-b76f-4fbd-a759-0b6358fb6008"
+          },
+          "rationale": "Start task_escalation process"
+        },
+        {
+          "action": "wait_for_process",
+          "target": "process:task_escalation",
+          "data": {
+            "timeout_seconds": 259200
+          },
+          "rationale": "Wait for process completion"
+        },
+        {
+          "action": "assert_process_completed",
+          "target": "process:task_escalation",
+          "rationale": "Verify process completed"
+        }
+      ],
+      "expected_outcomes": [
+        "Complete Escalate Overdue Task succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "completion",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027218"
+    },
+    {
+      "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_1_NOTIFY",
+      "title": "task_escalation: Step level_1_notify",
+      "description": "Test that step level_1_notify executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:task_escalation",
+          "data": {
+            "step": "level_1_notify"
+          },
+          "rationale": "Execute step level_1_notify"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:level_1_notify",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "task_escalation: Step level_1_notify succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027221"
+    },
+    {
+      "test_id": "PROC_TASK_ESCALATION_STEP_WAIT_FOR_ACTION",
+      "title": "task_escalation: Step wait_for_action",
+      "description": "Test that step wait_for_action executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:task_escalation",
+          "data": {
+            "step": "wait_for_action"
+          },
+          "rationale": "Execute step wait_for_action"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:wait_for_action",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "task_escalation: Step wait_for_action succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027223"
+    },
+    {
+      "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_2_ESCALATE",
+      "title": "task_escalation: Step level_2_escalate",
+      "description": "Test that step level_2_escalate executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:task_escalation",
+          "data": {
+            "step": "level_2_escalate"
+          },
+          "rationale": "Execute step level_2_escalate"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:level_2_escalate",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "task_escalation: Step level_2_escalate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027225"
+    },
+    {
+      "test_id": "PROC_URGENT_TASK_APPROVAL_TRIGGER",
+      "title": "Trigger Urgent Task Approval",
+      "description": "Test that urgent_task_approval process starts correctly",
+      "trigger": "process_start",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:urgent_task_approval",
+          "data": {
+            "task_id": "57b70216-c7c3-4633-8b02-d78be3b33f31"
+          },
+          "rationale": "Start urgent_task_approval process"
+        },
+        {
+          "action": "assert_process_started",
+          "target": "process:urgent_task_approval",
+          "rationale": "Verify process started"
+        }
+      ],
+      "expected_outcomes": [
+        "Trigger Urgent Task Approval succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "trigger",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027232"
+    },
+    {
+      "test_id": "PROC_URGENT_TASK_APPROVAL_COMPLETE",
+      "title": "Complete Urgent Task Approval",
+      "description": "Test that urgent_task_approval process completes successfully",
+      "trigger": "process_completion",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "trigger_process",
+          "target": "process:urgent_task_approval",
+          "data": {
+            "task_id": "798a0c4c-7d74-43b3-a373-db0f5d73491b"
+          },
+          "rationale": "Start urgent_task_approval process"
+        },
+        {
+          "action": "wait_for_process",
+          "target": "process:urgent_task_approval",
+          "data": {
+            "timeout_seconds": 86400
+          },
+          "rationale": "Wait for process completion"
+        },
+        {
+          "action": "assert_process_completed",
+          "target": "process:urgent_task_approval",
+          "rationale": "Verify process completed"
+        }
+      ],
+      "expected_outcomes": [
+        "Complete Urgent Task Approval succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "completion",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027240"
+    },
+    {
+      "test_id": "PROC_URGENT_TASK_APPROVAL_STEP_REQUEST_APPROVAL",
+      "title": "urgent_task_approval: Step request_approval",
+      "description": "Test that step request_approval executes correctly",
+      "trigger": "process_step",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "execute_step",
+          "target": "process:urgent_task_approval",
+          "data": {
+            "step": "request_approval"
+          },
+          "rationale": "Execute step request_approval"
+        },
+        {
+          "action": "assert_step_completed",
+          "target": "step:request_approval",
+          "rationale": "Verify step completed"
+        }
+      ],
+      "expected_outcomes": [
+        "urgent_task_approval: Step request_approval succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "process",
+        "step",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T07:57:16.027242"
+    }
+  ]
+}

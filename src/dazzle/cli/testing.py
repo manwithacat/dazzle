@@ -169,12 +169,12 @@ def test_run(
     base_url: str = typer.Option(
         "http://localhost:3000",
         "--base-url",
-        help="Base URL of the running application",
+        help="Base URL of the running application (ignored with --auto-server)",
     ),
     api_url: str = typer.Option(
         "http://localhost:8000",
         "--api-url",
-        help="Base URL of the API server",
+        help="Base URL of the API server (ignored with --auto-server)",
     ),
     headless: bool = typer.Option(
         True,
@@ -198,18 +198,25 @@ def test_run(
         "-v",
         help="Verbose output",
     ),
+    auto_server: bool = typer.Option(
+        True,
+        "--auto-server/--no-auto-server",
+        help="Automatically start and stop DNR server (default: True)",
+    ),
 ) -> None:
     """
     Run E2E tests using Playwright.
 
-    Requires the application to be running (use 'dazzle dnr serve --test-mode').
+    By default, automatically starts the DNR server, runs tests, and stops the server.
+    Use --no-auto-server to require a manually started server.
 
     Examples:
-        dazzle test run                             # Run all tests
+        dazzle test run                             # Auto-start server, run all tests
         dazzle test run --priority high             # Run high-priority only
         dazzle test run --tag crud                  # Run tests tagged 'crud'
         dazzle test run --flow Task_create_valid    # Run specific flow
         dazzle test run --headed                    # Show browser window
+        dazzle test run --no-auto-server            # Require running server
     """
     # Check for playwright
     try:
@@ -220,11 +227,75 @@ def test_run(
         typer.echo("  playwright install chromium", err=True)
         raise typer.Exit(code=1)
 
+    # If auto_server is enabled, use E2ERunner for full lifecycle management
+    if auto_server:
+        from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions, format_e2e_report
+
+        manifest_path = Path(manifest).resolve()
+        root = manifest_path.parent
+
+        runner = E2ERunner(root)
+
+        # Check Playwright browsers
+        playwright_ok, playwright_msg = runner.ensure_playwright()
+        if not playwright_ok:
+            typer.echo(playwright_msg, err=True)
+            raise typer.Exit(code=1)
+
+        options = E2ERunOptions(
+            headless=headless,
+            priority=priority,
+            tag=tag,
+            flow_id=flow,
+            timeout=timeout,
+        )
+
+        if verbose:
+            typer.echo("Starting E2E test run with auto-server...")
+            typer.echo(f"  Project: {root}")
+
+        result = runner.run_all(options)
+
+        # Output results
+        if verbose:
+            typer.echo(format_e2e_report(result))
+        else:
+            if result.error:
+                typer.secho(f"ERROR: {result.error}", fg=typer.colors.RED, err=True)
+            else:
+                for flow_result in result.flows:
+                    icon = "✓" if flow_result.status == "passed" else "✗"
+                    color = (
+                        typer.colors.GREEN if flow_result.status == "passed" else typer.colors.RED
+                    )
+                    typer.secho(f"  {icon} {flow_result.flow_id}", fg=color)
+                    if flow_result.error and verbose:
+                        typer.echo(f"    Error: {flow_result.error}")
+
+                typer.echo()
+                typer.echo(f"Results: {result.passed} passed, {result.failed} failed")
+
+        # Output to file if requested
+        if output:
+            import json
+
+            output_path = Path(output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(result.to_dict(), indent=2))
+            typer.echo(f"Results saved to {output_path}")
+
+        # Exit with appropriate code
+        if result.error or result.failed > 0:
+            raise typer.Exit(code=1)
+        return
+
+    # Legacy mode: --no-auto-server requires running server
     try:
         from dazzle.testing.testspec_generator import generate_e2e_testspec
         from dazzle_e2e.adapters.dnr import DNRAdapter
     except ImportError as e:
         typer.echo(f"E2E testing modules not available: {e}", err=True)
+        typer.echo("Note: Use --auto-server (default) for built-in server management", err=True)
         raise typer.Exit(code=1)
 
     # Load AppSpec
@@ -1030,3 +1101,439 @@ def feedback_prompt_suggestions(
 
     for i, suggestion in enumerate(suggestions, 1):
         typer.secho(f"  {i}. {suggestion}", fg=typer.colors.YELLOW)
+
+
+# ============================================================================
+# DSL-Driven Test Commands (v0.18.0)
+# ============================================================================
+
+
+@test_app.command("dsl-generate")
+def dsl_generate(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    output: str = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory for generated tests (default: .dazzle/tests)",
+    ),
+    format: str = typer.Option(
+        "json",
+        "--format",
+        "-f",
+        help="Output format: json (default) or yaml",
+    ),
+) -> None:
+    """
+    Generate tests from DSL/AppSpec definitions.
+
+    This command analyzes your DSL files and generates comprehensive tests
+    covering CRUD operations, state machines, personas, validation, and more.
+
+    Unlike Playwright E2E tests, these tests run against the API without
+    requiring a browser. They're faster and can be run in CI/CD pipelines.
+
+    Examples:
+        dazzle test dsl-generate                          # Generate to .dazzle/tests
+        dazzle test dsl-generate -o tests/dsl             # Custom output directory
+        dazzle test dsl-generate --format yaml            # YAML output
+    """
+    try:
+        from dazzle.testing.dsl_test_generator import (
+            generate_tests_from_dsl,
+            save_generated_tests,
+        )
+    except ImportError as e:
+        typer.echo(f"DSL testing module not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Load AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    # Generate tests (the function handles loading appspec internally)
+    typer.echo(f"Generating tests from DSL in {root}...")
+
+    try:
+        test_suite = generate_tests_from_dsl(root)
+    except Exception as e:
+        typer.echo(f"Error generating tests: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Show coverage
+    coverage = test_suite.coverage
+    typer.echo()
+    typer.secho("Coverage Analysis:", bold=True)
+    typer.echo(f"  • Entities: {len(coverage.entities_covered)}/{coverage.entities_total}")
+    typer.echo(
+        f"  • State Machines: {len(coverage.state_machines_covered)}/{coverage.state_machines_total}"
+    )
+    typer.echo(f"  • Personas: {len(coverage.personas_covered)}/{coverage.personas_total}")
+    typer.echo(f"  • Workspaces: {len(coverage.workspaces_covered)}/{coverage.workspaces_total}")
+    if coverage.events_total > 0:
+        typer.echo(f"  • Events: {len(coverage.events_covered)}/{coverage.events_total}")
+    if coverage.processes_total > 0:
+        typer.echo(f"  • Processes: {len(coverage.processes_covered)}/{coverage.processes_total}")
+    typer.echo()
+
+    # Show test categories (from tags)
+    typer.secho("Generated Tests:", bold=True)
+    categories: dict[str, int] = {}
+    for design in test_suite.designs:
+        # Get category from tags (first tag that's not generic)
+        tags = design.get("tags", [])
+        cat = next((t for t in tags if t not in ("generated", "dsl-derived")), "other")
+        categories[cat] = categories.get(cat, 0) + 1
+
+    for cat, count in sorted(categories.items()):
+        typer.echo(f"  • {cat}: {count} tests")
+    typer.echo(f"  Total: {len(test_suite.designs)} tests")
+    typer.echo()
+
+    # Save tests using the module's save function
+    output_file = save_generated_tests(root, test_suite)
+    typer.secho(f"Tests saved to {output_file}", fg=typer.colors.GREEN)
+
+
+@test_app.command("dsl-run")
+def dsl_run(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    regenerate: bool = typer.Option(
+        False,
+        "--regenerate",
+        "-r",
+        help="Regenerate tests from DSL before running",
+    ),
+    output: str = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file for test results JSON",
+    ),
+    timeout: int = typer.Option(
+        30,
+        "--timeout",
+        "-t",
+        help="Server startup timeout in seconds (increase for large projects)",
+    ),
+) -> None:
+    """
+    Run DSL-driven tests against a DNR server.
+
+    This command starts the DNR server, runs all generated tests,
+    and reports the results. Tests are generated from your DSL
+    and cached for performance.
+
+    Use --regenerate to force regeneration when DSL changes.
+    Use --timeout to increase server startup timeout for large projects.
+
+    Examples:
+        dazzle test dsl-run                    # Run all tests
+        dazzle test dsl-run --regenerate       # Regenerate and run
+        dazzle test dsl-run -o results.json    # Save results to file
+        dazzle test dsl-run --timeout 120      # Allow 2 min for server startup
+    """
+    import json
+
+    try:
+        from dazzle.testing.unified_runner import UnifiedTestRunner
+    except ImportError as e:
+        typer.echo(f"DSL testing module not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Running DSL tests for project at {root}...")
+    typer.echo()
+
+    try:
+        runner = UnifiedTestRunner(root, server_timeout=timeout)
+
+        # Run all tests
+        result = runner.run_all(generate=True, force_generate=regenerate)
+
+        # Show results
+        summary = result.get_summary()
+        summary["total_tests"]
+        passed = summary["passed"]
+        failed = summary["failed"]
+        skipped = summary.get("skipped", 0)
+        pass_rate = summary["success_rate"]
+        runnable = passed + failed
+
+        typer.echo()
+        if skipped > 0:
+            typer.secho(
+                f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%), {skipped} skipped",
+                bold=True,
+            )
+        else:
+            typer.secho(f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%)", bold=True)
+
+        if failed == 0:
+            typer.secho("All tests passed!", fg=typer.colors.GREEN)
+        else:
+            typer.secho(f"{failed} tests failed", fg=typer.colors.RED)
+
+        # Output results to file
+        if output:
+            output_path = Path(output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(json.dumps(result.to_dict(), indent=2))
+            typer.echo(f"Results saved to {output_path}")
+
+        # Exit with error code if any failures
+        if failed > 0:
+            raise typer.Exit(code=1)
+
+    except Exception as e:
+        typer.echo(f"Error running tests: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@test_app.command("dsl-coverage")
+def dsl_coverage(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="Output format: table (default), json, or markdown",
+    ),
+    detailed: bool = typer.Option(
+        False,
+        "--detailed",
+        "-d",
+        help="Show detailed coverage by entity/persona",
+    ),
+) -> None:
+    """
+    Show test coverage for DSL constructs.
+
+    Analyzes your DSL and shows what percentage is covered by generated tests.
+    Useful for identifying gaps in test coverage.
+
+    Examples:
+        dazzle test dsl-coverage                          # Table output
+        dazzle test dsl-coverage --detailed               # Show per-entity details
+        dazzle test dsl-coverage --format markdown        # Markdown for docs
+        dazzle test dsl-coverage --format json            # JSON for CI
+    """
+    import json
+
+    try:
+        from dazzle.testing.dsl_test_generator import generate_tests_from_dsl
+    except ImportError as e:
+        typer.echo(f"DSL testing module not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        test_suite = generate_tests_from_dsl(root)
+    except Exception as e:
+        typer.echo(f"Error generating tests: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    coverage = test_suite.coverage
+
+    # Calculate overall coverage
+    total_constructs = (
+        coverage.entities_total
+        + coverage.state_machines_total
+        + coverage.personas_total
+        + coverage.workspaces_total
+        + coverage.events_total
+        + coverage.processes_total
+    )
+    tested_constructs = (
+        len(coverage.entities_covered)
+        + len(coverage.state_machines_covered)
+        + len(coverage.personas_covered)
+        + len(coverage.workspaces_covered)
+        + len(coverage.events_covered)
+        + len(coverage.processes_covered)
+    )
+    overall_pct = (tested_constructs / total_constructs * 100) if total_constructs > 0 else 0
+
+    if format == "json":
+        # JSON output for CI
+        result = {
+            "overall_coverage": overall_pct,
+            "total_constructs": total_constructs,
+            "tested_constructs": tested_constructs,
+            "total_tests": len(test_suite.designs),
+            "categories": {
+                "entities": {
+                    "total": coverage.entities_total,
+                    "tested": len(coverage.entities_covered),
+                    "coverage": (len(coverage.entities_covered) / coverage.entities_total * 100)
+                    if coverage.entities_total > 0
+                    else 0,
+                },
+                "state_machines": {
+                    "total": coverage.state_machines_total,
+                    "tested": len(coverage.state_machines_covered),
+                    "coverage": (
+                        len(coverage.state_machines_covered) / coverage.state_machines_total * 100
+                    )
+                    if coverage.state_machines_total > 0
+                    else 0,
+                },
+                "personas": {
+                    "total": coverage.personas_total,
+                    "tested": len(coverage.personas_covered),
+                    "coverage": (len(coverage.personas_covered) / coverage.personas_total * 100)
+                    if coverage.personas_total > 0
+                    else 0,
+                },
+                "workspaces": {
+                    "total": coverage.workspaces_total,
+                    "tested": len(coverage.workspaces_covered),
+                    "coverage": (len(coverage.workspaces_covered) / coverage.workspaces_total * 100)
+                    if coverage.workspaces_total > 0
+                    else 0,
+                },
+                "events": {
+                    "total": coverage.events_total,
+                    "tested": len(coverage.events_covered),
+                    "coverage": (len(coverage.events_covered) / coverage.events_total * 100)
+                    if coverage.events_total > 0
+                    else 0,
+                },
+                "processes": {
+                    "total": coverage.processes_total,
+                    "tested": len(coverage.processes_covered),
+                    "coverage": (len(coverage.processes_covered) / coverage.processes_total * 100)
+                    if coverage.processes_total > 0
+                    else 0,
+                },
+            },
+            "dsl_hash": test_suite.dsl_hash,
+        }
+        typer.echo(json.dumps(result, indent=2))
+
+    elif format == "markdown":
+        # Markdown output for docs
+        typer.echo(f"# Test Coverage Report: {test_suite.project_name}")
+        typer.echo()
+        typer.echo(
+            f"**Overall Coverage:** {overall_pct:.1f}% ({tested_constructs}/{total_constructs} constructs)"
+        )
+        typer.echo(f"**Total Tests:** {len(test_suite.designs)}")
+        typer.echo()
+        typer.echo("## Coverage by Category")
+        typer.echo()
+        typer.echo("| Category | Total | Tested | Coverage |")
+        typer.echo("|----------|-------|--------|----------|")
+
+        rows = [
+            ("Entities", coverage.entities_total, len(coverage.entities_covered)),
+            ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
+            ("Personas", coverage.personas_total, len(coverage.personas_covered)),
+            ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
+            ("Events", coverage.events_total, len(coverage.events_covered)),
+            ("Processes", coverage.processes_total, len(coverage.processes_covered)),
+        ]
+
+        for name, total, tested in rows:
+            if total > 0:
+                pct = tested / total * 100
+                typer.echo(f"| {name} | {total} | {tested} | {pct:.1f}% |")
+
+        typer.echo()
+        typer.echo(f"*DSL Hash: `{test_suite.dsl_hash[:12]}`*")
+
+    else:
+        # Table output (default)
+        typer.secho(f"Test Coverage: {test_suite.project_name}", bold=True)
+        typer.echo()
+
+        # Overall bar
+        bar_width = 40
+        filled = int(overall_pct / 100 * bar_width)
+        bar = "█" * filled + "░" * (bar_width - filled)
+        color = (
+            typer.colors.GREEN
+            if overall_pct >= 80
+            else (typer.colors.YELLOW if overall_pct >= 50 else typer.colors.RED)
+        )
+        typer.echo(f"Overall: [{bar}] ", nl=False)
+        typer.secho(f"{overall_pct:.1f}%", fg=color)
+        typer.echo()
+
+        # Category breakdown
+        typer.echo("Category Breakdown:")
+        categories = [
+            ("Entities", coverage.entities_total, len(coverage.entities_covered)),
+            ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
+            ("Personas", coverage.personas_total, len(coverage.personas_covered)),
+            ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
+            ("Events", coverage.events_total, len(coverage.events_covered)),
+            ("Processes", coverage.processes_total, len(coverage.processes_covered)),
+        ]
+
+        for name, total, tested in categories:
+            if total > 0:
+                pct = tested / total * 100
+                color = (
+                    typer.colors.GREEN
+                    if pct >= 80
+                    else (typer.colors.YELLOW if pct >= 50 else typer.colors.RED)
+                )
+                typer.echo(f"  {name:18} ", nl=False)
+                typer.secho(f"{tested:3}/{total:3} ({pct:5.1f}%)", fg=color)
+
+        typer.echo()
+        typer.echo(f"Total tests: {len(test_suite.designs)}")
+        typer.echo(f"DSL hash: {test_suite.dsl_hash[:12]}")
+
+        # Detailed breakdown
+        if detailed:
+            typer.echo()
+            typer.secho("Detailed Coverage:", bold=True)
+
+            # By entity
+            typer.echo()
+            typer.echo("  Entities:")
+            entity_tests: dict[str, int] = {}
+            for design in test_suite.designs:
+                entities = design.get("entities", [])
+                for entity in entities:
+                    entity_tests[entity] = entity_tests.get(entity, 0) + 1
+
+            for entity_name in sorted(coverage.entities_covered):
+                count = entity_tests.get(entity_name, 0)
+                icon = "✓" if count > 0 else "✗"
+                color = typer.colors.GREEN if count > 0 else typer.colors.RED
+                typer.secho(f"    {icon} {entity_name}: {count} tests", fg=color)
+
+            # By persona
+            if coverage.personas_covered:
+                typer.echo()
+                typer.echo("  Personas:")
+                persona_tests: dict[str, int] = {}
+                for design in test_suite.designs:
+                    persona = design.get("persona")
+                    if persona:
+                        persona_tests[persona] = persona_tests.get(persona, 0) + 1
+
+                for persona_id in sorted(coverage.personas_covered):
+                    count = persona_tests.get(persona_id, 0)
+                    icon = "✓" if count > 0 else "✗"
+                    color = typer.colors.GREEN if count > 0 else typer.colors.RED
+                    typer.secho(f"    {icon} {persona_id}: {count} tests", fg=color)

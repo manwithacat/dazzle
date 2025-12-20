@@ -50,6 +50,14 @@ from .handlers.process import (
     propose_processes_handler,
     stories_coverage_handler,
 )
+
+# E2E testing handlers (v0.19.0)
+from .handlers.testing import (
+    check_test_infrastructure_handler,
+    get_e2e_test_coverage_handler,
+    list_e2e_flows_handler,
+    run_e2e_tests_handler,
+)
 from .state import (
     get_active_project_path,
     get_available_projects,
@@ -63,6 +71,8 @@ from .tool_handlers import (
     analyze_patterns,
     find_examples_handler,
     generate_demo_data_handler,
+    # DSL Test tools (v0.18.0)
+    generate_dsl_tests_handler,
     generate_service_dsl_handler,
     generate_story_stubs_handler,
     generate_tests_from_stories_handler,
@@ -73,6 +83,7 @@ from .tool_handlers import (
     get_demo_blueprint_handler,
     get_dnr_logs_handler,
     get_dsl_spec_handler,
+    get_dsl_test_coverage_handler,
     get_entities,
     get_env_vars_for_packs_handler,
     get_mcp_status_handler,
@@ -87,6 +98,7 @@ from .tool_handlers import (
     inspect_surface,
     lint_project,
     list_api_packs_handler,
+    list_dsl_tests_handler,
     list_modules,
     list_projects,
     lookup_concept_handler,
@@ -94,6 +106,7 @@ from .tool_handlers import (
     propose_demo_blueprint_handler,
     propose_persona_tests_handler,
     propose_stories_from_dsl_handler,
+    run_dsl_tests_handler,
     save_demo_blueprint_handler,
     save_runtime_coverage_handler,
     save_stories_handler,
@@ -161,6 +174,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = get_mcp_status_handler(arguments)
     elif name == "get_dnr_logs":
         result = get_dnr_logs_handler(arguments)
+
+    # Infrastructure check tool (no project context needed)
+    elif name == "check_test_infrastructure":
+        result = check_test_infrastructure_handler()
 
     # Feedback tools (always available, no project context needed)
     elif name == "add_feedback":
@@ -319,6 +336,15 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "get_sitespec",
         "validate_sitespec",
         "scaffold_site",
+        # DSL Test tools (v0.18.0)
+        "generate_dsl_tests",
+        "run_dsl_tests",
+        "get_dsl_test_coverage",
+        "list_dsl_tests",
+        # E2E Test tools (v0.19.0)
+        "run_e2e_tests",
+        "get_e2e_test_coverage",
+        "list_e2e_flows",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -365,6 +391,34 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 result = validate_sitespec_handler(project_path, arguments)
             elif name == "scaffold_site":
                 result = scaffold_site_handler(project_path, arguments)
+            # DSL Test tools (v0.18.0)
+            elif name == "generate_dsl_tests":
+                result = generate_dsl_tests_handler(project_path, arguments)
+            elif name == "run_dsl_tests":
+                result = run_dsl_tests_handler(project_path, arguments)
+            elif name == "get_dsl_test_coverage":
+                result = get_dsl_test_coverage_handler(project_path, arguments)
+            elif name == "list_dsl_tests":
+                result = list_dsl_tests_handler(project_path, arguments)
+            # E2E Test tools (v0.19.0)
+            elif name == "run_e2e_tests":
+                result = run_e2e_tests_handler(
+                    project_path=str(project_path),
+                    priority=arguments.get("priority"),
+                    tag=arguments.get("tag"),
+                    headless=arguments.get("headless", True),
+                )
+            elif name == "get_e2e_test_coverage":
+                result = get_e2e_test_coverage_handler(
+                    project_path=str(project_path),
+                )
+            elif name == "list_e2e_flows":
+                result = list_e2e_flows_handler(
+                    project_path=str(project_path),
+                    priority=arguments.get("priority"),
+                    tag=arguments.get("tag"),
+                    limit=arguments.get("limit", 20),
+                )
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
     else:
