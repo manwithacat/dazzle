@@ -1558,6 +1558,16 @@ def test_agent(
         "--model",
         help="LLM model to use (default: claude-sonnet-4-20250514)",
     ),
+    report: bool = typer.Option(
+        True,
+        "--report/--no-report",
+        help="Generate HTML coverage report",
+    ),
+    report_dir: str = typer.Option(
+        None,
+        "--report-dir",
+        help="Directory for reports (default: dsl/tests/reports)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """
@@ -1580,7 +1590,7 @@ def test_agent(
         typer.echo(f"Manifest not found: {manifest_path}", err=True)
         raise typer.Exit(code=1)
 
-    root = manifest_path.parent
+    root = manifest_path.parent.resolve()
 
     try:
         from dazzle.testing.agent_e2e import run_agent_tests
@@ -1620,6 +1630,15 @@ def test_agent(
 
         typer.echo()
         typer.secho(f"Results: {passed}/{len(results)} passed", bold=True)
+
+        # Generate HTML report
+        if report and results:
+            from dazzle.testing.agent_e2e import generate_html_report
+
+            output_dir = Path(report_dir) if report_dir else root / "dsl" / "tests" / "reports"
+            report_path = generate_html_report(results, root.name, output_dir)
+            typer.echo()
+            typer.secho(f"Report: {report_path}", fg=typer.colors.CYAN)
 
         if failed > 0:
             raise typer.Exit(code=1)

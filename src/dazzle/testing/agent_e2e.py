@@ -124,6 +124,10 @@ class AgentStep:
     result: str = ""
     error: str | None = None
     duration_ms: float = 0.0
+    # For coverage report
+    prompt: str = ""
+    response: str = ""
+    step_number: int = 0
 
 
 @dataclass
@@ -367,7 +371,11 @@ class E2EAgent:
             try:
                 import anthropic
 
-                self._client = anthropic.Anthropic(api_key=self.api_key)
+                # Only pass api_key if explicitly provided, otherwise use env var
+                if self.api_key:
+                    self._client = anthropic.Anthropic(api_key=self.api_key)
+                else:
+                    self._client = anthropic.Anthropic()
             except ImportError:
                 raise RuntimeError(
                     "anthropic package required for agent E2E tests. "
@@ -423,7 +431,7 @@ class E2EAgent:
 
             # Get action from LLM
             try:
-                action = await self._get_action(system, state, steps)
+                action, prompt_text, response_text = await self._get_action(system, state, steps)
             except Exception as e:
                 return AgentTestResult(
                     test_id=test_id,
@@ -442,6 +450,9 @@ class E2EAgent:
                 result=result,
                 error=error,
                 duration_ms=(datetime.now() - step_start).total_seconds() * 1000,
+                prompt=prompt_text,
+                response=response_text,
+                step_number=step_num + 1,
             )
             steps.append(step)
 
@@ -510,16 +521,28 @@ You can respond with one of these actions in JSON format:
 4. Call "done" when the test goal is achieved or you determine it cannot be achieved
 5. Keep reasoning concise but informative
 
-Respond with ONLY valid JSON, no markdown or explanation outside the JSON."""
+## CRITICAL OUTPUT FORMAT
+You MUST respond with ONLY a single JSON object. No text before or after.
+Do NOT explain your thinking outside the JSON.
+Do NOT use markdown code blocks.
+Your entire response must be parseable as JSON.
+
+Example valid response:
+{{"action": "click", "target": "#submit-btn", "reasoning": "Submit the form"}}"""
 
     async def _get_action(
         self, system: str, state: PageState, history: list[AgentStep]
-    ) -> AgentAction:
-        """Get the next action from the LLM."""
+    ) -> tuple[AgentAction, str, str]:
+        """Get the next action from the LLM.
+
+        Returns:
+            Tuple of (action, prompt_text, response_text) for coverage report.
+        """
         # Build conversation messages
         messages = []
 
         # Add history context
+        history_text = ""
         if history:
             history_text = "## Previous Actions\n"
             for i, step in enumerate(history[-5:]):  # Last 5 steps
@@ -552,9 +575,16 @@ Respond with ONLY valid JSON, no markdown or explanation outside the JSON."""
             )
 
         # Add text description
-        content.append({"type": "text", "text": state.to_prompt()})
+        page_state_text = state.to_prompt()
+        content.append({"type": "text", "text": page_state_text})
 
         messages.append({"role": "user", "content": content})
+
+        # Build prompt text for report (without image data)
+        prompt_text = f"## System\n{system}\n\n"
+        if history_text:
+            prompt_text += f"{history_text}\n"
+        prompt_text += f"{page_state_text}"
 
         # Call LLM
         client = self._get_client()
@@ -567,7 +597,9 @@ Respond with ONLY valid JSON, no markdown or explanation outside the JSON."""
 
         # Parse response
         response_text = response.content[0].text.strip()
-        return self._parse_action(response_text)
+        action = self._parse_action(response_text)
+
+        return action, prompt_text, response_text
 
     def _parse_action(self, response: str) -> AgentAction:
         """Parse the LLM response into an AgentAction."""
@@ -740,3 +772,340 @@ async def run_agent_tests(
 
     finally:
         runner.stop_server()
+
+
+# =============================================================================
+# HTML Coverage Report
+# =============================================================================
+
+
+def generate_html_report(
+    results: list[AgentTestResult],
+    project_name: str,
+    output_path: Path,
+) -> Path:
+    """
+    Generate an HTML coverage report for agent E2E tests.
+
+    Args:
+        results: List of test results
+        project_name: Name of the project
+        output_path: Directory to save the report
+
+    Returns:
+        Path to the generated HTML file
+    """
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Calculate summary stats
+    total = len(results)
+    passed = sum(1 for r in results if r.passed)
+    failed = total - passed
+    total_steps = sum(len(r.steps) for r in results)
+    total_duration = sum(r.duration_ms for r in results)
+
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Build HTML
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent E2E Test Report - {project_name}</title>
+    <style>
+        :root {{
+            --pass-color: #22c55e;
+            --fail-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-color: #1e293b;
+            --text-muted: #64748b;
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem;
+        }}
+        .container {{ max-width: 1400px; margin: 0 auto; }}
+        h1 {{ font-size: 1.75rem; margin-bottom: 0.5rem; }}
+        .timestamp {{ color: var(--text-muted); margin-bottom: 2rem; }}
+
+        /* Summary Cards */
+        .summary {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }}
+        .stat-card {{
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }}
+        .stat-value {{ font-size: 2rem; font-weight: bold; }}
+        .stat-label {{ color: var(--text-muted); font-size: 0.875rem; }}
+        .stat-pass {{ color: var(--pass-color); }}
+        .stat-fail {{ color: var(--fail-color); }}
+
+        /* Test Results */
+        .test-result {{
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }}
+        .test-header {{
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }}
+        .test-status {{
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }}
+        .test-status.pass {{ background: var(--pass-color); }}
+        .test-status.fail {{ background: var(--fail-color); }}
+        .test-title {{ font-weight: 600; flex: 1; }}
+        .test-meta {{ color: var(--text-muted); font-size: 0.875rem; }}
+        .test-error {{
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 0.875rem;
+        }}
+        .test-reasoning {{
+            background: #f0fdf4;
+            color: #166534;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }}
+
+        /* Steps */
+        .steps {{ padding: 1rem; }}
+        .step {{
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }}
+        .step-header {{
+            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+        }}
+        .step-header:hover {{ background: #f1f5f9; }}
+        .step-number {{
+            background: var(--text-color);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }}
+        .step-action {{ font-weight: 500; }}
+        .step-target {{ color: var(--text-muted); font-family: monospace; font-size: 0.875rem; }}
+        .step-duration {{ margin-left: auto; color: var(--text-muted); font-size: 0.875rem; }}
+        .step-error-badge {{
+            background: var(--fail-color);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }}
+        .step-content {{ display: none; padding: 1rem; border-top: 1px solid var(--border-color); }}
+        .step.expanded .step-content {{ display: block; }}
+
+        /* Screenshot */
+        .screenshot {{
+            max-width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }}
+
+        /* Collapsible sections */
+        .collapsible {{
+            margin-bottom: 1rem;
+        }}
+        .collapsible-header {{
+            background: #f1f5f9;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }}
+        .collapsible-header:hover {{ background: #e2e8f0; }}
+        .collapsible-content {{
+            display: none;
+            padding: 1rem;
+            background: #f8fafc;
+            border-radius: 0 0 4px 4px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }}
+        .collapsible.expanded .collapsible-content {{ display: block; }}
+
+        /* Result/Error in step */
+        .step-result {{
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }}
+        .step-result.success {{ background: #f0fdf4; color: #166534; }}
+        .step-result.error {{ background: #fef2f2; color: #991b1b; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Agent E2E Test Report</h1>
+        <p class="timestamp">{project_name} • {timestamp}</p>
+
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-value">{total}</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-pass">{passed}</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-fail">{failed}</div>
+                <div class="stat-label">Failed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{total_steps}</div>
+                <div class="stat-label">Total Steps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{total_duration / 1000:.1f}s</div>
+                <div class="stat-label">Duration</div>
+            </div>
+        </div>
+"""
+
+    # Add each test result
+    for result in results:
+        status_class = "pass" if result.passed else "fail"
+        html += f"""
+        <div class="test-result">
+            <div class="test-header">
+                <div class="test-status {status_class}"></div>
+                <span class="test-title">{result.test_id}</span>
+                <span class="test-meta">{len(result.steps)} steps • {result.duration_ms / 1000:.1f}s</span>
+            </div>
+"""
+
+        if result.error:
+            html += f'            <div class="test-error">{_escape_html(result.error)}</div>\n'
+
+        if result.reasoning and result.passed:
+            html += (
+                f'            <div class="test-reasoning">{_escape_html(result.reasoning)}</div>\n'
+            )
+
+        html += '            <div class="steps">\n'
+
+        # Add each step
+        for step in result.steps:
+            action_text = step.action.type.value
+            target_text = step.action.target or ""
+            error_badge = '<span class="step-error-badge">ERROR</span>' if step.error else ""
+
+            html += f"""
+                <div class="step" onclick="this.classList.toggle('expanded')">
+                    <div class="step-header">
+                        <span class="step-number">{step.step_number}</span>
+                        <span class="step-action">{action_text}</span>
+                        <span class="step-target">{_escape_html(target_text[:50])}</span>
+                        {error_badge}
+                        <span class="step-duration">{step.duration_ms:.0f}ms</span>
+                    </div>
+                    <div class="step-content">
+"""
+
+            # Screenshot
+            if step.state.screenshot_b64:
+                html += f'                        <img class="screenshot" src="data:image/png;base64,{step.state.screenshot_b64}" alt="Step {step.step_number} screenshot">\n'
+
+            # Prompt (collapsible)
+            if step.prompt:
+                html += f"""
+                        <div class="collapsible" onclick="event.stopPropagation(); this.classList.toggle('expanded')">
+                            <div class="collapsible-header">📝 Prompt</div>
+                            <div class="collapsible-content">{_escape_html(step.prompt)}</div>
+                        </div>
+"""
+
+            # Response (collapsible)
+            if step.response:
+                html += f"""
+                        <div class="collapsible" onclick="event.stopPropagation(); this.classList.toggle('expanded')">
+                            <div class="collapsible-header">🤖 Response</div>
+                            <div class="collapsible-content">{_escape_html(step.response)}</div>
+                        </div>
+"""
+
+            # Result or error
+            if step.result:
+                html += f'                        <div class="step-result success">✓ {_escape_html(step.result)}</div>\n'
+            if step.error:
+                html += f'                        <div class="step-result error">✗ {_escape_html(step.error)}</div>\n'
+
+            html += """
+                    </div>
+                </div>
+"""
+
+        html += "            </div>\n"  # Close steps
+        html += "        </div>\n"  # Close test-result
+
+    html += """
+    </div>
+</body>
+</html>
+"""
+
+    # Write to file
+    report_file = output_path / f"agent_e2e_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
+    report_file.write_text(html)
+
+    return report_file
+
+
+def _escape_html(text: str) -> str:
+    """Escape HTML special characters."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
