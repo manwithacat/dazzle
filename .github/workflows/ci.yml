@@ -338,10 +338,16 @@ jobs:
         cd examples/${{ matrix.example }}
         python -m dazzle test list || echo "Note: Test list not yet implemented"
 
+    - name: Cleanup stale Docker containers
+      run: |
+        # Remove any stale dazzle containers from previous runs
+        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
+
     - name: Start DNR server in test mode
       run: |
         cd examples/${{ matrix.example }}
-        python -m dazzle dnr serve --test-mode &
+        python -m dazzle dnr serve --test-mode --local &
         # Wait for server to be ready
         for i in {1..30}; do
           if curl -s http://localhost:8000/health > /dev/null 2>&1; then
@@ -377,6 +383,9 @@ jobs:
       if: always()
       run: |
         pkill -f "dazzle dnr serve" || true
+        # Stop any Docker containers that may have been started
+        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
 
   # Additional examples (P1/P2 priority - warning only)
   example-e2e-extended:
@@ -424,10 +433,17 @@ jobs:
         python -m dazzle validate || echo "Note: Validation issues found (P1/P2 example)"
         python -m dazzle test generate -o testspec.json || echo "Note: Test generation incomplete"
 
+    - name: Cleanup stale Docker containers
+      run: |
+        # Remove any stale dazzle containers from previous runs
+        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
+        docker network prune -f 2>/dev/null || true
+
     - name: Start server and run tests
       run: |
         cd examples/${{ matrix.example }}
-        python -m dazzle dnr serve --test-mode &
+        python -m dazzle dnr serve --test-mode --local &
         sleep 5
         # P1/P2 examples - test failures are informational only
         python -m dazzle test run --priority ${{ matrix.priority }} --verbose || echo "Note: Some tests did not pass (P1/P2 example - expected during development)"
@@ -436,7 +452,11 @@ jobs:
     - name: Cleanup
       if: always()
       run: |
+        # Kill local server process
         pkill -f "dazzle dnr serve" || true
+        # Stop any Docker containers
+        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
+        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
 
   # Homebrew formula validation - ensures formula is syntactically correct
   # and version numbers are consistent across all files
