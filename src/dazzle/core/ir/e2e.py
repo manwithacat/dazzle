@@ -105,6 +105,7 @@ class FlowStep(BaseModel):
         fixture_ref: Reference to fixture for dynamic values
         assertion: For assert steps, the assertion to check
         description: Optional human-readable description
+        field_type: For fill steps, the field type (str, int, bool, enum, etc.)
     """
 
     kind: FlowStepKind
@@ -113,6 +114,7 @@ class FlowStep(BaseModel):
     fixture_ref: str | None = None  # Reference to fixture data
     assertion: FlowAssertion | None = None  # For assert steps
     description: str | None = None  # Human-readable step description
+    field_type: str | None = None  # For fill steps: str, int, bool, enum, ref, etc.
 
     model_config = ConfigDict(frozen=True)
 

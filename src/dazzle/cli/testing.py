@@ -17,7 +17,7 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
 test_app = typer.Typer(
-    help="Semantic E2E testing commands for Dazzle applications.",
+    help="Testing commands for Dazzle apps. Tier 1: 'dsl-run' (API). Tier 2: 'playwright' (scripted UI). Tier 3: 'agent' (LLM-powered).",
     no_args_is_help=True,
 )
 
@@ -480,6 +480,7 @@ def _execute_step_sync(
         else:
             url = step.target or adapter.base_url
         page.goto(url)
+        page.wait_for_load_state("networkidle")
 
     elif step.kind == FlowStepKind.FILL:
         if not step.target:
@@ -487,13 +488,27 @@ def _execute_step_sync(
         # Build selector from semantic target
         selector = _build_selector(step.target)
         value = _resolve_step_value(step, fixtures)
-        page.locator(selector).fill(str(value))
+
+        # Use appropriate method based on field type
+        field_type = getattr(step, "field_type", None)
+        if field_type in ("enum", "ref"):
+            # Select/dropdown fields use select_option
+            page.locator(selector).select_option(str(value))
+        elif field_type == "bool":
+            # Checkbox fields use set_checked
+            page.locator(selector).set_checked(bool(value))
+        else:
+            # Text/number/other fields use fill
+            page.locator(selector).fill(str(value))
 
     elif step.kind == FlowStepKind.CLICK:
         if not step.target:
             raise ValueError("Click step requires target")
         selector = _build_selector(step.target)
-        page.locator(selector).click()
+        # Use .first to handle multiple matches (e.g., header button + form button)
+        page.locator(selector).first.click()
+        # Wait for any navigation or network activity to settle
+        page.wait_for_load_state("networkidle")
 
     elif step.kind == FlowStepKind.WAIT:
         if step.value:
@@ -527,6 +542,16 @@ def _build_selector(target: str) -> str:
         return f'[data-dazzle-field="{field_id}"]'
     elif target.startswith("action:"):
         action_id = target.split(":", 1)[1]
+        # For save/create/update/submit actions, use a flexible selector
+        if "." in action_id:
+            entity, action = action_id.split(".", 1)
+            if action in ("save", "create", "submit"):
+                # Try multiple selectors: full name, entity.create, or action-role
+                return f'[data-dazzle-action="{action_id}"], [data-dazzle-action="{entity}.create"], [data-dazzle-action-role="primary"]'
+            if action == "update":
+                # Update forms use Entity.update action
+                return f'[data-dazzle-action="{action_id}"], [data-dazzle-action-role="primary"]'
+            return f'[data-dazzle-action="{action_id}"], [data-dazzle-action="{action}"]'
         return f'[data-dazzle-action="{action_id}"]'
     elif target.startswith("entity:"):
         entity_name = target.split(":", 1)[1]
@@ -1199,6 +1224,80 @@ def dsl_generate(
     typer.secho(f"Tests saved to {output_file}", fg=typer.colors.GREEN)
 
 
+@test_app.command("tier2-generate")
+def tier2_generate(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    output: str = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output directory for generated tests (default: tests/e2e)",
+    ),
+    scenario: str = typer.Option(
+        None,
+        "--scenario",
+        "-s",
+        help="Default scenario to use for state setup",
+    ),
+) -> None:
+    """
+    [TIER 2] Generate Playwright tests from DSL surfaces.
+
+    This command analyzes your DSL surfaces and generates deterministic
+    Playwright test scripts using the semantic DOM contract (data-dazzle-*
+    attributes) for reliable element selection.
+
+    Unlike Tier 1 API tests, these tests run in a browser and verify the
+    full UI interaction flow. Unlike Tier 3 agent tests, these are scripted
+    and don't use LLM interpretation.
+
+    Generated tests:
+    - CRUD flows for surfaces (create, edit, view, list modes)
+    - Delete confirmation flows
+    - Scenario-based state setup via Dazzle Bar
+
+    Selectors use data-dazzle-* attributes:
+    - data-dazzle-view="surface_name"
+    - data-dazzle-field="field_name"
+    - data-dazzle-action="Entity.action"
+    - data-dazzle-table="EntityName"
+    - data-dazzle-row="row_id"
+
+    Examples:
+        dazzle test tier2-generate                    # Generate to tests/e2e
+        dazzle test tier2-generate -o my-tests        # Custom output directory
+        dazzle test tier2-generate -s active_tickets  # Use specific scenario
+    """
+    try:
+        from dazzle.testing.tier2_playwright import generate_tier2_tests_for_app
+    except ImportError as e:
+        typer.echo(f"Tier 2 testing module not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Load AppSpec
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    # Determine output directory
+    output_dir = Path(output) if output else None
+
+    typer.echo(f"Generating Tier 2 Playwright tests from DSL in {root}...")
+
+    try:
+        output_file = generate_tier2_tests_for_app(root, output_dir, scenario)
+        typer.secho(f"Tier 2 tests generated: {output_file}", fg=typer.colors.GREEN)
+        typer.echo()
+        typer.echo("Run tests with:")
+        typer.echo(f"  pytest {output_file} -m tier2")
+    except Exception as e:
+        typer.echo(f"Error generating tests: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
 @test_app.command("dsl-run")
 def dsl_run(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
@@ -1222,14 +1321,15 @@ def dsl_run(
     ),
 ) -> None:
     """
-    Run DSL-driven tests against a DNR server.
+    [Tier 1] Run API-based tests against a DNR server.
 
-    This command starts the DNR server, runs all generated tests,
-    and reports the results. Tests are generated from your DSL
-    and cached for performance.
+    Fast, deterministic tests generated from your DSL. Use this for:
+    - CRUD operations (create, read, update, delete)
+    - Field validation
+    - API response checks
+    - State machine transitions
 
-    Use --regenerate to force regeneration when DSL changes.
-    Use --timeout to increase server startup timeout for large projects.
+    Tests are auto-generated and cached for performance. No browser required.
 
     Examples:
         dazzle test dsl-run                    # Run all tests
@@ -1571,16 +1671,21 @@ def test_agent(
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """
-    Run E2E tests using an LLM agent.
+    [Tier 3] Run E2E tests using an LLM agent.
 
-    The agent uses Claude to observe pages, decide actions, and verify outcomes.
-    This enables testing of complex UI flows that are difficult to script.
+    Adaptive tests powered by Claude. Use this for:
+    - Visual verification ("does this look right?")
+    - Exploratory testing
+    - Accessibility audits
+    - Testing unknown or dynamic UIs
+
+    Slower and costs API credits, but handles complexity that scripts cannot.
 
     Examples:
-        dazzle test agent                    # Run all E2E tests with visible browser
-        dazzle test agent --headless         # Run headless (faster but no visual)
+        dazzle test agent                    # Run with visible browser
+        dazzle test agent --headless         # Run headless (faster)
         dazzle test agent -t WS_MY_WORK_NAV  # Run specific test
-        dazzle test agent --model claude-3-haiku-20240307  # Use faster/cheaper model
+        dazzle test agent --no-report        # Skip HTML report generation
     """
     import asyncio
 

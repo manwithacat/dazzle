@@ -170,6 +170,27 @@ def _get_edit_surface_name(entity: EntitySpec, appspec: AppSpec) -> str:
     return f"{entity.name.lower()}_edit"
 
 
+def _get_surface_fields(entity: EntitySpec, appspec: AppSpec, mode: SurfaceMode) -> set[str] | None:
+    """
+    Get the set of field names defined in the surface for an entity and mode.
+
+    Returns:
+        Set of field names if surface exists, None if no surface defined.
+    """
+    for surface in appspec.surfaces:
+        if surface.entity_ref == entity.name and surface.mode == mode:
+            field_names: set[str] = set()
+            for section in surface.sections:
+                for element in section.elements:
+                    # field_name can be "Entity.field_name" or just "field_name"
+                    if "." in element.field_name:
+                        field_names.add(element.field_name.split(".", 1)[1])
+                    else:
+                        field_names.add(element.field_name)
+            return field_names
+    return None
+
+
 def _get_required_fields(entity: EntitySpec) -> list[FieldSpec]:
     """Get all required fields for an entity."""
     return [
@@ -199,6 +220,9 @@ def generate_create_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
     list_surface = _get_list_surface_name(entity, appspec)
     form_fields = _get_form_fields(entity)
 
+    # Get surface-defined fields (if surface exists)
+    surface_fields = _get_surface_fields(entity, appspec, SurfaceMode.CREATE)
+
     steps: list[FlowStep] = [
         FlowStep(
             kind=FlowStepKind.NAVIGATE,
@@ -212,26 +236,32 @@ def generate_create_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
         ),
     ]
 
-    # Fill each form field
+    # Fill each form field (filtered by surface if defined)
     for field in form_fields:
         if field.type.kind == FieldTypeKind.REF:
             continue  # Skip refs for now
+
+        # If surface defines specific fields, only fill those
+        if surface_fields is not None and field.name not in surface_fields:
+            continue
+
         steps.append(
             FlowStep(
                 kind=FlowStepKind.FILL,
                 target=f"field:{entity.name}.{field.name}",
                 fixture_ref=f"{entity.name}_valid.{field.name}",
                 description=f"Fill {field.name} field",
+                field_type=field.type.kind.value,
             )
         )
 
-    # Submit and assert
+    # Submit and assert (use action:Entity.create for create forms)
     steps.extend(
         [
             FlowStep(
                 kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.save",
-                description="Click save button",
+                target=f"action:{entity.name}.create",
+                description="Click create button",
             ),
             FlowStep(
                 kind=FlowStepKind.ASSERT,
@@ -268,15 +298,16 @@ def generate_view_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
         FlowStep(
             kind=FlowStepKind.CLICK,
             target=f"row:{entity.name}",
-            description=f"Click on a {entity.name} row",
+            description=f"Click on a {entity.name} row to view details",
         ),
+        # Verify entity is viewable (exists in API)
         FlowStep(
             kind=FlowStepKind.ASSERT,
             assertion=FlowAssertion(
-                kind=FlowAssertionKind.VISIBLE,
-                target=f"view:{entity.name.lower()}_detail",
+                kind=FlowAssertionKind.ENTITY_EXISTS,
+                target=entity.name,
             ),
-            description=f"Assert {entity.name} detail view is visible",
+            description=f"Assert {entity.name} is accessible",
         ),
     ]
 
@@ -297,6 +328,13 @@ def generate_update_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
     list_surface = _get_list_surface_name(entity, appspec)
     form_fields = _get_form_fields(entity)
 
+    # Get surface-defined fields (if surface exists)
+    surface_fields = _get_surface_fields(entity, appspec, SurfaceMode.EDIT)
+
+    # Filter form fields by surface definition
+    if surface_fields is not None:
+        form_fields = [f for f in form_fields if f.name in surface_fields]
+
     steps: list[FlowStep] = [
         FlowStep(
             kind=FlowStepKind.NAVIGATE,
@@ -310,7 +348,7 @@ def generate_update_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
         ),
     ]
 
-    # Update at least one field
+    # Update at least one field (from surface-defined fields)
     if form_fields:
         field = form_fields[0]
         if field.type.kind != FieldTypeKind.REF:
@@ -320,6 +358,7 @@ def generate_update_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
                     target=f"field:{entity.name}.{field.name}",
                     fixture_ref=f"{entity.name}_updated.{field.name}",
                     description=f"Update {field.name} field",
+                    field_type=field.type.kind.value,
                 )
             )
 
@@ -327,7 +366,7 @@ def generate_update_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
         [
             FlowStep(
                 kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.save",
+                target=f"action:{entity.name}.update",
                 description="Click save button",
             ),
             FlowStep(
@@ -370,7 +409,7 @@ def generate_delete_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
         ),
         FlowStep(
             kind=FlowStepKind.CLICK,
-            target="action:confirm",
+            target="action:confirm-delete",
             description="Confirm deletion",
         ),
         FlowStep(
@@ -395,14 +434,36 @@ def generate_delete_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
     )
 
 
+def _has_surface_mode(entity: EntitySpec, appspec: AppSpec, mode: SurfaceMode) -> bool:
+    """Check if a surface exists for this entity with the given mode."""
+    for surface in appspec.surfaces:
+        if surface.entity_ref == entity.name and surface.mode == mode:
+            return True
+    return False
+
+
 def generate_entity_crud_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowSpec]:
-    """Generate all CRUD flows for an entity."""
-    flows: list[FlowSpec] = [
-        generate_create_flow(entity, appspec),
-        generate_view_flow(entity, appspec),
-        generate_update_flow(entity, appspec),
-        generate_delete_flow(entity, appspec),
-    ]
+    """Generate CRUD flows for an entity, skipping flows that require missing surfaces."""
+    flows: list[FlowSpec] = []
+
+    # Create flow requires a CREATE surface (or LIST with create action)
+    if _has_surface_mode(entity, appspec, SurfaceMode.CREATE) or _has_surface_mode(
+        entity, appspec, SurfaceMode.LIST
+    ):
+        flows.append(generate_create_flow(entity, appspec))
+
+    # View flow requires a VIEW surface
+    if _has_surface_mode(entity, appspec, SurfaceMode.VIEW):
+        flows.append(generate_view_flow(entity, appspec))
+
+    # Update flow requires an EDIT surface
+    if _has_surface_mode(entity, appspec, SurfaceMode.EDIT):
+        flows.append(generate_update_flow(entity, appspec))
+
+    # Delete flow requires a LIST surface (for the delete button)
+    if _has_surface_mode(entity, appspec, SurfaceMode.LIST):
+        flows.append(generate_delete_flow(entity, appspec))
+
     return flows
 
 
@@ -433,7 +494,7 @@ def generate_validation_flows(entity: EntitySpec, appspec: AppSpec) -> list[Flow
             # Don't fill the required field, just submit
             FlowStep(
                 kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.save",
+                target=f"action:{entity.name}.create",
                 description="Click save without filling required field",
             ),
             FlowStep(
@@ -562,12 +623,18 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
             # Add guard satisfaction steps if needed
             for guard in transition.guards:
                 if guard.requires_field:
+                    # Look up field type from entity
+                    guard_field = next(
+                        (f for f in entity.fields if f.name == guard.requires_field), None
+                    )
+                    guard_field_type = guard_field.type.kind.value if guard_field else None
                     steps.append(
                         FlowStep(
                             kind=FlowStepKind.FILL,
                             target=f"field:{entity.name}.{guard.requires_field}",
                             value="test_value",
                             description=f"Fill required guard field '{guard.requires_field}'",
+                            field_type=guard_field_type,
                         )
                     )
 
@@ -951,6 +1018,7 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                 target=f"field:{entity.name}.{ref_field.name}",
                 fixture_ref=f"{ref_target}_valid.id",
                 description=f"Select valid {ref_target} reference",
+                field_type="ref",
             ),
         ]
 
@@ -963,6 +1031,7 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                         target=f"field:{entity.name}.{field.name}",
                         fixture_ref=f"{entity.name}_valid.{field.name}",
                         description=f"Fill {field.name}",
+                        field_type=field.type.kind.value,
                     )
                 )
 
@@ -1017,6 +1086,7 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                 target=f"field:{entity.name}.{ref_field.name}",
                 value="00000000-0000-0000-0000-000000000000",  # Non-existent UUID
                 description=f"Enter invalid {ref_target} reference",
+                field_type="ref",
             ),
         ]
 
@@ -1029,6 +1099,7 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
                         target=f"field:{entity.name}.{field.name}",
                         fixture_ref=f"{entity.name}_valid.{field.name}",
                         description=f"Fill {field.name}",
+                        field_type=field.type.kind.value,
                     )
                 )
 

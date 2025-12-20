@@ -200,7 +200,12 @@ class E2ERunner:
             return False
 
         # Wait for server to be ready
+        import re
+
         start_time = time.time()
+        backend_ready = False
+        frontend_ready = False
+
         while time.time() - start_time < timeout:
             if self._server_process.poll() is not None:
                 # Server exited prematurely
@@ -209,16 +214,31 @@ class E2ERunner:
             try:
                 if self._server_process.stdout:
                     line = self._server_process.stdout.readline().decode()
-                    if "API Port:" in line:
-                        self.api_port = int(line.split()[-1])
-                    elif "Backend:" in line and "http://" in line:
-                        import re
 
+                    # Parse port allocation message: "  UI:  3393"
+                    if "UI:" in line and "http" not in line:
+                        match = re.search(r"UI:\s*(\d+)", line)
+                        if match:
+                            self.ui_port = int(match.group(1))
+                    elif "API:" in line and "http" not in line:
+                        match = re.search(r"API:\s*(\d+)", line)
+                        if match:
+                            self.api_port = int(match.group(1))
+
+                    # Also check the [DNR] output lines
+                    if "Backend:" in line and "http://" in line:
                         match = re.search(r":(\d+)", line)
                         if match:
                             self.api_port = int(match.group(1))
-                    elif "Press Ctrl+C" in line or "Frontend:" in line:
-                        # Server is ready
+                        backend_ready = True
+                    elif "Frontend:" in line and "http://" in line:
+                        match = re.search(r":(\d+)", line)
+                        if match:
+                            self.ui_port = int(match.group(1))
+                        frontend_ready = True
+
+                    # Server is ready when we see the Ctrl+C message or both backend/frontend
+                    if "Press Ctrl+C" in line or (backend_ready and frontend_ready):
                         time.sleep(1)  # Give it a moment to fully initialize
                         return True
             except Exception:
@@ -331,12 +351,48 @@ class E2ERunner:
                 self.api_url = api_url
 
             def reset_sync(self) -> None:
-                """Reset test data (no-op for now)."""
-                pass
+                """Reset test data by calling /__test__/reset endpoint."""
+                import urllib.request
+
+                try:
+                    url = f"{self.api_url}/__test__/reset"
+                    req = urllib.request.Request(url, method="POST", data=b"")
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        response.read()
+                except Exception as e:
+                    # Log but don't fail - test mode might not be enabled
+                    print(f"Warning: Could not reset test data: {e}")
 
             def seed_sync(self, fixtures: list) -> None:
-                """Seed fixtures (no-op for now)."""
-                pass
+                """Seed fixtures by calling /__test__/seed endpoint."""
+                import urllib.request
+
+                if not fixtures:
+                    return
+
+                try:
+                    seed_data = {
+                        "fixtures": [
+                            {
+                                "id": f.id,
+                                "entity": f.entity,
+                                "data": dict(f.data),
+                            }
+                            for f in fixtures
+                        ]
+                    }
+                    url = f"{self.api_url}/__test__/seed"
+                    req = urllib.request.Request(
+                        url,
+                        method="POST",
+                        data=json.dumps(seed_data).encode(),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    with urllib.request.urlopen(req, timeout=10) as response:
+                        response.read()
+                except Exception as e:
+                    # Log but don't fail - test mode might not be enabled
+                    print(f"Warning: Could not seed fixtures: {e}")
 
             def authenticate_sync(self, role: str | None = None) -> None:
                 """Authenticate (no-op for now)."""
@@ -355,12 +411,20 @@ class E2ERunner:
                 import urllib.request
 
                 try:
-                    url = f"{self.api_url}/api/{entity_name.lower()}s"
+                    # DNR API routes are at /{entity}s, not /api/{entity}s
+                    url = f"{self.api_url}/{entity_name.lower()}s"
                     with urllib.request.urlopen(url, timeout=5) as response:
                         data = json.loads(response.read().decode())
                         if isinstance(data, list):
                             return len(data)
-                        return data.get("count", 0)
+                        # Paginated response: {"items": [...], "total": N, ...}
+                        if isinstance(data, dict):
+                            if "total" in data:
+                                return data["total"]
+                            if "items" in data:
+                                return len(data["items"])
+                            return data.get("count", 0)
+                        return 0
                 except Exception:
                     return 0
 
@@ -380,6 +444,9 @@ class E2ERunner:
                 flow_result = E2EFlowResult(flow_id=flow.id, status="passed")
 
                 try:
+                    # Reset database before each flow for isolation
+                    adapter.reset_sync()
+
                     # Apply preconditions
                     if flow.preconditions:
                         if flow.preconditions.fixtures:

@@ -91,6 +91,12 @@ def task_surfaces() -> list[SurfaceSpec]:
             mode=SurfaceMode.LIST,
         ),
         SurfaceSpec(
+            name="task_detail",
+            title="Task Detail",
+            entity_ref="Task",
+            mode=SurfaceMode.VIEW,
+        ),
+        SurfaceSpec(
             name="task_create",
             title="Create Task",
             entity_ref="Task",

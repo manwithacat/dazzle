@@ -79,6 +79,14 @@ from dazzle.testing.test_runner import (
     run_project_tests,
 )
 from dazzle.testing.testspec_generator import generate_e2e_testspec
+from dazzle.testing.tier2_playwright import (
+    DazzleSelector,
+    PlaywrightStep,
+    PlaywrightTest,
+    generate_tier2_test_file,
+    generate_tier2_tests,
+    generate_tier2_tests_for_app,
+)
 from dazzle.testing.unified_runner import (
     UnifiedTestResult,
     UnifiedTestRunner,
@@ -124,4 +132,11 @@ __all__ = [
     "E2ERunResult",
     "E2EFlowResult",
     "format_e2e_report",
+    # Tier 2 Playwright Generator
+    "DazzleSelector",
+    "PlaywrightStep",
+    "PlaywrightTest",
+    "generate_tier2_tests",
+    "generate_tier2_test_file",
+    "generate_tier2_tests_for_app",
 ]
