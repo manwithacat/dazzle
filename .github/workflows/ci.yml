@@ -366,7 +366,8 @@ jobs:
       run: |
         cd examples/${{ matrix.example }}
         # Suppress exit code - E2E infrastructure is experimental
-        python -m dazzle test run --priority ${{ matrix.priority }} --verbose || echo "Note: Some E2E tests did not pass (expected during development)"
+        # Use --no-auto-server since we started the server above
+        python -m dazzle test run --no-auto-server --priority ${{ matrix.priority }} --verbose || echo "Note: Some E2E tests did not pass (expected during development)"
       timeout-minutes: 5
 
     - name: Upload test artifacts on failure
@@ -446,7 +447,8 @@ jobs:
         python -m dazzle dnr serve --test-mode --local &
         sleep 5
         # P1/P2 examples - test failures are informational only
-        python -m dazzle test run --priority ${{ matrix.priority }} --verbose || echo "Note: Some tests did not pass (P1/P2 example - expected during development)"
+        # Use --no-auto-server since we started the server above
+        python -m dazzle test run --no-auto-server --priority ${{ matrix.priority }} --verbose || echo "Note: Some tests did not pass (P1/P2 example - expected during development)"
       timeout-minutes: 5
 
     - name: Cleanup
