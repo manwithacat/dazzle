@@ -693,6 +693,37 @@ Example valid response:
 # =============================================================================
 
 
+def _load_env_file(project_path: Path) -> None:
+    """Load environment variables from .env file if present."""
+    import os
+
+    # Try project-level .env first, then parent directories up to repo root
+    search_paths = [project_path / ".env"]
+
+    # Walk up to find repo root (has .git or dazzle.toml)
+    current = project_path
+    while current != current.parent:
+        if (current / ".git").exists() or (current / "dazzle.toml").exists():
+            search_paths.append(current / ".env")
+            break
+        current = current.parent
+
+    for env_path in search_paths:
+        if env_path.exists():
+            logger.debug(f"Loading environment from {env_path}")
+            with open(env_path) as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, _, value = line.partition("=")
+                        key = key.strip()
+                        value = value.strip()
+                        # Only set if not already in environment
+                        if key not in os.environ:
+                            os.environ[key] = value
+            break
+
+
 async def run_agent_tests(
     project_path: Path,
     test_ids: list[str] | None = None,
@@ -711,6 +742,9 @@ async def run_agent_tests(
     Returns:
         List of test results
     """
+    # Load .env file if present
+    _load_env_file(project_path)
+
     try:
         from playwright.async_api import async_playwright
     except ImportError:
