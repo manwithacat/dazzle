@@ -56,6 +56,7 @@ from .handlers.testing import (
     check_test_infrastructure_handler,
     get_e2e_test_coverage_handler,
     list_e2e_flows_handler,
+    run_agent_e2e_tests_handler,
     run_e2e_tests_handler,
 )
 from .state import (
@@ -343,6 +344,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "list_dsl_tests",
         # E2E Test tools (v0.19.0)
         "run_e2e_tests",
+        "run_agent_e2e_tests",
         "get_e2e_test_coverage",
         "list_e2e_flows",
     ):
@@ -407,6 +409,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                     priority=arguments.get("priority"),
                     tag=arguments.get("tag"),
                     headless=arguments.get("headless", True),
+                )
+            elif name == "run_agent_e2e_tests":
+                result = run_agent_e2e_tests_handler(
+                    project_path=str(project_path),
+                    test_id=arguments.get("test_id"),
+                    headless=arguments.get("headless", True),
+                    model=arguments.get("model"),
                 )
             elif name == "get_e2e_test_coverage":
                 result = get_e2e_test_coverage_handler(

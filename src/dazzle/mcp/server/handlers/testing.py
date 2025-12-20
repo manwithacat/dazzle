@@ -466,3 +466,122 @@ def list_e2e_flows_handler(
                 "error": str(e),
             }
         )
+
+
+def run_agent_e2e_tests_handler(
+    project_path: str | None = None,
+    test_id: str | None = None,
+    headless: bool = True,
+    model: str | None = None,
+) -> str:
+    """
+    Run E2E tests using an LLM agent.
+
+    The agent uses Claude to observe pages, decide actions, and verify outcomes.
+    This enables testing of complex UI flows that require visual understanding.
+
+    Args:
+        project_path: Optional path to project (uses active project if not specified)
+        test_id: Specific test ID to run (default: all E2E tests)
+        headless: Run browser in headless mode (default: True)
+        model: LLM model to use (default: claude-sonnet-4-20250514)
+
+    Returns:
+        JSON string with test results including:
+        - status: overall pass/fail
+        - results: list of test results with steps and reasoning
+        - duration_seconds: total execution time
+    """
+    import asyncio
+
+    try:
+        # Resolve project path
+        root: Path
+        if project_path:
+            root = Path(project_path)
+        else:
+            active = get_active_project_path()
+            if active:
+                root = active
+            else:
+                project = get_project_root()
+                if project:
+                    root = project
+                else:
+                    return json.dumps(
+                        {
+                            "error": "No project path specified and no active project set",
+                            "status": "error",
+                        }
+                    )
+
+        # Import agent runner
+        from dazzle.testing.agent_e2e import run_agent_tests
+
+        test_ids = [test_id] if test_id else None
+
+        # Run tests
+        results = asyncio.run(
+            run_agent_tests(
+                project_path=root,
+                test_ids=test_ids,
+                headless=headless,
+                model=model,
+            )
+        )
+
+        if not results:
+            return json.dumps(
+                {
+                    "status": "skipped",
+                    "message": "No E2E tests found to run",
+                    "project": root.name,
+                }
+            )
+
+        # Format response
+        passed = sum(1 for r in results if r.passed)
+        failed = len(results) - passed
+
+        result_list = []
+        for r in results:
+            result_list.append(
+                {
+                    "test_id": r.test_id,
+                    "passed": r.passed,
+                    "steps": len(r.steps),
+                    "duration_ms": r.duration_ms,
+                    "reasoning": r.reasoning,
+                    "error": r.error,
+                }
+            )
+
+        return json.dumps(
+            {
+                "status": "passed" if failed == 0 else "failed",
+                "project": root.name,
+                "total": len(results),
+                "passed": passed,
+                "failed": failed,
+                "success_rate": round(passed / len(results) * 100, 1) if results else 0,
+                "results": result_list,
+            },
+            indent=2,
+        )
+
+    except ImportError as e:
+        return json.dumps(
+            {
+                "status": "error",
+                "error": str(e),
+                "hint": "pip install playwright anthropic && playwright install chromium",
+            }
+        )
+    except Exception as e:
+        logger.exception("Error running agent E2E tests")
+        return json.dumps(
+            {
+                "error": str(e),
+                "status": "error",
+            }
+        )

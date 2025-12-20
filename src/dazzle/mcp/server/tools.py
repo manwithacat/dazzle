@@ -1390,6 +1390,45 @@ Returns test results with pass/fail counts and any error details.""",
             },
         ),
         Tool(
+            name="run_agent_e2e_tests",
+            description="""Run E2E tests using an LLM agent.
+
+The agent uses Claude to observe pages, decide actions, and verify outcomes.
+This enables testing of complex UI flows that require visual understanding.
+
+Unlike scripted tests, the agent:
+1. Takes a screenshot of the current page
+2. Analyzes visible elements and their state
+3. Decides what action to take based on test goals
+4. Verifies outcomes visually
+
+PREREQUISITE: Requires both Playwright AND an Anthropic API key.
+
+Install with: pip install playwright anthropic && playwright install chromium
+Set ANTHROPIC_API_KEY environment variable.
+
+Best for: Navigation tests, complex workflows, visual verification.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "test_id": {
+                        "type": "string",
+                        "description": "Specific test ID to run (default: all E2E tests)",
+                    },
+                    "headless": {
+                        "type": "boolean",
+                        "description": "Run browser in headless mode (default: true). Use false to see the browser.",
+                    },
+                    "model": {
+                        "type": "string",
+                        "description": "LLM model to use (default: claude-sonnet-4-20250514)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
             name="get_e2e_test_coverage",
             description="""Get E2E test coverage report.
 
