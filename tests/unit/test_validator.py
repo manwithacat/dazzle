@@ -3,7 +3,11 @@ Unit tests for the semantic validator module.
 
 Tests validation of entities, surfaces, experiences, services, and UX specs
 for semantic correctness.
+
+Refactored to use helper functions and parameterization where applicable.
 """
+
+import pytest
 
 from dazzle.core import ir
 from dazzle.core.validator import (
@@ -17,6 +21,57 @@ from dazzle.core.validator import (
 )
 
 # =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+def make_id_field() -> ir.FieldSpec:
+    """Create a standard UUID primary key field."""
+    return ir.FieldSpec(
+        name="id",
+        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+        modifiers=[ir.FieldModifier.PK],
+    )
+
+
+def make_entity(
+    name: str = "Task",
+    title: str | None = "A task item",
+    fields: list[ir.FieldSpec] | None = None,
+    constraints: list[ir.Constraint] | None = None,
+) -> ir.EntitySpec:
+    """Create an entity with sensible defaults."""
+    if fields is None:
+        fields = [make_id_field()]
+    return ir.EntitySpec(
+        name=name,
+        title=title,
+        fields=fields,
+        constraints=constraints or [],
+    )
+
+
+def make_appspec(
+    entities: list[ir.EntitySpec] | None = None,
+    surfaces: list[ir.SurfaceSpec] | None = None,
+    experiences: list[ir.ExperienceSpec] | None = None,
+    apis: list[ir.APISpec] | None = None,
+    foreign_models: list[ir.ForeignModelSpec] | None = None,
+    integrations: list[ir.IntegrationSpec] | None = None,
+) -> ir.AppSpec:
+    """Create an AppSpec with sensible defaults."""
+    return ir.AppSpec(
+        name="Test",
+        domain=ir.DomainSpec(entities=entities or []),
+        surfaces=surfaces or [],
+        experiences=experiences or [],
+        apis=apis or [],
+        foreign_models=foreign_models or [],
+        integrations=integrations or [],
+    )
+
+
+# =============================================================================
 # Entity Validation Tests
 # =============================================================================
 
@@ -26,64 +81,81 @@ class TestValidateEntities:
 
     def test_valid_entity(self) -> None:
         """Test validation of a valid entity."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="title",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
                     modifiers=[ir.FieldModifier.REQUIRED],
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert len(errors) == 0
         assert len(warnings) == 0
 
-    def test_missing_primary_key(self) -> None:
-        """Test detection of missing primary key."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
+    @pytest.mark.parametrize(
+        "extra_field,error_fragment",
+        [
+            # Missing primary key
+            (None, "no primary key"),
+            # Enum without values
+            (
+                ir.FieldSpec(
+                    name="status",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=[]),
+                ),
+                "enum type but no values",
+            ),
+            # Decimal missing precision
+            (
+                ir.FieldSpec(
+                    name="amount",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.DECIMAL),
+                ),
+                "missing precision/scale",
+            ),
+            # String missing max_length
+            (
+                ir.FieldSpec(
+                    name="title",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.STR),
+                ),
+                "no max_length",
+            ),
+        ],
+        ids=[
+            "missing_pk",
+            "enum_no_values",
+            "decimal_no_precision",
+            "string_no_max_length",
+        ],
+    )
+    def test_field_type_errors(self, extra_field: ir.FieldSpec | None, error_fragment: str) -> None:
+        """Test detection of various field type errors."""
+        if extra_field is None:
+            # Special case: no PK
+            fields = [
                 ir.FieldSpec(
                     name="title",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
+                )
+            ]
+        else:
+            fields = [make_id_field(), extra_field]
 
+        entity = make_entity(fields=fields)
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
-        assert any("no primary key" in e for e in errors)
+        assert any(error_fragment in e for e in errors)
 
     def test_duplicate_field_names(self) -> None:
         """Test detection of duplicate field names."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="title",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
@@ -92,277 +164,112 @@ class TestValidateEntities:
                     name="title",  # Duplicate
                     type=ir.FieldType(kind=ir.FieldTypeKind.TEXT),
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("duplicate field names" in e for e in errors)
-
-    def test_enum_without_values(self) -> None:
-        """Test detection of enum without values."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="status",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=[]),
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
-        errors, warnings = validate_entities(appspec)
-
-        assert any("enum type but no values" in e for e in errors)
-
-    def test_decimal_missing_precision(self) -> None:
-        """Test detection of decimal without precision/scale."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="amount",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.DECIMAL),  # No precision/scale
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
-        errors, warnings = validate_entities(appspec)
-
-        assert any("missing precision/scale" in e for e in errors)
 
     def test_decimal_scale_greater_than_precision(self) -> None:
         """Test detection of invalid decimal scale > precision."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="amount",
                     type=ir.FieldType(kind=ir.FieldTypeKind.DECIMAL, precision=5, scale=10),
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("scale" in e and "precision" in e for e in errors)
-
-    def test_string_missing_max_length(self) -> None:
-        """Test detection of string without max_length."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR),  # No max_length
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
-        errors, warnings = validate_entities(appspec)
-
-        assert any("no max_length" in e for e in errors)
 
     def test_string_very_large_max_length_warning(self) -> None:
         """Test warning for very large string max_length."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="description",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=20000),
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("text" in w.lower() for w in warnings)
 
-    def test_sql_reserved_word_entity_name_warning(self) -> None:
-        """Test warning for SQL reserved word as entity name."""
-        entity = ir.EntitySpec(
-            name="Order",  # SQL reserved word
-            title="An order",
-            fields=[
+    @pytest.mark.parametrize(
+        "entity_name,field_name,expected_name",
+        [
+            ("Order", "id", "Order"),
+            ("Task", "order", "order"),
+        ],
+        ids=["entity_name", "field_name"],
+    )
+    def test_sql_reserved_word_warning(
+        self, entity_name: str, field_name: str, expected_name: str
+    ) -> None:
+        """Test warning for SQL reserved words in names."""
+        fields = [make_id_field()]
+        if field_name != "id":
+            fields.append(
                 ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
-        errors, warnings = validate_entities(appspec)
-
-        assert len(errors) == 0  # Not an error, just a warning
-        assert any("SQL reserved word" in w and "Order" in w for w in warnings)
-
-    def test_sql_reserved_word_field_name_warning(self) -> None:
-        """Test warning for SQL reserved word as field name."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-                ir.FieldSpec(
-                    name="order",  # SQL reserved word
+                    name=field_name,
                     type=ir.FieldType(kind=ir.FieldTypeKind.INT),
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+                )
+            )
+        entity = make_entity(name=entity_name, fields=fields)
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
-        assert len(errors) == 0  # Not an error, just a warning
-        assert any("SQL reserved word" in w and "order" in w for w in warnings)
+        assert len(errors) == 0
+        assert any("SQL reserved word" in w and expected_name in w for w in warnings)
 
     def test_conflicting_modifiers(self) -> None:
         """Test detection of conflicting required/optional modifiers."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="title",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
                     modifiers=[ir.FieldModifier.REQUIRED, ir.FieldModifier.OPTIONAL],
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("required" in e and "optional" in e for e in errors)
 
     def test_auto_modifier_on_non_datetime(self) -> None:
         """Test warning for auto_add/auto_update on non-datetime field."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="counter",
                     type=ir.FieldType(kind=ir.FieldTypeKind.INT),
-                    modifiers=[ir.FieldModifier.AUTO_ADD],  # Unusual on int
+                    modifiers=[ir.FieldModifier.AUTO_ADD],
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("auto_add" in w for w in warnings)
 
     def test_constraint_references_nonexistent_field(self) -> None:
         """Test detection of constraint referencing non-existent field."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
+        entity = make_entity(
             constraints=[
                 ir.Constraint(
                     kind=ir.ConstraintKind.UNIQUE,
                     fields=["nonexistent_field"],
                 ),
-            ],
+            ]
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        appspec = make_appspec(entities=[entity])
         errors, warnings = validate_entities(appspec)
-
         assert any("nonexistent_field" in e for e in errors)
 
 
@@ -376,20 +283,14 @@ class TestValidateSurfaces:
 
     def test_valid_surface(self) -> None:
         """Test validation of a valid surface."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
+        entity = make_entity(
             fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
+                make_id_field(),
                 ir.FieldSpec(
                     name="title",
                     type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
                 ),
-            ],
+            ]
         )
         surface = ir.SurfaceSpec(
             name="task_list",
@@ -405,29 +306,13 @@ class TestValidateSurfaces:
                 ),
             ],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface],
-        )
-
+        appspec = make_appspec(entities=[entity], surfaces=[surface])
         errors, warnings = validate_surfaces(appspec)
-
         assert len(errors) == 0
 
     def test_surface_references_nonexistent_field(self) -> None:
         """Test detection of surface referencing non-existent entity field."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
+        entity = make_entity()
         surface = ir.SurfaceSpec(
             name="task_list",
             title="Tasks",
@@ -442,29 +327,13 @@ class TestValidateSurfaces:
                 ),
             ],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface],
-        )
-
+        appspec = make_appspec(entities=[entity], surfaces=[surface])
         errors, warnings = validate_surfaces(appspec)
-
         assert any("nonexistent_field" in e for e in errors)
 
     def test_surface_no_sections_warning(self) -> None:
         """Test warning for surface with no sections."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title="A task item",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
+        entity = make_entity()
         surface = ir.SurfaceSpec(
             name="task_list",
             title="Tasks",
@@ -472,14 +341,8 @@ class TestValidateSurfaces:
             mode=ir.SurfaceMode.LIST,
             sections=[],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-            surfaces=[surface],
-        )
-
+        appspec = make_appspec(entities=[entity], surfaces=[surface])
         errors, warnings = validate_surfaces(appspec)
-
         assert any("no sections" in w for w in warnings)
 
     def test_create_mode_without_entity_ref_warning(self) -> None:
@@ -490,14 +353,8 @@ class TestValidateSurfaces:
             mode=ir.SurfaceMode.CREATE,
             sections=[],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            surfaces=[surface],
-        )
-
+        appspec = make_appspec(surfaces=[surface])
         errors, warnings = validate_surfaces(appspec)
-
         assert any("create" in w and "no entity reference" in w for w in warnings)
 
 
@@ -535,33 +392,46 @@ class TestValidateExperiences:
                 ),
             ],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            experiences=[experience],
-        )
-
+        appspec = make_appspec(experiences=[experience])
         errors, warnings = validate_experiences(appspec)
-
         assert len(errors) == 0
 
-    def test_experience_no_steps(self) -> None:
-        """Test detection of experience with no steps."""
-        experience = ir.ExperienceSpec(
-            name="empty",
-            title="Empty Experience",
-            start_step="nowhere",
-            steps=[],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            experiences=[experience],
-        )
-
+    @pytest.mark.parametrize(
+        "experience,error_fragment",
+        [
+            (
+                ir.ExperienceSpec(
+                    name="empty",
+                    title="Empty Experience",
+                    start_step="nowhere",
+                    steps=[],
+                ),
+                "no steps",
+            ),
+            (
+                ir.ExperienceSpec(
+                    name="flow",
+                    title="Flow",
+                    start_step="step1",
+                    steps=[
+                        ir.ExperienceStep(
+                            name="step1",
+                            kind=ir.StepKind.SURFACE,
+                            surface=None,
+                            transitions=[],
+                        ),
+                    ],
+                ),
+                "no surface target",
+            ),
+        ],
+        ids=["no_steps", "surface_step_without_surface"],
+    )
+    def test_experience_errors(self, experience: ir.ExperienceSpec, error_fragment: str) -> None:
+        """Test detection of experience errors."""
+        appspec = make_appspec(experiences=[experience])
         errors, warnings = validate_experiences(appspec)
-
-        assert any("no steps" in e for e in errors)
+        assert any(error_fragment in e for e in errors)
 
     def test_experience_unreachable_steps(self) -> None:
         """Test detection of unreachable steps."""
@@ -574,7 +444,7 @@ class TestValidateExperiences:
                     name="step1",
                     kind=ir.StepKind.SURFACE,
                     surface="page1",
-                    transitions=[],  # No way to get to step2
+                    transitions=[],
                 ),
                 ir.ExperienceStep(
                     name="step2",  # Unreachable
@@ -584,40 +454,9 @@ class TestValidateExperiences:
                 ),
             ],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            experiences=[experience],
-        )
-
+        appspec = make_appspec(experiences=[experience])
         errors, warnings = validate_experiences(appspec)
-
         assert any("unreachable" in w.lower() for w in warnings)
-
-    def test_surface_step_without_surface(self) -> None:
-        """Test detection of surface step without surface target."""
-        experience = ir.ExperienceSpec(
-            name="flow",
-            title="Flow",
-            start_step="step1",
-            steps=[
-                ir.ExperienceStep(
-                    name="step1",
-                    kind=ir.StepKind.SURFACE,
-                    surface=None,  # Missing surface
-                    transitions=[],
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            experiences=[experience],
-        )
-
-        errors, warnings = validate_experiences(appspec)
-
-        assert any("no surface target" in e for e in errors)
 
 
 # =============================================================================
@@ -637,14 +476,8 @@ class TestValidateServices:
             spec_inline=None,
             auth_profile=ir.AuthProfile(kind=ir.AuthKind.API_KEY_HEADER),
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            apis=[api],
-        )
-
+        appspec = make_appspec(apis=[api])
         errors, warnings = validate_services(appspec)
-
         assert len(errors) == 0
 
     def test_service_no_spec(self) -> None:
@@ -656,14 +489,8 @@ class TestValidateServices:
             spec_inline=None,
             auth_profile=ir.AuthProfile(kind=ir.AuthKind.API_KEY_HEADER),
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            apis=[api],
-        )
-
+        appspec = make_appspec(apis=[api])
         errors, warnings = validate_services(appspec)
-
         assert any("no spec" in e for e in errors)
 
     def test_service_invalid_url_warning(self) -> None:
@@ -675,14 +502,8 @@ class TestValidateServices:
             spec_inline=None,
             auth_profile=ir.AuthProfile(kind=ir.AuthKind.API_KEY_HEADER),
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            apis=[api],
-        )
-
+        appspec = make_appspec(apis=[api])
         errors, warnings = validate_services(appspec)
-
         assert any("invalid" in w.lower() for w in warnings)
 
     def test_oauth2_without_scopes_warning(self) -> None:
@@ -694,17 +515,11 @@ class TestValidateServices:
             spec_inline=None,
             auth_profile=ir.AuthProfile(
                 kind=ir.AuthKind.OAUTH2_PKCE,
-                options={},  # No scopes
+                options={},
             ),
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            apis=[api],
-        )
-
+        appspec = make_appspec(apis=[api])
         errors, warnings = validate_services(appspec)
-
         assert any("scopes" in w for w in warnings)
 
 
@@ -735,65 +550,47 @@ class TestValidateForeignModels:
             ],
             constraints=[],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            foreign_models=[foreign_model],
-        )
-
+        appspec = make_appspec(foreign_models=[foreign_model])
         errors, warnings = validate_foreign_models(appspec)
-
         assert len(errors) == 0
 
-    def test_foreign_model_no_key_fields(self) -> None:
-        """Test detection of foreign model without key fields."""
+    @pytest.mark.parametrize(
+        "key_fields,field_list,error_fragment",
+        [
+            ([], [("login", ir.FieldTypeKind.STR, 100)], "no key fields"),
+            (
+                ["nonexistent_id"],
+                [("login", ir.FieldTypeKind.STR, 100)],
+                "not defined",
+            ),
+        ],
+        ids=["no_key_fields", "key_field_not_defined"],
+    )
+    def test_foreign_model_key_errors(
+        self,
+        key_fields: list[str],
+        field_list: list[tuple],
+        error_fragment: str,
+    ) -> None:
+        """Test detection of foreign model key field errors."""
+        fields = [
+            ir.FieldSpec(
+                name=name,
+                type=ir.FieldType(kind=kind, max_length=max_len),
+            )
+            for name, kind, max_len in field_list
+        ]
         foreign_model = ir.ForeignModelSpec(
             name="GitHubUser",
             title="GitHub User",
             api_ref="github",
-            key_fields=[],  # No key fields
-            fields=[
-                ir.FieldSpec(
-                    name="login",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=100),
-                ),
-            ],
+            key_fields=key_fields,
+            fields=fields,
             constraints=[],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            foreign_models=[foreign_model],
-        )
-
+        appspec = make_appspec(foreign_models=[foreign_model])
         errors, warnings = validate_foreign_models(appspec)
-
-        assert any("no key fields" in e for e in errors)
-
-    def test_foreign_model_key_field_not_defined(self) -> None:
-        """Test detection of key field not in fields list."""
-        foreign_model = ir.ForeignModelSpec(
-            name="GitHubUser",
-            title="GitHub User",
-            api_ref="github",
-            key_fields=["nonexistent_id"],  # Key field not in fields
-            fields=[
-                ir.FieldSpec(
-                    name="login",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=100),
-                ),
-            ],
-            constraints=[],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            foreign_models=[foreign_model],
-        )
-
-        errors, warnings = validate_foreign_models(appspec)
-
-        assert any("not defined" in e for e in errors)
+        assert any(error_fragment in e for e in errors)
 
 
 # =============================================================================
@@ -804,43 +601,32 @@ class TestValidateForeignModels:
 class TestValidateIntegrations:
     """Test integration validation."""
 
-    def test_integration_no_apis_warning(self) -> None:
-        """Test warning for integration without API references."""
+    @pytest.mark.parametrize(
+        "api_refs,actions,syncs,warning_fragment",
+        [
+            ([], [], [], "doesn't use any APIs"),
+            (["github"], [], [], "no actions or syncs"),
+        ],
+        ids=["no_apis", "no_actions_or_syncs"],
+    )
+    def test_integration_warnings(
+        self,
+        api_refs: list[str],
+        actions: list,
+        syncs: list,
+        warning_fragment: str,
+    ) -> None:
+        """Test warnings for integration issues."""
         integration = ir.IntegrationSpec(
             name="sync_users",
             title="Sync Users",
-            api_refs=[],  # No API refs
-            actions=[],
-            syncs=[],
+            api_refs=api_refs,
+            actions=actions,
+            syncs=syncs,
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            integrations=[integration],
-        )
-
+        appspec = make_appspec(integrations=[integration])
         errors, warnings = validate_integrations(appspec)
-
-        assert any("doesn't use any APIs" in w for w in warnings)
-
-    def test_integration_no_actions_or_syncs_warning(self) -> None:
-        """Test warning for integration without actions or syncs."""
-        integration = ir.IntegrationSpec(
-            name="sync_users",
-            title="Sync Users",
-            api_refs=["github"],
-            actions=[],  # No actions
-            syncs=[],  # No syncs
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[]),
-            integrations=[integration],
-        )
-
-        errors, warnings = validate_integrations(appspec)
-
-        assert any("no actions or syncs" in w for w in warnings)
+        assert any(warning_fragment in w for w in warnings)
 
 
 # =============================================================================
@@ -853,85 +639,29 @@ class TestExtendedLint:
 
     def test_entity_naming_convention(self) -> None:
         """Test warning for non-PascalCase entity names."""
-        entity = ir.EntitySpec(
-            name="task",  # Should be PascalCase
-            title="A task",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        entity = make_entity(name="task")  # Should be PascalCase
+        appspec = make_appspec(entities=[entity])
         warnings = extended_lint(appspec)
-
         assert any("PascalCase" in w for w in warnings)
 
     def test_unused_entities_warning(self) -> None:
         """Test warning for unused entities."""
-        entity1 = ir.EntitySpec(
-            name="Task",
-            title="A task",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
-        entity2 = ir.EntitySpec(
-            name="Orphan",  # Never referenced
-            title="Orphan",
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
+        entity1 = make_entity(name="Task")
+        entity2 = make_entity(name="Orphan")  # Never referenced
         surface = ir.SurfaceSpec(
             name="task_list",
             title="Tasks",
-            entity_ref="Task",  # Only references Task, not Orphan
+            entity_ref="Task",  # Only references Task
             mode=ir.SurfaceMode.LIST,
             sections=[],
         )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity1, entity2]),
-            surfaces=[surface],
-        )
-
+        appspec = make_appspec(entities=[entity1, entity2], surfaces=[surface])
         warnings = extended_lint(appspec)
-
         assert any("Unused entities" in w and "Orphan" in w for w in warnings)
 
     def test_missing_title_warning(self) -> None:
         """Test warning for missing titles."""
-        entity = ir.EntitySpec(
-            name="Task",
-            title=None,  # Missing title
-            fields=[
-                ir.FieldSpec(
-                    name="id",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-                    modifiers=[ir.FieldModifier.PK],
-                ),
-            ],
-        )
-        appspec = ir.AppSpec(
-            name="Test",
-            domain=ir.DomainSpec(entities=[entity]),
-        )
-
+        entity = make_entity(title=None)
+        appspec = make_appspec(entities=[entity])
         warnings = extended_lint(appspec)
-
         assert any("no title" in w for w in warnings)

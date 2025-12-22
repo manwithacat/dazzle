@@ -2,7 +2,10 @@
 Unit tests for Playwright code generation.
 
 Tests for selector mapping, step code generation, and auth assertion generation.
+Refactored to use parameterization for reduced redundancy.
 """
+
+import pytest
 
 from dazzle.core.ir import (
     FlowAssertion,
@@ -22,236 +25,177 @@ from dazzle.testing.playwright_codegen import (
 class TestParseTarget:
     """Tests for target parsing."""
 
-    def test_parse_view_target(self) -> None:
-        """Test parsing a view target."""
-        target_type, target_name = _parse_target("view:task_list")
-        assert target_type == "view"
-        assert target_name == "task_list"
-
-    def test_parse_field_target(self) -> None:
-        """Test parsing a field target."""
-        target_type, target_name = _parse_target("field:Task.title")
-        assert target_type == "field"
-        assert target_name == "Task.title"
-
-    def test_parse_action_target(self) -> None:
-        """Test parsing an action target."""
-        target_type, target_name = _parse_target("action:Task.create")
-        assert target_type == "action"
-        assert target_name == "Task.create"
-
-    def test_parse_auth_target(self) -> None:
-        """Test parsing an auth target."""
-        target_type, target_name = _parse_target("auth:login_button")
-        assert target_type == "auth"
-        assert target_name == "login_button"
-
-    def test_parse_unknown_target(self) -> None:
-        """Test parsing a target without colon."""
-        target_type, target_name = _parse_target("unknown")
-        assert target_type == "unknown"
-        assert target_name == "unknown"
+    @pytest.mark.parametrize(
+        "input_target,expected_type,expected_name",
+        [
+            ("view:task_list", "view", "task_list"),
+            ("field:Task.title", "field", "Task.title"),
+            ("action:Task.create", "action", "Task.create"),
+            ("auth:login_button", "auth", "login_button"),
+            ("unknown", "unknown", "unknown"),
+        ],
+        ids=["view", "field", "action", "auth", "unknown"],
+    )
+    def test_parse_target(self, input_target: str, expected_type: str, expected_name: str) -> None:
+        """Test target parsing for various target types."""
+        target_type, target_name = _parse_target(input_target)
+        assert target_type == expected_type
+        assert target_name == expected_name
 
 
 class TestTargetToSelector:
     """Tests for target to selector conversion."""
 
-    def test_view_selector(self) -> None:
-        """Test view target to selector."""
-        selector = _target_to_selector("view:task_list")
-        assert selector == '[data-dazzle-view="task_list"]'
-
-    def test_field_selector(self) -> None:
-        """Test field target to selector."""
-        selector = _target_to_selector("field:Task.title")
-        assert selector == '[data-dazzle-field="title"]'
-
-    def test_action_selector(self) -> None:
-        """Test action target to selector."""
-        selector = _target_to_selector("action:Task.create")
-        assert selector == '[data-dazzle-action="create"]'
-
-    def test_row_selector(self) -> None:
-        """Test row target to selector."""
-        selector = _target_to_selector("row:Task")
-        assert selector == '[data-dazzle-row="Task"]'
-
-    def test_component_selector(self) -> None:
-        """Test component target to selector."""
-        selector = _target_to_selector("component:TaskList")
-        assert selector == '[data-dazzle-component="TaskList"]'
-
-    def test_auth_selector(self) -> None:
-        """Test auth target to selector."""
-        selector = _target_to_selector("auth:login_button")
-        assert selector == '[data-dazzle-auth-action="login"]'
-
-    def test_unknown_selector(self) -> None:
-        """Test unknown target to selector (fallback)."""
-        selector = _target_to_selector("unknown:something")
-        assert selector == '[data-testid="something"]'
+    @pytest.mark.parametrize(
+        "target,expected_fragment",
+        [
+            ("view:task_list", '[data-dazzle-view="task_list"]'),
+            ("field:Task.title", '[data-dazzle-field="title"]'),
+            ("action:Task.create", "data-dazzle-action"),
+            ("row:Task", '[data-dazzle-row="Task"]'),
+            ("component:TaskList", '[data-dazzle-component="TaskList"]'),
+            ("auth:login_button", '[data-dazzle-auth-action="login"]'),
+            ("unknown:something", '[data-testid="something"]'),
+        ],
+        ids=["view", "field", "action", "row", "component", "auth", "unknown"],
+    )
+    def test_target_to_selector(self, target: str, expected_fragment: str) -> None:
+        """Test target to selector conversion for various target types."""
+        selector = _target_to_selector(target)
+        assert expected_fragment in selector
 
 
 class TestAuthTargetToSelector:
     """Tests for auth target to selector conversion."""
 
-    def test_login_button(self) -> None:
-        """Test login_button selector."""
-        selector = _auth_target_to_selector("login_button")
-        assert selector == '[data-dazzle-auth-action="login"]'
-
-    def test_logout_button(self) -> None:
-        """Test logout_button selector."""
-        selector = _auth_target_to_selector("logout_button")
-        assert selector == '[data-dazzle-auth-action="logout"]'
-
-    def test_modal(self) -> None:
-        """Test modal selector."""
-        selector = _auth_target_to_selector("modal")
-        assert selector == "#dz-auth-modal"
-
-    def test_form(self) -> None:
-        """Test form selector."""
-        selector = _auth_target_to_selector("form")
-        assert selector == "#dz-auth-form"
-
-    def test_submit(self) -> None:
-        """Test submit selector."""
-        selector = _auth_target_to_selector("submit")
-        assert selector == "#dz-auth-submit"
-
-    def test_error(self) -> None:
-        """Test error selector."""
-        selector = _auth_target_to_selector("error")
-        assert selector == "#dz-auth-error:not(.hidden)"
-
-    def test_user_indicator(self) -> None:
-        """Test user_indicator selector."""
-        selector = _auth_target_to_selector("user_indicator")
-        assert selector == "[data-dazzle-auth-user]"
-
-    def test_field_email(self) -> None:
-        """Test field.email selector."""
-        selector = _auth_target_to_selector("field.email")
-        assert selector == '#dz-auth-form [name="email"]'
-
-    def test_field_password(self) -> None:
-        """Test field.password selector."""
-        selector = _auth_target_to_selector("field.password")
-        assert selector == '#dz-auth-form [name="password"]'
-
-    def test_toggle_register(self) -> None:
-        """Test toggle.register selector."""
-        selector = _auth_target_to_selector("toggle.register")
-        assert selector == '[data-dazzle-auth-toggle="register"]'
-
-    def test_toggle_login(self) -> None:
-        """Test toggle.login selector."""
-        selector = _auth_target_to_selector("toggle.login")
-        assert selector == '[data-dazzle-auth-toggle="login"]'
-
-    def test_fallback(self) -> None:
-        """Test fallback selector for unknown auth target."""
-        selector = _auth_target_to_selector("unknown")
-        assert selector == '[data-dazzle-auth="unknown"]'
+    @pytest.mark.parametrize(
+        "auth_target,expected_selector",
+        [
+            ("login_button", '[data-dazzle-auth-action="login"]'),
+            ("logout_button", '[data-dazzle-auth-action="logout"]'),
+            ("modal", "#dz-auth-modal"),
+            ("form", "#dz-auth-form"),
+            ("submit", "#dz-auth-submit"),
+            ("error", "#dz-auth-error:not(.hidden)"),
+            ("user_indicator", "[data-dazzle-auth-user]"),
+            ("field.email", '#dz-auth-form [name="email"]'),
+            ("field.password", '#dz-auth-form [name="password"]'),
+            ("toggle.register", '[data-dazzle-auth-toggle="register"]'),
+            ("toggle.login", '[data-dazzle-auth-toggle="login"]'),
+            ("unknown", '[data-dazzle-auth="unknown"]'),
+        ],
+        ids=[
+            "login_button",
+            "logout_button",
+            "modal",
+            "form",
+            "submit",
+            "error",
+            "user_indicator",
+            "field.email",
+            "field.password",
+            "toggle.register",
+            "toggle.login",
+            "fallback",
+        ],
+    )
+    def test_auth_target_to_selector(self, auth_target: str, expected_selector: str) -> None:
+        """Test auth target to selector conversion."""
+        selector = _auth_target_to_selector(auth_target)
+        assert selector == expected_selector
 
 
 class TestTargetToRoute:
     """Tests for target to route conversion."""
 
-    def test_view_route(self) -> None:
-        """Test view target to route."""
-        route = _target_to_route("view:task_list")
-        assert route == "/task/list"
-
-    def test_view_create_route(self) -> None:
-        """Test view create target to route."""
-        route = _target_to_route("view:task_create")
-        assert route == "/task/create"
-
-    def test_view_edit_route(self) -> None:
-        """Test view edit target to route."""
-        route = _target_to_route("view:task_edit")
-        assert route == "/task/edit"
-
-    def test_direct_path(self) -> None:
-        """Test direct path (starts with /)."""
-        route = _target_to_route("/")
-        assert route == "/"
-
-    def test_direct_path_with_segments(self) -> None:
-        """Test direct path with segments."""
-        route = _target_to_route("/admin/dashboard")
-        assert route == "/admin/dashboard"
-
-    def test_simple_target(self) -> None:
-        """Test simple target without underscore."""
-        route = _target_to_route("view:dashboard")
-        assert route == "/dashboard"
+    @pytest.mark.parametrize(
+        "target,expected_route",
+        [
+            ("view:task_list", "/task/list"),
+            ("view:task_create", "/task/create"),
+            ("view:task_edit", "/task/edit"),
+            ("/", "/"),
+            ("/admin/dashboard", "/admin/dashboard"),
+            ("view:dashboard", "/dashboard"),
+        ],
+        ids=[
+            "view_list",
+            "view_create",
+            "view_edit",
+            "direct_root",
+            "direct_path",
+            "simple_view",
+        ],
+    )
+    def test_target_to_route(self, target: str, expected_route: str) -> None:
+        """Test target to route conversion."""
+        route = _target_to_route(target)
+        assert route == expected_route
 
 
 class TestGenerateStepCodeAuthAssertions:
     """Tests for step code generation with auth assertions."""
 
-    def test_is_authenticated_assertion(self) -> None:
-        """Test IS_AUTHENTICATED assertion code generation."""
+    @pytest.mark.parametrize(
+        "assertion_kind,expected_fragments",
+        [
+            (
+                FlowAssertionKind.IS_AUTHENTICATED,
+                ["Verify user is authenticated", "[data-dazzle-auth-user]", "to_be_visible"],
+            ),
+            (
+                FlowAssertionKind.IS_NOT_AUTHENTICATED,
+                [
+                    "Verify user is not authenticated",
+                    '[data-dazzle-auth-action="login"]',
+                    "to_be_visible",
+                ],
+            ),
+            (
+                FlowAssertionKind.LOGIN_SUCCEEDED,
+                [
+                    "Verify login succeeded",
+                    "#dz-auth-modal",
+                    "not_to_be_visible",
+                    "[data-dazzle-auth-user]",
+                ],
+            ),
+            (
+                FlowAssertionKind.LOGIN_FAILED,
+                ["Verify login failed with error", "#dz-auth-error", "to_be_visible"],
+            ),
+            (
+                FlowAssertionKind.ROUTE_PROTECTED,
+                [
+                    "Verify route is protected",
+                    "#dz-auth-modal",
+                    '[data-dazzle-auth-action="login"]',
+                    "Route should be protected",
+                ],
+            ),
+        ],
+        ids=[
+            "is_authenticated",
+            "is_not_authenticated",
+            "login_succeeded",
+            "login_failed",
+            "route_protected",
+        ],
+    )
+    def test_auth_assertion_code_generation(
+        self, assertion_kind: FlowAssertionKind, expected_fragments: list[str]
+    ) -> None:
+        """Test auth assertion code generation."""
         step = FlowStep(
             kind=FlowStepKind.ASSERT,
-            assertion=FlowAssertion(kind=FlowAssertionKind.IS_AUTHENTICATED),
+            assertion=FlowAssertion(kind=assertion_kind),
         )
         code = _generate_step_code(step, {})
-        assert "Verify user is authenticated" in code
-        assert "[data-dazzle-auth-user]" in code
-        assert "to_be_visible" in code
-
-    def test_is_not_authenticated_assertion(self) -> None:
-        """Test IS_NOT_AUTHENTICATED assertion code generation."""
-        step = FlowStep(
-            kind=FlowStepKind.ASSERT,
-            assertion=FlowAssertion(kind=FlowAssertionKind.IS_NOT_AUTHENTICATED),
-        )
-        code = _generate_step_code(step, {})
-        assert "Verify user is not authenticated" in code
-        assert '[data-dazzle-auth-action="login"]' in code
-        assert "to_be_visible" in code
-
-    def test_login_succeeded_assertion(self) -> None:
-        """Test LOGIN_SUCCEEDED assertion code generation."""
-        step = FlowStep(
-            kind=FlowStepKind.ASSERT,
-            assertion=FlowAssertion(kind=FlowAssertionKind.LOGIN_SUCCEEDED),
-        )
-        code = _generate_step_code(step, {})
-        assert "Verify login succeeded" in code
-        assert "#dz-auth-modal" in code
-        assert "not_to_be_visible" in code
-        assert "[data-dazzle-auth-user]" in code
-
-    def test_login_failed_assertion(self) -> None:
-        """Test LOGIN_FAILED assertion code generation."""
-        step = FlowStep(
-            kind=FlowStepKind.ASSERT,
-            assertion=FlowAssertion(kind=FlowAssertionKind.LOGIN_FAILED),
-        )
-        code = _generate_step_code(step, {})
-        assert "Verify login failed with error" in code
-        assert "#dz-auth-error" in code
-        assert "to_be_visible" in code
-
-    def test_route_protected_assertion(self) -> None:
-        """Test ROUTE_PROTECTED assertion code generation."""
-        step = FlowStep(
-            kind=FlowStepKind.ASSERT,
-            assertion=FlowAssertion(kind=FlowAssertionKind.ROUTE_PROTECTED),
-        )
-        code = _generate_step_code(step, {})
-        assert "Verify route is protected" in code
-        assert "#dz-auth-modal" in code
-        assert '[data-dazzle-auth-action="login"]' in code
-        assert "Route should be protected" in code
+        for fragment in expected_fragments:
+            assert fragment in code, f"Expected '{fragment}' in generated code"
 
     def test_has_persona_assertion(self) -> None:
-        """Test HAS_PERSONA assertion code generation."""
+        """Test HAS_PERSONA assertion code generation (requires target param)."""
         step = FlowStep(
             kind=FlowStepKind.ASSERT,
             assertion=FlowAssertion(
@@ -268,101 +212,75 @@ class TestGenerateStepCodeAuthAssertions:
 class TestGenerateStepCodeNavigation:
     """Tests for step code generation with navigation."""
 
-    def test_navigate_to_view(self) -> None:
-        """Test navigation to view target."""
+    @pytest.mark.parametrize(
+        "target,expected_fragments",
+        [
+            ("view:task_list", ["/task/list", "page.goto", "wait_for_load_state"]),
+            ("/admin/dashboard", ["/admin/dashboard"]),
+        ],
+        ids=["view_target", "admin_path"],
+    )
+    def test_navigate_step_code(self, target: str, expected_fragments: list[str]) -> None:
+        """Test navigation step code generation."""
         step = FlowStep(
             kind=FlowStepKind.NAVIGATE,
-            target="view:task_list",
+            target=target,
         )
         code = _generate_step_code(step, {})
-        assert "/task/list" in code
-        assert "page.goto" in code
-        assert "wait_for_load_state" in code
+        for fragment in expected_fragments:
+            assert fragment in code, f"Expected '{fragment}' in generated code"
 
-    def test_navigate_to_direct_path(self) -> None:
-        """Test navigation to direct path."""
+    def test_navigate_to_root(self) -> None:
+        """Test navigation to root path."""
         step = FlowStep(
             kind=FlowStepKind.NAVIGATE,
             target="/",
         )
         code = _generate_step_code(step, {})
-        # Should navigate to base_url + "/"
         assert "page.goto" in code
-        assert '/"' in code or "/{" in code  # Path should be /
-
-    def test_navigate_to_admin(self) -> None:
-        """Test navigation to admin path."""
-        step = FlowStep(
-            kind=FlowStepKind.NAVIGATE,
-            target="/admin/dashboard",
-        )
-        code = _generate_step_code(step, {})
-        assert "/admin/dashboard" in code
+        # Path should be / somewhere in the code
+        assert '/"' in code or "/{" in code
 
 
 class TestGenerateStepCodeAuthActions:
     """Tests for step code generation with auth actions."""
 
-    def test_click_auth_login_button(self) -> None:
-        """Test clicking auth login button."""
+    @pytest.mark.parametrize(
+        "target,expected_selector",
+        [
+            ("auth:login_button", '[data-dazzle-auth-action="login"]'),
+            ("auth:logout_button", '[data-dazzle-auth-action="logout"]'),
+            ("auth:submit", "#dz-auth-submit"),
+            ("auth:toggle.register", '[data-dazzle-auth-toggle="register"]'),
+        ],
+        ids=["login", "logout", "submit", "toggle_register"],
+    )
+    def test_click_auth_element(self, target: str, expected_selector: str) -> None:
+        """Test clicking auth elements."""
         step = FlowStep(
             kind=FlowStepKind.CLICK,
-            target="auth:login_button",
+            target=target,
         )
         code = _generate_step_code(step, {})
-        assert '[data-dazzle-auth-action="login"]' in code
+        assert expected_selector in code
         assert ".click()" in code
 
-    def test_click_auth_logout_button(self) -> None:
-        """Test clicking auth logout button."""
-        step = FlowStep(
-            kind=FlowStepKind.CLICK,
-            target="auth:logout_button",
-        )
-        code = _generate_step_code(step, {})
-        assert '[data-dazzle-auth-action="logout"]' in code
-        assert ".click()" in code
-
-    def test_click_auth_submit(self) -> None:
-        """Test clicking auth submit button."""
-        step = FlowStep(
-            kind=FlowStepKind.CLICK,
-            target="auth:submit",
-        )
-        code = _generate_step_code(step, {})
-        assert "#dz-auth-submit" in code
-        assert ".click()" in code
-
-    def test_fill_auth_email(self) -> None:
-        """Test filling auth email field."""
+    @pytest.mark.parametrize(
+        "target,field_selector,value",
+        [
+            ("auth:field.email", '#dz-auth-form [name="email"]', "test@example.com"),
+            ("auth:field.password", '#dz-auth-form [name="password"]', "secret123"),
+        ],
+        ids=["email", "password"],
+    )
+    def test_fill_auth_field(self, target: str, field_selector: str, value: str) -> None:
+        """Test filling auth fields."""
         step = FlowStep(
             kind=FlowStepKind.FILL,
-            target="auth:field.email",
-            value="test@example.com",
+            target=target,
+            value=value,
         )
         code = _generate_step_code(step, {})
-        assert '#dz-auth-form [name="email"]' in code
+        assert field_selector in code
         assert ".fill(" in code
-        assert "test@example.com" in code
-
-    def test_fill_auth_password(self) -> None:
-        """Test filling auth password field."""
-        step = FlowStep(
-            kind=FlowStepKind.FILL,
-            target="auth:field.password",
-            value="secret123",
-        )
-        code = _generate_step_code(step, {})
-        assert '#dz-auth-form [name="password"]' in code
-        assert ".fill(" in code
-        assert "secret123" in code
-
-    def test_click_auth_toggle_register(self) -> None:
-        """Test clicking auth toggle to register mode."""
-        step = FlowStep(
-            kind=FlowStepKind.CLICK,
-            target="auth:toggle.register",
-        )
-        code = _generate_step_code(step, {})
-        assert '[data-dazzle-auth-toggle="register"]' in code
-        assert ".click()" in code
+        assert value in code

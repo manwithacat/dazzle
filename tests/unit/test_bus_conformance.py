@@ -111,34 +111,29 @@ async def kafka_bus() -> AsyncGenerator[Any, None]:
         yield bus
 
 
-# Parametrized fixture for all bus implementations
-@pytest.fixture(
-    params=[
-        pytest.param("memory", id="memory"),
-        pytest.param("sqlite", id="sqlite"),
-        pytest.param(
-            "kafka",
-            id="kafka",
-            marks=pytest.mark.skipif(
-                not KAFKA_TEST_ENABLED,
-                reason="Kafka not available",
-            ),
-        ),
-    ]
-)
+# Build params dynamically - only include available implementations
+# This eliminates skip noise from test runs
+_BUS_PARAMS = [
+    pytest.param("memory", id="memory"),
+    pytest.param("sqlite", id="sqlite"),
+]
+if KAFKA_TEST_ENABLED:
+    _BUS_PARAMS.append(pytest.param("kafka", id="kafka"))
+
+
+# Parametrized fixture for all available bus implementations
+@pytest.fixture(params=_BUS_PARAMS)
 async def any_bus(
     request: pytest.FixtureRequest,
     memory_bus: DevBusMemory,
     sqlite_bus: DevBrokerSQLite,
 ) -> AsyncGenerator[EventBus, None]:
-    """Parametrized fixture that yields each bus implementation."""
+    """Parametrized fixture that yields each available bus implementation."""
     if request.param == "memory":
         yield memory_bus
     elif request.param == "sqlite":
         yield sqlite_bus
     elif request.param == "kafka":
-        if not KAFKA_TEST_ENABLED:
-            pytest.skip("Kafka not available")
         config = KafkaConfig.from_env()  # type: ignore
         async with KafkaBus(config) as bus:  # type: ignore
             yield bus

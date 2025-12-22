@@ -2,6 +2,7 @@
 Unit tests for DAZZLE messaging template engine (v0.9.0).
 
 Tests the restricted Jinja-ish template syntax.
+Refactored to use parameterization for reduced redundancy.
 """
 
 import pytest
@@ -17,236 +18,241 @@ from dazzle_dnr_back.channels.templates import (
 class TestBasicInterpolation:
     """Tests for basic variable interpolation."""
 
-    def test_simple_variable(self):
-        """Test simple variable interpolation."""
-        result = render_template("Hello {{ name }}!", {"name": "World"})
-        assert result == "Hello World!"
-
-    def test_dotted_path(self):
-        """Test dotted path variable access."""
-        result = render_template(
-            "Hello {{ user.name }}!",
-            {"user": {"name": "John"}},
-        )
-        assert result == "Hello John!"
-
-    def test_deep_nesting(self):
-        """Test deeply nested variable access."""
-        result = render_template(
-            "Order: {{ order.customer.address.city }}",
-            {"order": {"customer": {"address": {"city": "London"}}}},
-        )
-        assert result == "Order: London"
-
-    def test_missing_variable_empty_string(self):
-        """Test that missing variables render as empty string."""
-        result = render_template("Hello {{ name }}!", {})
-        assert result == "Hello !"
-
-    def test_none_value_empty_string(self):
-        """Test that None values render as empty string."""
-        result = render_template("Value: {{ value }}", {"value": None})
-        assert result == "Value: "
-
-    def test_multiple_variables(self):
-        """Test multiple variable interpolations."""
-        result = render_template(
-            "{{ greeting }}, {{ name }}! Your order #{{ order_num }} is ready.",
-            {"greeting": "Hello", "name": "John", "order_num": "1234"},
-        )
-        assert result == "Hello, John! Your order #1234 is ready."
-
-    def test_variable_with_whitespace(self):
-        """Test variable with whitespace in braces."""
-        result = render_template("{{  name  }}", {"name": "Test"})
-        assert result == "Test"
+    @pytest.mark.parametrize(
+        "template,context,expected",
+        [
+            ("Hello {{ name }}!", {"name": "World"}, "Hello World!"),
+            (
+                "Hello {{ user.name }}!",
+                {"user": {"name": "John"}},
+                "Hello John!",
+            ),
+            (
+                "Order: {{ order.customer.address.city }}",
+                {"order": {"customer": {"address": {"city": "London"}}}},
+                "Order: London",
+            ),
+            ("Hello {{ name }}!", {}, "Hello !"),
+            ("Value: {{ value }}", {"value": None}, "Value: "),
+            (
+                "{{ greeting }}, {{ name }}! Your order #{{ order_num }} is ready.",
+                {"greeting": "Hello", "name": "John", "order_num": "1234"},
+                "Hello, John! Your order #1234 is ready.",
+            ),
+            ("{{  name  }}", {"name": "Test"}, "Test"),
+        ],
+        ids=[
+            "simple_variable",
+            "dotted_path",
+            "deep_nesting",
+            "missing_variable",
+            "none_value",
+            "multiple_variables",
+            "whitespace_in_braces",
+        ],
+    )
+    def test_interpolation(self, template: str, context: dict, expected: str) -> None:
+        """Test variable interpolation."""
+        result = render_template(template, context)
+        assert result == expected
 
 
 class TestConditionals:
     """Tests for conditional blocks."""
 
-    def test_simple_if_true(self):
-        """Test simple if block when true."""
-        result = render_template(
-            "{% if show %}Visible{% endif %}",
-            {"show": True},
-        )
-        assert result == "Visible"
+    @pytest.mark.parametrize(
+        "template,context,expected",
+        [
+            ("{% if show %}Visible{% endif %}", {"show": True}, "Visible"),
+            ("{% if show %}Visible{% endif %}", {"show": False}, ""),
+        ],
+        ids=["if_true", "if_false"],
+    )
+    def test_simple_if(self, template: str, context: dict, expected: str) -> None:
+        """Test simple if block."""
+        result = render_template(template, context)
+        assert result == expected
 
-    def test_simple_if_false(self):
-        """Test simple if block when false."""
-        result = render_template(
-            "{% if show %}Visible{% endif %}",
-            {"show": False},
-        )
-        assert result == ""
-
-    def test_if_else(self):
+    def test_if_else(self) -> None:
         """Test if/else block."""
         template = "{% if is_admin %}Admin{% else %}User{% endif %}"
+        assert render_template(template, {"is_admin": True}) == "Admin"
+        assert render_template(template, {"is_admin": False}) == "User"
 
-        result_admin = render_template(template, {"is_admin": True})
-        assert result_admin == "Admin"
-
-        result_user = render_template(template, {"is_admin": False})
-        assert result_user == "User"
-
-    def test_if_elif_else(self):
+    @pytest.mark.parametrize(
+        "role,expected",
+        [
+            ("admin", "Admin"),
+            ("moderator", "Mod"),
+            ("guest", "User"),
+        ],
+        ids=["admin", "moderator", "guest"],
+    )
+    def test_if_elif_else(self, role: str, expected: str) -> None:
         """Test if/elif/else block."""
-        template = """{% if role == "admin" %}Admin{% elif role == "moderator" %}Mod{% else %}User{% endif %}"""
+        template = '{% if role == "admin" %}Admin{% elif role == "moderator" %}Mod{% else %}User{% endif %}'
+        result = render_template(template, {"role": role})
+        assert result == expected
 
-        assert render_template(template, {"role": "admin"}) == "Admin"
-        assert render_template(template, {"role": "moderator"}) == "Mod"
-        assert render_template(template, {"role": "guest"}) == "User"
-
-    def test_nested_if(self):
+    @pytest.mark.parametrize(
+        "outer,inner,expected",
+        [
+            (True, True, "Both"),
+            (True, False, ""),
+            (False, True, ""),
+        ],
+        ids=["both_true", "outer_only", "inner_only"],
+    )
+    def test_nested_if(self, outer: bool, inner: bool, expected: str) -> None:
         """Test nested if blocks."""
-        template = """{% if outer %}{% if inner %}Both{% endif %}{% endif %}"""
+        template = "{% if outer %}{% if inner %}Both{% endif %}{% endif %}"
+        result = render_template(template, {"outer": outer, "inner": inner})
+        assert result == expected
 
-        assert render_template(template, {"outer": True, "inner": True}) == "Both"
-        assert render_template(template, {"outer": True, "inner": False}) == ""
-        assert render_template(template, {"outer": False, "inner": True}) == ""
-
-    def test_if_with_variable(self):
+    def test_if_with_variable(self) -> None:
         """Test if block containing variables."""
         template = "{% if user %}Hello {{ user.name }}!{% endif %}"
-
         result = render_template(template, {"user": {"name": "John"}})
         assert result == "Hello John!"
 
-    def test_equality_comparison(self):
+    @pytest.mark.parametrize(
+        "status,expected",
+        [
+            ("active", "Active"),
+            ("pending", "Inactive"),
+        ],
+        ids=["active", "pending"],
+    )
+    def test_equality_comparison(self, status: str, expected: str) -> None:
         """Test equality comparison in condition."""
         template = '{% if status == "active" %}Active{% else %}Inactive{% endif %}'
+        result = render_template(template, {"status": status})
+        assert result == expected
 
-        assert render_template(template, {"status": "active"}) == "Active"
-        assert render_template(template, {"status": "pending"}) == "Inactive"
-
-    def test_inequality_comparison(self):
+    @pytest.mark.parametrize(
+        "role,expected",
+        [
+            ("admin", "Authorized"),
+            ("guest", ""),
+        ],
+        ids=["admin", "guest"],
+    )
+    def test_inequality_comparison(self, role: str, expected: str) -> None:
         """Test inequality comparison in condition."""
         template = '{% if role != "guest" %}Authorized{% endif %}'
-
-        assert render_template(template, {"role": "admin"}) == "Authorized"
-        assert render_template(template, {"role": "guest"}) == ""
+        result = render_template(template, {"role": role})
+        assert result == expected
 
 
 class TestEdgeCases:
     """Tests for edge cases and special scenarios."""
 
-    def test_empty_template(self):
-        """Test empty template."""
-        result = render_template("", {})
-        assert result == ""
-
-    def test_no_variables(self):
-        """Test template with no variables."""
-        result = render_template("Plain text", {})
-        assert result == "Plain text"
-
-    def test_double_braces_interpreted_as_variables(self):
-        """Test that double braces are always interpreted as variables."""
-        # Valid variable syntax should work
-        result = render_template("Use {{ braces }} for variables", {"braces": "double"})
-        assert result == "Use double for variables"
-
-        # Missing variables render as empty string (not an error)
-        result = render_template("Value: {{ missing }}", {})
-        assert result == "Value: "
-
-    def test_numeric_value(self):
-        """Test numeric values."""
-        result = render_template("Count: {{ count }}", {"count": 42})
-        assert result == "Count: 42"
-
-    def test_boolean_value(self):
-        """Test boolean values."""
-        result = render_template("Active: {{ active }}", {"active": True})
-        assert result == "Active: True"
+    @pytest.mark.parametrize(
+        "template,context,expected",
+        [
+            ("", {}, ""),
+            ("Plain text", {}, "Plain text"),
+            (
+                "Use {{ braces }} for variables",
+                {"braces": "double"},
+                "Use double for variables",
+            ),
+            ("Value: {{ missing }}", {}, "Value: "),
+            ("Count: {{ count }}", {"count": 42}, "Count: 42"),
+            ("Active: {{ active }}", {"active": True}, "Active: True"),
+        ],
+        ids=[
+            "empty_template",
+            "no_variables",
+            "variable_substitution",
+            "missing_variable",
+            "numeric_value",
+            "boolean_value",
+        ],
+    )
+    def test_edge_case(self, template: str, context: dict, expected: str) -> None:
+        """Test edge cases."""
+        result = render_template(template, context)
+        assert result == expected
 
 
 class TestSyntaxErrors:
     """Tests for syntax error detection."""
 
-    def test_unclosed_if(self):
-        """Test unclosed if block raises error."""
+    @pytest.mark.parametrize(
+        "template,context,error_fragment",
+        [
+            ("{% if x %}test", {"x": True}, "Unclosed"),
+            (
+                "{% for item in items %}{{ item }}{% endfor %}",
+                {"items": []},
+                "for",
+            ),
+            ("{% macro test() %}{% endmacro %}", {}, "macro"),
+            ("{% if %}test{% endif %}", {}, "condition"),
+            ("{% endif %}", {}, "Unexpected"),
+        ],
+        ids=[
+            "unclosed_if",
+            "for_loop_rejected",
+            "macro_rejected",
+            "if_without_condition",
+            "stray_endif",
+        ],
+    )
+    def test_syntax_error(self, template: str, context: dict, error_fragment: str) -> None:
+        """Test syntax error detection."""
         with pytest.raises(TemplateSyntaxError) as exc_info:
-            render_template("{% if x %}test", {"x": True})
-        assert "Unclosed" in str(exc_info.value)
-
-    def test_for_loop_rejected(self):
-        """Test that for loops are rejected."""
-        with pytest.raises(TemplateSyntaxError) as exc_info:
-            render_template("{% for item in items %}{{ item }}{% endfor %}", {"items": []})
-        assert (
-            "for" in str(exc_info.value).lower() or "not supported" in str(exc_info.value).lower()
+            render_template(template, context)
+        assert error_fragment.lower() in str(exc_info.value).lower() or (
+            "not supported" in str(exc_info.value).lower()
         )
-
-    def test_macro_rejected(self):
-        """Test that macros are rejected."""
-        with pytest.raises(TemplateSyntaxError) as exc_info:
-            render_template("{% macro test() %}{% endmacro %}", {})
-        assert (
-            "macro" in str(exc_info.value).lower() or "not supported" in str(exc_info.value).lower()
-        )
-
-    def test_if_without_condition(self):
-        """Test if without condition raises error."""
-        with pytest.raises(TemplateSyntaxError) as exc_info:
-            render_template("{% if %}test{% endif %}", {})
-        assert "condition" in str(exc_info.value).lower()
-
-    def test_stray_endif(self):
-        """Test stray endif raises error."""
-        with pytest.raises(TemplateSyntaxError) as exc_info:
-            render_template("{% endif %}", {})
-        assert "Unexpected" in str(exc_info.value)
 
 
 class TestValidation:
     """Tests for template validation."""
 
-    def test_valid_template(self):
-        """Test validation of valid template."""
-        errors = validate_template("Hello {{ name }}!")
-        assert errors == []
-
-    def test_invalid_template(self):
-        """Test validation catches errors."""
-        errors = validate_template("{% if x %}unclosed")
-        assert len(errors) > 0
-
-    def test_validation_for_loop(self):
-        """Test validation catches for loops."""
-        errors = validate_template("{% for x in y %}{% endfor %}")
-        assert len(errors) > 0
+    @pytest.mark.parametrize(
+        "template,should_have_errors",
+        [
+            ("Hello {{ name }}!", False),
+            ("{% if x %}unclosed", True),
+            ("{% for x in y %}{% endfor %}", True),
+        ],
+        ids=["valid", "unclosed_if", "for_loop"],
+    )
+    def test_validation(self, template: str, should_have_errors: bool) -> None:
+        """Test template validation."""
+        errors = validate_template(template)
+        if should_have_errors:
+            assert len(errors) > 0
+        else:
+            assert errors == []
 
 
 class TestVariableExtraction:
     """Tests for variable extraction."""
 
-    def test_extract_simple_variable(self):
-        """Test extracting simple variable."""
-        variables = extract_variables("Hello {{ name }}!")
-        assert "name" in variables
+    @pytest.mark.parametrize(
+        "template,expected_variables",
+        [
+            ("Hello {{ name }}!", ["name"]),
+            ("{{ user.email }}", ["user.email"]),
+            ("{{ a }} and {{ b }} and {{ c }}", ["a", "b", "c"]),
+            (
+                "{% if user.active %}{{ user.name }}{% endif %}",
+                ["user.active", "user.name"],
+            ),
+        ],
+        ids=["simple", "dotted_path", "multiple", "from_condition"],
+    )
+    def test_extract_variables(self, template: str, expected_variables: list[str]) -> None:
+        """Test variable extraction."""
+        variables = extract_variables(template)
+        for var in expected_variables:
+            assert var in variables
 
-    def test_extract_dotted_path(self):
-        """Test extracting dotted path."""
-        variables = extract_variables("{{ user.email }}")
-        assert "user.email" in variables
-
-    def test_extract_multiple_variables(self):
-        """Test extracting multiple variables."""
-        variables = extract_variables("{{ a }} and {{ b }} and {{ c }}")
-        assert "a" in variables
-        assert "b" in variables
-        assert "c" in variables
-
-    def test_extract_from_condition(self):
-        """Test extracting variables from conditions."""
-        variables = extract_variables("{% if user.active %}{{ user.name }}{% endif %}")
-        assert "user.active" in variables
-        assert "user.name" in variables
-
-    def test_no_duplicates(self):
+    def test_no_duplicates(self) -> None:
         """Test no duplicate variables extracted."""
         variables = extract_variables("{{ name }} {{ name }} {{ name }}")
         assert variables.count("name") == 1
@@ -255,7 +261,7 @@ class TestVariableExtraction:
 class TestRealWorldTemplates:
     """Tests with realistic email templates."""
 
-    def test_welcome_email(self):
+    def test_welcome_email(self) -> None:
         """Test realistic welcome email template."""
         template = """Hello {{ user.name }},
 
@@ -277,7 +283,7 @@ The {{ app.name }} Team"""
         assert "Welcome to MyApp" in result
         assert "free trial will expire in 14 days" in result
 
-    def test_order_confirmation(self):
+    def test_order_confirmation(self) -> None:
         """Test realistic order confirmation template."""
         template = """Order #{{ order.number }} Confirmation
 
