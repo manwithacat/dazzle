@@ -55,10 +55,12 @@ from .handlers.process import (
 from .handlers.testing import (
     check_test_infrastructure_handler,
     get_e2e_test_coverage_handler,
+    get_test_tier_guidance_handler,
     list_e2e_flows_handler,
     run_agent_e2e_tests_handler,
     run_e2e_tests_handler,
 )
+from .handlers_consolidated import dispatch_consolidated_tool
 from .state import (
     get_active_project_path,
     get_available_projects,
@@ -67,6 +69,7 @@ from .state import (
     is_dev_mode,
     resolve_project_path,
     set_project_root,
+    use_consolidated_tools,
 )
 from .tool_handlers import (
     analyze_patterns,
@@ -120,6 +123,7 @@ from .tool_handlers import (
     validate_sitespec_handler,
 )
 from .tools import get_all_tools
+from .tools_consolidated import get_all_consolidated_tools
 
 # Configure logging to stderr only (stdout is reserved for JSON-RPC protocol)
 logging.basicConfig(
@@ -141,6 +145,9 @@ server = Server("dazzle")
 @server.list_tools()  # type: ignore[no-untyped-call]
 async def list_tools_handler() -> list[Tool]:
     """List available DAZZLE tools."""
+    if use_consolidated_tools():
+        logger.info("Using consolidated tools mode (66 -> 17 tools)")
+        return get_all_consolidated_tools()
     return get_all_tools()
 
 
@@ -148,7 +155,13 @@ async def list_tools_handler() -> list[Tool]:
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute a DAZZLE tool."""
 
-    # Dev mode tools
+    # Try consolidated tools first if enabled
+    if use_consolidated_tools():
+        result = dispatch_consolidated_tool(name, arguments or {})
+        if result is not None:
+            return [TextContent(type="text", text=result)]
+
+    # Dev mode tools (always handled directly)
     if name == "list_projects":
         result = list_projects()
     elif name == "select_project":
@@ -428,6 +441,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                     tag=arguments.get("tag"),
                     limit=arguments.get("limit", 20),
                 )
+            elif name == "get_test_tier_guidance":
+                result = get_test_tier_guidance_handler(arguments)
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
     else:

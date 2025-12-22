@@ -8,6 +8,7 @@ for project root, dev mode, and active project management.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 logger = logging.getLogger("dazzle.mcp")
@@ -23,6 +24,21 @@ _project_root: Path = Path.cwd()
 _is_dev_mode: bool = False
 _active_project: str | None = None  # Name of the active example project
 _available_projects: dict[str, Path] = {}  # project_name -> project_path
+
+# Consolidated tools mode - reduces token budget by ~40%
+# Set via DAZZLE_CONSOLIDATED_TOOLS=1 environment variable
+_use_consolidated_tools: bool = os.environ.get("DAZZLE_CONSOLIDATED_TOOLS", "1") == "1"
+
+
+def use_consolidated_tools() -> bool:
+    """Check if consolidated tools mode is enabled."""
+    return _use_consolidated_tools
+
+
+def set_consolidated_tools(enabled: bool) -> None:
+    """Enable or disable consolidated tools mode."""
+    global _use_consolidated_tools
+    _use_consolidated_tools = enabled
 
 
 def set_project_root(path: Path) -> None:

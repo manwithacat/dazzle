@@ -585,3 +585,131 @@ def run_agent_e2e_tests_handler(
                 "status": "error",
             }
         )
+
+
+def get_test_tier_guidance_handler(arguments: dict) -> str:
+    """Provide guidance on which test tier to use for a scenario."""
+    scenario = arguments.get("scenario", "").lower()
+
+    # Keywords that suggest Tier 3 (agent) testing
+    tier3_keywords = [
+        "visual",
+        "looks",
+        "appearance",
+        "layout",
+        "design",
+        "exploratory",
+        "fuzz",
+        "break",
+        "edge case",
+        "accessibility",
+        "keyboard",
+        "screen reader",
+        "adaptive",
+        "unexpected",
+        "regression",
+        "refactor",
+    ]
+
+    # Keywords that suggest Tier 2 (Playwright) testing
+    tier2_keywords = [
+        "navigation",
+        "navigate",
+        "click",
+        "form",
+        "submit",
+        "fill",
+        "ui",
+        "browser",
+        "page",
+        "button",
+        "modal",
+        "dialog",
+    ]
+
+    # Keywords that suggest Tier 1 (API) testing
+    tier1_keywords = [
+        "crud",
+        "create",
+        "update",
+        "delete",
+        "list",
+        "api",
+        "validation",
+        "required",
+        "unique",
+        "state machine",
+        "transition",
+        "permission",
+        "access",
+    ]
+
+    # Score the scenario
+    tier1_score = sum(1 for kw in tier1_keywords if kw in scenario)
+    tier2_score = sum(1 for kw in tier2_keywords if kw in scenario)
+    tier3_score = sum(1 for kw in tier3_keywords if kw in scenario)
+
+    if tier3_score > tier2_score and tier3_score > tier1_score:
+        recommendation = "tier3"
+        reason = (
+            "This scenario requires visual judgment, adaptive behavior, or exploratory testing."
+        )
+        tags = ["tier3", "agent"]
+        run_command = "dazzle test agent"
+        mcp_tool = "run_agent_e2e_tests"
+    elif tier2_score > tier1_score:
+        recommendation = "tier2"
+        reason = "This scenario involves UI interaction with predictable, scriptable steps."
+        tags = ["tier2", "playwright"]
+        run_command = "dazzle test playwright"
+        mcp_tool = "run_e2e_tests"
+    else:
+        recommendation = "tier1"
+        reason = "This scenario can be tested via API without a browser."
+        tags = ["tier1", "generated", "dsl-derived"]
+        run_command = "dazzle test dsl-run"
+        mcp_tool = "run_dsl_tests"
+
+    return json.dumps(
+        {
+            "scenario": arguments.get("scenario", ""),
+            "recommendation": recommendation,
+            "reason": reason,
+            "tags_to_use": tags,
+            "run_command": run_command,
+            "mcp_tool": mcp_tool,
+            "tier_summary": {
+                "tier1": {
+                    "name": "API Tests",
+                    "characteristics": ["Fast", "No browser", "Free"],
+                    "best_for": [
+                        "CRUD operations",
+                        "Field validation",
+                        "API response checks",
+                        "State machine transitions",
+                    ],
+                },
+                "tier2": {
+                    "name": "Scripted E2E (Playwright)",
+                    "characteristics": ["Deterministic", "Uses semantic selectors", "Free"],
+                    "best_for": [
+                        "Navigation verification",
+                        "Form submission",
+                        "UI interaction flows",
+                        "Multi-step workflows",
+                    ],
+                },
+                "tier3": {
+                    "name": "Agent Tests (LLM-Driven)",
+                    "characteristics": ["Adaptive", "Visual understanding", "Costs money"],
+                    "best_for": [
+                        "Visual verification",
+                        "Exploratory testing",
+                        "Accessibility audits",
+                        "Testing after UI refactors",
+                    ],
+                },
+            },
+        },
+        indent=2,
+    )
