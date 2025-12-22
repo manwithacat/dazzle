@@ -133,8 +133,6 @@
           'name': 'Task',
           'patterns': list([
           ]),
-          'publishes': list([
-          ]),
           'state_machine': None,
           'title': 'Task',
         }),
