@@ -587,7 +587,7 @@ def run_agent_e2e_tests_handler(
         )
 
 
-def get_test_tier_guidance_handler(arguments: dict) -> str:
+def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
     """Provide guidance on which test tier to use for a scenario."""
     scenario = arguments.get("scenario", "").lower()
 

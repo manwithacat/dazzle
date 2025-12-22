@@ -120,6 +120,8 @@ class TestMCPServerIntegration:
 
     def test_tools_list(self, mcp_server, request_id_counter):
         """Test that server returns list of tools."""
+        from dazzle.mcp.server.state import use_consolidated_tools
+
         request_id_counter["id"] += 1
         response = send_jsonrpc(mcp_server, "tools/list", {}, id=request_id_counter["id"])
 
@@ -130,18 +132,32 @@ class TestMCPServerIntegration:
         tools = response["result"]["tools"]
         tool_names = [t["name"] for t in tools]
 
-        # Check expected tools exist
-        assert "validate_dsl" in tool_names
-        assert "list_modules" in tool_names
-        assert "inspect_entity" in tool_names
+        # Check expected tools exist (consolidated vs original mode)
+        if use_consolidated_tools():
+            assert "dsl" in tool_names
+            assert "api_pack" in tool_names
+            assert "knowledge" in tool_names
+        else:
+            assert "validate_dsl" in tool_names
+            assert "list_modules" in tool_names
+            assert "inspect_entity" in tool_names
 
     def test_tool_call_validate_dsl(self, mcp_server, request_id_counter):
-        """Test calling the validate_dsl tool."""
+        """Test calling the validate_dsl tool (or dsl with validate operation in consolidated mode)."""
+        from dazzle.mcp.server.state import use_consolidated_tools
+
         request_id_counter["id"] += 1
+        if use_consolidated_tools():
+            tool_name = "dsl"
+            tool_args = {"operation": "validate"}
+        else:
+            tool_name = "validate_dsl"
+            tool_args = {}
+
         response = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "validate_dsl", "arguments": {}},
+            {"name": tool_name, "arguments": tool_args},
             id=request_id_counter["id"],
         )
 
@@ -189,17 +205,26 @@ class TestMCPServerUnit:
     async def test_list_tools_async(self):
         """Test list_tools returns expected tools."""
         from dazzle.mcp.server import list_tools_handler
+        from dazzle.mcp.server.state import use_consolidated_tools
 
         tools = await list_tools_handler()
-
-        assert len(tools) >= 7
         tool_names = [t.name for t in tools]
-        assert "validate_dsl" in tool_names
-        assert "list_modules" in tool_names
-        assert "inspect_entity" in tool_names
-        assert "inspect_surface" in tool_names
-        assert "analyze_patterns" in tool_names
-        assert "lint_project" in tool_names
+
+        if use_consolidated_tools():
+            # In consolidated mode, we have fewer but more comprehensive tools
+            assert len(tools) >= 13
+            assert "dsl" in tool_names
+            assert "api_pack" in tool_names
+            assert "story" in tool_names
+            assert "knowledge" in tool_names
+        else:
+            assert len(tools) >= 7
+            assert "validate_dsl" in tool_names
+            assert "list_modules" in tool_names
+            assert "inspect_entity" in tool_names
+            assert "inspect_surface" in tool_names
+            assert "analyze_patterns" in tool_names
+            assert "lint_project" in tool_names
 
     async def test_call_tool_unknown(self):
         """Test calling unknown tool returns error."""
@@ -263,7 +288,7 @@ class TestMCPDevMode:
     async def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
         from dazzle.mcp.server import list_tools_handler
-        from dazzle.mcp.server.state import init_dev_mode
+        from dazzle.mcp.server.state import init_dev_mode, use_consolidated_tools
 
         # Ensure dev mode is initialized
         init_dev_mode(PROJECT_ROOT)
@@ -277,9 +302,13 @@ class TestMCPDevMode:
         assert "get_active_project" in tool_names
         assert "validate_all_projects" in tool_names
 
-        # Regular tools should also be present
-        assert "validate_dsl" in tool_names
-        assert "list_modules" in tool_names
+        # Regular tools should also be present (consolidated vs original)
+        if use_consolidated_tools():
+            assert "dsl" in tool_names
+            assert "knowledge" in tool_names
+        else:
+            assert "validate_dsl" in tool_names
+            assert "list_modules" in tool_names
 
     async def test_list_projects_tool(self):
         """Test the list_projects tool."""
