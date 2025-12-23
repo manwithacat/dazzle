@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dazzle Control Plane</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="login-screen" class="screen">
+            <div class="login-container">
+                <div class="logo">
+                    <svg width="48" height="48" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="4"/>
+                        <path d="M30 50 L50 30 L70 50 L50 70 Z" fill="currentColor"/>
+                    </svg>
+                    <h1>Dazzle Control Plane</h1>
+                </div>
+
+                <div id="setup-form" class="auth-form hidden">
+                    <p class="setup-notice">Welcome! Create your ops admin account.</p>
+                    <form onsubmit="handleSetup(event)">
+                        <div class="form-group">
+                            <label for="setup-username">Username</label>
+                            <input type="text" id="setup-username" value="ops_admin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="setup-password">Password</label>
+                            <input type="password" id="setup-password" placeholder="Min 8 characters" required minlength="8">
+                        </div>
+                        <div class="form-group">
+                            <label for="setup-password-confirm">Confirm Password</label>
+                            <input type="password" id="setup-password-confirm" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Create Account</button>
+                        <p id="setup-error" class="error-message"></p>
+                    </form>
+                </div>
+
+                <div id="login-form" class="auth-form hidden">
+                    <form onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <label for="login-username">Username</label>
+                            <input type="text" id="login-username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Login</button>
+                        <p id="login-error" class="error-message"></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div id="dashboard-screen" class="screen hidden">
+            <nav class="sidebar">
+                <div class="sidebar-header">
+                    <svg width="32" height="32" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="4"/>
+                        <path d="M30 50 L50 30 L70 50 L50 70 Z" fill="currentColor"/>
+                    </svg>
+                    <span>Control Plane</span>
+                </div>
+
+                <ul class="nav-items">
+                    <li class="nav-item active" data-panel="health">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                        </svg>
+                        <span>Health</span>
+                    </li>
+                    <li class="nav-item" data-panel="events">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+                        </svg>
+                        <span>Events</span>
+                    </li>
+                    <li class="nav-item" data-panel="api-calls">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                        </svg>
+                        <span>API Calls</span>
+                    </li>
+                    <li class="nav-item" data-panel="analytics">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                        </svg>
+                        <span>Analytics</span>
+                    </li>
+                    <li class="nav-item" data-panel="emails">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                        </svg>
+                        <span>Emails</span>
+                    </li>
+                    <li class="nav-item" data-panel="settings">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                        </svg>
+                        <span>Settings</span>
+                    </li>
+                </ul>
+
+                <div class="sidebar-footer">
+                    <button class="btn-logout" onclick="handleLogout()">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                        </svg>
+                        Logout
+                    </button>
+                </div>
+            </nav>
+
+            <main class="content">
+                <!-- Health Panel -->
+                <div id="health-panel" class="panel">
+                    <header class="panel-header">
+                        <h2>System Health</h2>
+                        <div class="panel-actions">
+                            <span id="health-status-badge" class="status-badge">Loading...</span>
+                            <button class="btn-secondary" onclick="refreshHealth()">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                                </svg>
+                                Refresh
+                            </button>
+                        </div>
+                    </header>
+
+                    <div class="health-summary" id="health-summary">
+                        <div class="health-stat healthy">
+                            <span class="stat-value" id="healthy-count">-</span>
+                            <span class="stat-label">Healthy</span>
+                        </div>
+                        <div class="health-stat degraded">
+                            <span class="stat-value" id="degraded-count">-</span>
+                            <span class="stat-label">Degraded</span>
+                        </div>
+                        <div class="health-stat unhealthy">
+                            <span class="stat-value" id="unhealthy-count">-</span>
+                            <span class="stat-label">Unhealthy</span>
+                        </div>
+                    </div>
+
+                    <div class="component-grid" id="health-components">
+                        <!-- Components rendered here -->
+                    </div>
+
+                    <div class="sse-status">
+                        <span id="sse-indicator" class="sse-indicator disconnected"></span>
+                        <span id="sse-label">Connecting to live updates...</span>
+                    </div>
+                </div>
+
+                <!-- Events Panel -->
+                <div id="events-panel" class="panel hidden">
+                    <header class="panel-header">
+                        <h2>Event Explorer</h2>
+                        <div class="panel-actions">
+                            <input type="text" id="event-search" placeholder="Search events..." class="search-input">
+                        </div>
+                    </header>
+
+                    <div class="event-filters">
+                        <select id="event-entity-filter">
+                            <option value="">All Entities</option>
+                        </select>
+                        <select id="event-type-filter">
+                            <option value="">All Types</option>
+                            <option value="created">Created</option>
+                            <option value="updated">Updated</option>
+                            <option value="deleted">Deleted</option>
+                        </select>
+                        <input type="text" id="event-tenant-filter" placeholder="Tenant ID">
+                    </div>
+
+                    <div class="event-list" id="event-list">
+                        <!-- Events rendered here -->
+                    </div>
+                </div>
+
+                <!-- API Calls Panel -->
+                <div id="api-calls-panel" class="panel hidden">
+                    <header class="panel-header">
+                        <h2>External API Calls</h2>
+                        <div class="panel-actions">
+                            <select id="api-hours-filter">
+                                <option value="1">Last 1 hour</option>
+                                <option value="24" selected>Last 24 hours</option>
+                                <option value="168">Last 7 days</option>
+                            </select>
+                        </div>
+                    </header>
+
+                    <div class="api-stats" id="api-stats">
+                        <!-- API stats rendered here -->
+                    </div>
+                </div>
+
+                <!-- Analytics Panel -->
+                <div id="analytics-panel" class="panel hidden">
+                    <header class="panel-header">
+                        <h2>Analytics</h2>
+                        <div class="panel-actions">
+                            <select id="analytics-tenant-filter">
+                                <option value="">Select Tenant</option>
+                            </select>
+                            <select id="analytics-days-filter">
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </header>
+
+                    <div class="analytics-content" id="analytics-content">
+                        <p class="placeholder-text">Select a tenant to view analytics</p>
+                    </div>
+                </div>
+
+                <!-- Emails Panel -->
+                <div id="emails-panel" class="panel hidden">
+                    <header class="panel-header">
+                        <h2>Email Tracking</h2>
+                        <div class="panel-actions">
+                            <select id="email-days-filter">
+                                <option value="7" selected>Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
+                    </header>
+
+                    <div class="email-content" id="email-content">
+                        <p class="placeholder-text">Loading email statistics...</p>
+                    </div>
+                </div>
+
+                <!-- Settings Panel -->
+                <div id="settings-panel" class="panel hidden">
+                    <header class="panel-header">
+                        <h2>Settings</h2>
+                    </header>
+
+                    <div class="settings-section">
+                        <h3>Data Retention</h3>
+                        <p class="settings-description">
+                            Configure how long operational data is retained.
+                            Default: 2 years for analytics (UK GDPR compliant).
+                        </p>
+
+                        <form id="retention-form" onsubmit="saveRetention(event)">
+                            <div class="settings-grid">
+                                <div class="setting-item">
+                                    <label for="retention-health">Health Checks</label>
+                                    <div class="setting-input">
+                                        <input type="number" id="retention-health" min="1" max="365">
+                                        <span class="unit">days</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="retention-api">API Calls</label>
+                                    <div class="setting-input">
+                                        <input type="number" id="retention-api" min="1" max="365">
+                                        <span class="unit">days</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="retention-events">Events</label>
+                                    <div class="setting-input">
+                                        <input type="number" id="retention-events" min="1" max="730">
+                                        <span class="unit">days</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="retention-analytics">Analytics</label>
+                                    <div class="setting-input">
+                                        <input type="number" id="retention-analytics" min="1" max="730">
+                                        <span class="unit">days</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-actions">
+                                <button type="submit" class="btn-primary">Save Changes</button>
+                                <button type="button" class="btn-secondary" onclick="enforceRetention()">
+                                    Enforce Now
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>SSE Streams</h3>
+                        <div id="sse-stats">
+                            <!-- SSE stats rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
