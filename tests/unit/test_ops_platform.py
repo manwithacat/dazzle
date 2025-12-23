@@ -13,6 +13,13 @@ from uuid import uuid4
 
 import pytest
 
+try:
+    import fastapi  # noqa: F401
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+
 from dazzle_dnr_back.runtime.email_templates import (
     BrandConfig,
     EmailTemplate,
@@ -274,6 +281,7 @@ class TestOpsPlatform:
 
         assert client is not None
 
+    @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
     def test_create_routes(self, platform: OpsPlatform) -> None:
         """Test creating ops routes."""
         routers = platform.create_routes()

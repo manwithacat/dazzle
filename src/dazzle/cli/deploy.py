@@ -7,12 +7,15 @@ Commands for generating and managing AWS CDK infrastructure code.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+if TYPE_CHECKING:
+    from dazzle.core.ir import AppSpec
 
 deploy_app = typer.Typer(
     help="Generate and manage AWS infrastructure",
@@ -22,7 +25,7 @@ deploy_app = typer.Typer(
 console = Console()
 
 
-def _load_spec(project_dir: Path):
+def _load_spec(project_dir: Path) -> AppSpec:
     """Load and parse the AppSpec from a project directory."""
     from dazzle.core.fileset import discover_dsl_files
     from dazzle.core.linker import build_appspec
