@@ -1,0 +1,881 @@
+{
+  "version": "2.0",
+  "dsl_hash": "cb8ae2d46c4bcad5",
+  "generated_at": "2025-12-20T12:03:46.956118",
+  "project_name": "ticket_classifier",
+  "coverage": {
+    "entities": [
+      "PriorityAssessment",
+      "Ticket",
+      "TicketClassification"
+    ],
+    "entities_total": 3,
+    "state_machines": [],
+    "state_machines_total": 0,
+    "personas": [
+      "supervisor",
+      "support_agent"
+    ],
+    "personas_total": 2,
+    "workspaces": [
+      "support_dashboard",
+      "ticket_management"
+    ],
+    "workspaces_total": 2,
+    "events": [],
+    "events_total": 0,
+    "processes": [],
+    "processes_total": 0
+  },
+  "designs": [
+    {
+      "test_id": "CRUD_TICKET_CREATE",
+      "title": "Create Support Ticket",
+      "description": "Test creating a new Support Ticket",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "subject": "Test subject",
+            "description": "Test description for description",
+            "customer_email": "Test customer_email"
+          },
+          "rationale": "Create valid Support Ticket"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Ticket",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Support Ticket succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955945"
+    },
+    {
+      "test_id": "CRUD_TICKET_READ",
+      "title": "Read Support Ticket list",
+      "description": "Test reading Support Ticket list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "subject": "Test subject",
+            "description": "Test description for description",
+            "customer_email": "Test customer_email"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:Ticket",
+          "rationale": "Fetch Support Ticket list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:Ticket",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Support Ticket list succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955950"
+    },
+    {
+      "test_id": "VAL_TICKET_REQUIRED",
+      "title": "Validate required fields for Support Ticket",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:Ticket",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Support Ticket succeeds"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955954"
+    },
+    {
+      "test_id": "CRUD_TICKETCLASSIFICATION_CREATE",
+      "title": "Create Ticket Classification",
+      "description": "Test creating a new Ticket Classification",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "subject": "Test subject",
+            "description": "Test description for description",
+            "customer_email": "Test customer_email"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket for ref field 'ticket'"
+        },
+        {
+          "action": "create",
+          "target": "entity:TicketClassification",
+          "data": {
+            "ticket": "$ref:parent_ticket.id"
+          },
+          "rationale": "Create valid Ticket Classification"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TicketClassification",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Ticket Classification succeeds"
+      ],
+      "entities": [
+        "TicketClassification",
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955971"
+    },
+    {
+      "test_id": "CRUD_TICKETCLASSIFICATION_READ",
+      "title": "Read Ticket Classification list",
+      "description": "Test reading Ticket Classification list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Ticket",
+          "data": {
+            "subject": "Test subject",
+            "description": "Test description for description",
+            "customer_email": "Test customer_email"
+          },
+          "store_result": "parent_ticket",
+          "rationale": "Create parent Support Ticket for ref field 'ticket'"
+        },
+        {
+          "action": "create",
+          "target": "entity:TicketClassification",
+          "data": {
+            "ticket": "$ref:parent_ticket.id"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:TicketClassification",
+          "rationale": "Fetch Ticket Classification list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:TicketClassification",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Ticket Classification list succeeds"
+      ],
+      "entities": [
+        "TicketClassification",
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955974"
+    },
+    {
+      "test_id": "VAL_TICKETCLASSIFICATION_REQUIRED",
+      "title": "Validate required fields for Ticket Classification",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:TicketClassification",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Ticket Classification succeeds"
+      ],
+      "entities": [
+        "TicketClassification"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955977"
+    },
+    {
+      "test_id": "CRUD_PRIORITYASSESSMENT_CREATE",
+      "title": "Create Priority Assessment Result",
+      "description": "Test creating a new Priority Assessment Result",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:PriorityAssessment",
+          "data": {
+            "priority": "Test priority"
+          },
+          "rationale": "Create valid Priority Assessment Result"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:PriorityAssessment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify entity was created"
+        }
+      ],
+      "expected_outcomes": [
+        "Create Priority Assessment Result succeeds"
+      ],
+      "entities": [
+        "PriorityAssessment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "create",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955985"
+    },
+    {
+      "test_id": "CRUD_PRIORITYASSESSMENT_READ",
+      "title": "Read Priority Assessment Result list",
+      "description": "Test reading Priority Assessment Result list",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:PriorityAssessment",
+          "data": {
+            "priority": "Test priority"
+          },
+          "rationale": "Seed test data"
+        },
+        {
+          "action": "read_list",
+          "target": "entity:PriorityAssessment",
+          "rationale": "Fetch Priority Assessment Result list"
+        },
+        {
+          "action": "assert_count",
+          "target": "entity:PriorityAssessment",
+          "data": {
+            "min": 1
+          },
+          "rationale": "Verify list has data"
+        }
+      ],
+      "expected_outcomes": [
+        "Read Priority Assessment Result list succeeds"
+      ],
+      "entities": [
+        "PriorityAssessment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "crud",
+        "read",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955987"
+    },
+    {
+      "test_id": "VAL_PRIORITYASSESSMENT_REQUIRED",
+      "title": "Validate required fields for Priority Assessment Result",
+      "description": "Test that missing required fields are rejected",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create_expect_error",
+          "target": "entity:PriorityAssessment",
+          "data": {},
+          "rationale": "Attempt create without required fields"
+        },
+        {
+          "action": "assert_error",
+          "target": "last_response",
+          "data": {
+            "type": "validation_error"
+          },
+          "rationale": "Verify validation error returned"
+        }
+      ],
+      "expected_outcomes": [
+        "Validate required fields for Priority Assessment Result succeeds"
+      ],
+      "entities": [
+        "PriorityAssessment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "validation",
+        "required",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955990"
+    },
+    {
+      "test_id": "ACL_SUPPORT_AGENT_ACCESS",
+      "title": "Support Agent can authenticate",
+      "description": "Test that Support Agent persona can authenticate",
+      "trigger": "authentication",
+      "persona": "support_agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "support_agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "support_agent",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.955994"
+    },
+    {
+      "test_id": "GOAL_SUPPORT_AGENT_VIEW_AND_MANAGE_TICK",
+      "title": "Support Agent: View and manage tickets",
+      "description": "Test that Support Agent can achieve goal: View and manage tickets",
+      "trigger": "user_action",
+      "persona": "support_agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "support_agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "View and manage tickets",
+          "rationale": "Work towards goal: View and manage tickets"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: View and manage tickets succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956041"
+    },
+    {
+      "test_id": "GOAL_SUPPORT_AGENT_REVIEW_AI_CLASSIFICA",
+      "title": "Support Agent: Review AI classifications",
+      "description": "Test that Support Agent can achieve goal: Review AI classifications",
+      "trigger": "user_action",
+      "persona": "support_agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "support_agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Review AI classifications",
+          "rationale": "Work towards goal: Review AI classifications"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: Review AI classifications succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956047"
+    },
+    {
+      "test_id": "GOAL_SUPPORT_AGENT_UPDATE_TICKET_STATUS",
+      "title": "Support Agent: Update ticket status",
+      "description": "Test that Support Agent can achieve goal: Update ticket status",
+      "trigger": "user_action",
+      "persona": "support_agent",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "support_agent",
+          "rationale": "Authenticate as Support Agent"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Update ticket status",
+          "rationale": "Work towards goal: Update ticket status"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Agent: Update ticket status succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956052"
+    },
+    {
+      "test_id": "ACL_SUPERVISOR_ACCESS",
+      "title": "Support Supervisor can authenticate",
+      "description": "Test that Support Supervisor persona can authenticate",
+      "trigger": "authentication",
+      "persona": "supervisor",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "supervisor",
+          "rationale": "Authenticate as Support Supervisor"
+        },
+        {
+          "action": "assert_authenticated",
+          "target": "supervisor",
+          "rationale": "Verify authentication succeeded"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Supervisor can authenticate succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "authentication",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956055"
+    },
+    {
+      "test_id": "GOAL_SUPERVISOR_MONITOR_TICKET_CLASS",
+      "title": "Support Supervisor: Monitor ticket classifications",
+      "description": "Test that Support Supervisor can achieve goal: Monitor ticket classifications",
+      "trigger": "user_action",
+      "persona": "supervisor",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "supervisor",
+          "rationale": "Authenticate as Support Supervisor"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Monitor ticket classifications",
+          "rationale": "Work towards goal: Monitor ticket classifications"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Supervisor: Monitor ticket classifications succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956059"
+    },
+    {
+      "test_id": "GOAL_SUPERVISOR_REVIEW_AI_ACCURACY",
+      "title": "Support Supervisor: Review AI accuracy",
+      "description": "Test that Support Supervisor can achieve goal: Review AI accuracy",
+      "trigger": "user_action",
+      "persona": "supervisor",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "supervisor",
+          "rationale": "Authenticate as Support Supervisor"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Review AI accuracy",
+          "rationale": "Work towards goal: Review AI accuracy"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Supervisor: Review AI accuracy succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956062"
+    },
+    {
+      "test_id": "GOAL_SUPERVISOR_MANAGE_TEAM_WORKLOAD",
+      "title": "Support Supervisor: Manage team workload",
+      "description": "Test that Support Supervisor can achieve goal: Manage team workload",
+      "trigger": "user_action",
+      "persona": "supervisor",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "supervisor",
+          "rationale": "Authenticate as Support Supervisor"
+        },
+        {
+          "action": "achieve_goal",
+          "target": "Manage team workload",
+          "rationale": "Work towards goal: Manage team workload"
+        }
+      ],
+      "expected_outcomes": [
+        "Support Supervisor: Manage team workload succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "persona",
+        "goal",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956065"
+    },
+    {
+      "test_id": "WS_SUPPORT_DASHBOARD_NAV",
+      "title": "Navigate to Support Dashboard",
+      "description": "Verify Support Dashboard workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:support_dashboard",
+          "data": {
+            "route": "/support-dashboard"
+          },
+          "rationale": "Navigate to Support Dashboard workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='support_dashboard']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Support Dashboard succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956070"
+    },
+    {
+      "test_id": "WS_SUPPORT_DASHBOARD_ROUTE",
+      "title": "Workspace Support Dashboard route exists",
+      "description": "Verify Support Dashboard workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:support_dashboard",
+          "data": {
+            "route": "/support-dashboard"
+          },
+          "rationale": "Verify route for Support Dashboard is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Support Dashboard route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956072"
+    },
+    {
+      "test_id": "WS_TICKET_MANAGEMENT_NAV",
+      "title": "Navigate to Ticket Management",
+      "description": "Verify Ticket Management workspace loads and displays correctly",
+      "trigger": "playwright",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "navigate_to",
+          "target": "workspace:ticket_management",
+          "data": {
+            "route": "/ticket-management"
+          },
+          "rationale": "Navigate to Ticket Management workspace"
+        },
+        {
+          "action": "wait_for_load",
+          "target": "page",
+          "rationale": "Wait for workspace to fully load"
+        },
+        {
+          "action": "assert_visible",
+          "target": "[data-dazzle-workspace='ticket_management']",
+          "rationale": "Verify workspace container is visible"
+        },
+        {
+          "action": "assert_no_errors",
+          "target": "console",
+          "rationale": "Verify no JavaScript errors in console"
+        }
+      ],
+      "expected_outcomes": [
+        "Navigate to Ticket Management succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "navigation",
+        "playwright",
+        "tier1",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956075"
+    },
+    {
+      "test_id": "WS_TICKET_MANAGEMENT_ROUTE",
+      "title": "Workspace Ticket Management route exists",
+      "description": "Verify Ticket Management workspace route is configured",
+      "trigger": "api_call",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "check_route",
+          "target": "workspace:ticket_management",
+          "data": {
+            "route": "/ticket-management"
+          },
+          "rationale": "Verify route for Ticket Management is defined"
+        }
+      ],
+      "expected_outcomes": [
+        "Workspace Ticket Management route exists succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "workspace",
+        "route",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T12:03:46.956077"
+    }
+  ]
+}

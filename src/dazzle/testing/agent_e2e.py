@@ -772,13 +772,20 @@ async def run_agent_tests(
         with open(designs_path) as f:
             data = json.load(f)
 
-        e2e_tests = [d for d in data.get("designs", []) if "e2e" in d.get("tags", [])]
+        # Filter for Tier 3 (agent) tests - these require LLM-driven testing
+        # Tier 3 tests are tagged with "tier3" or "agent"
+        # Note: "tier2" or "playwright" tags are for scripted Playwright tests
+        def is_tier3_test(test: dict) -> bool:
+            tags = set(test.get("tags", []))
+            return bool(tags & {"tier3", "agent"})
+
+        agent_tests = [d for d in data.get("designs", []) if is_tier3_test(d)]
 
         if test_ids:
-            e2e_tests = [t for t in e2e_tests if t.get("test_id") in test_ids]
+            agent_tests = [t for t in agent_tests if t.get("test_id") in test_ids]
 
-        if not e2e_tests:
-            logger.info("No E2E tests to run")
+        if not agent_tests:
+            logger.info("No Tier 3 (agent) tests to run")
             return []
 
         # Run tests
@@ -791,7 +798,7 @@ async def run_agent_tests(
             page = await context.new_page()
 
             async with E2EAgent(model=model) as agent:
-                for test in e2e_tests:
+                for test in agent_tests:
                     logger.info(f"Running: {test.get('test_id')}")
                     result = await agent.run_test(page, test, base_url)
                     results.append(result)

@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "61a41149c592b5d2",
-  "generated_at": "2025-12-20T07:57:10.799083",
+  "generated_at": "2025-12-20T11:34:07.897373",
   "project_name": "fieldtest_hub",
   "coverage": {
     "entities": [
@@ -52,7 +52,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798"
+            "serial_number": "SN47896"
           },
           "rationale": "Create valid Device"
         },
@@ -80,7 +80,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798504"
+      "created_at": "2025-12-20T11:34:07.896760"
     },
     {
       "test_id": "CRUD_DEVICE_READ",
@@ -97,7 +97,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798"
+            "serial_number": "SN47896"
           },
           "rationale": "Seed test data"
         },
@@ -130,7 +130,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798510"
+      "created_at": "2025-12-20T11:34:07.896767"
     },
     {
       "test_id": "VAL_DEVICE_REQUIRED",
@@ -170,7 +170,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798514"
+      "created_at": "2025-12-20T11:34:07.896771"
     },
     {
       "test_id": "VAL_DEVICE_SERIAL_NUMBER_UNIQUE",
@@ -187,7 +187,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798"
+            "serial_number": "SN47896"
           },
           "rationale": "Create first entity"
         },
@@ -198,7 +198,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798"
+            "serial_number": "SN47896"
           },
           "rationale": "Attempt duplicate serial_number"
         },
@@ -226,7 +226,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798529"
+      "created_at": "2025-12-20T11:34:07.896787"
     },
     {
       "test_id": "CRUD_TESTER_CREATE",
@@ -241,7 +241,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_30798@example.com",
+            "email": "test_47896@example.com",
             "location": "Test location"
           },
           "rationale": "Create valid Tester"
@@ -270,7 +270,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798538"
+      "created_at": "2025-12-20T11:34:07.896797"
     },
     {
       "test_id": "CRUD_TESTER_READ",
@@ -285,7 +285,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_30798@example.com",
+            "email": "test_47896@example.com",
             "location": "Test location"
           },
           "rationale": "Seed test data"
@@ -319,7 +319,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798541"
+      "created_at": "2025-12-20T11:34:07.896799"
     },
     {
       "test_id": "VAL_TESTER_REQUIRED",
@@ -359,7 +359,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798544"
+      "created_at": "2025-12-20T11:34:07.896802"
     },
     {
       "test_id": "VAL_TESTER_EMAIL_UNIQUE",
@@ -374,7 +374,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_30798@example.com",
+            "email": "test_47896@example.com",
             "location": "Test location"
           },
           "rationale": "Create first entity"
@@ -384,7 +384,7 @@
           "target": "entity:Tester",
           "data": {
             "name": "Test name",
-            "email": "test_30798@example.com",
+            "email": "test_47896@example.com",
             "location": "Test location"
           },
           "rationale": "Attempt duplicate email"
@@ -413,7 +413,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798555"
+      "created_at": "2025-12-20T11:34:07.896814"
     },
     {
       "test_id": "CRUD_ISSUEREPORT_CREATE",
@@ -427,8 +427,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "f630dc16-1217-4471-83b7-97241bbff864",
-            "reported_by_id": "4534ea71-28fd-4dff-8246-0edaf67f2ddc",
+            "device_id": "37b890b0-d9f6-412f-8b11-f9295b33fd0b",
+            "reported_by_id": "9657c868-6de3-42ed-a55f-be455bf123fc",
             "description": "Test description for description"
           },
           "rationale": "Create valid Issue Report"
@@ -457,7 +457,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798603"
+      "created_at": "2025-12-20T11:34:07.896846"
     },
     {
       "test_id": "CRUD_ISSUEREPORT_READ",
@@ -471,8 +471,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "f630dc16-1217-4471-83b7-97241bbff864",
-            "reported_by_id": "4534ea71-28fd-4dff-8246-0edaf67f2ddc",
+            "device_id": "37b890b0-d9f6-412f-8b11-f9295b33fd0b",
+            "reported_by_id": "9657c868-6de3-42ed-a55f-be455bf123fc",
             "description": "Test description for description"
           },
           "rationale": "Seed test data"
@@ -506,7 +506,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798605"
+      "created_at": "2025-12-20T11:34:07.896849"
     },
     {
       "test_id": "VAL_ISSUEREPORT_REQUIRED",
@@ -546,7 +546,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798609"
+      "created_at": "2025-12-20T11:34:07.896852"
     },
     {
       "test_id": "CRUD_TESTSESSION_CREATE",
@@ -560,8 +560,8 @@
           "action": "create",
           "target": "entity:TestSession",
           "data": {
-            "device_id": "979ef241-5518-470e-b9b9-5dde434e78a4",
-            "tester_id": "c6c91c0a-c6ac-43c3-9bba-3130116afca3"
+            "device_id": "da6fd93a-2408-4015-b5d7-b2866e434b90",
+            "tester_id": "1f84fee0-1730-496a-bca8-66b841dd630f"
           },
           "rationale": "Create valid Test Session"
         },
@@ -589,7 +589,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798624"
+      "created_at": "2025-12-20T11:34:07.896867"
     },
     {
       "test_id": "CRUD_TESTSESSION_READ",
@@ -603,8 +603,8 @@
           "action": "create",
           "target": "entity:TestSession",
           "data": {
-            "device_id": "979ef241-5518-470e-b9b9-5dde434e78a4",
-            "tester_id": "c6c91c0a-c6ac-43c3-9bba-3130116afca3"
+            "device_id": "da6fd93a-2408-4015-b5d7-b2866e434b90",
+            "tester_id": "1f84fee0-1730-496a-bca8-66b841dd630f"
           },
           "rationale": "Seed test data"
         },
@@ -637,7 +637,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798626"
+      "created_at": "2025-12-20T11:34:07.896870"
     },
     {
       "test_id": "VAL_TESTSESSION_REQUIRED",
@@ -677,7 +677,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798629"
+      "created_at": "2025-12-20T11:34:07.896872"
     },
     {
       "test_id": "CRUD_FIRMWARERELEASE_CREATE",
@@ -691,8 +691,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798636"
+            "version": "1.0.47896",
+            "release_date": "2025-12-20T11:34:07.896880"
           },
           "rationale": "Create valid Firmware Release"
         },
@@ -720,7 +720,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798638"
+      "created_at": "2025-12-20T11:34:07.896882"
     },
     {
       "test_id": "CRUD_FIRMWARERELEASE_READ",
@@ -734,8 +734,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798636"
+            "version": "1.0.47896",
+            "release_date": "2025-12-20T11:34:07.896880"
           },
           "rationale": "Seed test data"
         },
@@ -768,7 +768,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798640"
+      "created_at": "2025-12-20T11:34:07.896885"
     },
     {
       "test_id": "VAL_FIRMWARERELEASE_REQUIRED",
@@ -808,7 +808,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798643"
+      "created_at": "2025-12-20T11:34:07.896887"
     },
     {
       "test_id": "VAL_FIRMWARERELEASE_VERSION_UNIQUE",
@@ -822,8 +822,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798649"
+            "version": "1.0.47896",
+            "release_date": "2025-12-20T11:34:07.896893"
           },
           "rationale": "Create first entity"
         },
@@ -831,8 +831,8 @@
           "action": "create_expect_error",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798653"
+            "version": "1.0.47896",
+            "release_date": "2025-12-20T11:34:07.896898"
           },
           "rationale": "Attempt duplicate version"
         },
@@ -860,7 +860,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798655"
+      "created_at": "2025-12-20T11:34:07.896899"
     },
     {
       "test_id": "CRUD_TASK_CREATE",
@@ -874,7 +874,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "4e0c16a7-83fd-4344-a39a-3f59fba68644"
+            "created_by_id": "2216603d-7124-4643-b261-891629937ba6"
           },
           "rationale": "Create valid Task"
         },
@@ -902,7 +902,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798664"
+      "created_at": "2025-12-20T11:34:07.896908"
     },
     {
       "test_id": "CRUD_TASK_READ",
@@ -916,7 +916,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "4e0c16a7-83fd-4344-a39a-3f59fba68644"
+            "created_by_id": "2216603d-7124-4643-b261-891629937ba6"
           },
           "rationale": "Seed test data"
         },
@@ -949,7 +949,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798666"
+      "created_at": "2025-12-20T11:34:07.896911"
     },
     {
       "test_id": "VAL_TASK_REQUIRED",
@@ -989,7 +989,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798669"
+      "created_at": "2025-12-20T11:34:07.896914"
     },
     {
       "test_id": "SM_DEVICE_PROTOTYPE_ACTIVE",
@@ -1006,7 +1006,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "prototype"
           },
           "rationale": "Create entity in prototype state"
@@ -1044,7 +1044,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798680"
+      "created_at": "2025-12-20T11:34:07.896933"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_RECALLED",
@@ -1061,7 +1061,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1099,7 +1099,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798689"
+      "created_at": "2025-12-20T11:34:07.896941"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_RETIRED",
@@ -1116,7 +1116,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1154,7 +1154,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798696"
+      "created_at": "2025-12-20T11:34:07.896949"
     },
     {
       "test_id": "SM_DEVICE_RECALLED_ACTIVE",
@@ -1171,7 +1171,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "recalled"
           },
           "rationale": "Create entity in recalled state"
@@ -1209,7 +1209,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798703"
+      "created_at": "2025-12-20T11:34:07.896956"
     },
     {
       "test_id": "SM_DEVICE_RETIRED_PROTOTYPE",
@@ -1226,7 +1226,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "retired"
           },
           "rationale": "Create entity in retired state"
@@ -1264,12 +1264,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798715"
+      "created_at": "2025-12-20T11:34:07.896965"
     },
     {
-      "test_id": "SM_DEVICE_PROTOTYPE_RECALLED_INVALID",
-      "title": "Device: prototype \u2192 recalled (invalid)",
-      "description": "Test that invalid transition from prototype to recalled is rejected",
+      "test_id": "SM_DEVICE_PROTOTYPE_RETIRED_INVALID",
+      "title": "Device: prototype \u2192 retired (invalid)",
+      "description": "Test that invalid transition from prototype to retired is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1281,7 +1281,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "prototype"
           },
           "rationale": "Create entity in prototype state"
@@ -1290,9 +1290,9 @@
           "action": "transition_expect_error",
           "target": "entity:Device",
           "data": {
-            "to_state": "recalled"
+            "to_state": "retired"
           },
-          "rationale": "Attempt invalid transition to recalled"
+          "rationale": "Attempt invalid transition to retired"
         },
         {
           "action": "assert_state",
@@ -1305,7 +1305,7 @@
         }
       ],
       "expected_outcomes": [
-        "Device: prototype \u2192 recalled (invalid) succeeds"
+        "Device: prototype \u2192 retired (invalid) succeeds"
       ],
       "entities": [
         "Device"
@@ -1319,7 +1319,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798726"
+      "created_at": "2025-12-20T11:34:07.896977"
     },
     {
       "test_id": "SM_DEVICE_ACTIVE_PROTOTYPE_INVALID",
@@ -1336,7 +1336,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "active"
           },
           "rationale": "Create entity in active state"
@@ -1374,12 +1374,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798736"
+      "created_at": "2025-12-20T11:34:07.896987"
     },
     {
-      "test_id": "SM_DEVICE_RECALLED_RETIRED_INVALID",
-      "title": "Device: recalled \u2192 retired (invalid)",
-      "description": "Test that invalid transition from recalled to retired is rejected",
+      "test_id": "SM_DEVICE_RECALLED_PROTOTYPE_INVALID",
+      "title": "Device: recalled \u2192 prototype (invalid)",
+      "description": "Test that invalid transition from recalled to prototype is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1391,7 +1391,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "recalled"
           },
           "rationale": "Create entity in recalled state"
@@ -1400,9 +1400,9 @@
           "action": "transition_expect_error",
           "target": "entity:Device",
           "data": {
-            "to_state": "retired"
+            "to_state": "prototype"
           },
-          "rationale": "Attempt invalid transition to retired"
+          "rationale": "Attempt invalid transition to prototype"
         },
         {
           "action": "assert_state",
@@ -1415,7 +1415,7 @@
         }
       ],
       "expected_outcomes": [
-        "Device: recalled \u2192 retired (invalid) succeeds"
+        "Device: recalled \u2192 prototype (invalid) succeeds"
       ],
       "entities": [
         "Device"
@@ -1429,7 +1429,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798746"
+      "created_at": "2025-12-20T11:34:07.896995"
     },
     {
       "test_id": "SM_DEVICE_RETIRED_ACTIVE_INVALID",
@@ -1446,7 +1446,7 @@
             "name": "Test name",
             "model": "Test model",
             "batch_number": "Test batch_number",
-            "serial_number": "SN30798",
+            "serial_number": "SN47896",
             "status": "retired"
           },
           "rationale": "Create entity in retired state"
@@ -1484,7 +1484,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798754"
+      "created_at": "2025-12-20T11:34:07.897003"
     },
     {
       "test_id": "SM_ISSUEREPORT_OPEN_TRIAGED",
@@ -1498,8 +1498,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "ca09e855-75da-4ac9-9ade-05d80face78a",
-            "reported_by_id": "2553e78d-0a3d-4dc2-8cc2-5751ee389bc9",
+            "device_id": "d6c18f4e-64c7-47df-a8dd-4652289cc124",
+            "reported_by_id": "4c69a9fe-e696-4831-b945-04b47c8f9b48",
             "description": "Test description for description",
             "status": "open"
           },
@@ -1538,7 +1538,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798769"
+      "created_at": "2025-12-20T11:34:07.897019"
     },
     {
       "test_id": "SM_ISSUEREPORT_TRIAGED_IN_PROGRESS",
@@ -1552,8 +1552,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "147f941f-1e5a-43ca-b01a-9b309bb89acd",
-            "reported_by_id": "d7d7ae68-8d45-4d11-827e-f55ffc0783ac",
+            "device_id": "793a7a8c-407c-40da-b7ee-b369195f31c0",
+            "reported_by_id": "5829dacc-1a3e-43ab-955e-86a0758bf66a",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1592,7 +1592,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798782"
+      "created_at": "2025-12-20T11:34:07.897032"
     },
     {
       "test_id": "SM_ISSUEREPORT_IN_PROGRESS_FIXED",
@@ -1606,8 +1606,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "7e3a181e-273d-4a6d-aa8a-bed0f0de354d",
-            "reported_by_id": "a7f90e90-6ee5-4b51-9fce-ad5642cd1595",
+            "device_id": "6ef5e0b6-7b41-4718-afff-98ec2b298454",
+            "reported_by_id": "3cd631b1-85b6-46a6-81f3-a143e18ed36c",
             "description": "Test description for description",
             "status": "in_progress"
           },
@@ -1646,7 +1646,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798794"
+      "created_at": "2025-12-20T11:34:07.897044"
     },
     {
       "test_id": "SM_ISSUEREPORT_FIXED_VERIFIED",
@@ -1660,8 +1660,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "899f6229-a1c4-4d05-9260-1e58698daf2f",
-            "reported_by_id": "c1ffeb47-56e6-415c-bd83-d698563d7704",
+            "device_id": "40a84df3-7e6c-4a7f-bc9a-7bdb0b7e116b",
+            "reported_by_id": "6820ae0c-ac36-4ce6-9993-012c3537384d",
             "description": "Test description for description",
             "status": "fixed"
           },
@@ -1700,7 +1700,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798806"
+      "created_at": "2025-12-20T11:34:07.897056"
     },
     {
       "test_id": "SM_ISSUEREPORT_FIXED_IN_PROGRESS",
@@ -1714,8 +1714,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "8242e52f-153a-4c39-8ed8-dac59499f96b",
-            "reported_by_id": "b075b615-9cfd-4079-bcb3-3f7971e0f2e8",
+            "device_id": "9034bfaa-6a85-4752-86c5-858149f442ca",
+            "reported_by_id": "41471551-83e7-4013-a043-c78efe7174de",
             "description": "Test description for description",
             "status": "fixed"
           },
@@ -1754,7 +1754,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798818"
+      "created_at": "2025-12-20T11:34:07.897068"
     },
     {
       "test_id": "SM_ISSUEREPORT_VERIFIED_CLOSED",
@@ -1768,8 +1768,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "aaa30a5e-3733-494d-b092-c9ce60a8ccf9",
-            "reported_by_id": "61bb0886-f52c-4dff-975f-fa8987894af2",
+            "device_id": "98893f6a-5791-4604-a3be-7f68439bcf9f",
+            "reported_by_id": "140776bf-d61c-4a7e-8ce7-b03a661809fe",
             "description": "Test description for description",
             "status": "verified"
           },
@@ -1808,7 +1808,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798830"
+      "created_at": "2025-12-20T11:34:07.897080"
     },
     {
       "test_id": "SM_ISSUEREPORT_CLOSED_OPEN",
@@ -1822,8 +1822,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "006508e2-ed67-4e60-8f4e-5f0291c7a880",
-            "reported_by_id": "58d50d34-c18b-400e-b4b0-8b2f5fa30e24",
+            "device_id": "e5047b55-b0b0-4ba2-a5f4-c5d7a8d037c8",
+            "reported_by_id": "970ed767-76bd-4373-9539-32332485ae22",
             "description": "Test description for description",
             "status": "closed"
           },
@@ -1862,12 +1862,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798842"
+      "created_at": "2025-12-20T11:34:07.897092"
     },
     {
-      "test_id": "SM_ISSUEREPORT_OPEN_FIXED_INVALID",
-      "title": "Issue Report: open \u2192 fixed (invalid)",
-      "description": "Test that invalid transition from open to fixed is rejected",
+      "test_id": "SM_ISSUEREPORT_OPEN_CLOSED_INVALID",
+      "title": "Issue Report: open \u2192 closed (invalid)",
+      "description": "Test that invalid transition from open to closed is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1876,8 +1876,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "0b6412c0-d9bb-4cb2-bb20-a6c6e29d6ee7",
-            "reported_by_id": "92d5578e-3407-49e4-a470-aeb948cee47e",
+            "device_id": "ad6f769e-f03b-4463-bf4f-803e3d55ef60",
+            "reported_by_id": "c7ea375d-0e55-489c-9131-aca17809e123",
             "description": "Test description for description",
             "status": "open"
           },
@@ -1887,9 +1887,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "fixed"
+            "to_state": "closed"
           },
-          "rationale": "Attempt invalid transition to fixed"
+          "rationale": "Attempt invalid transition to closed"
         },
         {
           "action": "assert_state",
@@ -1902,7 +1902,7 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: open \u2192 fixed (invalid) succeeds"
+        "Issue Report: open \u2192 closed (invalid) succeeds"
       ],
       "entities": [
         "IssueReport"
@@ -1916,7 +1916,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798856"
+      "created_at": "2025-12-20T11:34:07.897106"
     },
     {
       "test_id": "SM_ISSUEREPORT_TRIAGED_FIXED_INVALID",
@@ -1930,8 +1930,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "dc5c4735-97df-4a2f-855c-b105748a8153",
-            "reported_by_id": "db98ebf4-6476-4b30-b3bb-d35a4d3444d0",
+            "device_id": "6dfd7ff4-c00a-42a0-84eb-08fbe35b7175",
+            "reported_by_id": "6861dd1a-f0bf-4720-92a1-ff2c6a0d4fd5",
             "description": "Test description for description",
             "status": "triaged"
           },
@@ -1970,12 +1970,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798869"
+      "created_at": "2025-12-20T11:34:07.897120"
     },
     {
-      "test_id": "SM_ISSUEREPORT_IN_PROGRESS_VERIFIED_INVALID",
-      "title": "Issue Report: in_progress \u2192 verified (invalid)",
-      "description": "Test that invalid transition from in_progress to verified is rejected",
+      "test_id": "SM_ISSUEREPORT_IN_PROGRESS_TRIAGED_INVALID",
+      "title": "Issue Report: in_progress \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from in_progress to triaged is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1984,8 +1984,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "2c1cc3b3-141e-401e-8d19-898b78cff000",
-            "reported_by_id": "c71a1a29-992b-4060-8e85-4b47f28cdb2f",
+            "device_id": "22693b84-026e-4054-b52a-e1d63a8a97aa",
+            "reported_by_id": "78976d88-e2e2-4106-a064-b1fd891ff590",
             "description": "Test description for description",
             "status": "in_progress"
           },
@@ -1995,9 +1995,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "verified"
+            "to_state": "triaged"
           },
-          "rationale": "Attempt invalid transition to verified"
+          "rationale": "Attempt invalid transition to triaged"
         },
         {
           "action": "assert_state",
@@ -2010,7 +2010,7 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: in_progress \u2192 verified (invalid) succeeds"
+        "Issue Report: in_progress \u2192 triaged (invalid) succeeds"
       ],
       "entities": [
         "IssueReport"
@@ -2024,7 +2024,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798882"
+      "created_at": "2025-12-20T11:34:07.897133"
     },
     {
       "test_id": "SM_ISSUEREPORT_FIXED_OPEN_INVALID",
@@ -2038,8 +2038,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "36838171-aa34-4882-8f77-65db276adf72",
-            "reported_by_id": "ac071561-a5dc-4479-a5f9-afb852c7b006",
+            "device_id": "a8ce496a-1c31-44a0-a164-e187fed6f689",
+            "reported_by_id": "5a7682ed-3128-4438-b6a8-46bad4631122",
             "description": "Test description for description",
             "status": "fixed"
           },
@@ -2078,12 +2078,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798895"
+      "created_at": "2025-12-20T11:34:07.897149"
     },
     {
-      "test_id": "SM_ISSUEREPORT_VERIFIED_FIXED_INVALID",
-      "title": "Issue Report: verified \u2192 fixed (invalid)",
-      "description": "Test that invalid transition from verified to fixed is rejected",
+      "test_id": "SM_ISSUEREPORT_VERIFIED_TRIAGED_INVALID",
+      "title": "Issue Report: verified \u2192 triaged (invalid)",
+      "description": "Test that invalid transition from verified to triaged is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2092,8 +2092,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "26e50fc3-3569-4b47-8182-d499232a2e87",
-            "reported_by_id": "40febe64-6df7-4ad0-a9ff-1d5657bc4794",
+            "device_id": "19fdccf0-e69d-4744-8e41-bda3ebc19f78",
+            "reported_by_id": "9f7ae3a1-b976-4c11-aa68-6d1001973eb2",
             "description": "Test description for description",
             "status": "verified"
           },
@@ -2103,9 +2103,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "fixed"
+            "to_state": "triaged"
           },
-          "rationale": "Attempt invalid transition to fixed"
+          "rationale": "Attempt invalid transition to triaged"
         },
         {
           "action": "assert_state",
@@ -2118,7 +2118,7 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: verified \u2192 fixed (invalid) succeeds"
+        "Issue Report: verified \u2192 triaged (invalid) succeeds"
       ],
       "entities": [
         "IssueReport"
@@ -2132,12 +2132,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798908"
+      "created_at": "2025-12-20T11:34:07.897162"
     },
     {
-      "test_id": "SM_ISSUEREPORT_CLOSED_FIXED_INVALID",
-      "title": "Issue Report: closed \u2192 fixed (invalid)",
-      "description": "Test that invalid transition from closed to fixed is rejected",
+      "test_id": "SM_ISSUEREPORT_CLOSED_VERIFIED_INVALID",
+      "title": "Issue Report: closed \u2192 verified (invalid)",
+      "description": "Test that invalid transition from closed to verified is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2146,8 +2146,8 @@
           "action": "create",
           "target": "entity:IssueReport",
           "data": {
-            "device_id": "09d46ec6-3ed6-48d1-a70b-b65c885d995e",
-            "reported_by_id": "739f8405-0751-4175-a912-c286c12ff517",
+            "device_id": "e7fcb7f2-5cbb-445f-a684-a417d2ff91e9",
+            "reported_by_id": "e1430074-fc20-4a65-baa0-59bd5cbdf316",
             "description": "Test description for description",
             "status": "closed"
           },
@@ -2157,9 +2157,9 @@
           "action": "transition_expect_error",
           "target": "entity:IssueReport",
           "data": {
-            "to_state": "fixed"
+            "to_state": "verified"
           },
-          "rationale": "Attempt invalid transition to fixed"
+          "rationale": "Attempt invalid transition to verified"
         },
         {
           "action": "assert_state",
@@ -2172,7 +2172,7 @@
         }
       ],
       "expected_outcomes": [
-        "Issue Report: closed \u2192 fixed (invalid) succeeds"
+        "Issue Report: closed \u2192 verified (invalid) succeeds"
       ],
       "entities": [
         "IssueReport"
@@ -2186,7 +2186,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798920"
+      "created_at": "2025-12-20T11:34:07.897174"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DRAFT_RELEASED",
@@ -2200,8 +2200,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798926",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897181",
             "status": "draft"
           },
           "rationale": "Create entity in draft state"
@@ -2239,7 +2239,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798928"
+      "created_at": "2025-12-20T11:34:07.897184"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_RELEASED_DEPRECATED",
@@ -2253,8 +2253,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798933",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897188",
             "status": "released"
           },
           "rationale": "Create entity in released state"
@@ -2292,7 +2292,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798942"
+      "created_at": "2025-12-20T11:34:07.897191"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DEPRECATED_DRAFT",
@@ -2306,8 +2306,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798947",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897195",
             "status": "deprecated"
           },
           "rationale": "Create entity in deprecated state"
@@ -2345,7 +2345,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798950"
+      "created_at": "2025-12-20T11:34:07.897198"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DRAFT_DEPRECATED_INVALID",
@@ -2359,8 +2359,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798955",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897204",
             "status": "draft"
           },
           "rationale": "Create entity in draft state"
@@ -2398,7 +2398,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798958"
+      "created_at": "2025-12-20T11:34:07.897206"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_RELEASED_DRAFT_INVALID",
@@ -2412,8 +2412,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798963",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897211",
             "status": "released"
           },
           "rationale": "Create entity in released state"
@@ -2451,7 +2451,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798965"
+      "created_at": "2025-12-20T11:34:07.897213"
     },
     {
       "test_id": "SM_FIRMWARERELEASE_DEPRECATED_RELEASED_INVALID",
@@ -2465,8 +2465,8 @@
           "action": "create",
           "target": "entity:FirmwareRelease",
           "data": {
-            "version": "1.0.30798",
-            "release_date": "2025-12-20T07:57:10.798970",
+            "version": "1.0.47897",
+            "release_date": "2025-12-20T11:34:07.897218",
             "status": "deprecated"
           },
           "rationale": "Create entity in deprecated state"
@@ -2504,7 +2504,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798972"
+      "created_at": "2025-12-20T11:34:07.897220"
     },
     {
       "test_id": "SM_TASK_OPEN_IN_PROGRESS",
@@ -2518,7 +2518,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "6e338078-4083-4982-927d-13aedc5c05fa",
+            "created_by_id": "461663eb-4e3b-4303-bfaf-1c132584e608",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -2556,7 +2556,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798980"
+      "created_at": "2025-12-20T11:34:07.897230"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_COMPLETED",
@@ -2570,7 +2570,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "fd6f989d-e41e-4bf9-93af-a1f3151ffc6c",
+            "created_by_id": "ce836f31-e874-43a9-9b50-358994e10599",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2608,7 +2608,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.798993"
+      "created_at": "2025-12-20T11:34:07.897239"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_OPEN",
@@ -2622,7 +2622,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "2d882294-76e5-4359-897b-a1d56de16f29",
+            "created_by_id": "ef20852d-093a-4498-9556-ab6b59f61aa8",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2660,7 +2660,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799000"
+      "created_at": "2025-12-20T11:34:07.897246"
     },
     {
       "test_id": "SM_TASK_COMPLETED_OPEN",
@@ -2674,7 +2674,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "a2eede27-17e4-4c07-9366-32badf080b6f",
+            "created_by_id": "e81befba-e72b-45d5-83ba-11d1bfe05bbd",
             "status": "completed"
           },
           "rationale": "Create entity in completed state"
@@ -2712,7 +2712,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799007"
+      "created_at": "2025-12-20T11:34:07.897253"
     },
     {
       "test_id": "SM_TASK_*_CANCELLED",
@@ -2726,7 +2726,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "fe0ed1b4-b04a-4c34-ad33-95d64489dcc0",
+            "created_by_id": "7c82f6ce-0678-4cc9-b84d-6546ac40c05d",
             "status": "*"
           },
           "rationale": "Create entity in * state"
@@ -2764,12 +2764,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799015"
+      "created_at": "2025-12-20T11:34:07.897261"
     },
     {
-      "test_id": "SM_TASK_OPEN_CANCELLED_INVALID",
-      "title": "Task: open \u2192 cancelled (invalid)",
-      "description": "Test that invalid transition from open to cancelled is rejected",
+      "test_id": "SM_TASK_OPEN_COMPLETED_INVALID",
+      "title": "Task: open \u2192 completed (invalid)",
+      "description": "Test that invalid transition from open to completed is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2778,7 +2778,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "af067065-aa03-47a2-8e3d-d59bddacafc0",
+            "created_by_id": "c13e298a-6fda-4668-8dca-d20747c9cc06",
             "status": "open"
           },
           "rationale": "Create entity in open state"
@@ -2787,9 +2787,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "cancelled"
+            "to_state": "completed"
           },
-          "rationale": "Attempt invalid transition to cancelled"
+          "rationale": "Attempt invalid transition to completed"
         },
         {
           "action": "assert_state",
@@ -2802,7 +2802,7 @@
         }
       ],
       "expected_outcomes": [
-        "Task: open \u2192 cancelled (invalid) succeeds"
+        "Task: open \u2192 completed (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -2816,7 +2816,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799024"
+      "created_at": "2025-12-20T11:34:07.897270"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_CANCELLED_INVALID",
@@ -2830,7 +2830,7 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "34727109-a7ab-4f40-9b34-9801af43d685",
+            "created_by_id": "bfca90fe-672d-4c5a-b3af-56bf055527ee",
             "status": "in_progress"
           },
           "rationale": "Create entity in in_progress state"
@@ -2868,12 +2868,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799032"
+      "created_at": "2025-12-20T11:34:07.897278"
     },
     {
-      "test_id": "SM_TASK_COMPLETED_CANCELLED_INVALID",
-      "title": "Task: completed \u2192 cancelled (invalid)",
-      "description": "Test that invalid transition from completed to cancelled is rejected",
+      "test_id": "SM_TASK_COMPLETED_IN_PROGRESS_INVALID",
+      "title": "Task: completed \u2192 in_progress (invalid)",
+      "description": "Test that invalid transition from completed to in_progress is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -2882,62 +2882,10 @@
           "action": "create",
           "target": "entity:Task",
           "data": {
-            "created_by_id": "beb8a002-7577-4240-aacc-25b385c6c86d",
+            "created_by_id": "310b141b-ca3e-42b9-a1d7-9e193639184b",
             "status": "completed"
           },
           "rationale": "Create entity in completed state"
-        },
-        {
-          "action": "transition_expect_error",
-          "target": "entity:Task",
-          "data": {
-            "to_state": "cancelled"
-          },
-          "rationale": "Attempt invalid transition to cancelled"
-        },
-        {
-          "action": "assert_state",
-          "target": "entity:Task",
-          "data": {
-            "field": "status",
-            "value": "completed"
-          },
-          "rationale": "Verify state unchanged"
-        }
-      ],
-      "expected_outcomes": [
-        "Task: completed \u2192 cancelled (invalid) succeeds"
-      ],
-      "entities": [
-        "Task"
-      ],
-      "surfaces": [],
-      "tags": [
-        "state_machine",
-        "invalid_transition",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799040"
-    },
-    {
-      "test_id": "SM_TASK_CANCELLED_IN_PROGRESS_INVALID",
-      "title": "Task: cancelled \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from cancelled to in_progress is rejected",
-      "trigger": "state_change",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:Task",
-          "data": {
-            "created_by_id": "da982198-df8b-4e76-a1dd-8a5c52f62ad8",
-            "status": "cancelled"
-          },
-          "rationale": "Create entity in cancelled state"
         },
         {
           "action": "transition_expect_error",
@@ -2952,13 +2900,13 @@
           "target": "entity:Task",
           "data": {
             "field": "status",
-            "value": "cancelled"
+            "value": "completed"
           },
           "rationale": "Verify state unchanged"
         }
       ],
       "expected_outcomes": [
-        "Task: cancelled \u2192 in_progress (invalid) succeeds"
+        "Task: completed \u2192 in_progress (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -2972,7 +2920,59 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799048"
+      "created_at": "2025-12-20T11:34:07.897287"
+    },
+    {
+      "test_id": "SM_TASK_CANCELLED_OPEN_INVALID",
+      "title": "Task: cancelled \u2192 open (invalid)",
+      "description": "Test that invalid transition from cancelled to open is rejected",
+      "trigger": "state_change",
+      "persona": null,
+      "scenario": null,
+      "steps": [
+        {
+          "action": "create",
+          "target": "entity:Task",
+          "data": {
+            "created_by_id": "9b802178-9abd-4633-8e19-0db09d485b91",
+            "status": "cancelled"
+          },
+          "rationale": "Create entity in cancelled state"
+        },
+        {
+          "action": "transition_expect_error",
+          "target": "entity:Task",
+          "data": {
+            "to_state": "open"
+          },
+          "rationale": "Attempt invalid transition to open"
+        },
+        {
+          "action": "assert_state",
+          "target": "entity:Task",
+          "data": {
+            "field": "status",
+            "value": "cancelled"
+          },
+          "rationale": "Verify state unchanged"
+        }
+      ],
+      "expected_outcomes": [
+        "Task: cancelled \u2192 open (invalid) succeeds"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "state_machine",
+        "invalid_transition",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2025-12-20T11:34:07.897296"
     },
     {
       "test_id": "ACL_ENGINEER_ACCESS",
@@ -3006,7 +3006,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799051"
+      "created_at": "2025-12-20T11:34:07.897303"
     },
     {
       "test_id": "ACL_TESTER_ACCESS",
@@ -3040,7 +3040,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799054"
+      "created_at": "2025-12-20T11:34:07.897306"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -3074,13 +3074,13 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799056"
+      "created_at": "2025-12-20T11:34:07.897308"
     },
     {
       "test_id": "WS_ENGINEERING_DASHBOARD_NAV",
       "title": "Navigate to Engineering Dashboard",
-      "description": "E2E test: Verify Engineering Dashboard workspace loads and displays correctly",
-      "trigger": "e2e",
+      "description": "Verify Engineering Dashboard workspace loads and displays correctly",
+      "trigger": "playwright",
       "persona": null,
       "scenario": null,
       "steps": [
@@ -3116,13 +3116,14 @@
       "tags": [
         "workspace",
         "navigation",
-        "e2e",
+        "playwright",
+        "tier1",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799060"
+      "created_at": "2025-12-20T11:34:07.897314"
     },
     {
       "test_id": "WS_ENGINEERING_DASHBOARD_ROUTE",
@@ -3154,13 +3155,13 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799064"
+      "created_at": "2025-12-20T11:34:07.897317"
     },
     {
       "test_id": "WS_TESTER_DASHBOARD_NAV",
       "title": "Navigate to Tester Dashboard",
-      "description": "E2E test: Verify Tester Dashboard workspace loads and displays correctly",
-      "trigger": "e2e",
+      "description": "Verify Tester Dashboard workspace loads and displays correctly",
+      "trigger": "playwright",
       "persona": null,
       "scenario": null,
       "steps": [
@@ -3196,13 +3197,14 @@
       "tags": [
         "workspace",
         "navigation",
-        "e2e",
+        "playwright",
+        "tier1",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799067"
+      "created_at": "2025-12-20T11:34:07.897320"
     },
     {
       "test_id": "WS_TESTER_DASHBOARD_ROUTE",
@@ -3234,7 +3236,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:10.799069"
+      "created_at": "2025-12-20T11:34:07.897322"
     }
   ]
 }

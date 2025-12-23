@@ -182,7 +182,16 @@ def _generate_routes_from_surfaces(
                 )
                 entities_seen.add(entity_name)
 
-            # Also add explicit /list route
+            # Add /entity route (intuitive URL for entity list)
+            routes.append(
+                RouteSpec(
+                    path=f"{workspace_prefix}/{entity_lower}",
+                    component=component_name,
+                    title=surface.title or f"{entity_name} List",
+                )
+            )
+
+            # Also add explicit /entity/list route
             routes.append(
                 RouteSpec(
                     path=f"{workspace_prefix}/{entity_lower}/list",

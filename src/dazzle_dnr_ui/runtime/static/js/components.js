@@ -406,17 +406,16 @@ registerComponent('DataTable', (props) => {
         { action: `${entityName}.edit`, actionRole: 'secondary', entityId: rowId }
       );
 
-      // Delete button - DaisyUI
+      // Delete button - DaisyUI with custom confirmation dialog
       const deleteBtn = withDazzleAttrs(
         createElement('button', {
           className: 'btn btn-error btn-sm',
           onClick: (e) => {
             e.stopPropagation();
-            if (confirm(`Are you sure you want to delete this ${entityName}?`)) {
-              window.dispatchEvent(new CustomEvent('dnr-delete', {
-                detail: { entity: entityName, id: rowId }
-              }));
-            }
+            // Show delete confirmation dialog
+            window.dispatchEvent(new CustomEvent('dnr-confirm-delete', {
+              detail: { entity: entityName, id: rowId }
+            }));
           }
         }, ['Delete']),
         { action: `${entityName}.delete`, actionRole: 'destructive', entityId: rowId }
@@ -429,9 +428,16 @@ registerComponent('DataTable', (props) => {
       );
     }
 
+    // Default row click navigates to detail view if entity has one
+    const handleRowClick = onRowClick || (entityName ? () => {
+      window.dispatchEvent(new CustomEvent('dnr-navigate', {
+        detail: { url: `/${entityName.toLowerCase()}/${rowId}` }
+      }));
+    } : null);
+
     const tr = createElement('tr', {
-      className: onRowClick ? 'hover cursor-pointer' : '',
-      onClick: () => onRowClick && onRowClick(row)
+      className: handleRowClick ? 'hover cursor-pointer' : '',
+      onClick: handleRowClick
     }, cells);
 
     // Add row semantic attributes
@@ -457,12 +463,85 @@ registerComponent('DataTable', (props) => {
 
 // Form component - represents an entity form
 // Uses DaisyUI: card structure with Tailwind flex utilities
+// Automatically handles form submission to API and navigation
 registerComponent('Form', (props, children) => {
+  const entityName = props.dazzle?.entity || props.entity;
+  const formMode = props.dazzle?.formMode || props.mode || 'create';
+  const entityId = props.dazzle?.entityId || props.entityId;
+
+  // Build API endpoint (DNR routes are at /entitys, not /api/entitys)
+  const apiEndpoint = entityName ? `/${entityName.toLowerCase()}s` : null;
+
   const el = createElement('form', {
     className: 'flex flex-col gap-4 max-w-lg',
-    onSubmit: (e) => {
+    onSubmit: async (e) => {
       e.preventDefault();
-      props.onSubmit && props.onSubmit(e);
+
+      // If custom onSubmit provided, use it
+      if (props.onSubmit) {
+        props.onSubmit(e);
+        return;
+      }
+
+      // Otherwise, handle form submission automatically
+      if (!apiEndpoint || !entityName) {
+        console.warn('Form: No entity specified, cannot submit');
+        return;
+      }
+
+      // Collect form data from all data-dazzle-field elements
+      const formData = {};
+      const form = e.target;
+      const fieldElements = form.querySelectorAll('[data-dazzle-field]');
+
+      fieldElements.forEach((field) => {
+        const fieldAttr = field.getAttribute('data-dazzle-field');
+        // Field format is "Entity.fieldName" - extract fieldName
+        const fieldName = fieldAttr.includes('.') ? fieldAttr.split('.')[1] : fieldAttr;
+
+        let value;
+        if (field.tagName === 'INPUT') {
+          if (field.type === 'checkbox') {
+            value = field.checked;
+          } else {
+            value = field.value;
+          }
+        } else if (field.tagName === 'SELECT') {
+          value = field.value;
+        } else if (field.tagName === 'TEXTAREA') {
+          value = field.value;
+        }
+
+        // Convert empty strings to null for API compatibility
+        // (empty optional fields should be null, not "")
+        formData[fieldName] = value === '' ? null : value;
+      });
+
+      try {
+        const isCreate = formMode === 'create';
+        const url = isCreate ? apiEndpoint : `${apiEndpoint}/${entityId}`;
+        const method = isCreate ? 'POST' : 'PUT';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+
+        if (response.ok) {
+          // Navigate to list view
+          const listUrl = `/${entityName.toLowerCase()}`;
+          window.dispatchEvent(new CustomEvent('dnr-navigate', {
+            detail: { url: listUrl }
+          }));
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          alert(`Failed to ${isCreate ? 'create' : 'update'}: ${errorData.detail || response.statusText}`);
+        }
+      } catch (err) {
+        console.error('Form submission error:', err);
+        alert(`Failed to submit form: ${err.message}`);
+      }
     }
   }, [
     props.title ? createElement('h2', { className: 'text-xl font-semibold mb-2' }, [props.title]) : null,
@@ -470,12 +549,11 @@ registerComponent('Form', (props, children) => {
   ].filter(Boolean));
 
   // Add semantic attributes for forms
-  const entityName = props.dazzle?.entity || props.entity;
   return withDazzleAttrs(el, {
     form: entityName,
-    formMode: props.dazzle?.formMode || props.mode || 'create',
+    formMode: formMode,
     entity: entityName,
-    entityId: props.dazzle?.entityId || props.entityId,
+    entityId: entityId,
     ...props.dazzle
   });
 });
@@ -554,6 +632,10 @@ registerComponent('Grid', (props, children) => {
   }
   return el;
 });
+
+// Track entities delete handlers: stores { apiEndpoint, fetchData } per entity
+// This prevents duplicate handlers and allows updating the fetchData reference
+const entityDeleteRegistry = new Map();
 
 // FilterableTable pattern component with auto-fetch
 // Uses DaisyUI: card, btn, input, table patterns
@@ -685,23 +767,40 @@ registerComponent('FilterableTable', (props) => {
   renderContent(null, true, null);
   setTimeout(() => fetchData(), 0);
 
-  // Listen for delete events
-  const handleDelete = async (event) => {
-    if (event.detail.entity === entityName) {
-      const id = event.detail.id;
-      try {
-        const response = await fetch(`${apiEndpoint}/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          fetchData();
-        } else {
-          alert(`Failed to delete: ${response.statusText}`);
+  // Register delete handler (only once per entity, but update fetchData reference)
+  if (entityName) {
+    // Check if handler already registered
+    const existingRegistry = entityDeleteRegistry.get(entityName);
+    const handlerRegistered = existingRegistry?.handlerRegistered || false;
+
+    // Update registry with current apiEndpoint and fetchData (preserving handlerRegistered)
+    entityDeleteRegistry.set(entityName, { apiEndpoint, fetchData, handlerRegistered });
+
+    // Only add the event listener once per entity
+    if (!handlerRegistered) {
+      entityDeleteRegistry.get(entityName).handlerRegistered = true;
+
+      const handleDelete = async (event) => {
+        if (event.detail.entity === entityName) {
+          const id = event.detail.id;
+          const registry = entityDeleteRegistry.get(entityName);
+          if (!registry) return;
+
+          try {
+            const response = await fetch(`${registry.apiEndpoint}/${id}`, { method: 'DELETE' });
+            if (response.ok) {
+              registry.fetchData();
+            } else {
+              alert(`Failed to delete: ${response.statusText}`);
+            }
+          } catch (err) {
+            alert(`Failed to delete: ${err.message}`);
+          }
         }
-      } catch (err) {
-        alert(`Failed to delete: ${err.message}`);
-      }
+      };
+      window.addEventListener('dnr-delete', handleDelete);
     }
-  };
-  window.addEventListener('dnr-delete', handleDelete);
+  }
 
   return withDazzleAttrs(container, {
     view: viewName,
@@ -1300,6 +1399,101 @@ registerComponent('TaskInbox', (props) => {
     ...props.dazzle
   });
 });
+
+// =============================================================================
+// Global Delete Confirmation Dialog
+// =============================================================================
+
+// Create and manage a global delete confirmation dialog
+// Uses DaisyUI modal with data-dazzle-* attributes for Playwright compatibility
+let deleteDialogInitialized = false;
+const initDeleteConfirmDialog = () => {
+  // Prevent multiple initializations
+  if (deleteDialogInitialized) return;
+  deleteDialogInitialized = true;
+
+  let dialogEl = null;
+  let pendingDelete = null;
+
+  const createDialog = () => {
+    if (dialogEl) return dialogEl;
+
+    // Create modal backdrop
+    const backdrop = createElement('div', {
+      className: 'modal modal-open',
+      onClick: (e) => {
+        if (e.target === backdrop) hideDialog();
+      }
+    });
+
+    // Create modal box
+    const modalBox = createElement('div', { className: 'modal-box' }, [
+      createElement('h3', { className: 'font-bold text-lg' }, ['Confirm Delete']),
+      createElement('p', { className: 'py-4', id: 'delete-dialog-message' }, ['Are you sure you want to delete this item?']),
+      createElement('div', { className: 'modal-action' }, [
+        withDazzleAttrs(
+          createElement('button', {
+            className: 'btn',
+            onClick: hideDialog
+          }, ['Cancel']),
+          { action: 'cancel', actionRole: 'cancel' }
+        ),
+        withDazzleAttrs(
+          createElement('button', {
+            className: 'btn btn-error',
+            onClick: confirmDelete
+          }, ['Delete']),
+          { action: 'confirm-delete', actionRole: 'destructive' }
+        )
+      ])
+    ]);
+
+    backdrop.appendChild(modalBox);
+    withDazzleAttrs(backdrop, { dialog: 'delete-confirm' });
+
+    dialogEl = backdrop;
+    return dialogEl;
+  };
+
+  const showDialog = (entity, id) => {
+    pendingDelete = { entity, id };
+    const dialog = createDialog();
+    const message = dialog.querySelector('#delete-dialog-message');
+    if (message) {
+      message.textContent = `Are you sure you want to delete this ${entity}?`;
+    }
+    document.body.appendChild(dialog);
+  };
+
+  const hideDialog = () => {
+    if (dialogEl && dialogEl.parentNode) {
+      dialogEl.parentNode.removeChild(dialogEl);
+    }
+    pendingDelete = null;
+  };
+
+  const confirmDelete = () => {
+    if (pendingDelete) {
+      window.dispatchEvent(new CustomEvent('dnr-delete', {
+        detail: pendingDelete
+      }));
+    }
+    hideDialog();
+  };
+
+  // Listen for delete confirmation requests
+  window.addEventListener('dnr-confirm-delete', (event) => {
+    const { entity, id } = event.detail;
+    showDialog(entity, id);
+  });
+};
+
+// Initialize the delete confirmation dialog when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDeleteConfirmDialog);
+} else {
+  initDeleteConfirmDialog();
+}
 
 // =============================================================================
 // Export

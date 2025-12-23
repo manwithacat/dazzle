@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "f41b0b2890c9f039",
-  "generated_at": "2025-12-20T07:57:21.149708",
+  "generated_at": "2025-12-20T11:34:09.246278",
   "project_name": "support_tickets",
   "coverage": {
     "entities": [
@@ -39,7 +39,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid User"
@@ -68,7 +68,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149535"
+      "created_at": "2025-12-20T11:34:09.246078"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -82,7 +82,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -116,7 +116,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149540"
+      "created_at": "2025-12-20T11:34:09.246083"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -156,7 +156,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149544"
+      "created_at": "2025-12-20T11:34:09.246086"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -170,7 +170,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -179,7 +179,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -208,7 +208,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149556"
+      "created_at": "2025-12-20T11:34:09.246098"
     },
     {
       "test_id": "CRUD_TICKET_CREATE",
@@ -222,7 +222,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -263,7 +263,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149571"
+      "created_at": "2025-12-20T11:34:09.246113"
     },
     {
       "test_id": "CRUD_TICKET_READ",
@@ -277,7 +277,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -323,7 +323,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149574"
+      "created_at": "2025-12-20T11:34:09.246115"
     },
     {
       "test_id": "VAL_TICKET_REQUIRED",
@@ -363,7 +363,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149577"
+      "created_at": "2025-12-20T11:34:09.246119"
     },
     {
       "test_id": "VAL_TICKET_TICKET_NUMBER_UNIQUE",
@@ -415,7 +415,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149589"
+      "created_at": "2025-12-20T11:34:09.246130"
     },
     {
       "test_id": "CRUD_COMMENT_CREATE",
@@ -439,7 +439,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -481,7 +481,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149605"
+      "created_at": "2025-12-20T11:34:09.246146"
     },
     {
       "test_id": "CRUD_COMMENT_READ",
@@ -505,7 +505,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_41149@example.com",
+            "email": "test_49246@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -552,7 +552,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149607"
+      "created_at": "2025-12-20T11:34:09.246148"
     },
     {
       "test_id": "VAL_COMMENT_REQUIRED",
@@ -592,7 +592,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149610"
+      "created_at": "2025-12-20T11:34:09.246151"
     },
     {
       "test_id": "SM_TICKET_OPEN_IN_PROGRESS",
@@ -645,7 +645,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149620"
+      "created_at": "2025-12-20T11:34:09.246161"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_RESOLVED",
@@ -698,7 +698,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149628"
+      "created_at": "2025-12-20T11:34:09.246168"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_OPEN",
@@ -751,7 +751,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149634"
+      "created_at": "2025-12-20T11:34:09.246174"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_CLOSED",
@@ -804,7 +804,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149640"
+      "created_at": "2025-12-20T11:34:09.246180"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_IN_PROGRESS",
@@ -857,7 +857,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149646"
+      "created_at": "2025-12-20T11:34:09.246186"
     },
     {
       "test_id": "SM_TICKET_CLOSED_OPEN",
@@ -910,7 +910,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149652"
+      "created_at": "2025-12-20T11:34:09.246192"
     },
     {
       "test_id": "SM_TICKET_OPEN_CLOSED_INVALID",
@@ -963,7 +963,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149661"
+      "created_at": "2025-12-20T11:34:09.246201"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_CLOSED_INVALID",
@@ -1016,7 +1016,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149669"
+      "created_at": "2025-12-20T11:34:09.246209"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_OPEN_INVALID",
@@ -1069,12 +1069,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149676"
+      "created_at": "2025-12-20T11:34:09.246216"
     },
     {
-      "test_id": "SM_TICKET_CLOSED_IN_PROGRESS_INVALID",
-      "title": "Support Ticket: closed \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from closed to in_progress is rejected",
+      "test_id": "SM_TICKET_CLOSED_RESOLVED_INVALID",
+      "title": "Support Ticket: closed \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from closed to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1093,9 +1093,9 @@
           "action": "transition_expect_error",
           "target": "entity:Ticket",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -1108,7 +1108,7 @@
         }
       ],
       "expected_outcomes": [
-        "Support Ticket: closed \u2192 in_progress (invalid) succeeds"
+        "Support Ticket: closed \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "Ticket"
@@ -1122,13 +1122,13 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149683"
+      "created_at": "2025-12-20T11:34:09.246222"
     },
     {
       "test_id": "WS_TICKET_QUEUE_NAV",
       "title": "Navigate to Ticket Queue",
-      "description": "E2E test: Verify Ticket Queue workspace loads and displays correctly",
-      "trigger": "e2e",
+      "description": "Verify Ticket Queue workspace loads and displays correctly",
+      "trigger": "playwright",
       "persona": null,
       "scenario": null,
       "steps": [
@@ -1164,13 +1164,14 @@
       "tags": [
         "workspace",
         "navigation",
-        "e2e",
+        "playwright",
+        "tier1",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149688"
+      "created_at": "2025-12-20T11:34:09.246227"
     },
     {
       "test_id": "WS_TICKET_QUEUE_ROUTE",
@@ -1202,13 +1203,13 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149690"
+      "created_at": "2025-12-20T11:34:09.246229"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_NAV",
       "title": "Navigate to Agent Dashboard",
-      "description": "E2E test: Verify Agent Dashboard workspace loads and displays correctly",
-      "trigger": "e2e",
+      "description": "Verify Agent Dashboard workspace loads and displays correctly",
+      "trigger": "playwright",
       "persona": null,
       "scenario": null,
       "steps": [
@@ -1244,13 +1245,14 @@
       "tags": [
         "workspace",
         "navigation",
-        "e2e",
+        "playwright",
+        "tier1",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149693"
+      "created_at": "2025-12-20T11:34:09.246232"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_ROUTE",
@@ -1282,7 +1284,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:21.149695"
+      "created_at": "2025-12-20T11:34:09.246234"
     }
   ]
 }

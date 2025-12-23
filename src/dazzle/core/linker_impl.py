@@ -611,6 +611,10 @@ def detect_entity_cycles(symbols: SymbolTable) -> list[str]:
         for fld in entity.fields:
             if fld.type.kind == ir.FieldTypeKind.REF and fld.type.ref_entity:
                 ref_entity = fld.type.ref_entity
+                # Skip optional refs (they can break cycles) and self-refs (valid for trees)
+                is_optional = ir.FieldModifier.OPTIONAL in fld.modifiers
+                if is_optional or ref_entity == entity_name:
+                    continue
                 if ref_entity in symbols.entities:
                     ref_graph[entity_name].add(ref_entity)
 

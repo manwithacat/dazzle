@@ -242,6 +242,9 @@ def convert_surfaces_to_services(
     services: list[ServiceSpec] = []
     endpoints: list[EndpointSpec] = []
 
+    # Track entities that have list surfaces (for adding DELETE endpoints)
+    entities_with_list = set()
+
     for surface in surfaces:
         # Get entity if available
         entity = None
@@ -255,5 +258,42 @@ def convert_surfaces_to_services(
         # Create endpoint
         endpoint = convert_surface_to_endpoint(surface, service.name)
         endpoints.append(endpoint)
+
+        # Track entities with list surfaces for DELETE endpoint generation
+        if surface.mode == ir.SurfaceMode.LIST and surface.entity_ref:
+            entities_with_list.add(surface.entity_ref)
+
+    # Add DELETE endpoints for entities that have list surfaces
+    # This enables CRUD delete operations on entity tables
+    for entity_name in entities_with_list:
+        entity_lower = entity_name.lower()
+
+        # Create delete service
+        delete_service = ServiceSpec(
+            name=f"delete_{entity_lower}",
+            input_schema=SchemaSpec(
+                fields=[SchemaFieldSpec(name="id", type="uuid", required=True)]
+            ),
+            output_schema=SchemaSpec(
+                fields=[SchemaFieldSpec(name="deleted", type="bool", required=True)]
+            ),
+            domain_operation=DomainOperation(
+                entity=entity_name,
+                kind=OperationKind.DELETE,
+            ),
+            is_crud=True,
+        )
+        services.append(delete_service)
+
+        # Create delete endpoint
+        delete_endpoint = EndpointSpec(
+            name=f"delete_{entity_lower}_endpoint",
+            service=f"delete_{entity_lower}",
+            method=HttpMethod.DELETE,
+            path=f"/{entity_lower}s/{{id}}",
+            description=f"Delete {entity_name}",
+            tags=[entity_name],
+        )
+        endpoints.append(delete_endpoint)
 
     return services, endpoints

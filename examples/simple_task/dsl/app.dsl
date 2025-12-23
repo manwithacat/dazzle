@@ -1,9 +1,18 @@
 # DAZZLE Team Task Manager
-# Demonstrates v0.8.5+ Features:
+# Comprehensive Showcase of Dazzle v0.9+ Features:
+#
+# Core Features:
 # - Personas for role-based views
 # - Scenarios for demo state switching
 # - Relationships between entities
 # - Business logic: state machines, invariants, access rules
+#
+# Advanced Features (see separate DSL files):
+# - Events: Task lifecycle events (events.dsl)
+# - Services: Domain logic stubs (services.dsl)
+# - Messaging: Email notifications (messaging.dsl)
+# - Processes: Temporal workflows (processes.dsl)
+# - LLM: AI-powered task classification (llm.dsl)
 
 module simple_task.core
 
@@ -58,6 +67,32 @@ entity Task "Task":
   access:
     read: role(admin) or role(manager) or assigned_to = current_user or created_by = current_user
     write: role(admin) or role(manager) or assigned_to = current_user
+
+  # Event publishing (see events.dsl for event definitions)
+  # TODO: Enable when publish syntax is implemented in parser
+  # publish TaskCreated when created
+  # publish TaskStatusChanged when status changed
+  # publish TaskAssigned when assigned_to changed
+
+# =============================================================================
+# TaskComment Entity - for task collaboration
+# =============================================================================
+
+entity TaskComment "Task Comment":
+  id: uuid pk
+  task: ref Task required
+  author: ref User required
+  content: text required
+  created_at: datetime auto_add
+
+  # Publish comment events
+  # TODO: Enable when publish syntax is implemented in parser
+  # publish CommentAdded when created
+
+  # Access: anyone who can read the task can read comments
+  access:
+    read: role(admin) or role(manager) or task.assigned_to = current_user or task.created_by = current_user
+    write: author = current_user or role(admin)
 
 # =============================================================================
 # Personas - role-based variants for the UI

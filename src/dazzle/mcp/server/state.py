@@ -82,6 +82,12 @@ def get_active_project_path() -> Path | None:
     return None
 
 
+# Alias for backward compatibility
+def get_project_path() -> Path | None:
+    """Get the path to the current project. Alias for get_active_project_path."""
+    return get_active_project_path()
+
+
 def resolve_project_path(project_path: str | None = None) -> Path:
     """
     Resolve the project path from various sources.

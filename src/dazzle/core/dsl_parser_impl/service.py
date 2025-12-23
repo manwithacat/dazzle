@@ -472,7 +472,7 @@ class ServiceParserMixin:
             self.advance()
 
             event_token = self.expect(TokenType.IDENTIFIER)
-            event = ir.TransitionEvent(event_token.value)
+            event = event_token.value  # Arbitrary event names supported
 
             self.expect(TokenType.ARROW)
             self.expect(TokenType.STEP)

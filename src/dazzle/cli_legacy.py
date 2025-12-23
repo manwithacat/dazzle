@@ -353,6 +353,14 @@ app.add_typer(eject_app, name="eject")
 
 
 # =============================================================================
+# Deploy Commands (imported from cli.deploy)
+# =============================================================================
+from dazzle.cli.deploy import deploy_app  # noqa: E402
+
+app.add_typer(deploy_app, name="deploy")
+
+
+# =============================================================================
 # Events Commands (imported from cli.events)
 # =============================================================================
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402

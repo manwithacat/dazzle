@@ -1,0 +1,16 @@
+# Dazzle Manifest - LLM Ticket Classifier Example
+# Demonstrates LLM Jobs as First-Class Events (Issue #33)
+
+[project]
+name = "llm_ticket_classifier"
+version = "0.1.0"
+root = "llm_ticket_classifier"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[theme]
+preset = "saas-default"

@@ -63,7 +63,11 @@ def _target_to_selector(target: str) -> str:
         # Target format: Entity.action or just action
         if "." in target_name:
             entity, action = target_name.split(".", 1)
-            return f'[data-dazzle-action="{action}"]'
+            # Try full name first, then action-only, then action-role
+            # For save/create/submit, also check action-role="primary"
+            if action in ("save", "create", "submit"):
+                return f'[data-dazzle-action="{target_name}"], [data-dazzle-action="{entity}.create"], [data-dazzle-action-role="primary"]'
+            return f'[data-dazzle-action="{target_name}"], [data-dazzle-action="{action}"]'
         return f'[data-dazzle-action="{target_name}"]'
 
     elif target_type == "row":
@@ -165,9 +169,27 @@ def _generate_step_code(step: FlowStep, fixtures: dict[str, FixtureSpec]) -> str
             # fixture_ref format: "Entity_valid.field_name"
             fixture_id, field_name = step.fixture_ref.rsplit(".", 1)
             value = f'fixtures["{fixture_id}"]["{field_name}"]'
-            lines.append(f"page.locator('{selector}').fill(str({value}))")
+
+            # Use appropriate method based on field type
+            if step.field_type in ("enum", "ref"):
+                # Select fields use select_option with the value
+                lines.append(f"page.locator('{selector}').select_option(str({value}))")
+            elif step.field_type == "bool":
+                # Checkbox fields use set_checked
+                lines.append(f"page.locator('{selector}').set_checked(bool({value}))")
+            else:
+                # Text/number fields use fill
+                lines.append(f"page.locator('{selector}').fill(str({value}))")
         elif step.value is not None:
-            lines.append(f"page.locator('{selector}').fill(\"{step.value}\")")
+            # Use appropriate method based on field type
+            if step.field_type in ("enum", "ref"):
+                lines.append(f"page.locator('{selector}').select_option(\"{step.value}\")")
+            elif step.field_type == "bool":
+                # Parse boolean value
+                bool_val = step.value.lower() in ("true", "1", "yes")
+                lines.append(f"page.locator('{selector}').set_checked({bool_val})")
+            else:
+                lines.append(f"page.locator('{selector}').fill(\"{step.value}\")")
         else:
             lines.append(f"page.locator('{selector}').fill(\"test_value\")")
 

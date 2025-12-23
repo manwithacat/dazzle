@@ -32,6 +32,7 @@ except ImportError:
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.health_aggregator import HealthAggregator
     from dazzle_dnr_back.runtime.ops_database import OpsDatabase
+    from dazzle_dnr_back.runtime.ops_simulator import OpsSimulator
     from dazzle_dnr_back.runtime.sse_stream import SSEStreamManager
 
 
@@ -166,6 +167,7 @@ def create_ops_routes(
     ops_db: OpsDatabase,
     health_aggregator: HealthAggregator | None = None,
     sse_manager: SSEStreamManager | None = None,
+    simulator: OpsSimulator | None = None,
     require_auth: bool = True,
 ) -> APIRouter:
     """
@@ -175,6 +177,7 @@ def create_ops_routes(
         ops_db: Operations database
         health_aggregator: Health check aggregator (optional)
         sse_manager: SSE stream manager (optional)
+        simulator: Ops simulator for demo mode (optional)
         require_auth: Whether to require authentication (default True)
 
     Returns:
@@ -1106,6 +1109,98 @@ def create_ops_routes(
         return {
             "period_days": days,
             "links": links,
+        }
+
+    # -------------------------------------------------------------------------
+    # Simulation Endpoints
+    # -------------------------------------------------------------------------
+
+    @router.get("/simulation/status")
+    async def get_simulation_status(
+        username: str = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        """
+        Get simulation status.
+
+        Returns whether simulation is running and statistics.
+        """
+        if not simulator:
+            return {
+                "available": False,
+                "running": False,
+                "message": "Simulator not configured",
+            }
+
+        stats = simulator.stats
+        return {
+            "available": True,
+            "running": simulator.running,
+            "stats": {
+                "started_at": stats.started_at.isoformat() if stats.started_at else None,
+                "events_generated": stats.events_generated,
+                "health_checks": stats.health_checks,
+                "api_calls": stats.api_calls,
+                "emails": stats.emails,
+            }
+            if simulator.running
+            else None,
+        }
+
+    @router.post("/simulation/start")
+    async def start_simulation(
+        username: str = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        """
+        Start the simulation.
+
+        Generates synthetic events for dashboard demonstration.
+        """
+        if not simulator:
+            raise HTTPException(
+                status_code=503,
+                detail="Simulator not configured",
+            )
+
+        if simulator.running:
+            return {
+                "success": True,
+                "message": "Simulation already running",
+            }
+
+        await simulator.start()
+        return {
+            "success": True,
+            "message": "Simulation started",
+        }
+
+    @router.post("/simulation/stop")
+    async def stop_simulation(
+        username: str = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        """
+        Stop the simulation.
+
+        Stops generating synthetic events.
+        """
+        if not simulator:
+            raise HTTPException(
+                status_code=503,
+                detail="Simulator not configured",
+            )
+
+        if not simulator.running:
+            return {
+                "success": True,
+                "message": "Simulation not running",
+            }
+
+        await simulator.stop()
+        return {
+            "success": True,
+            "message": "Simulation stopped",
+            "stats": {
+                "events_generated": simulator.stats.events_generated,
+            },
         }
 
     return router

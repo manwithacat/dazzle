@@ -512,23 +512,25 @@ class MessagingParserMixin:
             self.advance()
             service_name = self.expect(TokenType.IDENTIFIER).value
 
-            if self.match(TokenType.IDENTIFIER):
-                event_token = self.advance()
-                if event_token.value == "called":
-                    return ir.SendTriggerSpec(
-                        kind=ir.SendTriggerKind.SERVICE_CALLED,
-                        service_name=service_name,
-                    )
-                elif event_token.value == "succeeded":
-                    return ir.SendTriggerSpec(
-                        kind=ir.SendTriggerKind.SERVICE_SUCCEEDED,
-                        service_name=service_name,
-                    )
-                elif event_token.value == "failed":
-                    return ir.SendTriggerSpec(
-                        kind=ir.SendTriggerKind.SERVICE_FAILED,
-                        service_name=service_name,
-                    )
+            # Check for service lifecycle events: called, succeeded, failed
+            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "called":
+                self.advance()
+                return ir.SendTriggerSpec(
+                    kind=ir.SendTriggerKind.SERVICE_CALLED,
+                    service_name=service_name,
+                )
+            elif self.match(TokenType.SUCCEEDED):
+                self.advance()
+                return ir.SendTriggerSpec(
+                    kind=ir.SendTriggerKind.SERVICE_SUCCEEDED,
+                    service_name=service_name,
+                )
+            elif self.match(TokenType.FAILED):
+                self.advance()
+                return ir.SendTriggerSpec(
+                    kind=ir.SendTriggerKind.SERVICE_FAILED,
+                    service_name=service_name,
+                )
 
         # schedule triggers
         elif self.match(TokenType.EVERY):
@@ -1159,12 +1161,18 @@ class MessagingParserMixin:
                 self.skip_newlines()
 
                 # Parse optional entity and filename (on same or next lines)
+                # Handle nested indentation for multi-line list items
+                nested_indent = False
+                if self.match(TokenType.INDENT):
+                    self.advance()
+                    nested_indent = True
+
                 while not self.match(TokenType.MINUS) and not self.match(TokenType.DEDENT):
                     self.skip_newlines()
                     if self.match(TokenType.MINUS) or self.match(TokenType.DEDENT):
                         break
 
-                    if self.match(TokenType.ENTITY_ARG):
+                    if self.match(TokenType.ENTITY_ARG) or self.match(TokenType.ENTITY):
                         self.advance()
                         self.expect(TokenType.COLON)
                         entity_arg = self.expect(TokenType.IDENTIFIER).value
@@ -1178,6 +1186,9 @@ class MessagingParserMixin:
 
                     else:
                         break
+
+                if nested_indent and self.match(TokenType.DEDENT):
+                    self.advance()
 
                 attachments.append(
                     ir.TemplateAttachmentSpec(

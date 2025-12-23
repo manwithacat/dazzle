@@ -531,8 +531,15 @@ class DSLTestGenerator:
     def _generate_workspace_tests(self, workspace: WorkspaceSpec) -> list[dict]:
         """Generate navigation and access tests for a workspace.
 
-        Workspace tests are marked as E2E tests since they require browser-based
-        testing via Playwright. They are skipped in API-only test runs.
+        Workspace tests use Playwright for browser-based testing but are Tier 1
+        (scripted, deterministic). They do NOT require LLM agent involvement.
+
+        Test Tiers:
+        - tier1: Scripted tests (API or Playwright) - fast, deterministic, free
+        - tier2: Agent tests (LLM-driven) - adaptive, slow, costs money
+
+        Workspace navigation is tier1 because the steps are predictable and
+        don't require visual judgment or adaptive decision-making.
         """
         tests = []
 
@@ -542,13 +549,13 @@ class DSLTestGenerator:
         # Workspaces typically have routes like /workspace_name or derive from their name
         workspace_route = f"/{workspace.name.replace('_', '-')}"
 
-        # E2E navigation test - requires Playwright
+        # Tier 1 Playwright navigation test - scripted, no LLM needed
         tests.append(
             self._create_test(
                 test_id=f"WS_{workspace.name.upper()}_NAV",
                 title=f"Navigate to {workspace_label}",
-                description=f"E2E test: Verify {workspace_label} workspace loads and displays correctly",
-                trigger="e2e",  # Mark as E2E test
+                description=f"Verify {workspace_label} workspace loads and displays correctly",
+                trigger="playwright",  # Tier 1: Scripted Playwright test
                 steps=[
                     {
                         "action": "navigate_to",
@@ -572,7 +579,7 @@ class DSLTestGenerator:
                         "rationale": "Verify no JavaScript errors in console",
                     },
                 ],
-                tags=["workspace", "navigation", "e2e", "generated", "dsl-derived"],
+                tags=["workspace", "navigation", "playwright", "tier1", "generated", "dsl-derived"],
             )
         )
 

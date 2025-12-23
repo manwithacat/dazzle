@@ -301,6 +301,25 @@
                             <!-- SSE stats rendered here -->
                         </div>
                     </div>
+
+                    <div class="settings-section">
+                        <h3>Simulation Mode</h3>
+                        <p class="settings-description">
+                            Generate synthetic events to demo the dashboard in action.
+                            Useful for presentations and testing without real traffic.
+                        </p>
+
+                        <div class="simulation-control">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="simulation-toggle" onchange="toggleSimulation(this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <div class="simulation-status">
+                                <span id="simulation-status-text">Inactive</span>
+                                <span id="simulation-stats" class="simulation-stats hidden"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
         </div>

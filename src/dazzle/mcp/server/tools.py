@@ -1165,16 +1165,24 @@ def get_dsl_test_tools() -> list[Tool]:
     return [
         Tool(
             name="generate_dsl_tests",
-            description="""Generate tests from DSL/AppSpec definitions.
+            description="""Generate TIER 1 tests from DSL/AppSpec definitions.
 
-Analyzes DSL files and generates comprehensive tests covering:
+Generates fast, deterministic tests (no LLM required) covering:
 - CRUD operations for each entity
 - State machine transitions (valid and invalid)
 - Field validation (required fields, unique constraints)
 - Persona access control tests
-- Workspace navigation tests
+- Workspace navigation tests (Playwright)
 
-Returns a test suite with coverage metrics. Tests run against the API without requiring a browser.""",
+All generated tests are TIER 1 (scripted, free, fast).
+
+For TIER 2 tests (LLM agent, visual, exploratory), you must manually
+create tests with the 'tier2' or 'agent' tag. Use Tier 2 when:
+- Tests require visual judgment
+- Tests have conditional/adaptive logic
+- Tests need exploratory behavior
+
+Returns a test suite with coverage metrics.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1356,18 +1364,23 @@ If this returns ready=false, follow the setup_instructions before running tests.
         ),
         Tool(
             name="run_e2e_tests",
-            description="""Run E2E tests using Playwright.
+            description="""[TIER 2] Run scripted E2E tests using Playwright.
+
+TIER 2 tests are:
+- Fast and deterministic
+- Free (no API costs)
+- Uses semantic DOM selectors (data-dazzle-*)
+- Best for: navigation, UI flows, form submission
 
 This tool:
 1. Automatically starts the DNR server
 2. Runs Playwright-based E2E tests in headless browser
 3. Stops the server when complete
 
-PREREQUISITE: Run check_test_infrastructure first to ensure Playwright is installed.
+Use this for predictable, scriptable UI scenarios.
+For visual verification or exploratory testing, use run_agent_e2e_tests (Tier 3) instead.
 
-Requires Playwright to be installed (pip install playwright && playwright install chromium).
-
-Returns test results with pass/fail counts and any error details.""",
+PREREQUISITE: Run check_test_infrastructure first to ensure Playwright is installed.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1391,23 +1404,35 @@ Returns test results with pass/fail counts and any error details.""",
         ),
         Tool(
             name="run_agent_e2e_tests",
-            description="""Run E2E tests using an LLM agent.
+            description="""[TIER 3] Run E2E tests using an LLM agent.
 
-The agent uses Claude to observe pages, decide actions, and verify outcomes.
-This enables testing of complex UI flows that require visual understanding.
+TIER 3 tests are:
+- Adaptive (handles UI changes)
+- Slower (~5 seconds per step)
+- Costs money (LLM API calls)
+- Best for: Visual verification, exploratory testing
 
-Unlike scripted tests, the agent:
-1. Takes a screenshot of the current page
-2. Analyzes visible elements and their state
-3. Decides what action to take based on test goals
-4. Verifies outcomes visually
+The agent uses Claude to:
+1. Take screenshots and analyze page state
+2. Decide actions based on test goals
+3. Handle unexpected UI variations
+4. Verify outcomes visually
 
-PREREQUISITE: Requires both Playwright AND an Anthropic API key.
+WHEN TO USE TIER 3:
+- Visual regression detection ("does this look right?")
+- Exploratory/fuzz testing
+- Accessibility audits
+- Testing after UI refactors
+- Testing unknown or dynamic UIs
 
-Install with: pip install playwright anthropic && playwright install chromium
-Set ANTHROPIC_API_KEY environment variable.
+WHEN TO USE TIER 2 INSTEAD (run_e2e_tests):
+- Navigation with known selectors
+- Form submission with predictable steps
+- UI flows that don't need visual judgment
 
-Best for: Navigation tests, complex workflows, visual verification.""",
+Tests must be tagged with 'tier3' or 'agent' to run with this tool.
+
+PREREQUISITE: Requires Playwright AND ANTHROPIC_API_KEY in .env file.""",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1478,6 +1503,141 @@ Use with filters to find specific tests.""",
                 "required": [],
             },
         ),
+        Tool(
+            name="get_test_tier_guidance",
+            description="""Get guidance on which test tier to use for a scenario.
+
+Dazzle uses a tiered testing model:
+
+TIER 1 (API) - Fast, no browser
+  Use for: CRUD, validation, state machines, API checks
+  Tags: tier1, crud, validation, state_machine
+  Run with: run_dsl_tests
+
+TIER 2 (Playwright) - Scripted browser tests
+  Use for: Navigation, UI flows, form submission
+  Tags: tier2, playwright
+  Run with: run_e2e_tests
+
+TIER 3 (Agent) - LLM-driven, adaptive
+  Use for: Visual verification, exploratory, accessibility
+  Tags: tier3, agent
+  Run with: run_agent_e2e_tests
+
+DECISION GUIDE:
+- Is it pure API testing? → Tier 1
+- Is it UI with predictable steps? → Tier 2
+- Does it require visual judgment? → Tier 3
+- Does it need to adapt to UI variations? → Tier 3
+- Is it exploratory or fuzzing? → Tier 3
+
+Provide a test scenario description to get a recommendation.""",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "scenario": {
+                        "type": "string",
+                        "description": "Description of what you want to test (e.g., 'verify user can complete checkout')",
+                    },
+                },
+                "required": ["scenario"],
+            },
+        ),
+    ]
+
+
+def get_feedback_tools() -> list[Tool]:
+    """Get tools for user feedback management (from Dazzle Bar)."""
+    return [
+        Tool(
+            name="list_user_feedback",
+            description=(
+                "List user feedback entries submitted via the Dazzle Bar. "
+                "Use this to see what users have reported - bugs, feature requests, and general feedback. "
+                "Feedback is captured when users click the Feedback button in the Dazzle Bar. "
+                "This is different from 'list_feedback' which shows DSL/code feedback."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "description": "Filter by status: 'new', 'acknowledged', 'addressed', 'wont_fix'",
+                        "enum": ["new", "acknowledged", "addressed", "wont_fix"],
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Filter by category (e.g., 'Bug Report', 'Feature Request', 'General Feedback')",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum entries to return (default: 20)",
+                        "default": 20,
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_user_feedback",
+            description=(
+                "Get a specific user feedback entry by ID. "
+                "Use this to see full details including extra context like viewport size, user agent, etc."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "feedback_id": {
+                        "type": "string",
+                        "description": "The 8-character feedback ID (e.g., 'a1b2c3d4')",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["feedback_id"],
+            },
+        ),
+        Tool(
+            name="update_user_feedback",
+            description=(
+                "Update the status of a user feedback entry. "
+                "Use this to track feedback as you address it. "
+                "Status flow: new -> acknowledged -> addressed (or wont_fix)"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "feedback_id": {
+                        "type": "string",
+                        "description": "The 8-character feedback ID",
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "New status for the feedback",
+                        "enum": ["acknowledged", "addressed", "wont_fix"],
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional notes about how you addressed this feedback",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["feedback_id", "status"],
+            },
+        ),
+        Tool(
+            name="get_user_feedback_summary",
+            description=(
+                "Get a summary of all user feedback for quick context. "
+                "Use this at the start of a session to understand what user feedback needs attention. "
+                "Shows counts by status (new, acknowledged, addressed) and category."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {**PROJECT_PATH_SCHEMA},
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -1523,6 +1683,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add E2E test execution tools (v0.19.0)
     tools.extend(get_e2e_test_tools())
+
+    # Add Feedback management tools (for LLM ingestion)
+    tools.extend(get_feedback_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

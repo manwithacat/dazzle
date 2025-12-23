@@ -40,6 +40,14 @@ from dazzle.mcp.semantics import get_dsl_patterns, get_semantic_index
 
 from .glossary import get_glossary
 
+# User feedback handlers (Dazzle Bar)
+from .handlers.feedback import (
+    get_feedback_handler,
+    get_feedback_summary_handler,
+    list_feedback_handler,
+    update_feedback_handler,
+)
+
 # Import process tool handlers (Phase 7)
 from .handlers.process import (
     get_process_diagram_handler,
@@ -360,6 +368,11 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         "run_agent_e2e_tests",
         "get_e2e_test_coverage",
         "list_e2e_flows",
+        # User Feedback tools (Dazzle Bar)
+        "list_user_feedback",
+        "get_user_feedback",
+        "update_user_feedback",
+        "get_user_feedback_summary",
     ):
         # Try to resolve project path from arguments or state
         explicit_path = arguments.get("project_path") if arguments else None
@@ -443,6 +456,54 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
                 )
             elif name == "get_test_tier_guidance":
                 result = get_test_tier_guidance_handler(arguments)
+            # User Feedback tools (Dazzle Bar)
+            elif name == "list_user_feedback":
+                import asyncio
+
+                result = json.dumps(
+                    asyncio.get_event_loop().run_until_complete(
+                        list_feedback_handler(
+                            status=arguments.get("status"),
+                            category=arguments.get("category"),
+                            limit=arguments.get("limit", 20),
+                            project_path=str(project_path),
+                        )
+                    )
+                )
+            elif name == "get_user_feedback":
+                import asyncio
+
+                result = json.dumps(
+                    asyncio.get_event_loop().run_until_complete(
+                        get_feedback_handler(
+                            feedback_id=arguments.get("feedback_id"),
+                            project_path=str(project_path),
+                        )
+                    )
+                )
+            elif name == "update_user_feedback":
+                import asyncio
+
+                result = json.dumps(
+                    asyncio.get_event_loop().run_until_complete(
+                        update_feedback_handler(
+                            feedback_id=arguments.get("feedback_id"),
+                            status=arguments.get("status"),
+                            notes=arguments.get("notes"),
+                            project_path=str(project_path),
+                        )
+                    )
+                )
+            elif name == "get_user_feedback_summary":
+                import asyncio
+
+                result = json.dumps(
+                    asyncio.get_event_loop().run_until_complete(
+                        get_feedback_summary_handler(
+                            project_path=str(project_path),
+                        )
+                    )
+                )
             else:
                 result = json.dumps({"error": f"Unknown tool: {name}"})
     else:

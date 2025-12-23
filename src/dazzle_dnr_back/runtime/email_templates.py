@@ -231,6 +231,95 @@ If you didn't request this, you can safely ignore this email.
         description="Password reset email",
         category="transactional",
     ),
+    "feedback": EmailTemplate(
+        name="feedback",
+        subject="[Feedback] {{ category }} - {{ app_name }}",
+        body_html="""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <tr>
+            <td style="background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h2 style="color: {{ brand_color }}; margin: 0 0 20px 0;">💬 New Feedback Received</h2>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666; width: 120px;">Category:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>{{ category }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Page:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{{ route }}</code></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Persona:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">{{ persona }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Scenario:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">{{ scenario }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Viewport:</td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #eee;">{{ viewport }}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #666;">Timestamp:</td>
+                        <td style="padding: 8px 0;">{{ timestamp }}</td>
+                    </tr>
+                </table>
+
+                <div style="background: #f8f9fa; border-left: 4px solid {{ brand_color }}; padding: 15px; margin: 20px 0; border-radius: 0 4px 4px 0;">
+                    <p style="margin: 0; white-space: pre-wrap;">{{ message }}</p>
+                </div>
+
+                {% if extra_context %}
+                <details style="margin-top: 20px;">
+                    <summary style="cursor: pointer; color: #666; font-size: 14px;">Additional Context</summary>
+                    <pre style="background: #f0f0f0; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px;">{{ extra_context }}</pre>
+                </details>
+                {% endif %}
+
+                <p style="margin: 20px 0 0 0; color: #999; font-size: 12px;">
+                    Sent from {{ app_name }} Dazzle Bar
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        """,
+        body_text="""
+NEW FEEDBACK RECEIVED
+=====================
+
+Category: {{ category }}
+Page: {{ route }}
+Persona: {{ persona }}
+Scenario: {{ scenario }}
+Viewport: {{ viewport }}
+Timestamp: {{ timestamp }}
+
+Message:
+--------
+{{ message }}
+
+{% if extra_context %}
+Additional Context:
+{{ extra_context }}
+{% endif %}
+
+---
+Sent from {{ app_name }} Dazzle Bar
+        """,
+        description="Feedback notification email for developers",
+        category="notification",
+    ),
 }
 
 

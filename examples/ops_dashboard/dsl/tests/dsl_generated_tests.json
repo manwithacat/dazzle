@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "14cedbddb9afc2f9",
-  "generated_at": "2025-12-20T07:57:34.039355",
+  "generated_at": "2025-12-20T11:34:08.564208",
   "project_name": "ops_dashboard",
   "coverage": {
     "entities": [
@@ -67,7 +67,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039220"
+      "created_at": "2025-12-20T11:34:08.564059"
     },
     {
       "test_id": "CRUD_SYSTEM_READ",
@@ -114,7 +114,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039225"
+      "created_at": "2025-12-20T11:34:08.564065"
     },
     {
       "test_id": "VAL_SYSTEM_REQUIRED",
@@ -154,7 +154,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039229"
+      "created_at": "2025-12-20T11:34:08.564069"
     },
     {
       "test_id": "CRUD_ALERT_CREATE",
@@ -207,7 +207,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039245"
+      "created_at": "2025-12-20T11:34:08.564085"
     },
     {
       "test_id": "CRUD_ALERT_READ",
@@ -265,7 +265,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039248"
+      "created_at": "2025-12-20T11:34:08.564087"
     },
     {
       "test_id": "VAL_ALERT_REQUIRED",
@@ -305,7 +305,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039251"
+      "created_at": "2025-12-20T11:34:08.564090"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_DEGRADED",
@@ -357,7 +357,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039260"
+      "created_at": "2025-12-20T11:34:08.564100"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_CRITICAL",
@@ -409,7 +409,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039267"
+      "created_at": "2025-12-20T11:34:08.564107"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_HEALTHY",
@@ -461,7 +461,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039272"
+      "created_at": "2025-12-20T11:34:08.564112"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_CRITICAL",
@@ -513,7 +513,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039277"
+      "created_at": "2025-12-20T11:34:08.564118"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_DEGRADED",
@@ -565,7 +565,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039282"
+      "created_at": "2025-12-20T11:34:08.564122"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_OFFLINE",
@@ -617,7 +617,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039287"
+      "created_at": "2025-12-20T11:34:08.564127"
     },
     {
       "test_id": "SM_SYSTEM_OFFLINE_HEALTHY",
@@ -669,7 +669,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039292"
+      "created_at": "2025-12-20T11:34:08.564132"
     },
     {
       "test_id": "SM_SYSTEM_*_OFFLINE",
@@ -721,7 +721,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039297"
+      "created_at": "2025-12-20T11:34:08.564138"
     },
     {
       "test_id": "SM_SYSTEM_HEALTHY_OFFLINE_INVALID",
@@ -773,7 +773,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039305"
+      "created_at": "2025-12-20T11:34:08.564146"
     },
     {
       "test_id": "SM_SYSTEM_DEGRADED_OFFLINE_INVALID",
@@ -825,7 +825,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039312"
+      "created_at": "2025-12-20T11:34:08.564153"
     },
     {
       "test_id": "SM_SYSTEM_CRITICAL_HEALTHY_INVALID",
@@ -877,7 +877,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039318"
+      "created_at": "2025-12-20T11:34:08.564159"
     },
     {
       "test_id": "SM_SYSTEM_OFFLINE_DEGRADED_INVALID",
@@ -929,7 +929,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039324"
+      "created_at": "2025-12-20T11:34:08.564165"
     },
     {
       "test_id": "ACL_OPS_ENGINEER_ACCESS",
@@ -963,13 +963,13 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039333"
+      "created_at": "2025-12-20T11:34:08.564169"
     },
     {
       "test_id": "WS_COMMAND_CENTER_NAV",
       "title": "Navigate to Command Center",
-      "description": "E2E test: Verify Command Center workspace loads and displays correctly",
-      "trigger": "e2e",
+      "description": "Verify Command Center workspace loads and displays correctly",
+      "trigger": "playwright",
       "persona": null,
       "scenario": null,
       "steps": [
@@ -1005,13 +1005,14 @@
       "tags": [
         "workspace",
         "navigation",
-        "e2e",
+        "playwright",
+        "tier1",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039338"
+      "created_at": "2025-12-20T11:34:08.564175"
     },
     {
       "test_id": "WS_COMMAND_CENTER_ROUTE",
@@ -1043,7 +1044,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T07:57:34.039342"
+      "created_at": "2025-12-20T11:34:08.564177"
     }
   ]
 }

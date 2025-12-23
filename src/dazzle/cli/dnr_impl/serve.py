@@ -377,7 +377,22 @@ def dnr_serve(
         for p in appspec.personas
     ]
     scenarios = [
-        {"id": s.id, "name": s.name, "description": s.description} for s in appspec.scenarios
+        {
+            "id": s.id,
+            "name": s.name,
+            "description": s.description,
+            "demo_fixtures": [{"entity": f.entity, "records": f.records} for f in s.demo_fixtures],
+            "seed_data_path": s.seed_data_path,
+            "persona_entries": [
+                {
+                    "persona_id": e.persona_id,
+                    "start_route": e.start_route,
+                    "seed_script": e.seed_script,
+                }
+                for e in s.persona_entries
+            ],
+        }
+        for s in appspec.scenarios
     ]
 
     if personas:

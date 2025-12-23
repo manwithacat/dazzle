@@ -46,6 +46,7 @@ from dazzle_dnr_back.runtime.ops_database import (
     RetentionConfig,
 )
 from dazzle_dnr_back.runtime.ops_routes import create_ops_routes
+from dazzle_dnr_back.runtime.ops_simulator import OpsSimulator
 from dazzle_dnr_back.runtime.sse_stream import SSEStreamManager, create_sse_routes
 
 if TYPE_CHECKING:
@@ -116,6 +117,7 @@ class OpsPlatform:
         self.analytics_collector: AnalyticsCollector | None = None
         self.api_tracker: ApiTracker | None = None
         self.email_engine: EmailTemplateEngine | None = None
+        self.simulator: OpsSimulator | None = None
 
     def configure(
         self,
@@ -197,6 +199,12 @@ class OpsPlatform:
             brand_config=self.config.brand_config,
         )
 
+        # Simulator for dashboard demo
+        self.simulator = OpsSimulator(
+            ops_db=self.ops_db,
+            event_bus=event_bus,
+        )
+
     async def start(self) -> None:
         """Start all ops services."""
         if self.health_aggregator:
@@ -210,6 +218,9 @@ class OpsPlatform:
 
     async def stop(self) -> None:
         """Stop all ops services."""
+        if self.simulator and self.simulator.running:
+            await self.simulator.stop()
+
         if self.health_aggregator:
             await self.health_aggregator.stop_periodic_checks()
 
@@ -234,6 +245,7 @@ class OpsPlatform:
                 ops_db=self.ops_db,
                 health_aggregator=self.health_aggregator,
                 sse_manager=self.sse_manager,
+                simulator=self.simulator,
                 require_auth=self.config.require_auth,
             )
         )

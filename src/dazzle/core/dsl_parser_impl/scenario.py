@@ -333,6 +333,9 @@ class ScenarioParserMixin:
 
         Syntax:
             title: "Grade assignments", status: "pending", completed: false
+
+        Note: Field names can be keywords (like 'subject', 'description', 'status')
+        so we use expect_identifier_or_keyword() instead of just checking for IDENTIFIER.
         """
         record: dict[str, Any] = {}
 
@@ -341,8 +344,8 @@ class ScenarioParserMixin:
             if self.match(TokenType.NEWLINE) or self.match(TokenType.DEDENT):
                 break
 
-            # field_name: value
-            if self.match(TokenType.IDENTIFIER):
+            # field_name: value - field names can be keywords too
+            if self.match(TokenType.IDENTIFIER) or self._is_keyword_as_field():
                 field_name = self.current_token().value
                 self.advance()
                 self.expect(TokenType.COLON)
@@ -358,6 +361,18 @@ class ScenarioParserMixin:
                 break
 
         return record
+
+    def _is_keyword_as_field(self) -> bool:
+        """Check if current token is a keyword that can be used as a field name."""
+        # Common field names that are also keywords in the DSL
+        # Only include TokenTypes that actually exist
+        keyword_field_types = [
+            TokenType.SUBJECT,
+            TokenType.DESCRIPTION,
+            TokenType.STATUS,
+            TokenType.EMAIL,
+        ]
+        return any(self.match(t) for t in keyword_field_types)
 
     def _parse_demo_value(self) -> Any:
         """

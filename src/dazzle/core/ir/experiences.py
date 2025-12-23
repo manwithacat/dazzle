@@ -21,10 +21,16 @@ class StepKind(str, Enum):
 
 
 class TransitionEvent(str, Enum):
-    """Events that trigger step transitions."""
+    """Commonly used transition events (for documentation/autocomplete)."""
 
     SUCCESS = "success"
     FAILURE = "failure"
+    CANCEL = "cancel"
+    CONTINUE = "continue"
+    BACK = "back"
+    APPROVE = "approve"
+    REJECT = "reject"
+    SKIP = "skip"
 
 
 class StepTransition(BaseModel):
@@ -32,11 +38,11 @@ class StepTransition(BaseModel):
     Transition from one step to another.
 
     Attributes:
-        event: Event that triggers transition
+        event: Event name that triggers transition (any string)
         next_step: Name of the next step
     """
 
-    event: TransitionEvent
+    event: str  # Arbitrary event names supported
     next_step: str
 
     model_config = ConfigDict(frozen=True)

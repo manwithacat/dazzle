@@ -124,12 +124,28 @@ class EventingParserMixin:
             if self.match(TokenType.RETENTION):
                 self.advance()
                 self.expect(TokenType.COLON)
-                retention_value = self.expect(TokenType.IDENTIFIER).value
-                # Parse retention like "7d" or "30d"
-                if retention_value.endswith("d"):
-                    retention_days = int(retention_value[:-1])
+                # Accept DURATION_LITERAL (e.g., 30d) or IDENTIFIER or NUMBER
+                if self.match(TokenType.DURATION_LITERAL):
+                    retention_value = self.advance().value
+                    # Parse retention like "7d" or "30d"
+                    if retention_value.endswith("d"):
+                        retention_days = int(retention_value[:-1])
+                    elif retention_value.endswith("w"):
+                        retention_days = int(retention_value[:-1]) * 7
+                    elif retention_value.endswith("m"):
+                        retention_days = int(retention_value[:-1]) * 30
+                    elif retention_value.endswith("y"):
+                        retention_days = int(retention_value[:-1]) * 365
+                    else:
+                        retention_days = int(retention_value)
+                elif self.match(TokenType.NUMBER):
+                    retention_days = int(self.advance().value)
                 else:
-                    retention_days = int(retention_value)
+                    retention_value = self.expect(TokenType.IDENTIFIER).value
+                    if retention_value.endswith("d"):
+                        retention_days = int(retention_value[:-1])
+                    else:
+                        retention_days = int(retention_value)
             elif self.match(TokenType.IDENTIFIER):
                 key = self.advance().value
                 if key == "partition_key":
@@ -273,7 +289,7 @@ class EventingParserMixin:
 
         # Parse group ID
         group_id = topic.replace(".", "_")  # Default
-        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "as":
+        if self.match(TokenType.AS):
             self.advance()
             group_id = self.expect(TokenType.IDENTIFIER).value
 
@@ -288,7 +304,7 @@ class EventingParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "on":
+            if self.match(TokenType.ON):
                 self.advance()
                 event_name = self.expect(TokenType.IDENTIFIER).value
                 handler = self._parse_event_handler(event_name)
@@ -331,34 +347,29 @@ class EventingParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            if self.match(TokenType.IDENTIFIER):
-                keyword = self.current_token().value
-
-                if keyword == "call":
+            if self.match(TokenType.CALL):
+                self.advance()
+                if self.match(TokenType.SERVICE):
                     self.advance()
-                    if self.match(TokenType.SERVICE):
-                        self.advance()
-                    service_name = self.expect(TokenType.IDENTIFIER).value
-                    # Check for method name
-                    if self.match(TokenType.DOT):
-                        self.advance()
-                        service_method = self.expect(TokenType.IDENTIFIER).value
-
-                elif keyword == "when":
+                service_name = self.expect(TokenType.IDENTIFIER).value
+                # Check for method name
+                if self.match(TokenType.DOT):
                     self.advance()
-                    # Parse condition expression (simplified)
-                    condition_parts: list[str] = []
-                    while not self.match(TokenType.COLON):
-                        condition_parts.append(self.advance().value)
-                    condition = " ".join(condition_parts)
-                    # Skip nested block for now
-                    self.expect(TokenType.COLON)
-                    self.skip_newlines()
-                    if self.match(TokenType.INDENT):
-                        self._skip_block()
+                    service_method = self.expect(TokenType.IDENTIFIER).value
 
-                else:
-                    self.advance()
+            elif self.match(TokenType.WHEN):
+                self.advance()
+                # Parse condition expression (simplified)
+                condition_parts: list[str] = []
+                while not self.match(TokenType.COLON):
+                    condition_parts.append(self.advance().value)
+                condition = " ".join(condition_parts)
+                # Skip nested block for now
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                if self.match(TokenType.INDENT):
+                    self._skip_block()
+
             else:
                 self.advance()
 
@@ -393,7 +404,7 @@ class EventingParserMixin:
         name = self.expect(TokenType.IDENTIFIER).value
 
         # Parse "from topic"
-        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "from":
+        if self.match(TokenType.FROM):
             self.advance()
 
         source_topic = self.expect(TokenType.IDENTIFIER).value
@@ -412,7 +423,7 @@ class EventingParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "on":
+            if self.match(TokenType.ON):
                 self.advance()
                 event_name = self.expect(TokenType.IDENTIFIER).value
                 handler = self._parse_projection_handler(event_name)
@@ -559,9 +570,10 @@ class EventingParserMixin:
         trigger = ir.EventTriggerKind.CREATED  # Default
         field_name: str | None = None
 
-        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "when":
+        if self.match(TokenType.WHEN):
             self.advance()
-            trigger_name = self.expect(TokenType.IDENTIFIER).value
+            # Trigger can be: created, updated, deleted, or <field_name> changed
+            trigger_name = self.expect_identifier_or_keyword().value
 
             if trigger_name == "created":
                 trigger = ir.EventTriggerKind.CREATED
@@ -570,8 +582,8 @@ class EventingParserMixin:
             elif trigger_name == "deleted":
                 trigger = ir.EventTriggerKind.DELETED
             else:
-                # Could be field name for field_changed
-                if self.match(TokenType.IDENTIFIER) and self.current_token().value == "changed":
+                # Could be field name for field_changed (e.g., "status changed")
+                if self.match(TokenType.CHANGED):
                     self.advance()
                     trigger = ir.EventTriggerKind.FIELD_CHANGED
                     field_name = trigger_name

@@ -230,6 +230,7 @@ function switchPanel(panelId) {
         case 'settings':
             loadRetentionConfig();
             loadSSEStats();
+            loadSimulationStatus();
             break;
     }
 }
@@ -1042,6 +1043,109 @@ async function loadSSEStats() {
         `;
     } catch (error) {
         console.error('Failed to load SSE stats:', error);
+    }
+}
+
+/* ==========================================================================
+   Simulation Mode
+   ========================================================================== */
+
+/**
+ * Load simulation status and update UI
+ */
+async function loadSimulationStatus() {
+    try {
+        const status = await api('/simulation/status');
+        updateSimulationUI(status);
+    } catch (error) {
+        console.error('Failed to load simulation status:', error);
+    }
+}
+
+/**
+ * Toggle simulation on/off
+ * @param {boolean} enabled - Whether to enable simulation
+ */
+async function toggleSimulation(enabled) {
+    const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
+    const statusText = document.getElementById('simulation-status-text');
+
+    try {
+        if (statusText) statusText.textContent = enabled ? 'Starting...' : 'Stopping...';
+
+        const endpoint = enabled ? '/simulation/start' : '/simulation/stop';
+        await api(endpoint, { method: 'POST' });
+
+        // Refresh status
+        await loadSimulationStatus();
+    } catch (error) {
+        console.error('Simulation toggle failed:', error);
+        if (toggle) toggle.checked = !enabled; // Revert toggle
+        if (statusText) statusText.textContent = 'Error';
+        alert('Failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+}
+
+/**
+ * Update simulation UI based on status
+ * @param {Object} status - Simulation status from API
+ */
+function updateSimulationUI(status) {
+    const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
+    const statusText = document.getElementById('simulation-status-text');
+    const statsEl = document.getElementById('simulation-stats');
+
+    if (!status.available) {
+        if (toggle) toggle.disabled = true;
+        if (statusText) statusText.textContent = 'Not available';
+        return;
+    }
+
+    if (toggle) {
+        toggle.disabled = false;
+        toggle.checked = status.running;
+    }
+
+    if (statusText) {
+        statusText.textContent = status.running ? 'Active' : 'Inactive';
+        statusText.className = status.running ? 'simulation-active' : '';
+    }
+
+    if (statsEl) {
+        if (status.running && status.stats) {
+            statsEl.textContent = `${status.stats.events_generated} events generated`;
+            statsEl.classList.remove('hidden');
+        } else {
+            statsEl.classList.add('hidden');
+        }
+    }
+}
+
+/** @type {number | null} */
+let simulationStatusInterval = null;
+
+/**
+ * Start polling simulation status (when running)
+ */
+function startSimulationPolling() {
+    if (simulationStatusInterval) return;
+    simulationStatusInterval = window.setInterval(async () => {
+        const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
+        if (toggle && toggle.checked) {
+            await loadSimulationStatus();
+        } else {
+            stopSimulationPolling();
+        }
+    }, 2000);
+}
+
+/**
+ * Stop polling simulation status
+ */
+function stopSimulationPolling() {
+    if (simulationStatusInterval) {
+        clearInterval(simulationStatusInterval);
+        simulationStatusInterval = null;
     }
 }
 

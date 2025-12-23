@@ -67,6 +67,7 @@ dev = [
     "types-PyYAML>=6.0",
     "requests>=2.31",
     "aiosqlite>=0.19.0",
+    "mutmut>=2.4",
 ]
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [
@@ -237,4 +238,5 @@ skips = [
     "B604",  # any_other_function_shell_true - using for npm/node commands
     "B607",  # start_process_with_partial_path - we use git/python which are in PATH
     "B608",  # hardcoded SQL - false positives on template strings
+    "B311",  # random - used for demo simulation data, not security
 ]

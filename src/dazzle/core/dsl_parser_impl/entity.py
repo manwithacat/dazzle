@@ -39,6 +39,8 @@ class EntityParserMixin:
         # v0.10.2: Date/duration methods from TypeParserMixin
         _parse_date_expr: Any
         _parse_duration_literal: Any
+        # v0.18.0: Publish directive from EventingParserMixin
+        parse_publish_directive: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""
@@ -70,6 +72,7 @@ class EntityParserMixin:
         permission_rules: list[ir.PermissionRule] = []
         transitions: list[ir.StateTransition] = []
         invariants: list[ir.InvariantSpec] = []
+        publishes: list[ir.PublishSpec] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -322,6 +325,13 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.18.0: Check for publish declaration
+            if self.match(TokenType.PUBLISH):
+                publish_spec = self.parse_publish_directive(entity_name=name)
+                publishes.append(publish_spec)
+                self.skip_newlines()
+                continue
+
             # Parse field
             field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
@@ -395,6 +405,7 @@ class EntityParserMixin:
             access=access,
             state_machine=state_machine,
             examples=examples,
+            publishes=publishes,
         )
 
     def _map_archetype_kind(self, value: str) -> ir.ArchetypeKind:

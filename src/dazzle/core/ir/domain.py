@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .archetype import ArchetypeKind
 from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
+from .eventing import PublishSpec
 from .fields import FieldSpec
 from .invariant import InvariantSpec
 from .state_machine import StateMachineSpec
@@ -163,6 +164,7 @@ class EntitySpec(BaseModel):
         access: Access control specification (visibility + permissions)
         state_machine: State machine specification for status transitions (v0.7.0)
         examples: Example data records for LLM cognition (v0.7.1)
+        publishes: Event publishing declarations (v0.18.0)
     """
 
     name: str
@@ -182,6 +184,8 @@ class EntitySpec(BaseModel):
     access: AccessSpec | None = None
     state_machine: StateMachineSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
+    # v0.18.0: Event publishing
+    publishes: list[PublishSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

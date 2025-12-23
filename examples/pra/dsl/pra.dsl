@@ -29,7 +29,7 @@ entity Account "Account":
   currency: str(3)="GBP"
   created_at: datetime required
 
-entity Order "Order":
+entity TradeOrder "Trade Order":
   id: uuid pk
   actor_id: uuid required
   account_id: uuid required
