@@ -51,6 +51,7 @@ use pra
 use pra.entities
 use pra.relationships
 use pra.surfaces
+use pra.state_machines
 
 # =============================================================================
 # BASIC WORKSPACE
@@ -551,21 +552,25 @@ workspace operations_center "Operations Center":
 
 # Placeholder surfaces for workspace actions
 surface employee_edit "Edit Employee":
+  uses entity Employee
   mode: edit
   section main:
     field first_name
 
 surface invoice_edit "Edit Invoice":
+  uses entity Invoice
   mode: edit
   section main:
     field invoice_number
 
 surface alert_handle "Handle Alert":
+  uses entity TimeSensitiveAlert
   mode: edit
   section main:
     field status
 
 surface alert_escalate "Escalate Alert":
-  mode: custom
+  uses entity TimeSensitiveAlert
+  mode: edit
   section main:
-    field escalate_to
+    field status

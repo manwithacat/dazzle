@@ -65,6 +65,8 @@ module pra.services
 use pra
 use pra.entities
 use pra.surfaces
+use pra.relationships
+use pra.state_machines
 
 # =============================================================================
 # EXTERNAL API SERVICE: API KEY AUTH
@@ -487,101 +489,121 @@ experience purchase_approval "Purchase Approval":
 
 # Placeholder surfaces for experiences
 surface payment_form "Payment Form":
+  uses entity Invoice
   mode: create
   section main:
-    field amount
+    field total
 
 surface order_confirmation "Order Confirmation":
+  uses entity Invoice
   mode: view
   section main:
-    field order_number
+    field invoice_number
 
 surface payment_receipt "Payment Receipt":
+  uses entity Invoice
   mode: view
   section main:
-    field transaction_id
+    field invoice_number
 
 surface payment_error "Payment Error":
-  mode: custom
+  uses entity Invoice
+  mode: view
   section main:
-    field error_message
+    field status
 
 surface payment_cancelled "Payment Cancelled":
-  mode: custom
+  uses entity Invoice
+  mode: view
   section main:
-    field message
+    field status
 
 surface onboarding_welcome "Welcome":
-  mode: custom
+  uses entity AppUser
+  mode: view
   section main:
-    field welcome_message
+    field display_name
 
 surface onboarding_profile "Profile Setup":
-  mode: create
+  uses entity AppUser
+  mode: edit
   section main:
-    field name
+    field display_name
 
 surface onboarding_preferences "Preferences":
-  mode: create
+  uses entity AppUser
+  mode: edit
   section main:
-    field preferences
+    field display_name
 
 surface verification_error "Verification Error":
-  mode: custom
+  uses entity AppUser
+  mode: view
   section main:
-    field error_message
+    field email
 
 surface onboarding_complete "Onboarding Complete":
-  mode: custom
+  uses entity AppUser
+  mode: view
   section main:
-    field message
+    field display_name
 
 surface po_review "PO Review":
+  uses entity PurchaseOrder
   mode: view
   section main:
     field po_number
 
 surface po_escalate "Escalate PO":
+  uses entity PurchaseOrder
   mode: edit
   section main:
-    field escalation_reason
+    field rejection_reason
 
 surface po_completed "PO Completed":
+  uses entity PurchaseOrder
   mode: view
   section main:
     field po_number
 
 surface po_rejected "PO Rejected":
+  uses entity PurchaseOrder
   mode: view
   section main:
     field rejection_reason
 
 surface po_cancelled "PO Cancelled":
+  uses entity PurchaseOrder
   mode: view
   section main:
-    field cancellation_reason
+    field rejection_reason
 
 surface po_error "PO Error":
-  mode: custom
+  uses entity PurchaseOrder
+  mode: view
   section main:
-    field error_message
+    field po_number
 
 surface payment_processing "Payment Processing":
-  mode: custom
+  uses entity Invoice
+  mode: view
   section main:
-    field status "Processing..."
+    field status
 
 surface verification_pending "Verification Pending":
-  mode: custom
+  uses entity AppUser
+  mode: view
   section main:
-    field status "Verifying..."
+    field email
 
 surface budget_check_pending "Budget Check":
-  mode: custom
+  uses entity PurchaseOrder
+  mode: view
   section main:
-    field status "Checking budget..."
+    field amount
 
 surface po_processing "PO Processing":
-  mode: custom
+  uses entity PurchaseOrder
+  mode: view
   section main:
-    field status "Processing PO..."
+    field status

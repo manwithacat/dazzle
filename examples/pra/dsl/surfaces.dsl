@@ -164,14 +164,15 @@ surface product_edit "Edit Product":
 # =============================================================================
 
 surface dashboard "Dashboard":
-  mode: custom
+  uses entity Product
+  mode: view
 
   section summary:
-    field total_products "Total Products"
-    field active_products "Active Products"
+    field name "Product Name"
+    field sku "SKU"
 
   section recent:
-    field recent_items "Recent Items"
+    field price "Price"
 
 # =============================================================================
 # SURFACE WITH ALL ACTION TRIGGERS
@@ -229,19 +230,22 @@ surface checkout "Checkout":
 
 # Placeholder surfaces for navigation
 surface cart_view "Cart":
-  mode: custom
-  section main:
-    field items "Items"
-
-surface payment_form_surface "Payment Form":
-  mode: create
-  section main:
-    field amount "Amount"
-
-surface order_confirmation_surface "Order Confirmation":
+  uses entity Invoice
   mode: view
   section main:
-    field confirmation_number "Confirmation"
+    field invoice_number "Invoice #"
+
+surface payment_form_surface "Payment Form":
+  uses entity Invoice
+  mode: create
+  section main:
+    field total "Amount"
+
+surface order_confirmation_surface "Order Confirmation":
+  uses entity Invoice
+  mode: view
+  section main:
+    field invoice_number "Confirmation"
 
 surface task_list "Task List":
   uses entity Task
@@ -316,14 +320,16 @@ surface invoice_list "Invoice Management":
 
 # Placeholder for attention signal actions
 surface invoice_escalate "Escalate Invoice":
-  mode: custom
+  uses entity Invoice
+  mode: edit
   section main:
-    field action "Escalate"
+    field status "Status"
 
 surface invoice_remind "Send Reminder":
-  mode: custom
+  uses entity Invoice
+  mode: edit
   section main:
-    field action "Remind"
+    field status "Status"
 
 # =============================================================================
 # UX BLOCK: PERSONA VARIANTS (BASIC)
@@ -417,6 +423,7 @@ surface task_edit "Edit Task":
     field title
 
 surface project_create "Create Project":
+  uses entity DevProject
   mode: create
   section main:
     field name
@@ -463,20 +470,16 @@ surface ticket_create "New Support Ticket":
 # =============================================================================
 
 surface analytics_dashboard "Analytics Dashboard":
-  mode: custom
+  uses entity Invoice
+  mode: list
 
   section metrics:
-    field daily_active_users
-    field conversion_rate
-    field revenue
-
-  section charts:
-    field trend_chart
-    field funnel_chart
+    field total "Total"
+    field status "Status"
 
   section details:
-    field top_products
-    field recent_orders
+    field invoice_number "Invoice #"
+    field due_date "Due Date"
 
   ux:
     purpose: "Analytics overview"
@@ -484,20 +487,20 @@ surface analytics_dashboard "Analytics Dashboard":
     # Marketing focuses on different regions
     for marketing:
       purpose: "Marketing performance metrics"
-      focus: metrics, charts
-      show_aggregate: conversion_rate, campaign_performance
+      focus: metrics
+      show_aggregate: total
 
     # Sales focuses on revenue
     for sales:
       purpose: "Sales metrics and pipeline"
       focus: metrics, details
-      show_aggregate: revenue, pipeline_value
+      show_aggregate: total
 
     # Executive sees high-level summary
     for executive:
       purpose: "Executive summary"
       focus: metrics
-      show_aggregate: revenue, growth_rate
+      show_aggregate: total
 
 # =============================================================================
 # SURFACE WITHOUT TITLE
@@ -606,17 +609,20 @@ surface order_management "Order Management":
 
 # Placeholder surfaces for order management
 surface order_detail "Order Details":
+  uses entity OrderWithTotals
   mode: view
   section main:
     field order_number
 
 surface order_process "Process Order":
+  uses entity OrderWithTotals
   mode: edit
   section main:
     field status
 
 surface order_refund_form "Request Refund":
-  mode: create
+  uses entity OrderWithTotals
+  mode: edit
   section main:
-    field refund_reason "Reason"
-    field refund_amount "Amount"
+    field status "Status"
+    field order_number "Order #"
