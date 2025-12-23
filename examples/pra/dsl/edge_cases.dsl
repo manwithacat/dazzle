@@ -248,7 +248,8 @@ entity DeepNesting "Deep Nesting Test":
 
 # Empty section (minimal surface)
 surface empty_surface "Empty Surface":
-  mode: custom
+  uses entity Minimal
+  mode: view
   section main:
     field id
 
@@ -339,6 +340,7 @@ entity Minimal "Minimal":
 
 # Minimal surface
 surface minimal_surf:
+  uses entity Minimal
   mode: view
   section main:
     field id
