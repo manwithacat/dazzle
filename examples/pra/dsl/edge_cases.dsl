@@ -89,15 +89,15 @@ entity VeryLongEntityNameThatTestsTheLimitsOfIdentifierLength "Long Name":
   id: uuid pk
   very_long_field_name_that_tests_limits: str(200)
 
-# Underscore variations
-entity _underscore_prefix "Underscore Prefix":
-  intent: "Test underscore prefix identifier"
+# Underscore variations (field names cannot have leading underscores)
+entity underscore_test "Underscore Test":
+  intent: "Test underscore variations in identifiers"
   domain: testing
 
   id: uuid pk
-  _prefixed: str(255)
+  prefixed_name: str(255)
   suffixed_: str(255)
-  __double__: str(255)
+  double_underscore: str(255)
   a_b_c_d_e_f: str(255)
 
 # Numbers in identifier
