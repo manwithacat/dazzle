@@ -1,0 +1,187 @@
+# Dazzle Baseline Guardrail Policies
+# These rules enforce security best practices for AWS CDK deployments
+
+#
+# RDS Rules
+#
+
+# Rule: RDS instances must not be publicly accessible
+rule rds_no_public_access when Resources.*[ Type == "AWS::RDS::DBInstance" ] {
+    Properties.PubliclyAccessible == false
+    <<
+        Violation: RDS instance is publicly accessible.
+        Fix: Set PubliclyAccessible to false.
+    >>
+}
+
+# Rule: RDS instances must have storage encryption enabled
+rule rds_storage_encrypted when Resources.*[ Type == "AWS::RDS::DBInstance" ] {
+    Properties.StorageEncrypted == true
+    <<
+        Violation: RDS instance storage is not encrypted.
+        Fix: Set StorageEncrypted to true.
+    >>
+}
+
+# Rule: RDS instances must have backup retention
+rule rds_backup_enabled when Resources.*[ Type == "AWS::RDS::DBInstance" ] {
+    Properties.BackupRetentionPeriod >= 7
+    <<
+        Violation: RDS instance has insufficient backup retention.
+        Fix: Set BackupRetentionPeriod to at least 7 days.
+    >>
+}
+
+# Rule: RDS clusters must have storage encryption
+rule rds_cluster_encrypted when Resources.*[ Type == "AWS::RDS::DBCluster" ] {
+    Properties.StorageEncrypted == true
+    <<
+        Violation: RDS cluster storage is not encrypted.
+        Fix: Set StorageEncrypted to true.
+    >>
+}
+
+#
+# S3 Rules
+#
+
+# Rule: S3 buckets must have public access blocked
+rule s3_block_public_access when Resources.*[ Type == "AWS::S3::Bucket" ] {
+    Properties.PublicAccessBlockConfiguration exists
+    Properties.PublicAccessBlockConfiguration.BlockPublicAcls == true
+    Properties.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+    Properties.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+    Properties.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+    <<
+        Violation: S3 bucket does not have public access fully blocked.
+        Fix: Add PublicAccessBlockConfiguration with all options set to true.
+    >>
+}
+
+# Rule: S3 buckets should have encryption configured
+rule s3_encryption_configured when Resources.*[ Type == "AWS::S3::Bucket" ] {
+    Properties.BucketEncryption exists
+    <<
+        Violation: S3 bucket does not have encryption configured.
+        Fix: Add BucketEncryption with SSE-S3 or SSE-KMS.
+    >>
+}
+
+#
+# Security Group Rules
+#
+
+# Rule: Security groups must not allow SSH from 0.0.0.0/0
+rule sg_no_public_ssh when Resources.*[ Type == "AWS::EC2::SecurityGroup" ] {
+    let sg = this
+    when %sg.Properties.SecurityGroupIngress exists {
+        %sg.Properties.SecurityGroupIngress[*] {
+            when CidrIp == "0.0.0.0/0" OR CidrIpv6 == "::/0" {
+                FromPort != 22 OR ToPort != 22
+            }
+        }
+    }
+    <<
+        Violation: Security group allows SSH (port 22) from 0.0.0.0/0.
+        Fix: Restrict SSH access to specific IP ranges.
+    >>
+}
+
+# Rule: Security groups must not allow RDP from 0.0.0.0/0
+rule sg_no_public_rdp when Resources.*[ Type == "AWS::EC2::SecurityGroup" ] {
+    let sg = this
+    when %sg.Properties.SecurityGroupIngress exists {
+        %sg.Properties.SecurityGroupIngress[*] {
+            when CidrIp == "0.0.0.0/0" OR CidrIpv6 == "::/0" {
+                FromPort != 3389 OR ToPort != 3389
+            }
+        }
+    }
+    <<
+        Violation: Security group allows RDP (port 3389) from 0.0.0.0/0.
+        Fix: Restrict RDP access to specific IP ranges.
+    >>
+}
+
+# Rule: Security groups must not allow database ports from 0.0.0.0/0
+rule sg_no_public_db when Resources.*[ Type == "AWS::EC2::SecurityGroup" ] {
+    let sg = this
+    let db_ports = [5432, 3306, 1433, 27017, 6379]
+    when %sg.Properties.SecurityGroupIngress exists {
+        %sg.Properties.SecurityGroupIngress[*] {
+            when CidrIp == "0.0.0.0/0" OR CidrIpv6 == "::/0" {
+                NOT (FromPort IN %db_ports AND ToPort IN %db_ports)
+            }
+        }
+    }
+    <<
+        Violation: Security group allows database ports from 0.0.0.0/0.
+        Fix: Restrict database access to VPC CIDR only.
+    >>
+}
+
+#
+# ECS Rules
+#
+
+# Rule: ECS tasks should not run as privileged
+rule ecs_no_privileged when Resources.*[ Type == "AWS::ECS::TaskDefinition" ] {
+    Properties.ContainerDefinitions[*].Privileged != true
+    <<
+        Violation: ECS container runs in privileged mode.
+        Fix: Remove Privileged setting unless absolutely necessary.
+    >>
+}
+
+# Rule: ECS tasks should not run as root
+rule ecs_no_root when Resources.*[ Type == "AWS::ECS::TaskDefinition" ] {
+    Properties.ContainerDefinitions[*] {
+        when User exists {
+            User != "root"
+            User != "0"
+        }
+    }
+    <<
+        Violation: ECS container runs as root user.
+        Fix: Use a non-root user for container execution.
+    >>
+}
+
+#
+# IAM Rules
+#
+
+# Rule: IAM roles must not allow wildcard principals
+rule iam_no_wildcard_principal when Resources.*[ Type == "AWS::IAM::Role" ] {
+    Properties.AssumeRolePolicyDocument.Statement[*].Principal != "*"
+    <<
+        Violation: IAM role can be assumed by any principal.
+        Fix: Specify explicit principals in AssumeRolePolicyDocument.
+    >>
+}
+
+#
+# SQS Rules
+#
+
+# Rule: SQS queues should have encryption
+rule sqs_encrypted when Resources.*[ Type == "AWS::SQS::Queue" ] {
+    Properties.KmsMasterKeyId exists OR Properties.SqsManagedSseEnabled == true
+    <<
+        Violation: SQS queue does not have encryption enabled.
+        Fix: Enable SQS managed SSE or use a KMS key.
+    >>
+}
+
+#
+# CloudWatch Logs Rules
+#
+
+# Rule: CloudWatch log groups should have retention configured
+rule logs_retention when Resources.*[ Type == "AWS::Logs::LogGroup" ] {
+    Properties.RetentionInDays exists
+    <<
+        Violation: CloudWatch log group has no retention policy.
+        Fix: Set RetentionInDays to limit log storage.
+    >>
+}

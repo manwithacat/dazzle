@@ -462,6 +462,9 @@ class TestParserProperties:
     def test_parser_minimal_entity(self, entity_name: str) -> None:
         """Invariant: Minimal entity declaration parses correctly."""
         assume(entity_name[0].isupper())  # Entity names should start uppercase
+        # Avoid reserved keywords that would fail parsing
+        reserved = {"IF", "ELSE", "WHEN", "THEN", "AND", "OR", "NOT", "TRUE", "FALSE", "FACT"}
+        assume(entity_name not in reserved)
         text = f"""entity {entity_name} "Test entity":
   id: uuid pk
 """
