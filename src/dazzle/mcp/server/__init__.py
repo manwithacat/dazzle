@@ -473,10 +473,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             elif name == "get_user_feedback":
                 import asyncio
 
+                feedback_id = arguments.get("feedback_id")
+                if not feedback_id:
+                    return [TextContent(type="text", text="Error: feedback_id is required")]
                 result = json.dumps(
                     asyncio.get_event_loop().run_until_complete(
                         get_feedback_handler(
-                            feedback_id=arguments.get("feedback_id"),
+                            feedback_id=feedback_id,
                             project_path=str(project_path),
                         )
                     )
@@ -484,11 +487,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             elif name == "update_user_feedback":
                 import asyncio
 
+                feedback_id = arguments.get("feedback_id")
+                status = arguments.get("status")
+                if not feedback_id or not status:
+                    return [
+                        TextContent(type="text", text="Error: feedback_id and status are required")
+                    ]
                 result = json.dumps(
                     asyncio.get_event_loop().run_until_complete(
                         update_feedback_handler(
-                            feedback_id=arguments.get("feedback_id"),
-                            status=arguments.get("status"),
+                            feedback_id=feedback_id,
+                            status=status,
                             notes=arguments.get("notes"),
                             project_path=str(project_path),
                         )
