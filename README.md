@@ -2,10 +2,25 @@
 
 **Human Intent → Structured DSL → Deterministic Code**
 
+<!-- Versions & Compatibility -->
+[![PyPI version](https://img.shields.io/pypi/v/dazzle.svg)](https://pypi.org/project/dazzle/)
+[![Python 3.11+](https://img.shields.io/pypi/pyversions/dazzle.svg)](https://pypi.org/project/dazzle/)
+[![Homebrew](https://img.shields.io/badge/homebrew-manwithacat%2Ftap-orange)](https://github.com/manwithacat/homebrew-tap)
+
+<!-- Build & Quality -->
 [![CI](https://github.com/manwithacat/dazzle/workflows/CI/badge.svg)](https://github.com/manwithacat/dazzle/actions)
+[![codecov](https://codecov.io/gh/manwithacat/dazzle/graph/badge.svg)](https://codecov.io/gh/manwithacat/dazzle)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](https://mypy-lang.org/)
+
+<!-- Downloads & Stats -->
+[![PyPI Downloads](https://img.shields.io/pypi/dm/dazzle.svg)](https://pypi.org/project/dazzle/)
+[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/i/manwithacat.dazzle-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode)
+
+<!-- Meta -->
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://manwithacat.github.io/dazzle/)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/manwithacat/dazzle.svg?style=social)](https://github.com/manwithacat/dazzle)
 
 DAZZLE is a DSL-first toolkit that bridges human specifications and production code. An LLM translates your intent into a structured DSL; from there, all code generation is deterministic and token-efficient.
 
