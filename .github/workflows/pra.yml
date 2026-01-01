@@ -91,7 +91,7 @@ jobs:
 
     - name: Download baseline (if exists)
       id: baseline
-      uses: dawidd6/action-download-artifact@v11
+      uses: dawidd6/action-download-artifact@v12
       with:
         name: pra-baseline-${{ github.event.inputs.scenario }}
         path: ./baseline
