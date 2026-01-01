@@ -172,7 +172,7 @@ jobs:
           EOF
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: DAZZLE v${{ steps.version.outputs.VERSION }}
           body_path: RELEASE_NOTES.md
