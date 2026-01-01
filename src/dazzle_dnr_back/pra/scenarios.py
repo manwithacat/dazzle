@@ -81,7 +81,7 @@ class SuccessCriteria:
 
 
 @dataclass
-class TestScenario:
+class StressScenario:
     """
     A complete test scenario configuration.
 
@@ -102,7 +102,7 @@ class TestScenario:
         return self.consumer_factory(metrics)
 
 
-def create_quick_scenario() -> TestScenario:
+def create_quick_scenario() -> StressScenario:
     """
     Quick sanity check scenario.
 
@@ -111,7 +111,7 @@ def create_quick_scenario() -> TestScenario:
     Note: Throughput threshold is set to 35 events/sec to account for
     CI environment variability. Local runs typically achieve 40-60 events/sec.
     """
-    return TestScenario(
+    return StressScenario(
         name="quick",
         description="Quick 1-minute sanity check",
         scenario_type=ScenarioType.QUICK,
@@ -131,13 +131,13 @@ def create_quick_scenario() -> TestScenario:
     )
 
 
-def create_standard_scenario() -> TestScenario:
+def create_standard_scenario() -> StressScenario:
     """
     Standard 5-minute test scenario.
 
     Balanced test for regular CI runs.
     """
-    return TestScenario(
+    return StressScenario(
         name="standard",
         description="Standard 5-minute performance test",
         scenario_type=ScenarioType.STANDARD,
@@ -160,13 +160,13 @@ def create_standard_scenario() -> TestScenario:
     )
 
 
-def create_extended_scenario() -> TestScenario:
+def create_extended_scenario() -> StressScenario:
     """
     Extended 30-minute soak test.
 
     For release validation.
     """
-    return TestScenario(
+    return StressScenario(
         name="extended",
         description="Extended 30-minute soak test",
         scenario_type=ScenarioType.EXTENDED,
@@ -189,13 +189,13 @@ def create_extended_scenario() -> TestScenario:
     )
 
 
-def create_burst_scenario() -> TestScenario:
+def create_burst_scenario() -> StressScenario:
     """
     Burst test scenario.
 
     Tests system response to sudden load spikes.
     """
-    return TestScenario(
+    return StressScenario(
         name="burst",
         description="Sudden 10x burst for backpressure testing",
         scenario_type=ScenarioType.BURST,
@@ -221,13 +221,13 @@ def create_burst_scenario() -> TestScenario:
     )
 
 
-def create_skewed_burst_scenario() -> TestScenario:
+def create_skewed_burst_scenario() -> StressScenario:
     """
     Skewed burst scenario.
 
     Tests hot partition handling under burst.
     """
-    return TestScenario(
+    return StressScenario(
         name="skewed_burst",
         description="Burst focused on hot partitions (95% traffic to 10% keys)",
         scenario_type=ScenarioType.SKEWED_BURST,
@@ -255,13 +255,13 @@ def create_skewed_burst_scenario() -> TestScenario:
     )
 
 
-def create_backpressure_scenario() -> TestScenario:
+def create_backpressure_scenario() -> StressScenario:
     """
     Backpressure testing scenario.
 
     One slow consumer creates backpressure.
     """
-    return TestScenario(
+    return StressScenario(
         name="backpressure",
         description="Test bounded backlog with slow consumer",
         scenario_type=ScenarioType.BACKPRESSURE,
@@ -287,13 +287,13 @@ def create_backpressure_scenario() -> TestScenario:
     )
 
 
-def create_dlq_scenario() -> TestScenario:
+def create_dlq_scenario() -> StressScenario:
     """
     DLQ activation scenario.
 
     Tests that invalid records route to DLQ.
     """
-    return TestScenario(
+    return StressScenario(
         name="dlq",
         description="Test DLQ routing for failing events",
         scenario_type=ScenarioType.DLQ,
@@ -319,13 +319,13 @@ def create_dlq_scenario() -> TestScenario:
     )
 
 
-def create_replay_scenario() -> TestScenario:
+def create_replay_scenario() -> StressScenario:
     """
     Full replay scenario.
 
     Tests derivation rebuild from logs.
     """
-    return TestScenario(
+    return StressScenario(
         name="replay",
         description="Full derivation rebuild from offset zero",
         scenario_type=ScenarioType.REPLAY,
@@ -348,13 +348,13 @@ def create_replay_scenario() -> TestScenario:
     )
 
 
-def create_failure_injection_scenario() -> TestScenario:
+def create_failure_injection_scenario() -> StressScenario:
     """
     Failure injection scenario.
 
     Tests system behavior under partial failures.
     """
-    return TestScenario(
+    return StressScenario(
         name="failure_injection",
         description="Partial downstream failure simulation",
         scenario_type=ScenarioType.FAILURE_INJECTION,
@@ -378,13 +378,13 @@ def create_failure_injection_scenario() -> TestScenario:
     )
 
 
-def create_full_scenario() -> TestScenario:
+def create_full_scenario() -> StressScenario:
     """
     Comprehensive full test scenario.
 
     Exercises all stress patterns sequentially.
     """
-    return TestScenario(
+    return StressScenario(
         name="full",
         description="Comprehensive test exercising all patterns",
         scenario_type=ScenarioType.FULL,
@@ -418,7 +418,7 @@ def create_full_scenario() -> TestScenario:
 
 
 # Registry of all scenarios
-SCENARIOS: dict[ScenarioType, TestScenario] = {
+SCENARIOS: dict[ScenarioType, StressScenario] = {
     ScenarioType.QUICK: create_quick_scenario(),
     ScenarioType.STANDARD: create_standard_scenario(),
     ScenarioType.EXTENDED: create_extended_scenario(),
@@ -432,7 +432,7 @@ SCENARIOS: dict[ScenarioType, TestScenario] = {
 }
 
 
-def get_scenario(scenario_type: ScenarioType | str) -> TestScenario:
+def get_scenario(scenario_type: ScenarioType | str) -> StressScenario:
     """
     Get a test scenario by type.
 
@@ -440,7 +440,7 @@ def get_scenario(scenario_type: ScenarioType | str) -> TestScenario:
         scenario_type: ScenarioType enum or string name
 
     Returns:
-        TestScenario configuration
+        StressScenario configuration
 
     Raises:
         KeyError: If scenario type not found

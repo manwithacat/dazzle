@@ -15,7 +15,7 @@ Routes are prefixed with /_ops/ and require ops authentication.
 from __future__ import annotations
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -129,7 +129,7 @@ class OpsSessionManager:
     def create_session(self, username: str) -> str:
         """Create a new session and return token."""
         token = secrets.token_urlsafe(32)
-        expires = datetime.utcnow() + self.session_duration
+        expires = datetime.now(UTC) + self.session_duration
         self._sessions[token] = (username, expires)
         return token
 
@@ -139,7 +139,7 @@ class OpsSessionManager:
             return None
 
         username, expires = self._sessions[token]
-        if datetime.utcnow() > expires:
+        if datetime.now(UTC) > expires:
             del self._sessions[token]
             return None
 
@@ -151,7 +151,7 @@ class OpsSessionManager:
 
     def cleanup_expired(self) -> int:
         """Remove expired sessions. Returns count of removed sessions."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         expired = [t for t, (_, exp) in self._sessions.items() if now > exp]
         for token in expired:
             del self._sessions[token]
@@ -335,7 +335,7 @@ def create_ops_routes(
         if not health_aggregator:
             return HealthSummary(
                 status="unknown",
-                checked_at=datetime.utcnow().isoformat(),
+                checked_at=datetime.now(UTC).isoformat(),
                 summary={"total": 0, "healthy": 0, "degraded": 0, "unhealthy": 0, "unknown": 0},
                 components=[],
             )
@@ -569,7 +569,7 @@ def create_ops_routes(
 
         Returns cost aggregation by service or by day.
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with ops_db.connection() as conn:
             if group_by == "day":
@@ -626,7 +626,7 @@ def create_ops_routes(
 
         Returns failed API calls for debugging.
         """
-        cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
 
         with ops_db.connection() as conn:
             query = """
@@ -692,7 +692,7 @@ def create_ops_routes(
 
         Returns daily page views, top pages, and session metrics.
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with ops_db.connection() as conn:
             # Daily page views
@@ -763,7 +763,7 @@ def create_ops_routes(
 
         Returns referrer breakdown and UTM parameter analysis.
         """
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with ops_db.connection() as conn:
             # Referrer breakdown
@@ -949,7 +949,7 @@ def create_ops_routes(
         """
         from datetime import timedelta
 
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(UTC) - timedelta(days=days)
         since_str = since.isoformat()
 
         with ops_db.connection() as conn:
@@ -1083,7 +1083,7 @@ def create_ops_routes(
         """
         from datetime import timedelta
 
-        since = datetime.utcnow() - timedelta(days=days)
+        since = datetime.now(UTC) - timedelta(days=days)
         since_str = since.isoformat()
 
         with ops_db.connection() as conn:

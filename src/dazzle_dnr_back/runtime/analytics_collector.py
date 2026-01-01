@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -429,7 +429,7 @@ class AnalyticsCollector:
             user_id=context.user_id,
             session_id=context.session_id,
             properties=self._build_properties(context, properties),
-            recorded_at=datetime.utcnow(),
+            recorded_at=datetime.now(UTC),
         )
 
         # Add to batch

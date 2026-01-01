@@ -10,7 +10,7 @@ These activities are used by dynamically generated workflows to:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -75,7 +75,7 @@ if _TEMPORAL_AVAILABLE:
         task_id = str(uuid4())
 
         due_seconds = params.get("due_seconds", 86400)  # Default 24 hours
-        due_at = datetime.utcnow() + timedelta(seconds=due_seconds)
+        due_at = datetime.now(UTC) + timedelta(seconds=due_seconds)
 
         task = ProcessTask(
             task_id=task_id,
@@ -113,7 +113,7 @@ if _TEMPORAL_AVAILABLE:
         if task_id in _task_store:
             task = _task_store[task_id]
             task.status = TaskStatus.ESCALATED
-            task.escalated_at = datetime.utcnow()
+            task.escalated_at = datetime.now(UTC)
 
             activity.logger.warning(f"Escalated human task {task_id} (step: {step_name})")
         else:
@@ -228,7 +228,7 @@ async def complete_task_in_db(
         task.status = TaskStatus.COMPLETED
         task.outcome = outcome
         task.outcome_data = outcome_data
-        task.completed_at = datetime.utcnow()
+        task.completed_at = datetime.now(UTC)
 
         logger.info(f"Task {task_id} completed with outcome '{outcome}'")
 

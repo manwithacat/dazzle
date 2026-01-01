@@ -274,7 +274,7 @@ class TestActivities:
             pytest.skip("Temporal activities not available")
 
         # Activities are registered, but we test the underlying logic
-        from datetime import datetime
+        from datetime import UTC, datetime
 
         # Create a mock task directly in store for testing
         from dazzle.core.process import ProcessTask
@@ -291,7 +291,7 @@ class TestActivities:
             surface_name="review_form",
             entity_name="Document",
             entity_id="doc-1",
-            due_at=datetime.utcnow(),
+            due_at=datetime.now(UTC),
         )
         _task_store[task.task_id] = task
 

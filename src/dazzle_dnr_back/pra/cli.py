@@ -16,7 +16,7 @@ import click
 
 from dazzle_dnr_back.metrics.reporter import ReportFormat
 
-from .harness import TestHarness
+from .harness import StressHarness
 from .scenarios import ScenarioType, list_scenarios
 
 
@@ -108,7 +108,7 @@ def run_cmd(
             click.echo(f"  [{phase}] {progress:.1f}% @ {rate:.0f} events/sec")
 
     # Run the test
-    harness = TestHarness()
+    harness = StressHarness()
 
     result = asyncio.run(
         harness.run_scenario(scenario_type, progress_callback if verbose else None)

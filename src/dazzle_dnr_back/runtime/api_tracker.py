@@ -31,7 +31,7 @@ import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 from uuid import uuid4
 
@@ -282,7 +282,7 @@ class ApiTracker:
             error_message=ctx.error_message,
             cost_cents=ctx.cost_cents,
             metadata=ctx.metadata,
-            called_at=datetime.utcnow(),
+            called_at=datetime.now(UTC),
             tenant_id=ctx.tenant_id,
         )
 

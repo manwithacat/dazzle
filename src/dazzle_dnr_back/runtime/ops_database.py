@@ -21,7 +21,7 @@ import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -304,7 +304,7 @@ class OpsDatabase:
             # Record migration
             conn.execute(
                 "INSERT INTO _ops_schema (version, applied_at) VALUES (?, ?)",
-                (1, datetime.utcnow().isoformat()),
+                (1, datetime.now(UTC).isoformat()),
             )
 
     # =========================================================================
@@ -349,7 +349,7 @@ class OpsDatabase:
                 # Update last login
                 conn.execute(
                     "UPDATE ops_credentials SET last_login = ? WHERE username = ?",
-                    (datetime.utcnow().isoformat(), username),
+                    (datetime.now(UTC).isoformat(), username),
                 )
                 return True
             return False
@@ -418,7 +418,7 @@ class OpsDatabase:
         hours: int = 24,
     ) -> list[HealthCheckRecord]:
         """Get health check history for a component."""
-        cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
         with self.connection() as conn:
             cursor = conn.execute(
                 """
@@ -483,7 +483,7 @@ class OpsDatabase:
         tenant_id: str | None = None,
     ) -> dict[str, Any]:
         """Get API call statistics."""
-        cutoff = (datetime.utcnow() - timedelta(hours=hours)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
 
         with self.connection() as conn:
             # Build query based on filters
@@ -562,7 +562,7 @@ class OpsDatabase:
         days: int = 7,
     ) -> dict[str, Any]:
         """Get analytics summary for a tenant."""
-        cutoff = (datetime.utcnow() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
         with self.connection() as conn:
             # Event counts by type
@@ -644,7 +644,7 @@ class OpsDatabase:
                     causation_id,
                     user_id,
                     tenant_id,
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
         return event_id
@@ -719,23 +719,23 @@ class OpsDatabase:
         with self.connection() as conn:
             # Health checks
             cutoff = (
-                datetime.utcnow() - timedelta(days=self.retention.health_checks_days)
+                datetime.now(UTC) - timedelta(days=self.retention.health_checks_days)
             ).isoformat()
             cursor = conn.execute("DELETE FROM health_checks WHERE checked_at < ?", (cutoff,))
             deleted["health_checks"] = cursor.rowcount
 
             # API calls
-            cutoff = (datetime.utcnow() - timedelta(days=self.retention.api_calls_days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.api_calls_days)).isoformat()
             cursor = conn.execute("DELETE FROM api_calls WHERE called_at < ?", (cutoff,))
             deleted["api_calls"] = cursor.rowcount
 
             # Analytics
-            cutoff = (datetime.utcnow() - timedelta(days=self.retention.analytics_days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.analytics_days)).isoformat()
             cursor = conn.execute("DELETE FROM analytics_events WHERE recorded_at < ?", (cutoff,))
             deleted["analytics_events"] = cursor.rowcount
 
             # Events
-            cutoff = (datetime.utcnow() - timedelta(days=self.retention.events_days)).isoformat()
+            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.events_days)).isoformat()
             cursor = conn.execute("DELETE FROM event_log WHERE recorded_at < ?", (cutoff,))
             deleted["event_log"] = cursor.rowcount
 
@@ -749,7 +749,7 @@ class OpsDatabase:
         """Update retention configuration."""
         self.retention = config
         with self.connection() as conn:
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(UTC).isoformat()
             for key, value in [
                 ("health_checks_days", config.health_checks_days),
                 ("api_calls_days", config.api_calls_days),

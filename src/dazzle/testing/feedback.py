@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 
@@ -239,7 +239,7 @@ def save_regressions(project_root: Path, regressions: list[TestRegression]) -> P
 
     container = RegressionsContainer(
         regressions=regressions,
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(UTC),
     )
 
     regressions_file = feedback_dir / REGRESSIONS_FILE
@@ -389,7 +389,7 @@ def save_corrections(project_root: Path, corrections: list[TestCorrection]) -> P
 
     container = CorrectionsContainer(
         corrections=corrections,
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(UTC),
     )
 
     corrections_file = feedback_dir / CORRECTIONS_FILE
@@ -516,7 +516,7 @@ def save_prompt_versions(project_root: Path, prompts: list[PromptVersion]) -> Pa
 
     container = PromptVersionsContainer(
         prompts=prompts,
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(UTC),
     )
 
     prompts_file = feedback_dir / PROMPT_VERSIONS_FILE

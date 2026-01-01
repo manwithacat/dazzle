@@ -22,15 +22,15 @@ from dazzle_dnr_back.pra.consumers import (
 )
 from dazzle_dnr_back.pra.harness import (
     CriteriaResult,
-    TestHarness,
-    TestResult,
-    TestStatus,
+    RunResult,
+    RunStatus,
+    StressHarness,
     run_quick_test,
 )
 from dazzle_dnr_back.pra.scenarios import (
     ScenarioType,
+    StressScenario,
     SuccessCriteria,
-    TestScenario,
     get_scenario,
     list_scenarios,
 )
@@ -271,7 +271,7 @@ class TestConsumerGroup:
         assert len(full.consumers) >= 4
 
 
-class TestScenarios:
+class StressScenarios:
     """Tests for test scenarios."""
 
     def test_list_scenarios(self) -> None:
@@ -374,8 +374,8 @@ class TestCriteriaResult:
         assert result.actual > result.threshold
 
 
-class TestTestResult:
-    """Tests for TestResult."""
+class TestRunResult:
+    """Tests for RunResult."""
 
     def test_result_to_dict(self) -> None:
         """Test result serialization."""
@@ -383,11 +383,11 @@ class TestTestResult:
 
         from dazzle_dnr_back.pra.generator import GeneratorStats
 
-        result = TestResult(
+        result = RunResult(
             test_id="abc123",
             scenario_name="quick",
             scenario_type=ScenarioType.QUICK,
-            status=TestStatus.COMPLETED,
+            status=RunStatus.COMPLETED,
             started_at=datetime.now(UTC),
             completed_at=datetime.now(UTC),
             duration_seconds=10.5,
@@ -406,13 +406,13 @@ class TestTestResult:
         assert d["generator_stats"]["intents_generated"] == 100
 
 
-class TestTestHarness:
-    """Tests for TestHarness."""
+class TestStressHarness:
+    """Tests for StressHarness."""
 
     @pytest.mark.asyncio
     async def test_harness_initialization(self) -> None:
         """Test harness initializes correctly."""
-        harness = TestHarness()
+        harness = StressHarness()
 
         assert harness._event_bus is None
         assert harness._owns_event_bus
@@ -423,7 +423,7 @@ class TestTestHarness:
         from dazzle_dnr_back.pra.profiles import SteadyRampProfile
 
         # Create a very short scenario for testing
-        scenario = TestScenario(
+        scenario = StressScenario(
             name="minimal",
             description="Minimal test",
             scenario_type=ScenarioType.QUICK,
@@ -446,17 +446,17 @@ class TestTestHarness:
             success_criteria=SuccessCriteria(max_error_rate=0.5),
         )
 
-        harness = TestHarness()
+        harness = StressHarness()
         result = await harness.run_test(scenario)
 
-        assert result.status == TestStatus.COMPLETED
+        assert result.status == RunStatus.COMPLETED
         assert result.generator_stats is not None
         assert result.generator_stats.total_generated > 0
 
     @pytest.mark.asyncio
     async def test_harness_evaluate_criteria(self) -> None:
         """Test harness evaluates success criteria."""
-        harness = TestHarness()
+        harness = StressHarness()
 
         criteria = SuccessCriteria(
             max_p50_latency_ms=100,
@@ -489,13 +489,13 @@ class TestTestHarness:
         from dazzle_dnr_back.metrics.reporter import ReportFormat
         from dazzle_dnr_back.pra.generator import GeneratorStats
 
-        harness = TestHarness()
+        harness = StressHarness()
 
-        result = TestResult(
+        result = RunResult(
             test_id="test123",
             scenario_name="test_scenario",
             scenario_type=ScenarioType.QUICK,
-            status=TestStatus.COMPLETED,
+            status=RunStatus.COMPLETED,
             started_at=datetime.now(UTC),
             completed_at=datetime.now(UTC),
             duration_seconds=60,
@@ -538,13 +538,13 @@ class TestTestHarness:
         from dazzle_dnr_back.metrics.reporter import ReportFormat
         from dazzle_dnr_back.pra.generator import GeneratorStats
 
-        harness = TestHarness()
+        harness = StressHarness()
 
-        result = TestResult(
+        result = RunResult(
             test_id="test456",
             scenario_name="md_test",
             scenario_type=ScenarioType.STANDARD,
-            status=TestStatus.COMPLETED,
+            status=RunStatus.COMPLETED,
             started_at=datetime.now(UTC),
             completed_at=datetime.now(UTC),
             duration_seconds=30,
@@ -569,5 +569,5 @@ class TestConvenienceFunctions:
         """Test run_quick_test convenience function."""
         result = await run_quick_test()
 
-        assert result.status in [TestStatus.COMPLETED, TestStatus.FAILED]
+        assert result.status in [RunStatus.COMPLETED, RunStatus.FAILED]
         assert result.scenario_type == ScenarioType.QUICK

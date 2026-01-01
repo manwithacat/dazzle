@@ -8,7 +8,7 @@ for input mappings between steps.
 from __future__ import annotations
 
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -252,7 +252,7 @@ class ProcessContext(BaseModel):
         if isinstance(started_at, str):
             started_at = datetime.fromisoformat(started_at)
         else:
-            started_at = datetime.utcnow()
+            started_at = datetime.now(UTC)
 
         return cls(
             inputs=data.get("inputs", {}),

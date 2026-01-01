@@ -19,7 +19,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -292,7 +292,7 @@ class SSEStreamManager:
                     # Send heartbeat
                     yield SSEMessage(
                         event="heartbeat",
-                        data={"timestamp": datetime.utcnow().isoformat()},
+                        data={"timestamp": datetime.now(UTC).isoformat()},
                     ).serialize()
         finally:
             self.remove_subscription(subscription_id)

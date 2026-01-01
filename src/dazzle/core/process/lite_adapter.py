@@ -25,7 +25,7 @@ import json
 import logging
 import uuid
 from collections.abc import Callable, Coroutine
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -770,8 +770,8 @@ class LiteProcessAdapter(ProcessAdapter):
         if step.wait_for_signal:
             # Poll for signal
             run_id = context.get_variable("run_id")
-            deadline = datetime.utcnow() + timedelta(seconds=step.timeout_seconds)
-            while datetime.utcnow() < deadline:
+            deadline = datetime.now(UTC) + timedelta(seconds=step.timeout_seconds)
+            while datetime.now(UTC) < deadline:
                 signal = await self._check_signal(run_id, step.wait_for_signal)
                 if signal:
                     return {"signal": step.wait_for_signal, "payload": signal}
@@ -811,7 +811,7 @@ class LiteProcessAdapter(ProcessAdapter):
 
         # Create task
         task_id = str(uuid.uuid4())
-        due_at = datetime.utcnow() + timedelta(seconds=step.timeout_seconds)
+        due_at = datetime.now(UTC) + timedelta(seconds=step.timeout_seconds)
 
         await self._create_task(
             task_id=task_id,
@@ -835,9 +835,9 @@ class LiteProcessAdapter(ProcessAdapter):
 
         # Poll for completion
         escalation_seconds = task_config.escalation_timeout_seconds or step.timeout_seconds
-        escalation_time = datetime.utcnow() + timedelta(seconds=escalation_seconds)
+        escalation_time = datetime.now(UTC) + timedelta(seconds=escalation_seconds)
 
-        while datetime.utcnow() < due_at:
+        while datetime.now(UTC) < due_at:
             task = await self.get_task(task_id)
             if not task:
                 raise ProcessStepFailed(step.name, "Task not found")
@@ -858,7 +858,7 @@ class LiteProcessAdapter(ProcessAdapter):
                 return {"outcome": outcome, "task_id": task_id, **outcome_data}
 
             # Check escalation
-            if datetime.utcnow() > escalation_time and not task.escalated_at:
+            if datetime.now(UTC) > escalation_time and not task.escalated_at:
                 await self._escalate_task(task_id)
 
             await asyncio.sleep(self._poll_interval)
@@ -1004,7 +1004,7 @@ class LiteProcessAdapter(ProcessAdapter):
                 if self._shutting_down:
                     break
 
-                now = datetime.utcnow()
+                now = datetime.now(UTC)
 
                 # Check scheduled processes
                 for name, spec in self._schedule_registry.items():
@@ -1251,7 +1251,7 @@ class LiteProcessAdapter(ProcessAdapter):
         if not self._db:
             return
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).isoformat()
 
         # Find pending tasks past their due date that haven't been escalated
         async with self._db.execute(
@@ -1380,7 +1380,7 @@ class LiteProcessAdapter(ProcessAdapter):
         event_data = {
             "schema": schema_name,
             "run_id": run_id,
-            "t_event": datetime.utcnow().isoformat(),
+            "t_event": datetime.now(UTC).isoformat(),
             **kwargs,
         }
 

@@ -24,12 +24,12 @@ from dazzle_dnr_back.metrics.reporter import ReportFormat
 
 from .consumers import ConsumerGroup
 from .generator import GeneratorStats, LoadGenerator
-from .scenarios import ScenarioType, SuccessCriteria, TestScenario, get_scenario
+from .scenarios import ScenarioType, StressScenario, SuccessCriteria, get_scenario
 
 logger = logging.getLogger(__name__)
 
 
-class TestStatus(str, Enum):
+class RunStatus(str, Enum):
     """Status of a test run."""
 
     PENDING = "pending"
@@ -51,7 +51,7 @@ class CriteriaResult:
 
 
 @dataclass
-class TestResult:
+class RunResult:
     """
     Complete result of a test run.
 
@@ -61,7 +61,7 @@ class TestResult:
     test_id: str
     scenario_name: str
     scenario_type: ScenarioType
-    status: TestStatus
+    status: RunStatus
     started_at: datetime
     completed_at: datetime | None = None
     duration_seconds: float = 0.0
@@ -120,14 +120,14 @@ class TestResult:
         }
 
 
-class TestHarness:
+class StressHarness:
     """
     Orchestrates PRA stress tests.
 
     Coordinates load generation, event processing, and metrics collection.
 
     Example:
-        harness = TestHarness()
+        harness = StressHarness()
         result = await harness.run_scenario(ScenarioType.STANDARD)
         print(result.criteria_passed)
     """
@@ -152,7 +152,7 @@ class TestHarness:
         self._metrics: MetricsCollector | None = None
         self._generator: LoadGenerator | None = None
         self._consumers: ConsumerGroup | None = None
-        self._current_result: TestResult | None = None
+        self._current_result: RunResult | None = None
 
         # Event routing
         self._topic_events: dict[str, list[EventEnvelope]] = {}
@@ -168,7 +168,7 @@ class TestHarness:
         self,
         scenario_type: ScenarioType | str,
         progress_callback: Any | None = None,
-    ) -> TestResult:
+    ) -> RunResult:
         """
         Run a predefined test scenario.
 
@@ -177,25 +177,25 @@ class TestHarness:
             progress_callback: Optional callback for progress updates
 
         Returns:
-            TestResult with all metrics and evaluations
+            RunResult with all metrics and evaluations
         """
         scenario = get_scenario(scenario_type)
         return await self.run_test(scenario, progress_callback)
 
     async def run_test(
         self,
-        scenario: TestScenario,
+        scenario: StressScenario,
         progress_callback: Any | None = None,
-    ) -> TestResult:
+    ) -> RunResult:
         """
         Run a custom test scenario.
 
         Args:
-            scenario: TestScenario configuration
+            scenario: StressScenario configuration
             progress_callback: Optional callback for progress updates
 
         Returns:
-            TestResult with all metrics and evaluations
+            RunResult with all metrics and evaluations
         """
         test_id = str(uuid4())[:8]
         started_at = datetime.now(UTC)
@@ -203,11 +203,11 @@ class TestHarness:
 
         logger.info(f"Starting test {test_id}: {scenario.name}")
 
-        result = TestResult(
+        result = RunResult(
             test_id=test_id,
             scenario_name=scenario.name,
             scenario_type=scenario.scenario_type,
-            status=TestStatus.RUNNING,
+            status=RunStatus.RUNNING,
             started_at=started_at,
         )
         self._current_result = result
@@ -282,7 +282,7 @@ class TestHarness:
             result.criteria_passed = all(cr.passed for cr in result.criteria_results)
 
             # Set final status
-            result.status = TestStatus.COMPLETED
+            result.status = RunStatus.COMPLETED
             result.completed_at = datetime.now(UTC)
             result.duration_seconds = time.monotonic() - start_time
 
@@ -292,7 +292,7 @@ class TestHarness:
 
         except Exception as e:
             logger.error(f"Test {test_id} failed with error: {e}")
-            result.status = TestStatus.FAILED
+            result.status = RunStatus.FAILED
             result.error_message = str(e)
             result.completed_at = datetime.now(UTC)
             result.duration_seconds = time.monotonic() - start_time
@@ -474,12 +474,12 @@ class TestHarness:
 
         return results
 
-    def generate_report(self, result: TestResult, format: ReportFormat = ReportFormat.HUMAN) -> str:
+    def generate_report(self, result: RunResult, format: ReportFormat = ReportFormat.HUMAN) -> str:
         """
         Generate a report from test results.
 
         Args:
-            result: TestResult from a test run
+            result: RunResult from a test run
             format: Output format
 
         Returns:
@@ -496,7 +496,7 @@ class TestHarness:
         else:
             return self._generate_human_report(result)
 
-    def _generate_human_report(self, result: TestResult) -> str:
+    def _generate_human_report(self, result: RunResult) -> str:
         """Generate human-readable report."""
         lines = [
             f"PRA Test Report: {result.scenario_name}",
@@ -551,7 +551,7 @@ class TestHarness:
 
         return "\n".join(lines)
 
-    def _generate_markdown_report(self, result: TestResult) -> str:
+    def _generate_markdown_report(self, result: RunResult) -> str:
         """Generate markdown report."""
         status_emoji = "✅" if result.criteria_passed else "❌"
 
@@ -626,23 +626,23 @@ class TestHarness:
         return "\n".join(lines)
 
 
-async def run_quick_test() -> TestResult:
+async def run_quick_test() -> RunResult:
     """
     Convenience function to run a quick test.
 
     Returns:
-        TestResult from quick scenario
+        RunResult from quick scenario
     """
-    harness = TestHarness()
+    harness = StressHarness()
     return await harness.run_scenario(ScenarioType.QUICK)
 
 
-async def run_standard_test() -> TestResult:
+async def run_standard_test() -> RunResult:
     """
     Convenience function to run a standard test.
 
     Returns:
-        TestResult from standard scenario
+        RunResult from standard scenario
     """
-    harness = TestHarness()
+    harness = StressHarness()
     return await harness.run_scenario(ScenarioType.STANDARD)

@@ -47,18 +47,13 @@ def dnr_info() -> None:
     except ImportError:
         pass
 
-    typer.echo(
-        f"DNR Backend:   {'✓' if dnr_back_available else '✗'} {'installed' if dnr_back_available else 'not installed'}"
-    )
-    typer.echo(
-        f"DNR UI:        {'✓' if dnr_ui_available else '✗'} {'installed' if dnr_ui_available else 'not installed'}"
-    )
-    typer.echo(
-        f"FastAPI:       {'✓' if fastapi_available else '✗'} {'installed' if fastapi_available else 'not installed'}"
-    )
-    typer.echo(
-        f"Uvicorn:       {'✓' if uvicorn_available else '✗'} {'installed' if uvicorn_available else 'not installed'}"
-    )
+    def status(available: bool) -> str:
+        return "✓ installed" if available else "✗ not installed"
+
+    typer.echo(f"DNR Backend:   {status(dnr_back_available)}")
+    typer.echo(f"DNR UI:        {status(dnr_ui_available)}")
+    typer.echo(f"FastAPI:       {status(fastapi_available)}")
+    typer.echo(f"Uvicorn:       {status(uvicorn_available)}")
 
     typer.echo("\nAvailable Commands:")
     if dnr_ui_available:

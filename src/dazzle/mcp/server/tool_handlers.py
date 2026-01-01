@@ -1916,7 +1916,7 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
     Analyzes a persona's goals from DSL and proposes tests that verify
     the persona can achieve their stated objectives.
     """
-    from datetime import datetime
+    from datetime import UTC, datetime
 
     from dazzle.core.ir.test_design import (
         TestDesignAction,
@@ -1949,7 +1949,7 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
             design_count += 1
             return result
 
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Filter personas
         personas_to_process = app_spec.personas

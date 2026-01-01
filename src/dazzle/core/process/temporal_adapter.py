@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -588,7 +588,7 @@ class TemporalAdapter(ProcessAdapter):
                 inputs={},
                 outputs=None,
                 error=None,
-                started_at=desc.start_time or datetime.utcnow(),
+                started_at=desc.start_time or datetime.now(UTC),
                 completed_at=desc.close_time,
             )
         except Exception as e:
@@ -630,7 +630,7 @@ class TemporalAdapter(ProcessAdapter):
                     run_id=workflow.id,
                     process_name=workflow.workflow_type or "unknown",
                     status=self._map_status(workflow.status),
-                    started_at=workflow.start_time or datetime.utcnow(),
+                    started_at=workflow.start_time or datetime.now(UTC),
                     completed_at=workflow.close_time,
                 )
             )
@@ -799,7 +799,7 @@ class TemporalAdapter(ProcessAdapter):
                     process_name=workflow.workflow_type or "unknown",
                     dsl_version=dsl_version,
                     status=self._map_status(workflow.status),
-                    started_at=workflow.start_time or datetime.utcnow(),
+                    started_at=workflow.start_time or datetime.now(UTC),
                     completed_at=workflow.close_time,
                 )
             )

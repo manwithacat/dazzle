@@ -12,7 +12,7 @@ Storage locations:
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -139,7 +139,7 @@ def save_test_designs(
     container = TestDesignsContainer(
         project_name=project_name,
         designs=designs,
-        updated_at=datetime.utcnow(),
+        updated_at=datetime.now(UTC),
     )
 
     designs_file = tests_dir / DESIGNS_FILE
@@ -248,7 +248,7 @@ def update_test_design_status(
                 notes=notes if notes is not None else design.notes,
                 prompt_version=design.prompt_version,
                 created_at=design.created_at,
-                updated_at=datetime.utcnow(),
+                updated_at=datetime.now(UTC),
             )
             updated_designs.append(updated_design)
         else:

@@ -336,10 +336,13 @@ class TestTemplateVars:
 
     def test_render_year_var(self) -> None:
         """Test year variable substitution."""
+        from datetime import datetime
+
         spec = create_default_sitespec()
         content = "© {{year}} Company"
         rendered = render_template_vars(content, spec)
-        assert "© 2025" in rendered or "© 2024" in rendered  # Year depends on when test runs
+        current_year = str(datetime.now().year)
+        assert f"© {current_year}" in rendered
 
 
 class TestSiteSpecValidation:

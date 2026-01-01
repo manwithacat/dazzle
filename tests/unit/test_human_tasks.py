@@ -495,7 +495,7 @@ class TestLiteAdapterEscalation:
 
         try:
             # Create a task that is overdue
-            overdue_time = datetime.utcnow() - timedelta(hours=2)
+            overdue_time = datetime.now(UTC) - timedelta(hours=2)
             await adapter._db.execute(
                 """
                 INSERT INTO process_tasks (
@@ -513,7 +513,7 @@ class TestLiteAdapterEscalation:
                     "user-1",
                     TaskStatus.PENDING.value,
                     overdue_time.isoformat(),
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
             await adapter._db.commit()
@@ -546,7 +546,7 @@ class TestLiteAdapterEscalation:
 
         try:
             # Create a task that is NOT overdue
-            future_time = datetime.utcnow() + timedelta(hours=2)
+            future_time = datetime.now(UTC) + timedelta(hours=2)
             await adapter._db.execute(
                 """
                 INSERT INTO process_tasks (
@@ -564,7 +564,7 @@ class TestLiteAdapterEscalation:
                     "user-1",
                     TaskStatus.PENDING.value,
                     future_time.isoformat(),
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
             await adapter._db.commit()
@@ -597,8 +597,8 @@ class TestLiteAdapterEscalation:
 
         try:
             # Create a task that is already escalated
-            overdue_time = datetime.utcnow() - timedelta(hours=2)
-            escalated_time = datetime.utcnow() - timedelta(hours=1)
+            overdue_time = datetime.now(UTC) - timedelta(hours=2)
+            escalated_time = datetime.now(UTC) - timedelta(hours=1)
             await adapter._db.execute(
                 """
                 INSERT INTO process_tasks (
@@ -617,7 +617,7 @@ class TestLiteAdapterEscalation:
                     TaskStatus.ESCALATED.value,
                     overdue_time.isoformat(),
                     escalated_time.isoformat(),
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).isoformat(),
                 ),
             )
             await adapter._db.commit()

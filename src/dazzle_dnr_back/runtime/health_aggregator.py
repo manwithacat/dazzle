@@ -17,7 +17,7 @@ import asyncio
 import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
@@ -183,7 +183,7 @@ class HealthAggregator:
         if health.latency_ms is None:
             health.latency_ms = (time.monotonic() - start) * 1000
 
-        health.last_checked = datetime.utcnow()
+        health.last_checked = datetime.now(UTC)
         self._latest[name] = health
 
         # Record to database
@@ -232,7 +232,7 @@ class HealthAggregator:
         system_health = SystemHealth(
             status=aggregate_status,
             components=components,
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.now(UTC),
             healthy_count=healthy,
             degraded_count=degraded,
             unhealthy_count=unhealthy,
@@ -282,7 +282,7 @@ class HealthAggregator:
         return SystemHealth(
             status=aggregate_status,
             components=components,
-            checked_at=datetime.utcnow(),
+            checked_at=datetime.now(UTC),
             healthy_count=healthy,
             degraded_count=degraded,
             unhealthy_count=unhealthy,
