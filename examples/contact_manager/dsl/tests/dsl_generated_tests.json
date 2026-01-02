@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "d0269ccefd0ae856",
-  "generated_at": "2025-12-20T11:34:07.231254",
+  "generated_at": "2026-01-02T02:38:22.679986",
   "project_name": "contact_manager",
   "coverage": {
     "entities": [
@@ -36,7 +36,7 @@
           "data": {
             "first_name": "Test first_name",
             "last_name": "Test last_name",
-            "email": "test_47231@example.com"
+            "email": "test_2679@example.com"
           },
           "rationale": "Create valid Contact"
         },
@@ -64,7 +64,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231188"
+      "created_at": "2026-01-02T02:38:22.679924"
     },
     {
       "test_id": "CRUD_CONTACT_READ",
@@ -80,7 +80,7 @@
           "data": {
             "first_name": "Test first_name",
             "last_name": "Test last_name",
-            "email": "test_47231@example.com"
+            "email": "test_2679@example.com"
           },
           "rationale": "Seed test data"
         },
@@ -113,7 +113,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231194"
+      "created_at": "2026-01-02T02:38:22.679929"
     },
     {
       "test_id": "VAL_CONTACT_REQUIRED",
@@ -153,7 +153,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231198"
+      "created_at": "2026-01-02T02:38:22.679934"
     },
     {
       "test_id": "VAL_CONTACT_EMAIL_UNIQUE",
@@ -169,7 +169,7 @@
           "data": {
             "first_name": "Test first_name",
             "last_name": "Test last_name",
-            "email": "test_47231@example.com"
+            "email": "test_2679@example.com"
           },
           "rationale": "Create first entity"
         },
@@ -179,7 +179,7 @@
           "data": {
             "first_name": "Test first_name",
             "last_name": "Test last_name",
-            "email": "test_47231@example.com"
+            "email": "test_2679@example.com"
           },
           "rationale": "Attempt duplicate email"
         },
@@ -207,7 +207,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231214"
+      "created_at": "2026-01-02T02:38:22.679947"
     },
     {
       "test_id": "WS_CONTACTS_NAV",
@@ -256,7 +256,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231221"
+      "created_at": "2026-01-02T02:38:22.679952"
     },
     {
       "test_id": "WS_CONTACTS_ROUTE",
@@ -288,7 +288,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:07.231223"
+      "created_at": "2026-01-02T02:38:22.679954"
     }
   ]
 }

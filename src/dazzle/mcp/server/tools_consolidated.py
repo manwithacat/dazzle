@@ -265,11 +265,11 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # Test Design (replaces 7 tools)
+        # Test Design (replaces 7 tools + 2 new autonomous operations)
         # =====================================================================
         Tool(
             name="test_design",
-            description="Test design operations: propose_persona, gaps, save, get, coverage_actions, runtime_gaps, save_runtime",
+            description="Test design operations: propose_persona, gaps, save, get, coverage_actions, runtime_gaps, save_runtime, auto_populate, improve_coverage",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -283,6 +283,8 @@ def get_consolidated_tools() -> list[Tool]:
                             "coverage_actions",
                             "runtime_gaps",
                             "save_runtime",
+                            "auto_populate",
+                            "improve_coverage",
                         ],
                         "description": "Operation to perform",
                     },
@@ -325,7 +327,15 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "max_actions": {
                         "type": "integer",
-                        "description": "Max actions (for coverage_actions, runtime_gaps)",
+                        "description": "Max actions (for coverage_actions, runtime_gaps, improve_coverage)",
+                    },
+                    "max_stories": {
+                        "type": "integer",
+                        "description": "Max stories to propose (for auto_populate, default: 30)",
+                    },
+                    "include_test_designs": {
+                        "type": "boolean",
+                        "description": "Generate test designs from stories (for auto_populate, default: true)",
                     },
                     "coverage_report_path": {
                         "type": "string",

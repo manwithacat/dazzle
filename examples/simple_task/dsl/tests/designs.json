@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "project_name": null,
-  "created_at": "2025-12-12T21:41:14.097561",
-  "updated_at": "2025-12-12T22:04:00.000000",
+  "created_at": "2026-01-02T02:33:00.436700Z",
+  "updated_at": "2026-01-02T02:33:00.436697Z",
   "designs": [
     {
       "test_id": "TD-001",
@@ -592,8 +592,8 @@
       "implementation_path": null,
       "notes": "Generated from runtime coverage analysis",
       "prompt_version": "v1",
-      "created_at": "2025-12-12T22:04:00.000000",
-      "updated_at": "2025-12-12T22:04:00.000000"
+      "created_at": "2025-12-12T22:04:00",
+      "updated_at": "2025-12-12T22:04:00"
     },
     {
       "test_id": "RUNTIME_TASK_VIEW_DETAIL_001",
@@ -638,8 +638,8 @@
       "implementation_path": null,
       "notes": "Generated from runtime coverage analysis",
       "prompt_version": "v1",
-      "created_at": "2025-12-12T22:04:00.000000",
-      "updated_at": "2025-12-12T22:04:00.000000"
+      "created_at": "2025-12-12T22:04:00",
+      "updated_at": "2025-12-12T22:04:00"
     },
     {
       "test_id": "RUNTIME_TASK_VIEW_EDIT_001",
@@ -684,8 +684,290 @@
       "implementation_path": null,
       "notes": "Generated from runtime coverage analysis",
       "prompt_version": "v1",
-      "created_at": "2025-12-12T22:04:00.000000",
-      "updated_at": "2025-12-12T22:04:00.000000"
+      "created_at": "2025-12-12T22:04:00",
+      "updated_at": "2025-12-12T22:04:00"
+    },
+    {
+      "test_id": "TD-006",
+      "title": "Verify: Administrator creates a new Team Member",
+      "description": "Test generated from story ST-006",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "User_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New User is saved to database",
+        "Administrator sees confirmation message"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-006",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.435816Z",
+      "updated_at": "2026-01-02T02:33:00.436031Z"
+    },
+    {
+      "test_id": "TD-007",
+      "title": "Verify: Administrator creates a new Task",
+      "description": "Test generated from story ST-007",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Task_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Task is saved to database",
+        "Administrator sees confirmation message"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-007",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.436052Z",
+      "updated_at": "2026-01-02T02:33:00.436052Z"
+    },
+    {
+      "test_id": "TD-008",
+      "title": "Verify: Administrator changes Task from todo to in_progress",
+      "description": "Test generated from story ST-008",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'in_progress'",
+        "Timestamp is recorded"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-008",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.436060Z",
+      "updated_at": "2026-01-02T02:33:00.436060Z"
+    },
+    {
+      "test_id": "TD-009",
+      "title": "Verify: Administrator changes Task from in_progress to review",
+      "description": "Test generated from story ST-009",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'review'",
+        "Timestamp is recorded"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-009",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.436065Z",
+      "updated_at": "2026-01-02T02:33:00.436065Z"
+    },
+    {
+      "test_id": "TD-010",
+      "title": "Verify: Administrator changes Task from in_progress to todo",
+      "description": "Test generated from story ST-010",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'todo'",
+        "Timestamp is recorded"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-010",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.436069Z",
+      "updated_at": "2026-01-02T02:33:00.436070Z"
+    },
+    {
+      "test_id": "TD-011",
+      "title": "Verify: Administrator creates a new Task Comment",
+      "description": "Test generated from story ST-011",
+      "persona": "Administrator",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Administrator",
+          "data": null,
+          "rationale": "Test from Administrator's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "TaskComment_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New TaskComment is saved to database",
+        "Administrator sees confirmation message"
+      ],
+      "entities": [
+        "TaskComment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-011",
+        "auto-generated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:00.436079Z",
+      "updated_at": "2026-01-02T02:33:00.436079Z"
     }
   ]
 }

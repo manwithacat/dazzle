@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "cb8ae2d46c4bcad5",
-  "generated_at": "2025-12-20T12:03:46.956118",
+  "generated_at": "2026-01-02T02:38:40.743469",
   "project_name": "ticket_classifier",
   "coverage": {
     "entities": [
@@ -70,7 +70,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955945"
+      "created_at": "2026-01-02T02:38:40.743321"
     },
     {
       "test_id": "CRUD_TICKET_READ",
@@ -119,7 +119,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955950"
+      "created_at": "2026-01-02T02:38:40.743325"
     },
     {
       "test_id": "VAL_TICKET_REQUIRED",
@@ -159,7 +159,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955954"
+      "created_at": "2026-01-02T02:38:40.743329"
     },
     {
       "test_id": "CRUD_TICKETCLASSIFICATION_CREATE",
@@ -213,7 +213,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955971"
+      "created_at": "2026-01-02T02:38:40.743344"
     },
     {
       "test_id": "CRUD_TICKETCLASSIFICATION_READ",
@@ -272,7 +272,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955974"
+      "created_at": "2026-01-02T02:38:40.743347"
     },
     {
       "test_id": "VAL_TICKETCLASSIFICATION_REQUIRED",
@@ -312,7 +312,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955977"
+      "created_at": "2026-01-02T02:38:40.743350"
     },
     {
       "test_id": "CRUD_PRIORITYASSESSMENT_CREATE",
@@ -354,7 +354,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955985"
+      "created_at": "2026-01-02T02:38:40.743357"
     },
     {
       "test_id": "CRUD_PRIORITYASSESSMENT_READ",
@@ -401,7 +401,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955987"
+      "created_at": "2026-01-02T02:38:40.743359"
     },
     {
       "test_id": "VAL_PRIORITYASSESSMENT_REQUIRED",
@@ -441,7 +441,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955990"
+      "created_at": "2026-01-02T02:38:40.743361"
     },
     {
       "test_id": "ACL_SUPPORT_AGENT_ACCESS",
@@ -475,7 +475,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.955994"
+      "created_at": "2026-01-02T02:38:40.743369"
     },
     {
       "test_id": "GOAL_SUPPORT_AGENT_VIEW_AND_MANAGE_TICK",
@@ -509,7 +509,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956041"
+      "created_at": "2026-01-02T02:38:40.743405"
     },
     {
       "test_id": "GOAL_SUPPORT_AGENT_REVIEW_AI_CLASSIFICA",
@@ -543,7 +543,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956047"
+      "created_at": "2026-01-02T02:38:40.743410"
     },
     {
       "test_id": "GOAL_SUPPORT_AGENT_UPDATE_TICKET_STATUS",
@@ -577,7 +577,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956052"
+      "created_at": "2026-01-02T02:38:40.743413"
     },
     {
       "test_id": "ACL_SUPERVISOR_ACCESS",
@@ -611,7 +611,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956055"
+      "created_at": "2026-01-02T02:38:40.743415"
     },
     {
       "test_id": "GOAL_SUPERVISOR_MONITOR_TICKET_CLASS",
@@ -645,7 +645,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956059"
+      "created_at": "2026-01-02T02:38:40.743419"
     },
     {
       "test_id": "GOAL_SUPERVISOR_REVIEW_AI_ACCURACY",
@@ -679,7 +679,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956062"
+      "created_at": "2026-01-02T02:38:40.743421"
     },
     {
       "test_id": "GOAL_SUPERVISOR_MANAGE_TEAM_WORKLOAD",
@@ -713,7 +713,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956065"
+      "created_at": "2026-01-02T02:38:40.743424"
     },
     {
       "test_id": "WS_SUPPORT_DASHBOARD_NAV",
@@ -762,7 +762,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956070"
+      "created_at": "2026-01-02T02:38:40.743430"
     },
     {
       "test_id": "WS_SUPPORT_DASHBOARD_ROUTE",
@@ -794,7 +794,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956072"
+      "created_at": "2026-01-02T02:38:40.743432"
     },
     {
       "test_id": "WS_TICKET_MANAGEMENT_NAV",
@@ -843,7 +843,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956075"
+      "created_at": "2026-01-02T02:38:40.743435"
     },
     {
       "test_id": "WS_TICKET_MANAGEMENT_ROUTE",
@@ -875,7 +875,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T12:03:46.956077"
+      "created_at": "2026-01-02T02:38:40.743436"
     }
   ]
 }

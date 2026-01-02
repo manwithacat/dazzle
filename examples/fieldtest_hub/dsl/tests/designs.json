@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "project_name": null,
-  "created_at": "2025-12-12T21:43:06.690558",
-  "updated_at": "2025-12-12T21:43:06.690556",
+  "created_at": "2026-01-02T02:33:16.315447Z",
+  "updated_at": "2026-01-02T02:33:16.315444Z",
   "designs": [
     {
       "test_id": "TD-001",
@@ -751,6 +751,798 @@
       "prompt_version": "v1",
       "created_at": "2025-12-12T21:43:06.690446",
       "updated_at": "2025-12-12T21:43:06.690446"
+    },
+    {
+      "test_id": "TD-019",
+      "title": "Verify: Engineer creates a new Device",
+      "description": "Test generated from story ST-019",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Device_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Device is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-019",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314698Z",
+      "updated_at": "2026-01-02T02:33:16.314701Z"
+    },
+    {
+      "test_id": "TD-020",
+      "title": "Verify: Engineer changes Device from prototype to active",
+      "description": "Test generated from story ST-020",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Device",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Device.status becomes 'active'"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-020",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314709Z",
+      "updated_at": "2026-01-02T02:33:16.314709Z"
+    },
+    {
+      "test_id": "TD-021",
+      "title": "Verify: Engineer changes Device from active to recalled",
+      "description": "Test generated from story ST-021",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Device",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Device.status becomes 'recalled'"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-021",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314715Z",
+      "updated_at": "2026-01-02T02:33:16.314715Z"
+    },
+    {
+      "test_id": "TD-022",
+      "title": "Verify: Engineer changes Device from active to retired",
+      "description": "Test generated from story ST-022",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Device",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Device.status becomes 'retired'"
+      ],
+      "entities": [
+        "Device"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-022",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314719Z",
+      "updated_at": "2026-01-02T02:33:16.314720Z"
+    },
+    {
+      "test_id": "TD-023",
+      "title": "Verify: Engineer creates a new Tester",
+      "description": "Test generated from story ST-023",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Tester_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Tester is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "Tester"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-023",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314726Z",
+      "updated_at": "2026-01-02T02:33:16.314727Z"
+    },
+    {
+      "test_id": "TD-024",
+      "title": "Verify: Engineer creates a new Issue Report",
+      "description": "Test generated from story ST-024",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "IssueReport_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New IssueReport is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-024",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314733Z",
+      "updated_at": "2026-01-02T02:33:16.314733Z"
+    },
+    {
+      "test_id": "TD-025",
+      "title": "Verify: Engineer changes IssueReport from open to triaged",
+      "description": "Test generated from story ST-025",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "IssueReport",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "IssueReport.status becomes 'triaged'"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-025",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314738Z",
+      "updated_at": "2026-01-02T02:33:16.314738Z"
+    },
+    {
+      "test_id": "TD-026",
+      "title": "Verify: Engineer changes IssueReport from triaged to in_progress",
+      "description": "Test generated from story ST-026",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "IssueReport",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "IssueReport.status becomes 'in_progress'"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-026",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314742Z",
+      "updated_at": "2026-01-02T02:33:16.314742Z"
+    },
+    {
+      "test_id": "TD-027",
+      "title": "Verify: Engineer changes IssueReport from in_progress to fixed",
+      "description": "Test generated from story ST-027",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "IssueReport",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "IssueReport.status becomes 'fixed'"
+      ],
+      "entities": [
+        "IssueReport"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-027",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314746Z",
+      "updated_at": "2026-01-02T02:33:16.314746Z"
+    },
+    {
+      "test_id": "TD-028",
+      "title": "Verify: Engineer creates a new Test Session",
+      "description": "Test generated from story ST-028",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "TestSession_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New TestSession is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "TestSession"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-028",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314752Z",
+      "updated_at": "2026-01-02T02:33:16.314752Z"
+    },
+    {
+      "test_id": "TD-029",
+      "title": "Verify: Engineer creates a new Firmware Release",
+      "description": "Test generated from story ST-029",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "FirmwareRelease_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New FirmwareRelease is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-029",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314758Z",
+      "updated_at": "2026-01-02T02:33:16.314758Z"
+    },
+    {
+      "test_id": "TD-030",
+      "title": "Verify: Engineer changes FirmwareRelease from draft to released",
+      "description": "Test generated from story ST-030",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "FirmwareRelease",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "FirmwareRelease.status becomes 'released'"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-030",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314762Z",
+      "updated_at": "2026-01-02T02:33:16.314763Z"
+    },
+    {
+      "test_id": "TD-031",
+      "title": "Verify: Engineer changes FirmwareRelease from released to deprecated",
+      "description": "Test generated from story ST-031",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "FirmwareRelease",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "FirmwareRelease.status becomes 'deprecated'"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-031",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314766Z",
+      "updated_at": "2026-01-02T02:33:16.314767Z"
+    },
+    {
+      "test_id": "TD-032",
+      "title": "Verify: Engineer changes FirmwareRelease from deprecated to draft",
+      "description": "Test generated from story ST-032",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "FirmwareRelease",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "FirmwareRelease.status becomes 'draft'"
+      ],
+      "entities": [
+        "FirmwareRelease"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-032",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314776Z",
+      "updated_at": "2026-01-02T02:33:16.314776Z"
+    },
+    {
+      "test_id": "TD-033",
+      "title": "Verify: Engineer creates a new Task",
+      "description": "Test generated from story ST-033",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Task_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Task is saved to database",
+        "Engineer sees confirmation message"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-033",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314782Z",
+      "updated_at": "2026-01-02T02:33:16.314782Z"
+    },
+    {
+      "test_id": "TD-034",
+      "title": "Verify: Engineer changes Task from open to in_progress",
+      "description": "Test generated from story ST-034",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'in_progress'"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-034",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314787Z",
+      "updated_at": "2026-01-02T02:33:16.314787Z"
+    },
+    {
+      "test_id": "TD-035",
+      "title": "Verify: Engineer changes Task from in_progress to completed",
+      "description": "Test generated from story ST-035",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'completed'"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-035",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314791Z",
+      "updated_at": "2026-01-02T02:33:16.314791Z"
+    },
+    {
+      "test_id": "TD-036",
+      "title": "Verify: Engineer changes Task from in_progress to open",
+      "description": "Test generated from story ST-036",
+      "persona": "Engineer",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "Engineer",
+          "data": null,
+          "rationale": "Test from Engineer's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Task",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Task.status becomes 'open'"
+      ],
+      "entities": [
+        "Task"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-036",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:16.314795Z",
+      "updated_at": "2026-01-02T02:33:16.314795Z"
     }
   ]
 }

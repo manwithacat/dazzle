@@ -1,8 +1,8 @@
 {
   "version": "1.0",
   "project_name": null,
-  "created_at": "2025-12-12T21:43:06.816693",
-  "updated_at": "2025-12-12T21:43:06.816691",
+  "created_at": "2026-01-02T02:33:15.733428Z",
+  "updated_at": "2026-01-02T02:33:15.733426Z",
   "designs": [
     {
       "test_id": "SM_TICKET_001",
@@ -222,6 +222,285 @@
       "prompt_version": "v1",
       "created_at": "2025-12-12T21:43:06.816592",
       "updated_at": "2025-12-12T21:43:06.816593"
+    },
+    {
+      "test_id": "TD-013",
+      "title": "Verify: User creates a new User",
+      "description": "Test generated from story ST-013",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "User_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New User is saved to database",
+        "User sees confirmation message"
+      ],
+      "entities": [
+        "User"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-013",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.732986Z",
+      "updated_at": "2026-01-02T02:33:15.732987Z"
+    },
+    {
+      "test_id": "TD-014",
+      "title": "Verify: User creates a new Support Ticket",
+      "description": "Test generated from story ST-014",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Ticket_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Ticket is saved to database",
+        "User sees confirmation message"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-014",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.732997Z",
+      "updated_at": "2026-01-02T02:33:15.732997Z"
+    },
+    {
+      "test_id": "TD-015",
+      "title": "Verify: User changes Ticket from open to in_progress",
+      "description": "Test generated from story ST-015",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Ticket",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Ticket.status becomes 'in_progress'"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-015",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.733004Z",
+      "updated_at": "2026-01-02T02:33:15.733004Z"
+    },
+    {
+      "test_id": "TD-016",
+      "title": "Verify: User changes Ticket from in_progress to resolved",
+      "description": "Test generated from story ST-016",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Ticket",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Ticket.status becomes 'resolved'"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-016",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.733010Z",
+      "updated_at": "2026-01-02T02:33:15.733010Z"
+    },
+    {
+      "test_id": "TD-017",
+      "title": "Verify: User changes Ticket from in_progress to open",
+      "description": "Test generated from story ST-017",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "status_changed",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "trigger_transition",
+          "target": "Ticket",
+          "data": null,
+          "rationale": "Trigger status change"
+        }
+      ],
+      "expected_outcomes": [
+        "Ticket.status becomes 'open'"
+      ],
+      "entities": [
+        "Ticket"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-017",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.733016Z",
+      "updated_at": "2026-01-02T02:33:15.733017Z"
+    },
+    {
+      "test_id": "TD-018",
+      "title": "Verify: User creates a new Comment",
+      "description": "Test generated from story ST-018",
+      "persona": "User",
+      "scenario": null,
+      "trigger": "form_submitted",
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "User",
+          "data": null,
+          "rationale": "Test from User's perspective"
+        },
+        {
+          "action": "navigate_to",
+          "target": "Comment_create",
+          "data": null,
+          "rationale": "Navigate to creation form"
+        },
+        {
+          "action": "fill",
+          "target": "form",
+          "data": {
+            "fields": "required_fields"
+          },
+          "rationale": "Fill form with test data"
+        },
+        {
+          "action": "click",
+          "target": "submit_button",
+          "data": null,
+          "rationale": "Submit the form"
+        }
+      ],
+      "expected_outcomes": [
+        "New Comment is saved to database",
+        "User sees confirmation message"
+      ],
+      "entities": [
+        "Comment"
+      ],
+      "surfaces": [],
+      "tags": [
+        "story:ST-018",
+        "auto-populated"
+      ],
+      "status": "proposed",
+      "implementation_path": null,
+      "notes": null,
+      "prompt_version": "v1",
+      "created_at": "2026-01-02T02:33:15.733025Z",
+      "updated_at": "2026-01-02T02:33:15.733025Z"
     }
   ]
 }

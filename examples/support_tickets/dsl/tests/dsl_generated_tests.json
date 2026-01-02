@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "f41b0b2890c9f039",
-  "generated_at": "2025-12-20T11:34:09.246278",
+  "generated_at": "2026-01-02T02:38:23.280508",
   "project_name": "support_tickets",
   "coverage": {
     "entities": [
@@ -39,7 +39,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid User"
@@ -68,7 +68,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246078"
+      "created_at": "2026-01-02T02:38:23.280315"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -82,7 +82,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -116,7 +116,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246083"
+      "created_at": "2026-01-02T02:38:23.280319"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -156,7 +156,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246086"
+      "created_at": "2026-01-02T02:38:23.280323"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -170,7 +170,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -179,7 +179,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -208,7 +208,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246098"
+      "created_at": "2026-01-02T02:38:23.280334"
     },
     {
       "test_id": "CRUD_TICKET_CREATE",
@@ -222,7 +222,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -263,7 +263,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246113"
+      "created_at": "2026-01-02T02:38:23.280349"
     },
     {
       "test_id": "CRUD_TICKET_READ",
@@ -277,7 +277,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -323,7 +323,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246115"
+      "created_at": "2026-01-02T02:38:23.280351"
     },
     {
       "test_id": "VAL_TICKET_REQUIRED",
@@ -363,7 +363,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246119"
+      "created_at": "2026-01-02T02:38:23.280355"
     },
     {
       "test_id": "VAL_TICKET_TICKET_NUMBER_UNIQUE",
@@ -415,7 +415,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246130"
+      "created_at": "2026-01-02T02:38:23.280367"
     },
     {
       "test_id": "CRUD_COMMENT_CREATE",
@@ -439,7 +439,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -481,7 +481,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246146"
+      "created_at": "2026-01-02T02:38:23.280383"
     },
     {
       "test_id": "CRUD_COMMENT_READ",
@@ -505,7 +505,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_49246@example.com",
+            "email": "test_3280@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -552,7 +552,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246148"
+      "created_at": "2026-01-02T02:38:23.280385"
     },
     {
       "test_id": "VAL_COMMENT_REQUIRED",
@@ -592,7 +592,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246151"
+      "created_at": "2026-01-02T02:38:23.280387"
     },
     {
       "test_id": "SM_TICKET_OPEN_IN_PROGRESS",
@@ -645,7 +645,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246161"
+      "created_at": "2026-01-02T02:38:23.280398"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_RESOLVED",
@@ -698,7 +698,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246168"
+      "created_at": "2026-01-02T02:38:23.280405"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_OPEN",
@@ -751,7 +751,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246174"
+      "created_at": "2026-01-02T02:38:23.280412"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_CLOSED",
@@ -804,7 +804,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246180"
+      "created_at": "2026-01-02T02:38:23.280418"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_IN_PROGRESS",
@@ -857,7 +857,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246186"
+      "created_at": "2026-01-02T02:38:23.280424"
     },
     {
       "test_id": "SM_TICKET_CLOSED_OPEN",
@@ -910,12 +910,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246192"
+      "created_at": "2026-01-02T02:38:23.280430"
     },
     {
-      "test_id": "SM_TICKET_OPEN_CLOSED_INVALID",
-      "title": "Support Ticket: open \u2192 closed (invalid)",
-      "description": "Test that invalid transition from open to closed is rejected",
+      "test_id": "SM_TICKET_OPEN_RESOLVED_INVALID",
+      "title": "Support Ticket: open \u2192 resolved (invalid)",
+      "description": "Test that invalid transition from open to resolved is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -934,9 +934,9 @@
           "action": "transition_expect_error",
           "target": "entity:Ticket",
           "data": {
-            "to_state": "closed"
+            "to_state": "resolved"
           },
-          "rationale": "Attempt invalid transition to closed"
+          "rationale": "Attempt invalid transition to resolved"
         },
         {
           "action": "assert_state",
@@ -949,7 +949,7 @@
         }
       ],
       "expected_outcomes": [
-        "Support Ticket: open \u2192 closed (invalid) succeeds"
+        "Support Ticket: open \u2192 resolved (invalid) succeeds"
       ],
       "entities": [
         "Ticket"
@@ -963,7 +963,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246201"
+      "created_at": "2026-01-02T02:38:23.280439"
     },
     {
       "test_id": "SM_TICKET_IN_PROGRESS_CLOSED_INVALID",
@@ -1016,7 +1016,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246209"
+      "created_at": "2026-01-02T02:38:23.280447"
     },
     {
       "test_id": "SM_TICKET_RESOLVED_OPEN_INVALID",
@@ -1069,7 +1069,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246216"
+      "created_at": "2026-01-02T02:38:23.280453"
     },
     {
       "test_id": "SM_TICKET_CLOSED_RESOLVED_INVALID",
@@ -1122,7 +1122,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246222"
+      "created_at": "2026-01-02T02:38:23.280460"
     },
     {
       "test_id": "WS_TICKET_QUEUE_NAV",
@@ -1171,7 +1171,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246227"
+      "created_at": "2026-01-02T02:38:23.280465"
     },
     {
       "test_id": "WS_TICKET_QUEUE_ROUTE",
@@ -1203,7 +1203,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246229"
+      "created_at": "2026-01-02T02:38:23.280468"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_NAV",
@@ -1252,7 +1252,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246232"
+      "created_at": "2026-01-02T02:38:23.280471"
     },
     {
       "test_id": "WS_AGENT_DASHBOARD_ROUTE",
@@ -1284,7 +1284,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2025-12-20T11:34:09.246234"
+      "created_at": "2026-01-02T02:38:23.280473"
     }
   ]
 }
