@@ -2,6 +2,7 @@
 name = "pra"
 version = "0.1.0"
 root = "pra"
+type = "benchmark"  # Not a tutorial example - stress testing reference
 
 [modules]
 paths = ["./dsl"]

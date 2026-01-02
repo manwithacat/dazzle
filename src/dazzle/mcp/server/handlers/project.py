@@ -53,12 +53,14 @@ def list_projects() -> str:
                 "active": is_active,
                 "manifest_name": manifest.name,
                 "version": manifest.version,
+                "type": manifest.project_type,  # example | benchmark | test | internal
             }
         except Exception as e:
             project_info = {
                 "name": name,
                 "path": str(path),
                 "active": is_active,
+                "type": "unknown",
                 "error": str(e),
             }
 

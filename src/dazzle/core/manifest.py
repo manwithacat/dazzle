@@ -277,12 +277,19 @@ class ProjectManifest:
 
     Contains project metadata, module paths, and optional infrastructure,
     stack, shell, theme, and authentication configuration.
+
+    Project Types:
+        - example: Tutorial/production patterns (default, include in LLM analysis)
+        - benchmark: Performance/stress testing (skip unless analyzing performance)
+        - test: Test infrastructure projects (skip unless testing)
+        - internal: Internal tooling (skip entirely in LLM analysis)
     """
 
     name: str
     version: str
     project_root: str
     module_paths: list[str]
+    project_type: str = "example"  # example | benchmark | test | internal
     infra: InfraConfig | None = None
     stack: StackConfig | None = None
     shell: ShellConfig = field(default_factory=ShellConfig)
@@ -447,6 +454,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         version=project.get("version", "0.0.0"),
         project_root=project.get("root", ""),
         module_paths=modules.get("paths", ["./dsl"]),
+        project_type=project.get("type", "example"),
         infra=infra_config,
         stack=stack_config,
         shell=shell_config,
