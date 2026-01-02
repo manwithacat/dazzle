@@ -11,11 +11,16 @@ should be tested rather than HOW (implementation details).
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 
 class TestDesignTrigger(str, Enum):
@@ -141,8 +146,8 @@ class TestDesignSpec(BaseModel):
     # Quality tracking
     notes: str | None = None
     prompt_version: str = "v1"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
 
     model_config = ConfigDict(frozen=False)  # Mutable for status updates
 

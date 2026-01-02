@@ -8,13 +8,18 @@ backends must implement, allowing swappable runtime implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
+
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 
 class ProcessStatus(str, Enum):
@@ -57,8 +62,8 @@ class ProcessRun(BaseModel):
     outputs: dict[str, Any] | None = Field(default=None, description="Final process outputs")
     error: str | None = Field(default=None, description="Error message if failed")
     idempotency_key: str | None = Field(default=None, description="Deduplication key")
-    started_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
     completed_at: datetime | None = Field(default=None)
 
     model_config = ConfigDict(frozen=False)
@@ -81,7 +86,7 @@ class ProcessTask(BaseModel):
     due_at: datetime = Field(..., description="Task deadline")
     escalated_at: datetime | None = Field(default=None)
     completed_at: datetime | None = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
 
     model_config = ConfigDict(frozen=False)
 

@@ -24,6 +24,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
+
+
 # Storage paths
 FEEDBACK_DIR = ".dazzle/test_feedback"
 REGRESSIONS_FILE = "regressions.json"
@@ -87,7 +93,7 @@ class TestRegression(BaseModel):
     test_path: str
     failure_message: str
     failure_type: FailureType
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utcnow)
 
     # Context
     example_name: str
@@ -129,7 +135,7 @@ class TestCorrection(BaseModel):
     pattern_identified: str | None = None
     prompt_improvement: str | None = None
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utcnow)
 
 
 class PromptVersion(BaseModel):
@@ -151,7 +157,7 @@ class PromptVersion(BaseModel):
     version: str
     tool_name: str
     prompt_text: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
 
     # Performance tracking
     tests_generated: int = 0
@@ -171,7 +177,7 @@ class RegressionsContainer(BaseModel):
 
     version: str = "1.0"
     regressions: list[TestRegression] = Field(default_factory=list)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
 
 
 class CorrectionsContainer(BaseModel):
@@ -179,7 +185,7 @@ class CorrectionsContainer(BaseModel):
 
     version: str = "1.0"
     corrections: list[TestCorrection] = Field(default_factory=list)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
 
 
 class PromptVersionsContainer(BaseModel):
@@ -187,7 +193,7 @@ class PromptVersionsContainer(BaseModel):
 
     version: str = "1.0"
     prompts: list[PromptVersion] = Field(default_factory=list)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
 
 
 def get_feedback_dir(project_root: Path) -> Path:

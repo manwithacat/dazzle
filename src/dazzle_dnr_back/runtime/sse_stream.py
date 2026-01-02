@@ -31,6 +31,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
+
+
 class StreamType(str, Enum):
     """Available SSE stream types."""
 
@@ -78,7 +83,7 @@ class StreamSubscription:
     tenant_id: str | None = None  # For tenant-scoped streams
     entity_filter: str | None = None  # Filter by entity name
     last_event_id: str | None = None  # For reconnection
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=_utcnow)
 
 
 class SSEStreamManager:

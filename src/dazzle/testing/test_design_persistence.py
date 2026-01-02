@@ -19,6 +19,12 @@ from pydantic import BaseModel, Field
 
 from dazzle.core.ir.test_design import TestDesignSpec, TestDesignStatus
 
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
+
+
 # Storage paths
 DSL_TESTS_DIR = "dsl/tests"
 RUNTIME_TESTS_DIR = ".dazzle/test_designs"
@@ -30,8 +36,8 @@ class TestDesignsContainer(BaseModel):
 
     version: str = "1.0"
     project_name: str | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
     designs: list[TestDesignSpec] = Field(default_factory=list)
 
 

@@ -22,13 +22,18 @@ from __future__ import annotations
 import html
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlencode
 from uuid import uuid4
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.ops_database import OpsDatabase
+
+
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -76,7 +81,7 @@ class RenderedEmail:
     body_html: str
     body_text: str
     template_name: str
-    rendered_at: datetime = field(default_factory=datetime.utcnow)
+    rendered_at: datetime = field(default_factory=_utcnow)
     tracking_enabled: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 

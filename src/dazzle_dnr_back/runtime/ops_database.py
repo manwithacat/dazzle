@@ -28,6 +28,11 @@ from typing import Any
 from uuid import uuid4
 
 
+def _utcnow() -> datetime:
+    """Return current UTC datetime (timezone-aware)."""
+    return datetime.now(UTC)
+
+
 class HealthStatus(str, Enum):
     """Health check status."""
 
@@ -122,7 +127,7 @@ class OpsCredentials:
 
     username: str = "ops_admin"
     password_hash: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=_utcnow)
     last_login: datetime | None = None
 
     @classmethod
