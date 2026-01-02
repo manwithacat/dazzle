@@ -212,6 +212,14 @@ app.add_typer(stubs_app, name="stubs")
 
 
 # =============================================================================
+# Story Commands (imported from cli.story)
+# =============================================================================
+from dazzle.cli.story import story_app  # noqa: E402
+
+app.add_typer(story_app, name="story")
+
+
+# =============================================================================
 # MCP Commands (top-level for backward compatibility)
 # =============================================================================
 

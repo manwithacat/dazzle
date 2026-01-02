@@ -220,6 +220,10 @@ def handle_test_design(arguments: dict[str, Any]) -> str:
         return get_runtime_coverage_gaps_handler(project_path, arguments)
     elif operation == "save_runtime":
         return save_runtime_coverage_handler(project_path, arguments)
+    elif operation == "auto_populate":
+        return _auto_populate_tests(project_path, arguments)
+    elif operation == "improve_coverage":
+        return _improve_coverage(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown test design operation: {operation}"})
 
@@ -491,6 +495,417 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
         return lookup_inference_handler(arguments)
     else:
         return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
+
+
+# =============================================================================
+# Helper Functions for Enhanced Operations
+# =============================================================================
+
+
+def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
+    """
+    Auto-populate stories and test designs from DSL.
+
+    This operation runs the full autonomous workflow:
+    1. Propose stories from DSL entities
+    2. Auto-accept all proposed stories
+    3. Generate test designs from accepted stories
+    4. Save everything to dsl/stories/ and dsl/tests/
+
+    Args:
+        project_path: Path to the project directory
+        arguments: dict with optional keys:
+            - max_stories: Maximum stories to propose (default: 30)
+            - include_test_designs: Whether to generate test designs (default: True)
+
+    Returns:
+        JSON string with summary of what was created
+    """
+    from datetime import UTC, datetime
+
+    from dazzle.core.fileset import discover_dsl_files
+    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.manifest import load_manifest
+    from dazzle.core.parser import parse_modules
+    from dazzle.core.stories_persistence import add_stories, get_next_story_id
+    from dazzle.testing.test_design_persistence import add_test_designs
+
+    max_stories = arguments.get("max_stories", 30)
+    include_test_designs = arguments.get("include_test_designs", True)
+
+    try:
+        manifest = load_manifest(project_path / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_path, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load DSL: {e}"})
+
+    # Get starting story ID
+    base_id = get_next_story_id(project_path)
+    base_num = int(base_id[3:])
+    story_count = 0
+
+    def next_story_id() -> str:
+        nonlocal story_count
+        result = f"ST-{base_num + story_count:03d}"
+        story_count += 1
+        return result
+
+    now = datetime.now(UTC).isoformat()
+    default_actor = "User"
+    if appspec.personas:
+        default_actor = appspec.personas[0].label or appspec.personas[0].id
+
+    stories: list[StorySpec] = []
+
+    # Generate stories from entities
+    for entity in appspec.domain.entities:
+        if story_count >= max_stories:
+            break
+
+        # Create story
+        stories.append(
+            StorySpec(
+                story_id=next_story_id(),
+                title=f"{default_actor} creates a new {entity.title or entity.name}",
+                actor=default_actor,
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=[entity.name],
+                preconditions=[f"{default_actor} has permission to create {entity.name}"],
+                happy_path_outcome=[
+                    f"New {entity.name} is saved to database",
+                    f"{default_actor} sees confirmation message",
+                ],
+                side_effects=[],
+                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][:3],
+                variants=["Validation error on required field"],
+                status=StoryStatus.ACCEPTED,
+                created_at=now,
+                accepted_at=now,
+            )
+        )
+
+        # State machine transitions
+        if entity.state_machine:
+            for transition in entity.state_machine.transitions[:3]:
+                if story_count >= max_stories:
+                    break
+                sm = entity.state_machine
+                stories.append(
+                    StorySpec(
+                        story_id=next_story_id(),
+                        title=f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        actor=default_actor,
+                        trigger=StoryTrigger.STATUS_CHANGED,
+                        scope=[entity.name],
+                        preconditions=[
+                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        ],
+                        happy_path_outcome=[
+                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                        ],
+                        side_effects=[],
+                        constraints=[],
+                        variants=[],
+                        status=StoryStatus.ACCEPTED,
+                        created_at=now,
+                        accepted_at=now,
+                    )
+                )
+
+    # Save stories
+    all_stories = add_stories(project_path, stories, overwrite=False)
+
+    result: dict[str, Any] = {
+        "stories_proposed": len(stories),
+        "stories_total": len(all_stories),
+        "status": "success",
+    }
+
+    # Generate test designs from stories
+    if include_test_designs and stories:
+        trigger_map = {
+            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+        }
+
+        test_designs: list[TestDesignSpec] = []
+
+        for story in stories:
+            test_id = story.story_id.replace("ST-", "TD-")
+
+            steps: list[TestDesignStep] = [
+                TestDesignStep(
+                    action=TestDesignAction.LOGIN_AS,
+                    target=story.actor,
+                    rationale=f"Test from {story.actor}'s perspective",
+                )
+            ]
+
+            if story.trigger == StoryTrigger.FORM_SUBMITTED:
+                entity = story.scope[0] if story.scope else "form"
+                steps.extend(
+                    [
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target=f"{entity}_create",
+                            rationale="Navigate to creation form",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.FILL,
+                            target="form",
+                            data={"fields": "required_fields"},
+                            rationale="Fill form with test data",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="submit_button",
+                            rationale="Submit the form",
+                        ),
+                    ]
+                )
+            elif story.trigger == StoryTrigger.STATUS_CHANGED:
+                entity = story.scope[0] if story.scope else "entity"
+                steps.append(
+                    TestDesignStep(
+                        action=TestDesignAction.TRIGGER_TRANSITION,
+                        target=entity,
+                        rationale="Trigger status change",
+                    )
+                )
+
+            test_designs.append(
+                TestDesignSpec(
+                    test_id=test_id,
+                    title=f"Verify: {story.title}",
+                    description=f"Test generated from story {story.story_id}",
+                    persona=story.actor,
+                    trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
+                    steps=steps,
+                    expected_outcomes=story.happy_path_outcome.copy(),
+                    entities=story.scope.copy(),
+                    tags=[f"story:{story.story_id}", "auto-populated"],
+                    status=TestDesignStatus.PROPOSED,
+                )
+            )
+
+        add_test_designs(project_path, test_designs, overwrite=False, to_dsl=True)
+        result["test_designs_generated"] = len(test_designs)
+
+    result["next_steps"] = [
+        "dazzle test dsl-run    # Run Tier 1 API tests",
+        "dazzle test run-all    # Run all test tiers",
+    ]
+
+    return json.dumps(result, indent=2)
+
+
+def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
+    """
+    Execute top coverage improvement actions automatically.
+
+    This operation:
+    1. Gets prioritized coverage actions
+    2. Executes the top N actions automatically
+    3. Returns a summary of what was done
+
+    Args:
+        project_path: Path to the project directory
+        arguments: dict with optional keys:
+            - max_actions: Maximum actions to execute (default: 5)
+            - focus: Focus area - "all", "personas", "entities", "scenarios" (default: "all")
+
+    Returns:
+        JSON string with summary of actions taken
+    """
+    from dazzle.core.fileset import discover_dsl_files
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.manifest import load_manifest
+    from dazzle.core.parser import parse_modules
+    from dazzle.testing.test_design_persistence import add_test_designs, load_test_designs
+
+    max_actions = arguments.get("max_actions", 5)
+    focus = arguments.get("focus", "all")
+
+    try:
+        manifest = load_manifest(project_path / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_path, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load DSL: {e}"})
+
+    # Load existing test designs
+    existing_designs = load_test_designs(project_path)
+
+    # Track what's covered
+    covered_personas: set[str] = set()
+    covered_entities: set[str] = set()
+
+    for design in existing_designs:
+        if design.persona:
+            covered_personas.add(design.persona)
+        covered_entities.update(design.entities)
+
+    # Find gaps
+    all_entities = {e.name for e in appspec.domain.entities}
+    all_personas = {p.id for p in appspec.personas}
+
+    uncovered_entities = all_entities - covered_entities
+    uncovered_personas = all_personas - covered_personas
+
+    actions_taken: list[dict[str, Any]] = []
+    new_designs: list[TestDesignSpec] = []
+    next_id = len(existing_designs) + 1
+
+    # Priority 1: Uncovered personas
+    if focus in ("all", "personas"):
+        for persona in appspec.personas:
+            if len(actions_taken) >= max_actions:
+                break
+            if persona.id not in covered_personas and persona.goals:
+                # Create a test design for this persona
+                new_designs.append(
+                    TestDesignSpec(
+                        test_id=f"TD-{next_id:03d}",
+                        title=f"Verify {persona.label or persona.id} can achieve their goals",
+                        description=f"Auto-generated to cover persona {persona.id}",
+                        persona=persona.id,
+                        trigger=TestDesignTrigger.USER_CLICK,
+                        steps=[
+                            TestDesignStep(
+                                action=TestDesignAction.LOGIN_AS,
+                                target=persona.id,
+                                rationale=f"Test as {persona.id}",
+                            ),
+                            TestDesignStep(
+                                action=TestDesignAction.NAVIGATE_TO,
+                                target="dashboard",
+                                rationale="Navigate to main view",
+                            ),
+                        ],
+                        expected_outcomes=[f"{persona.id} can access their workspace"],
+                        entities=[],
+                        tags=["auto-coverage", f"persona:{persona.id}"],
+                        status=TestDesignStatus.PROPOSED,
+                    )
+                )
+                next_id += 1
+                actions_taken.append(
+                    {
+                        "action": "propose_persona_test",
+                        "persona": persona.id,
+                        "test_id": new_designs[-1].test_id,
+                    }
+                )
+
+    # Priority 2: Uncovered entities
+    if focus in ("all", "entities"):
+        for entity in appspec.domain.entities:
+            if len(actions_taken) >= max_actions:
+                break
+            if entity.name in uncovered_entities:
+                new_designs.append(
+                    TestDesignSpec(
+                        test_id=f"TD-{next_id:03d}",
+                        title=f"CRUD operations for {entity.title or entity.name}",
+                        description=f"Auto-generated to cover entity {entity.name}",
+                        persona="User",
+                        trigger=TestDesignTrigger.FORM_SUBMITTED,
+                        steps=[
+                            TestDesignStep(
+                                action=TestDesignAction.NAVIGATE_TO,
+                                target=f"{entity.name}_create",
+                                rationale="Navigate to creation form",
+                            ),
+                            TestDesignStep(
+                                action=TestDesignAction.FILL,
+                                target="form",
+                                data={"fields": "required"},
+                                rationale="Fill required fields",
+                            ),
+                            TestDesignStep(
+                                action=TestDesignAction.CLICK,
+                                target="submit",
+                                rationale="Submit form",
+                            ),
+                        ],
+                        expected_outcomes=[f"{entity.name} is created successfully"],
+                        entities=[entity.name],
+                        tags=["auto-coverage", f"entity:{entity.name}", "crud"],
+                        status=TestDesignStatus.PROPOSED,
+                    )
+                )
+                next_id += 1
+                actions_taken.append(
+                    {
+                        "action": "propose_entity_test",
+                        "entity": entity.name,
+                        "test_id": new_designs[-1].test_id,
+                    }
+                )
+
+    # Save new test designs
+    if new_designs:
+        add_test_designs(project_path, new_designs, overwrite=False, to_dsl=True)
+
+    # Calculate new coverage
+    new_entity_coverage = (
+        (
+            len(covered_entities)
+            + len([a for a in actions_taken if a["action"] == "propose_entity_test"])
+        )
+        / len(all_entities)
+        * 100
+        if all_entities
+        else 100
+    )
+    new_persona_coverage = (
+        (
+            len(covered_personas)
+            + len([a for a in actions_taken if a["action"] == "propose_persona_test"])
+        )
+        / len(all_personas)
+        * 100
+        if all_personas
+        else 100
+    )
+
+    return json.dumps(
+        {
+            "actions_taken": len(actions_taken),
+            "actions": actions_taken,
+            "test_designs_created": len(new_designs),
+            "coverage": {
+                "entities": f"{new_entity_coverage:.1f}%",
+                "personas": f"{new_persona_coverage:.1f}%",
+            },
+            "gaps_remaining": {
+                "entities": len(uncovered_entities)
+                - len([a for a in actions_taken if a["action"] == "propose_entity_test"]),
+                "personas": len(uncovered_personas)
+                - len([a for a in actions_taken if a["action"] == "propose_persona_test"]),
+            },
+        },
+        indent=2,
+    )
 
 
 # =============================================================================

@@ -1755,3 +1755,398 @@ def test_agent(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1)
+
+
+# ============================================================================
+# Autonomous Workflow Commands (v0.25.0)
+# ============================================================================
+
+
+@test_app.command("populate")
+def test_populate(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    max_stories: int = typer.Option(30, "--max-stories", help="Maximum stories to propose"),
+    include_test_designs: bool = typer.Option(
+        True,
+        "--include-tests/--no-tests",
+        help="Also generate test designs from stories",
+    ),
+) -> None:
+    """
+    Auto-populate stories and test designs from DSL.
+
+    This command runs the full autonomous workflow:
+    1. Propose stories from DSL entities
+    2. Auto-accept all stories
+    3. Generate test designs from accepted stories
+    4. Save everything to dsl/stories/ and dsl/tests/
+
+    Use this for LLM-friendly autonomous operation.
+
+    Examples:
+        dazzle test populate                    # Full workflow
+        dazzle test populate --max-stories 50   # More stories
+        dazzle test populate --no-tests         # Stories only
+    """
+    from datetime import UTC, datetime
+
+    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+    from dazzle.core.stories_persistence import add_stories, get_next_story_id
+    from dazzle.testing.test_design_persistence import add_test_designs
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    # Load AppSpec
+    try:
+        mf = load_manifest(manifest_path)
+        dsl_files = discover_dsl_files(root, mf)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, mf.project_root)
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Populating tests for '{appspec.name}'...")
+    typer.echo()
+
+    # 1. Propose and auto-accept stories
+    typer.secho("Step 1: Proposing stories from DSL...", bold=True)
+
+    base_id = get_next_story_id(root)
+    base_num = int(base_id[3:])
+    story_count = 0
+
+    def next_story_id() -> str:
+        nonlocal story_count
+        result = f"ST-{base_num + story_count:03d}"
+        story_count += 1
+        return result
+
+    now = datetime.now(UTC).isoformat()
+    default_actor = "User"
+    if appspec.personas:
+        default_actor = appspec.personas[0].label or appspec.personas[0].id
+
+    stories: list[StorySpec] = []
+
+    for entity in appspec.domain.entities:
+        if story_count >= max_stories:
+            break
+
+        # Create story
+        stories.append(
+            StorySpec(
+                story_id=next_story_id(),
+                title=f"{default_actor} creates a new {entity.title or entity.name}",
+                actor=default_actor,
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=[entity.name],
+                preconditions=[f"{default_actor} has permission to create {entity.name}"],
+                happy_path_outcome=[
+                    f"New {entity.name} is saved to database",
+                    f"{default_actor} sees confirmation message",
+                ],
+                side_effects=[],
+                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][:3],
+                variants=["Validation error on required field"],
+                status=StoryStatus.ACCEPTED,  # Auto-accept
+                created_at=now,
+                accepted_at=now,
+            )
+        )
+
+        # State machine transitions
+        if entity.state_machine:
+            for transition in entity.state_machine.transitions[:3]:
+                if story_count >= max_stories:
+                    break
+                sm = entity.state_machine
+                stories.append(
+                    StorySpec(
+                        story_id=next_story_id(),
+                        title=f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        actor=default_actor,
+                        trigger=StoryTrigger.STATUS_CHANGED,
+                        scope=[entity.name],
+                        preconditions=[
+                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        ],
+                        happy_path_outcome=[
+                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                        ],
+                        side_effects=[],
+                        constraints=[],
+                        variants=[],
+                        status=StoryStatus.ACCEPTED,
+                        created_at=now,
+                        accepted_at=now,
+                    )
+                )
+
+    # Save stories
+    all_stories = add_stories(root, stories, overwrite=False)
+    typer.secho(f"  ✓ Proposed and accepted {len(stories)} stories", fg=typer.colors.GREEN)
+    typer.echo(f"    Total stories in project: {len(all_stories)}")
+
+    # 2. Generate test designs from stories
+    if include_test_designs:
+        typer.echo()
+        typer.secho("Step 2: Generating test designs from stories...", bold=True)
+
+        trigger_map = {
+            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+        }
+
+        test_designs: list[TestDesignSpec] = []
+
+        for story in stories:
+            test_id = story.story_id.replace("ST-", "TD-")
+
+            steps: list[TestDesignStep] = [
+                TestDesignStep(
+                    action=TestDesignAction.LOGIN_AS,
+                    target=story.actor,
+                    rationale=f"Test from {story.actor}'s perspective",
+                )
+            ]
+
+            if story.trigger == StoryTrigger.FORM_SUBMITTED:
+                entity = story.scope[0] if story.scope else "form"
+                steps.extend(
+                    [
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target=f"{entity}_create",
+                            rationale="Navigate to creation form",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.FILL,
+                            target="form",
+                            data={"fields": "required_fields"},
+                            rationale="Fill form with test data",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="submit_button",
+                            rationale="Submit the form",
+                        ),
+                    ]
+                )
+            elif story.trigger == StoryTrigger.STATUS_CHANGED:
+                entity = story.scope[0] if story.scope else "entity"
+                steps.append(
+                    TestDesignStep(
+                        action=TestDesignAction.TRIGGER_TRANSITION,
+                        target=entity,
+                        rationale="Trigger status change",
+                    )
+                )
+
+            test_designs.append(
+                TestDesignSpec(
+                    test_id=test_id,
+                    title=f"Verify: {story.title}",
+                    description=f"Test generated from story {story.story_id}",
+                    persona=story.actor,
+                    trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
+                    steps=steps,
+                    expected_outcomes=story.happy_path_outcome.copy(),
+                    entities=story.scope.copy(),
+                    tags=[f"story:{story.story_id}", "auto-populated"],
+                    status=TestDesignStatus.PROPOSED,
+                )
+            )
+
+        add_test_designs(root, test_designs, overwrite=False, to_dsl=True)
+        typer.secho(f"  ✓ Generated {len(test_designs)} test designs", fg=typer.colors.GREEN)
+
+    # Summary
+    typer.echo()
+    typer.secho("Population complete!", bold=True, fg=typer.colors.GREEN)
+    typer.echo()
+    typer.echo("Next steps:")
+    typer.echo("  dazzle test dsl-run              # Run Tier 1 API tests")
+    typer.echo("  dazzle test run --tier 2         # Run Tier 2 Playwright tests")
+    typer.echo("  dazzle test agent                # Run Tier 3 LLM agent tests")
+
+
+@test_app.command("run-all")
+def test_run_all(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    tier: int = typer.Option(
+        None,
+        "--tier",
+        "-t",
+        help="Run specific tier only: 1 (API), 2 (Playwright), 3 (Agent)",
+    ),
+    headless: bool = typer.Option(True, "--headless/--headed"),
+    output: str = typer.Option(None, "--output", "-o", help="Output JSON file for results"),
+    verbose: bool = typer.Option(False, "--verbose", "-v"),
+) -> None:
+    """
+    Run tests across all tiers (unified test runner).
+
+    By default runs all applicable tiers. Use --tier to run specific tier:
+    - Tier 1: API-based tests (fast, no browser)
+    - Tier 2: Playwright scripted tests (browser, deterministic)
+    - Tier 3: LLM agent tests (browser, adaptive)
+
+    Examples:
+        dazzle test run-all                    # Run all tiers
+        dazzle test run-all --tier 1           # Run Tier 1 only (API)
+        dazzle test run-all --tier 2           # Run Tier 2 only (Playwright)
+        dazzle test run-all --tier 3           # Run Tier 3 only (Agent)
+        dazzle test run-all --headed           # Show browser for Tier 2/3
+    """
+    import json
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    results: dict[str, Any] = {"tiers": {}, "overall": {"passed": 0, "failed": 0}}
+
+    # Tier 1: API tests
+    if tier is None or tier == 1:
+        typer.secho("Tier 1: Running API tests...", bold=True)
+        try:
+            from dazzle.testing.unified_runner import UnifiedTestRunner
+
+            runner = UnifiedTestRunner(root)
+            result = runner.run_all(generate=True)
+            summary = result.get_summary()
+            passed = summary["passed"]
+            failed = summary["failed"]
+
+            results["tiers"]["tier1"] = {
+                "passed": passed,
+                "failed": failed,
+                "total": passed + failed,
+            }
+            results["overall"]["passed"] += passed
+            results["overall"]["failed"] += failed
+
+            color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+            typer.secho(f"  Tier 1: {passed}/{passed + failed} passed", fg=color)
+
+        except ImportError:
+            typer.echo("  Tier 1: Skipped (unified_runner not available)", err=True)
+        except Exception as e:
+            typer.echo(f"  Tier 1: Error - {e}", err=True)
+            results["tiers"]["tier1"] = {"error": str(e)}
+
+    # Tier 2: Playwright tests
+    if tier is None or tier == 2:
+        typer.echo()
+        typer.secho("Tier 2: Running Playwright tests...", bold=True)
+        try:
+            from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
+
+            runner = E2ERunner(root)
+            playwright_ok, _ = runner.ensure_playwright()
+
+            if playwright_ok:
+                options = E2ERunOptions(headless=headless)
+                result = runner.run_all(options)
+
+                passed = result.passed
+                failed = result.failed
+
+                results["tiers"]["tier2"] = {
+                    "passed": passed,
+                    "failed": failed,
+                    "total": passed + failed,
+                }
+                results["overall"]["passed"] += passed
+                results["overall"]["failed"] += failed
+
+                color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+                typer.secho(f"  Tier 2: {passed}/{passed + failed} passed", fg=color)
+            else:
+                typer.echo("  Tier 2: Skipped (Playwright not available)", err=True)
+                results["tiers"]["tier2"] = {"skipped": True}
+
+        except ImportError:
+            typer.echo("  Tier 2: Skipped (e2e_runner not available)", err=True)
+        except Exception as e:
+            typer.echo(f"  Tier 2: Error - {e}", err=True)
+            results["tiers"]["tier2"] = {"error": str(e)}
+
+    # Tier 3: Agent tests
+    if tier is None or tier == 3:
+        typer.echo()
+        typer.secho("Tier 3: Running LLM agent tests...", bold=True)
+        try:
+            import asyncio
+
+            from dazzle.testing.agent_e2e import run_agent_tests
+
+            test_results = asyncio.run(
+                run_agent_tests(
+                    project_path=root,
+                    test_ids=None,
+                    headless=headless,
+                )
+            )
+
+            passed = sum(1 for r in test_results if r.passed)
+            failed = len(test_results) - passed
+
+            results["tiers"]["tier3"] = {
+                "passed": passed,
+                "failed": failed,
+                "total": len(test_results),
+            }
+            results["overall"]["passed"] += passed
+            results["overall"]["failed"] += failed
+
+            color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+            typer.secho(f"  Tier 3: {passed}/{len(test_results)} passed", fg=color)
+
+        except ImportError as e:
+            typer.echo(f"  Tier 3: Skipped ({e})", err=True)
+            results["tiers"]["tier3"] = {"skipped": True}
+        except Exception as e:
+            typer.echo(f"  Tier 3: Error - {e}", err=True)
+            results["tiers"]["tier3"] = {"error": str(e)}
+
+    # Summary
+    typer.echo()
+    total_passed = results["overall"]["passed"]
+    total_failed = results["overall"]["failed"]
+    total = total_passed + total_failed
+
+    if total_failed == 0 and total > 0:
+        typer.secho(f"All tests passed: {total_passed}/{total}", fg=typer.colors.GREEN, bold=True)
+    elif total > 0:
+        typer.secho(
+            f"Results: {total_passed}/{total} passed, {total_failed} failed",
+            fg=typer.colors.RED,
+            bold=True,
+        )
+    else:
+        typer.echo("No tests were run.")
+
+    # Output to file
+    if output:
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(results, indent=2))
+        typer.echo(f"Results saved to {output_path}")
+
+    # Exit with error if failures
+    if total_failed > 0:
+        raise typer.Exit(code=1)

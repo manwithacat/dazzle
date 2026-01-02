@@ -26,6 +26,7 @@ from dazzle.cli.e2e import e2e_app
 from dazzle.cli.events import dlq_app, events_app, outbox_app
 from dazzle.cli.mcp import mcp_app
 from dazzle.cli.migrate import migrate_app
+from dazzle.cli.story import story_app
 from dazzle.cli.testing import test_app
 
 # Re-export utilities (no dazzle imports, safe)
@@ -74,6 +75,7 @@ __all__ = [
     # Sub-apps (Typer instances)
     "dnr_app",
     "vocab_app",
+    "story_app",
     "test_app",
     "e2e_app",
     "mcp_app",
