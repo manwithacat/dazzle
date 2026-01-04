@@ -75,6 +75,7 @@ class HLESSParserMixin:
         parse_type_spec: Any
         parse_field_modifiers: Any
         error: Any
+        _is_keyword_as_identifier: Any
 
     # =========================================================================
     # Stream Parsing
