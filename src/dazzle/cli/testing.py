@@ -1921,12 +1921,12 @@ def test_populate(
             ]
 
             if story.trigger == StoryTrigger.FORM_SUBMITTED:
-                entity = story.scope[0] if story.scope else "form"
+                scope_entity = story.scope[0] if story.scope else "form"
                 steps.extend(
                     [
                         TestDesignStep(
                             action=TestDesignAction.NAVIGATE_TO,
-                            target=f"{entity}_create",
+                            target=f"{scope_entity}_create",
                             rationale="Navigate to creation form",
                         ),
                         TestDesignStep(
@@ -1943,11 +1943,11 @@ def test_populate(
                     ]
                 )
             elif story.trigger == StoryTrigger.STATUS_CHANGED:
-                entity = story.scope[0] if story.scope else "entity"
+                scope_entity = story.scope[0] if story.scope else "entity"
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.TRIGGER_TRANSITION,
-                        target=entity,
+                        target=scope_entity,
                         rationale="Trigger status change",
                     )
                 )
@@ -2055,15 +2055,15 @@ def test_run_all(
         try:
             from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
 
-            runner = E2ERunner(root)
-            playwright_ok, _ = runner.ensure_playwright()
+            e2e_runner = E2ERunner(root)
+            playwright_ok, _ = e2e_runner.ensure_playwright()
 
             if playwright_ok:
                 options = E2ERunOptions(headless=headless)
-                result = runner.run_all(options)
+                e2e_result = e2e_runner.run_all(options)
 
-                passed = result.passed
-                failed = result.failed
+                passed = e2e_result.passed
+                failed = e2e_result.failed
 
                 results["tiers"]["tier2"] = {
                     "passed": passed,

@@ -653,12 +653,12 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
             ]
 
             if story.trigger == StoryTrigger.FORM_SUBMITTED:
-                entity = story.scope[0] if story.scope else "form"
+                scope_entity = story.scope[0] if story.scope else "form"
                 steps.extend(
                     [
                         TestDesignStep(
                             action=TestDesignAction.NAVIGATE_TO,
-                            target=f"{entity}_create",
+                            target=f"{scope_entity}_create",
                             rationale="Navigate to creation form",
                         ),
                         TestDesignStep(
@@ -675,11 +675,11 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
                     ]
                 )
             elif story.trigger == StoryTrigger.STATUS_CHANGED:
-                entity = story.scope[0] if story.scope else "entity"
+                scope_entity = story.scope[0] if story.scope else "entity"
                 steps.append(
                     TestDesignStep(
                         action=TestDesignAction.TRIGGER_TRANSITION,
-                        target=entity,
+                        target=scope_entity,
                         rationale="Trigger status change",
                     )
                 )
@@ -957,6 +957,8 @@ async def dispatch_consolidated_tool(name: str, arguments: dict[str, Any]) -> st
     handler = CONSOLIDATED_TOOL_HANDLERS.get(name)
     if handler:
         if inspect.iscoroutinefunction(handler):
-            return await handler(arguments)
-        return handler(arguments)
+            result = await handler(arguments)
+        else:
+            result = handler(arguments)
+        return str(result) if result is not None else None
     return None

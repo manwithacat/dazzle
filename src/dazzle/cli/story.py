@@ -15,10 +15,11 @@ from pathlib import Path
 
 import typer
 
+from dazzle.core import ir
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import ProjectManifest, load_manifest
 from dazzle.core.parser import parse_modules
 
 story_app = typer.Typer(
@@ -27,7 +28,7 @@ story_app = typer.Typer(
 )
 
 
-def _load_appspec(manifest_path: Path) -> tuple:
+def _load_appspec(manifest_path: Path) -> tuple[ir.AppSpec, Path, ProjectManifest]:
     """Load AppSpec from manifest path."""
     root = manifest_path.parent
     mf = load_manifest(manifest_path)
