@@ -27,6 +27,7 @@ from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
+from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .process import ProcessParserMixin
@@ -60,6 +61,7 @@ class Parser(
     GovernanceParserMixin,
     LLMParserMixin,
     ProcessParserMixin,
+    LedgerParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -1101,6 +1103,89 @@ class Parser(
                     schedules=[*fragment.schedules, schedule],
                 )
 
+            # v0.24.0 TigerBeetle Ledgers
+            elif self.match(TokenType.LEDGER):
+                ledger = self.parse_ledger()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
+                    ledgers=[*fragment.ledgers, ledger],
+                    transactions=fragment.transactions,
+                )
+
+            elif self.match(TokenType.TRANSACTION):
+                transaction = self.parse_transaction()
+                fragment = ir.ModuleFragment(
+                    archetypes=fragment.archetypes,
+                    entities=fragment.entities,
+                    surfaces=fragment.surfaces,
+                    workspaces=fragment.workspaces,
+                    experiences=fragment.experiences,
+                    apis=fragment.apis,
+                    domain_services=fragment.domain_services,
+                    foreign_models=fragment.foreign_models,
+                    integrations=fragment.integrations,
+                    tests=fragment.tests,
+                    e2e_flows=fragment.e2e_flows,
+                    fixtures=fragment.fixtures,
+                    personas=fragment.personas,
+                    scenarios=fragment.scenarios,
+                    messages=fragment.messages,
+                    channels=fragment.channels,
+                    assets=fragment.assets,
+                    documents=fragment.documents,
+                    templates=fragment.templates,
+                    event_model=fragment.event_model,
+                    subscriptions=fragment.subscriptions,
+                    projections=fragment.projections,
+                    streams=fragment.streams,
+                    hless_pragma=fragment.hless_pragma,
+                    policies=fragment.policies,
+                    tenancy=fragment.tenancy,
+                    interfaces=fragment.interfaces,
+                    data_products=fragment.data_products,
+                    llm_config=fragment.llm_config,
+                    llm_models=fragment.llm_models,
+                    llm_intents=fragment.llm_intents,
+                    stories=fragment.stories,
+                    processes=fragment.processes,
+                    schedules=fragment.schedules,
+                    ledgers=fragment.ledgers,
+                    transactions=[*fragment.transactions, transaction],
+                )
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -1157,4 +1242,5 @@ __all__ = [
     "EventingParserMixin",
     "HLESSParserMixin",
     "ProcessParserMixin",
+    "LedgerParserMixin",
 ]

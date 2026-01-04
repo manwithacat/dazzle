@@ -88,7 +88,34 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`
+
+### TigerBeetle Ledgers (v0.24)
+
+```dsl
+ledger CustomerWallet "Customer Wallet":
+  account_code: 1001
+  ledger_id: 1
+  account_type: asset
+  currency: GBP
+  flags: debits_must_not_exceed_credits
+  sync_to: Customer.balance_cache
+
+transaction RecordPayment "Record Payment":
+  execution: async
+  priority: high
+
+  transfer revenue:
+    debit: CustomerWallet
+    credit: Revenue
+    amount: payment.amount
+    code: 1
+    flags: linked
+
+  idempotency_key: payment.id
+```
+
+**Account types**: `asset`, `liability`, `equity`, `revenue`, `expense`
 
 ## Extending
 

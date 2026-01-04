@@ -391,7 +391,8 @@ class HLESSParserMixin:
                 description = self.expect(TokenType.STRING).value
 
             # field_name: type modifiers
-            elif self.match(TokenType.IDENTIFIER):
+            # Note: field names may be keywords (e.g., 'currency' in v0.5 ledgers)
+            elif self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier():
                 field = self._parse_schema_field()
                 fields.append(field)
 
@@ -413,7 +414,8 @@ class HLESSParserMixin:
 
     def _parse_schema_field(self) -> ir.FieldSpec:
         """Parse a field within a schema."""
-        field_name = self.expect(TokenType.IDENTIFIER).value
+        # Field names may be keywords (e.g., 'currency' in v0.5 ledgers)
+        field_name = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)
 
         # Parse type

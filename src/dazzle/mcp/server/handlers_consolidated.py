@@ -909,6 +909,18 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Mailpit Handler (async)
+# =============================================================================
+
+
+async def handle_mailpit(arguments: dict[str, Any]) -> str:
+    """Handle consolidated Mailpit operations (async)."""
+    from .handlers.mailpit import handle_mailpit as _handle_mailpit
+
+    return await _handle_mailpit(arguments)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -927,17 +939,24 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "e2e_test": handle_e2e_test,
     "status": handle_status,
     "knowledge": handle_knowledge,
+    "mailpit": handle_mailpit,
 }
 
 
-def dispatch_consolidated_tool(name: str, arguments: dict[str, Any]) -> str | None:
+async def dispatch_consolidated_tool(name: str, arguments: dict[str, Any]) -> str | None:
     """
     Dispatch a consolidated tool call.
 
     Returns the result string if the tool is a consolidated tool,
     or None if it's not (to allow fallback to original tools).
+
+    Supports both sync and async handlers.
     """
+    import inspect
+
     handler = CONSOLIDATED_TOOL_HANDLERS.get(name)
     if handler:
+        if inspect.iscoroutinefunction(handler):
+            return await handler(arguments)
         return handler(arguments)
     return None

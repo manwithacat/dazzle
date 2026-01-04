@@ -70,13 +70,41 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 
 See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
+## What's New in v0.5
+
+### TigerBeetle Ledgers
+Double-entry accounting with [TigerBeetle](https://tigerbeetle.com/) integration:
+
+```dsl
+ledger CustomerWallet "Customer Wallet":
+  account_code: 1001
+  ledger_id: 1
+  account_type: asset
+  currency: GBP
+  flags: debits_must_not_exceed_credits
+
+transaction RecordPayment "Record Payment":
+  transfer revenue:
+    debit: CustomerWallet
+    credit: Revenue
+    amount: payment.amount
+    code: 1
+  idempotency_key: payment.id
+```
+
+### Also in v0.5
+- **Messaging Channels** - Email, queue, and stream integrations with typed messages
+- **UX Semantic Layer** - Attention signals, persona-specific views
+- **Personas & Scenarios** - Test different user archetypes with demo data
+- **MCP Server** - Claude Code integration with 17 consolidated tools
+
 ## Version Status
 
 | Version | Features | Status |
 |---------|----------|--------|
-| **v0.9.x** (Current) | Messaging channels, UX layer, personas | Active development |
-| v0.8.x | Bun CLI + DNR + Ejection | Stable |
-| v0.1.x-v0.7.x | Legacy versions | Deprecated |
+| **v0.5.x** (Current) | TigerBeetle ledgers, messaging, UX layer | Active development |
+| v0.4.x | DNR + Ejection + MCP | Stable |
+| v0.1.x-v0.3.x | Legacy versions | Deprecated |
 
 - **DNR** is for rapid iteration - run your DSL directly without code generation
 - **Ejection** generates standalone FastAPI + React when you need production deployment
@@ -223,7 +251,7 @@ Complete reference: [docs/reference/](docs/reference/)
 
 **Integration Elements**: `action` (request-response), `sync` (scheduled/event-driven)
 
-### Messaging (v0.9)
+### Messaging
 
 | Construct | Purpose |
 |-----------|---------|
@@ -236,6 +264,19 @@ Complete reference: [docs/reference/](docs/reference/)
 **Channel Operations**: `send` (outbound with triggers), `receive` (inbound with routing)
 
 **Send Triggers**: Entity events, status transitions, field changes, service events, schedules
+
+### Ledgers & Transactions
+
+| Construct | Purpose |
+|-----------|---------|
+| `ledger` | TigerBeetle account templates for double-entry accounting |
+| `transaction` | Multi-leg financial transactions with atomic guarantees |
+
+**Account Types**: `asset`, `liability`, `equity`, `revenue`, `expense`
+
+**Account Flags**: `debits_must_not_exceed_credits`, `credits_must_not_exceed_debits`, `linked`, `history`
+
+**Transaction Features**: `transfer` blocks, `idempotency_key`, `validation` rules, `async`/`sync` execution
 
 ### UX Semantic Layer
 
@@ -361,6 +402,7 @@ my_project/
   - [Workspaces](docs/reference/workspaces.md) - Dashboards
   - [Services](docs/reference/services.md) - External and domain services
   - [Integrations](docs/reference/integrations.md) - API orchestration
+  - [Ledgers](docs/reference/ledgers.md) - TigerBeetle double-entry accounting
   - [Messaging](docs/reference/messaging.md) - Channels and templates
   - [UX Layer](docs/reference/ux.md) - Attention signals and personas
   - [Scenarios](docs/reference/scenarios.md) - Test data and personas

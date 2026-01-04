@@ -6,6 +6,7 @@ from .validator import (
     validate_experiences,
     validate_foreign_models,
     validate_integrations,
+    validate_ledgers,
     validate_money_fields,
     validate_services,
     validate_surfaces,
@@ -83,6 +84,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # Event payload secrets validation
     errors, warnings = validate_event_payload_secrets(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # TigerBeetle ledger validation (v0.24.0)
+    errors, warnings = validate_ledgers(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

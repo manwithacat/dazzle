@@ -1,6 +1,6 @@
 # DSL Grammar Specification
 
-Formal EBNF grammar for DAZZLE DSL v0.9.
+Formal EBNF grammar for DAZZLE DSL v0.24.
 
 ## Overview
 
@@ -14,6 +14,7 @@ This grammar defines the complete syntax for the DAZZLE Domain-Specific Language
 - Domain and patterns tags for LLM guidance
 - Archetypes with `extends` inheritance
 - Relationship semantics (`has_many`, `has_one`, `embeds`, `belongs_to`)
+- TigerBeetle ledgers and transactions for double-entry accounting (v0.24)
 
 ## Anti-Turing Enforcement
 
@@ -63,6 +64,8 @@ statement     ::= entity_decl
                 | foreign_model_decl
                 | integration_decl
                 | flow_decl              (* NEW in v0.3.2 - E2E testing *)
+                | ledger_decl            (* NEW in v0.24.0 - TigerBeetle *)
+                | transaction_decl       (* NEW in v0.24.0 - TigerBeetle *)
                 | use_decl
                 | comment ;
 
@@ -674,4 +677,155 @@ assertion_check ::= "visible" | "hidden" | "enabled" | "disabled"
                   | "text" "=" STRING
                   | "value" "=" literal
                   | "count" "=" NUMBER ;
+
+(* =============================================================================
+   TigerBeetle Ledgers (NEW in v0.24.0)
+   ============================================================================= *)
+
+ledger_decl   ::= "ledger" LEDGER_NAME STRING? ":" NEWLINE
+                  INDENT
+                    ledger_body_line+
+                  DEDENT ;
+
+LEDGER_NAME   ::= IDENT ;
+
+ledger_body_line
+              ::= intent_line
+                | account_code_line
+                | ledger_id_line
+                | account_type_line
+                | currency_line
+                | flags_line
+                | sync_to_line
+                | tenant_scoped_line
+                | metadata_mapping_block ;
+
+account_code_line
+              ::= "account_code" ":" NUMBER NEWLINE ;
+
+ledger_id_line
+              ::= "ledger_id" ":" NUMBER NEWLINE ;
+
+account_type_line
+              ::= "account_type" ":" ACCOUNT_TYPE NEWLINE ;
+
+ACCOUNT_TYPE  ::= "asset" | "liability" | "equity" | "revenue" | "expense" ;
+
+currency_line ::= "currency" ":" CURRENCY_CODE NEWLINE ;
+
+CURRENCY_CODE ::= /[A-Z]{3}/ ;       (* ISO 4217 currency code *)
+
+flags_line    ::= "flags" ":" ACCOUNT_FLAG ("," ACCOUNT_FLAG)* NEWLINE ;
+
+ACCOUNT_FLAG  ::= "debits_must_not_exceed_credits"
+                | "credits_must_not_exceed_debits"
+                | "linked"
+                | "history" ;
+
+sync_to_line  ::= "sync_to" ":" ENTITY_NAME "." FIELD_NAME
+                  ("trigger" ":" SYNC_TRIGGER)? NEWLINE ;
+
+SYNC_TRIGGER  ::= "after_transfer" | "scheduled" STRING | "on_demand" ;
+
+tenant_scoped_line
+              ::= "tenant_scoped" ":" BOOLEAN NEWLINE ;
+
+metadata_mapping_block
+              ::= "metadata_mapping" ":" NEWLINE
+                  INDENT
+                    metadata_mapping_line+
+                  DEDENT ;
+
+metadata_mapping_line
+              ::= IDENT ":" ("ref" ENTITY_NAME "." FIELD_NAME | STRING) NEWLINE ;
+
+(* =============================================================================
+   TigerBeetle Transactions (NEW in v0.24.0)
+   ============================================================================= *)
+
+transaction_decl
+              ::= "transaction" TRANSACTION_NAME STRING? ":" NEWLINE
+                  INDENT
+                    transaction_body_line+
+                  DEDENT ;
+
+TRANSACTION_NAME ::= IDENT ;
+
+transaction_body_line
+              ::= intent_line
+                | execution_line
+                | priority_line
+                | timeout_line
+                | transfer_block
+                | idempotency_key_line
+                | validation_block ;
+
+execution_line
+              ::= "execution" ":" EXECUTION_MODE NEWLINE ;
+
+EXECUTION_MODE ::= "sync" | "async" ;
+
+priority_line ::= "priority" ":" PRIORITY_LEVEL NEWLINE ;
+
+PRIORITY_LEVEL ::= "critical" | "high" | "normal" | "low" ;
+
+timeout_line  ::= "timeout" ":" NUMBER NEWLINE ;     (* milliseconds *)
+
+transfer_block
+              ::= "transfer" TRANSFER_NAME ":" NEWLINE
+                  INDENT
+                    transfer_line+
+                  DEDENT ;
+
+TRANSFER_NAME ::= IDENT ;
+
+transfer_line ::= debit_line
+                | credit_line
+                | amount_line
+                | code_line
+                | transfer_flags_line
+                | pending_id_line
+                | user_data_block ;
+
+debit_line    ::= "debit" ":" LEDGER_NAME NEWLINE ;
+
+credit_line   ::= "credit" ":" LEDGER_NAME NEWLINE ;
+
+amount_line   ::= "amount" ":" amount_expr NEWLINE ;
+
+amount_expr   ::= amount_term (("+" | "-" | "*" | "/") amount_term)? ;
+
+amount_term   ::= NUMBER
+                | field_path ;
+
+code_line     ::= "code" ":" NUMBER NEWLINE ;
+
+transfer_flags_line
+              ::= "flags" ":" TRANSFER_FLAG ("," TRANSFER_FLAG)* NEWLINE ;
+
+TRANSFER_FLAG ::= "linked" | "pending" | "post_pending" | "void_pending" | "balancing" ;
+
+pending_id_line
+              ::= "pending_id" ":" STRING NEWLINE ;
+
+user_data_block
+              ::= "user_data" ":" NEWLINE
+                  INDENT
+                    user_data_line+
+                  DEDENT ;
+
+user_data_line
+              ::= IDENT ":" (STRING | IDENT) NEWLINE ;
+
+idempotency_key_line
+              ::= "idempotency_key" ":" expression NEWLINE ;
+
+validation_block
+              ::= "validation" ":" NEWLINE
+                  INDENT
+                    validation_rule_line+
+                  DEDENT ;
+
+validation_rule_line
+              ::= "-" expression NEWLINE ;
 ```

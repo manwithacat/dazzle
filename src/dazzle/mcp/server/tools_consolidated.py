@@ -727,6 +727,41 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Mailpit (for monitoring feedback during UX testing)
+        # =====================================================================
+        Tool(
+            name="mailpit",
+            description="Mailpit operations: list_messages, get_message, search, delete, stats. Monitor feedback and bug reports submitted via Dazzle Bar.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["list_messages", "get_message", "search", "delete", "stats"],
+                        "description": "Operation to perform",
+                    },
+                    "message_id": {
+                        "type": "string",
+                        "description": "Message ID (for get_message, delete)",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (for search)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max messages to return (default 20)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["bug", "feature", "ux", "general"],
+                        "description": "Filter by feedback category (for list_messages)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

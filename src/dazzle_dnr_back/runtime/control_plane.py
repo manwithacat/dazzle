@@ -25,13 +25,14 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, HTTPException
+    from fastapi import APIRouter, HTTPException, Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = None  # type: ignore[misc, assignment]
     HTTPException = None  # type: ignore[misc, assignment]
+    Response = None  # type: ignore[misc, assignment]
 
 
 if TYPE_CHECKING:
@@ -758,6 +759,125 @@ def create_control_plane_routes(
         )
 
     # -------------------------------------------------------------------------
+    # Health Endpoint
+    # -------------------------------------------------------------------------
+
+    @router.get("/health")
+    async def get_system_health() -> dict[str, Any]:
+        """
+        Get system health status for the Dazzle Bar health panel.
+
+        Returns health of API, database, mail provider, and event bus.
+        """
+        import time
+
+        components = []
+        overall = "healthy"
+
+        # Check API health (always healthy if we got here)
+        components.append(
+            {
+                "name": "API",
+                "status": "healthy",
+                "latency_ms": 1,
+            }
+        )
+
+        # Check database health
+        if db_manager:
+            start = time.time()
+            try:
+                # Quick check - try to access the engine
+                if hasattr(db_manager, "_engine") and db_manager._engine:
+                    latency = int((time.time() - start) * 1000)
+                    components.append(
+                        {
+                            "name": "Database",
+                            "status": "healthy",
+                            "latency_ms": latency,
+                        }
+                    )
+                else:
+                    components.append(
+                        {
+                            "name": "Database",
+                            "status": "degraded",
+                            "message": "Not initialized",
+                        }
+                    )
+                    if overall == "healthy":
+                        overall = "degraded"
+            except Exception as e:
+                components.append(
+                    {
+                        "name": "Database",
+                        "status": "unhealthy",
+                        "message": str(e),
+                    }
+                )
+                overall = "unhealthy"
+        else:
+            components.append(
+                {
+                    "name": "Database",
+                    "status": "degraded",
+                    "message": "Not configured",
+                }
+            )
+
+        # Check Mailpit/email provider
+        try:
+            import httpx
+
+            mailpit_url = os.getenv("MAILPIT_URL", "http://localhost:8025")
+            async with httpx.AsyncClient() as client:
+                start = time.time()
+                response = await client.get(f"{mailpit_url}/api/v1/info", timeout=2.0)
+                latency = int((time.time() - start) * 1000)
+                if response.status_code == 200:
+                    components.append(
+                        {
+                            "name": "Mailpit",
+                            "status": "healthy",
+                            "latency_ms": latency,
+                        }
+                    )
+                else:
+                    components.append(
+                        {
+                            "name": "Mailpit",
+                            "status": "degraded",
+                            "message": f"Status {response.status_code}",
+                        }
+                    )
+                    if overall == "healthy":
+                        overall = "degraded"
+        except Exception:
+            components.append(
+                {
+                    "name": "Mailpit",
+                    "status": "unhealthy",
+                    "message": "Not running",
+                }
+            )
+            # Don't mark overall as unhealthy for Mailpit - it's optional
+
+        # Check event bus (if configured)
+        components.append(
+            {
+                "name": "Events",
+                "status": "healthy",
+                "message": "In-memory",
+            }
+        )
+
+        return {
+            "overall": overall,
+            "components": components,
+            "checked_at": datetime.now().isoformat(),
+        }
+
+    # -------------------------------------------------------------------------
     # Persona Endpoints
     # -------------------------------------------------------------------------
 
@@ -1025,6 +1145,51 @@ def create_control_plane_routes(
         status = "logged_and_emailed" if email_sent else "logged"
         return FeedbackResponse(status=status, feedback_id=feedback_id)
 
+    @router.get("/feedback")
+    async def list_feedback_endpoint(
+        status: str | None = None,
+        category: str | None = None,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """
+        List feedback entries for monitoring.
+
+        Useful for Claude Code async feedback monitoring.
+        """
+        entries = feedback_logger.list_feedback(status=status, category=category, limit=limit)
+        return [
+            {
+                "id": e.id,
+                "timestamp": e.timestamp,
+                "category": e.category,
+                "message": e.message,
+                "route": e.route,
+                "status": e.status,
+                "persona_id": e.persona_id,
+                "scenario_id": e.scenario_id,
+            }
+            for e in entries
+        ]
+
+    @router.get("/feedback/{feedback_id}")
+    async def get_feedback_endpoint(feedback_id: str) -> dict[str, Any] | None:
+        """Get a specific feedback entry by ID."""
+        entry = feedback_logger.get_feedback(feedback_id)
+        if not entry:
+            return None
+        return {
+            "id": entry.id,
+            "timestamp": entry.timestamp,
+            "category": entry.category,
+            "message": entry.message,
+            "route": entry.route,
+            "url": entry.url,
+            "status": entry.status,
+            "persona_id": entry.persona_id,
+            "scenario_id": entry.scenario_id,
+            "extra_context": entry.extra_context,
+        }
+
     # -------------------------------------------------------------------------
     # Export Endpoints
     # -------------------------------------------------------------------------
@@ -1235,6 +1400,348 @@ def create_control_plane_routes(
 
         count = clear_logs()
         return {"status": "cleared", "files_deleted": count}
+
+    # -------------------------------------------------------------------------
+    # Developer Dashboard (Phase 2b)
+    # -------------------------------------------------------------------------
+
+    @router.get("/dashboard")
+    async def get_dashboard() -> Response:
+        """
+        Serve the developer dashboard HTML page.
+
+        Provides a comprehensive view of system health, metrics, and events.
+        """
+        from fastapi.responses import HTMLResponse
+
+        html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dazzle Developer Dashboard</title>
+  <style>
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-secondary: #1a1a2e;
+      --bg-card: #16213e;
+      --accent: #e94560;
+      --accent-hover: #ff6b6b;
+      --text-primary: #e8e8e8;
+      --text-secondary: #888;
+      --border: #0f3460;
+      --success: #4ade80;
+      --warning: #fbbf24;
+      --error: #ef4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dashboard-header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .refresh-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.15s;
+    }
+    .refresh-btn:hover { background: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .status-dot.healthy { background: var(--success); }
+    .status-dot.degraded { background: var(--warning); }
+    .status-dot.unhealthy { background: var(--error); }
+    .component-list { list-style: none; }
+    .component-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .component-item:last-child { border-bottom: none; }
+    .component-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .component-name { font-weight: 500; }
+    .component-latency {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .error-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .error-item {
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+    .error-item:last-child { margin-bottom: 0; }
+    .error-time {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .error-message { color: var(--error); }
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-secondary);
+    }
+    .updated-at {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 12px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-header">
+    <h1>Dazzle Developer Dashboard</h1>
+    <button class="refresh-btn" onclick="refreshAll()">&#x21bb; Refresh</button>
+  </div>
+
+  <div class="grid">
+    <!-- Health Status Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">System Health</span>
+        <span class="status-dot" id="overall-status"></span>
+      </div>
+      <ul class="component-list" id="health-components">
+        <li class="empty-state">Loading...</li>
+      </ul>
+    </div>
+
+    <!-- Request Metrics Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Request Metrics</span>
+      </div>
+      <div class="metric-value" id="request-count">--</div>
+      <div class="metric-label">Total Requests</div>
+      <div style="margin-top: 16px;">
+        <div class="metric-value" id="avg-latency">--</div>
+        <div class="metric-label">Avg Latency (ms)</div>
+      </div>
+    </div>
+
+    <!-- Event Bus Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Event Bus</span>
+      </div>
+      <div class="metric-value" id="event-count">--</div>
+      <div class="metric-label">Events Published</div>
+      <div style="margin-top: 16px;">
+        <div class="metric-value" id="subscriber-count">--</div>
+        <div class="metric-label">Active Subscribers</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Errors Card -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Recent Errors</span>
+    </div>
+    <div class="error-list" id="error-list">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </div>
+
+  <div class="updated-at" id="updated-at"></div>
+
+  <script>
+    async function fetchHealth() {
+      try {
+        const resp = await fetch('/dazzle/dev/health');
+        const data = await resp.json();
+
+        const statusDot = document.getElementById('overall-status');
+        statusDot.className = 'status-dot ' + (data.overall || 'healthy');
+
+        const list = document.getElementById('health-components');
+        if (data.components && data.components.length) {
+          list.innerHTML = data.components.map(c => `
+            <li class="component-item">
+              <div class="component-info">
+                <span class="status-dot ${c.status}"></span>
+                <span class="component-name">${c.name}</span>
+              </div>
+              <span class="component-latency">${c.latency_ms ? c.latency_ms + 'ms' : c.message || ''}</span>
+            </li>
+          `).join('');
+        } else {
+          list.innerHTML = '<li class="empty-state">No components</li>';
+        }
+      } catch (e) {
+        console.error('Failed to fetch health:', e);
+      }
+    }
+
+    async function fetchMetrics() {
+      try {
+        const resp = await fetch('/dazzle/dev/dashboard/metrics');
+        const data = await resp.json();
+
+        document.getElementById('request-count').textContent = data.total_requests || 0;
+        document.getElementById('avg-latency').textContent = data.avg_latency_ms?.toFixed(1) || '--';
+        document.getElementById('event-count').textContent = data.events_published || 0;
+        document.getElementById('subscriber-count').textContent = data.active_subscribers || 0;
+      } catch (e) {
+        // Metrics endpoint may not exist yet
+        document.getElementById('request-count').textContent = '--';
+        document.getElementById('avg-latency').textContent = '--';
+      }
+    }
+
+    async function fetchErrors() {
+      try {
+        const resp = await fetch('/dazzle/dev/logs/errors');
+        const data = await resp.json();
+
+        const list = document.getElementById('error-list');
+        const errors = data.recent_errors || [];
+
+        if (errors.length === 0) {
+          list.innerHTML = '<div class="empty-state">No recent errors</div>';
+        } else {
+          list.innerHTML = errors.slice(0, 10).map(e => `
+            <div class="error-item">
+              <div class="error-time">${e.timestamp || ''}</div>
+              <div class="error-message">${e.message || e.error || 'Unknown error'}</div>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        document.getElementById('error-list').innerHTML =
+          '<div class="empty-state">Failed to load errors</div>';
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([fetchHealth(), fetchMetrics(), fetchErrors()]);
+      document.getElementById('updated-at').textContent =
+        'Last updated: ' + new Date().toLocaleTimeString();
+    }
+
+    // Initial load
+    refreshAll();
+
+    // Auto-refresh every 10 seconds
+    setInterval(refreshAll, 10000);
+  </script>
+</body>
+</html>"""
+        return HTMLResponse(content=html)
+
+    @router.get("/dashboard/metrics")
+    async def get_dashboard_metrics() -> dict[str, Any]:
+        """
+        Get request metrics for the dashboard.
+
+        Returns request counts, latency stats, and event bus metrics.
+        """
+        # These would come from actual instrumentation
+        # For now, return placeholder data that can be enhanced
+        metrics: dict[str, Any] = {
+            "total_requests": 0,
+            "avg_latency_ms": 0.0,
+            "p50_latency_ms": 0.0,
+            "p95_latency_ms": 0.0,
+            "p99_latency_ms": 0.0,
+            "events_published": 0,
+            "active_subscribers": 0,
+            "errors_last_hour": 0,
+        }
+
+        # Try to get actual metrics from logging system
+        try:
+            from dazzle_dnr_back.runtime.logging import get_recent_logs
+
+            logs = get_recent_logs(count=100)
+            request_logs = [log for log in logs if log.get("type") == "request"]
+            error_logs = [log for log in logs if log.get("level") == "ERROR"]
+
+            metrics["total_requests"] = len(request_logs)
+            metrics["errors_last_hour"] = len(error_logs)
+
+            if request_logs:
+                latencies = [
+                    entry.get("latency_ms", 0) for entry in request_logs if "latency_ms" in entry
+                ]
+                if latencies:
+                    metrics["avg_latency_ms"] = sum(latencies) / len(latencies)
+        except Exception:
+            pass
+
+        return metrics
 
     return router
 

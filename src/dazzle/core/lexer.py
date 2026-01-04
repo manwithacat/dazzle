@@ -221,6 +221,28 @@ class TokenType(Enum):
     TRIGGER = "trigger"
     UNLESS = "unless"
 
+    # v0.24.0 TigerBeetle Ledger Keywords
+    LEDGER = "ledger"
+    TRANSACTION = "transaction"
+    TRANSFER = "transfer"
+    DEBIT = "debit"
+    CREDIT = "credit"
+    AMOUNT = "amount"
+    ACCOUNT_CODE = "account_code"
+    LEDGER_ID = "ledger_id"
+    ACCOUNT_TYPE = "account_type"
+    CURRENCY = "currency"
+    FLAGS = "flags"
+    SYNC_TO = "sync_to"
+    IDEMPOTENCY_KEY = "idempotency_key"
+    VALIDATION = "validation"
+    EXECUTION = "execution"
+    PRIORITY = "priority"
+    PENDING_ID = "pending_id"
+    USER_DATA = "user_data"
+    TENANT_SCOPED = "tenant_scoped"
+    METADATA_MAPPING = "metadata_mapping"
+
     # v0.23.0 Process Workflow Keywords
     # Note: Many tokens already defined elsewhere:
     #   SCHEDULE, INPUT, OUTPUT, SERVICE, CHANNEL, STEP, MAPPING,

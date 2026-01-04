@@ -36,6 +36,8 @@ class SymbolTable:
     llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
     processes: dict[str, ir.ProcessSpec] = field(default_factory=dict)  # v0.23.0
     schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
+    ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)  # v0.24.0
+    transactions: dict[str, ir.TransactionSpec] = field(default_factory=dict)  # v0.24.0
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -228,6 +230,28 @@ class SymbolTable:
         self.schedules[schedule.name] = schedule
         self.symbol_sources[schedule.name] = module_name
 
+    def add_ledger(self, ledger: ir.LedgerSpec, module_name: str) -> None:
+        """Add ledger to symbol table, checking for duplicates (v0.24.0)."""
+        if ledger.name in self.ledgers:
+            existing_module = self.symbol_sources.get(ledger.name, "unknown")
+            raise LinkError(
+                f"Duplicate ledger '{ledger.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.ledgers[ledger.name] = ledger
+        self.symbol_sources[ledger.name] = module_name
+
+    def add_transaction(self, transaction: ir.TransactionSpec, module_name: str) -> None:
+        """Add transaction to symbol table, checking for duplicates (v0.24.0)."""
+        if transaction.name in self.transactions:
+            existing_module = self.symbol_sources.get(transaction.name, "unknown")
+            raise LinkError(
+                f"Duplicate transaction '{transaction.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.transactions[transaction.name] = transaction
+        self.symbol_sources[transaction.name] = module_name
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -382,6 +406,14 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add schedules (v0.23.0)
         for schedule in module.fragment.schedules:
             symbols.add_schedule(schedule, module.name)
+
+        # Add ledgers (v0.24.0)
+        for ledger in module.fragment.ledgers:
+            symbols.add_ledger(ledger, module.name)
+
+        # Add transactions (v0.24.0)
+        for transaction in module.fragment.transactions:
+            symbols.add_transaction(transaction, module.name)
 
     return symbols
 
@@ -903,4 +935,6 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         llm_intents=list(symbols.llm_intents.values()),  # v0.21.0
         processes=list(symbols.processes.values()),  # v0.23.0
         schedules=list(symbols.schedules.values()),  # v0.23.0
+        ledgers=list(symbols.ledgers.values()),  # v0.24.0
+        transactions=list(symbols.transactions.values()),  # v0.24.0
     )

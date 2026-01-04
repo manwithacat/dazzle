@@ -33,6 +33,10 @@ from .hless import (
     StreamSpec,
 )
 from .integrations import IntegrationSpec
+from .ledgers import (
+    LedgerSpec,
+    TransactionSpec,
+)
 from .llm import (
     LLMConfigSpec,
     LLMIntentSpec,
@@ -149,6 +153,9 @@ class ModuleFragment(BaseModel):
     # Process Workflows (v0.23.0)
     processes: list[ProcessSpec] = Field(default_factory=list)
     schedules: list[ScheduleSpec] = Field(default_factory=list)
+    # TigerBeetle Ledgers (v0.24.0)
+    ledgers: list[LedgerSpec] = Field(default_factory=list)
+    transactions: list[TransactionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

@@ -8,7 +8,7 @@
  * @module dazzle-bar/bar
  */
 
-import { createEffect } from '../signals.js';
+import { createEffect } from "../signals.js";
 import {
   isBarVisible,
   currentPersona,
@@ -18,16 +18,17 @@ import {
   isLoading,
   error,
   fetchState,
-  DazzleRuntime
-} from './runtime.js';
-import { initEmailPanel, toggleEmailPanel } from './email-panel.js';
+  DazzleRuntime,
+} from "./runtime.js";
+import { initEmailPanel, toggleEmailPanel } from "./email-panel.js";
+import { initHealthPanel, toggleHealthPanel } from "./health-panel.js";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
 const BAR_HEIGHT = 42;
-const BAR_ID = 'dazzle-bar';
+const BAR_ID = "dazzle-bar";
 
 // =============================================================================
 // Styles
@@ -257,6 +258,31 @@ const barStyles = `
     margin-top: 16px;
   }
 
+  .dazzle-modal .dazzle-btn {
+    background: #0f3460;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #e8e8e8;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .dazzle-modal .dazzle-btn:hover {
+    background: #1a1a2e;
+    border-color: #e94560;
+  }
+
+  .dazzle-modal .dazzle-btn.primary {
+    background: #e94560;
+    color: white;
+  }
+
+  .dazzle-modal .dazzle-btn.primary:hover {
+    background: #d63d56;
+  }
+
   .dazzle-category-select {
     margin-bottom: 12px;
   }
@@ -374,10 +400,10 @@ const barStyles = `
  * @returns {HTMLDivElement}
  */
 function createBarElement() {
-  const bar = document.createElement('div');
+  const bar = document.createElement("div");
   bar.id = BAR_ID;
   // Add semantic attribute for E2E testing
-  bar.setAttribute('data-dazzle-component', 'dazzle-bar');
+  bar.setAttribute("data-dazzle-component", "dazzle-bar");
 
   bar.innerHTML = `
     <div class="dazzle-logo">
@@ -428,6 +454,11 @@ function createBarElement() {
 
     <div class="dazzle-divider"></div>
 
+    <div id="dazzle-health-indicator" title="System health - click for details" data-dazzle-control="health">
+      <span class="health-dot healthy"></span>
+      <span class="health-label">Healthy</span>
+    </div>
+
     <div class="dazzle-status" data-dazzle-control="status">
       <span class="dazzle-status-dot" id="dazzle-status-dot"></span>
       <span class="dazzle-status-text" id="dazzle-status-text">Dev Mode</span>
@@ -445,10 +476,10 @@ function createBarElement() {
  * Inject styles into the document.
  */
 function injectStyles() {
-  if (document.getElementById('dazzle-bar-styles')) return;
+  if (document.getElementById("dazzle-bar-styles")) return;
 
-  const style = document.createElement('style');
-  style.id = 'dazzle-bar-styles';
+  const style = document.createElement("style");
+  style.id = "dazzle-bar-styles";
   style.textContent = barStyles;
   document.head.appendChild(style);
 }
@@ -458,7 +489,7 @@ function injectStyles() {
  */
 function updatePersonaSelect() {
   const select = /** @type {HTMLSelectElement|null} */ (
-    document.getElementById('dazzle-persona-select')
+    document.getElementById("dazzle-persona-select")
   );
   if (!select) return;
 
@@ -470,9 +501,9 @@ function updatePersonaSelect() {
     personas
       .map(
         (p) =>
-          `<option value="${p.id}" ${p.id === current ? 'selected' : ''}>${p.label || p.id}</option>`
+          `<option value="${p.id}" ${p.id === current ? "selected" : ""}>${p.label || p.id}</option>`,
       )
-      .join('');
+      .join("");
 }
 
 /**
@@ -480,7 +511,7 @@ function updatePersonaSelect() {
  */
 function updateScenarioSelect() {
   const select = /** @type {HTMLSelectElement|null} */ (
-    document.getElementById('dazzle-scenario-select')
+    document.getElementById("dazzle-scenario-select")
   );
   if (!select) return;
 
@@ -492,34 +523,34 @@ function updateScenarioSelect() {
     scenarios
       .map(
         (s) =>
-          `<option value="${s.id}" ${s.id === current ? 'selected' : ''}>${s.name || s.id}</option>`
+          `<option value="${s.id}" ${s.id === current ? "selected" : ""}>${s.name || s.id}</option>`,
       )
-      .join('');
+      .join("");
 }
 
 /**
  * Update the status indicator.
  */
 function updateStatus() {
-  const dot = document.getElementById('dazzle-status-dot');
-  const text = document.getElementById('dazzle-status-text');
+  const dot = document.getElementById("dazzle-status-dot");
+  const text = document.getElementById("dazzle-status-text");
   if (!dot || !text) return;
 
   const loading = isLoading();
   const err = error();
 
-  dot.classList.toggle('loading', loading);
-  dot.classList.toggle('error', !!err);
+  dot.classList.toggle("loading", loading);
+  dot.classList.toggle("error", !!err);
 
   if (err) {
-    text.textContent = 'Error';
+    text.textContent = "Error";
     text.title = err;
   } else if (loading) {
-    text.textContent = 'Loading...';
-    text.title = '';
+    text.textContent = "Loading...";
+    text.title = "";
   } else {
-    text.textContent = 'Dev Mode';
-    text.title = '';
+    text.textContent = "Dev Mode";
+    text.title = "";
   }
 }
 
@@ -528,11 +559,11 @@ function updateStatus() {
  */
 function showFeedbackModal() {
   // Remove existing modal if any
-  const existing = document.querySelector('.dazzle-modal-overlay');
+  const existing = document.querySelector(".dazzle-modal-overlay");
   if (existing) existing.remove();
 
-  const overlay = document.createElement('div');
-  overlay.className = 'dazzle-modal-overlay';
+  const overlay = document.createElement("div");
+  overlay.className = "dazzle-modal-overlay";
   overlay.innerHTML = `
     <div class="dazzle-modal">
       <h3>&#x1F4AC; Send Feedback</h3>
@@ -556,27 +587,27 @@ function showFeedbackModal() {
 
   // Focus the textarea
   const textarea = /** @type {HTMLTextAreaElement|null} */ (
-    document.getElementById('dazzle-feedback-text')
+    document.getElementById("dazzle-feedback-text")
   );
   if (textarea) textarea.focus();
 
   // Close on overlay click
-  overlay.addEventListener('click', (e) => {
+  overlay.addEventListener("click", (e) => {
     if (e.target === overlay) overlay.remove();
   });
 
   // Cancel button
-  const cancelBtn = document.getElementById('dazzle-feedback-cancel');
+  const cancelBtn = document.getElementById("dazzle-feedback-cancel");
   if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => overlay.remove());
+    cancelBtn.addEventListener("click", () => overlay.remove());
   }
 
   // Submit button
-  const submitBtn = document.getElementById('dazzle-feedback-submit');
+  const submitBtn = document.getElementById("dazzle-feedback-submit");
   if (submitBtn) {
-    submitBtn.addEventListener('click', async () => {
+    submitBtn.addEventListener("click", async () => {
       const category = /** @type {HTMLSelectElement|null} */ (
-        document.getElementById('dazzle-feedback-category')
+        document.getElementById("dazzle-feedback-category")
       )?.value;
       const message = textarea?.value?.trim();
 
@@ -586,27 +617,31 @@ function showFeedbackModal() {
       }
 
       try {
-        await DazzleRuntime.submitFeedback({
+        const result = await DazzleRuntime.submitFeedback({
           message,
-          category: category || 'general'
+          category: category || "general",
         });
         overlay.remove();
-        // Show success toast
-        showToast('Feedback submitted successfully!', 'success');
+        // Show success toast with email status indicator
+        const emailSent = result.status === "logged_and_emailed";
+        const toastMessage = emailSent
+          ? "✓ Feedback submitted and emailed to developer"
+          : "✓ Feedback logged (email not configured)";
+        showToast(toastMessage, "success");
       } catch (_err) {
-        showToast('Failed to submit feedback', 'error');
+        showToast("Failed to submit feedback", "error");
       }
     });
   }
 
   // Close on Escape
   const handleEscape = (/** @type {KeyboardEvent} */ e) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       overlay.remove();
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("keydown", handleEscape);
     }
   };
-  document.addEventListener('keydown', handleEscape);
+  document.addEventListener("keydown", handleEscape);
 }
 
 /**
@@ -614,14 +649,14 @@ function showFeedbackModal() {
  * @param {string} message - Toast message
  * @param {'success'|'error'|'info'} [type='info'] - Toast type
  */
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
+function showToast(message, type = "info") {
+  const toast = document.createElement("div");
   toast.style.cssText = `
     position: fixed;
     bottom: 20px;
     right: 20px;
     padding: 12px 20px;
-    background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#ef4444' : '#3b82f6'};
+    background: ${type === "success" ? "#4ade80" : type === "error" ? "#ef4444" : "#3b82f6"};
     color: white;
     border-radius: 6px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -633,9 +668,9 @@ function showToast(message, type = 'info') {
   toast.textContent = message;
 
   // Add animation keyframes if not present
-  if (!document.getElementById('dazzle-toast-styles')) {
-    const style = document.createElement('style');
-    style.id = 'dazzle-toast-styles';
+  if (!document.getElementById("dazzle-toast-styles")) {
+    const style = document.createElement("style");
+    style.id = "dazzle-toast-styles";
     style.textContent = `
       @keyframes dazzle-toast-in {
         from { opacity: 0; transform: translateY(10px); }
@@ -649,9 +684,9 @@ function showToast(message, type = 'info') {
 
   // Auto-remove after 3 seconds
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(10px)';
-    toast.style.transition = 'all 0.2s ease-out';
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    toast.style.transition = "all 0.2s ease-out";
     setTimeout(() => toast.remove(), 200);
   }, 3000);
 }
@@ -665,9 +700,9 @@ function showToast(message, type = 'info') {
  */
 function setupEventHandlers() {
   // Persona select
-  const personaSelect = document.getElementById('dazzle-persona-select');
+  const personaSelect = document.getElementById("dazzle-persona-select");
   if (personaSelect) {
-    personaSelect.addEventListener('change', async (e) => {
+    personaSelect.addEventListener("change", async (e) => {
       const value = /** @type {HTMLSelectElement} */ (e.target).value;
       if (value) {
         await DazzleRuntime.setPersona(value);
@@ -676,9 +711,9 @@ function setupEventHandlers() {
   }
 
   // Scenario select
-  const scenarioSelect = document.getElementById('dazzle-scenario-select');
+  const scenarioSelect = document.getElementById("dazzle-scenario-select");
   if (scenarioSelect) {
-    scenarioSelect.addEventListener('change', async (e) => {
+    scenarioSelect.addEventListener("change", async (e) => {
       const value = /** @type {HTMLSelectElement} */ (e.target).value;
       if (value) {
         await DazzleRuntime.setScenario(value);
@@ -687,59 +722,69 @@ function setupEventHandlers() {
   }
 
   // Reset button
-  const resetBtn = document.getElementById('dazzle-reset-btn');
+  const resetBtn = document.getElementById("dazzle-reset-btn");
   if (resetBtn) {
-    resetBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+    resetBtn.addEventListener("click", async () => {
+      if (
+        confirm(
+          "Are you sure you want to reset all data? This cannot be undone.",
+        )
+      ) {
         await DazzleRuntime.resetData();
       }
     });
   }
 
   // Regenerate button
-  const regenerateBtn = document.getElementById('dazzle-regenerate-btn');
+  const regenerateBtn = document.getElementById("dazzle-regenerate-btn");
   if (regenerateBtn) {
-    regenerateBtn.addEventListener('click', async () => {
+    regenerateBtn.addEventListener("click", async () => {
       await DazzleRuntime.regenerateData();
     });
   }
 
   // Email button
-  const emailBtn = document.getElementById('dazzle-email-btn');
+  const emailBtn = document.getElementById("dazzle-email-btn");
   if (emailBtn) {
-    emailBtn.addEventListener('click', toggleEmailPanel);
+    emailBtn.addEventListener("click", toggleEmailPanel);
+  }
+
+  // Health indicator
+  const healthIndicator = document.getElementById("dazzle-health-indicator");
+  if (healthIndicator) {
+    healthIndicator.addEventListener("click", toggleHealthPanel);
   }
 
   // Feedback button
-  const feedbackBtn = document.getElementById('dazzle-feedback-btn');
+  const feedbackBtn = document.getElementById("dazzle-feedback-btn");
   if (feedbackBtn) {
-    feedbackBtn.addEventListener('click', showFeedbackModal);
+    feedbackBtn.addEventListener("click", showFeedbackModal);
   }
 
   // Export button
-  const exportBtn = document.getElementById('dazzle-export-btn');
+  const exportBtn = document.getElementById("dazzle-export-btn");
   if (exportBtn) {
-    exportBtn.addEventListener('click', async () => {
+    exportBtn.addEventListener("click", async () => {
       try {
-        await DazzleRuntime.exportSession('github_issue');
-        showToast('Export link opened in new tab', 'success');
+        await DazzleRuntime.exportSession("github_issue");
+        showToast("Export link opened in new tab", "success");
       } catch (_err) {
-        showToast('Failed to export session', 'error');
+        showToast("Failed to export session", "error");
       }
     });
   }
 
   // Hide button
-  const hideBtn = document.getElementById('dazzle-hide-btn');
+  const hideBtn = document.getElementById("dazzle-hide-btn");
   if (hideBtn) {
-    hideBtn.addEventListener('click', () => {
+    hideBtn.addEventListener("click", () => {
       DazzleRuntime.hideBar();
     });
   }
 
   // Keyboard shortcut: Cmd+Shift+D to toggle bar
-  document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'D') {
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "D") {
       e.preventDefault();
       DazzleRuntime.toggleBar();
     }
@@ -768,7 +813,7 @@ export function initDazzleBar() {
   document.body.appendChild(bar);
 
   // Add body padding class
-  document.body.classList.add('dazzle-bar-active');
+  document.body.classList.add("dazzle-bar-active");
 
   // Set up event handlers
   setupEventHandlers();
@@ -776,11 +821,14 @@ export function initDazzleBar() {
   // Initialize email panel
   initEmailPanel();
 
+  // Initialize health panel
+  initHealthPanel();
+
   // Set up reactive updates
   createEffect(() => {
     const visible = isBarVisible();
-    bar.classList.toggle('hidden', !visible);
-    document.body.classList.toggle('dazzle-bar-active', visible);
+    bar.classList.toggle("hidden", !visible);
+    document.body.classList.toggle("dazzle-bar-active", visible);
   });
 
   createEffect(() => {
@@ -811,10 +859,10 @@ export function initDazzleBar() {
 
   // Fetch initial state
   fetchState().catch((err) => {
-    console.warn('[Dazzle Bar] Failed to fetch initial state:', err);
+    console.warn("[Dazzle Bar] Failed to fetch initial state:", err);
   });
 
-  console.log('[Dazzle Bar] Initialized. Press Cmd+Shift+D to toggle.');
+  console.log("[Dazzle Bar] Initialized. Press Cmd+Shift+D to toggle.");
 }
 
 export { BAR_HEIGHT, BAR_ID, showToast };

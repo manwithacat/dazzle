@@ -238,6 +238,23 @@ from .layout import (
     WorkspaceLayout,
 )
 
+# Ledgers (v0.24.0 TigerBeetle Integration)
+from .ledgers import (
+    AccountFlag,
+    AccountType,
+    AmountExpr,
+    LedgerAccountRef,
+    LedgerSpec,
+    LedgerSyncSpec,
+    SyncTrigger,
+    TransactionExecution,
+    TransactionPriority,
+    TransactionSpec,
+    TransferFlag,
+    TransferSpec,
+    ValidationRule,
+)
+
 # LLM - Large Language Model (v0.21.0 - Issue #33)
 from .llm import (
     ArtifactKind,
@@ -562,6 +579,20 @@ __all__ = [
     "MatchRule",
     "IntegrationSync",
     "IntegrationSpec",
+    # Ledgers (v0.24.0 TigerBeetle Integration)
+    "AccountFlag",
+    "AccountType",
+    "AmountExpr",
+    "LedgerAccountRef",
+    "LedgerSpec",
+    "LedgerSyncSpec",
+    "SyncTrigger",
+    "TransactionExecution",
+    "TransactionPriority",
+    "TransactionSpec",
+    "TransferFlag",
+    "TransferSpec",
+    "ValidationRule",
     # Tests
     "TestActionKind",
     "TestAssertionKind",

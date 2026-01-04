@@ -127,6 +127,8 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         llm_intents=merged_fragment.llm_intents,  # v0.21.0 LLM Jobs
         processes=merged_fragment.processes,  # v0.23.0 Process Workflows
         schedules=merged_fragment.schedules,  # v0.23.0 Process Workflows
+        ledgers=merged_fragment.ledgers,  # v0.24.0 TigerBeetle Ledgers
+        transactions=merged_fragment.transactions,  # v0.24.0 TigerBeetle Ledgers
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

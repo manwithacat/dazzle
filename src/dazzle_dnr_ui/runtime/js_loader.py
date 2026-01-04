@@ -355,6 +355,7 @@ def clear_cache() -> None:
 _DAZZLE_BAR_MODULE_ORDER = [
     "dazzle-bar/runtime.js",
     "dazzle-bar/email-panel.js",
+    "dazzle-bar/health-panel.js",
     "dazzle-bar/bar.js",
     "dazzle-bar/index.js",
 ]

@@ -72,8 +72,10 @@ class FlowParserMixin:
                 break
 
             # Parse priority: high|medium|low
-            # Note: 'priority', 'high', 'medium', 'low' are identifiers, not keywords
-            if self.match(TokenType.IDENTIFIER) and self.current_token().value == "priority":
+            # Note: 'priority' may be IDENTIFIER or PRIORITY token (v0.5 ledgers)
+            if (
+                self.match(TokenType.IDENTIFIER) and self.current_token().value == "priority"
+            ) or self.match(TokenType.PRIORITY):
                 self.advance()  # consume 'priority'
                 self.expect(TokenType.COLON)
                 priority_token = self.expect_identifier_or_keyword()

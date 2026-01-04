@@ -1,0 +1,182 @@
+{
+  "description": "Backlog scenario - High volume testing with many open tickets",
+  "users": [
+    {
+      "email": "customer1@example.com",
+      "name": "Alice Customer",
+      "role": "customer"
+    },
+    {
+      "email": "customer2@example.com",
+      "name": "Bob Customer",
+      "role": "customer"
+    },
+    {
+      "email": "customer3@example.com",
+      "name": "Carol Customer",
+      "role": "customer"
+    },
+    {
+      "email": "agent1@support.com",
+      "name": "Dan Agent",
+      "role": "agent"
+    },
+    {
+      "email": "agent2@support.com",
+      "name": "Eve Agent",
+      "role": "agent"
+    },
+    {
+      "email": "manager@support.com",
+      "name": "Frank Manager",
+      "role": "manager"
+    }
+  ],
+  "tickets": [
+    {
+      "ticket_number": "TKT-001",
+      "title": "Cannot login to account",
+      "description": "Getting 'Invalid credentials' error even with correct password",
+      "status": "open",
+      "priority": "critical",
+      "category": "bug",
+      "created_by": "customer1@example.com"
+    },
+    {
+      "ticket_number": "TKT-002",
+      "title": "Feature request: Dark mode",
+      "description": "Please add dark mode option for better night viewing",
+      "status": "open",
+      "priority": "low",
+      "category": "feature",
+      "created_by": "customer2@example.com"
+    },
+    {
+      "ticket_number": "TKT-003",
+      "title": "Payment failed but amount deducted",
+      "description": "Transaction shows failed but money was taken from my account",
+      "status": "in_progress",
+      "priority": "critical",
+      "category": "bug",
+      "created_by": "customer3@example.com",
+      "assigned_to": "agent1@support.com"
+    },
+    {
+      "ticket_number": "TKT-004",
+      "title": "How to export my data?",
+      "description": "Need to export all my records as CSV for tax purposes",
+      "status": "open",
+      "priority": "medium",
+      "category": "question",
+      "created_by": "customer1@example.com"
+    },
+    {
+      "ticket_number": "TKT-005",
+      "title": "App crashes on iOS 17",
+      "description": "App force closes immediately after opening on iPhone with iOS 17.2",
+      "status": "in_progress",
+      "priority": "high",
+      "category": "bug",
+      "created_by": "customer2@example.com",
+      "assigned_to": "agent2@support.com"
+    },
+    {
+      "ticket_number": "TKT-006",
+      "title": "Request for API access",
+      "description": "We need API access for integration with our internal systems",
+      "status": "open",
+      "priority": "medium",
+      "category": "feature",
+      "created_by": "customer3@example.com"
+    },
+    {
+      "ticket_number": "TKT-007",
+      "title": "Slow page load times",
+      "description": "Dashboard takes over 10 seconds to load, affecting productivity",
+      "status": "open",
+      "priority": "high",
+      "category": "bug",
+      "created_by": "customer1@example.com"
+    },
+    {
+      "ticket_number": "TKT-008",
+      "title": "Email notifications not working",
+      "description": "Not receiving any email notifications for ticket updates",
+      "status": "resolved",
+      "priority": "medium",
+      "category": "bug",
+      "created_by": "customer2@example.com",
+      "assigned_to": "agent1@support.com",
+      "resolution": "Fixed email configuration issue on server. Notifications should now work correctly."
+    },
+    {
+      "ticket_number": "TKT-009",
+      "title": "Add keyboard shortcuts",
+      "description": "Would love keyboard shortcuts for common actions like 'n' for new ticket",
+      "status": "open",
+      "priority": "low",
+      "category": "feature",
+      "created_by": "customer3@example.com"
+    },
+    {
+      "ticket_number": "TKT-010",
+      "title": "Security concern: Password reset",
+      "description": "Password reset link does not expire, potential security issue",
+      "status": "in_progress",
+      "priority": "critical",
+      "category": "bug",
+      "created_by": "customer1@example.com",
+      "assigned_to": "agent1@support.com"
+    },
+    {
+      "ticket_number": "TKT-011",
+      "title": "Mobile app sync issues",
+      "description": "Changes made on mobile don't sync to web version",
+      "status": "open",
+      "priority": "high",
+      "category": "bug",
+      "created_by": "customer2@example.com"
+    },
+    {
+      "ticket_number": "TKT-012",
+      "title": "Bulk import feature",
+      "description": "Need ability to bulk import records from Excel",
+      "status": "open",
+      "priority": "medium",
+      "category": "feature",
+      "created_by": "customer3@example.com"
+    }
+  ],
+  "comments": [
+    {
+      "ticket_number": "TKT-003",
+      "author": "agent1@support.com",
+      "content": "I've escalated this to our payment team. They are investigating the discrepancy.",
+      "is_internal": false
+    },
+    {
+      "ticket_number": "TKT-003",
+      "author": "agent1@support.com",
+      "content": "Payment gateway logs show transaction was reversed. Need to check bank sync.",
+      "is_internal": true
+    },
+    {
+      "ticket_number": "TKT-005",
+      "author": "agent2@support.com",
+      "content": "Can you please provide your device model and exact iOS version?",
+      "is_internal": false
+    },
+    {
+      "ticket_number": "TKT-008",
+      "author": "agent1@support.com",
+      "content": "Issue was with our SMTP configuration. Fixed and verified.",
+      "is_internal": false
+    },
+    {
+      "ticket_number": "TKT-010",
+      "author": "agent1@support.com",
+      "content": "Confirmed security issue. Need to implement token expiration ASAP.",
+      "is_internal": true
+    }
+  ]
+}

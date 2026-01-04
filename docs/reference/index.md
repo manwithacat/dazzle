@@ -1,6 +1,6 @@
 # DSL Reference
 
-Complete reference for the DAZZLE Domain-Specific Language v0.9.
+Complete reference for the DAZZLE Domain-Specific Language v0.24.
 
 ## Reference Documents
 
@@ -12,6 +12,7 @@ Complete reference for the DAZZLE Domain-Specific Language v0.9.
 | [Workspaces](workspaces.md) | Data-centric views with regions and aggregates |
 | [Services](services.md) | External APIs and domain services |
 | [Integrations](integrations.md) | API integrations, actions, syncs, mappings |
+| [Ledgers](ledgers.md) | TigerBeetle ledgers and transactions for accounting |
 | [Messaging](messaging.md) | Channels, messages, templates, assets |
 | [UX Layer](ux.md) | UX semantic layer, attention signals, persona variants |
 | [Scenarios](scenarios.md) | Personas, scenarios, demo fixtures |
@@ -60,5 +61,9 @@ str text int decimal bool date datetime uuid email enum
 filter sort limit display aggregate source empty group_by
 when on send receive create update delete
 ux attention for scope purpose show hide focus defaults
+ledger transaction transfer debit credit amount
+account_code ledger_id account_type currency flags
+sync_to idempotency_key validation execution priority
+asset liability equity revenue expense
 true false null
 ```

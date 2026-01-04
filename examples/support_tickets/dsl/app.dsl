@@ -301,3 +301,61 @@ workspace agent_dashboard "Agent Dashboard":
     display: list
     action: ticket_detail
     empty: "No tickets pending closure"
+
+workspace my_tickets "My Tickets":
+  purpose: "Customer view of their submitted tickets"
+  stage: "simple_list"
+
+  customer_tickets:
+    source: Ticket
+    filter: created_by = current_user
+    sort: created_at desc
+    display: list
+    action: ticket_detail
+    empty: "You have not submitted any tickets yet"
+
+# =============================================================================
+# PERSONAS - User archetypes for testing
+# =============================================================================
+
+persona customer "Customer":
+  description: "End user submitting support requests and tracking their status"
+  goals: "Submit new tickets easily", "Track ticket status and updates", "Receive timely responses from support"
+  proficiency: novice
+  default_workspace: my_tickets
+
+persona agent "Support Agent":
+  description: "First-line support handling incoming tickets"
+  goals: "Process tickets efficiently", "Maintain SLA compliance", "Escalate complex issues to managers"
+  proficiency: intermediate
+  default_workspace: ticket_queue
+
+persona manager "Support Manager":
+  description: "Team lead monitoring performance and handling escalations"
+  goals: "Monitor team metrics and performance", "Identify bottlenecks in ticket flow", "Ensure quality and customer satisfaction"
+  proficiency: expert
+  default_workspace: agent_dashboard
+
+# =============================================================================
+# SCENARIOS - Testing contexts with demo data
+# =============================================================================
+
+scenario happy_path "Happy Path":
+  description: "Normal ticket flow - customer submits, agent resolves, customer satisfied"
+  persona_entries:
+    customer: start_route="/tickets/new"
+    agent: start_route="/queue"
+
+scenario escalation "Escalation Flow":
+  description: "Critical issue requiring manager attention and oversight"
+  persona_entries:
+    customer: start_route="/tickets"
+    agent: start_route="/queue?priority=critical"
+    manager: start_route="/dashboard"
+
+scenario backlog "Backlog Scenario":
+  description: "High volume testing with many open tickets"
+  seed_data_path: "fixtures/backlog.json"
+  persona_entries:
+    agent: start_route="/queue"
+    manager: start_route="/dashboard"

@@ -165,7 +165,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
     # Try consolidated tools first if enabled
     if use_consolidated_tools():
-        result = dispatch_consolidated_tool(name, arguments or {})
+        result = await dispatch_consolidated_tool(name, arguments or {})
         if result is not None:
             return [TextContent(type="text", text=result)]
 

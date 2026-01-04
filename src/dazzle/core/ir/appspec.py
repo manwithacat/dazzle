@@ -35,6 +35,10 @@ from .hless import (
 )
 from .integrations import IntegrationSpec
 from .layout import UXLayouts
+from .ledgers import (
+    LedgerSpec,
+    TransactionSpec,
+)
 from .llm import (
     LLMConfigSpec,
     LLMIntentSpec,
@@ -136,6 +140,9 @@ class AppSpec(BaseModel):
     # Process Workflows (v0.23.0)
     processes: list[ProcessSpec] = Field(default_factory=list)
     schedules: list[ScheduleSpec] = Field(default_factory=list)
+    # Ledgers (v0.24.0 TigerBeetle Integration)
+    ledgers: list[LedgerSpec] = Field(default_factory=list)
+    transactions: list[TransactionSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -344,6 +351,30 @@ class AppSpec(BaseModel):
     def get_schedules_by_story(self, story_id: str) -> list[ScheduleSpec]:
         """Get all schedules that implement a specific story."""
         return [s for s in self.schedules if story_id in s.implements]
+
+    # Ledger getters (v0.24.0 TigerBeetle Integration)
+
+    def get_ledger(self, name: str) -> LedgerSpec | None:
+        """Get ledger by name."""
+        for ledger in self.ledgers:
+            if ledger.name == name:
+                return ledger
+        return None
+
+    def get_transaction(self, name: str) -> TransactionSpec | None:
+        """Get transaction by name."""
+        for transaction in self.transactions:
+            if transaction.name == name:
+                return transaction
+        return None
+
+    def get_transactions_by_ledger(self, ledger_name: str) -> list[TransactionSpec]:
+        """Get all transactions that affect a specific ledger."""
+        return [t for t in self.transactions if ledger_name in t.affected_ledgers]
+
+    def get_ledgers_by_currency(self, currency: str) -> list[LedgerSpec]:
+        """Get all ledgers with a specific currency."""
+        return [ledger for ledger in self.ledgers if ledger.currency == currency]
 
     @property
     def type_catalog(self) -> dict[str, list[FieldType]]:

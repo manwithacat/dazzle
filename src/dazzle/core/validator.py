@@ -847,6 +847,156 @@ def validate_money_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate TigerBeetle ledger and transaction specifications (v0.24.0).
+
+    Checks:
+    - Ledger names are unique
+    - Account codes are unique within a ledger_id
+    - Currency is valid ISO 4217 format
+    - Transaction transfers reference valid ledgers
+    - Transaction idempotency_key is defined
+    - Transfer codes are unique within a transaction
+    - Multi-leg transactions use 'linked' flag correctly
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.ledgers:
+        return errors, warnings
+
+    # Build ledger lookup
+    ledger_names = set()
+    ledger_by_name = {}
+    account_codes_by_ledger_id: dict[int, set[int]] = {}
+
+    # Validate ledgers
+    for ledger in appspec.ledgers:
+        # Check unique names
+        if ledger.name in ledger_names:
+            errors.append(f"Duplicate ledger name: '{ledger.name}'")
+        ledger_names.add(ledger.name)
+        ledger_by_name[ledger.name] = ledger
+
+        # Check account_code uniqueness within ledger_id
+        if ledger.ledger_id not in account_codes_by_ledger_id:
+            account_codes_by_ledger_id[ledger.ledger_id] = set()
+        if ledger.account_code in account_codes_by_ledger_id[ledger.ledger_id]:
+            errors.append(
+                f"Ledger '{ledger.name}': account_code {ledger.account_code} "
+                f"is already used in ledger_id {ledger.ledger_id}"
+            )
+        account_codes_by_ledger_id[ledger.ledger_id].add(ledger.account_code)
+
+        # Validate currency format
+        if len(ledger.currency) != 3 or not ledger.currency.isalpha():
+            errors.append(
+                f"Ledger '{ledger.name}': currency '{ledger.currency}' "
+                f"must be a 3-letter ISO 4217 code (e.g., GBP, USD, EUR)"
+            )
+
+        # Check sync target if specified
+        if ledger.sync:
+            # Verify sync target entity exists
+            entity_name = ledger.sync.target_entity
+            entity = appspec.get_entity(entity_name)
+            if not entity:
+                errors.append(
+                    f"Ledger '{ledger.name}': sync target entity '{entity_name}' not found"
+                )
+            else:
+                # Verify target field exists and is numeric
+                field = entity.get_field(ledger.sync.target_field)
+                if not field:
+                    errors.append(
+                        f"Ledger '{ledger.name}': sync target field "
+                        f"'{entity_name}.{ledger.sync.target_field}' not found"
+                    )
+
+        # Warn about missing intent
+        if not ledger.intent:
+            warnings.append(
+                f"Ledger '{ledger.name}': consider adding an 'intent' field "
+                f"to document the business purpose"
+            )
+
+    # Validate transactions
+    for txn in appspec.transactions:
+        # Check idempotency_key is set
+        if not txn.idempotency_key:
+            errors.append(
+                f"Transaction '{txn.name}': idempotency_key is required "
+                f"for TigerBeetle transfer deduplication"
+            )
+
+        # Validate transfers
+        transfer_codes: set[int] = set()
+        for transfer in txn.transfers:
+            # Check ledger references exist
+            if transfer.debit_ledger not in ledger_names:
+                errors.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"debit ledger '{transfer.debit_ledger}' not found"
+                )
+            if transfer.credit_ledger not in ledger_names:
+                errors.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"credit ledger '{transfer.credit_ledger}' not found"
+                )
+
+            # Validate ledgers are in same ledger_id (TigerBeetle requirement)
+            if transfer.debit_ledger in ledger_by_name and transfer.credit_ledger in ledger_by_name:
+                debit_ledger = ledger_by_name[transfer.debit_ledger]
+                credit_ledger = ledger_by_name[transfer.credit_ledger]
+                if debit_ledger.ledger_id != credit_ledger.ledger_id:
+                    errors.append(
+                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                        f"debit ledger '{transfer.debit_ledger}' (ledger_id={debit_ledger.ledger_id}) "
+                        f"and credit ledger '{transfer.credit_ledger}' (ledger_id={credit_ledger.ledger_id}) "
+                        f"must be in the same ledger_id"
+                    )
+
+                # Validate currency match
+                if debit_ledger.currency != credit_ledger.currency:
+                    errors.append(
+                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                        f"currency mismatch between '{transfer.debit_ledger}' ({debit_ledger.currency}) "
+                        f"and '{transfer.credit_ledger}' ({credit_ledger.currency})"
+                    )
+
+            # Check transfer code uniqueness
+            if transfer.code in transfer_codes:
+                warnings.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"code {transfer.code} is duplicated (consider unique codes for debugging)"
+                )
+            transfer_codes.add(transfer.code)
+
+        # Multi-leg transaction validation
+        if len(txn.transfers) > 1:
+            # Check that all but last transfer have 'linked' flag
+            for transfer in txn.transfers[:-1]:
+                if not transfer.is_linked:
+                    warnings.append(
+                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                        f"multi-leg transactions should use 'linked' flag on all but the last transfer "
+                        f"to ensure atomic execution"
+                    )
+
+        # Warn about missing intent
+        if not txn.intent:
+            warnings.append(
+                f"Transaction '{txn.name}': consider adding an 'intent' field "
+                f"to document the business purpose"
+            )
+
+    return errors, warnings
+
+
 def validate_event_payload_secrets(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate that event payloads do not contain secret/sensitive fields.
