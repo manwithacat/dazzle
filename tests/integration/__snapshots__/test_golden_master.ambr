@@ -156,6 +156,8 @@
     'integrations': list([
     ]),
     'interfaces': None,
+    'ledgers': list([
+    ]),
     'llm_config': None,
     'llm_intents': list([
     ]),
@@ -331,6 +333,8 @@
     'tests': list([
     ]),
     'title': 'Simple Test App',
+    'transactions': list([
+    ]),
     'ux': None,
     'version': '0.1.0',
     'workspaces': list([
