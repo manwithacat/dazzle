@@ -48,6 +48,19 @@ class DatabaseSize(str, Enum):
     SERVERLESS = "serverless"  # Aurora Serverless v2
 
 
+class TigerBeetleSize(str, Enum):
+    """TigerBeetle instance sizes (EC2).
+
+    TigerBeetle has no managed AWS service, so we deploy on EC2.
+    Memory-optimized instances recommended for best performance.
+    """
+
+    SMALL = "t3.medium"  # Dev/test: 1 node, 4GB RAM
+    MEDIUM = "r6i.large"  # Small prod: 3 nodes, 16GB RAM
+    LARGE = "r6i.xlarge"  # Medium prod: 3 nodes, 32GB RAM
+    XLARGE = "r6i.2xlarge"  # Large prod: 5 nodes, 64GB RAM
+
+
 # =============================================================================
 # Sub-configuration Models
 # =============================================================================
@@ -150,6 +163,38 @@ class ObservabilityConfig(BaseModel):
     enable_xray: bool = False
 
 
+class TigerBeetleConfig(BaseModel):
+    """TigerBeetle cluster configuration.
+
+    TigerBeetle has no managed AWS service, so we deploy self-hosted
+    EC2 instances with high-IOPS EBS volumes.
+
+    Node count must be odd (1, 3, or 5) for Raft consensus.
+    Production deployments require at least 3 nodes for HA.
+    """
+
+    enabled: bool = True
+    size: TigerBeetleSize = TigerBeetleSize.MEDIUM
+    node_count: int = Field(default=3, ge=1, le=5)
+    volume_size_gb: int = Field(default=100, ge=50, le=1000)
+    volume_iops: int = Field(default=10000, ge=3000, le=64000)
+    volume_throughput_mbps: int = Field(default=500, ge=125, le=1000)
+    backup_enabled: bool = True
+    backup_retention_days: int = Field(default=7, ge=1, le=35)
+
+    @property
+    def instance_type(self) -> str:
+        """Get the EC2 instance type."""
+        return self.size.value
+
+    def model_post_init(self, __context: Any) -> None:
+        """Validate node count is odd for Raft consensus."""
+        if self.node_count > 1 and self.node_count % 2 == 0:
+            raise ValueError(
+                f"TigerBeetle node_count must be odd for HA (1, 3, or 5), got {self.node_count}"
+            )
+
+
 class OutputConfig(BaseModel):
     """Output configuration."""
 
@@ -181,6 +226,7 @@ class DeploymentConfig(BaseModel):
     messaging: MessagingConfig = Field(default_factory=MessagingConfig)
     dns: DNSConfig = Field(default_factory=DNSConfig)
     observability: ObservabilityConfig = Field(default_factory=ObservabilityConfig)
+    tigerbeetle: TigerBeetleConfig = Field(default_factory=TigerBeetleConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     def get_stack_name(self, stack_type: str) -> str:
@@ -241,6 +287,7 @@ def _parse_config(data: dict[str, Any]) -> DeploymentConfig:
         "messaging",
         "dns",
         "observability",
+        "tigerbeetle",
         "output",
     ]
 

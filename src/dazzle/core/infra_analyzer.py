@@ -27,6 +27,13 @@ class InfraRequirements:
     needs_webhooks: bool = False
     needs_storage: bool = False
 
+    # TigerBeetle ledger infrastructure (v0.24.0)
+    needs_tigerbeetle: bool = False
+    tigerbeetle_ledger_count: int = 0
+    tigerbeetle_transaction_count: int = 0
+    tigerbeetle_currencies: list[str] | None = None
+    tigerbeetle_ledger_names: list[str] | None = None
+
     # Type specifications
     database_type: str = "postgres"
     cache_type: str = "redis"
@@ -53,6 +60,10 @@ class InfraRequirements:
             self.webhook_service_names = []
         if self.async_service_names is None:
             self.async_service_names = []
+        if self.tigerbeetle_currencies is None:
+            self.tigerbeetle_currencies = []
+        if self.tigerbeetle_ledger_names is None:
+            self.tigerbeetle_ledger_names = []
 
     def has_any_infra_needs(self) -> bool:
         """Check if any infrastructure is needed."""
@@ -63,6 +74,7 @@ class InfraRequirements:
             or self.needs_workers
             or self.needs_webhooks
             or self.needs_storage
+            or self.needs_tigerbeetle
         )
 
 
@@ -146,6 +158,26 @@ def analyze_infra_requirements(appspec: ir.AppSpec) -> InfraRequirements:
     # Analyze surfaces (for counting)
     requirements.surface_count = len(appspec.surfaces)
 
+    # Analyze ledgers (TigerBeetle integration)
+    if appspec.ledgers:
+        requirements.needs_tigerbeetle = True
+        requirements.tigerbeetle_ledger_count = len(appspec.ledgers)
+        requirements.tigerbeetle_transaction_count = len(appspec.transactions)
+        requirements.tigerbeetle_ledger_names = [ledger.name for ledger in appspec.ledgers]
+
+        # Collect unique currencies
+        currencies = list({ledger.currency for ledger in appspec.ledgers})
+        requirements.tigerbeetle_currencies = currencies
+
+        # TigerBeetle transactions often benefit from async processing
+        if appspec.transactions:
+            has_async_transactions = any(
+                tx.execution.value == "async" for tx in appspec.transactions
+            )
+            if has_async_transactions:
+                requirements.needs_queue = True
+                requirements.needs_workers = True
+
     return requirements
 
 
@@ -205,6 +237,14 @@ def get_required_env_vars(requirements: InfraRequirements) -> list[str]:
             [
                 "WEBHOOK_SECRET",
                 "WEBHOOK_URL",
+            ]
+        )
+
+    if requirements.needs_tigerbeetle:
+        env_vars.extend(
+            [
+                "TIGERBEETLE_CLUSTER_ID",
+                "TIGERBEETLE_ADDRESSES",
             ]
         )
 

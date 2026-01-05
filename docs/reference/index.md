@@ -17,6 +17,8 @@ Complete reference for the DAZZLE Domain-Specific Language v0.24.
 | [UX Layer](ux.md) | UX semantic layer, attention signals, persona variants |
 | [Scenarios](scenarios.md) | Personas, scenarios, demo fixtures |
 | [Experiences](experiences.md) | Multi-step user flows |
+| [Testing](testing.md) | Test design, stories, E2E flows |
+| [Deployment](deployment.md) | AWS infrastructure, TigerBeetle, CDK |
 | [CLI](cli.md) | Command-line interface reference |
 | [Grammar](grammar.md) | Formal EBNF grammar specification |
 

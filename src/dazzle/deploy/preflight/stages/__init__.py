@@ -10,6 +10,7 @@ from .bootstrap import BootstrapStage
 from .guardrails import GuardrailsStage
 from .lint import LintStage
 from .synth import SynthStage
+from .tigerbeetle import TigerBeetleStage
 
 __all__ = [
     "PreflightStage",
@@ -18,4 +19,5 @@ __all__ = [
     "AssertionsStage",
     "LintStage",
     "GuardrailsStage",
+    "TigerBeetleStage",
 ]

@@ -20,6 +20,7 @@ from .stacks import (
     MessagingStackGenerator,
     NetworkStackGenerator,
     ObservabilityStackGenerator,
+    TigerBeetleStackGenerator,
 )
 
 if TYPE_CHECKING:
@@ -196,6 +197,11 @@ class DeploymentRunner:
             NetworkStackGenerator(self.spec, self.aws_reqs, self.config, self.output_dir)
         )
 
+        # TigerBeetle (self-hosted ledger) - depends on Network, before Compute
+        generators.append(
+            TigerBeetleStackGenerator(self.spec, self.aws_reqs, self.config, self.output_dir)
+        )
+
         # Data (RDS, S3)
         generators.append(
             DataStackGenerator(self.spec, self.aws_reqs, self.config, self.output_dir)
@@ -244,6 +250,17 @@ class DeploymentRunner:
 network_stack = NetworkStack(
     app,
     "{app_name}-{env}-network",
+    env=env,
+)
+''')
+
+        # TigerBeetle stack (self-hosted ledger)
+        if "TigerBeetle" in stack_names:
+            stack_inits.append(f'''
+tigerbeetle_stack = TigerBeetleStack(
+    app,
+    "{app_name}-{env}-tigerbeetle",
+    network_stack=network_stack,
     env=env,
 )
 ''')
@@ -460,10 +477,23 @@ cdk destroy --all
 | Stack | Resources |
 |-------|-----------|
 | Network | VPC, Subnets, Security Groups |
+| TigerBeetle | Self-hosted TigerBeetle cluster (EC2 ASG) |
 | Data | RDS (PostgreSQL), S3 |
 | Messaging | SQS, EventBridge |
 | Compute | ECS Fargate, ALB, ECR |
 | Observability | CloudWatch Dashboard, Alarms |
+
+## TigerBeetle
+
+If your application uses ledgers, the TigerBeetle stack creates a self-hosted
+TigerBeetle cluster on EC2. The cluster uses SSM Parameter Store for node
+discovery. To connect from your application, read the connection parameters
+from SSM:
+
+```bash
+# Get node addresses
+aws ssm get-parameters-by-path --path "/{app_name}/{env}/tigerbeetle/nodes" --query "Parameters[*].Value" --output text
+```
 """
         readme_path = self.output_dir / "README.md"
         readme_path.write_text(readme)
@@ -501,7 +531,7 @@ cdk destroy --all
         Returns:
             Dictionary with infrastructure plan
         """
-        return {
+        plan_data: dict[str, Any] = {
             "app_name": self._get_app_name(),
             "environment": self.config.environment,
             "region": self.config.region.value,
@@ -526,6 +556,23 @@ cdk destroy --all
                 },
             },
         }
+
+        # Add TigerBeetle configuration if needed
+        if self.aws_reqs.needs_tigerbeetle:
+            tb_spec = self.aws_reqs.tigerbeetle_spec
+            plan_data["tigerbeetle"] = {
+                "enabled": True,
+                "node_count": self.config.tigerbeetle.node_count,
+                "instance_type": self.config.tigerbeetle.instance_type,
+                "volume_size_gb": self.config.tigerbeetle.volume_size_gb,
+                "volume_iops": self.config.tigerbeetle.volume_iops,
+                "ledger_count": tb_spec.ledger_count if tb_spec else 0,
+                "transaction_count": tb_spec.transaction_count if tb_spec else 0,
+                "currencies": tb_spec.currencies if tb_spec else [],
+                "ledger_names": tb_spec.ledger_names if tb_spec else [],
+            }
+
+        return plan_data
 
 
 __all__ = [

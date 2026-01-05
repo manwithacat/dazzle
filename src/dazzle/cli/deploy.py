@@ -127,6 +127,7 @@ def deploy_generate(
     reqs_table.add_row("S3", "Yes" if reqs["s3"] else "No")
     reqs_table.add_row("SQS", "Yes" if reqs["sqs"] else "No")
     reqs_table.add_row("EventBridge", "Yes" if reqs["eventbridge"] else "No")
+    reqs_table.add_row("TigerBeetle (EC2)", "Yes" if reqs.get("tigerbeetle") else "No")
     reqs_table.add_row("CloudWatch", "Yes")
 
     console.print(reqs_table)
@@ -244,6 +245,7 @@ def deploy_plan(
         ("EventBridge", reqs["eventbridge"]),
         ("SES", reqs["ses"]),
         ("ElastiCache", reqs["elasticache"]),
+        ("TigerBeetle (EC2)", reqs.get("tigerbeetle", False)),
         ("CloudWatch", True),
     ]
 
@@ -254,6 +256,20 @@ def deploy_plan(
             console.print(f"  [dim]○ {service}[/dim]")
 
     console.print()
+
+    # Show TigerBeetle configuration if needed
+    if "tigerbeetle" in plan:
+        tb = plan["tigerbeetle"]
+        console.print("[bold]TigerBeetle Configuration:[/bold]")
+        console.print(f"  Nodes: {tb['node_count']} x {tb['instance_type']}")
+        console.print(f"  Storage: {tb['volume_size_gb']}GB @ {tb['volume_iops']} IOPS")
+        console.print(f"  Ledgers: {tb['ledger_count']}")
+        if tb.get("ledger_names"):
+            for name in tb["ledger_names"]:
+                console.print(f"    - {name}")
+        if tb.get("currencies"):
+            console.print(f"  Currencies: {', '.join(tb['currencies'])}")
+        console.print()
 
     # Show stacks
     console.print("[bold]CDK Stacks:[/bold]")

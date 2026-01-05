@@ -83,6 +83,32 @@ class IAMPolicySpec:
     description: str | None = None
 
 
+@dataclass
+class TigerBeetleClusterSpec:
+    """
+    Specification for TigerBeetle cluster deployment.
+
+    TigerBeetle has no managed AWS service, so we deploy it on EC2 instances
+    with Auto Scaling Groups for HA.
+
+    Requirements:
+    - Node count must be odd (1, 3, or 5) for Raft consensus
+    - Minimum 3 nodes for production HA
+    - High-IOPS EBS gp3 volumes for WAL performance
+    """
+
+    cluster_id: int = 0
+    node_count: int = 3  # Must be odd for Raft consensus
+    instance_type: str = "r6i.large"  # Memory-optimized for TigerBeetle
+    volume_size_gb: int = 100
+    volume_iops: int = 10000  # High IOPS for WAL
+    volume_throughput_mbps: int = 500
+    currencies: list[str] = field(default_factory=list)
+    ledger_count: int = 0
+    transaction_count: int = 0
+    ledger_names: list[str] = field(default_factory=list)
+
+
 # =============================================================================
 # AWS Requirements
 # =============================================================================
@@ -121,6 +147,10 @@ class AWSRequirements:
     # Caching
     needs_elasticache: bool = False
 
+    # TigerBeetle (self-hosted ledger)
+    needs_tigerbeetle: bool = False
+    tigerbeetle_spec: TigerBeetleClusterSpec | None = None
+
     # Secrets
     secrets: list[str] = field(default_factory=list)
 
@@ -142,6 +172,7 @@ class AWSRequirements:
             "eventbridge": self.needs_eventbridge,
             "ses": self.needs_ses,
             "elasticache": self.needs_elasticache,
+            "tigerbeetle": self.needs_tigerbeetle,
             "tables": len(self.rds_tables),
             "queues": len(self.sqs_queues),
             "buckets": len(self.s3_buckets),
@@ -217,6 +248,25 @@ def analyze_aws_requirements(
     # -------------------------------------------------------------------------
     if infra_reqs.needs_cache:
         reqs.needs_elasticache = True
+
+    # -------------------------------------------------------------------------
+    # TigerBeetle (self-hosted ledger cluster)
+    # -------------------------------------------------------------------------
+    if infra_reqs.needs_tigerbeetle:
+        reqs.needs_tigerbeetle = True
+
+        # Determine node count based on environment
+        # Production requires 3+ nodes for HA, dev/staging can use 1
+        node_count = 3 if config.environment == "prod" else 1
+
+        reqs.tigerbeetle_spec = TigerBeetleClusterSpec(
+            cluster_id=0,
+            node_count=node_count,
+            ledger_count=infra_reqs.tigerbeetle_ledger_count,
+            transaction_count=infra_reqs.tigerbeetle_transaction_count,
+            currencies=infra_reqs.tigerbeetle_currencies or [],
+            ledger_names=infra_reqs.tigerbeetle_ledger_names or [],
+        )
 
     # -------------------------------------------------------------------------
     # Tenancy
@@ -343,5 +393,6 @@ __all__ = [
     "S3BucketSpec",
     "SESConfigSpec",
     "IAMPolicySpec",
+    "TigerBeetleClusterSpec",
     "analyze_aws_requirements",
 ]

@@ -282,6 +282,13 @@ class TestDeploymentRunnerGenerators:
 
             generators = runner._get_generators()
 
-            # Check order: Network -> Data -> Messaging -> Compute -> Observability
+            # Check order: Network -> TigerBeetle -> Data -> Messaging -> Compute -> Observability
             names = [g.stack_name for g in generators]
-            assert names == ["Network", "Data", "Messaging", "Compute", "Observability"]
+            assert names == [
+                "Network",
+                "TigerBeetle",
+                "Data",
+                "Messaging",
+                "Compute",
+                "Observability",
+            ]
