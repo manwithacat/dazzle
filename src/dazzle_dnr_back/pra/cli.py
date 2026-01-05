@@ -482,5 +482,225 @@ def format_result_markdown(data: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# ============================================================================
+# TigerBeetle Commands (v0.5.0)
+# ============================================================================
+
+
+@pra_group.group("tb")
+def tb_group() -> None:
+    """TigerBeetle stress testing commands."""
+    pass
+
+
+@tb_group.command("list")
+def tb_list_cmd() -> None:
+    """List available TigerBeetle test scenarios."""
+    try:
+        from .tigerbeetle_scenarios import list_tb_scenarios
+    except ImportError:
+        click.echo(
+            "TigerBeetle not installed. Install with: pip install dazzle[tigerbeetle]", err=True
+        )
+        sys.exit(1)
+
+    scenarios = list_tb_scenarios()
+
+    click.echo("\nAvailable TigerBeetle Scenarios:")
+    click.echo("=" * 60)
+
+    for s in scenarios:
+        duration = s.get("duration_seconds", "varies")
+        click.echo(f"\n{s['name']} ({s['type']})")
+        click.echo(f"  {s['description']}")
+        click.echo(f"  Duration: {duration} seconds")
+
+    click.echo()
+
+
+@tb_group.command("run")
+@click.argument("scenario", type=str, default="tb_quick")
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    help="Output file for results (JSON)",
+)
+@click.option(
+    "--format",
+    "-f",
+    type=click.Choice(["json", "human", "markdown"]),
+    default="human",
+    help="Report format",
+)
+@click.option(
+    "--address",
+    "-a",
+    type=str,
+    default="127.0.0.1:3000",
+    help="TigerBeetle server address",
+)
+@click.option(
+    "--cluster-id",
+    "-c",
+    type=int,
+    default=0,
+    help="TigerBeetle cluster ID",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Show verbose progress",
+)
+def tb_run_cmd(
+    scenario: str,
+    output: str | None,
+    format: str,
+    address: str,
+    cluster_id: int,
+    verbose: bool,
+) -> None:
+    """Run a TigerBeetle stress test scenario.
+
+    SCENARIO is the scenario name (default: tb_quick).
+    Use 'pra tb list' to see available scenarios.
+
+    Examples:
+
+        dazzle pra tb run tb_quick
+
+        dazzle pra tb run tb_steady -o results.json
+
+        dazzle pra tb run tb_burst --format markdown
+
+        dazzle pra tb run tb_full -a 192.168.1.10:3000
+    """
+    try:
+        from .tigerbeetle_client import TigerBeetleConfig
+        from .tigerbeetle_harness import TigerBeetleHarness
+        from .tigerbeetle_scenarios import TBScenarioType
+    except ImportError:
+        click.echo(
+            "TigerBeetle not installed. Install with: pip install dazzle[tigerbeetle]", err=True
+        )
+        sys.exit(1)
+
+    try:
+        scenario_type = TBScenarioType(scenario)
+    except ValueError:
+        click.echo(f"Unknown scenario: {scenario}", err=True)
+        click.echo("Use 'dazzle pra tb list' to see available scenarios", err=True)
+        sys.exit(1)
+
+    click.echo(f"\nRunning TigerBeetle scenario: {scenario}")
+    click.echo(f"Connecting to: {address} (cluster {cluster_id})")
+    click.echo("=" * 60)
+
+    # Configure connection
+    tb_config = TigerBeetleConfig(
+        cluster_id=cluster_id,
+        addresses=[address],
+    )
+
+    # Progress callback
+    def progress_callback(
+        phase: str,
+        progress: float,
+        rate: float,
+        accounts: int,
+        transfers: int,
+    ) -> None:
+        if verbose:
+            click.echo(
+                f"  [{phase}] {progress:.1f}% @ {rate:.0f}/s "
+                f"(accounts: {accounts}, transfers: {transfers})"
+            )
+
+    # Run the test
+    harness = TigerBeetleHarness(tb_config)
+
+    result = asyncio.run(
+        harness.run_scenario(scenario_type, progress_callback if verbose else None)
+    )
+
+    # Generate report
+    report_format = {
+        "json": ReportFormat.JSON,
+        "human": ReportFormat.HUMAN,
+        "markdown": ReportFormat.MARKDOWN,
+    }[format]
+
+    report = harness.generate_report(result, report_format)
+
+    # Output
+    if output:
+        output_path = Path(output)
+        output_path.write_text(json.dumps(result.to_dict(), indent=2, default=str))
+        click.echo(f"\nResults saved to: {output_path}")
+
+    click.echo("\n" + report)
+
+    # Exit code based on status and criteria
+    if result.status.value == "skipped":
+        click.echo("\n⏭️  Test skipped (TigerBeetle not available)")
+        sys.exit(2)
+    elif result.criteria_passed:
+        click.echo("\n✅ All criteria passed")
+        sys.exit(0)
+    else:
+        click.echo("\n❌ Some criteria failed")
+        sys.exit(1)
+
+
+@tb_group.command("check")
+@click.option(
+    "--address",
+    "-a",
+    type=str,
+    default="127.0.0.1:3000",
+    help="TigerBeetle server address",
+)
+@click.option(
+    "--cluster-id",
+    "-c",
+    type=int,
+    default=0,
+    help="TigerBeetle cluster ID",
+)
+def tb_check_cmd(address: str, cluster_id: int) -> None:
+    """Check if TigerBeetle is available.
+
+    Example:
+
+        dazzle pra tb check
+
+        dazzle pra tb check -a 192.168.1.10:3000
+    """
+    try:
+        from .tigerbeetle_client import TigerBeetleConfig, check_tigerbeetle_available
+    except ImportError:
+        click.echo("❌ TigerBeetle client not installed")
+        click.echo("   Install with: pip install dazzle[tigerbeetle]")
+        sys.exit(1)
+
+    click.echo(f"Checking TigerBeetle at {address} (cluster {cluster_id})...")
+
+    tb_config = TigerBeetleConfig(
+        cluster_id=cluster_id,
+        addresses=[address],
+    )
+
+    available = asyncio.run(check_tigerbeetle_available(tb_config))
+
+    if available:
+        click.echo("✅ TigerBeetle is available and responding")
+        sys.exit(0)
+    else:
+        click.echo("❌ TigerBeetle is not available")
+        click.echo("   Make sure the server is running and accessible")
+        sys.exit(1)
+
+
 # Export for registration with main CLI
 __all__ = ["pra_group"]

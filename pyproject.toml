@@ -83,6 +83,10 @@ messaging = [
     "redis>=5.0",
     "aiokafka>=0.9",
 ]
+# TigerBeetle ledger integration (v0.5.0 - Issue #ledgers)
+tigerbeetle = [
+    "tigerbeetle>=0.16.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/manwithacat/dazzle"
