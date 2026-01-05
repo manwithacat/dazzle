@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dazzle_dnr_back.metrics import MetricsCollector
+    from dazzle_dnr_back.metrics.system_collector import SystemMetricsCollector
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def _get_tb() -> ModuleType:
     global _tb_module
     if _tb_module is None:
         try:
-            import tigerbeetle as tb
+            from tigerbeetle import client as tb
 
             _tb_module = tb
         except ImportError as e:
@@ -115,16 +116,19 @@ class TigerBeetleClient:
         self,
         config: TigerBeetleConfig | None = None,
         metrics: MetricsCollector | None = None,
+        system_metrics: SystemMetricsCollector | None = None,
     ) -> None:
         """
         Initialize client (does not connect yet).
 
         Args:
             config: TigerBeetle connection configuration
-            metrics: Optional metrics collector for latency tracking
+            metrics: Optional PRA metrics collector for latency tracking
+            system_metrics: Optional system metrics collector for observability
         """
         self._config = config or TigerBeetleConfig()
         self._metrics = metrics
+        self._system_metrics = system_metrics
         self._client = None
         self._stats = TigerBeetleStats()
         self._connected = False
@@ -136,18 +140,20 @@ class TigerBeetleClient:
         cls,
         config: TigerBeetleConfig | None = None,
         metrics: MetricsCollector | None = None,
+        system_metrics: SystemMetricsCollector | None = None,
     ) -> AsyncIterator[TigerBeetleClient]:
         """
         Context manager for connecting to TigerBeetle.
 
         Args:
             config: Optional configuration override
-            metrics: Optional metrics collector
+            metrics: Optional PRA metrics collector
+            system_metrics: Optional system metrics collector
 
         Yields:
             Connected TigerBeetleClient
         """
-        client = cls(config, metrics)
+        client = cls(config, metrics, system_metrics)
         try:
             await client._connect()
             yield client
@@ -199,13 +205,25 @@ class TigerBeetleClient:
         tb = _get_tb()
         return int(tb.id())
 
-    def _record_latency(self, operation: str, latency_ms: float) -> None:
+    def _record_latency(
+        self, operation: str, latency_ms: float, count: int = 1, failed: int = 0
+    ) -> None:
         """Record operation latency in metrics."""
         self._stats.total_latency_ms += latency_ms
         self._stats.operation_count += 1
 
+        # PRA metrics (for stress testing)
         if self._metrics:
             self._metrics.record_latency(f"tigerbeetle.{operation}", latency_ms)
+
+        # System metrics (for observability dashboard)
+        if self._system_metrics:
+            self._system_metrics.record_tigerbeetle_operation(
+                operation=operation,
+                latency_ms=latency_ms,
+                count=count,
+                failed=failed,
+            )
 
     async def create_accounts(
         self,
@@ -245,11 +263,14 @@ class TigerBeetleClient:
         try:
             results = await self._client.create_accounts(accounts)
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_accounts", latency_ms)
 
             # Check for failures
             failed_ids = {r.index for r in results}
             succeeded = [aid for i, aid in enumerate(account_ids) if i not in failed_ids]
+
+            self._record_latency(
+                "create_accounts", latency_ms, count=len(succeeded), failed=len(failed_ids)
+            )
 
             self._stats.accounts_created += len(succeeded)
             self._stats.accounts_failed += len(failed_ids)
@@ -264,7 +285,7 @@ class TigerBeetleClient:
 
         except Exception as e:
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_accounts", latency_ms)
+            self._record_latency("create_accounts", latency_ms, failed=len(account_ids))
             self._stats.accounts_failed += len(account_ids)
             logger.error(f"Error creating accounts: {e}")
             raise
@@ -312,19 +333,20 @@ class TigerBeetleClient:
         try:
             results = await self._client.create_transfers([transfer])
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_transfer", latency_ms)
 
             if results:
+                self._record_latency("create_transfer", latency_ms, count=0, failed=1)
                 self._stats.transfers_failed += 1
                 logger.warning(f"Transfer failed: {results[0].result}")
                 return False
 
+            self._record_latency("create_transfer", latency_ms, count=1)
             self._stats.transfers_created += 1
             return True
 
         except Exception as e:
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_transfer", latency_ms)
+            self._record_latency("create_transfer", latency_ms, failed=1)
             self._stats.transfers_failed += 1
             logger.error(f"Error creating transfer: {e}")
             raise
@@ -377,19 +399,22 @@ class TigerBeetleClient:
         try:
             results = await self._client.create_transfers(tb_transfers)
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_linked_transfers", latency_ms)
 
             if results:
+                self._record_latency(
+                    "create_linked_transfers", latency_ms, count=0, failed=len(transfers)
+                )
                 self._stats.transfers_failed += len(transfers)
                 logger.warning(f"Linked transfers failed: {[r.result for r in results]}")
                 return False
 
+            self._record_latency("create_linked_transfers", latency_ms, count=len(transfers))
             self._stats.transfers_created += len(transfers)
             return True
 
         except Exception as e:
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("create_linked_transfers", latency_ms)
+            self._record_latency("create_linked_transfers", latency_ms, failed=len(transfers))
             self._stats.transfers_failed += len(transfers)
             logger.error(f"Error creating linked transfers: {e}")
             raise
@@ -411,7 +436,7 @@ class TigerBeetleClient:
         try:
             accounts = await self._client.lookup_accounts(account_ids)
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("lookup_accounts", latency_ms)
+            self._record_latency("lookup_accounts", latency_ms, count=len(accounts))
             self._stats.lookups_performed += 1
 
             return [
@@ -430,7 +455,7 @@ class TigerBeetleClient:
 
         except Exception as e:
             latency_ms = (time.perf_counter() - start) * 1000
-            self._record_latency("lookup_accounts", latency_ms)
+            self._record_latency("lookup_accounts", latency_ms, failed=len(account_ids))
             logger.error(f"Error looking up accounts: {e}")
             raise
 

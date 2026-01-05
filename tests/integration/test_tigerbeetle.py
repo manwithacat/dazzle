@@ -48,7 +48,7 @@ def get_tb_cluster_id() -> int:
 def tb_client():
     """Create a TigerBeetle client for testing."""
     try:
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
     except ImportError:
         pytest.skip("TigerBeetle client not installed (pip install tigerbeetle)")
 
@@ -91,7 +91,7 @@ class TestTigerBeetleAccounts:
 
     def test_create_account(self, tb_client, unique_id: int) -> None:
         """Should create an account successfully."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         account = tb.Account(
             id=unique_id,
@@ -115,7 +115,7 @@ class TestTigerBeetleAccounts:
 
     def test_create_account_linked_pair(self, tb_client) -> None:
         """Should create linked accounts atomically."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         id1 = uuid.uuid4().int & ((1 << 128) - 1)
         id2 = uuid.uuid4().int & ((1 << 128) - 1)
@@ -142,7 +142,7 @@ class TestTigerBeetleAccounts:
 
     def test_duplicate_account_returns_exists(self, tb_client, unique_id: int) -> None:
         """Creating duplicate account should return EXISTS error."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         account = tb.Account(
             id=unique_id,
@@ -166,7 +166,7 @@ class TestTigerBeetleTransfers:
     @pytest.fixture
     def account_pair(self, tb_client) -> tuple[int, int]:
         """Create a pair of accounts for transfer testing."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id = uuid.uuid4().int & ((1 << 128) - 1)
         credit_id = uuid.uuid4().int & ((1 << 128) - 1)
@@ -217,7 +217,7 @@ class TestTigerBeetleTransfers:
 
     def test_create_transfer(self, tb_client, account_pair: tuple[int, int]) -> None:
         """Should create a transfer successfully."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id, credit_id = account_pair
         transfer_id = uuid.uuid4().int & ((1 << 128) - 1)
@@ -243,7 +243,7 @@ class TestTigerBeetleTransfers:
 
     def test_transfer_updates_balances(self, tb_client, account_pair: tuple[int, int]) -> None:
         """Transfer should update account balances."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id, credit_id = account_pair
 
@@ -275,7 +275,7 @@ class TestTigerBeetleTransfers:
 
     def test_transfer_exceeds_balance_fails(self, tb_client, account_pair: tuple[int, int]) -> None:
         """Transfer exceeding balance should fail (with CREDITS_MUST_NOT_EXCEED_DEBITS)."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id, credit_id = account_pair
 
@@ -301,7 +301,7 @@ class TestTigerBeetlePendingTransfers:
     @pytest.fixture
     def funded_accounts(self, tb_client) -> tuple[int, int]:
         """Create funded accounts for pending transfer testing."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         bank_id = uuid.uuid4().int & ((1 << 128) - 1)
         debit_id = uuid.uuid4().int & ((1 << 128) - 1)
@@ -333,7 +333,7 @@ class TestTigerBeetlePendingTransfers:
 
     def test_pending_transfer_and_post(self, tb_client, funded_accounts: tuple[int, int]) -> None:
         """Should create pending transfer and post it."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id, credit_id = funded_accounts
         pending_id = uuid.uuid4().int & ((1 << 128) - 1)
@@ -386,7 +386,7 @@ class TestTigerBeetlePendingTransfers:
 
     def test_pending_transfer_void(self, tb_client, funded_accounts: tuple[int, int]) -> None:
         """Should void a pending transfer."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         debit_id, credit_id = funded_accounts
         pending_id = uuid.uuid4().int & ((1 << 128) - 1)
@@ -432,7 +432,7 @@ class TestTigerBeetleBatch:
 
     def test_batch_account_creation(self, tb_client) -> None:
         """Should create multiple accounts in a batch."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         accounts = [
             tb.Account(
@@ -453,7 +453,7 @@ class TestTigerBeetleBatch:
 
     def test_batch_transfers(self, tb_client) -> None:
         """Should create multiple transfers in a batch."""
-        import tigerbeetle as tb
+        from tigerbeetle import client as tb
 
         # Create source and destination accounts
         bank_id = uuid.uuid4().int & ((1 << 128) - 1)

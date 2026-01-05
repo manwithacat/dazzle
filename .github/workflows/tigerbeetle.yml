@@ -101,7 +101,7 @@ jobs:
         # Try to connect with Python client
         for i in {1..30}; do
           echo "Attempt $i/30..."
-          if python -c "import tigerbeetle; c = tigerbeetle.Client(cluster_id=0, addresses=['127.0.0.1:3000']); print('Connected successfully!')"; then
+          if python -c "from tigerbeetle.client import Client; c = Client(cluster_id=0, addresses=['127.0.0.1:3000']); print('Connected successfully!')"; then
             echo "TigerBeetle is ready!"
             break
           fi
@@ -277,7 +277,7 @@ jobs:
         # Try to connect with Python client
         for i in {1..30}; do
           echo "Attempt $i/30..."
-          if python -c "import tigerbeetle; c = tigerbeetle.Client(cluster_id=0, addresses=['127.0.0.1:3000']); print('Connected successfully!')"; then
+          if python -c "from tigerbeetle.client import Client; c = Client(cluster_id=0, addresses=['127.0.0.1:3000']); print('Connected successfully!')"; then
             echo "TigerBeetle is ready!"
             break
           fi
