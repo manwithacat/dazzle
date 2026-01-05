@@ -45,18 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [tigerbeetle-unit]
 
-    services:
-      tigerbeetle:
-        image: ghcr.io/tigerbeetle/tigerbeetle:latest
-        ports:
-          - 3000:3000
-        options: >-
-          --security-opt seccomp=unconfined
-          --health-cmd "echo 'healthy'"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
     - uses: actions/checkout@v6
 
@@ -70,13 +58,40 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,tigerbeetle]"
 
-    - name: Wait for TigerBeetle
+    - name: Start TigerBeetle
       run: |
+        # Pull the TigerBeetle image
+        docker pull ghcr.io/tigerbeetle/tigerbeetle:latest
+
+        # Create data directory
+        mkdir -p /tmp/tigerbeetle
+
+        # Format the data file (single replica for testing)
+        docker run --rm \
+          -v /tmp/tigerbeetle:/data \
+          ghcr.io/tigerbeetle/tigerbeetle:latest \
+          format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle
+
+        # Start TigerBeetle server in background
+        docker run -d \
+          --name tigerbeetle \
+          --security-opt seccomp=unconfined \
+          -v /tmp/tigerbeetle:/data \
+          -p 3000:3000 \
+          ghcr.io/tigerbeetle/tigerbeetle:latest \
+          start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle
+
+        # Wait for TigerBeetle to be ready
         echo "Waiting for TigerBeetle to be ready..."
         for i in {1..30}; do
           if python -c "import tigerbeetle; c = tigerbeetle.Client(0, ['127.0.0.1:3000']); print('Connected!')" 2>/dev/null; then
             echo "TigerBeetle is ready!"
             break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "TigerBeetle failed to start!"
+            docker logs tigerbeetle
+            exit 1
           fi
           echo "Attempt $i/30 - waiting..."
           sleep 2
@@ -195,14 +210,6 @@ jobs:
     # Only run on main branch pushes (not PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    services:
-      tigerbeetle:
-        image: ghcr.io/tigerbeetle/tigerbeetle:latest
-        ports:
-          - 3000:3000
-        options: >-
-          --security-opt seccomp=unconfined
-
     steps:
     - uses: actions/checkout@v6
 
@@ -216,12 +223,42 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,tigerbeetle]"
 
-    - name: Wait for TigerBeetle
+    - name: Start TigerBeetle
       run: |
+        # Pull the TigerBeetle image
+        docker pull ghcr.io/tigerbeetle/tigerbeetle:latest
+
+        # Create data directory
+        mkdir -p /tmp/tigerbeetle
+
+        # Format the data file (single replica for testing)
+        docker run --rm \
+          -v /tmp/tigerbeetle:/data \
+          ghcr.io/tigerbeetle/tigerbeetle:latest \
+          format --cluster=0 --replica=0 --replica-count=1 /data/0_0.tigerbeetle
+
+        # Start TigerBeetle server in background
+        docker run -d \
+          --name tigerbeetle \
+          --security-opt seccomp=unconfined \
+          -v /tmp/tigerbeetle:/data \
+          -p 3000:3000 \
+          ghcr.io/tigerbeetle/tigerbeetle:latest \
+          start --addresses=0.0.0.0:3000 /data/0_0.tigerbeetle
+
+        # Wait for TigerBeetle to be ready
+        echo "Waiting for TigerBeetle to be ready..."
         for i in {1..30}; do
-          if python -c "import tigerbeetle; tigerbeetle.Client(0, ['127.0.0.1:3000'])" 2>/dev/null; then
+          if python -c "import tigerbeetle; c = tigerbeetle.Client(0, ['127.0.0.1:3000']); print('Connected!')" 2>/dev/null; then
+            echo "TigerBeetle is ready!"
             break
           fi
+          if [ $i -eq 30 ]; then
+            echo "TigerBeetle failed to start!"
+            docker logs tigerbeetle
+            exit 1
+          fi
+          echo "Attempt $i/30 - waiting..."
           sleep 2
         done
 
