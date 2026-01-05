@@ -594,6 +594,60 @@ def lookup_inference_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+def get_product_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Load natural language product specification from spec/ directory or SPEC.md.
+
+    Supports flexible spec organization:
+    - spec/ directory with multiple markdown files (recommended for complex projects)
+    - SPEC.md single file (backward compatible)
+    """
+    from dazzle.core.spec_loader import get_spec_summary, load_spec
+
+    include_sources = args.get("include_sources", True)
+    summary_only = args.get("summary_only", False)
+
+    if summary_only:
+        # Just return metadata about spec files
+        summary = get_spec_summary(project_root)
+        return json.dumps(
+            {
+                "project": str(project_root.name),
+                **summary,
+                "hint": "Use summary_only=false to get full content",
+            },
+            indent=2,
+        )
+
+    # Load full spec content
+    spec = load_spec(project_root, include_sources=include_sources)
+
+    if spec.is_empty:
+        return json.dumps(
+            {
+                "error": "No product specification found",
+                "project": str(project_root.name),
+                "searched": ["spec/ directory", "SPEC.md"],
+                "hint": (
+                    "Create a SPEC.md file or spec/ directory with markdown files "
+                    "describing your product requirements."
+                ),
+            },
+            indent=2,
+        )
+
+    return json.dumps(
+        {
+            "project": str(project_root.name),
+            "source_type": spec.source_type,
+            "file_count": spec.file_count,
+            "source_files": [str(f.relative_to(project_root)) for f in spec.source_files],
+            "content": spec.content,
+        },
+        indent=2,
+    )
+
+
 # ============================================================================
 # Internal/Development Tools
 # ============================================================================

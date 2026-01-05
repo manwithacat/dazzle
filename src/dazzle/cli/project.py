@@ -557,23 +557,61 @@ def layout_plan_command(
 
 
 def analyze_spec_command(
-    spec_file: str = typer.Argument("SPEC.md", help="Specification file to analyze"),
+    spec_file: str | None = typer.Argument(
+        None,
+        help="Specification file or directory. If omitted, auto-detects spec/ directory or SPEC.md",
+    ),
     output: str | None = typer.Option(None, "--output", "-o", help="Output DSL file"),
     interactive: bool = typer.Option(False, "--interactive", "-i", help="Interactive Q&A mode"),
     provider: str = typer.Option("anthropic", "--provider", "-p", help="LLM provider"),
 ) -> None:
     """
     Analyze a specification file using LLM to generate DSL.
+
+    Supports flexible spec organization:
+    - spec/ directory with multiple markdown files
+    - SPEC.md single file (backward compatible)
+    - Explicit file path as argument
     """
-    spec_path = Path(spec_file)
-    if not spec_path.exists():
-        typer.echo(f"Specification file not found: {spec_file}", err=True)
-        raise typer.Exit(code=1)
+    from dazzle.core.spec_loader import load_spec
+
+    # Determine spec content
+    if spec_file:
+        # Explicit file/directory specified
+        spec_path = Path(spec_file)
+        if not spec_path.exists():
+            typer.echo(f"Specification not found: {spec_file}", err=True)
+            raise typer.Exit(code=1)
+
+        if spec_path.is_dir():
+            # Load from directory - treat the dir as the project root with spec/ inside,
+            # or as the spec directory itself if it's named 'spec'
+            if spec_path.name == "spec":
+                project_root = spec_path.parent
+            else:
+                project_root = spec_path
+            spec_result = load_spec(project_root, include_sources=True)
+            spec_content = spec_result.content
+            spec_display = f"{spec_file}/ ({spec_result.file_count} files)"
+        else:
+            spec_content = spec_path.read_text()
+            spec_display = spec_file
+    else:
+        # Auto-detect from current directory
+        spec_result = load_spec(Path.cwd(), include_sources=True)
+        if spec_result.is_empty:
+            typer.echo("No specification found. Create SPEC.md or spec/ directory.", err=True)
+            raise typer.Exit(code=1)
+        spec_content = spec_result.content
+        if spec_result.source_type == "directory":
+            spec_display = f"spec/ ({spec_result.file_count} files)"
+        else:
+            spec_display = "SPEC.md"
 
     try:
         from dazzle.llm import LLMProvider, SpecAnalyzer
 
-        typer.echo(f"📄 Analyzing: {spec_file}")
+        typer.echo(f"📄 Analyzing: {spec_display}")
         typer.echo(f"   Provider: {provider}")
 
         # Convert provider string to enum
@@ -586,7 +624,6 @@ def analyze_spec_command(
             raise typer.Exit(code=1)
 
         analyzer = SpecAnalyzer(provider=provider_enum)
-        spec_content = spec_path.read_text()
 
         typer.echo("\n🔍 Analyzing specification...")
         analysis = analyzer.analyze(spec_content)

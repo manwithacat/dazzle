@@ -99,6 +99,7 @@ from .tool_handlers import (
     get_entities,
     get_env_vars_for_packs_handler,
     get_mcp_status_handler,
+    get_product_spec_handler,
     get_runtime_coverage_gaps_handler,
     get_sitespec_handler,
     get_stories_handler,
@@ -190,6 +191,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         result = get_workflow_guide_handler(arguments)
     elif name == "lookup_inference":
         result = lookup_inference_handler(arguments)
+    elif name == "get_product_spec":
+        explicit_path = arguments.get("project_path")
+        if explicit_path:
+            project_path = resolve_project_path(explicit_path)
+        else:
+            project_path = get_active_project_path()
+        result = get_product_spec_handler(project_path, arguments)
 
     # Internal/development tools
     elif name == "get_mcp_status":

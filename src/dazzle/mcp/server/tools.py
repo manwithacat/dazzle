@@ -214,6 +214,30 @@ def get_project_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="get_product_spec",
+            description=(
+                "Load natural language product specification. "
+                "Loads from spec/ directory (multiple markdown files) or SPEC.md (single file). "
+                "Returns combined content suitable for LLM analysis and DSL generation. "
+                "Use this to understand what the founder wants to build before generating DSL."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "include_sources": {
+                        "type": "boolean",
+                        "description": "Include source file markers (<!-- Source: path -->) in output. Default: true",
+                    },
+                    "summary_only": {
+                        "type": "boolean",
+                        "description": "Return only metadata (file count, paths) without content. Useful for checking spec status.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
