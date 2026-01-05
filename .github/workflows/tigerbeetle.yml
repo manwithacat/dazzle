@@ -105,8 +105,8 @@ jobs:
         # Try to connect with Python client
         for i in {1..30}; do
           echo "Attempt $i/30..."
-          # Use positional arguments: cluster_id, replica_addresses
-          if python -c "from tigerbeetle.client import Client; c = Client(0, ['127.0.0.1:3000']); print('Connected successfully!')"; then
+          # replica_addresses is a comma-separated string, not a list
+          if python -c "from tigerbeetle.client import Client; c = Client(0, '127.0.0.1:3000'); print('Connected successfully!')"; then
             echo "TigerBeetle is ready!"
             break
           fi
@@ -282,8 +282,8 @@ jobs:
         # Try to connect with Python client
         for i in {1..30}; do
           echo "Attempt $i/30..."
-          # Use positional arguments: cluster_id, replica_addresses
-          if python -c "from tigerbeetle.client import Client; c = Client(0, ['127.0.0.1:3000']); print('Connected successfully!')"; then
+          # replica_addresses is a comma-separated string, not a list
+          if python -c "from tigerbeetle.client import Client; c = Client(0, '127.0.0.1:3000'); print('Connected successfully!')"; then
             echo "TigerBeetle is ready!"
             break
           fi

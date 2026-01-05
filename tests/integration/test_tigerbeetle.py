@@ -56,8 +56,9 @@ def tb_client():
     cluster_id = get_tb_cluster_id()
 
     try:
-        # Use positional args: cluster_id, replica_addresses
-        client = tb.Client(cluster_id, addresses)
+        # replica_addresses is a comma-separated string, not a list
+        addresses_str = ",".join(addresses)
+        client = tb.Client(cluster_id, addresses_str)
         yield client
     except Exception as e:
         pytest.skip(f"Could not connect to TigerBeetle at {addresses}: {e}")
