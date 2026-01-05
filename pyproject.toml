@@ -142,6 +142,7 @@ markers = [
     "display: Display/UI element tests (FieldTest Hub)",
     "pra: Performance Reference App stress tests",
     "corpus: Parser corpus golden snapshot tests",
+    "tigerbeetle: TigerBeetle integration tests (requires running TigerBeetle)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
