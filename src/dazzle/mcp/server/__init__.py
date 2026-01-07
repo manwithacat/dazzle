@@ -194,10 +194,13 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     elif name == "get_product_spec":
         explicit_path = arguments.get("project_path")
         if explicit_path:
-            project_path = resolve_project_path(explicit_path)
+            project_path: Path | None = resolve_project_path(explicit_path)
         else:
             project_path = get_active_project_path()
-        result = get_product_spec_handler(project_path, arguments)
+        if not project_path:
+            result = json.dumps({"error": "No active project. Use select_project first."})
+        else:
+            result = get_product_spec_handler(project_path, arguments)
 
     # Internal/development tools
     elif name == "get_mcp_status":
