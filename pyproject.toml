@@ -87,6 +87,28 @@ messaging = [
 tigerbeetle = [
     "tigerbeetle>=0.16.0",
 ]
+# Mobile authentication (JWT, OAuth2, Push)
+mobile = [
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.0",
+]
+# Social authentication providers
+social_auth = [
+    "google-auth>=2.25.0",
+    "httpx>=0.25.0",  # For OAuth2 flows
+]
+# Push notifications
+push = [
+    "firebase-admin>=6.2.0",
+]
+# All mobile features
+mobile_full = [
+    "PyJWT>=2.8.0",
+    "cryptography>=41.0.0",
+    "google-auth>=2.25.0",
+    "httpx>=0.25.0",
+    "firebase-admin>=6.2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/manwithacat/dazzle"
