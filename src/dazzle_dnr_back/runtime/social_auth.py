@@ -13,9 +13,18 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-if TYPE_CHECKING:
-    from fastapi import APIRouter
+# FastAPI imports - needed at module level for proper dependency injection
+try:
+    from fastapi import APIRouter, HTTPException, Request
 
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+    APIRouter = None  # type: ignore
+    HTTPException = None  # type: ignore
+    Request = None  # type: ignore
+
+if TYPE_CHECKING:
     from dazzle_dnr_back.runtime.auth import AuthStore, UserRecord
     from dazzle_dnr_back.runtime.jwt_auth import JWTService
     from dazzle_dnr_back.runtime.token_store import TokenStore
@@ -608,9 +617,7 @@ def create_social_auth_routes(
     Returns:
         FastAPI router with social auth endpoints
     """
-    try:
-        from fastapi import APIRouter, HTTPException, Request
-    except ImportError:
+    if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for social auth routes")
 
     router = APIRouter(prefix="/auth/social", tags=["Social Authentication"])
