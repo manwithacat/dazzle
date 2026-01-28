@@ -14,6 +14,17 @@ from unittest.mock import patch
 
 import pytest
 
+# Check if FastAPI is available
+try:
+    import fastapi  # noqa: F401
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+
+# Skip all tests in this module if FastAPI is not installed
+pytestmark = pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+
 if TYPE_CHECKING:
     from dazzle_dnr_back.specs import BackendSpec
 
