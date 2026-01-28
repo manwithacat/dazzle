@@ -52,6 +52,7 @@ class ServerConfig:
     # Authentication settings
     enable_auth: bool = False
     auth_db_path: Path = field(default_factory=lambda: Path(".dazzle/auth.db"))
+    auth_config: Any = None  # AuthConfig from manifest (for OAuth providers)
 
     # File upload settings
     enable_files: bool = False
@@ -131,6 +132,7 @@ class DNRBackendApp:
         use_database: bool | None = None,
         enable_auth: bool | None = None,
         auth_db_path: str | Path | None = None,
+        auth_config: Any = None,  # AuthConfig from manifest (for OAuth providers)
         enable_files: bool | None = None,
         files_path: str | Path | None = None,
         files_db_path: str | Path | None = None,
@@ -184,6 +186,7 @@ class DNRBackendApp:
         self._use_database = use_database if use_database is not None else config.use_database
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
         self._auth_db_path = Path(auth_db_path) if auth_db_path else config.auth_db_path
+        self._auth_config = auth_config if auth_config is not None else config.auth_config
         self._enable_files = enable_files if enable_files is not None else config.enable_files
         self._files_path = Path(files_path) if files_path else config.files_path
         self._files_db_path = Path(files_db_path) if files_db_path else config.files_db_path
@@ -209,6 +212,10 @@ class DNRBackendApp:
         self._db_manager: DatabaseManager | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
+        # Social auth (OAuth2)
+        self._jwt_service: Any | None = None  # JWTService type
+        self._token_store: Any | None = None  # TokenStore type
+        self._social_auth_service: Any | None = None  # SocialAuthService type
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
@@ -360,6 +367,138 @@ class DNRBackendApp:
                 ],
                 "stats": channel_manager.get_outbox_stats(),
             }
+
+    def _init_social_auth(self) -> None:
+        """Initialize social auth (OAuth2) if providers are configured."""
+        if not self._auth_config or not self._app or not self._auth_store:
+            return
+
+        # Check if OAuth providers are configured
+        oauth_providers = getattr(self._auth_config, "oauth_providers", None)
+        if not oauth_providers:
+            return
+
+        import logging
+        import os
+
+        logger = logging.getLogger(__name__)
+
+        try:
+            from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+            from dazzle_dnr_back.runtime.social_auth import (
+                SocialAuthService,
+                create_social_auth_routes,
+            )
+            from dazzle_dnr_back.runtime.token_store import TokenStore
+        except ImportError as e:
+            logger.warning(f"Social auth dependencies not available: {e}")
+            return
+
+        # Get JWT config from auth_config
+        jwt_cfg = getattr(self._auth_config, "jwt", None)
+        access_minutes = getattr(jwt_cfg, "access_token_minutes", 15) if jwt_cfg else 15
+        refresh_days = getattr(jwt_cfg, "refresh_token_days", 7) if jwt_cfg else 7
+
+        # Create JWT service
+        jwt_secret = os.getenv("JWT_SECRET")
+        jwt_config_kwargs: dict[str, Any] = {
+            "access_token_expire_minutes": access_minutes,
+            "refresh_token_expire_days": refresh_days,
+        }
+        if jwt_secret:
+            jwt_config_kwargs["secret_key"] = jwt_secret
+        self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
+
+        # Create token store
+        token_db_path = self._auth_db_path.parent / "tokens.db"
+        self._token_store = TokenStore(
+            db_path=token_db_path,
+            token_lifetime_days=refresh_days,
+        )
+
+        # Build social auth config from manifest + environment
+        social_config = self._build_social_auth_config(oauth_providers)
+        if not social_config:
+            logger.info("No OAuth providers configured with valid credentials")
+            return
+
+        # Create social auth service
+        self._social_auth_service = SocialAuthService(
+            auth_store=self._auth_store,
+            jwt_service=self._jwt_service,
+            token_store=self._token_store,
+            config=social_config,
+        )
+
+        # Register social auth routes
+        social_router = create_social_auth_routes(self._social_auth_service)
+        self._app.include_router(social_router)
+
+        # Log enabled providers
+        enabled = []
+        if social_config.google_client_id:
+            enabled.append("google")
+        if social_config.github_client_id:
+            enabled.append("github")
+        if social_config.apple_team_id:
+            enabled.append("apple")
+
+        if enabled:
+            logger.info(f"Social auth enabled: {', '.join(enabled)}")
+
+    def _build_social_auth_config(self, oauth_providers: list[Any]) -> Any | None:
+        """
+        Build SocialAuthConfig from manifest oauth_providers.
+
+        Reads credentials from environment variables specified in manifest.
+        """
+        import logging
+        import os
+
+        from dazzle_dnr_back.runtime.social_auth import SocialAuthConfig
+
+        logger = logging.getLogger(__name__)
+        config = SocialAuthConfig()
+        any_configured = False
+
+        for provider_cfg in oauth_providers:
+            provider = provider_cfg.provider.lower()
+
+            if provider == "google":
+                client_id = os.getenv(provider_cfg.client_id_env)
+                if client_id:
+                    config.google_client_id = client_id
+                    any_configured = True
+                else:
+                    logger.warning(f"Google OAuth: {provider_cfg.client_id_env} not set")
+
+            elif provider == "github":
+                client_id = os.getenv(provider_cfg.client_id_env)
+                client_secret = os.getenv(provider_cfg.client_secret_env)
+                if client_id and client_secret:
+                    config.github_client_id = client_id
+                    config.github_client_secret = client_secret
+                    any_configured = True
+                else:
+                    missing = []
+                    if not client_id:
+                        missing.append(provider_cfg.client_id_env)
+                    if not client_secret:
+                        missing.append(provider_cfg.client_secret_env)
+                    logger.warning(f"GitHub OAuth: {', '.join(missing)} not set")
+
+            elif provider == "apple":
+                # Apple requires team_id, key_id, private_key, bundle_id
+                # These would need extended manifest schema
+                logger.warning(
+                    "Apple OAuth: requires extended configuration "
+                    "(team_id, key_id, private_key, bundle_id)"
+                )
+
+            else:
+                logger.warning(f"Unknown OAuth provider: {provider}")
+
+        return config if any_configured else None
 
     def _init_event_framework(self) -> None:
         """Initialize the event framework for event-driven features (v0.18.0)."""
@@ -625,6 +764,9 @@ class DNRBackendApp:
             self._app.include_router(auth_router)
             # Create auth context getter for routes
             get_auth_context = self._auth_middleware.get_auth_context
+
+            # Initialize social auth if OAuth providers configured
+            self._init_social_auth()
 
         # Extract entity access specs from entity metadata
         entity_access_specs: dict[str, dict[str, Any]] = {}

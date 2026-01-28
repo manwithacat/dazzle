@@ -861,6 +861,7 @@ class DNRCombinedServer:
         enable_test_mode: bool = False,
         enable_dev_mode: bool = True,  # Enable Dazzle Bar (v0.24.0 - env-aware)
         enable_auth: bool = True,  # Enable authentication by default
+        auth_config: Any = None,  # AuthConfig from manifest (for OAuth providers)
         enable_watch: bool = False,
         watch_source: bool = False,
         project_root: Path | None = None,
@@ -884,6 +885,7 @@ class DNRCombinedServer:
             enable_test_mode: Enable test endpoints (/__test__/*)
             enable_dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
             enable_auth: Enable authentication endpoints (/auth/*)
+            auth_config: Full auth configuration from manifest (for OAuth providers)
             enable_watch: Enable hot reload file watching
             watch_source: Also watch framework source files (Python, CSS, JS)
             project_root: Project root directory (required for hot reload)
@@ -903,6 +905,7 @@ class DNRCombinedServer:
         self.enable_test_mode = enable_test_mode
         self.enable_dev_mode = enable_dev_mode
         self.enable_auth = enable_auth
+        self.auth_config = auth_config
         self.enable_watch = enable_watch
         self.watch_source = watch_source
         self.project_root = project_root or Path.cwd()
@@ -981,6 +984,7 @@ class DNRCombinedServer:
         # Capture flags for closure
         enable_test_mode = self.enable_test_mode
         enable_auth = self.enable_auth
+        auth_config = self.auth_config
         personas = self.personas
         scenarios = self.scenarios
         sitespec_data = self.sitespec_data
@@ -996,6 +1000,7 @@ class DNRCombinedServer:
                     use_database=True,
                     enable_test_mode=enable_test_mode,
                     enable_auth=enable_auth,
+                    auth_config=auth_config,
                     enable_dev_mode=self.enable_dev_mode,  # v0.24.0: env-aware
                     personas=personas,
                     scenarios=scenarios,
@@ -1153,6 +1158,7 @@ def run_combined_server(
     enable_test_mode: bool = False,
     enable_dev_mode: bool = True,  # v0.24.0: Enable Dazzle Bar (env-aware)
     enable_auth: bool = True,  # Enable authentication by default
+    auth_config: Any = None,  # AuthConfig from manifest (for OAuth providers)
     host: str = "127.0.0.1",
     enable_watch: bool = False,
     watch_source: bool = False,
@@ -1175,6 +1181,7 @@ def run_combined_server(
         enable_test_mode: Enable test endpoints (/__test__/*)
         enable_dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
         enable_auth: Enable authentication endpoints (/auth/*)
+        auth_config: Full auth configuration from manifest (for OAuth providers)
         host: Host to bind both servers to
         enable_watch: Enable hot reload file watching
         watch_source: Also watch framework source files (Python, CSS, JS)
@@ -1196,6 +1203,7 @@ def run_combined_server(
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
         enable_auth=enable_auth,
+        auth_config=auth_config,
         enable_watch=enable_watch,
         watch_source=watch_source,
         project_root=project_root,

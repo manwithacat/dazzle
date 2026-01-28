@@ -340,7 +340,8 @@ def dnr_test(
                 )
             else:
                 typer.secho(
-                    f"  {a11y_results['violation_count']} WCAG {a11y_level.upper()} violation(s) found",
+                    f"  {a11y_results['violation_count']} WCAG "
+                    f"{a11y_level.upper()} violation(s) found",
                     fg=typer.colors.YELLOW,
                 )
                 if verbose and a11y_results.get("violations"):

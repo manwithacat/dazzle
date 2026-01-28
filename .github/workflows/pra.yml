@@ -57,11 +57,11 @@ jobs:
       run: |
         python -c "
         import asyncio
-        from dazzle_dnr_back.pra import run_quick_test, TestHarness, ScenarioType
+        from dazzle_dnr_back.pra import run_quick_test, StressHarness, ScenarioType
         from dazzle_dnr_back.metrics.reporter import ReportFormat
 
         async def main():
-            harness = TestHarness()
+            harness = StressHarness()
             result = await harness.run_scenario(ScenarioType.QUICK)
             print(harness.generate_report(result, ReportFormat.HUMAN))
             return result.criteria_passed
@@ -107,12 +107,12 @@ jobs:
         import asyncio
         import json
         from pathlib import Path
-        from dazzle_dnr_back.pra import TestHarness, ScenarioType
+        from dazzle_dnr_back.pra import StressHarness, ScenarioType
         from dazzle_dnr_back.metrics.reporter import ReportFormat
 
         async def main():
             scenario = ScenarioType('${SCENARIO}')
-            harness = TestHarness()
+            harness = StressHarness()
             result = await harness.run_scenario(scenario)
 
             # Save results
@@ -229,11 +229,11 @@ jobs:
         import asyncio
         import json
         from pathlib import Path
-        from dazzle_dnr_back.pra import TestHarness, ScenarioType, list_scenarios
+        from dazzle_dnr_back.pra import StressHarness, ScenarioType, list_scenarios
         from dazzle_dnr_back.metrics.reporter import ReportFormat
 
         async def main():
-            harness = TestHarness()
+            harness = StressHarness()
             results = {}
             all_passed = True
 

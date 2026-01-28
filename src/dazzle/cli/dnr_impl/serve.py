@@ -442,6 +442,7 @@ def dnr_serve(
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
         enable_auth=auth_enabled,
+        auth_config=mf.auth if auth_enabled else None,
         host=host,
         enable_watch=watch,
         watch_source=watch_source,
