@@ -921,6 +921,34 @@ async def handle_mailpit(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Contribution Handler
+# =============================================================================
+
+
+def handle_contribution(arguments: dict[str, Any]) -> str:
+    """Handle consolidated contribution packaging operations."""
+    from .handlers.contribution import (
+        create_handler,
+        examples_handler,
+        templates_handler,
+        validate_handler,
+    )
+
+    operation = arguments.get("operation")
+
+    if operation == "templates":
+        return templates_handler(arguments)
+    elif operation == "create":
+        return create_handler(arguments)
+    elif operation == "validate":
+        return validate_handler(arguments)
+    elif operation == "examples":
+        return examples_handler(arguments)
+    else:
+        return json.dumps({"error": f"Unknown contribution operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -940,6 +968,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "status": handle_status,
     "knowledge": handle_knowledge,
     "mailpit": handle_mailpit,
+    "contribution": handle_contribution,
 }
 
 

@@ -762,6 +762,51 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Contribution (community contribution packaging)
+        # =====================================================================
+        Tool(
+            name="contribution",
+            description="Community contribution: templates, create, validate, examples. Package API packs, UI patterns, bug fixes, DSL patterns, and feature requests for sharing with the Dazzle team.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["templates", "create", "validate", "examples"],
+                        "description": "Operation to perform",
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "api_pack",
+                            "ui_pattern",
+                            "bug_fix",
+                            "dsl_pattern",
+                            "feature_request",
+                        ],
+                        "description": "Contribution type (for create, validate, examples)",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Contribution title (for create)",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "What this contributes (for create)",
+                    },
+                    "content": {
+                        "type": "object",
+                        "description": "Type-specific content (for create, validate)",
+                    },
+                    "output_dir": {
+                        "type": "string",
+                        "description": "Directory to write output files (for create)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 
