@@ -1541,7 +1541,8 @@ def dsl_coverage(
         typer.echo(f"# Test Coverage Report: {test_suite.project_name}")
         typer.echo()
         typer.echo(
-            f"**Overall Coverage:** {overall_pct:.1f}% ({tested_constructs}/{total_constructs} constructs)"
+            f"**Overall Coverage:** {overall_pct:.1f}%"
+            f" ({tested_constructs}/{total_constructs} constructs)"
         )
         typer.echo(f"**Total Tests:** {len(test_suite.designs)}")
         typer.echo()

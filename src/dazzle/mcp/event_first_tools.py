@@ -1002,10 +1002,32 @@ def handle_add_feedback(args: dict[str, Any], project_path: Path) -> str:
 
         get_feedback_store().add(entry)
 
+        # Attempt to create a GitHub issue
+        from dazzle.mcp.server.github_issues import create_github_issue
+
+        issue_body = (
+            f"**Pain point:** {entry.pain_point}\n\n"
+            f"**Expected:** {entry.expected}\n\n"
+            f"**Observed:** {entry.observed}\n\n"
+            f"**Severity:** {entry.severity.value}\n\n"
+            f"**Scope:** {entry.scope.value}\n"
+        )
+        if entry.hypothesis:
+            issue_body += f"\n**Hypothesis:** {entry.hypothesis}\n"
+        if entry.location:
+            issue_body += f"\n**Location:** {entry.location}\n"
+
+        github_issue = create_github_issue(
+            title=f"[Feedback] {entry.pain_point[:80]}",
+            body=issue_body,
+            labels=["feedback", entry.severity.value],
+        )
+
         return json.dumps(
             {
                 "id": entry.id,
                 "message": "Feedback recorded",
+                "github_issue": github_issue,
             }
         )
 

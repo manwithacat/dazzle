@@ -118,6 +118,25 @@ def create_handler(args: dict[str, Any]) -> str:
     else:
         return json.dumps({"error": f"Unhandled type: {contrib_type}"})
 
+    # Attempt to create a GitHub issue
+    from dazzle.mcp.server.github_issues import create_github_issue
+
+    issue_body = result.get("markdown", "")
+    if not issue_body and "files" in result:
+        # For api_pack, use the markdown file content
+        for fname, fcontent in result["files"].items():
+            if fname.endswith(".md"):
+                issue_body = fcontent
+                break
+
+    if issue_body:
+        github_issue = create_github_issue(
+            title=f"[Contribution] {title}",
+            body=issue_body,
+            labels=["contribution", contrib_type.replace("_", "-")],
+        )
+        result["github_issue"] = github_issue
+
     return json.dumps(result, indent=2)
 
 
