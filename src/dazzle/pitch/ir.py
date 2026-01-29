@@ -34,6 +34,8 @@ class ExtraSlideLayout(str, Enum):
     IMAGE = "image"
     TABLE = "table"
     CALLOUT = "callout"
+    CHART = "chart"
+    TIMELINE = "timeline"
     CUSTOM = "custom"
 
 

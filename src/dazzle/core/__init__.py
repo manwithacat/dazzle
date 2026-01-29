@@ -1,4 +1,4 @@
-"""Core DAZZLE functionality: IR, parser, linker, validator, project initialization, incremental builds."""
+"""Core DAZZLE: IR, parser, linker, validator, project init, incremental builds."""
 
 from . import ir
 from .changes import ChangeSet, detect_changes

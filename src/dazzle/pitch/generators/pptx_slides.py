@@ -25,6 +25,7 @@ from dazzle.pitch.generators.pptx_primitives import (
     _add_stat_box,
     _add_table,
     _add_text_box,
+    _add_timeline,
     _create_dark_slide,
     _create_light_slide,
     _estimate_text_height,
@@ -53,7 +54,15 @@ __all__ = [
 ]
 
 # Suppress unused-import warnings for primitives used only by specific builders
-_ = (_add_stat_box, _add_columns, _add_rich_text_box, _add_callout_box, _add_table, _add_divider)
+_ = (
+    _add_stat_box,
+    _add_columns,
+    _add_rich_text_box,
+    _add_callout_box,
+    _add_table,
+    _add_divider,
+    _add_timeline,
+)
 
 
 def _build_title_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -1276,6 +1285,13 @@ def _build_extra_slide(
         if extra.items:
             headers = [h.strip() for h in extra.items[0].split("|")]
             rows = [[c.strip() for c in item.split("|")] for item in extra.items[1:]]
+            # Replace visual indicator shortcodes in cell text
+            _indicator_map = {"[yes]": "\u2713", "[no]": "\u2717", "[partial]": "\u25d0"}
+            for row in rows:
+                for ci, cell in enumerate(row):
+                    for code, symbol in _indicator_map.items():
+                        cell = cell.replace(code, symbol)
+                    row[ci] = cell
             _add_table(
                 slide,
                 Inches(0.8),
@@ -1311,6 +1327,66 @@ def _build_extra_slide(
                     spacing=0.6,
                     color=text_color,
                 )
+
+    elif extra.layout == ExtraSlideLayout.CHART:
+        # Generate a chart from extra.data and embed as image
+        data = extra.data or {}
+        chart_type = data.get("chart_type", "bar")
+        values = data.get("values", [])
+        labels = data.get("labels", [])
+        try:
+            import tempfile
+
+            import matplotlib
+
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+
+            fig, ax = plt.subplots(figsize=(9, 4))
+            fig.patch.set_facecolor(ctx.spec.brand.primary)
+            ax.set_facecolor(ctx.spec.brand.primary)
+            accent = ctx.spec.brand.accent
+            if chart_type == "pie":
+                ax.pie(
+                    values,
+                    labels=labels,
+                    colors=[
+                        accent,
+                        ctx.spec.brand.highlight,
+                        ctx.spec.brand.success,
+                        ctx.spec.brand.light,
+                    ][: len(values)],
+                    textprops={"color": "white"},
+                )
+            elif chart_type == "line":
+                ax.plot(labels, values, color=accent, marker="o", linewidth=2)
+            else:
+                ax.bar(labels, values, color=accent)
+            ax.tick_params(colors="white")
+            for spine in ax.spines.values():
+                spine.set_color("white")
+            ax.xaxis.label.set_color("white")
+            ax.yaxis.label.set_color("white")
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                fig.savefig(tmp.name, bbox_inches="tight", dpi=150, facecolor=fig.get_facecolor())
+                plt.close(fig)
+                slide.shapes.add_picture(tmp.name, Inches(1.5), Inches(y), Inches(10), Inches(4.5))
+        except Exception as e:
+            logger.warning(f"Chart layout: matplotlib failed ({e}), falling back to stats")
+            parsed_stats: list[tuple[str, str]] = []
+            for val, lbl in zip(values, labels, strict=False):
+                parsed_stats.append((str(val), str(lbl)))
+            if parsed_stats:
+                _add_columns(
+                    slide,
+                    Inches(2.0),
+                    parsed_stats,
+                    value_color=colors["accent"],
+                    label_color=colors["muted"],
+                )
+
+    elif extra.layout == ExtraSlideLayout.TIMELINE:
+        _add_timeline(slide, y, extra.items, colors)
 
     elif extra.layout == ExtraSlideLayout.CUSTOM:
         # Handled by plugin system in pptx_gen.py

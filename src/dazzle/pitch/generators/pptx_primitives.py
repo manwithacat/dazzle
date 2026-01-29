@@ -560,6 +560,95 @@ def _add_callout_box(
     return shape
 
 
+def _add_timeline(
+    slide: Any,
+    top: float,
+    items: list[str],
+    colors: dict[str, Any],
+    *,
+    width: float = 11.0,
+) -> None:
+    """Render a horizontal timeline with dots, connecting line, and labels.
+
+    Each item is a ``"date|description"`` pipe-separated string.
+    """
+    from pptx.util import Inches, Pt
+
+    n = len(items)
+    if n == 0:
+        return
+
+    font_name = colors.get("font_family")
+    left = 1.0
+    line_y = top + 0.4
+
+    # Connecting line
+    line = slide.shapes.add_shape(
+        1,  # MSO_SHAPE.RECTANGLE
+        Inches(left),
+        Inches(line_y),
+        Inches(width),
+        Inches(0.04),
+    )
+    line.fill.solid()
+    line.fill.fore_color.rgb = colors["accent"]
+    line.line.fill.background()
+
+    spacing = width / max(n, 1)
+    dot_size = 0.22
+
+    for i, item in enumerate(items):
+        parts = item.split("|", 1)
+        date_text = parts[0].strip()
+        desc_text = parts[1].strip() if len(parts) > 1 else ""
+
+        cx = left + i * spacing + spacing / 2
+        dot_left = cx - dot_size / 2
+
+        # Dot
+        dot = slide.shapes.add_shape(
+            9,  # MSO_SHAPE.OVAL
+            Inches(dot_left),
+            Inches(line_y - dot_size / 2 + 0.02),
+            Inches(dot_size),
+            Inches(dot_size),
+        )
+        dot.fill.solid()
+        dot.fill.fore_color.rgb = colors["highlight"]
+        dot.line.fill.background()
+
+        # Date label (above line)
+        _add_text_box(
+            slide,
+            Inches(cx - spacing / 2),
+            Inches(top - 0.1),
+            Inches(spacing),
+            Inches(0.4),
+            date_text,
+            font_size=12,
+            bold=True,
+            color=colors["accent"],
+            alignment=1,  # PP_ALIGN.CENTER
+            font_name=font_name,
+        )
+
+        # Description (below line)
+        _add_text_box(
+            slide,
+            Inches(cx - spacing / 2),
+            Inches(line_y + 0.25),
+            Inches(spacing),
+            Inches(0.8),
+            desc_text,
+            font_size=11,
+            color=colors["white"],
+            alignment=1,  # PP_ALIGN.CENTER
+            font_name=font_name,
+        )
+
+    _ = Pt  # suppress unused
+
+
 def _add_divider(slide: Any, y: float, colors: dict[str, Any]) -> Any:
     """Thin horizontal accent line."""
     from pptx.util import Inches

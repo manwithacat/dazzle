@@ -418,12 +418,22 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         " or at https://github.com/manwithacat/dazzle/issues"
     )
 
+    creative_suggestions: list[str] = [
+        "Use web search to find current market size data for your TAM/SAM/SOM",
+        "Add a chart extra_slide (layout: chart) for revenue growth visualization",
+        "Add a timeline extra_slide (layout: timeline) for your milestones roadmap",
+        "Use [yes]/[no]/[partial] shortcodes in table cells for visual comparison matrices",
+        "Use the plugin system (layout: custom) to create bespoke slide layouts",
+        "Add speaker_notes to each section for a polished presenter experience",
+    ]
+
     return json.dumps(
         {
             "overall_assessment": overall,
             "section_scores": section_scores,
             "completeness": f"{_completeness_score(spec)}%",
             "suggestions": suggestions,
+            "creative_suggestions": creative_suggestions,
             "iteration_checklist": iteration_checklist,
             "next_steps": next_steps,
         },
