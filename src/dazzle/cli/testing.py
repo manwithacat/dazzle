@@ -17,7 +17,10 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
 test_app = typer.Typer(
-    help="Testing commands for Dazzle apps. Tier 1: 'dsl-run' (API). Tier 2: 'playwright' (scripted UI). Tier 3: 'agent' (LLM-powered).",
+    help=(
+        "Testing commands for Dazzle apps. Tier 1: 'dsl-run' (API). "
+        "Tier 2: 'playwright' (scripted UI). Tier 3: 'agent' (LLM-powered)."
+    ),
     no_args_is_help=True,
 )
 
@@ -547,7 +550,11 @@ def _build_selector(target: str) -> str:
             entity, action = action_id.split(".", 1)
             if action in ("save", "create", "submit"):
                 # Try multiple selectors: full name, entity.create, or action-role
-                return f'[data-dazzle-action="{action_id}"], [data-dazzle-action="{entity}.create"], [data-dazzle-action-role="primary"]'
+                return (
+                    f'[data-dazzle-action="{action_id}"],'
+                    f' [data-dazzle-action="{entity}.create"],'
+                    f' [data-dazzle-action-role="primary"]'
+                )
             if action == "update":
                 # Update forms use Entity.update action
                 return f'[data-dazzle-action="{action_id}"], [data-dazzle-action-role="primary"]'

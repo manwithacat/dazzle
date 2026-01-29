@@ -772,13 +772,13 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="pitch",
-            description="Pitch deck operations: scaffold, generate, validate, get. Generate investor pitch decks from pitchspec.yaml + DSL data.",
+            description="Pitch deck operations: scaffold, generate, validate, get, review. Generate investor pitch decks from pitchspec.yaml + DSL data. Workflow: scaffold → edit pitchspec.yaml → validate → generate → review → iterate.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["scaffold", "generate", "validate", "get"],
+                        "enum": ["scaffold", "generate", "validate", "get", "review"],
                         "description": "Operation to perform",
                     },
                     "format": {

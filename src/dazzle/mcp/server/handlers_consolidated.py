@@ -918,6 +918,7 @@ def handle_pitch(arguments: dict[str, Any]) -> str:
     from .handlers.pitch import (
         generate_pitch_handler,
         get_pitchspec_handler,
+        review_pitchspec_handler,
         scaffold_pitchspec_handler,
         validate_pitchspec_handler,
     )
@@ -936,6 +937,8 @@ def handle_pitch(arguments: dict[str, Any]) -> str:
         return validate_pitchspec_handler(project_path, arguments)
     elif operation == "get":
         return get_pitchspec_handler(project_path, arguments)
+    elif operation == "review":
+        return review_pitchspec_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown pitch operation: {operation}"})
 

@@ -108,6 +108,8 @@ When helping users, use these MCP tools:
 - "What patterns exist?" → lookup_concept("patterns")
 - "Run the app" → get_cli_help("dnr serve")
 - "Something is broken" → get_workflow_guide("troubleshoot")
+- "Create a pitch deck" → get_workflow_guide("pitch_deck") or pitch(operation='scaffold')
+- "Review my pitch" → pitch(operation='review')
 """
 
 

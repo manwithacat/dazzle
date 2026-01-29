@@ -169,6 +169,109 @@ class TestNewFieldsRoundTrip:
         assert loaded.problem is not None
         assert loaded.problem.speaker_notes == "Key point"
 
+
+class TestReviewHandler:
+    """Tests for the pitch review MCP handler."""
+
+    def test_review_skeleton_spec(self, tmp_project: Path):
+        """A default spec should be rated as skeleton/early_draft."""
+        import json
+
+        from dazzle.mcp.server.handlers.pitch import review_pitchspec_handler
+        from dazzle.pitch.loader import save_pitchspec
+
+        spec = PitchSpec()
+        save_pitchspec(tmp_project, spec)
+
+        result = json.loads(review_pitchspec_handler(tmp_project, {}))
+        assert result["overall_assessment"] in ("skeleton", "early_draft")
+        assert "problem" in result["section_scores"]
+        assert result["section_scores"]["problem"] == "missing"
+        assert len(result["suggestions"]) > 0
+        assert len(result["next_steps"]) > 0
+        assert "iteration_checklist" in result
+
+    def test_review_complete_spec(self, tmp_project: Path):
+        """A fully populated spec should score well."""
+        import json
+
+        from dazzle.mcp.server.handlers.pitch import review_pitchspec_handler
+        from dazzle.pitch.ir import (
+            BusinessModelSpec,
+            FinancialsSpec,
+            FundAllocation,
+            MarketSize,
+            MarketSpec,
+            MilestonesSpec,
+            PricingTier,
+            SolutionSpec,
+            TeamMember,
+            TeamSpec,
+            YearProjection,
+        )
+        from dazzle.pitch.loader import save_pitchspec
+
+        spec = PitchSpec(
+            company=CompanySpec(name="TestCo", tagline="We do things", funding_ask=1000000),
+            problem=ProblemSpec(
+                headline="Big problem",
+                points=["p1", "p2", "p3"],
+                market_failure=["Existing solutions fail"],
+            ),
+            solution=SolutionSpec(
+                headline="Our solution",
+                how_it_works=["Step 1", "Step 2"],
+                value_props=["Fast", "Cheap"],
+            ),
+            market=MarketSpec(
+                tam=MarketSize(value=1000000000, label="$1B"),
+                sam=MarketSize(value=100000000, label="$100M"),
+                som=MarketSize(value=10000000, label="$10M"),
+                drivers=["Trend 1"],
+            ),
+            business_model=BusinessModelSpec(
+                tiers=[
+                    PricingTier(name="Free", price=0),
+                    PricingTier(name="Pro", price=99),
+                ],
+            ),
+            financials=FinancialsSpec(
+                projections=[
+                    YearProjection(year=2025, revenue=100000),
+                    YearProjection(year=2026, revenue=500000),
+                ],
+                use_of_funds=[
+                    FundAllocation(category="Eng", percent=60),
+                    FundAllocation(category="Sales", percent=40),
+                ],
+            ),
+            team=TeamSpec(
+                founders=[
+                    TeamMember(name="Alice", role="CEO", bio="10 years exp"),
+                    TeamMember(name="Bob", role="CTO", bio="Ex-Google"),
+                ],
+            ),
+            milestones=MilestonesSpec(
+                completed=["MVP launched"],
+                next_12_months=["Series A"],
+            ),
+        )
+        save_pitchspec(tmp_project, spec)
+
+        result = json.loads(review_pitchspec_handler(tmp_project, {}))
+        assert result["overall_assessment"] == "investor_ready"
+        assert result["completeness"] == "100%"
+
+    def test_review_missing_file(self, tmp_project: Path):
+        """Review should return error with next_steps when no pitchspec exists."""
+        import json
+
+        from dazzle.mcp.server.handlers.pitch import review_pitchspec_handler
+
+        result = json.loads(review_pitchspec_handler(tmp_project, {}))
+        assert "error" in result
+        assert len(result["next_steps"]) > 0
+
     def test_scaffold_contains_new_examples(self, tmp_project: Path):
         scaffold_pitchspec(tmp_project, overwrite=True)
         content = (tmp_project / "pitchspec.yaml").read_text()
