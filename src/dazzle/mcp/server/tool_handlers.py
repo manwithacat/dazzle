@@ -159,13 +159,21 @@ def select_project(args: dict[str, Any]) -> str:
         return json.dumps({"error": "project_name required"})
 
     available_projects = get_available_projects()
+
+    # Support absolute paths to external projects
     if project_name not in available_projects:
-        return json.dumps(
-            {
-                "error": f"Project '{project_name}' not found",
-                "available_projects": list(available_projects.keys()),
-            }
-        )
+        candidate = Path(project_name)
+        if candidate.is_absolute() and (candidate / "dazzle.toml").is_file():
+            resolved_name = candidate.name
+            available_projects[resolved_name] = candidate
+            project_name = resolved_name
+        else:
+            return json.dumps(
+                {
+                    "error": f"Project '{project_name}' not found. Pass an absolute path to an external project directory containing dazzle.toml.",
+                    "available_projects": list(available_projects.keys()),
+                }
+            )
 
     set_active_project(project_name)
     project_path = available_projects[project_name]

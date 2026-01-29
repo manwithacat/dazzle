@@ -637,6 +637,8 @@ async def list_resources() -> list[Resource]:
 @server.read_resource()  # type: ignore[no-untyped-call]
 async def read_resource(uri: str) -> str:
     """Read a DAZZLE resource by URI."""
+    # MCP SDK passes AnyUrl (not a str subclass in Pydantic v2)
+    uri = str(uri)
 
     # Documentation resources
     if uri == "dazzle://docs/glossary":
