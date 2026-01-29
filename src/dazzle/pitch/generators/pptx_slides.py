@@ -12,6 +12,7 @@ from typing import Any
 
 from dazzle.pitch.extractor import PitchContext
 from dazzle.pitch.generators.pptx_primitives import (
+    CONTENT_BOTTOM,
     _add_bullet_list,
     _add_callout_box,
     _add_card,
@@ -123,7 +124,7 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
 
     y = _add_bullet_list(
         slide, Inches(1.2), y, Inches(10), problem.points, colors, font_size=20, spacing=0.7
-    )
+    ).final_y
 
     if problem.market_failure:
         y += 0.3
@@ -152,7 +153,7 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
             spacing=0.6,
             bullet_char="\u2192",
             color=colors["muted"],
-        )
+        ).final_y
 
     notes = problem.speaker_notes
     _add_speaker_notes(slide, notes or f"Problem: {problem.headline}")
@@ -776,7 +777,7 @@ def _build_competition_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]
         colors,
         col_widths=[3.5, 4.0, 4.0],
         font_size=14,
-    )
+    )  # returns (shape, LayoutResult) — unused here
 
     _add_speaker_notes(slide, f"{len(ctx.spec.competitors)} competitors analyzed.")
 
@@ -819,7 +820,7 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             spacing=0.5,
             bullet_char="\u2713",
             color=colors["muted"],
-        )
+        ).final_y
 
     if ms.next_12_months:
         if ms.completed:
@@ -848,7 +849,7 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             font_size=16,
             spacing=0.5,
             bullet_char="\u2192",
-        )
+        ).final_y
 
     if ms.long_term:
         if ms.completed or ms.next_12_months:
@@ -878,7 +879,7 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             spacing=0.5,
             bullet_char="\u25c6",
             color=colors["muted"],
-        )
+        ).final_y
 
     notes = ms.speaker_notes
     _add_speaker_notes(slide, notes or "Milestones and roadmap.")
@@ -1069,6 +1070,8 @@ def _build_extra_slide(
             row = idx // col_count
             x = margin + col * (card_w + gap)
             cy = y + row * (card_h + row_gap)
+            if cy + card_h > CONTENT_BOTTOM:
+                break
             _add_card(
                 slide,
                 Inches(x),
@@ -1104,7 +1107,7 @@ def _build_extra_slide(
                 rows,
                 colors,
                 font_size=14,
-            )
+            )  # returns (shape, LayoutResult) — unused here
 
     elif extra.layout == ExtraSlideLayout.CALLOUT:
         # First item as callout box, rest as supporting bullets
@@ -1130,6 +1133,10 @@ def _build_extra_slide(
                     spacing=0.6,
                     color=text_color,
                 )
+
+    elif extra.layout == ExtraSlideLayout.CUSTOM:
+        # Handled by plugin system in pptx_gen.py
+        pass
 
     elif extra.layout == ExtraSlideLayout.IMAGE:
         if extra.image_path:

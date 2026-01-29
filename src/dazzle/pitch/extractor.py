@@ -21,6 +21,8 @@ class PitchContext:
     """Merged view of PitchSpec + DSL-extracted data for generators."""
 
     spec: PitchSpec
+    # Project root for plugin discovery:
+    project_root: Path | None = None
     # Chart image paths (populated by generators):
     chart_paths: dict[str, Path] = field(default_factory=dict)
     # DSL-extracted (auto-populated):

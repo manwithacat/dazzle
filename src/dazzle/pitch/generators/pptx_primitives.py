@@ -6,8 +6,30 @@ Low-level shape helpers used by slide builders.
 
 from __future__ import annotations
 
+import logging
 import re
+from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
+
+# Layout constants (inches)
+SLIDE_WIDTH = 13.333
+SLIDE_HEIGHT = 7.5
+CONTENT_TOP = 2.0  # after heading + accent bar
+CONTENT_BOTTOM = 7.0  # 0.5" bottom margin
+CONTENT_LEFT = 0.8
+CONTENT_RIGHT = 12.5
+
+
+@dataclass
+class LayoutResult:
+    """Result of a layout operation with overflow tracking."""
+
+    final_y: float
+    items_rendered: int
+    items_truncated: int
+    overflow: bool
 
 
 def _resolve_colors(brand: Any) -> dict[str, Any]:
@@ -301,8 +323,8 @@ def _add_bullet_list(
     spacing: float = 0.6,
     bullet_char: str = "\u2022",
     color: Any = None,
-) -> float:
-    """Render N bullet items. Returns final y position (inches)."""
+) -> LayoutResult:
+    """Render N bullet items with bounds checking. Returns LayoutResult."""
     from pptx.util import Inches
 
     text_color = color or colors["white"]
@@ -313,7 +335,14 @@ def _add_bullet_list(
         y = float(y)
     left_emu = left if not isinstance(left, float) else Inches(left)
     width_emu = width if not isinstance(width, float) else Inches(width)
+    rendered = 0
     for item in items:
+        if y + spacing > CONTENT_BOTTOM:
+            truncated = len(items) - rendered
+            logger.warning(f"Bullet list overflow: truncated {truncated} items")
+            return LayoutResult(
+                final_y=y, items_rendered=rendered, items_truncated=truncated, overflow=True
+            )
         _add_text_box(
             slide,
             left_emu,
@@ -326,7 +355,8 @@ def _add_bullet_list(
             font_name=font_name,
         )
         y += spacing
-    return y
+        rendered += 1
+    return LayoutResult(final_y=y, items_rendered=rendered, items_truncated=0, overflow=False)
 
 
 def _add_table(
@@ -340,15 +370,28 @@ def _add_table(
     *,
     col_widths: list[float] | None = None,
     font_size: int = 14,
-) -> Any:
-    """Create a table shape with styled header row and alternating row colors."""
+) -> tuple[Any, LayoutResult]:
+    """Create a table shape with styled header row and alternating row colors.
+
+    Returns (table_shape, LayoutResult) tuple.
+    """
     from pptx.dml.color import RGBColor
     from pptx.util import Inches, Pt
 
-    row_count = len(rows) + 1  # +1 for header
     col_count = len(headers)
     if col_count == 0:
-        return None
+        return None, LayoutResult(final_y=0, items_rendered=0, items_truncated=0, overflow=False)
+
+    # Bounds check: truncate rows that won't fit
+    top_inches = top if isinstance(top, float) else float(top / 914400)
+    row_height = 0.4
+    max_rows_fit = max(1, int((CONTENT_BOTTOM - top_inches) / row_height) - 1)
+    actual_rows = rows[:max_rows_fit]
+    truncated = len(rows) - len(actual_rows)
+    if truncated > 0:
+        logger.warning(f"Table overflow: truncated {truncated} rows")
+
+    row_count = len(actual_rows) + 1  # +1 for header
 
     table_shape = slide.shapes.add_table(
         row_count, col_count, left, top, width, Inches(0.4 * row_count)
@@ -376,7 +419,7 @@ def _add_table(
         cell.fill.fore_color.rgb = colors["accent"]
 
     # Data rows
-    for ri, row in enumerate(rows):
+    for ri, row in enumerate(actual_rows):
         for ci, value in enumerate(row[:col_count]):
             cell = table.cell(ri + 1, ci)
             cell.text = value
@@ -392,7 +435,14 @@ def _add_table(
             else:
                 cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)  # type: ignore[no-untyped-call]
 
-    return table_shape
+    final_y = top_inches + row_height * row_count
+    lr = LayoutResult(
+        final_y=final_y,
+        items_rendered=len(actual_rows),
+        items_truncated=truncated,
+        overflow=truncated > 0,
+    )
+    return table_shape, lr
 
 
 def _add_callout_box(

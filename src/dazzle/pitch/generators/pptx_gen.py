@@ -20,6 +20,11 @@ from dazzle.pitch.extractor import PitchContext
 
 # Re-export primitives for backwards compatibility
 from dazzle.pitch.generators.pptx_primitives import (  # noqa: F401
+    CONTENT_BOTTOM,
+    CONTENT_TOP,
+    SLIDE_HEIGHT,
+    SLIDE_WIDTH,
+    LayoutResult,
     _add_bullet_list,
     _add_callout_box,
     _add_card,
@@ -54,11 +59,16 @@ from dazzle.pitch.generators.pptx_slides import (  # noqa: F401
     _build_team_slide,
     _build_title_slide,
 )
-from dazzle.pitch.ir import ExtraSlide
+from dazzle.pitch.ir import ExtraSlide, ExtraSlideLayout
 
 __all__ = [
     "GeneratorResult",
     "generate_pptx",
+    "LayoutResult",
+    "SLIDE_WIDTH",
+    "SLIDE_HEIGHT",
+    "CONTENT_TOP",
+    "CONTENT_BOTTOM",
     "_fmt_currency",
     "_resolve_colors",
     "_add_text_box",
@@ -102,6 +112,7 @@ class GeneratorResult:
     files_created: list[str] = field(default_factory=list)
     error: str | None = None
     slide_count: int = 0
+    warnings: list[str] = field(default_factory=list)
 
 
 def _check_pptx_available() -> bool:
@@ -188,6 +199,25 @@ SLIDE_CATALOG: list[SlideCatalogEntry] = [
 
 
 # =============================================================================
+# Bounds Audit
+# =============================================================================
+
+
+def _audit_slide_bounds(prs: Any) -> list[str]:
+    """Scan all shapes on all slides for overflow past slide height."""
+    warnings: list[str] = []
+    for slide_idx, slide in enumerate(prs.slides):
+        for shape in slide.shapes:
+            bottom = (shape.top + shape.height) / 914400  # EMU to inches
+            if bottom > SLIDE_HEIGHT:
+                warnings.append(
+                    f"Slide {slide_idx + 1}: shape '{shape.name}' "
+                    f'extends to {bottom:.1f}" (slide height {SLIDE_HEIGHT}")'
+                )
+    return warnings
+
+
+# =============================================================================
 # Main Generator
 # =============================================================================
 
@@ -270,6 +300,12 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                     ordered_names.insert(closing_idx, extra_name)
                     closing_idx += 1
 
+        # Discover plugins
+        from dazzle.pitch.generators.plugin_loader import discover_plugins
+
+        plugin_root = ctx.project_root or output_path.parent
+        plugin_registry = discover_plugins(plugin_root)
+
         slide_count = 0
         for slide_name in ordered_names:
             if slide_name in catalog_map:
@@ -279,9 +315,27 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                     slide_count += 1
                     logger.debug(f"Built slide: {slide_name}")
             elif slide_name in extra_map:
-                _build_extra_slide(prs, ctx, colors, extra_map[slide_name])
-                slide_count += 1
-                logger.debug(f"Built extra slide: {slide_name}")
+                extra = extra_map[slide_name]
+                if extra.layout == ExtraSlideLayout.CUSTOM and extra.builder:
+                    custom_builder = plugin_registry.get(extra.builder)
+                    if custom_builder:
+                        try:
+                            custom_builder(prs, ctx, colors, extra)
+                            slide_count += 1
+                            logger.debug(f"Built custom slide: {slide_name}")
+                        except Exception as e:
+                            logger.warning(f"Plugin builder '{extra.builder}' failed: {e}")
+                    else:
+                        logger.warning(f"No plugin builder found: {extra.builder}")
+                else:
+                    _build_extra_slide(prs, ctx, colors, extra)
+                    slide_count += 1
+                    logger.debug(f"Built extra slide: {slide_name}")
+
+        # Audit bounds before saving
+        audit_warnings = _audit_slide_bounds(prs)
+        for w in audit_warnings:
+            logger.warning(w)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         prs.save(str(output_path))
@@ -291,6 +345,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
             output_path=output_path,
             files_created=[str(output_path)],
             slide_count=slide_count,
+            warnings=audit_warnings,
         )
 
     except Exception as e:

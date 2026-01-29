@@ -157,7 +157,10 @@ def propose_stories(
                 stories.append(
                     StorySpec(
                         story_id=next_id(),
-                        title=f"{actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        title=(
+                            f"{actor} changes {entity.name} "
+                            f"from {transition.from_state} to {transition.to_state}"
+                        ),
                         actor=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],

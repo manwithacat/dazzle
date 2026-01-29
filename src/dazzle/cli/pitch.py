@@ -59,6 +59,7 @@ def pitch_generate(
         raise typer.Exit(1)
 
     ctx = extract_pitch_context(project_dir, spec)
+    ctx.project_root = project_dir
 
     formats = ["pptx", "narrative"] if format == "all" else [format]
 
@@ -70,6 +71,10 @@ def pitch_generate(
             result = generate_pptx(ctx, out_path)
             if result.success:
                 typer.echo(f"Generated PPTX: {result.output_path} ({result.slide_count} slides)")
+                if result.warnings:
+                    typer.echo(f"Warnings ({len(result.warnings)}):")
+                    for w in result.warnings:
+                        typer.echo(f"  ⚠ {w}")
             else:
                 typer.echo(f"Error: {result.error}", err=True)
                 raise typer.Exit(1)

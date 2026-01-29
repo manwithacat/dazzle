@@ -14,6 +14,7 @@ Defines the specification for investor pitch materials:
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -33,6 +34,7 @@ class ExtraSlideLayout(str, Enum):
     IMAGE = "image"
     TABLE = "table"
     CALLOUT = "callout"
+    CUSTOM = "custom"
 
 
 class ExtraSlide(BaseModel):
@@ -43,6 +45,8 @@ class ExtraSlide(BaseModel):
     speaker_notes: str | None = None
     image_path: str | None = None
     theme: str = "dark"
+    data: dict[str, Any] | None = None
+    builder: str | None = None
 
 
 class CompanySpec(BaseModel):

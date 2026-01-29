@@ -403,10 +403,13 @@ class TestNewHelpers:
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         colors = _resolve_colors(BrandColors())
-        final_y = _add_bullet_list(
+        lr = _add_bullet_list(
             slide, Inches(1), 2.0, Inches(10), ["A", "B", "C"], colors, spacing=0.5
         )
-        assert final_y == pytest.approx(3.5)
+        assert lr.final_y == pytest.approx(3.5)
+        assert lr.items_rendered == 3
+        assert lr.items_truncated == 0
+        assert not lr.overflow
         assert len(slide.shapes) == 3
 
     def test_add_table(self):
@@ -424,7 +427,7 @@ class TestNewHelpers:
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[6])
         colors = _resolve_colors(BrandColors())
-        shape = _add_table(
+        shape, lr = _add_table(
             slide,
             Inches(1),
             Inches(2),
@@ -434,6 +437,8 @@ class TestNewHelpers:
             colors,
         )
         assert shape is not None
+        assert lr.items_rendered == 2
+        assert not lr.overflow
         table = shape.table
         assert len(table.rows) == 3  # 1 header + 2 data
         assert len(table.columns) == 2
@@ -814,3 +819,231 @@ class TestNarrativeGenerator:
 
         assert result.success
         assert output.exists()
+
+
+class TestLayoutSafety:
+    def test_layout_constants_defined(self):
+        from dazzle.pitch.generators.pptx_primitives import (
+            CONTENT_BOTTOM,
+            CONTENT_LEFT,
+            CONTENT_RIGHT,
+            CONTENT_TOP,
+            SLIDE_HEIGHT,
+            SLIDE_WIDTH,
+        )
+
+        assert SLIDE_WIDTH == 13.333
+        assert SLIDE_HEIGHT == 7.5
+        assert CONTENT_TOP == 2.0
+        assert CONTENT_BOTTOM == 7.0
+        assert CONTENT_LEFT == 0.8
+        assert CONTENT_RIGHT == 12.5
+
+    def test_bullet_list_returns_layout_result(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import LayoutResult
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        lr = _add_bullet_list(
+            slide, Inches(1), 2.0, Inches(10), ["A", "B", "C"], colors, spacing=0.5
+        )
+        assert isinstance(lr, LayoutResult)
+        assert lr.items_rendered == 3
+        assert lr.items_truncated == 0
+        assert not lr.overflow
+
+    def test_bullet_list_truncates_overflow(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        items = [f"Item {i}" for i in range(20)]
+        lr = _add_bullet_list(slide, Inches(1), 2.0, Inches(10), items, colors, spacing=0.6)
+        assert lr.overflow
+        assert lr.items_rendered < 20
+        assert lr.items_truncated == 20 - lr.items_rendered
+
+    def test_table_returns_layout_result(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
+        from dazzle.pitch.generators.pptx_primitives import LayoutResult
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        shape, lr = _add_table(
+            slide,
+            Inches(1),
+            Inches(2),
+            Inches(10),
+            ["A", "B"],
+            [["1", "2"], ["3", "4"]],
+            colors,
+        )
+        assert isinstance(lr, LayoutResult)
+        assert lr.items_rendered == 2
+        assert not lr.overflow
+
+    def test_table_truncates_overflow(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        rows = [[f"r{i}", f"v{i}"] for i in range(30)]
+        shape, lr = _add_table(
+            slide,
+            Inches(1),
+            Inches(2),
+            Inches(10),
+            ["Name", "Value"],
+            rows,
+            colors,
+        )
+        assert lr.overflow
+        assert lr.items_rendered < 30
+        assert lr.items_truncated == 30 - lr.items_rendered
+
+    def test_generator_result_has_warnings(self):
+        from dazzle.pitch.generators.pptx_gen import GeneratorResult
+
+        r = GeneratorResult(success=True)
+        assert r.warnings == []
+        r2 = GeneratorResult(success=True, warnings=["test warning"])
+        assert r2.warnings == ["test warning"]
+
+    def test_bounds_audit_detects_overflow(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _audit_slide_bounds
+
+        prs = Presentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        # Add a shape that overflows
+        slide.shapes.add_textbox(Inches(1), Inches(7.2), Inches(2), Inches(1.0))
+        warnings = _audit_slide_bounds(prs)
+        assert len(warnings) >= 1
+        assert "extends to" in warnings[0]
+
+
+class TestPluginSystem:
+    def test_plugin_registry(self):
+        from dazzle.pitch.generators.plugin_loader import PluginRegistry
+
+        reg = PluginRegistry()
+
+        def dummy(prs, ctx, colors, extra):  # type: ignore[no-untyped-def]
+            pass
+
+        reg.register("test", dummy)
+        assert reg.get("test") is dummy
+        assert "test" in reg.list_builders()
+        assert reg.get("nonexistent") is None
+
+    def test_discover_plugins_empty_dir(self, tmp_path: Path):
+        from dazzle.pitch.generators.plugin_loader import discover_plugins
+
+        # No pitch_slides/ directory
+        reg = discover_plugins(tmp_path)
+        assert reg.list_builders() == []
+
+    def test_discover_plugins_with_builder(self, tmp_path: Path):
+        from dazzle.pitch.generators.plugin_loader import discover_plugins
+
+        plugin_dir = tmp_path / "pitch_slides"
+        plugin_dir.mkdir()
+        (plugin_dir / "my_plugin.py").write_text(
+            "def build_custom_slide(prs, ctx, colors, extra):\n    pass\n"
+        )
+        reg = discover_plugins(tmp_path)
+        assert "custom" in reg.list_builders()
+
+    def test_plugin_readme_generation(self, tmp_path: Path):
+        from dazzle.pitch.generators.plugin_loader import generate_plugin_readme
+
+        readme_path = generate_plugin_readme(tmp_path)
+        assert readme_path.exists()
+        content = readme_path.read_text()
+        assert "Builder API" in content
+        assert "build_" in content
+
+    def test_custom_slide_with_data(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        # Create plugin
+        plugin_dir = tmp_path / "pitch_slides"
+        plugin_dir.mkdir()
+        (plugin_dir / "demo.py").write_text(
+            "def build_demo_slide(prs, ctx, colors, extra):\n"
+            "    from dazzle.pitch.generators.pptx_primitives import _create_dark_slide, _add_slide_heading\n"
+            "    slide = _create_dark_slide(prs, colors)\n"
+            "    _add_slide_heading(slide, extra.title, colors)\n"
+        )
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Demo Custom",
+                    layout=ExtraSlideLayout.CUSTOM,
+                    builder="demo",
+                    data={"key": "value"},
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec, project_root=tmp_path)
+        output = tmp_path / "custom.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+        # title + custom + closing = 3
+        assert result.slide_count >= 3
