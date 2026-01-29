@@ -684,13 +684,20 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="knowledge",
-            description="Knowledge lookup: concept, examples, cli_help, workflow, inference. Note: Static content also available via MCP Resources.",
+            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, get_spec. Note: Static content also available via MCP Resources.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["concept", "examples", "cli_help", "workflow", "inference"],
+                        "enum": [
+                            "concept",
+                            "examples",
+                            "cli_help",
+                            "workflow",
+                            "inference",
+                            "get_spec",
+                        ],
                         "description": "Operation to perform",
                     },
                     "term": {
@@ -836,6 +843,46 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Directory to write output files (for create)",
                     },
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
+        # User Feedback (Dazzle Bar - replaces 4 tools)
+        # =====================================================================
+        Tool(
+            name="user_feedback",
+            description="User feedback operations: list, get, update, summary. Monitor feedback and bug reports submitted via Dazzle Bar.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["list", "get", "update", "summary"],
+                        "description": "Operation to perform",
+                    },
+                    "feedback_id": {
+                        "type": "string",
+                        "description": "Feedback ID (for get, update)",
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Filter by status (for list) or new status (for update)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": ["bug", "feature", "ux", "general"],
+                        "description": "Filter by category (for list)",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Notes to add (for update)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max items to return (for list, default 20)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["operation"],
             },

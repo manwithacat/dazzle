@@ -16,6 +16,11 @@ from .state import get_available_projects, get_project_root, is_dev_mode, resolv
 
 def _resolve_project(arguments: dict[str, Any]) -> Path | None:
     """Resolve project path from arguments or state."""
+    # Check for pre-resolved path (set by dispatch_consolidated_tool via roots)
+    pre_resolved = arguments.get("_resolved_project_path")
+    if isinstance(pre_resolved, Path):
+        return pre_resolved
+
     explicit_path = arguments.get("project_path")
     try:
         return resolve_project_path(explicit_path)
@@ -493,8 +498,70 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
         return get_workflow_guide_handler(arguments)
     elif operation == "inference":
         return lookup_inference_handler(arguments)
+    elif operation == "get_spec":
+        project_path = _resolve_project(arguments)
+        if project_path is None:
+            return _project_error()
+        from .tool_handlers import get_product_spec_handler
+
+        return get_product_spec_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
+
+
+# =============================================================================
+# User Feedback Handler (Dazzle Bar)
+# =============================================================================
+
+
+async def handle_user_feedback(arguments: dict[str, Any]) -> str:
+    """Handle consolidated user feedback operations (async)."""
+    from .handlers.feedback import (
+        get_feedback_handler,
+        get_feedback_summary_handler,
+        list_feedback_handler,
+        update_feedback_handler,
+    )
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    pp = str(project_path)
+
+    if operation == "list":
+        return json.dumps(
+            await list_feedback_handler(
+                status=arguments.get("status"),
+                category=arguments.get("category"),
+                limit=arguments.get("limit", 20),
+                project_path=pp,
+            )
+        )
+    elif operation == "get":
+        feedback_id = arguments.get("feedback_id")
+        if not feedback_id:
+            return json.dumps({"error": "feedback_id is required"})
+        return json.dumps(await get_feedback_handler(feedback_id=feedback_id, project_path=pp))
+    elif operation == "update":
+        feedback_id = arguments.get("feedback_id")
+        status = arguments.get("status")
+        if not feedback_id or not status:
+            return json.dumps({"error": "feedback_id and status are required"})
+        return json.dumps(
+            await update_feedback_handler(
+                feedback_id=feedback_id,
+                status=status,
+                notes=arguments.get("notes"),
+                project_path=pp,
+            )
+        )
+    elif operation == "summary":
+        return json.dumps(await get_feedback_summary_handler(project_path=pp))
+    else:
+        return json.dumps({"error": f"Unknown user feedback operation: {operation}"})
 
 
 # =============================================================================
@@ -1005,10 +1072,15 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "pitch": handle_pitch,
     "mailpit": handle_mailpit,
     "contribution": handle_contribution,
+    "user_feedback": handle_user_feedback,
 }
 
 
-async def dispatch_consolidated_tool(name: str, arguments: dict[str, Any]) -> str | None:
+async def dispatch_consolidated_tool(
+    name: str,
+    arguments: dict[str, Any],
+    session: Any = None,
+) -> str | None:
     """
     Dispatch a consolidated tool call.
 
@@ -1016,11 +1088,28 @@ async def dispatch_consolidated_tool(name: str, arguments: dict[str, Any]) -> st
     or None if it's not (to allow fallback to original tools).
 
     Supports both sync and async handlers.
+
+    Args:
+        name: Tool name.
+        arguments: Tool arguments.
+        session: Optional MCP ServerSession for roots-based project resolution.
     """
     import inspect
 
     handler = CONSOLIDATED_TOOL_HANDLERS.get(name)
     if handler:
+        # Pre-resolve project path from MCP roots if session available
+        if session is not None and "_resolved_project_path" not in arguments:
+            try:
+                from .state import resolve_project_path_from_roots
+
+                resolved = await resolve_project_path_from_roots(
+                    session, arguments.get("project_path")
+                )
+                arguments = {**arguments, "_resolved_project_path": resolved}
+            except Exception:
+                pass  # Fall through to sync resolution
+
         if inspect.iscoroutinefunction(handler):
             result = await handler(arguments)
         else:

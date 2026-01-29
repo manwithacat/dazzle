@@ -8,8 +8,12 @@ for project root, dev mode, and active project management.
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
+from typing import TYPE_CHECKING
+from urllib.parse import unquote, urlparse
+
+if TYPE_CHECKING:
+    from mcp.server.session import ServerSession
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -24,21 +28,6 @@ _project_root: Path = Path.cwd()
 _is_dev_mode: bool = False
 _active_project: str | None = None  # Name of the active example project
 _available_projects: dict[str, Path] = {}  # project_name -> project_path
-
-# Consolidated tools mode - reduces token budget by ~40%
-# Set via DAZZLE_CONSOLIDATED_TOOLS=1 environment variable
-_use_consolidated_tools: bool = os.environ.get("DAZZLE_CONSOLIDATED_TOOLS", "1") == "1"
-
-
-def use_consolidated_tools() -> bool:
-    """Check if consolidated tools mode is enabled."""
-    return _use_consolidated_tools
-
-
-def set_consolidated_tools(enabled: bool) -> None:
-    """Enable or disable consolidated tools mode."""
-    global _use_consolidated_tools
-    _use_consolidated_tools = enabled
 
 
 def set_project_root(path: Path) -> None:
@@ -128,6 +117,77 @@ def resolve_project_path(project_path: str | None = None) -> Path:
 
     # Fall back to project root
     return _project_root
+
+
+# ============================================================================
+# MCP Roots-based Resolution
+# ============================================================================
+
+# Cache: frozenset of root URIs -> resolved Path
+_roots_cache: dict[frozenset[str], Path] = {}
+
+
+def _path_from_file_uri(uri: str) -> Path | None:
+    """Convert a file:// URI to a Path, or return None for non-file URIs."""
+    parsed = urlparse(uri)
+    if parsed.scheme != "file":
+        return None
+    return Path(unquote(parsed.path))
+
+
+async def resolve_project_path_from_roots(
+    session: ServerSession | None,
+    explicit_path: str | None = None,
+) -> Path:
+    """Resolve project path using MCP client roots.
+
+    Priority:
+    1. Explicit project_path parameter (validated)
+    2. Client workspace roots containing dazzle.toml (cached per root set)
+    3. Active project path / server project root (existing fallback)
+
+    Args:
+        session: The MCP server session to query for roots.
+        explicit_path: Optional explicit path from tool arguments.
+
+    Returns:
+        Resolved Path to the project directory.
+
+    Raises:
+        ValueError: If explicit_path is invalid.
+    """
+    # Explicit path takes priority — delegate to sync resolver
+    if explicit_path:
+        return resolve_project_path(explicit_path)
+
+    # No session available — fall back to sync resolver
+    if session is None:
+        return resolve_project_path(None)
+
+    # Try to get roots from the client
+    try:
+        roots_result = await session.list_roots()
+        root_uris = frozenset(str(r.uri) for r in roots_result.roots)
+    except Exception:
+        logger.debug("list_roots() unavailable, falling back to default resolution")
+        return resolve_project_path(None)
+
+    # Check cache
+    if root_uris in _roots_cache:
+        return _roots_cache[root_uris]
+
+    # Search roots for a dazzle.toml
+    for root in roots_result.roots:
+        path = _path_from_file_uri(str(root.uri))
+        if path and path.is_dir() and (path / "dazzle.toml").exists():
+            _roots_cache[root_uris] = path
+            logger.info(f"Resolved project from MCP root: {path}")
+            return path
+
+    # No root had dazzle.toml — fall back
+    fallback = resolve_project_path(None)
+    _roots_cache[root_uris] = fallback
+    return fallback
 
 
 # ============================================================================

@@ -114,12 +114,15 @@ def version_callback(value: bool) -> None:
         typer.echo(f"  Location:      {install_location}")
         typer.echo("")
         typer.echo("Features:")
-        typer.echo(
-            f"  LSP Server:    {'✓ Available' if lsp_available else '✗ Not available (install with: pip install dazzle)'}"
+        lsp_status = (
+            "✓ Available" if lsp_available else "✗ Not available (install with: pip install dazzle)"
         )
-        typer.echo(
-            f"  LLM Support:   {'✓ Available (' + ', '.join(llm_providers) + ')' if llm_available else '✗ Not available (install with: pip install dazzle[llm])'}"
-        )
+        typer.echo(f"  LSP Server:    {lsp_status}")
+        if llm_available:
+            llm_status = "✓ Available (" + ", ".join(llm_providers) + ")"
+        else:
+            llm_status = "✗ Not available (install with: pip install dazzle[llm])"
+        typer.echo(f"  LLM Support:   {llm_status}")
         typer.echo("")
         if ejection_adapters:
             typer.echo("Ejection Adapters:")

@@ -31,13 +31,27 @@ def send_jsonrpc(proc: subprocess.Popen, method: str, params: dict = None, id: i
     proc.stdin.write(json.dumps(message) + "\n")
     proc.stdin.flush()
 
-    # Read response
-    response_line = proc.stdout.readline()
-    if not response_line:
-        stderr = proc.stderr.read()
-        raise RuntimeError(f"No response received. stderr: {stderr}")
+    # Read response, handling server-to-client requests (e.g. roots/list)
+    while True:
+        response_line = proc.stdout.readline()
+        if not response_line:
+            stderr = proc.stderr.read()
+            raise RuntimeError(f"No response received. stderr: {stderr}")
 
-    return json.loads(response_line)
+        data = json.loads(response_line)
+
+        # If this is a server-to-client request, respond and keep reading
+        if "method" in data and "id" in data and "result" not in data:
+            reply: dict = {"jsonrpc": "2.0", "id": data["id"]}
+            if data["method"] == "roots/list":
+                reply["result"] = {"roots": []}
+            else:
+                reply["error"] = {"code": -32601, "message": "Method not found"}
+            proc.stdin.write(json.dumps(reply) + "\n")
+            proc.stdin.flush()
+            continue
+
+        return data
 
 
 def _start_mcp_server() -> subprocess.Popen:
@@ -120,8 +134,6 @@ class TestMCPServerIntegration:
 
     def test_tools_list(self, mcp_server, request_id_counter):
         """Test that server returns list of tools."""
-        from dazzle.mcp.server.state import use_consolidated_tools
-
         request_id_counter["id"] += 1
         response = send_jsonrpc(mcp_server, "tools/list", {}, id=request_id_counter["id"])
 
@@ -132,27 +144,16 @@ class TestMCPServerIntegration:
         tools = response["result"]["tools"]
         tool_names = [t["name"] for t in tools]
 
-        # Check expected tools exist (consolidated vs original mode)
-        if use_consolidated_tools():
-            assert "dsl" in tool_names
-            assert "api_pack" in tool_names
-            assert "knowledge" in tool_names
-        else:
-            assert "validate_dsl" in tool_names
-            assert "list_modules" in tool_names
-            assert "inspect_entity" in tool_names
+        # Check expected consolidated tools exist
+        assert "dsl" in tool_names
+        assert "api_pack" in tool_names
+        assert "knowledge" in tool_names
 
     def test_tool_call_validate_dsl(self, mcp_server, request_id_counter):
-        """Test calling the validate_dsl tool (or dsl with validate operation in consolidated mode)."""
-        from dazzle.mcp.server.state import use_consolidated_tools
-
+        """Test calling the dsl tool with validate operation."""
         request_id_counter["id"] += 1
-        if use_consolidated_tools():
-            tool_name = "dsl"
-            tool_args = {"operation": "validate"}
-        else:
-            tool_name = "validate_dsl"
-            tool_args = {}
+        tool_name = "dsl"
+        tool_args = {"operation": "validate"}
 
         response = send_jsonrpc(
             mcp_server,
@@ -205,26 +206,16 @@ class TestMCPServerUnit:
     async def test_list_tools_async(self):
         """Test list_tools returns expected tools."""
         from dazzle.mcp.server import list_tools_handler
-        from dazzle.mcp.server.state import use_consolidated_tools
 
         tools = await list_tools_handler()
         tool_names = [t.name for t in tools]
 
-        if use_consolidated_tools():
-            # In consolidated mode, we have fewer but more comprehensive tools
-            assert len(tools) >= 13
-            assert "dsl" in tool_names
-            assert "api_pack" in tool_names
-            assert "story" in tool_names
-            assert "knowledge" in tool_names
-        else:
-            assert len(tools) >= 7
-            assert "validate_dsl" in tool_names
-            assert "list_modules" in tool_names
-            assert "inspect_entity" in tool_names
-            assert "inspect_surface" in tool_names
-            assert "analyze_patterns" in tool_names
-            assert "lint_project" in tool_names
+        # Consolidated mode: fewer but more comprehensive tools
+        assert len(tools) >= 13
+        assert "dsl" in tool_names
+        assert "api_pack" in tool_names
+        assert "story" in tool_names
+        assert "knowledge" in tool_names
 
     async def test_call_tool_unknown(self):
         """Test calling unknown tool returns error."""
@@ -288,7 +279,7 @@ class TestMCPDevMode:
     async def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
         from dazzle.mcp.server import list_tools_handler
-        from dazzle.mcp.server.state import init_dev_mode, use_consolidated_tools
+        from dazzle.mcp.server.state import init_dev_mode
 
         # Ensure dev mode is initialized
         init_dev_mode(PROJECT_ROOT)
@@ -302,13 +293,9 @@ class TestMCPDevMode:
         assert "get_active_project" in tool_names
         assert "validate_all_projects" in tool_names
 
-        # Regular tools should also be present (consolidated vs original)
-        if use_consolidated_tools():
-            assert "dsl" in tool_names
-            assert "knowledge" in tool_names
-        else:
-            assert "validate_dsl" in tool_names
-            assert "list_modules" in tool_names
+        # Consolidated tools should also be present
+        assert "dsl" in tool_names
+        assert "knowledge" in tool_names
 
     async def test_list_projects_tool(self):
         """Test the list_projects tool."""
@@ -390,13 +377,13 @@ class TestMCPDevMode:
         assert data["summary"]["total"] > 0
 
     async def test_validate_dsl_in_dev_mode(self):
-        """Test that validate_dsl works with active project in dev mode."""
+        """Test that dsl validate works with active project in dev mode."""
         from dazzle.mcp.server import call_tool
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
 
-        result = await call_tool("validate_dsl", {})
+        result = await call_tool("dsl", {"operation": "validate"})
 
         data = json.loads(result[0].text)
         # Should have project context in dev mode
@@ -484,7 +471,7 @@ class TestMCPDevModeIntegration:
         response = send_jsonrpc(
             mcp_server,
             "tools/call",
-            {"name": "validate_dsl", "arguments": {}},
+            {"name": "dsl", "arguments": {"operation": "validate"}},
             id=request_id_counter["id"],
         )
         validate_data = json.loads(response["result"]["content"][0]["text"])

@@ -108,85 +108,33 @@ async def test_tool_registration() -> bool:
     print("Testing tool registration...")
     try:
         from dazzle.mcp.server import is_dev_mode, list_tools_handler
-        from dazzle.mcp.server.state import use_consolidated_tools
 
         # Get tools from the server handler
         published_tools = await list_tools_handler()
         published_names = {t.name for t in published_tools}
 
-        # In consolidated mode, check for consolidated tool names
-        if use_consolidated_tools():
-            expected_consolidated_tools = {
-                "dsl",
-                "api_pack",
-                "story",
-                "demo_data",
-                "test_design",
-                "sitespec",
-                "semantics",
-                "feedback",
-                "process",
-                "dsl_test",
-                "e2e_test",
-                "status",
-                "knowledge",
-            }
-            missing = expected_consolidated_tools - published_names
-            if missing:
-                print(f"  ✗ Missing consolidated tools: {missing}")
-                return False
-            print(f"  ✓ Consolidated mode: {len(published_names)} tools published")
-            print(f"    Consolidated tools: {len(expected_consolidated_tools)} verified")
-        else:
-            # Original mode - check for expected core tools
-            from dazzle.mcp.server.tools import get_all_tools
-
-            defined_tools = get_all_tools()
-            defined_names = {t.name for t in defined_tools}
-
-            missing = defined_names - published_names
-            if missing:
-                print(f"  ✗ Missing tools (defined but not published): {missing}")
-                return False
-
-            # Expected core tools that should ALWAYS be present (regardless of dev mode)
-            expected_core_tools = {
-                # Semantic/lookup tools
-                "lookup_concept",
-                "find_examples",
-                "get_cli_help",
-                "get_workflow_guide",
-                # Project tools
-                "validate_dsl",
-                "list_modules",
-                "inspect_entity",
-                "inspect_surface",
-                "lint_project",
-                "analyze_patterns",
-                # API pack tools
-                "list_api_packs",
-                "search_api_packs",
-                "get_api_pack",
-                # Story tools
-                "get_stories",
-                "propose_stories_from_dsl",
-                "save_stories",
-                # Demo data tools
-                "get_demo_blueprint",
-                "propose_demo_blueprint",
-                "save_demo_blueprint",
-                "generate_demo_data",
-                # Status tools
-                "get_mcp_status",
-            }
-
-            missing_core = expected_core_tools - published_names
-            if missing_core:
-                print(f"  ✗ Missing core tools: {missing_core}")
-                return False
-
-            print(f"  ✓ All {len(published_names)} tools properly registered and published")
-            print(f"    Core tools: {len(expected_core_tools)} verified")
+        # Check for consolidated tool names
+        expected_consolidated_tools = {
+            "dsl",
+            "api_pack",
+            "story",
+            "demo_data",
+            "test_design",
+            "sitespec",
+            "semantics",
+            "feedback",
+            "process",
+            "dsl_test",
+            "e2e_test",
+            "status",
+            "knowledge",
+        }
+        missing = expected_consolidated_tools - published_names
+        if missing:
+            print(f"  ✗ Missing consolidated tools: {missing}")
+            return False
+        print(f"  ✓ Consolidated mode: {len(published_names)} tools published")
+        print(f"    Consolidated tools: {len(expected_consolidated_tools)} verified")
 
         # Dev mode tools (only expected when in dev mode)
         dev_mode_tools = {
