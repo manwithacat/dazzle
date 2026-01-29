@@ -23,7 +23,8 @@ from dazzle.core.manifest import ProjectManifest, load_manifest
 from dazzle.core.parser import parse_modules
 
 story_app = typer.Typer(
-    help="Story-driven test generation. Propose stories from DSL, accept them, and generate test designs.",
+    help="Story-driven test generation. Propose stories from DSL, "
+    "accept them, and generate test designs.",
     no_args_is_help=True,
 )
 

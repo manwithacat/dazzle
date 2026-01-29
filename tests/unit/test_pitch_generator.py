@@ -619,6 +619,176 @@ class TestNewHelpers:
         assert result.slide_count >= 3
 
 
+class TestNewCosmetics:
+    def test_add_divider(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import _add_divider, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        bar = _add_divider(slide, 3.0, colors)
+        assert bar is not None
+        assert len(slide.shapes) == 1
+        # Bar should have accent color fill
+        assert bar.fill.fore_color.rgb == colors["accent"]
+
+    def test_logo_embedding_in_title_slide(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        # Create a minimal valid PNG (1x1 pixel)
+        import struct
+        import zlib
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        def _make_png(path: Path) -> None:
+            sig = b"\x89PNG\r\n\x1a\n"
+            ihdr_data = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
+            ihdr_crc = zlib.crc32(b"IHDR" + ihdr_data) & 0xFFFFFFFF
+            ihdr = struct.pack(">I", 13) + b"IHDR" + ihdr_data + struct.pack(">I", ihdr_crc)
+            raw = b"\x00\x00\x00\x00"  # filter byte + 1 RGB pixel
+            compressed = zlib.compress(raw)
+            idat_crc = zlib.crc32(b"IDAT" + compressed) & 0xFFFFFFFF
+            idat = (
+                struct.pack(">I", len(compressed))
+                + b"IDAT"
+                + compressed
+                + struct.pack(">I", idat_crc)
+            )
+            iend_crc = zlib.crc32(b"IEND") & 0xFFFFFFFF
+            iend = struct.pack(">I", 0) + b"IEND" + struct.pack(">I", iend_crc)
+            path.write_bytes(sig + ihdr + idat + iend)
+
+        logo_path = tmp_path / "logo.png"
+        _make_png(logo_path)
+
+        spec = PitchSpec(
+            company=CompanySpec(
+                name="LogoCo",
+                stage=FundingStage.SEED,
+                logo_path=str(logo_path),
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "logo_deck.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        title_slide = prs.slides[0]
+        # Should have picture shape for logo
+        has_picture = any(
+            hasattr(shape, "image") and shape.image is not None
+            for shape in title_slide.shapes
+            if shape.shape_type == 13  # MSO_SHAPE_TYPE.PICTURE
+        )
+        assert has_picture, "Title slide should contain embedded logo"
+
+    def test_pricing_tier_has_card_shapes(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            business_model=BusinessModelSpec(
+                tiers=[
+                    PricingTier(name="Free", price=0),
+                    PricingTier(name="Pro", price=49, highlighted=True),
+                ]
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "pricing.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        # Business model slide is after title
+        bm_slide = prs.slides[1]
+        # Should have auto-shapes (cards) with type 5 (rounded rect)
+        auto_shapes = [s for s in bm_slide.shapes if hasattr(s, "shape_type") and s.shape_type == 1]
+        assert len(auto_shapes) >= 2, "Each pricing tier should have a card shape"
+
+    def test_platform_stat_box_cards(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec()
+        ctx = PitchContext(
+            spec=spec,
+            entities=["Task", "Project"],
+            surfaces=["task_list"],
+        )
+        output = tmp_path / "platform.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        # Platform slide is after title
+        platform_slide = prs.slides[1]
+        # Should have auto-shapes (cards) with type 5 (rounded rect)
+        auto_shapes = [
+            s for s in platform_slide.shapes if hasattr(s, "shape_type") and s.shape_type == 1
+        ]
+        assert len(auto_shapes) >= 2, "Each platform metric should have a card background"
+
+    def test_milestones_has_dividers(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            milestones=MilestonesSpec(
+                completed=["MVP done"],
+                next_12_months=["Launch v1"],
+                long_term=["Global expansion"],
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "milestones.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        # Milestones slide is after title
+        ms_slide = prs.slides[1]
+        # Count shapes - with 3 sections and dividers between them, should have more shapes
+        # than without dividers. At minimum we expect 2 divider rectangles.
+        shape_count = len(ms_slide.shapes)
+        # heading(text+bar) + completed(header+1 bullet) + divider + next(header+1 bullet)
+        # + divider + long_term(header+1 bullet) = at least 10 shapes
+        assert shape_count >= 10, f"Expected >=10 shapes with dividers, got {shape_count}"
+
+
 class TestNarrativeGenerator:
     def test_generate_narrative(self, tmp_path: Path):
         from dazzle.pitch.generators.narrative import generate_narrative
