@@ -255,6 +255,19 @@ def _add_stat_box(
     """Add a big-number + caption stat box."""
     from pptx.util import Inches
 
+    # Convert width to inches for estimation
+    width_in = width / Inches(1) if not isinstance(width, float) else width
+
+    # Auto-scale value font to fit within the box width
+    value_font = 48
+    while _estimate_text_height(value, width_in, value_font, bold=True) > 1.0 and value_font > 24:
+        value_font -= 4
+
+    # Auto-scale label font to fit
+    label_font = 16
+    while _estimate_text_height(label, width_in, label_font) > 0.5 and label_font > 11:
+        label_font -= 1
+
     _add_text_box(
         slide,
         left,
@@ -262,7 +275,7 @@ def _add_stat_box(
         width,
         Inches(1),
         value,
-        font_size=48,
+        font_size=value_font,
         bold=True,
         color=value_color,
         alignment=alignment,
@@ -274,7 +287,7 @@ def _add_stat_box(
         width,
         Inches(0.5),
         label,
-        font_size=16,
+        font_size=label_font,
         color=label_color,
         alignment=alignment,
     )
