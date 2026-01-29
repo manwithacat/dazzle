@@ -972,6 +972,204 @@ class TestLayoutSafety:
         assert "extends to" in warnings[0]
 
 
+class TestContentRegion:
+    def test_content_region_remaining(self):
+        from dazzle.pitch.generators.pptx_primitives import ContentRegion
+
+        r = ContentRegion(left=1.0, top=3.0, width=10.0, bottom=7.0)
+        assert r.remaining == pytest.approx(4.0)
+
+    def test_content_region_remaining_past_bottom(self):
+        from dazzle.pitch.generators.pptx_primitives import ContentRegion
+
+        r = ContentRegion(left=1.0, top=8.0, width=10.0, bottom=7.0)
+        assert r.remaining == 0.0
+
+    def test_content_region_fits(self):
+        from dazzle.pitch.generators.pptx_primitives import ContentRegion
+
+        r = ContentRegion(left=1.0, top=6.0, width=10.0, bottom=7.0)
+        assert r.fits(0.5)
+        assert r.fits(1.0)
+        assert not r.fits(1.1)
+
+    def test_content_region_advance(self):
+        from dazzle.pitch.generators.pptx_primitives import ContentRegion
+
+        r = ContentRegion(left=1.0, top=2.0, width=10.0, bottom=7.0)
+        r2 = r.advance(1.5)
+        assert r2.top == pytest.approx(3.5)
+        assert r2.remaining == pytest.approx(3.5)
+        assert r2.left == r.left
+        assert r2.width == r.width
+
+    def test_estimate_text_height_short(self):
+        from dazzle.pitch.generators.pptx_primitives import _estimate_text_height
+
+        h = _estimate_text_height("Hello", 10.0, 18)
+        # Single line at 18pt: 18 * 1.4 / 72 = 0.35"
+        assert h == pytest.approx(0.35)
+
+    def test_estimate_text_height_wrapping(self):
+        from dazzle.pitch.generators.pptx_primitives import _estimate_text_height
+
+        long_text = "A" * 500
+        h = _estimate_text_height(long_text, 5.0, 18)
+        # Should be multiple lines
+        assert h > 0.35
+
+    def test_estimate_text_height_bold_wider(self):
+        from dazzle.pitch.generators.pptx_primitives import _estimate_text_height
+
+        text = "A" * 200
+        h_normal = _estimate_text_height(text, 5.0, 18)
+        h_bold = _estimate_text_height(text, 5.0, 18, bold=True)
+        # Bold text is wider per char, so wraps to more lines
+        assert h_bold >= h_normal
+
+    def test_estimate_text_height_multiline(self):
+        from dazzle.pitch.generators.pptx_primitives import _estimate_text_height
+
+        text = "Line 1\nLine 2\nLine 3"
+        h = _estimate_text_height(text, 10.0, 18)
+        single = _estimate_text_height("Line 1", 10.0, 18)
+        assert h == pytest.approx(single * 3)
+
+
+class TestOverflowHandling:
+    def test_solution_slide_truncates_long_steps(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            solution=SolutionSpec(
+                headline="Solution",
+                how_it_works=[f"Step {i}" for i in range(15)],
+                value_props=[f"Value {i}" for i in range(15)],
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "overflow_solution.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+    def test_team_slide_auto_split(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            team=TeamSpec(
+                founders=[
+                    TeamMember(
+                        name=f"Founder {i}", role=f"Role {i}", bio=f"Bio for founder {i} " * 5
+                    )
+                    for i in range(10)
+                ],
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "overflow_team.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        # Should have created continuation slide(s)
+        prs = Presentation(str(output))
+        # title + team + continuation(s) + closing
+        assert len(prs.slides) >= 4
+
+    def test_milestones_auto_split(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            milestones=MilestonesSpec(
+                completed=[f"Done {i}" for i in range(10)],
+                next_12_months=[f"Next {i}" for i in range(10)],
+                long_term=[f"Long {i}" for i in range(10)],
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "overflow_ms.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        # Should have continuation slide(s) — at least title + milestones + continuation + closing
+        assert len(prs.slides) >= 4
+
+    def test_market_drivers_truncated(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+
+        spec = PitchSpec(
+            market=MarketSpec(
+                tam=MarketSize(value=1_000_000, label="TAM"),
+                drivers=[f"Driver {i}: a long market driver description" for i in range(10)],
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "overflow_market.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        # No shape should extend past slide height
+        prs = Presentation(str(output))
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                bottom = (shape.top + shape.height) / 914400
+                assert bottom <= SLIDE_HEIGHT + 0.1, f"Shape overflows: {bottom}"
+
+    def test_personas_truncated(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+
+        spec = PitchSpec()
+        ctx = PitchContext(
+            spec=spec,
+            personas=[
+                {"id": f"p{i}", "label": f"Persona {i}", "description": "A long description " * 3}
+                for i in range(10)
+            ],
+        )
+        output = tmp_path / "overflow_personas.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                bottom = (shape.top + shape.height) / 914400
+                assert bottom <= SLIDE_HEIGHT + 0.1
+
+
 class TestPluginSystem:
     def test_plugin_registry(self):
         from dazzle.pitch.generators.plugin_loader import PluginRegistry

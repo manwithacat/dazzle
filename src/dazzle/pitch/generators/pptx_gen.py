@@ -24,6 +24,7 @@ from dazzle.pitch.generators.pptx_primitives import (  # noqa: F401
     CONTENT_TOP,
     SLIDE_HEIGHT,
     SLIDE_WIDTH,
+    ContentRegion,
     LayoutResult,
     _add_bullet_list,
     _add_callout_box,
@@ -38,6 +39,7 @@ from dazzle.pitch.generators.pptx_primitives import (  # noqa: F401
     _add_text_box,
     _create_dark_slide,
     _create_light_slide,
+    _estimate_text_height,
     _fmt_currency,
     _resolve_colors,
 )
@@ -64,7 +66,9 @@ from dazzle.pitch.ir import ExtraSlide, ExtraSlideLayout
 __all__ = [
     "GeneratorResult",
     "generate_pptx",
+    "ContentRegion",
     "LayoutResult",
+    "_estimate_text_height",
     "SLIDE_WIDTH",
     "SLIDE_HEIGHT",
     "CONTENT_TOP",

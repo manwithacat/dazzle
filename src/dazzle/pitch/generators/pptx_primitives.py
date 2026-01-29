@@ -7,8 +7,9 @@ Low-level shape helpers used by slide builders.
 from __future__ import annotations
 
 import logging
+import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,41 @@ CONTENT_TOP = 2.0  # after heading + accent bar
 CONTENT_BOTTOM = 7.0  # 0.5" bottom margin
 CONTENT_LEFT = 0.8
 CONTENT_RIGHT = 12.5
+
+
+@dataclass
+class ContentRegion:
+    """Vertical layout cursor with bounds tracking."""
+
+    left: float  # inches
+    top: float  # current y position (inches)
+    width: float  # available width (inches)
+    bottom: float  # hard stop y (inches), typically CONTENT_BOTTOM
+
+    @property
+    def remaining(self) -> float:
+        return max(0.0, self.bottom - self.top)
+
+    def fits(self, height: float) -> bool:
+        return self.top + height <= self.bottom
+
+    def advance(self, height: float) -> ContentRegion:
+        return replace(self, top=self.top + height)
+
+
+def _estimate_text_height(
+    text: str, width_inches: float, font_size: int, *, bold: bool = False
+) -> float:
+    """Estimate rendered text height in inches (conservative/rounds up)."""
+    char_width = font_size * 0.6  # points per character (approximate)
+    if bold:
+        char_width *= 1.1
+    chars_per_line = max(1, int(width_inches * 72 / char_width))
+    lines = 0
+    for paragraph in text.split("\n"):
+        lines += max(1, math.ceil(len(paragraph) / chars_per_line))
+    line_height = font_size * 1.4 / 72  # inches
+    return lines * line_height
 
 
 @dataclass

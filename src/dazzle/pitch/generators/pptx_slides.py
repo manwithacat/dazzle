@@ -13,6 +13,7 @@ from typing import Any
 from dazzle.pitch.extractor import PitchContext
 from dazzle.pitch.generators.pptx_primitives import (
     CONTENT_BOTTOM,
+    ContentRegion,
     _add_bullet_list,
     _add_callout_box,
     _add_card,
@@ -172,11 +173,16 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
 
     font_name = colors.get("font_family")
     if solution.how_it_works:
+        left_region = ContentRegion(left=1.2, top=y, width=5.0, bottom=CONTENT_BOTTOM)
         for i, step in enumerate(solution.how_it_works, 1):
+            if not left_region.fits(0.6):
+                remaining = len(solution.how_it_works) - i + 1
+                logger.warning(f"Solution slide: truncated {remaining} how_it_works steps")
+                break
             _add_text_box(
                 slide,
-                Inches(1.2),
-                Inches(y),
+                Inches(left_region.left),
+                Inches(left_region.top),
                 Inches(5),
                 Inches(0.6),
                 f"{i}. {step}",
@@ -184,14 +190,14 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 color=colors["white"],
                 font_name=font_name,
             )
-            y += 0.6
+            left_region = left_region.advance(0.6)
 
     if solution.value_props:
-        vy = 2.0
+        right_region = ContentRegion(left=7.0, top=2.0, width=5.0, bottom=CONTENT_BOTTOM)
         _add_text_box(
             slide,
             Inches(7),
-            Inches(vy - 0.5),
+            Inches(right_region.top - 0.5),
             Inches(5),
             Inches(0.5),
             "Value Propositions",
@@ -200,11 +206,15 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
             color=colors["accent"],
             font_name=font_name,
         )
+        right_region = right_region.advance(0.2)
         for prop in solution.value_props:
+            if not right_region.fits(0.5):
+                logger.warning("Solution slide: truncated value_props")
+                break
             _add_text_box(
                 slide,
                 Inches(7.2),
-                Inches(vy + 0.2),
+                Inches(right_region.top),
                 Inches(5),
                 Inches(0.5),
                 f"\u2713 {prop}",
@@ -212,7 +222,7 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 color=colors["white"],
                 font_name=font_name,
             )
-            vy += 0.5
+            right_region = right_region.advance(0.5)
 
     notes = solution.speaker_notes
     _add_speaker_notes(slide, notes or f"Solution: {solution.headline}")
@@ -323,12 +333,15 @@ def _build_personas_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
     slide = _create_dark_slide(prs, colors)
     _add_slide_heading(slide, "User Personas", colors)
 
-    y = 2.0
+    region = ContentRegion(left=1.2, top=2.0, width=10.0, bottom=CONTENT_BOTTOM)
     for persona in ctx.personas[:6]:
+        if not region.fits(0.8):
+            logger.warning("Personas slide: truncated due to overflow")
+            break
         _add_text_box(
             slide,
             Inches(1.2),
-            Inches(y),
+            Inches(region.top),
             Inches(3),
             Inches(0.5),
             persona["label"],
@@ -340,14 +353,14 @@ def _build_personas_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
             _add_text_box(
                 slide,
                 Inches(4.5),
-                Inches(y),
+                Inches(region.top),
                 Inches(7),
                 Inches(0.5),
                 persona["description"],
                 font_size=16,
                 color=colors["muted"],
             )
-        y += 0.8
+        region = region.advance(0.8)
 
     _add_speaker_notes(slide, f"{len(ctx.personas)} user personas defined in DSL.")
 
@@ -413,11 +426,11 @@ def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> 
         )
 
     if market.drivers:
-        y = 5.0
+        driver_region = ContentRegion(left=0.8, top=5.0, width=11.0, bottom=CONTENT_BOTTOM)
         _add_text_box(
             slide,
             Inches(0.8),
-            Inches(y),
+            Inches(driver_region.top),
             Inches(11),
             Inches(0.5),
             "Market Drivers",
@@ -425,19 +438,22 @@ def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> 
             bold=True,
             color=colors["accent"],
         )
-        y += 0.6
+        driver_region = driver_region.advance(0.6)
         for driver in market.drivers:
+            if not driver_region.fits(0.5):
+                logger.warning("Market slide: truncated drivers due to overflow")
+                break
             _add_text_box(
                 slide,
                 Inches(1.2),
-                Inches(y),
+                Inches(driver_region.top),
                 Inches(10),
                 Inches(0.4),
                 f"\u25b8 {driver}",
                 font_size=16,
                 color=colors["white"],
             )
-            y += 0.5
+            driver_region = driver_region.advance(0.5)
 
     # Embed market chart if available
     market_chart = ctx.chart_paths.get("market")
@@ -635,116 +651,237 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
     _add_speaker_notes(slide, notes or "Financial projections and use of funds breakdown.")
 
 
-def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
-    """Build team slide with light background."""
+def _estimate_team_height(team: Any, scale: dict[str, int] | None = None) -> float:
+    """Estimate total height needed for all team sections."""
+    if scale is None:
+        scale = {"name": 22, "role": 18, "bio": 14, "section": 20, "item": 16}
+    height = 0.0
+    for member in team.founders:
+        height += 1.0 if member.bio else 0.7
+    if team.advisors:
+        height += 0.3 + 0.5  # gap + header
+        height += len(team.advisors) * 0.5
+    if team.key_hires:
+        height += 0.3 + 0.5  # gap + header
+        height += len(team.key_hires) * 0.5
+    return height
+
+
+def _render_team_member(
+    slide: Any,
+    region: ContentRegion,
+    member: Any,
+    colors: dict[str, Any],
+    scale: dict[str, int],
+    font_name: str | None,
+) -> ContentRegion:
+    """Render a single team member and return advanced region."""
     from pptx.util import Inches
 
+    _add_text_box(
+        slide,
+        Inches(1.2),
+        Inches(region.top),
+        Inches(3),
+        Inches(0.5),
+        member.name,
+        font_size=scale["name"],
+        bold=True,
+        color=colors["accent"],
+        font_name=font_name,
+    )
+    _add_text_box(
+        slide,
+        Inches(4.5),
+        Inches(region.top),
+        Inches(2),
+        Inches(0.5),
+        member.role,
+        font_size=scale["role"],
+        color=colors["highlight"],
+        font_name=font_name,
+    )
+    if member.bio:
+        _add_text_box(
+            slide,
+            Inches(1.2),
+            Inches(region.top + 0.4),
+            Inches(10),
+            Inches(0.4),
+            member.bio,
+            font_size=scale["bio"],
+            color=colors["muted"],
+            font_name=font_name,
+        )
+        return region.advance(1.0)
+    return region.advance(0.7)
+
+
+def _build_team_content(
+    prs: Any,
+    slide: Any,
+    region: ContentRegion,
+    colors: dict[str, Any],
+    founders: list[Any],
+    advisors: list[Any],
+    key_hires: list[Any],
+    scale: dict[str, int],
+    title: str,
+) -> None:
+    """Render team content on a slide, creating continuation slides on overflow."""
+    from pptx.util import Inches
+
+    font_name = colors.get("font_family")
+
+    overflow_founders: list[Any] = []
+    overflow_advisors: list[Any] = []
+    overflow_hires: list[Any] = []
+
+    # Founders
+    for idx, member in enumerate(founders):
+        needed = 1.0 if member.bio else 0.7
+        if not region.fits(needed):
+            overflow_founders = founders[idx:]
+            break
+        region = _render_team_member(slide, region, member, colors, scale, font_name)
+
+    # Advisors
+    if not overflow_founders and advisors:
+        header_h = 0.8  # gap + header
+        if not region.fits(header_h + 0.5):
+            overflow_advisors = advisors
+        else:
+            region = region.advance(0.3)
+            _add_text_box(
+                slide,
+                Inches(0.8),
+                Inches(region.top),
+                Inches(11),
+                Inches(0.5),
+                "Advisors",
+                font_size=scale["section"],
+                bold=True,
+                color=colors["accent"],
+                font_name=font_name,
+            )
+            region = region.advance(0.5)
+            for idx, advisor in enumerate(advisors):
+                if not region.fits(0.5):
+                    overflow_advisors = advisors[idx:]
+                    break
+                _add_text_box(
+                    slide,
+                    Inches(1.2),
+                    Inches(region.top),
+                    Inches(5),
+                    Inches(0.4),
+                    f"{advisor.name} \u2014 {advisor.role}",
+                    font_size=scale["item"],
+                    color=colors["dark_text"],
+                    font_name=font_name,
+                )
+                region = region.advance(0.5)
+    elif overflow_founders:
+        overflow_advisors = advisors
+
+    # Key Hires
+    if not overflow_founders and not overflow_advisors and key_hires:
+        header_h = 0.8
+        if not region.fits(header_h + 0.5):
+            overflow_hires = key_hires
+        else:
+            region = region.advance(0.3)
+            _add_text_box(
+                slide,
+                Inches(0.8),
+                Inches(region.top),
+                Inches(11),
+                Inches(0.5),
+                "Key Hires",
+                font_size=scale["section"],
+                bold=True,
+                color=colors["accent"],
+                font_name=font_name,
+            )
+            region = region.advance(0.5)
+            for idx, hire in enumerate(key_hires):
+                if not region.fits(0.5):
+                    overflow_hires = key_hires[idx:]
+                    break
+                timing = f" ({hire.timing})" if hire.timing else ""
+                _add_text_box(
+                    slide,
+                    Inches(1.2),
+                    Inches(region.top),
+                    Inches(10),
+                    Inches(0.4),
+                    f"{hire.role}{timing}",
+                    font_size=scale["item"],
+                    color=colors["dark_text"],
+                    font_name=font_name,
+                )
+                region = region.advance(0.5)
+    elif overflow_founders or overflow_advisors:
+        overflow_hires = key_hires
+
+    # Create continuation slide if needed
+    if overflow_founders or overflow_advisors or overflow_hires:
+        logger.warning("Team slide: content overflow, creating continuation slide")
+        cont_slide = _create_light_slide(prs, colors)
+        cont_y = _add_slide_heading(
+            cont_slide, f"{title} (continued)", colors, text_color=colors["dark_text"]
+        )
+        cont_region = ContentRegion(left=0.8, top=cont_y, width=11.0, bottom=CONTENT_BOTTOM)
+        _build_team_content(
+            prs,
+            cont_slide,
+            cont_region,
+            colors,
+            overflow_founders,
+            overflow_advisors,
+            overflow_hires,
+            scale,
+            title,
+        )
+
+
+def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+    """Build team slide with light background, auto-scale, and auto-split."""
     team = ctx.spec.team
     if not team:
         return
 
+    # Font scale options: normal -> compact -> minimum
+    font_scales = [
+        {"name": 22, "role": 18, "bio": 14, "section": 20, "item": 16},
+        {"name": 18, "role": 16, "bio": 13, "section": 18, "item": 14},
+        {"name": 16, "role": 14, "bio": 12, "section": 16, "item": 12},
+    ]
+
+    available = CONTENT_BOTTOM - 2.0  # heading takes ~2.0"
+    scale = font_scales[0]
+    for s in font_scales:
+        total = _estimate_team_height(team, s)
+        if total <= available:
+            scale = s
+            break
+        scale = s  # use smallest if none fit
+
     slide = _create_light_slide(prs, colors)
     y = _add_slide_heading(slide, "Team", colors, text_color=colors["dark_text"])
+    region = ContentRegion(left=0.8, top=y, width=11.0, bottom=CONTENT_BOTTOM)
 
-    font_name = colors.get("font_family")
-    for member in team.founders:
-        _add_text_box(
-            slide,
-            Inches(1.2),
-            Inches(y),
-            Inches(3),
-            Inches(0.5),
-            member.name,
-            font_size=22,
-            bold=True,
-            color=colors["accent"],
-            font_name=font_name,
-        )
-        _add_text_box(
-            slide,
-            Inches(4.5),
-            Inches(y),
-            Inches(2),
-            Inches(0.5),
-            member.role,
-            font_size=18,
-            color=colors["highlight"],
-            font_name=font_name,
-        )
-        if member.bio:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y + 0.4),
-                Inches(10),
-                Inches(0.4),
-                member.bio,
-                font_size=14,
-                color=colors["muted"],
-                font_name=font_name,
-            )
-            y += 1.0
-        else:
-            y += 0.7
-
-    if team.advisors:
-        y += 0.3
-        _add_text_box(
-            slide,
-            Inches(0.8),
-            Inches(y),
-            Inches(11),
-            Inches(0.5),
-            "Advisors",
-            font_size=20,
-            bold=True,
-            color=colors["accent"],
-            font_name=font_name,
-        )
-        y += 0.5
-        for advisor in team.advisors:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(5),
-                Inches(0.4),
-                f"{advisor.name} \u2014 {advisor.role}",
-                font_size=16,
-                color=colors["dark_text"],
-                font_name=font_name,
-            )
-            y += 0.5
-
-    if team.key_hires:
-        y += 0.3
-        _add_text_box(
-            slide,
-            Inches(0.8),
-            Inches(y),
-            Inches(11),
-            Inches(0.5),
-            "Key Hires",
-            font_size=20,
-            bold=True,
-            color=colors["accent"],
-            font_name=font_name,
-        )
-        y += 0.5
-        for hire in team.key_hires:
-            timing = f" ({hire.timing})" if hire.timing else ""
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.4),
-                f"{hire.role}{timing}",
-                font_size=16,
-                color=colors["dark_text"],
-                font_name=font_name,
-            )
-            y += 0.5
+    _build_team_content(
+        prs,
+        slide,
+        region,
+        colors,
+        list(team.founders),
+        list(team.advisors) if team.advisors else [],
+        list(team.key_hires) if team.key_hires else [],
+        scale,
+        "Team",
+    )
 
     notes = team.speaker_notes
     _add_speaker_notes(
@@ -782,104 +919,93 @@ def _build_competition_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]
     _add_speaker_notes(slide, f"{len(ctx.spec.competitors)} competitors analyzed.")
 
 
-def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
-    """Build milestones / roadmap slide."""
+def _build_milestones_content(
+    prs: Any,
+    slide: Any,
+    region: ContentRegion,
+    colors: dict[str, Any],
+    sections: list[tuple[str, list[str], Any, str, Any | None]],
+    section_index: int,
+    is_first_on_slide: bool,
+) -> None:
+    """Render milestone sections on a slide, creating continuation on overflow."""
     from pptx.util import Inches
 
+    font_name = colors.get("font_family")
+
+    for i in range(section_index, len(sections)):
+        title, items, title_color, bullet_char, item_color = sections[i]
+        needs_divider = not is_first_on_slide or i > section_index
+        header_h = 0.8 if needs_divider else 0.5
+
+        if not region.fits(header_h + 0.5):
+            # Create continuation slide with remaining sections
+            logger.warning("Milestones slide: content overflow, creating continuation slide")
+            cont_slide = _create_dark_slide(prs, colors)
+            cont_y = _add_slide_heading(cont_slide, "Milestones & Roadmap (continued)", colors)
+            cont_region = ContentRegion(left=1.2, top=cont_y, width=10.0, bottom=CONTENT_BOTTOM)
+            _build_milestones_content(prs, cont_slide, cont_region, colors, sections, i, True)
+            return
+
+        if needs_divider:
+            _add_divider(slide, region.top + 0.1, colors)
+            region = region.advance(0.3)
+
+        _add_text_box(
+            slide,
+            Inches(0.8),
+            Inches(region.top),
+            Inches(5),
+            Inches(0.5),
+            title,
+            font_size=20,
+            bold=True,
+            color=title_color,
+            font_name=font_name,
+        )
+        region = region.advance(0.5)
+
+        lr = _add_bullet_list(
+            slide,
+            Inches(1.2),
+            region.top,
+            Inches(10),
+            items,
+            colors,
+            font_size=16,
+            spacing=0.5,
+            bullet_char=bullet_char,
+            color=item_color or colors["white"],
+        )
+        region = ContentRegion(
+            left=region.left, top=lr.final_y, width=region.width, bottom=region.bottom
+        )
+        is_first_on_slide = False
+
+
+def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+    """Build milestones / roadmap slide with auto-split on overflow."""
     ms = ctx.spec.milestones
     if not ms:
         return
 
     slide = _create_dark_slide(prs, colors)
     y = _add_slide_heading(slide, "Milestones & Roadmap", colors)
+    region = ContentRegion(left=1.2, top=y, width=10.0, bottom=CONTENT_BOTTOM)
 
-    font_name = colors.get("font_family")
-
+    sections: list[tuple[str, list[str], Any, str, Any | None]] = []
     if ms.completed:
-        _add_text_box(
-            slide,
-            Inches(0.8),
-            Inches(y),
-            Inches(5),
-            Inches(0.5),
-            "Completed \u2713",
-            font_size=20,
-            bold=True,
-            color=colors["success"],
-            font_name=font_name,
+        sections.append(
+            ("Completed \u2713", ms.completed, colors["success"], "\u2713", colors["muted"])
         )
-        y += 0.5
-        y = _add_bullet_list(
-            slide,
-            Inches(1.2),
-            y,
-            Inches(10),
-            ms.completed,
-            colors,
-            font_size=16,
-            spacing=0.5,
-            bullet_char="\u2713",
-            color=colors["muted"],
-        ).final_y
-
     if ms.next_12_months:
-        if ms.completed:
-            _add_divider(slide, y + 0.1, colors)
-        y += 0.3
-        _add_text_box(
-            slide,
-            Inches(0.8),
-            Inches(y),
-            Inches(5),
-            Inches(0.5),
-            "Next 12 Months",
-            font_size=20,
-            bold=True,
-            color=colors["accent"],
-            font_name=font_name,
-        )
-        y += 0.5
-        y = _add_bullet_list(
-            slide,
-            Inches(1.2),
-            y,
-            Inches(10),
-            ms.next_12_months,
-            colors,
-            font_size=16,
-            spacing=0.5,
-            bullet_char="\u2192",
-        ).final_y
-
+        sections.append(("Next 12 Months", ms.next_12_months, colors["accent"], "\u2192", None))
     if ms.long_term:
-        if ms.completed or ms.next_12_months:
-            _add_divider(slide, y + 0.1, colors)
-        y += 0.3
-        _add_text_box(
-            slide,
-            Inches(0.8),
-            Inches(y),
-            Inches(5),
-            Inches(0.5),
-            "Long Term Vision",
-            font_size=20,
-            bold=True,
-            color=colors["highlight"],
-            font_name=font_name,
+        sections.append(
+            ("Long Term Vision", ms.long_term, colors["highlight"], "\u25c6", colors["muted"])
         )
-        y += 0.5
-        y = _add_bullet_list(
-            slide,
-            Inches(1.2),
-            y,
-            Inches(10),
-            ms.long_term,
-            colors,
-            font_size=16,
-            spacing=0.5,
-            bullet_char="\u25c6",
-            color=colors["muted"],
-        ).final_y
+
+    _build_milestones_content(prs, slide, region, colors, sections, 0, True)
 
     notes = ms.speaker_notes
     _add_speaker_notes(slide, notes or "Milestones and roadmap.")
