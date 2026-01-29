@@ -6,7 +6,7 @@
  */
 
 // @ts-check
-'use strict';
+"use strict";
 
 /* ==========================================================================
    State
@@ -19,7 +19,7 @@ let healthSSE = null;
 let eventsSSE = null;
 
 /** @type {string | null} */
-let currentPanel = 'health';
+let currentPanel = "health";
 
 /* ==========================================================================
    API Helpers
@@ -32,21 +32,23 @@ let currentPanel = 'health';
  * @returns {Promise<any>}
  */
 async function api(path, options = {}) {
-    const response = await fetch(`/_ops${path}`, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-        credentials: 'include', // Include cookies for auth
-    });
+  const response = await fetch(`/_ops${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+    credentials: "include", // Include cookies for auth
+  });
 
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(error.detail || `HTTP ${response.status}`);
-    }
+  if (!response.ok) {
+    const error = await response
+      .json()
+      .catch(() => ({ detail: "Unknown error" }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
 
-    return response.json();
+  return response.json();
 }
 
 /* ==========================================================================
@@ -57,26 +59,26 @@ async function api(path, options = {}) {
  * Check if setup is required
  */
 async function checkSetup() {
-    try {
-        const { setup_required } = await api('/setup-required');
+  try {
+    const { setup_required } = await api("/setup-required");
 
-        if (setup_required) {
-            showElement('setup-form');
-            hideElement('login-form');
-        } else {
-            // Try to get current user (check if already logged in)
-            try {
-                await api('/me');
-                showDashboard();
-            } catch {
-                showElement('login-form');
-                hideElement('setup-form');
-            }
-        }
-    } catch (error) {
-        console.error('Setup check failed:', error);
-        showElement('login-form');
+    if (setup_required) {
+      showElement("setup-form");
+      hideElement("login-form");
+    } else {
+      // Try to get current user (check if already logged in)
+      try {
+        await api("/me");
+        showDashboard();
+      } catch {
+        showElement("login-form");
+        hideElement("setup-form");
+      }
     }
+  } catch (error) {
+    console.error("Setup check failed:", error);
+    showElement("login-form");
+  }
 }
 
 /**
@@ -84,34 +86,36 @@ async function checkSetup() {
  * @param {Event} event
  */
 async function handleSetup(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const username = /** @type {HTMLInputElement} */ (
-        document.getElementById('setup-username')
-    ).value;
-    const password = /** @type {HTMLInputElement} */ (
-        document.getElementById('setup-password')
-    ).value;
-    const confirm = /** @type {HTMLInputElement} */ (
-        document.getElementById('setup-password-confirm')
-    ).value;
+  const username = /** @type {HTMLInputElement} */ (
+    document.getElementById("setup-username")
+  ).value;
+  const password = /** @type {HTMLInputElement} */ (
+    document.getElementById("setup-password")
+  ).value;
+  const confirm = /** @type {HTMLInputElement} */ (
+    document.getElementById("setup-password-confirm")
+  ).value;
 
-    const errorEl = document.getElementById('setup-error');
+  const errorEl = document.getElementById("setup-error");
 
-    if (password !== confirm) {
-        if (errorEl) errorEl.textContent = 'Passwords do not match';
-        return;
-    }
+  if (password !== confirm) {
+    if (errorEl) errorEl.textContent = "Passwords do not match";
+    return;
+  }
 
-    try {
-        await api('/setup', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        });
-        showDashboard();
-    } catch (error) {
-        if (errorEl) errorEl.textContent = error instanceof Error ? error.message : 'Setup failed';
-    }
+  try {
+    await api("/setup", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    showDashboard();
+  } catch (error) {
+    if (errorEl)
+      errorEl.textContent =
+        error instanceof Error ? error.message : "Setup failed";
+  }
 }
 
 /**
@@ -119,43 +123,45 @@ async function handleSetup(event) {
  * @param {Event} event
  */
 async function handleLogin(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    const username = /** @type {HTMLInputElement} */ (
-        document.getElementById('login-username')
-    ).value;
-    const password = /** @type {HTMLInputElement} */ (
-        document.getElementById('login-password')
-    ).value;
+  const username = /** @type {HTMLInputElement} */ (
+    document.getElementById("login-username")
+  ).value;
+  const password = /** @type {HTMLInputElement} */ (
+    document.getElementById("login-password")
+  ).value;
 
-    const errorEl = document.getElementById('login-error');
+  const errorEl = document.getElementById("login-error");
 
-    try {
-        await api('/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        });
-        showDashboard();
-    } catch (error) {
-        if (errorEl) errorEl.textContent = error instanceof Error ? error.message : 'Login failed';
-    }
+  try {
+    await api("/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    });
+    showDashboard();
+  } catch (error) {
+    if (errorEl)
+      errorEl.textContent =
+        error instanceof Error ? error.message : "Login failed";
+  }
 }
 
 /**
  * Handle logout
  */
 async function handleLogout() {
-    try {
-        await api('/logout', { method: 'POST' });
-    } catch {
-        // Ignore errors
-    }
+  try {
+    await api("/logout", { method: "POST" });
+  } catch {
+    // Ignore errors
+  }
 
-    disconnectSSE();
-    hideElement('dashboard-screen');
-    showElement('login-screen');
-    showElement('login-form');
-    hideElement('setup-form');
+  disconnectSSE();
+  hideElement("dashboard-screen");
+  showElement("login-screen");
+  showElement("login-form");
+  hideElement("setup-form");
 }
 
 /* ==========================================================================
@@ -166,34 +172,34 @@ async function handleLogout() {
  * Show the dashboard
  */
 function showDashboard() {
-    hideElement('login-screen');
-    showElement('dashboard-screen');
+  hideElement("login-screen");
+  showElement("dashboard-screen");
 
-    // Set up navigation
-    setupNavigation();
+  // Set up navigation
+  setupNavigation();
 
-    // Load initial data
-    refreshHealth();
-    loadRetentionConfig();
+  // Load initial data
+  refreshHealth();
+  loadRetentionConfig();
 
-    // Connect to SSE
-    connectHealthSSE();
+  // Connect to SSE
+  connectHealthSSE();
 }
 
 /**
  * Set up navigation click handlers
  */
 function setupNavigation() {
-    const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll(".nav-item");
 
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const panel = item.getAttribute('data-panel');
-            if (panel) {
-                switchPanel(panel);
-            }
-        });
+  navItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const panel = item.getAttribute("data-panel");
+      if (panel) {
+        switchPanel(panel);
+      }
     });
+  });
 }
 
 /**
@@ -201,38 +207,44 @@ function setupNavigation() {
  * @param {string} panelId
  */
 function switchPanel(panelId) {
-    currentPanel = panelId;
+  currentPanel = panelId;
 
-    // Update nav items
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.toggle('active', item.getAttribute('data-panel') === panelId);
-    });
+  // Update nav items
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle(
+      "active",
+      item.getAttribute("data-panel") === panelId,
+    );
+  });
 
-    // Update panels
-    document.querySelectorAll('.panel').forEach(panel => {
-        panel.classList.toggle('hidden', panel.id !== `${panelId}-panel`);
-    });
+  // Update panels
+  document.querySelectorAll(".panel").forEach((panel) => {
+    panel.classList.toggle("hidden", panel.id !== `${panelId}-panel`);
+  });
 
-    // Load panel-specific data
-    switch (panelId) {
-        case 'events':
-            loadEvents();
-            break;
-        case 'api-calls':
-            loadApiStats();
-            break;
-        case 'analytics':
-            loadAnalyticsTenants();
-            break;
-        case 'emails':
-            loadEmailStats();
-            break;
-        case 'settings':
-            loadRetentionConfig();
-            loadSSEStats();
-            loadSimulationStatus();
-            break;
-    }
+  // Load panel-specific data
+  switch (panelId) {
+    case "events":
+      loadEvents();
+      break;
+    case "api-calls":
+      loadApiStats();
+      break;
+    case "analytics":
+      loadAnalyticsTenants();
+      break;
+    case "emails":
+      loadEmailStats();
+      break;
+    case "system-metrics":
+      loadSystemMetrics();
+      break;
+    case "settings":
+      loadRetentionConfig();
+      loadSSEStats();
+      loadSimulationStatus();
+      break;
+  }
 }
 
 /* ==========================================================================
@@ -243,12 +255,12 @@ function switchPanel(panelId) {
  * Refresh health data
  */
 async function refreshHealth() {
-    try {
-        const health = await api('/health');
-        renderHealth(health);
-    } catch (error) {
-        console.error('Failed to load health:', error);
-    }
+  try {
+    const health = await api("/health");
+    renderHealth(health);
+  } catch (error) {
+    console.error("Failed to load health:", error);
+  }
 }
 
 /**
@@ -256,29 +268,30 @@ async function refreshHealth() {
  * @param {Object} health
  */
 function renderHealth(health) {
-    // Update status badge
-    const badge = document.getElementById('health-status-badge');
-    if (badge) {
-        badge.textContent = health.status.replace('_', ' ');
-        badge.className = 'status-badge ' + getStatusClass(health.status);
-    }
+  // Update status badge
+  const badge = document.getElementById("health-status-badge");
+  if (badge) {
+    badge.textContent = health.status.replace("_", " ");
+    badge.className = "status-badge " + getStatusClass(health.status);
+  }
 
-    // Update summary
-    const summary = health.summary || {};
-    setTextContent('healthy-count', summary.healthy || 0);
-    setTextContent('degraded-count', summary.degraded || 0);
-    setTextContent('unhealthy-count', summary.unhealthy || 0);
+  // Update summary
+  const summary = health.summary || {};
+  setTextContent("healthy-count", summary.healthy || 0);
+  setTextContent("degraded-count", summary.degraded || 0);
+  setTextContent("unhealthy-count", summary.unhealthy || 0);
 
-    // Render components
-    const container = document.getElementById('health-components');
-    if (!container) return;
+  // Render components
+  const container = document.getElementById("health-components");
+  if (!container) return;
 
-    if (!health.components || health.components.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">No components registered</p>';
-        return;
-    }
+  if (!health.components || health.components.length === 0) {
+    container.innerHTML =
+      '<p class="placeholder-text">No components registered</p>';
+    return;
+  }
 
-    container.innerHTML = health.components.map(renderComponentCard).join('');
+  container.innerHTML = health.components.map(renderComponentCard).join("");
 }
 
 /**
@@ -287,10 +300,12 @@ function renderHealth(health) {
  * @returns {string}
  */
 function renderComponentCard(component) {
-    const statusClass = component.status.toLowerCase();
-    const latency = component.latency_ms ? `${Math.round(component.latency_ms)}ms` : '-';
+  const statusClass = component.status.toLowerCase();
+  const latency = component.latency_ms
+    ? `${Math.round(component.latency_ms)}ms`
+    : "-";
 
-    return `
+  return `
         <div class="component-card">
             <div class="component-card-header">
                 <span class="component-name">${escapeHtml(component.name)}</span>
@@ -309,34 +324,34 @@ function renderComponentCard(component) {
  * Connect to health SSE stream
  */
 function connectHealthSSE() {
-    if (healthSSE) {
-        healthSSE.close();
+  if (healthSSE) {
+    healthSSE.close();
+  }
+
+  healthSSE = new EventSource("/_ops/sse/health");
+
+  healthSSE.onopen = () => {
+    updateSSEStatus(true);
+  };
+
+  healthSSE.onerror = () => {
+    updateSSEStatus(false);
+    // Reconnect after delay
+    setTimeout(connectHealthSSE, 5000);
+  };
+
+  healthSSE.addEventListener("ops.health.updated", (event) => {
+    try {
+      const health = JSON.parse(event.data);
+      renderHealth(health);
+    } catch (e) {
+      console.error("Failed to parse health event:", e);
     }
+  });
 
-    healthSSE = new EventSource('/_ops/sse/health');
-
-    healthSSE.onopen = () => {
-        updateSSEStatus(true);
-    };
-
-    healthSSE.onerror = () => {
-        updateSSEStatus(false);
-        // Reconnect after delay
-        setTimeout(connectHealthSSE, 5000);
-    };
-
-    healthSSE.addEventListener('ops.health.updated', (event) => {
-        try {
-            const health = JSON.parse(event.data);
-            renderHealth(health);
-        } catch (e) {
-            console.error('Failed to parse health event:', e);
-        }
-    });
-
-    healthSSE.addEventListener('heartbeat', () => {
-        // Keep-alive received
-    });
+  healthSSE.addEventListener("heartbeat", () => {
+    // Keep-alive received
+  });
 }
 
 /**
@@ -344,29 +359,32 @@ function connectHealthSSE() {
  * @param {boolean} connected
  */
 function updateSSEStatus(connected) {
-    const indicator = document.getElementById('sse-indicator');
-    const label = document.getElementById('sse-label');
+  const indicator = document.getElementById("sse-indicator");
+  const label = document.getElementById("sse-label");
 
-    if (indicator) {
-        indicator.className = 'sse-indicator ' + (connected ? 'connected' : 'disconnected');
-    }
-    if (label) {
-        label.textContent = connected ? 'Live updates connected' : 'Reconnecting...';
-    }
+  if (indicator) {
+    indicator.className =
+      "sse-indicator " + (connected ? "connected" : "disconnected");
+  }
+  if (label) {
+    label.textContent = connected
+      ? "Live updates connected"
+      : "Reconnecting...";
+  }
 }
 
 /**
  * Disconnect all SSE streams
  */
 function disconnectSSE() {
-    if (healthSSE) {
-        healthSSE.close();
-        healthSSE = null;
-    }
-    if (eventsSSE) {
-        eventsSSE.close();
-        eventsSSE = null;
-    }
+  if (healthSSE) {
+    healthSSE.close();
+    healthSSE = null;
+  }
+  if (eventsSSE) {
+    eventsSSE.close();
+    eventsSSE = null;
+  }
 }
 
 /* ==========================================================================
@@ -377,27 +395,28 @@ function disconnectSSE() {
  * Load events
  */
 async function loadEvents() {
-    try {
-        const entityFilter = /** @type {HTMLSelectElement} */ (
-            document.getElementById('event-entity-filter')
-        )?.value;
-        const typeFilter = /** @type {HTMLSelectElement} */ (
-            document.getElementById('event-type-filter')
-        )?.value;
-        const tenantFilter = /** @type {HTMLInputElement} */ (
-            document.getElementById('event-tenant-filter')
-        )?.value;
+  try {
+    const entityFilter = /** @type {HTMLSelectElement} */ (
+      document.getElementById("event-entity-filter")
+    )?.value;
+    const typeFilter = /** @type {HTMLSelectElement} */ (
+      document.getElementById("event-type-filter")
+    )?.value;
+    const tenantFilter = /** @type {HTMLInputElement} */ (
+      document.getElementById("event-tenant-filter")
+    )?.value;
 
-        let query = '?limit=50';
-        if (entityFilter) query += `&entity_name=${encodeURIComponent(entityFilter)}`;
-        if (typeFilter) query += `&event_type=${encodeURIComponent(typeFilter)}`;
-        if (tenantFilter) query += `&tenant_id=${encodeURIComponent(tenantFilter)}`;
+    let query = "?limit=50";
+    if (entityFilter)
+      query += `&entity_name=${encodeURIComponent(entityFilter)}`;
+    if (typeFilter) query += `&event_type=${encodeURIComponent(typeFilter)}`;
+    if (tenantFilter) query += `&tenant_id=${encodeURIComponent(tenantFilter)}`;
 
-        const result = await api(`/events${query}`);
-        renderEvents(result.events);
-    } catch (error) {
-        console.error('Failed to load events:', error);
-    }
+    const result = await api(`/events${query}`);
+    renderEvents(result.events);
+  } catch (error) {
+    console.error("Failed to load events:", error);
+  }
 }
 
 /**
@@ -405,15 +424,15 @@ async function loadEvents() {
  * @param {Array} events
  */
 function renderEvents(events) {
-    const container = document.getElementById('event-list');
-    if (!container) return;
+  const container = document.getElementById("event-list");
+  if (!container) return;
 
-    if (!events || events.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">No events found</p>';
-        return;
-    }
+  if (!events || events.length === 0) {
+    container.innerHTML = '<p class="placeholder-text">No events found</p>';
+    return;
+  }
 
-    container.innerHTML = events.map(renderEventItem).join('');
+  container.innerHTML = events.map(renderEventItem).join("");
 }
 
 /**
@@ -422,15 +441,15 @@ function renderEvents(events) {
  * @returns {string}
  */
 function renderEventItem(event) {
-    const action = event.event_type.split('.').pop() || 'unknown';
-    const time = new Date(event.recorded_at).toLocaleString();
+  const action = event.event_type.split(".").pop() || "unknown";
+  const time = new Date(event.recorded_at).toLocaleString();
 
-    return `
+  return `
         <div class="event-item">
             <span class="event-type ${action}">${escapeHtml(action)}</span>
             <span class="event-entity">
-                <span class="event-entity-name">${escapeHtml(event.entity_name || '-')}</span>
-                <span class="event-entity-id">${escapeHtml(event.entity_id || '')}</span>
+                <span class="event-entity-name">${escapeHtml(event.entity_name || "-")}</span>
+                <span class="event-entity-id">${escapeHtml(event.entity_id || "")}</span>
             </span>
             <span class="event-time">${time}</span>
         </div>
@@ -445,26 +464,28 @@ function renderEventItem(event) {
  * Load API call statistics and related data
  */
 async function loadApiStats() {
-    try {
-        const hours = /** @type {HTMLSelectElement} */ (
-            document.getElementById('api-hours-filter')
-        )?.value || '24';
+  try {
+    const hours =
+      /** @type {HTMLSelectElement} */ (
+        document.getElementById("api-hours-filter")
+      )?.value || "24";
 
-        // Load stats, costs, and errors in parallel
-        const [stats, costs, errors] = await Promise.all([
-            api(`/api-calls/stats?hours=${hours}`),
-            api('/api-calls/costs?days=30'),
-            api(`/api-calls/errors?hours=${hours}`),
-        ]);
+    // Load stats, costs, and errors in parallel
+    const [stats, costs, errors] = await Promise.all([
+      api(`/api-calls/stats?hours=${hours}`),
+      api("/api-calls/costs?days=30"),
+      api(`/api-calls/errors?hours=${hours}`),
+    ]);
 
-        renderApiStats(stats, costs, errors);
-    } catch (error) {
-        console.error('Failed to load API stats:', error);
-        const container = document.getElementById('api-stats');
-        if (container) {
-            container.innerHTML = '<p class="placeholder-text">Failed to load API data</p>';
-        }
+    renderApiStats(stats, costs, errors);
+  } catch (error) {
+    console.error("Failed to load API stats:", error);
+    const container = document.getElementById("api-stats");
+    if (container) {
+      container.innerHTML =
+        '<p class="placeholder-text">Failed to load API data</p>';
     }
+  }
 }
 
 /**
@@ -474,64 +495,79 @@ async function loadApiStats() {
  * @param {Object} errors
  */
 function renderApiStats(stats, costs, errors) {
-    const container = document.getElementById('api-stats');
-    if (!container) return;
+  const container = document.getElementById("api-stats");
+  if (!container) return;
 
-    const services = stats.services || {};
+  const services = stats.services || {};
 
-    // Build cost summary section
-    const costHtml = `
+  // Build cost summary section
+  const costHtml = `
         <div class="api-cost-summary">
             <h3>Monthly Cost Summary</h3>
             <div class="cost-total">
-                <span class="cost-value">£${costs.total_cost_gbp || '0.00'}</span>
+                <span class="cost-value">£${costs.total_cost_gbp || "0.00"}</span>
                 <span class="cost-label">Last 30 days</span>
             </div>
             <div class="cost-breakdown">
-                ${(costs.breakdown || []).slice(0, 5).map(item => `
+                ${(costs.breakdown || [])
+                  .slice(0, 5)
+                  .map(
+                    (item) => `
                     <div class="cost-item">
                         <span class="cost-service">${escapeHtml(item.service_name)}</span>
                         <span class="cost-amount">£${((item.total_cost_cents || 0) / 100).toFixed(2)}</span>
                     </div>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
             </div>
         </div>
     `;
 
-    // Build errors section
-    const errorsHtml = errors.total_errors > 0 ? `
+  // Build errors section
+  const errorsHtml =
+    errors.total_errors > 0
+      ? `
         <div class="api-errors-summary">
             <h3>Recent Errors (${errors.period_hours}h)</h3>
-            <div class="error-count ${errors.total_errors > 10 ? 'high' : ''}">
+            <div class="error-count ${errors.total_errors > 10 ? "high" : ""}">
                 ${errors.total_errors} errors
             </div>
             <div class="error-list">
-                ${(errors.recent_errors || []).slice(0, 5).map(err => `
+                ${(errors.recent_errors || [])
+                  .slice(0, 5)
+                  .map(
+                    (err) => `
                     <div class="error-item">
                         <span class="error-service">${escapeHtml(err.service_name)}</span>
-                        <span class="error-code">${err.status_code || 'timeout'}</span>
+                        <span class="error-code">${err.status_code || "timeout"}</span>
                         <span class="error-endpoint">${escapeHtml(err.endpoint)}</span>
                     </div>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
             </div>
         </div>
-    ` : '';
+    `
+      : "";
 
-    // Build services section
-    let servicesHtml = '';
-    if (Object.keys(services).length === 0) {
-        servicesHtml = '<p class="placeholder-text">No API calls recorded</p>';
-    } else {
-        servicesHtml = `
+  // Build services section
+  let servicesHtml = "";
+  if (Object.keys(services).length === 0) {
+    servicesHtml = '<p class="placeholder-text">No API calls recorded</p>';
+  } else {
+    servicesHtml = `
             <div class="api-services-grid">
-                ${Object.entries(services).map(([name, data]) =>
-                    renderApiServiceCard(name, /** @type {Object} */ (data))
-                ).join('')}
+                ${Object.entries(services)
+                  .map(([name, data]) =>
+                    renderApiServiceCard(name, /** @type {Object} */ (data)),
+                  )
+                  .join("")}
             </div>
         `;
-    }
+  }
 
-    container.innerHTML = `
+  container.innerHTML = `
         <div class="api-dashboard">
             <div class="api-top-row">
                 ${costHtml}
@@ -550,10 +586,20 @@ function renderApiStats(stats, costs, errors) {
  * @returns {string}
  */
 function renderApiServiceCard(name, stats) {
-    const errorClass = stats.error_rate > 10 ? 'unhealthy' : stats.error_rate > 5 ? 'degraded' : 'healthy';
-    const latencyClass = stats.avg_latency_ms > 1000 ? 'slow' : stats.avg_latency_ms > 500 ? 'moderate' : 'fast';
+  const errorClass =
+    stats.error_rate > 10
+      ? "unhealthy"
+      : stats.error_rate > 5
+        ? "degraded"
+        : "healthy";
+  const latencyClass =
+    stats.avg_latency_ms > 1000
+      ? "slow"
+      : stats.avg_latency_ms > 500
+        ? "moderate"
+        : "fast";
 
-    return `
+  return `
         <div class="api-service-card">
             <div class="api-service-header">
                 <span class="api-service-name">${escapeHtml(name)}</span>
@@ -587,13 +633,13 @@ function renderApiServiceCard(name, stats) {
  * Load recent API calls for detail view
  */
 async function loadRecentApiCalls() {
-    try {
-        const result = await api('/api-calls/recent?limit=20');
-        console.log('Recent API calls:', result);
-        // Could render in a modal or detail panel
-    } catch (error) {
-        console.error('Failed to load recent calls:', error);
-    }
+  try {
+    const result = await api("/api-calls/recent?limit=20");
+    console.log("Recent API calls:", result);
+    // Could render in a modal or detail panel
+  } catch (error) {
+    console.error("Failed to load recent calls:", error);
+  }
 }
 
 /* ==========================================================================
@@ -607,35 +653,35 @@ let selectedTenantId = null;
  * Load available tenants for analytics
  */
 async function loadAnalyticsTenants() {
-    try {
-        const result = await api('/analytics/tenants');
-        const select = /** @type {HTMLSelectElement} */ (
-            document.getElementById('analytics-tenant-filter')
-        );
+  try {
+    const result = await api("/analytics/tenants");
+    const select = /** @type {HTMLSelectElement} */ (
+      document.getElementById("analytics-tenant-filter")
+    );
 
-        if (!select) return;
+    if (!select) return;
 
-        // Clear existing options except first
-        while (select.options.length > 1) {
-            select.remove(1);
-        }
-
-        // Add tenant options
-        for (const tenant of result.tenants || []) {
-            const option = document.createElement('option');
-            option.value = tenant.tenant_id;
-            option.textContent = `${tenant.tenant_id} (${tenant.event_count} events)`;
-            select.appendChild(option);
-        }
-
-        // If a tenant is selected, load its data
-        if (selectedTenantId) {
-            select.value = selectedTenantId;
-            await loadAnalyticsData(selectedTenantId);
-        }
-    } catch (error) {
-        console.error('Failed to load analytics tenants:', error);
+    // Clear existing options except first
+    while (select.options.length > 1) {
+      select.remove(1);
     }
+
+    // Add tenant options
+    for (const tenant of result.tenants || []) {
+      const option = document.createElement("option");
+      option.value = tenant.tenant_id;
+      option.textContent = `${tenant.tenant_id} (${tenant.event_count} events)`;
+      select.appendChild(option);
+    }
+
+    // If a tenant is selected, load its data
+    if (selectedTenantId) {
+      select.value = selectedTenantId;
+      await loadAnalyticsData(selectedTenantId);
+    }
+  } catch (error) {
+    console.error("Failed to load analytics tenants:", error);
+  }
 }
 
 /**
@@ -643,17 +689,18 @@ async function loadAnalyticsTenants() {
  * @param {Event} event
  */
 async function onTenantChange(event) {
-    const select = /** @type {HTMLSelectElement} */ (event.target);
-    selectedTenantId = select.value || null;
+  const select = /** @type {HTMLSelectElement} */ (event.target);
+  selectedTenantId = select.value || null;
 
-    if (selectedTenantId) {
-        await loadAnalyticsData(selectedTenantId);
-    } else {
-        const content = document.getElementById('analytics-content');
-        if (content) {
-            content.innerHTML = '<p class="placeholder-text">Select a tenant to view analytics</p>';
-        }
+  if (selectedTenantId) {
+    await loadAnalyticsData(selectedTenantId);
+  } else {
+    const content = document.getElementById("analytics-content");
+    if (content) {
+      content.innerHTML =
+        '<p class="placeholder-text">Select a tenant to view analytics</p>';
     }
+  }
 }
 
 /**
@@ -661,25 +708,27 @@ async function onTenantChange(event) {
  * @param {string} tenantId
  */
 async function loadAnalyticsData(tenantId) {
-    try {
-        const days = /** @type {HTMLSelectElement} */ (
-            document.getElementById('analytics-days-filter')
-        )?.value || '7';
+  try {
+    const days =
+      /** @type {HTMLSelectElement} */ (
+        document.getElementById("analytics-days-filter")
+      )?.value || "7";
 
-        const [summary, pageViews, sources] = await Promise.all([
-            api(`/analytics/${tenantId}?days=${days}`),
-            api(`/analytics/${tenantId}/page-views?days=${days}`),
-            api(`/analytics/${tenantId}/traffic-sources?days=${days}`),
-        ]);
+    const [summary, pageViews, sources] = await Promise.all([
+      api(`/analytics/${tenantId}?days=${days}`),
+      api(`/analytics/${tenantId}/page-views?days=${days}`),
+      api(`/analytics/${tenantId}/traffic-sources?days=${days}`),
+    ]);
 
-        renderAnalyticsDashboard(summary, pageViews, sources);
-    } catch (error) {
-        console.error('Failed to load analytics:', error);
-        const content = document.getElementById('analytics-content');
-        if (content) {
-            content.innerHTML = '<p class="placeholder-text">Failed to load analytics data</p>';
-        }
+    renderAnalyticsDashboard(summary, pageViews, sources);
+  } catch (error) {
+    console.error("Failed to load analytics:", error);
+    const content = document.getElementById("analytics-content");
+    if (content) {
+      content.innerHTML =
+        '<p class="placeholder-text">Failed to load analytics data</p>';
     }
+  }
 }
 
 /**
@@ -689,20 +738,20 @@ async function loadAnalyticsData(tenantId) {
  * @param {Object} sources
  */
 function renderAnalyticsDashboard(summary, pageViews, sources) {
-    const content = document.getElementById('analytics-content');
-    if (!content) return;
+  const content = document.getElementById("analytics-content");
+  if (!content) return;
 
-    const sessionStats = pageViews.session_stats || {};
-    const dailyViews = pageViews.daily_views || [];
-    const topPages = pageViews.top_pages || [];
-    const trafficSources = sources.sources || [];
+  const sessionStats = pageViews.session_stats || {};
+  const dailyViews = pageViews.daily_views || [];
+  const topPages = pageViews.top_pages || [];
+  const trafficSources = sources.sources || [];
 
-    // Calculate totals
-    const totalViews = dailyViews.reduce((sum, d) => sum + (d.views || 0), 0);
-    const totalSessions = sessionStats.total_sessions || 0;
-    const avgViewsPerSession = sessionStats.avg_views_per_session || 0;
+  // Calculate totals
+  const totalViews = dailyViews.reduce((sum, d) => sum + (d.views || 0), 0);
+  const totalSessions = sessionStats.total_sessions || 0;
+  const avgViewsPerSession = sessionStats.avg_views_per_session || 0;
 
-    content.innerHTML = `
+  content.innerHTML = `
         <div class="analytics-dashboard">
             <!-- Summary Cards -->
             <div class="analytics-summary">
@@ -733,13 +782,20 @@ function renderAnalyticsDashboard(summary, pageViews, sources) {
                 <div class="analytics-section">
                     <h3>Top Pages</h3>
                     <div class="top-pages-list">
-                        ${topPages.map((p, i) => `
+                        ${
+                          topPages
+                            .map(
+                              (p, i) => `
                             <div class="top-page-item">
                                 <span class="page-rank">${i + 1}</span>
-                                <span class="page-path">${escapeHtml(p.page || 'unknown')}</span>
+                                <span class="page-path">${escapeHtml(p.page || "unknown")}</span>
                                 <span class="page-views">${p.views}</span>
                             </div>
-                        `).join('') || '<p class="placeholder-text">No data</p>'}
+                        `,
+                            )
+                            .join("") ||
+                          '<p class="placeholder-text">No data</p>'
+                        }
                     </div>
                 </div>
 
@@ -761,26 +817,31 @@ function renderAnalyticsDashboard(summary, pageViews, sources) {
  * @returns {string}
  */
 function renderDailyChart(dailyViews) {
-    if (!dailyViews || dailyViews.length === 0) {
-        return '<p class="placeholder-text">No data available</p>';
-    }
+  if (!dailyViews || dailyViews.length === 0) {
+    return '<p class="placeholder-text">No data available</p>';
+  }
 
-    // Reverse to show oldest first
-    const sorted = [...dailyViews].reverse();
-    const maxViews = Math.max(...sorted.map(d => d.views || 0), 1);
+  // Reverse to show oldest first
+  const sorted = [...dailyViews].reverse();
+  const maxViews = Math.max(...sorted.map((d) => d.views || 0), 1);
 
-    return `
+  return `
         <div class="chart-bars">
-            ${sorted.map(d => {
+            ${sorted
+              .map((d) => {
                 const height = Math.max(4, (d.views / maxViews) * 100);
-                const date = new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                const date = new Date(d.date).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                });
                 return `
                     <div class="chart-bar-container" title="${date}: ${d.views} views, ${d.sessions} sessions">
                         <div class="chart-bar" style="height: ${height}%"></div>
                         <span class="chart-label">${date}</span>
                     </div>
                 `;
-            }).join('')}
+              })
+              .join("")}
         </div>
     `;
 }
@@ -792,13 +853,14 @@ function renderDailyChart(dailyViews) {
  * @returns {string}
  */
 function renderTrafficSources(sources, total) {
-    if (!sources || sources.length === 0) {
-        return '<p class="placeholder-text">No data</p>';
-    }
+  if (!sources || sources.length === 0) {
+    return '<p class="placeholder-text">No data</p>';
+  }
 
-    return sources.map(s => {
-        const pct = total > 0 ? ((s.views / total) * 100).toFixed(1) : '0';
-        return `
+  return sources
+    .map((s) => {
+      const pct = total > 0 ? ((s.views / total) * 100).toFixed(1) : "0";
+      return `
             <div class="source-item">
                 <span class="source-name">${escapeHtml(s.source)}</span>
                 <div class="source-bar-container">
@@ -807,7 +869,8 @@ function renderTrafficSources(sources, total) {
                 <span class="source-pct">${pct}%</span>
             </div>
         `;
-    }).join('');
+    })
+    .join("");
 }
 
 /* ==========================================================================
@@ -818,24 +881,26 @@ function renderTrafficSources(sources, total) {
  * Load email statistics
  */
 async function loadEmailStats() {
-    try {
-        const days = /** @type {HTMLSelectElement} */ (
-            document.getElementById('email-days-filter')
-        )?.value || '7';
+  try {
+    const days =
+      /** @type {HTMLSelectElement} */ (
+        document.getElementById("email-days-filter")
+      )?.value || "7";
 
-        const [stats, topLinks] = await Promise.all([
-            api(`/email/stats?days=${days}`),
-            api(`/email/top-links?days=${days}`),
-        ]);
+    const [stats, topLinks] = await Promise.all([
+      api(`/email/stats?days=${days}`),
+      api(`/email/top-links?days=${days}`),
+    ]);
 
-        renderEmailDashboard(stats, topLinks);
-    } catch (error) {
-        console.error('Failed to load email stats:', error);
-        const content = document.getElementById('email-content');
-        if (content) {
-            content.innerHTML = '<p class="placeholder-text">Failed to load email data</p>';
-        }
+    renderEmailDashboard(stats, topLinks);
+  } catch (error) {
+    console.error("Failed to load email stats:", error);
+    const content = document.getElementById("email-content");
+    if (content) {
+      content.innerHTML =
+        '<p class="placeholder-text">Failed to load email data</p>';
     }
+  }
 }
 
 /**
@@ -844,15 +909,15 @@ async function loadEmailStats() {
  * @param {Object} topLinks
  */
 function renderEmailDashboard(stats, topLinks) {
-    const content = document.getElementById('email-content');
-    if (!content) return;
+  const content = document.getElementById("email-content");
+  if (!content) return;
 
-    const totals = stats.totals || {};
-    const rates = stats.rates || {};
-    const daily = stats.daily || [];
-    const links = topLinks.links || [];
+  const totals = stats.totals || {};
+  const rates = stats.rates || {};
+  const daily = stats.daily || [];
+  const links = topLinks.links || [];
 
-    content.innerHTML = `
+  content.innerHTML = `
         <div class="email-dashboard">
             <!-- Summary Cards -->
             <div class="email-summary">
@@ -863,14 +928,14 @@ function renderEmailDashboard(stats, topLinks) {
                 <div class="email-stat-card">
                     <span class="stat-value">${(totals.opened || 0).toLocaleString()}</span>
                     <span class="stat-label">Opens</span>
-                    <span class="stat-rate ${rates.open_rate > 20 ? 'good' : rates.open_rate > 10 ? 'average' : 'poor'}">
+                    <span class="stat-rate ${rates.open_rate > 20 ? "good" : rates.open_rate > 10 ? "average" : "poor"}">
                         ${rates.open_rate}%
                     </span>
                 </div>
                 <div class="email-stat-card">
                     <span class="stat-value">${(totals.clicked || 0).toLocaleString()}</span>
                     <span class="stat-label">Clicks</span>
-                    <span class="stat-rate ${rates.click_rate > 5 ? 'good' : rates.click_rate > 2 ? 'average' : 'poor'}">
+                    <span class="stat-rate ${rates.click_rate > 5 ? "good" : rates.click_rate > 2 ? "average" : "poor"}">
                         ${rates.click_rate}%
                     </span>
                 </div>
@@ -901,15 +966,18 @@ function renderEmailDashboard(stats, topLinks) {
  * @returns {string}
  */
 function renderEmailChart(daily) {
-    if (!daily || daily.length === 0) {
-        return '<p class="placeholder-text">No email data available</p>';
-    }
+  if (!daily || daily.length === 0) {
+    return '<p class="placeholder-text">No email data available</p>';
+  }
 
-    // Reverse to show oldest first
-    const sorted = [...daily].reverse();
-    const maxValue = Math.max(...sorted.map(d => Math.max(d.sent || 0, d.opened || 0, d.clicked || 0)), 1);
+  // Reverse to show oldest first
+  const sorted = [...daily].reverse();
+  const maxValue = Math.max(
+    ...sorted.map((d) => Math.max(d.sent || 0, d.opened || 0, d.clicked || 0)),
+    1,
+  );
 
-    return `
+  return `
         <div class="email-chart-container">
             <div class="email-chart-legend">
                 <span class="legend-item sent">Sent</span>
@@ -917,11 +985,21 @@ function renderEmailChart(daily) {
                 <span class="legend-item clicked">Clicked</span>
             </div>
             <div class="email-chart-bars">
-                ${sorted.map(d => {
-                    const date = new Date(d.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                ${sorted
+                  .map((d) => {
+                    const date = new Date(d.date).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                    });
                     const sentHeight = Math.max(4, (d.sent / maxValue) * 100);
-                    const openedHeight = Math.max(4, (d.opened / maxValue) * 100);
-                    const clickedHeight = Math.max(4, (d.clicked / maxValue) * 100);
+                    const openedHeight = Math.max(
+                      4,
+                      (d.opened / maxValue) * 100,
+                    );
+                    const clickedHeight = Math.max(
+                      4,
+                      (d.clicked / maxValue) * 100,
+                    );
                     return `
                         <div class="email-bar-group" title="${date}: ${d.sent} sent, ${d.opened} opened, ${d.clicked} clicked">
                             <div class="email-bars">
@@ -932,7 +1010,8 @@ function renderEmailChart(daily) {
                             <span class="email-bar-label">${date}</span>
                         </div>
                     `;
-                }).join('')}
+                  })
+                  .join("")}
             </div>
         </div>
     `;
@@ -944,16 +1023,18 @@ function renderEmailChart(daily) {
  * @returns {string}
  */
 function renderTopLinks(links) {
-    if (!links || links.length === 0) {
-        return '<p class="placeholder-text">No link clicks recorded</p>';
-    }
+  if (!links || links.length === 0) {
+    return '<p class="placeholder-text">No link clicks recorded</p>';
+  }
 
-    const maxClicks = Math.max(...links.map(l => l.clicks), 1);
+  const maxClicks = Math.max(...links.map((l) => l.clicks), 1);
 
-    return links.map((link, i) => {
-        const pct = (link.clicks / maxClicks) * 100;
-        const displayUrl = link.url.length > 50 ? link.url.substring(0, 47) + '...' : link.url;
-        return `
+  return links
+    .map((link, i) => {
+      const pct = (link.clicks / maxClicks) * 100;
+      const displayUrl =
+        link.url.length > 50 ? link.url.substring(0, 47) + "..." : link.url;
+      return `
             <div class="email-link-item">
                 <span class="link-rank">${i + 1}</span>
                 <span class="link-url" title="${escapeHtml(link.url)}">${escapeHtml(displayUrl)}</span>
@@ -963,8 +1044,183 @@ function renderTopLinks(links) {
                 <span class="link-clicks">${link.clicks}</span>
             </div>
         `;
-    }).join('');
+    })
+    .join("");
 }
+
+/* ==========================================================================
+   System Metrics Panel
+   ========================================================================== */
+
+/**
+ * Load system metrics data
+ */
+async function loadSystemMetrics() {
+  try {
+    const data = await api("/system-metrics");
+    renderSystemMetrics(data);
+  } catch (error) {
+    console.error("Failed to load system metrics:", error);
+    const content = document.getElementById("system-metrics-content");
+    if (content) {
+      content.innerHTML =
+        '<p class="placeholder-text">Failed to load system metrics</p>';
+    }
+  }
+}
+
+/**
+ * Render system metrics dashboard
+ * @param {Object} data - System metrics data
+ */
+function renderSystemMetrics(data) {
+  const content = document.getElementById("system-metrics-content");
+  if (!content) return;
+
+  if (!data.available) {
+    content.innerHTML =
+      '<p class="placeholder-text">System metrics not available</p>';
+    return;
+  }
+
+  const components = data.components || {};
+  const aggregate = data.aggregate || {};
+  const healthSummary = data.health_summary || {};
+
+  content.innerHTML = `
+        <div class="system-metrics-dashboard">
+            <!-- Aggregate Stats -->
+            <div class="metrics-summary">
+                <div class="metrics-stat-card">
+                    <span class="stat-value">${(aggregate.total_requests || 0).toLocaleString()}</span>
+                    <span class="stat-label">Total Requests</span>
+                </div>
+                <div class="metrics-stat-card">
+                    <span class="stat-value">${(aggregate.total_errors || 0).toLocaleString()}</span>
+                    <span class="stat-label">Total Errors</span>
+                </div>
+                <div class="metrics-stat-card">
+                    <span class="stat-value ${aggregate.error_rate > 5 ? "error" : ""}">${((aggregate.error_rate || 0) * 100).toFixed(2)}%</span>
+                    <span class="stat-label">Error Rate</span>
+                </div>
+                <div class="metrics-stat-card">
+                    <span class="stat-value">${Math.floor(data.uptime_seconds / 60)}m</span>
+                    <span class="stat-label">Uptime</span>
+                </div>
+            </div>
+
+            <!-- Health Summary -->
+            <div class="metrics-health-bar">
+                <div class="health-segment healthy" style="width: ${getHealthPercent(healthSummary.healthy, healthSummary)}%" title="Healthy: ${healthSummary.healthy || 0}"></div>
+                <div class="health-segment degraded" style="width: ${getHealthPercent(healthSummary.degraded, healthSummary)}%" title="Degraded: ${healthSummary.degraded || 0}"></div>
+                <div class="health-segment unhealthy" style="width: ${getHealthPercent(healthSummary.unhealthy, healthSummary)}%" title="Unhealthy: ${healthSummary.unhealthy || 0}"></div>
+            </div>
+
+            <!-- Component Metrics Grid -->
+            <h3>Component Metrics</h3>
+            <div class="component-metrics-grid">
+                ${Object.entries(components)
+                  .map(([name, metrics]) =>
+                    renderComponentMetrics(
+                      name,
+                      /** @type {Object} */ (metrics),
+                    ),
+                  )
+                  .join("")}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Calculate health percentage
+ * @param {number|undefined} count
+ * @param {Object} summary
+ * @returns {number}
+ */
+function getHealthPercent(count, summary) {
+  const total =
+    (summary.healthy || 0) + (summary.degraded || 0) + (summary.unhealthy || 0);
+  if (total === 0) return 0;
+  return ((count || 0) / total) * 100;
+}
+
+/**
+ * Render metrics for a single component
+ * @param {string} name - Component name
+ * @param {Object} metrics - Component metrics data
+ * @returns {string}
+ */
+function renderComponentMetrics(name, metrics) {
+  const status = metrics.status || "unknown";
+  const statusClass = status.toLowerCase();
+  const counters = metrics.counters || {};
+  const gauges = metrics.gauges || {};
+  const histograms = metrics.histograms || {};
+
+  // Format component name for display
+  const displayName = name
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  // Build counters list
+  const countersList = Object.entries(counters)
+    .slice(0, 6)
+    .map(
+      ([k, v]) => `
+        <div class="metric-item">
+            <span class="metric-name">${escapeHtml(k)}</span>
+            <span class="metric-value">${/** @type {number} */ (v).toLocaleString()}</span>
+        </div>
+    `,
+    )
+    .join("");
+
+  // Build histograms list (show latency stats)
+  const histogramsList = Object.entries(histograms)
+    .slice(0, 3)
+    .map(([k, v]) => {
+      const stats = /** @type {Object} */ (v);
+      return `
+            <div class="metric-item histogram">
+                <span class="metric-name">${escapeHtml(k)}</span>
+                <span class="metric-value">
+                    p50: ${(stats.p50 || 0).toFixed(1)}ms
+                    p95: ${(stats.p95 || 0).toFixed(1)}ms
+                    p99: ${(stats.p99 || 0).toFixed(1)}ms
+                </span>
+            </div>
+        `;
+    })
+    .join("");
+
+  return `
+        <div class="component-metrics-card">
+            <div class="component-metrics-header">
+                <span class="component-name">${escapeHtml(displayName)}</span>
+                <span class="status-dot ${statusClass}"></span>
+            </div>
+            <div class="component-metrics-body">
+                ${countersList || '<span class="no-data">No counters</span>'}
+                ${histogramsList}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Refresh system metrics (called by button)
+ */
+async function refreshSystemMetrics() {
+  await loadSystemMetrics();
+}
+
+// Make loadSystemMetrics available globally
+// @ts-ignore
+window.loadSystemMetrics = loadSystemMetrics;
+// @ts-ignore
+window.refreshSystemMetrics = refreshSystemMetrics;
 
 /* ==========================================================================
    Settings Panel
@@ -974,16 +1230,16 @@ function renderTopLinks(links) {
  * Load retention configuration
  */
 async function loadRetentionConfig() {
-    try {
-        const config = await api('/config/retention');
+  try {
+    const config = await api("/config/retention");
 
-        setInputValue('retention-health', config.health_checks_days);
-        setInputValue('retention-api', config.api_calls_days);
-        setInputValue('retention-events', config.events_days);
-        setInputValue('retention-analytics', config.analytics_days);
-    } catch (error) {
-        console.error('Failed to load retention config:', error);
-    }
+    setInputValue("retention-health", config.health_checks_days);
+    setInputValue("retention-api", config.api_calls_days);
+    setInputValue("retention-events", config.events_days);
+    setInputValue("retention-analytics", config.analytics_days);
+  } catch (error) {
+    console.error("Failed to load retention config:", error);
+  }
 }
 
 /**
@@ -991,59 +1247,71 @@ async function loadRetentionConfig() {
  * @param {Event} event
  */
 async function saveRetention(event) {
-    event.preventDefault();
+  event.preventDefault();
 
-    try {
-        await api('/config/retention', {
-            method: 'PUT',
-            body: JSON.stringify({
-                health_checks_days: getInputValue('retention-health'),
-                api_calls_days: getInputValue('retention-api'),
-                events_days: getInputValue('retention-events'),
-                analytics_days: getInputValue('retention-analytics'),
-            }),
-        });
+  try {
+    await api("/config/retention", {
+      method: "PUT",
+      body: JSON.stringify({
+        health_checks_days: getInputValue("retention-health"),
+        api_calls_days: getInputValue("retention-api"),
+        events_days: getInputValue("retention-events"),
+        analytics_days: getInputValue("retention-analytics"),
+      }),
+    });
 
-        alert('Retention settings saved');
-    } catch (error) {
-        alert('Failed to save: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+    alert("Retention settings saved");
+  } catch (error) {
+    alert(
+      "Failed to save: " +
+        (error instanceof Error ? error.message : "Unknown error"),
+    );
+  }
 }
 
 /**
  * Trigger retention enforcement
  */
 async function enforceRetention() {
-    if (!confirm('This will delete data older than the retention periods. Continue?')) {
-        return;
-    }
+  if (
+    !confirm(
+      "This will delete data older than the retention periods. Continue?",
+    )
+  ) {
+    return;
+  }
 
-    try {
-        const result = await api('/config/retention/enforce', { method: 'POST' });
-        const deleted = result.deleted || {};
-        const total = Object.values(deleted).reduce((a, b) => a + /** @type {number} */ (b), 0);
-        alert(`Retention enforced. ${total} records deleted.`);
-    } catch (error) {
-        alert('Failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+  try {
+    const result = await api("/config/retention/enforce", { method: "POST" });
+    const deleted = result.deleted || {};
+    const total = Object.values(deleted).reduce(
+      (a, b) => a + /** @type {number} */ (b),
+      0,
+    );
+    alert(`Retention enforced. ${total} records deleted.`);
+  } catch (error) {
+    alert(
+      "Failed: " + (error instanceof Error ? error.message : "Unknown error"),
+    );
+  }
 }
 
 /**
  * Load SSE statistics
  */
 async function loadSSEStats() {
-    try {
-        const stats = await api('/sse/stats');
-        const container = document.getElementById('sse-stats');
-        if (!container) return;
+  try {
+    const stats = await api("/sse/stats");
+    const container = document.getElementById("sse-stats");
+    if (!container) return;
 
-        container.innerHTML = `
+    container.innerHTML = `
             <p>Active subscriptions: ${stats.active_subscriptions || 0}</p>
-            <p>Status: ${stats.running ? 'Running' : 'Stopped'}</p>
+            <p>Status: ${stats.running ? "Running" : "Stopped"}</p>
         `;
-    } catch (error) {
-        console.error('Failed to load SSE stats:', error);
-    }
+  } catch (error) {
+    console.error("Failed to load SSE stats:", error);
+  }
 }
 
 /* ==========================================================================
@@ -1054,12 +1322,12 @@ async function loadSSEStats() {
  * Load simulation status and update UI
  */
 async function loadSimulationStatus() {
-    try {
-        const status = await api('/simulation/status');
-        updateSimulationUI(status);
-    } catch (error) {
-        console.error('Failed to load simulation status:', error);
-    }
+  try {
+    const status = await api("/simulation/status");
+    updateSimulationUI(status);
+  } catch (error) {
+    console.error("Failed to load simulation status:", error);
+  }
 }
 
 /**
@@ -1067,23 +1335,28 @@ async function loadSimulationStatus() {
  * @param {boolean} enabled - Whether to enable simulation
  */
 async function toggleSimulation(enabled) {
-    const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
-    const statusText = document.getElementById('simulation-status-text');
+  const toggle = /** @type {HTMLInputElement} */ (
+    document.getElementById("simulation-toggle")
+  );
+  const statusText = document.getElementById("simulation-status-text");
 
-    try {
-        if (statusText) statusText.textContent = enabled ? 'Starting...' : 'Stopping...';
+  try {
+    if (statusText)
+      statusText.textContent = enabled ? "Starting..." : "Stopping...";
 
-        const endpoint = enabled ? '/simulation/start' : '/simulation/stop';
-        await api(endpoint, { method: 'POST' });
+    const endpoint = enabled ? "/simulation/start" : "/simulation/stop";
+    await api(endpoint, { method: "POST" });
 
-        // Refresh status
-        await loadSimulationStatus();
-    } catch (error) {
-        console.error('Simulation toggle failed:', error);
-        if (toggle) toggle.checked = !enabled; // Revert toggle
-        if (statusText) statusText.textContent = 'Error';
-        alert('Failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+    // Refresh status
+    await loadSimulationStatus();
+  } catch (error) {
+    console.error("Simulation toggle failed:", error);
+    if (toggle) toggle.checked = !enabled; // Revert toggle
+    if (statusText) statusText.textContent = "Error";
+    alert(
+      "Failed: " + (error instanceof Error ? error.message : "Unknown error"),
+    );
+  }
 }
 
 /**
@@ -1091,34 +1364,36 @@ async function toggleSimulation(enabled) {
  * @param {Object} status - Simulation status from API
  */
 function updateSimulationUI(status) {
-    const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
-    const statusText = document.getElementById('simulation-status-text');
-    const statsEl = document.getElementById('simulation-stats');
+  const toggle = /** @type {HTMLInputElement} */ (
+    document.getElementById("simulation-toggle")
+  );
+  const statusText = document.getElementById("simulation-status-text");
+  const statsEl = document.getElementById("simulation-stats");
 
-    if (!status.available) {
-        if (toggle) toggle.disabled = true;
-        if (statusText) statusText.textContent = 'Not available';
-        return;
-    }
+  if (!status.available) {
+    if (toggle) toggle.disabled = true;
+    if (statusText) statusText.textContent = "Not available";
+    return;
+  }
 
-    if (toggle) {
-        toggle.disabled = false;
-        toggle.checked = status.running;
-    }
+  if (toggle) {
+    toggle.disabled = false;
+    toggle.checked = status.running;
+  }
 
-    if (statusText) {
-        statusText.textContent = status.running ? 'Active' : 'Inactive';
-        statusText.className = status.running ? 'simulation-active' : '';
-    }
+  if (statusText) {
+    statusText.textContent = status.running ? "Active" : "Inactive";
+    statusText.className = status.running ? "simulation-active" : "";
+  }
 
-    if (statsEl) {
-        if (status.running && status.stats) {
-            statsEl.textContent = `${status.stats.events_generated} events generated`;
-            statsEl.classList.remove('hidden');
-        } else {
-            statsEl.classList.add('hidden');
-        }
+  if (statsEl) {
+    if (status.running && status.stats) {
+      statsEl.textContent = `${status.stats.events_generated} events generated`;
+      statsEl.classList.remove("hidden");
+    } else {
+      statsEl.classList.add("hidden");
     }
+  }
 }
 
 /** @type {number | null} */
@@ -1128,25 +1403,27 @@ let simulationStatusInterval = null;
  * Start polling simulation status (when running)
  */
 function startSimulationPolling() {
-    if (simulationStatusInterval) return;
-    simulationStatusInterval = window.setInterval(async () => {
-        const toggle = /** @type {HTMLInputElement} */ (document.getElementById('simulation-toggle'));
-        if (toggle && toggle.checked) {
-            await loadSimulationStatus();
-        } else {
-            stopSimulationPolling();
-        }
-    }, 2000);
+  if (simulationStatusInterval) return;
+  simulationStatusInterval = window.setInterval(async () => {
+    const toggle = /** @type {HTMLInputElement} */ (
+      document.getElementById("simulation-toggle")
+    );
+    if (toggle && toggle.checked) {
+      await loadSimulationStatus();
+    } else {
+      stopSimulationPolling();
+    }
+  }, 2000);
 }
 
 /**
  * Stop polling simulation status
  */
 function stopSimulationPolling() {
-    if (simulationStatusInterval) {
-        clearInterval(simulationStatusInterval);
-        simulationStatusInterval = null;
-    }
+  if (simulationStatusInterval) {
+    clearInterval(simulationStatusInterval);
+    simulationStatusInterval = null;
+  }
 }
 
 /* ==========================================================================
@@ -1158,8 +1435,8 @@ function stopSimulationPolling() {
  * @param {string} id
  */
 function showElement(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('hidden');
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("hidden");
 }
 
 /**
@@ -1167,8 +1444,8 @@ function showElement(id) {
  * @param {string} id
  */
 function hideElement(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
+  const el = document.getElementById(id);
+  if (el) el.classList.add("hidden");
 }
 
 /**
@@ -1177,8 +1454,8 @@ function hideElement(id) {
  * @param {any} text
  */
 function setTextContent(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = String(text);
+  const el = document.getElementById(id);
+  if (el) el.textContent = String(text);
 }
 
 /**
@@ -1187,8 +1464,8 @@ function setTextContent(id, text) {
  * @param {any} value
  */
 function setInputValue(id, value) {
-    const el = /** @type {HTMLInputElement} */ (document.getElementById(id));
-    if (el) el.value = String(value);
+  const el = /** @type {HTMLInputElement} */ (document.getElementById(id));
+  if (el) el.value = String(value);
 }
 
 /**
@@ -1197,10 +1474,10 @@ function setInputValue(id, value) {
  * @returns {number | null}
  */
 function getInputValue(id) {
-    const el = /** @type {HTMLInputElement} */ (document.getElementById(id));
-    if (!el) return null;
-    const val = parseInt(el.value, 10);
-    return isNaN(val) ? null : val;
+  const el = /** @type {HTMLInputElement} */ (document.getElementById(id));
+  if (!el) return null;
+  const val = parseInt(el.value, 10);
+  return isNaN(val) ? null : val;
 }
 
 /**
@@ -1209,9 +1486,9 @@ function getInputValue(id) {
  * @returns {string}
  */
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 /**
@@ -1220,20 +1497,20 @@ function escapeHtml(text) {
  * @returns {string}
  */
 function getStatusClass(status) {
-    switch (status.toLowerCase()) {
-        case 'healthy':
-        case 'all_healthy':
-            return 'healthy';
-        case 'degraded':
-        case 'some_degraded':
-            return 'degraded';
-        case 'unhealthy':
-        case 'some_unhealthy':
-        case 'all_unhealthy':
-            return 'unhealthy';
-        default:
-            return 'unknown';
-    }
+  switch (status.toLowerCase()) {
+    case "healthy":
+    case "all_healthy":
+      return "healthy";
+    case "degraded":
+    case "some_degraded":
+      return "degraded";
+    case "unhealthy":
+    case "some_unhealthy":
+    case "all_unhealthy":
+      return "unhealthy";
+    default:
+      return "unknown";
+  }
 }
 
 /* ==========================================================================
@@ -1265,41 +1542,47 @@ window.onTenantChange = onTenantChange;
 window.loadEmailStats = loadEmailStats;
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    checkSetup();
+document.addEventListener("DOMContentLoaded", () => {
+  checkSetup();
 
-    // Set up filter change handlers
-    const apiHoursFilter = document.getElementById('api-hours-filter');
-    if (apiHoursFilter) {
-        apiHoursFilter.addEventListener('change', loadApiStats);
+  // Set up filter change handlers
+  const apiHoursFilter = document.getElementById("api-hours-filter");
+  if (apiHoursFilter) {
+    apiHoursFilter.addEventListener("change", loadApiStats);
+  }
+
+  const eventFilters = [
+    "event-entity-filter",
+    "event-type-filter",
+    "event-tenant-filter",
+  ];
+  eventFilters.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener("change", loadEvents);
     }
+  });
 
-    const eventFilters = ['event-entity-filter', 'event-type-filter', 'event-tenant-filter'];
-    eventFilters.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('change', loadEvents);
-        }
+  // Analytics filters
+  const analyticsTenantFilter = document.getElementById(
+    "analytics-tenant-filter",
+  );
+  if (analyticsTenantFilter) {
+    analyticsTenantFilter.addEventListener("change", onTenantChange);
+  }
+
+  const analyticsDaysFilter = document.getElementById("analytics-days-filter");
+  if (analyticsDaysFilter) {
+    analyticsDaysFilter.addEventListener("change", () => {
+      if (selectedTenantId) {
+        loadAnalyticsData(selectedTenantId);
+      }
     });
+  }
 
-    // Analytics filters
-    const analyticsTenantFilter = document.getElementById('analytics-tenant-filter');
-    if (analyticsTenantFilter) {
-        analyticsTenantFilter.addEventListener('change', onTenantChange);
-    }
-
-    const analyticsDaysFilter = document.getElementById('analytics-days-filter');
-    if (analyticsDaysFilter) {
-        analyticsDaysFilter.addEventListener('change', () => {
-            if (selectedTenantId) {
-                loadAnalyticsData(selectedTenantId);
-            }
-        });
-    }
-
-    // Email filters
-    const emailDaysFilter = document.getElementById('email-days-filter');
-    if (emailDaysFilter) {
-        emailDaysFilter.addEventListener('change', loadEmailStats);
-    }
+  // Email filters
+  const emailDaysFilter = document.getElementById("email-days-filter");
+  if (emailDaysFilter) {
+    emailDaysFilter.addEventListener("change", loadEmailStats);
+  }
 });

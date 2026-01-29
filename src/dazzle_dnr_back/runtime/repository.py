@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date, datetime
@@ -30,6 +31,7 @@ from dazzle_dnr_back.specs.entity import (
 )
 
 if TYPE_CHECKING:
+    from dazzle_dnr_back.metrics.system_collector import SystemMetricsCollector
     from dazzle_dnr_back.runtime.relation_loader import RelationLoader
 
 
@@ -285,6 +287,7 @@ class SQLiteRepository(Generic[T]):
 
     Provides CRUD operations against SQLite database.
     Supports advanced filtering, sorting, and relation loading.
+    Optionally collects query metrics for observability.
     """
 
     def __init__(
@@ -293,6 +296,7 @@ class SQLiteRepository(Generic[T]):
         entity_spec: EntitySpec,
         model_class: type[T],
         relation_loader: RelationLoader | None = None,
+        metrics_collector: SystemMetricsCollector | None = None,
     ):
         """
         Initialize the repository.
@@ -302,18 +306,30 @@ class SQLiteRepository(Generic[T]):
             entity_spec: Entity specification
             model_class: Pydantic model class for the entity
             relation_loader: Optional relation loader for nested data fetching
+            metrics_collector: Optional system metrics collector for query timing
         """
         self.db = db_manager
         self.entity_spec = entity_spec
         self.model_class = model_class
         self.table_name = entity_spec.name
         self._relation_loader = relation_loader
+        self._metrics = metrics_collector
 
         # Build field type lookup for conversions
         self._field_types: dict[str, FieldType] = {f.name: f.type for f in entity_spec.fields}
 
         # Store computed field specs for evaluation
         self._computed_fields: list[ComputedFieldSpec] = entity_spec.computed_fields or []
+
+    def _record_query(self, query_type: str, latency_ms: float, rows: int = 0) -> None:
+        """Record a database query metric."""
+        if self._metrics:
+            self._metrics.record_db_query(
+                query_type=query_type,
+                table=self.table_name,
+                latency_ms=latency_ms,
+                rows_affected=rows,
+            )
 
     def _model_to_row(self, model: T) -> dict[str, Any]:
         """Convert Pydantic model to row dict for SQLite."""
@@ -346,8 +362,11 @@ class SQLiteRepository(Generic[T]):
         table = quote_identifier(self.table_name)
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             conn.execute(sql, values)
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("insert", latency_ms, rows=1)
 
         return self.model_class(**data)
 
@@ -369,9 +388,12 @@ class SQLiteRepository(Generic[T]):
         table = quote_identifier(self.table_name)
         sql = f'SELECT * FROM {table} WHERE "id" = ?'
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (str(id),))
             row = cursor.fetchone()
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("select", latency_ms, rows=1 if row else 0)
 
         if not row:
             return None
@@ -422,10 +444,15 @@ class SQLiteRepository(Generic[T]):
         table = quote_identifier(self.table_name)
         sql = f'UPDATE {table} SET {set_clause} WHERE "id" = ?'
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(sql, values)
-            if cursor.rowcount == 0:
-                return None
+            rowcount = cursor.rowcount
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("update", latency_ms, rows=rowcount)
+
+        if rowcount == 0:
+            return None
 
         return await self.read(id)
 
@@ -442,9 +469,14 @@ class SQLiteRepository(Generic[T]):
         table = quote_identifier(self.table_name)
         sql = f'DELETE FROM {table} WHERE "id" = ?'
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (str(id),))
-            return cursor.rowcount > 0
+            rowcount = cursor.rowcount
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("delete", latency_ms, rows=rowcount)
+
+        return rowcount > 0
 
     async def list(
         self,
@@ -493,16 +525,22 @@ class SQLiteRepository(Generic[T]):
         # Get total count
         count_sql, count_params = builder.build_count()
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(count_sql, count_params)
             total = cursor.fetchone()[0]
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("count", latency_ms)
 
         # Get paginated items
         items_sql, items_params = builder.build_select()
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(items_sql, items_params)
             rows = cursor.fetchall()
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("select", latency_ms, rows=len(rows))
 
         # Convert to dicts first for relation loading
         row_dicts = [dict(row) for row in rows]
@@ -569,11 +607,17 @@ class SQLiteRepository(Generic[T]):
 
     async def exists(self, id: UUID) -> bool:
         """Check if an entity exists."""
-        sql = f"SELECT 1 FROM {self.table_name} WHERE id = ? LIMIT 1"
+        table = quote_identifier(self.table_name)
+        sql = f'SELECT 1 FROM {table} WHERE "id" = ? LIMIT 1'
 
+        start = time.perf_counter()
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (str(id),))
-            return cursor.fetchone() is not None
+            result = cursor.fetchone()
+        latency_ms = (time.perf_counter() - start) * 1000
+        self._record_query("select", latency_ms, rows=1 if result else 0)
+
+        return result is not None
 
 
 # =============================================================================
@@ -591,6 +635,7 @@ class RepositoryFactory:
         db_manager: DatabaseManager,
         models: dict[str, type[BaseModel]],
         relation_loader: RelationLoader | None = None,
+        metrics_collector: SystemMetricsCollector | None = None,
     ):
         """
         Initialize the factory.
@@ -599,10 +644,12 @@ class RepositoryFactory:
             db_manager: Database manager
             models: Dictionary mapping entity names to Pydantic models
             relation_loader: Optional relation loader for nested data fetching
+            metrics_collector: Optional system metrics collector for query timing
         """
         self.db = db_manager
         self.models = models
         self._relation_loader = relation_loader
+        self._metrics = metrics_collector
         self._repositories: dict[str, SQLiteRepository[Any]] = {}
 
     def create_repository(self, entity: EntitySpec) -> SQLiteRepository[Any]:
@@ -624,6 +671,7 @@ class RepositoryFactory:
             entity_spec=entity,
             model_class=model,
             relation_loader=self._relation_loader,
+            metrics_collector=self._metrics,
         )
         self._repositories[entity.name] = repo
         return repo

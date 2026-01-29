@@ -30,6 +30,7 @@ except ImportError:
     HTTPException = None  # type: ignore
 
 if TYPE_CHECKING:
+    from dazzle_dnr_back.metrics.system_collector import SystemMetricsCollector
     from dazzle_dnr_back.runtime.health_aggregator import HealthAggregator
     from dazzle_dnr_back.runtime.ops_database import OpsDatabase
     from dazzle_dnr_back.runtime.ops_simulator import OpsSimulator
@@ -168,6 +169,7 @@ def create_ops_routes(
     health_aggregator: HealthAggregator | None = None,
     sse_manager: SSEStreamManager | None = None,
     simulator: OpsSimulator | None = None,
+    metrics_collector: SystemMetricsCollector | None = None,
     require_auth: bool = True,
 ) -> APIRouter:
     """
@@ -178,6 +180,7 @@ def create_ops_routes(
         health_aggregator: Health check aggregator (optional)
         sse_manager: SSE stream manager (optional)
         simulator: Ops simulator for demo mode (optional)
+        metrics_collector: System metrics collector (optional)
         require_auth: Whether to require authentication (default True)
 
     Returns:
@@ -1202,5 +1205,118 @@ def create_ops_routes(
                 "events_generated": simulator.stats.events_generated,
             },
         }
+
+    # -------------------------------------------------------------------------
+    # System Metrics Endpoints
+    # -------------------------------------------------------------------------
+
+    @router.get("/metrics", include_in_schema=False)
+    async def get_prometheus_metrics() -> Response:
+        """
+        Prometheus metrics endpoint.
+
+        Returns system metrics in Prometheus text format for scraping.
+        No authentication required to allow Prometheus scraping.
+        """
+        if not metrics_collector:
+            return Response(
+                content="# No metrics collector configured\n",
+                media_type="text/plain; version=0.0.4",
+            )
+
+        snapshot = metrics_collector.snapshot()
+        return Response(
+            content=snapshot.to_prometheus(),
+            media_type="text/plain; version=0.0.4",
+        )
+
+    @router.get("/system-metrics")
+    async def get_system_metrics(
+        username: str = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        """
+        Get system metrics as JSON.
+
+        Returns comprehensive metrics from all system components
+        for dashboard visualization.
+        """
+        if not metrics_collector:
+            return {
+                "available": False,
+                "message": "Metrics collector not configured",
+            }
+
+        snapshot = metrics_collector.snapshot()
+        data = snapshot.to_dict()
+        data["available"] = True
+        return data
+
+    @router.get("/system-metrics/component/{component}")
+    async def get_component_metrics(
+        component: str,
+        username: str = Depends(get_current_user),
+    ) -> dict[str, Any]:
+        """
+        Get metrics for a specific component.
+
+        Returns detailed metrics for a single system component.
+        """
+        if not metrics_collector:
+            raise HTTPException(
+                status_code=503,
+                detail="Metrics collector not configured",
+            )
+
+        from dazzle_dnr_back.metrics.system_collector import ComponentType
+
+        try:
+            comp_type = ComponentType(component)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown component: {component}. Valid: {[c.value for c in ComponentType]}",
+            )
+
+        snapshot = metrics_collector.snapshot()
+        metrics = snapshot.components.get(comp_type)
+
+        if not metrics:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No metrics for component: {component}",
+            )
+
+        from dazzle_dnr_back.metrics.system_collector import _compute_histogram_stats
+
+        return {
+            "component": component,
+            "status": metrics.status,
+            "last_check": metrics.last_check.isoformat() if metrics.last_check else None,
+            "counters": metrics.counters,
+            "gauges": metrics.gauges,
+            "histograms": {
+                name: _compute_histogram_stats(samples)
+                for name, samples in metrics.histograms.items()
+            },
+            "recent_errors": metrics.errors[-10:],
+        }
+
+    @router.post("/system-metrics/reset")
+    async def reset_system_metrics(
+        username: str = Depends(get_current_user),
+    ) -> dict[str, str]:
+        """
+        Reset all system metrics.
+
+        Clears accumulated metrics data. Use with caution.
+        """
+        if not metrics_collector:
+            raise HTTPException(
+                status_code=503,
+                detail="Metrics collector not configured",
+            )
+
+        metrics_collector.reset()
+        return {"status": "reset", "message": "All metrics have been reset"}
 
     return router
