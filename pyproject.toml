@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.5.0"
+version = "0.6.0"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
