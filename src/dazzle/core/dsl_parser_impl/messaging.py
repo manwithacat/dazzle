@@ -468,7 +468,7 @@ class MessagingParserMixin:
             # Check for field.changed or status -> state
             if self.match(TokenType.DOT):
                 self.advance()
-                field_name = self.expect(TokenType.IDENTIFIER).value
+                field_name = self.expect_identifier_or_keyword().value
                 self.expect(TokenType.CHANGED)
                 return ir.SendTriggerSpec(
                     kind=ir.SendTriggerKind.ENTITY_FIELD_CHANGED,
