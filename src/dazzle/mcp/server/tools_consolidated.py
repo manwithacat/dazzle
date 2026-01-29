@@ -768,6 +768,34 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Pitch (investor pitch deck generation)
+        # =====================================================================
+        Tool(
+            name="pitch",
+            description="Pitch deck operations: scaffold, generate, validate, get. Generate investor pitch decks from pitchspec.yaml + DSL data.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["scaffold", "generate", "validate", "get"],
+                        "description": "Operation to perform",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["pptx", "narrative", "all"],
+                        "description": "Output format (for generate)",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "Overwrite existing (for scaffold)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Contribution (community contribution packaging)
         # =====================================================================
         Tool(

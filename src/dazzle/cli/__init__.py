@@ -26,6 +26,7 @@ from dazzle.cli.e2e import e2e_app
 from dazzle.cli.events import dlq_app, events_app, outbox_app
 from dazzle.cli.mcp import mcp_app
 from dazzle.cli.migrate import migrate_app
+from dazzle.cli.pitch import pitch_app
 from dazzle.cli.story import story_app
 from dazzle.cli.testing import test_app
 
@@ -83,6 +84,7 @@ __all__ = [
     "events_app",
     "dlq_app",
     "outbox_app",
+    "pitch_app",
     # Utilities
     "get_version",
     "version_callback",

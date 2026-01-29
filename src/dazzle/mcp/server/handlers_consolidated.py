@@ -909,6 +909,38 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Pitch Handler
+# =============================================================================
+
+
+def handle_pitch(arguments: dict[str, Any]) -> str:
+    """Handle consolidated pitch operations."""
+    from .handlers.pitch import (
+        generate_pitch_handler,
+        get_pitchspec_handler,
+        scaffold_pitchspec_handler,
+        validate_pitchspec_handler,
+    )
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "scaffold":
+        return scaffold_pitchspec_handler(project_path, arguments)
+    elif operation == "generate":
+        return generate_pitch_handler(project_path, arguments)
+    elif operation == "validate":
+        return validate_pitchspec_handler(project_path, arguments)
+    elif operation == "get":
+        return get_pitchspec_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown pitch operation: {operation}"})
+
+
+# =============================================================================
 # Mailpit Handler (async)
 # =============================================================================
 
@@ -967,6 +999,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "e2e_test": handle_e2e_test,
     "status": handle_status,
     "knowledge": handle_knowledge,
+    "pitch": handle_pitch,
     "mailpit": handle_mailpit,
     "contribution": handle_contribution,
 }

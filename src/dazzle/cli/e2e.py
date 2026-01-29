@@ -77,10 +77,8 @@ def e2e_run(
 
     if not example_path.exists():
         typer.echo(f"Example '{example}' not found at {example_path}", err=True)
-        typer.echo(
-            f"Available examples: {', '.join(d.name for d in examples_dir.iterdir() if d.is_dir())}",
-            err=True,
-        )
+        available = ", ".join(d.name for d in examples_dir.iterdir() if d.is_dir())
+        typer.echo(f"Available examples: {available}", err=True)
         raise typer.Exit(code=2)
 
     # Check Docker is available
