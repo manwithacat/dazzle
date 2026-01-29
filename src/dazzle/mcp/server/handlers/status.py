@@ -24,27 +24,35 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
     from pathlib import Path
 
+    from dazzle.core.manifest import load_manifest
+
     reload_requested = args.get("reload", False)
     result: dict[str, Any] = {
         "mode": "dev" if is_dev_mode() else "normal",
         "project_root": str(get_project_root()),
     }
 
-    # If roots-resolved path differs from internal state, surface it
+    # Determine the effective active project — roots wins over internal state
     resolved = args.get("_resolved_project_path")
-    if isinstance(resolved, Path) and resolved != get_project_root():
-        resolved_info: dict[str, Any] = {"path": str(resolved)}
-        manifest_path = resolved / "dazzle.toml"
-        if manifest_path.exists():
-            try:
-                from dazzle.core.manifest import load_manifest
-
-                manifest = load_manifest(manifest_path)
-                resolved_info["manifest_name"] = manifest.name
-                resolved_info["version"] = manifest.version
-            except Exception:
-                pass
-        result["resolved_project"] = resolved_info
+    if isinstance(resolved, Path) and (resolved / "dazzle.toml").exists():
+        active: dict[str, Any] = {"path": str(resolved)}
+        try:
+            manifest = load_manifest(resolved / "dazzle.toml")
+            active["manifest_name"] = manifest.name
+            active["version"] = manifest.version
+        except Exception:
+            pass
+        result["active_project"] = active
+    elif is_dev_mode():
+        project_name = get_active_project()
+        if project_name:
+            active = {"name": project_name}
+            project_path = get_available_projects().get(project_name)
+            if project_path:
+                active["path"] = str(project_path)
+            result["active_project"] = active
+        else:
+            result["active_project"] = None
 
     # Get current version info
     version_info = get_mcp_version()
@@ -70,9 +78,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
             except Exception as e:
                 result["reload"] = f"failed: {e}"
 
-    # Add active project info in dev mode
     if is_dev_mode():
-        result["active_project"] = get_active_project()
         result["available_projects"] = list(get_available_projects().keys())
 
     return json.dumps(result, indent=2)

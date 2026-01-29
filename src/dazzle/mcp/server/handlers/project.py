@@ -205,7 +205,6 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
             manifest = load_manifest(resolved_path / "dazzle.toml")
             result: dict[str, Any] = {
                 "mode": "dev" if is_dev_mode() else "normal",
-                "source": "roots",
                 "project_root": str(resolved_path),
                 "manifest_name": manifest.name,
                 "version": manifest.version,
@@ -219,7 +218,6 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
             return json.dumps(
                 {
                     "mode": "dev" if is_dev_mode() else "normal",
-                    "source": "roots",
                     "project_root": str(resolved_path),
                     "error": f"Could not load manifest: {e}",
                 },
