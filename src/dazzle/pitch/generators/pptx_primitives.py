@@ -320,6 +320,16 @@ def _add_slide_heading(
 
     heading_color = text_color or colors["white"]
     font_name = colors.get("font_family")
+
+    # Auto-scale font to fit single line within the 11" heading width.
+    # At 36pt bold, ~46 chars fit on one line. Scale down for longer titles.
+    font_size = 36
+    max_box_height = 0.85  # inches available above accent bar
+    estimated_h = _estimate_text_height(text, 11.0, font_size, bold=True)
+    while estimated_h > max_box_height and font_size > 20:
+        font_size -= 2
+        estimated_h = _estimate_text_height(text, 11.0, font_size, bold=True)
+
     _add_text_box(
         slide,
         Inches(0.8),
@@ -327,7 +337,7 @@ def _add_slide_heading(
         Inches(11),
         Inches(1),
         text,
-        font_size=36,
+        font_size=font_size,
         bold=True,
         color=heading_color,
         font_name=font_name,

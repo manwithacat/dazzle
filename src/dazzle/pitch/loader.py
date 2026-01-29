@@ -295,6 +295,25 @@ def validate_pitchspec(spec: PitchSpec) -> PitchSpecValidationResult:
                 f"extra_slides: Slide '{es.title}' uses image layout but has no image_path"
             )
 
+    # Title length warnings (long titles may be auto-scaled down)
+    _MAX_TITLE_CHARS = 50
+    if spec.problem and len(spec.problem.headline) > _MAX_TITLE_CHARS:
+        result.add_warning(
+            f"Problem: Headline is {len(spec.problem.headline)} chars "
+            f"(>{_MAX_TITLE_CHARS}); consider shortening to avoid font scaling"
+        )
+    if spec.solution and len(spec.solution.headline) > _MAX_TITLE_CHARS:
+        result.add_warning(
+            f"Solution: Headline is {len(spec.solution.headline)} chars "
+            f"(>{_MAX_TITLE_CHARS}); consider shortening to avoid font scaling"
+        )
+    for es in spec.extra_slides:
+        if len(es.title) > _MAX_TITLE_CHARS:
+            result.add_warning(
+                f"extra_slides: Title '{es.title[:30]}...' is {len(es.title)} chars "
+                f"(>{_MAX_TITLE_CHARS}); consider shortening"
+            )
+
     # Brand color validation
     for field_name in ["primary", "accent", "highlight", "success", "light"]:
         color = getattr(spec.brand, field_name)
