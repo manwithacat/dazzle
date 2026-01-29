@@ -342,6 +342,101 @@ def _get_known_slide_names() -> list[tuple[str, str, str]]:
     ]
 
 
+def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge patch into base, returning a new dict.
+
+    Lists in patch replace lists in base (no append).
+    """
+    result = dict(base)
+    for key, value in patch.items():
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def merge_pitchspec(project_root: Path, patch: dict[str, Any]) -> PitchSpec:
+    """Load pitchspec.yaml, deep-merge patch, validate, and save.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+        patch: Partial pitchspec data to merge.
+
+    Returns:
+        The merged and saved PitchSpec.
+
+    Raises:
+        PitchSpecError: If file doesn't exist or merged result is invalid.
+    """
+    pitchspec_path = get_pitchspec_path(project_root)
+    if not pitchspec_path.exists():
+        raise PitchSpecError(f"PitchSpec not found: {pitchspec_path}")
+
+    content = pitchspec_path.read_text(encoding="utf-8")
+    base_data = yaml.safe_load(content) or {}
+    merged = _deep_merge(base_data, patch)
+    spec = _parse_pitchspec_data(merged)
+
+    # Validate before saving
+    result = validate_pitchspec(spec)
+    if not result.is_valid:
+        raise PitchSpecError(f"Merged pitchspec has errors: {'; '.join(result.errors)}")
+
+    save_pitchspec(project_root, spec)
+    return spec
+
+
+PITCH_ASSETS_DIR = "pitch_assets"
+PITCH_ASSETS_SUBDIRS = ["team", "research", "charts", "media"]
+MANIFEST_FILE = "manifest.yaml"
+
+
+def ensure_pitch_assets(project_root: Path) -> Path:
+    """Create pitch_assets/ directory structure if it doesn't exist.
+
+    Returns:
+        Path to the pitch_assets directory.
+    """
+    assets_dir = project_root / PITCH_ASSETS_DIR
+    for subdir in PITCH_ASSETS_SUBDIRS:
+        (assets_dir / subdir).mkdir(parents=True, exist_ok=True)
+
+    manifest_path = assets_dir / MANIFEST_FILE
+    if not manifest_path.exists():
+        manifest_path.write_text(
+            yaml.dump(
+                {"version": 1, "assets": {}},
+                default_flow_style=False,
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+
+    return assets_dir
+
+
+def load_asset_manifest(project_root: Path) -> dict[str, Any]:
+    """Load pitch_assets/manifest.yaml."""
+    manifest_path = project_root / PITCH_ASSETS_DIR / MANIFEST_FILE
+    if not manifest_path.exists():
+        return {"version": 1, "assets": {}}
+    content = manifest_path.read_text(encoding="utf-8")
+    return yaml.safe_load(content) or {"version": 1, "assets": {}}
+
+
+def save_asset_manifest(project_root: Path, manifest: dict[str, Any]) -> Path:
+    """Save pitch_assets/manifest.yaml."""
+    assets_dir = project_root / PITCH_ASSETS_DIR
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = assets_dir / MANIFEST_FILE
+    manifest_path.write_text(
+        yaml.dump(manifest, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
 def scaffold_pitchspec(
     project_root: Path,
     *,

@@ -195,7 +195,7 @@ class AntiTuringValidator:
                 violations.append(
                     Violation(
                         type=ViolationType.BANNED_KEYWORD,
-                        message=f"Banned keyword '{word}' - DSL must be declarative, not algorithmic",
+                        message=f"Banned keyword '{word}' - DSL must be declarative",
                         line=line_num,
                         column=match.start() + 1,
                         context=line.strip(),

@@ -779,13 +779,22 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="pitch",
-            description="Pitch deck operations: scaffold, generate, validate, get, review. Generate investor pitch decks from pitchspec.yaml + DSL data. Workflow: scaffold → edit pitchspec.yaml → validate → generate → review → iterate.",
+            description="Pitch deck operations: scaffold, generate, validate, get, review, update, enrich, init_assets. Generate investor pitch decks from pitchspec.yaml + DSL data. Workflow: scaffold → enrich → update → validate → generate → review → iterate.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["scaffold", "generate", "validate", "get", "review"],
+                        "enum": [
+                            "scaffold",
+                            "generate",
+                            "validate",
+                            "get",
+                            "review",
+                            "update",
+                            "enrich",
+                            "init_assets",
+                        ],
                         "description": "Operation to perform",
                     },
                     "format": {
@@ -796,6 +805,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "overwrite": {
                         "type": "boolean",
                         "description": "Overwrite existing (for scaffold)",
+                    },
+                    "patch": {
+                        "type": "object",
+                        "description": "Partial pitchspec data to merge (for update)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

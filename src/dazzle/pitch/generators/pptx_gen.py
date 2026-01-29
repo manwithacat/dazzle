@@ -262,7 +262,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                 generate_revenue_chart,
             )
 
-            chart_dir = output_path.parent / "charts"
+            chart_dir = output_path.parent / "pitch_assets" / "charts"
             chart_dir.mkdir(parents=True, exist_ok=True)
             hex_colors: dict[str, Any] = {
                 "primary": ctx.spec.brand.primary,

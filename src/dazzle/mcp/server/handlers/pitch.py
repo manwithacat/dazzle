@@ -439,3 +439,236 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         },
         indent=2,
     )
+
+
+def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Merge a patch into pitchspec.yaml."""
+    from dazzle.pitch.loader import PitchSpecError, merge_pitchspec
+
+    patch = args.get("patch")
+    if not patch or not isinstance(patch, dict):
+        return json.dumps({"error": "patch parameter is required and must be a dict"}, indent=2)
+
+    try:
+        spec = merge_pitchspec(project_root, patch)
+        missing = _get_missing_sections(spec)
+        completeness = _completeness_score(spec)
+
+        next_steps: list[str] = []
+        if missing:
+            next_steps.append(f"Add {', '.join(missing)} to pitchspec.yaml for a stronger deck")
+        next_steps.append("Run pitch(operation='validate') to check for issues")
+        next_steps.append("Run pitch(operation='generate', format='all') to build the deck")
+
+        return json.dumps(
+            {
+                "success": True,
+                "completeness": f"{completeness}%",
+                "missing_sections": missing,
+                "next_steps": next_steps,
+            },
+            indent=2,
+        )
+    except PitchSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error updating pitchspec")
+        return json.dumps({"error": f"Failed to update pitchspec: {e}"}, indent=2)
+
+
+def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyze pitchspec + DSL context and return structured enrichment tasks."""
+    from dazzle.pitch.extractor import extract_pitch_context
+    from dazzle.pitch.loader import PitchSpecError, load_pitchspec, pitchspec_exists
+
+    if not pitchspec_exists(project_root):
+        return json.dumps(
+            {
+                "error": "No pitchspec.yaml found",
+                "next_steps": ["Run pitch(operation='scaffold') first"],
+            },
+            indent=2,
+        )
+
+    try:
+        spec = load_pitchspec(project_root)
+    except PitchSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+    ctx = extract_pitch_context(project_root, spec)
+    missing = _get_missing_sections(spec)
+    completeness = _completeness_score(spec)
+
+    tasks: list[dict[str, Any]] = []
+
+    # Gap-based tasks: missing sections
+    for section in missing:
+        tasks.append(
+            {
+                "type": "gap",
+                "section": section,
+                "action": f"Add {section} section to pitchspec.yaml",
+                "priority": "high",
+            }
+        )
+
+    # DSL-aware tasks: maturity stats
+    dsl_stats: dict[str, Any] = {
+        "entities": len(ctx.entities),
+        "surfaces": len(ctx.surfaces),
+        "personas": len(ctx.personas),
+        "stories": ctx.story_count,
+        "integrations": len(ctx.integrations),
+        "services": len(ctx.services),
+        "ledgers": ctx.ledger_count,
+        "processes": ctx.process_count,
+        "e2e_flows": ctx.e2e_flow_count,
+        "state_machines": len(ctx.state_machines),
+    }
+
+    if ctx.entities:
+        tasks.append(
+            {
+                "type": "dsl_aware",
+                "action": (
+                    f"Add platform maturity stats to solution section: "
+                    f"{len(ctx.entities)} entities, {len(ctx.surfaces)} surfaces, "
+                    f"{ctx.story_count} user stories"
+                ),
+                "priority": "medium",
+            }
+        )
+
+    if ctx.ledger_count > 0:
+        tasks.append(
+            {
+                "type": "dsl_aware",
+                "action": (
+                    f"Highlight financial infrastructure: {ctx.ledger_count} TigerBeetle "
+                    f"ledger(s) for real-time accounting"
+                ),
+                "priority": "medium",
+            }
+        )
+
+    if ctx.integrations:
+        tasks.append(
+            {
+                "type": "dsl_aware",
+                "action": (f"Mention integration ecosystem: {', '.join(ctx.integrations[:5])}"),
+                "priority": "medium",
+            }
+        )
+
+    # Infra-aware tasks
+    if ctx.infra_summary:
+        services_needed = ctx.infra_summary.get("services", [])
+        if services_needed:
+            tasks.append(
+                {
+                    "type": "infra_aware",
+                    "action": (
+                        f"Estimate monthly infrastructure costs. Services needed: "
+                        f"{', '.join(str(s) for s in services_needed[:6])}"
+                    ),
+                    "priority": "medium",
+                    "search_queries": [
+                        "AWS pricing calculator 2025",
+                        f"cloud hosting cost {' '.join(str(s) for s in services_needed[:3])}",
+                    ],
+                }
+            )
+
+    # Asset-based tasks
+    assets_dir = project_root / "pitch_assets"
+    if spec.team and spec.team.founders:
+        for founder in spec.team.founders:
+            headshot_path = assets_dir / "team" / f"{founder.name.lower().replace(' ', '_')}.jpg"
+            if not headshot_path.exists():
+                tasks.append(
+                    {
+                        "type": "asset",
+                        "action": f"Add headshot photo for {founder.name}",
+                        "target_path": str(headshot_path),
+                        "priority": "low",
+                    }
+                )
+
+    logo_needed = not spec.company.logo_path if hasattr(spec.company, "logo_path") else True
+    if logo_needed:
+        tasks.append(
+            {
+                "type": "asset",
+                "action": "Add company logo",
+                "target_path": str(assets_dir / "media" / "logo.png"),
+                "priority": "low",
+            }
+        )
+
+    # Research tasks
+    if not spec.market:
+        tasks.append(
+            {
+                "type": "research",
+                "action": "Research TAM/SAM/SOM market sizing",
+                "priority": "high",
+                "search_queries": [
+                    f"{spec.company.name} market size 2025",
+                    f"{spec.company.tagline or 'SaaS'} total addressable market",
+                ],
+            }
+        )
+
+    if not spec.competitors:
+        tasks.append(
+            {
+                "type": "research",
+                "action": "Research competitors and their strengths/weaknesses",
+                "priority": "medium",
+                "search_queries": [
+                    f"{spec.company.tagline or spec.company.name} competitors",
+                    f"alternatives to {spec.company.name}",
+                ],
+            }
+        )
+
+    next_steps: list[str] = [
+        "Use pitch(operation='update', patch={...}) to apply changes",
+        "Run pitch(operation='review') to check content quality",
+        "Run pitch(operation='generate', format='all') to build the deck",
+    ]
+
+    return json.dumps(
+        {
+            "completeness": f"{completeness}%",
+            "dsl_stats": dsl_stats,
+            "enrichment_tasks": tasks,
+            "task_count": len(tasks),
+            "next_steps": next_steps,
+        },
+        indent=2,
+    )
+
+
+def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Create pitch_assets/ directory structure."""
+    from dazzle.pitch.loader import ensure_pitch_assets
+
+    try:
+        assets_dir = ensure_pitch_assets(project_root)
+        return json.dumps(
+            {
+                "success": True,
+                "path": str(assets_dir),
+                "subdirectories": ["team", "research", "charts", "media"],
+                "next_steps": [
+                    "Add team headshots to pitch_assets/team/",
+                    "Add company logo to pitch_assets/media/logo.png",
+                    "Run pitch(operation='enrich') to see what assets are needed",
+                ],
+            },
+            indent=2,
+        )
+    except Exception as e:
+        logger.exception("Error creating pitch assets")
+        return json.dumps({"error": f"Failed to create pitch assets: {e}"}, indent=2)

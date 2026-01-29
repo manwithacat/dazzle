@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .ir import PitchSpec
 
@@ -33,6 +34,12 @@ class PitchContext:
     workspaces: list[dict[str, str]] = field(default_factory=list)
     state_machines: list[dict[str, str]] = field(default_factory=list)
     story_count: int = 0
+    integrations: list[str] = field(default_factory=list)
+    services: list[str] = field(default_factory=list)
+    ledger_count: int = 0
+    process_count: int = 0
+    e2e_flow_count: int = 0
+    infra_summary: dict[str, Any] = field(default_factory=dict)
 
 
 def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
@@ -116,6 +123,47 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
 
             stories = load_stories(project_root)
             ctx.story_count = len(stories)
+        except Exception:
+            pass
+
+        # Extract integrations
+        try:
+            ctx.integrations = [i.name for i in appspec.domain.integrations]
+        except Exception:
+            pass
+
+        # Extract services
+        try:
+            ctx.services = [s.name for s in appspec.domain_services]
+        except Exception:
+            pass
+
+        # Count ledgers (TigerBeetle)
+        try:
+            ctx.ledger_count = len(appspec.domain.ledgers)
+        except Exception:
+            pass
+
+        # Count processes
+        try:
+            ctx.process_count = len(appspec.processes)
+        except Exception:
+            pass
+
+        # Count E2E test flows
+        try:
+            from dazzle.testing.e2e_flow_persistence import load_e2e_flows
+
+            flows = load_e2e_flows(project_root)
+            ctx.e2e_flow_count = len(flows)
+        except Exception:
+            pass
+
+        # Infrastructure summary
+        try:
+            from dazzle.core.infra import analyze_infra_requirements
+
+            ctx.infra_summary = analyze_infra_requirements(appspec)
         except Exception:
             pass
 
