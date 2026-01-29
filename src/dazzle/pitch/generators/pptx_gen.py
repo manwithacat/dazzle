@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.pitch.extractor import PitchContext
-from dazzle.pitch.ir import BrandColors
+from dazzle.pitch.ir import BrandColors, ExtraSlide, ExtraSlideLayout
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +122,154 @@ def _fmt_currency(amount: int, currency: str = "GBP") -> str:
     return f"{symbol}{amount:,}"
 
 
+def _add_card(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    height: Any,
+    *,
+    fill_color: Any = None,
+    border_color: Any = None,
+) -> Any:
+    """Add a rounded rectangle card shape to a slide."""
+    from pptx.util import Pt
+
+    shape = slide.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        left,
+        top,
+        width,
+        height,
+    )
+    if fill_color:
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = fill_color
+    else:
+        shape.fill.background()
+    if border_color:
+        shape.line.color.rgb = border_color
+        shape.line.width = Pt(1)
+    else:
+        shape.line.fill.background()
+    return shape
+
+
+def _add_stat_box(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    value: str,
+    label: str,
+    *,
+    value_color: Any = None,
+    label_color: Any = None,
+    alignment: int | None = None,
+) -> None:
+    """Add a big-number + caption stat box."""
+    from pptx.util import Inches
+
+    _add_text_box(
+        slide,
+        left,
+        top,
+        width,
+        Inches(1),
+        value,
+        font_size=48,
+        bold=True,
+        color=value_color,
+        alignment=alignment,
+    )
+    _add_text_box(
+        slide,
+        left,
+        top + Inches(1),
+        width,
+        Inches(0.5),
+        label,
+        font_size=16,
+        color=label_color,
+        alignment=alignment,
+    )
+
+
+def _add_columns(
+    slide: Any,
+    top: Any,
+    items: list[tuple[str, str]],
+    *,
+    value_color: Any = None,
+    label_color: Any = None,
+    alignment: int | None = None,
+) -> None:
+    """Auto-layout N stat boxes across slide width."""
+    from pptx.util import Inches
+
+    n = len(items)
+    if n == 0:
+        return
+    box_w = min(3.0, 11.0 / max(n, 1))
+    x_start = 1.0
+    for i, (value, label) in enumerate(items[:6]):
+        x = x_start + i * (box_w + 0.2)
+        _add_stat_box(
+            slide,
+            Inches(x),
+            top,
+            Inches(box_w),
+            value,
+            label,
+            value_color=value_color,
+            label_color=label_color,
+            alignment=alignment,
+        )
+
+
+def _add_rich_text_box(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    height: Any,
+    text: str,
+    *,
+    font_size: int = 18,
+    color: Any = None,
+    alignment: int | None = None,
+) -> Any:
+    """Add a text box that parses **bold** markers into bold runs."""
+    import re
+
+    from pptx.util import Pt
+
+    txbox = slide.shapes.add_textbox(left, top, width, height)
+    tf = txbox.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    if alignment is not None:
+        p.alignment = alignment
+
+    parts = re.split(r"(\*\*.*?\*\*)", text)
+    for part in parts:
+        if part.startswith("**") and part.endswith("**"):
+            run = p.add_run()
+            run.text = part[2:-2]
+            run.font.bold = True
+            run.font.size = Pt(font_size)
+            if color:
+                run.font.color.rgb = color
+        elif part:
+            run = p.add_run()
+            run.text = part
+            run.font.size = Pt(font_size)
+            run.font.bold = False
+            if color:
+                run.font.color.rgb = color
+    return txbox
+
+
 # =============================================================================
 # Slide Builders
 # =============================================================================
@@ -173,7 +321,8 @@ def _build_title_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> N
         color=colors["muted"],
         alignment=PP_ALIGN.CENTER,
     )
-    _add_speaker_notes(slide, f"Title slide for {name}. {tagline}")
+    notes = ctx.spec.company.speaker_notes if ctx.spec.company else None
+    _add_speaker_notes(slide, notes or f"Title slide for {name}. {tagline}")
 
 
 def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -238,7 +387,8 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
             )
             y += 0.6
 
-    _add_speaker_notes(slide, f"Problem: {problem.headline}")
+    notes = problem.speaker_notes
+    _add_speaker_notes(slide, notes or f"Problem: {problem.headline}")
 
 
 def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -303,7 +453,8 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
             )
             vy += 0.5
 
-    _add_speaker_notes(slide, f"Solution: {solution.headline}")
+    notes = solution.speaker_notes
+    _add_speaker_notes(slide, notes or f"Solution: {solution.headline}")
 
 
 def _build_platform_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -547,7 +698,18 @@ def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> 
             )
             y += 0.5
 
-    _add_speaker_notes(slide, "Market sizing: TAM/SAM/SOM breakdown.")
+    # Embed market chart if available
+    market_chart = ctx.chart_paths.get("market")
+    if market_chart and Path(market_chart).exists():
+        try:
+            slide.shapes.add_picture(
+                str(market_chart), Inches(7), Inches(4.5), Inches(5), Inches(2.5)
+            )
+        except Exception as e:
+            logger.debug(f"Failed to embed market chart: {e}")
+
+    notes = market.speaker_notes
+    _add_speaker_notes(slide, notes or "Market sizing: TAM/SAM/SOM breakdown.")
 
 
 def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -621,7 +783,8 @@ def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, A
                 alignment=PP_ALIGN.CENTER,
             )
 
-    _add_speaker_notes(slide, f"Business model with {tier_count} pricing tiers.")
+    notes = bm.speaker_notes
+    _add_speaker_notes(slide, notes or f"Business model with {tier_count} pricing tiers.")
 
 
 def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -725,7 +888,18 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             color=colors["white"],
         )
 
-    _add_speaker_notes(slide, "Financial projections and use of funds breakdown.")
+    # Embed revenue chart if available
+    revenue_chart = ctx.chart_paths.get("revenue")
+    if revenue_chart and Path(revenue_chart).exists():
+        try:
+            slide.shapes.add_picture(
+                str(revenue_chart), Inches(0.8), Inches(4.5), Inches(5), Inches(2.5)
+            )
+        except Exception as e:
+            logger.debug(f"Failed to embed revenue chart: {e}")
+
+    notes = fin.speaker_notes
+    _add_speaker_notes(slide, notes or "Financial projections and use of funds breakdown.")
 
 
 def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -842,8 +1016,10 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
             )
             y += 0.5
 
+    notes = team.speaker_notes
     _add_speaker_notes(
-        slide, f"Team: {len(team.founders)} founders, {len(team.advisors)} advisors."
+        slide,
+        notes or f"Team: {len(team.founders)} founders, {len(team.advisors)} advisors.",
     )
 
 
@@ -1045,7 +1221,8 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             )
             y += 0.5
 
-    _add_speaker_notes(slide, "Milestones and roadmap.")
+    notes = ms.speaker_notes
+    _add_speaker_notes(slide, notes or "Milestones and roadmap.")
 
 
 def _build_ask_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
@@ -1125,6 +1302,16 @@ def _build_ask_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> Non
             alignment=PP_ALIGN.CENTER,
         )
 
+    # Embed funds chart if available
+    funds_chart = ctx.chart_paths.get("funds")
+    if funds_chart and Path(funds_chart).exists():
+        try:
+            slide.shapes.add_picture(
+                str(funds_chart), Inches(8), Inches(4.5), Inches(4), Inches(2.5)
+            )
+        except Exception as e:
+            logger.debug(f"Failed to embed funds chart: {e}")
+
     _add_speaker_notes(slide, f"Raising {ask_str} at {stage} stage.")
 
 
@@ -1170,7 +1357,101 @@ def _build_closing_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
             alignment=PP_ALIGN.CENTER,
         )
 
-    _add_speaker_notes(slide, "Closing slide. Open for questions.")
+    notes = ctx.spec.company.speaker_notes if ctx.spec.company else None
+    _add_speaker_notes(slide, notes or "Closing slide. Open for questions.")
+
+
+def _build_extra_slide(
+    prs: Any, ctx: PitchContext, colors: dict[str, Any], extra: ExtraSlide
+) -> None:
+    """Build a user-defined extra slide based on its layout."""
+    from pptx.enum.text import PP_ALIGN
+    from pptx.util import Inches
+
+    slide = _create_dark_slide(prs, colors)
+    _add_text_box(
+        slide,
+        Inches(0.8),
+        Inches(0.5),
+        Inches(11),
+        Inches(1),
+        extra.title,
+        font_size=36,
+        bold=True,
+        color=colors["white"],
+    )
+
+    if extra.layout == ExtraSlideLayout.BULLETS:
+        y = 2.0
+        for item in extra.items:
+            _add_rich_text_box(
+                slide,
+                Inches(1.2),
+                Inches(y),
+                Inches(10),
+                Inches(0.6),
+                f"\u2022 {item}",
+                font_size=20,
+                color=colors["white"],
+            )
+            y += 0.7
+
+    elif extra.layout == ExtraSlideLayout.STATS:
+        parsed: list[tuple[str, str]] = []
+        for item in extra.items:
+            if "|" in item:
+                val, lbl = item.split("|", 1)
+                parsed.append((val.strip(), lbl.strip()))
+            else:
+                parsed.append((item, ""))
+        _add_columns(
+            slide,
+            Inches(2.0),
+            parsed,
+            value_color=colors["accent"],
+            label_color=colors["muted"],
+            alignment=PP_ALIGN.CENTER,
+        )
+
+    elif extra.layout == ExtraSlideLayout.CARDS:
+        y = 2.0
+        for item in extra.items:
+            _add_card(
+                slide,
+                Inches(1.0),
+                Inches(y),
+                Inches(10.5),
+                Inches(0.8),
+                fill_color=colors.get("dark_text"),
+                border_color=colors["accent"],
+            )
+            _add_rich_text_box(
+                slide,
+                Inches(1.3),
+                Inches(y + 0.1),
+                Inches(10),
+                Inches(0.6),
+                item,
+                font_size=18,
+                color=colors["white"],
+            )
+            y += 1.0
+
+    elif extra.layout == ExtraSlideLayout.IMAGE:
+        if extra.image_path:
+            try:
+                slide.shapes.add_picture(
+                    extra.image_path,
+                    Inches(1.5),
+                    Inches(2.0),
+                    Inches(10),
+                    Inches(5),
+                )
+            except Exception as e:
+                logger.warning(f"Failed to embed image {extra.image_path}: {e}")
+
+    notes = extra.speaker_notes
+    _add_speaker_notes(slide, notes or f"Extra slide: {extra.title}")
 
 
 # =============================================================================
@@ -1277,12 +1558,70 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
 
         colors = _resolve_colors(ctx.spec.brand)
 
+        # Generate charts and populate ctx.chart_paths
+        try:
+            from dazzle.pitch.generators.charts import (
+                generate_funds_chart,
+                generate_market_chart,
+                generate_revenue_chart,
+            )
+
+            chart_dir = output_path.parent / "charts"
+            chart_dir.mkdir(parents=True, exist_ok=True)
+            hex_colors = {
+                "primary": ctx.spec.brand.primary,
+                "accent": ctx.spec.brand.accent,
+                "highlight": ctx.spec.brand.highlight,
+                "success": ctx.spec.brand.success,
+                "light": ctx.spec.brand.light,
+            }
+            for name, gen_fn in [
+                ("revenue", generate_revenue_chart),
+                ("market", generate_market_chart),
+                ("funds", generate_funds_chart),
+            ]:
+                path = gen_fn(ctx, chart_dir, hex_colors)
+                if path:
+                    ctx.chart_paths[name] = path
+        except Exception as e:
+            logger.debug(f"Chart generation skipped: {e}")
+
+        # Build catalog and extra slide maps
+        catalog_map: dict[str, tuple[Callable[..., None], Callable[[PitchContext], bool]]] = {
+            entry_name: (builder, condition) for entry_name, builder, condition in SLIDE_CATALOG
+        }
+        extra_map: dict[str, ExtraSlide] = {
+            es.title.lower().replace(" ", "_"): es for es in ctx.spec.extra_slides
+        }
+
+        # Determine slide order
+        if ctx.spec.slide_order:
+            ordered_names = list(ctx.spec.slide_order)
+        else:
+            ordered_names = [entry_name for entry_name, _, _ in SLIDE_CATALOG]
+            # Insert extras before closing
+            if extra_map:
+                closing_idx = (
+                    ordered_names.index("closing")
+                    if "closing" in ordered_names
+                    else len(ordered_names)
+                )
+                for extra_name in extra_map:
+                    ordered_names.insert(closing_idx, extra_name)
+                    closing_idx += 1
+
         slide_count = 0
-        for name, builder, condition in SLIDE_CATALOG:
-            if condition(ctx):
-                builder(prs, ctx, colors)
+        for slide_name in ordered_names:
+            if slide_name in catalog_map:
+                builder, condition = catalog_map[slide_name]
+                if condition(ctx):
+                    builder(prs, ctx, colors)
+                    slide_count += 1
+                    logger.debug(f"Built slide: {slide_name}")
+            elif slide_name in extra_map:
+                _build_extra_slide(prs, ctx, colors, extra_map[slide_name])
                 slide_count += 1
-                logger.debug(f"Built slide: {name}")
+                logger.debug(f"Built extra slide: {slide_name}")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         prs.save(str(output_path))

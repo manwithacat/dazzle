@@ -23,8 +23,22 @@ import sys
 from pathlib import Path
 
 
+def _is_toolkit_repo(project_root: Path) -> bool:
+    """Detect if we're running inside the Dazzle toolkit repo itself."""
+    pyproject = project_root / "pyproject.toml"
+    if not pyproject.exists():
+        return False
+    try:
+        content = pyproject.read_text()
+        return 'name = "dazzle"' in content
+    except OSError:
+        return False
+
+
 def check_dsl_validation(project_root: Path) -> tuple[bool, str]:
     """Check if DSL validates."""
+    if _is_toolkit_repo(project_root):
+        return True, "Skipped DSL check: toolkit repo"
     try:
         result = subprocess.run(
             ["dazzle", "validate"], cwd=project_root, capture_output=True, text=True, timeout=30

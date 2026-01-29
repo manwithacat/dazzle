@@ -661,7 +661,7 @@ def example_command(
         False,
         "--reset",
         "-r",
-        help="Reset existing directory: overwrite source files, delete build artifacts, preserve user files",
+        help="Reset existing directory: overwrite source, delete build artifacts, preserve user files",
     ),
     list_flag: bool = typer.Option(False, "--list", "-l", help="List available examples"),
 ) -> None:

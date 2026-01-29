@@ -10,6 +10,8 @@ from dazzle.pitch.ir import (
     BusinessModelSpec,
     CompanySpec,
     Competitor,
+    ExtraSlide,
+    ExtraSlideLayout,
     FinancialsSpec,
     FundAllocation,
     FundingStage,
@@ -92,6 +94,90 @@ class TestBrandColors:
         b = BrandColors()
         assert b.primary == "#0F1A2E"
         assert b.accent == "#2E86AB"
+
+
+class TestExtraSlide:
+    def test_defaults(self):
+        es = ExtraSlide(title="Demo")
+        assert es.layout == ExtraSlideLayout.BULLETS
+        assert es.items == []
+        assert es.speaker_notes is None
+        assert es.image_path is None
+
+    def test_stats_layout(self):
+        es = ExtraSlide(
+            title="Key Metrics",
+            layout=ExtraSlideLayout.STATS,
+            items=["100|Users", "50K|Revenue"],
+        )
+        assert es.layout == ExtraSlideLayout.STATS
+        assert len(es.items) == 2
+
+    def test_image_layout(self):
+        es = ExtraSlide(
+            title="Screenshot",
+            layout=ExtraSlideLayout.IMAGE,
+            image_path="assets/screenshot.png",
+        )
+        assert es.image_path == "assets/screenshot.png"
+
+
+class TestSpeakerNotes:
+    def test_company_speaker_notes(self):
+        c = CompanySpec(name="Test", speaker_notes="Welcome everyone")
+        assert c.speaker_notes == "Welcome everyone"
+
+    def test_problem_speaker_notes(self):
+        p = ProblemSpec(headline="Big problem", speaker_notes="Key talking point")
+        assert p.speaker_notes == "Key talking point"
+
+    def test_solution_speaker_notes(self):
+        s = SolutionSpec(headline="Fix", speaker_notes="Demo this")
+        assert s.speaker_notes == "Demo this"
+
+    def test_market_speaker_notes(self):
+        m = MarketSpec(speaker_notes="Cite sources")
+        assert m.speaker_notes == "Cite sources"
+
+    def test_business_model_speaker_notes(self):
+        bm = BusinessModelSpec(speaker_notes="Focus on Pro tier")
+        assert bm.speaker_notes == "Focus on Pro tier"
+
+    def test_financials_speaker_notes(self):
+        f = FinancialsSpec(speaker_notes="Conservative estimates")
+        assert f.speaker_notes == "Conservative estimates"
+
+    def test_team_speaker_notes(self):
+        t = TeamSpec(speaker_notes="Highlight experience")
+        assert t.speaker_notes == "Highlight experience"
+
+    def test_milestones_speaker_notes(self):
+        m = MilestonesSpec(speaker_notes="On track")
+        assert m.speaker_notes == "On track"
+
+
+class TestPitchSpecNewFields:
+    def test_extra_slides(self):
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(title="Case Study", items=["Great result"]),
+            ]
+        )
+        assert len(spec.extra_slides) == 1
+        assert spec.extra_slides[0].title == "Case Study"
+
+    def test_slide_order(self):
+        spec = PitchSpec(slide_order=["title", "problem", "closing"])
+        assert spec.slide_order == ["title", "problem", "closing"]
+
+    def test_logo_path(self):
+        c = CompanySpec(name="Test", logo_path="assets/logo.png")
+        assert c.logo_path == "assets/logo.png"
+
+    def test_defaults_unchanged(self):
+        spec = PitchSpec()
+        assert spec.extra_slides == []
+        assert spec.slide_order is None
 
 
 class TestMarketSpec:

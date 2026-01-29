@@ -21,6 +21,8 @@ class PitchContext:
     """Merged view of PitchSpec + DSL-extracted data for generators."""
 
     spec: PitchSpec
+    # Chart image paths (populated by generators):
+    chart_paths: dict[str, Path] = field(default_factory=dict)
     # DSL-extracted (auto-populated):
     app_name: str | None = None
     entities: list[str] = field(default_factory=list)

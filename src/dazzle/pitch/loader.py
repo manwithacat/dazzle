@@ -20,6 +20,7 @@ from .ir import (
     BusinessModelSpec,
     CompanySpec,
     Competitor,
+    ExtraSlide,
     FinancialsSpec,
     FundAllocation,
     KeyHire,
@@ -156,6 +157,12 @@ def _parse_pitchspec_data(data: dict[str, Any]) -> PitchSpec:
         if "brand" in data and data["brand"]:
             brand = BrandColors(**data["brand"])
 
+        # Parse extra slides
+        extra_slides = [ExtraSlide(**es) for es in data.get("extra_slides", [])]
+
+        # Parse slide order
+        slide_order = data.get("slide_order")
+
         return PitchSpec(
             version=data.get("version", 1),
             company=company,
@@ -168,6 +175,8 @@ def _parse_pitchspec_data(data: dict[str, Any]) -> PitchSpec:
             competitors=competitors,
             milestones=milestones,
             brand=brand,
+            extra_slides=extra_slides,
+            slide_order=slide_order,
         )
     except (KeyError, ValueError, TypeError) as e:
         raise PitchSpecError(f"Failed to parse PitchSpec: {e}") from e
@@ -269,6 +278,23 @@ def validate_pitchspec(spec: PitchSpec) -> PitchSpecValidationResult:
                     f"Financials: Use of funds allocations sum to {total}%, expected 100%"
                 )
 
+    # Validate slide_order entries
+    if spec.slide_order is not None:
+        known_names = {name for name, _, _ in _get_known_slide_names()}
+        # Add extra slide slugs
+        for es in spec.extra_slides:
+            known_names.add(es.title.lower().replace(" ", "_"))
+        for entry in spec.slide_order:
+            if entry not in known_names:
+                result.add_error(f"slide_order: Unknown slide name '{entry}'")
+
+    # Validate extra_slides with image layout have image_path
+    for es in spec.extra_slides:
+        if es.layout.value == "image" and not es.image_path:
+            result.add_error(
+                f"extra_slides: Slide '{es.title}' uses image layout but has no image_path"
+            )
+
     # Brand color validation
     for field_name in ["primary", "accent", "highlight", "success", "light"]:
         color = getattr(spec.brand, field_name)
@@ -276,6 +302,25 @@ def validate_pitchspec(spec: PitchSpec) -> PitchSpecValidationResult:
             result.add_error(f"Brand: Invalid color for {field_name}: {color}")
 
     return result
+
+
+def _get_known_slide_names() -> list[tuple[str, str, str]]:
+    """Return known built-in slide names for validation."""
+    return [
+        ("title", "", ""),
+        ("problem", "", ""),
+        ("solution", "", ""),
+        ("platform", "", ""),
+        ("personas", "", ""),
+        ("market", "", ""),
+        ("business_model", "", ""),
+        ("financials", "", ""),
+        ("team", "", ""),
+        ("competition", "", ""),
+        ("milestones", "", ""),
+        ("ask", "", ""),
+        ("closing", "", ""),
+    ]
 
 
 def scaffold_pitchspec(
@@ -327,6 +372,7 @@ problem:
     - "Pain point 3 that existing solutions miss"
   market_failure:
     - "Why current solutions fall short"
+  speaker_notes: "Emphasize the cost of inaction"
 
 solution:
   headline: "Our Solution"
@@ -433,6 +479,30 @@ milestones:
   long_term:
     - "International expansion"
     - "Series A fundraise"
+
+# Optional: company logo (path relative to project root)
+# logo_path: "assets/logo.png"
+
+# Optional: extra slides added to the deck
+# extra_slides:
+#   - title: "Case Study"
+#     layout: bullets  # bullets, stats, cards, image
+#     items:
+#       - "Customer saw 3x improvement"
+#       - "Deployed in under a week"
+#     speaker_notes: "Walk through the case study"
+
+# Optional: custom slide ordering (default order if omitted)
+# slide_order:
+#   - title
+#   - problem
+#   - solution
+#   - market
+#   - business_model
+#   - financials
+#   - team
+#   - ask
+#   - closing
 
 # Slide theme colors (hex)
 brand:

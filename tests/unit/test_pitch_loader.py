@@ -6,7 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.pitch.ir import CompanySpec, FundingStage, PitchSpec, ProblemSpec
+from dazzle.pitch.ir import (
+    CompanySpec,
+    ExtraSlide,
+    ExtraSlideLayout,
+    FundingStage,
+    PitchSpec,
+    ProblemSpec,
+)
 from dazzle.pitch.loader import (
     PitchSpecError,
     load_pitchspec,
@@ -114,3 +121,58 @@ class TestValidation:
         spec = PitchSpec()
         result = validate_pitchspec(spec)
         assert any("My App" in w for w in result.warnings)
+
+    def test_invalid_slide_order_entry(self):
+        spec = PitchSpec(slide_order=["title", "nonexistent", "closing"])
+        result = validate_pitchspec(spec)
+        assert any("nonexistent" in e for e in result.errors)
+
+    def test_image_layout_missing_path(self):
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(title="Screenshot", layout=ExtraSlideLayout.IMAGE),
+            ]
+        )
+        result = validate_pitchspec(spec)
+        assert any("image_path" in e for e in result.errors)
+
+
+class TestNewFieldsRoundTrip:
+    def test_extra_slides_roundtrip(self, tmp_project: Path):
+        spec = PitchSpec(
+            company=CompanySpec(name="Test"),
+            extra_slides=[
+                ExtraSlide(
+                    title="Case Study",
+                    layout=ExtraSlideLayout.BULLETS,
+                    items=["Item 1", "Item 2"],
+                    speaker_notes="Talk about case study",
+                ),
+            ],
+            slide_order=["title", "case_study", "closing"],
+        )
+        save_pitchspec(tmp_project, spec)
+        loaded = load_pitchspec(tmp_project)
+        assert len(loaded.extra_slides) == 1
+        assert loaded.extra_slides[0].title == "Case Study"
+        assert loaded.extra_slides[0].speaker_notes == "Talk about case study"
+        assert loaded.slide_order == ["title", "case_study", "closing"]
+
+    def test_speaker_notes_roundtrip(self, tmp_project: Path):
+        spec = PitchSpec(
+            company=CompanySpec(name="Test", speaker_notes="Welcome"),
+            problem=ProblemSpec(headline="Problem", speaker_notes="Key point"),
+        )
+        save_pitchspec(tmp_project, spec)
+        loaded = load_pitchspec(tmp_project)
+        assert loaded.company.speaker_notes == "Welcome"
+        assert loaded.problem is not None
+        assert loaded.problem.speaker_notes == "Key point"
+
+    def test_scaffold_contains_new_examples(self, tmp_project: Path):
+        scaffold_pitchspec(tmp_project, overwrite=True)
+        content = (tmp_project / "pitchspec.yaml").read_text()
+        assert "speaker_notes" in content
+        assert "extra_slides" in content
+        assert "slide_order" in content
+        assert "logo_path" in content

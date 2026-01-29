@@ -26,6 +26,22 @@ class FundingStage(str, Enum):
     GROWTH = "growth"
 
 
+class ExtraSlideLayout(str, Enum):
+    BULLETS = "bullets"
+    STATS = "stats"
+    CARDS = "cards"
+    IMAGE = "image"
+
+
+class ExtraSlide(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    title: str
+    layout: ExtraSlideLayout = ExtraSlideLayout.BULLETS
+    items: list[str] = Field(default_factory=list)
+    speaker_notes: str | None = None
+    image_path: str | None = None
+
+
 class CompanySpec(BaseModel):
     name: str
     tagline: str | None = None
@@ -33,6 +49,8 @@ class CompanySpec(BaseModel):
     funding_ask: int | None = None
     currency: str = "GBP"
     runway_months: int | None = None
+    logo_path: str | None = None
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -40,6 +58,7 @@ class ProblemSpec(BaseModel):
     headline: str
     points: list[str] = Field(default_factory=list)
     market_failure: list[str] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -50,6 +69,7 @@ class SolutionSpec(BaseModel):
     entities_count: int | None = None
     surfaces_count: int | None = None
     personas: list[str] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -65,6 +85,7 @@ class MarketSpec(BaseModel):
     sam: MarketSize | None = None
     som: MarketSize | None = None
     drivers: list[str] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -79,6 +100,7 @@ class PricingTier(BaseModel):
 
 class BusinessModelSpec(BaseModel):
     tiers: list[PricingTier] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -100,6 +122,7 @@ class FundAllocation(BaseModel):
 class FinancialsSpec(BaseModel):
     projections: list[YearProjection] = Field(default_factory=list)
     use_of_funds: list[FundAllocation] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -121,6 +144,7 @@ class TeamSpec(BaseModel):
     founders: list[TeamMember] = Field(default_factory=list)
     advisors: list[TeamMember] = Field(default_factory=list)
     key_hires: list[KeyHire] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -135,6 +159,7 @@ class MilestonesSpec(BaseModel):
     completed: list[str] = Field(default_factory=list)
     next_12_months: list[str] = Field(default_factory=list)
     long_term: list[str] = Field(default_factory=list)
+    speaker_notes: str | None = None
     model_config = ConfigDict(frozen=True)
 
 
@@ -159,6 +184,8 @@ class PitchSpec(BaseModel):
     competitors: list[Competitor] = Field(default_factory=list)
     milestones: MilestonesSpec | None = None
     brand: BrandColors = Field(default_factory=BrandColors)
+    extra_slides: list[ExtraSlide] = Field(default_factory=list)
+    slide_order: list[str] | None = None
     model_config = ConfigDict(frozen=True)
 
 
