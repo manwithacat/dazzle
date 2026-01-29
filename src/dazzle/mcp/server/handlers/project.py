@@ -192,8 +192,40 @@ def select_project(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-def get_active_project_info() -> str:
-    """Get the currently selected project."""
+def get_active_project_info(resolved_path: Path | None = None) -> str:
+    """Get the currently selected project.
+
+    Args:
+        resolved_path: If provided (from MCP roots resolution), use this path
+            instead of internal state when it contains a dazzle.toml.
+    """
+    # If we have a roots-resolved path with a manifest, use it directly
+    if resolved_path is not None and (resolved_path / "dazzle.toml").exists():
+        try:
+            manifest = load_manifest(resolved_path / "dazzle.toml")
+            result: dict[str, Any] = {
+                "mode": "dev" if is_dev_mode() else "normal",
+                "source": "roots",
+                "project_root": str(resolved_path),
+                "manifest_name": manifest.name,
+                "version": manifest.version,
+            }
+
+            backend_spec_loaded = load_backend_spec_for_project(resolved_path)
+            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+
+            return json.dumps(result, indent=2)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "mode": "dev" if is_dev_mode() else "normal",
+                    "source": "roots",
+                    "project_root": str(resolved_path),
+                    "error": f"Could not load manifest: {e}",
+                },
+                indent=2,
+            )
+
     if not is_dev_mode():
         # In normal mode, return info about the project root
         project_root = get_project_root()

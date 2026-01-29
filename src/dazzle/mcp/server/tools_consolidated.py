@@ -648,13 +648,13 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="status",
-            description="Status operations: mcp, logs",
+            description="Status operations: mcp, logs, active_project",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["mcp", "logs"],
+                        "enum": ["mcp", "logs", "active_project"],
                         "description": "Operation to perform",
                     },
                     "reload": {

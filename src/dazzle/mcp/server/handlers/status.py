@@ -22,12 +22,29 @@ from ..state import (
 
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
+    from pathlib import Path
 
     reload_requested = args.get("reload", False)
     result: dict[str, Any] = {
         "mode": "dev" if is_dev_mode() else "normal",
         "project_root": str(get_project_root()),
     }
+
+    # If roots-resolved path differs from internal state, surface it
+    resolved = args.get("_resolved_project_path")
+    if isinstance(resolved, Path) and resolved != get_project_root():
+        resolved_info: dict[str, Any] = {"path": str(resolved)}
+        manifest_path = resolved / "dazzle.toml"
+        if manifest_path.exists():
+            try:
+                from dazzle.core.manifest import load_manifest
+
+                manifest = load_manifest(manifest_path)
+                resolved_info["manifest_name"] = manifest.name
+                resolved_info["version"] = manifest.version
+            except Exception:
+                pass
+        result["resolved_project"] = resolved_info
 
     # Get current version info
     version_info = get_mcp_version()
@@ -63,12 +80,18 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
+    from pathlib import Path
+
     count = args.get("count", 50)
     level = args.get("level")
     errors_only = args.get("errors_only", False)
 
-    # Get project path
-    project_path = get_active_project_path() or get_project_root()
+    # Prefer roots-resolved path, then active project, then project root
+    resolved = args.get("_resolved_project_path")
+    if isinstance(resolved, Path):
+        project_path = resolved
+    else:
+        project_path = get_active_project_path() or get_project_root()
     log_dir = project_path / ".dazzle" / "logs"
     log_file = log_dir / "dnr.log"
 

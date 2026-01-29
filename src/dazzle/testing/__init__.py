@@ -37,7 +37,7 @@ Usage:
     python -m dazzle.testing.event_test_runner ./my-project
 """
 
-# Legacy imports (playwright/testspec)
+# DSL test generation
 from dazzle.testing.dsl_test_generator import (
     DSLTestGenerator,
     GeneratedTestSuite,
@@ -68,7 +68,7 @@ from dazzle.testing.playwright_codegen import (
     generate_tests_for_app,
 )
 
-# New test infrastructure imports
+# Test runner
 from dazzle.testing.test_runner import (
     DNRClient,
     TestCaseResult,
@@ -94,11 +94,12 @@ from dazzle.testing.unified_runner import (
 )
 
 __all__ = [
-    # Legacy
-    "generate_e2e_testspec",
+    # Playwright codegen
     "generate_test_module",
     "generate_test_file",
     "generate_tests_for_app",
+    # Testspec
+    "generate_e2e_testspec",
     # Test Runner
     "TestRunner",
     "TestResult",

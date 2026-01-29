@@ -456,6 +456,7 @@ def handle_e2e_test(arguments: dict[str, Any]) -> str:
 
 def handle_status(arguments: dict[str, Any]) -> str:
     """Handle consolidated status operations."""
+    from .handlers.project import get_active_project_info
     from .handlers.status import (
         get_dnr_logs_handler,
         get_mcp_status_handler,
@@ -467,6 +468,9 @@ def handle_status(arguments: dict[str, Any]) -> str:
         return get_mcp_status_handler(arguments)
     elif operation == "logs":
         return get_dnr_logs_handler(arguments)
+    elif operation == "active_project":
+        resolved = arguments.get("_resolved_project_path")
+        return get_active_project_info(resolved_path=resolved)
     else:
         return json.dumps({"error": f"Unknown status operation: {operation}"})
 

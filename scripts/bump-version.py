@@ -10,7 +10,7 @@ Usage:
 
 Updates version in:
     - pyproject.toml (source of truth)
-    - src/dazzle/cli_legacy.py (fallback version)
+    - src/dazzle/cli/utils.py (fallback version)
     - homebrew/dazzle.rb (Homebrew formula)
     - homebrew/dazzle-simple.rb (Simple Homebrew formula)
 """
@@ -25,7 +25,7 @@ from pathlib import Path
 VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
     (
-        "src/dazzle/cli_legacy.py",
+        "src/dazzle/cli/utils.py",
         r'^__version__\s*=\s*["\']([^"\']+)["\']',
         '__version__ = "{version}"',
     ),

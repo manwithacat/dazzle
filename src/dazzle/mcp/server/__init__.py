@@ -90,7 +90,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     elif name == "select_project":
         result = select_project(arguments)
     elif name == "get_active_project":
-        result = get_active_project_info()
+        # Route through consolidated dispatch for roots-awareness
+        result = await dispatch_consolidated_tool(
+            "status", {"operation": "active_project", **(arguments or {})}, session=session
+        )
+        if result is None:
+            result = get_active_project_info()
     elif name == "validate_all_projects":
         result = validate_all_projects()
     else:

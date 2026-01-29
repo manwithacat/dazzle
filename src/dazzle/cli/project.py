@@ -200,8 +200,7 @@ def _generate_dsl(analyzer: Any, results: dict[str, Any], output_path: Path) -> 
 # =============================================================================
 
 # Note: These command functions are defined here but registered on the main app
-# in cli_legacy.py. They can't use @project_app.command() because they're
-# top-level commands, not sub-commands.
+# in cli/__init__.py. They're top-level commands, not sub-commands.
 
 
 def init_command(

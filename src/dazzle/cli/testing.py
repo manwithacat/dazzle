@@ -1882,7 +1882,11 @@ def test_populate(
                 stories.append(
                     StorySpec(
                         story_id=next_story_id(),
-                        title=f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        title=(
+                            f"{default_actor} changes {entity.name}"
+                            f" from {transition.from_state}"
+                            f" to {transition.to_state}"
+                        ),
                         actor=default_actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],

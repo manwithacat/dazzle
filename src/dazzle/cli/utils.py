@@ -11,6 +11,8 @@ import typer
 
 from dazzle.core.errors import ParseError
 
+__version__ = "0.5.0"
+
 
 def get_version() -> str:
     """Get DAZZLE version from package metadata."""
@@ -19,8 +21,7 @@ def get_version() -> str:
 
         return version("dazzle")
     except Exception:
-        # Fallback if not installed as package
-        return "0.1.0-dev"
+        return __version__
 
 
 def version_callback(value: bool) -> None:
@@ -114,9 +115,10 @@ def version_callback(value: bool) -> None:
         typer.echo(f"  Location:      {install_location}")
         typer.echo("")
         typer.echo("Features:")
-        lsp_status = (
-            "✓ Available" if lsp_available else "✗ Not available (install with: pip install dazzle)"
-        )
+        if lsp_available:
+            lsp_status = "✓ Available"
+        else:
+            lsp_status = "✗ Not available (install with: pip install dazzle)"
         typer.echo(f"  LSP Server:    {lsp_status}")
         if llm_available:
             llm_status = "✓ Available (" + ", ".join(llm_providers) + ")"
