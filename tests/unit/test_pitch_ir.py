@@ -95,6 +95,14 @@ class TestBrandColors:
         assert b.primary == "#0F1A2E"
         assert b.accent == "#2E86AB"
 
+    def test_font_family_default(self):
+        b = BrandColors()
+        assert b.font_family == "Calibri"
+
+    def test_font_family_custom(self):
+        b = BrandColors(font_family="Arial")
+        assert b.font_family == "Arial"
+
 
 class TestExtraSlide:
     def test_defaults(self):
@@ -120,6 +128,30 @@ class TestExtraSlide:
             image_path="assets/screenshot.png",
         )
         assert es.image_path == "assets/screenshot.png"
+
+    def test_theme_default(self):
+        es = ExtraSlide(title="Demo")
+        assert es.theme == "dark"
+
+    def test_theme_light(self):
+        es = ExtraSlide(title="Demo", theme="light")
+        assert es.theme == "light"
+
+    def test_table_layout(self):
+        es = ExtraSlide(
+            title="Data",
+            layout=ExtraSlideLayout.TABLE,
+            items=["A|B|C", "1|2|3"],
+        )
+        assert es.layout == ExtraSlideLayout.TABLE
+
+    def test_callout_layout(self):
+        es = ExtraSlide(
+            title="Quote",
+            layout=ExtraSlideLayout.CALLOUT,
+            items=["Big statement", "Supporting point"],
+        )
+        assert es.layout == ExtraSlideLayout.CALLOUT
 
 
 class TestSpeakerNotes:

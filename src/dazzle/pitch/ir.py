@@ -31,6 +31,8 @@ class ExtraSlideLayout(str, Enum):
     STATS = "stats"
     CARDS = "cards"
     IMAGE = "image"
+    TABLE = "table"
+    CALLOUT = "callout"
 
 
 class ExtraSlide(BaseModel):
@@ -40,6 +42,7 @@ class ExtraSlide(BaseModel):
     items: list[str] = Field(default_factory=list)
     speaker_notes: str | None = None
     image_path: str | None = None
+    theme: str = "dark"
 
 
 class CompanySpec(BaseModel):
@@ -169,6 +172,7 @@ class BrandColors(BaseModel):
     highlight: str = "#E86F2C"
     success: str = "#28A745"
     light: str = "#F8F9FA"
+    font_family: str = "Calibri"
     model_config = ConfigDict(frozen=True)
 
 

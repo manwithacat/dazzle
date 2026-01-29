@@ -60,6 +60,7 @@ def _resolve_colors(brand: BrandColors) -> dict[str, Any]:
         "white": RGBColor(0xFF, 0xFF, 0xFF),
         "dark_text": hex_to_rgb(brand.primary),
         "muted": RGBColor(0x99, 0x99, 0x99),
+        "font_family": brand.font_family,
     }
 
 
@@ -75,6 +76,7 @@ def _add_text_box(
     bold: bool = False,
     color: Any = None,
     alignment: int | None = None,
+    font_name: str | None = None,
 ) -> Any:
     """Add a text box to a slide."""
     from pptx.util import Pt
@@ -90,6 +92,8 @@ def _add_text_box(
         p.font.color.rgb = color
     if alignment is not None:
         p.alignment = alignment
+    if font_name:
+        p.font.name = font_name
     return txbox
 
 
@@ -238,6 +242,7 @@ def _add_rich_text_box(
     font_size: int = 18,
     color: Any = None,
     alignment: int | None = None,
+    font_name: str | None = None,
 ) -> Any:
     """Add a text box that parses **bold** markers into bold runs."""
     import re
@@ -260,6 +265,8 @@ def _add_rich_text_box(
             run.font.size = Pt(font_size)
             if color:
                 run.font.color.rgb = color
+            if font_name:
+                run.font.name = font_name
         elif part:
             run = p.add_run()
             run.text = part
@@ -267,7 +274,216 @@ def _add_rich_text_box(
             run.font.bold = False
             if color:
                 run.font.color.rgb = color
+            if font_name:
+                run.font.name = font_name
     return txbox
+
+
+def _create_light_slide(prs: Any, colors: dict[str, Any]) -> Any:
+    """Create a slide with light background."""
+    slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank layout
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = colors["light"]
+    return slide
+
+
+def _add_slide_heading(
+    slide: Any, text: str, colors: dict[str, Any], *, text_color: Any = None
+) -> float:
+    """Add a title heading with accent bar underneath. Returns y position after heading."""
+    from pptx.util import Inches, Pt
+
+    heading_color = text_color or colors["white"]
+    font_name = colors.get("font_family")
+    _add_text_box(
+        slide,
+        Inches(0.8),
+        Inches(0.5),
+        Inches(11),
+        Inches(1),
+        text,
+        font_size=36,
+        bold=True,
+        color=heading_color,
+        font_name=font_name,
+    )
+    # Accent bar
+    bar = slide.shapes.add_shape(
+        1,  # MSO_SHAPE.RECTANGLE
+        Inches(0.8),
+        Inches(1.35),
+        Inches(2.5),
+        Inches(0.06),
+    )
+    bar.fill.solid()
+    bar.fill.fore_color.rgb = colors["accent"]
+    bar.line.fill.background()
+    _ = Pt  # suppress unused import warning
+    return 2.0
+
+
+def _add_bullet_list(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    items: list[str],
+    colors: dict[str, Any],
+    *,
+    font_size: int = 18,
+    spacing: float = 0.6,
+    bullet_char: str = "\u2022",
+    color: Any = None,
+) -> float:
+    """Render N bullet items. Returns final y position (inches)."""
+    from pptx.util import Inches
+
+    text_color = color or colors["white"]
+    font_name = colors.get("font_family")
+    y = top if isinstance(top, float) else top / 914400  # convert EMU to inches if needed
+    # Normalize to float inches
+    if not isinstance(y, float):
+        y = float(y)
+    left_emu = left if not isinstance(left, float) else Inches(left)
+    width_emu = width if not isinstance(width, float) else Inches(width)
+    for item in items:
+        _add_text_box(
+            slide,
+            left_emu,
+            Inches(y),
+            width_emu,
+            Inches(spacing),
+            f"{bullet_char} {item}",
+            font_size=font_size,
+            color=text_color,
+            font_name=font_name,
+        )
+        y += spacing
+    return y
+
+
+def _add_table(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    headers: list[str],
+    rows: list[list[str]],
+    colors: dict[str, Any],
+    *,
+    col_widths: list[float] | None = None,
+    font_size: int = 14,
+) -> Any:
+    """Create a table shape with styled header row and alternating row colors."""
+    from pptx.dml.color import RGBColor
+    from pptx.util import Inches, Pt
+
+    row_count = len(rows) + 1  # +1 for header
+    col_count = len(headers)
+    if col_count == 0:
+        return None
+
+    table_shape = slide.shapes.add_table(
+        row_count, col_count, left, top, width, Inches(0.4 * row_count)
+    )
+    table = table_shape.table
+
+    # Set column widths
+    if col_widths:
+        for i, w in enumerate(col_widths[:col_count]):
+            table.columns[i].width = Inches(w)
+
+    font_name = colors.get("font_family")
+
+    # Header row
+    for ci, header in enumerate(headers):
+        cell = table.cell(0, ci)
+        cell.text = header
+        for paragraph in cell.text_frame.paragraphs:
+            paragraph.font.size = Pt(font_size)
+            paragraph.font.bold = True
+            paragraph.font.color.rgb = colors["white"]
+            if font_name:
+                paragraph.font.name = font_name
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = colors["accent"]
+
+    # Data rows
+    for ri, row in enumerate(rows):
+        for ci, value in enumerate(row[:col_count]):
+            cell = table.cell(ri + 1, ci)
+            cell.text = value
+            for paragraph in cell.text_frame.paragraphs:
+                paragraph.font.size = Pt(font_size)
+                paragraph.font.color.rgb = colors["dark_text"]
+                if font_name:
+                    paragraph.font.name = font_name
+            # Alternating row colors
+            cell.fill.solid()
+            if ri % 2 == 0:
+                cell.fill.fore_color.rgb = colors["light"]
+            else:
+                cell.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)  # type: ignore[no-untyped-call]
+
+    return table_shape
+
+
+def _add_callout_box(
+    slide: Any,
+    left: Any,
+    top: Any,
+    width: Any,
+    text: str,
+    colors: dict[str, Any],
+    *,
+    font_size: int = 24,
+) -> Any:
+    """Dark rounded rect with accent left border and bold text inside."""
+    from pptx.util import Inches, Pt
+
+    # Main box
+    box_height = Inches(1.2)
+    shape = slide.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        left,
+        top,
+        width,
+        box_height,
+    )
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = colors["primary"]
+    shape.line.fill.background()
+
+    # Accent left border
+    border = slide.shapes.add_shape(
+        1,  # MSO_SHAPE.RECTANGLE
+        left,
+        top,
+        Inches(0.08),
+        box_height,
+    )
+    border.fill.solid()
+    border.fill.fore_color.rgb = colors["accent"]
+    border.line.fill.background()
+
+    # Text
+    font_name = colors.get("font_family")
+    _add_text_box(
+        slide,
+        left + Inches(0.3),
+        top + Inches(0.2),
+        width - Inches(0.6),
+        box_height - Inches(0.4),
+        text,
+        font_size=font_size,
+        bold=True,
+        color=colors["white"],
+        font_name=font_name,
+    )
+    _ = Pt  # suppress unused
+    return shape
 
 
 # =============================================================================
@@ -334,34 +550,15 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        problem.headline,
-        font_size=36,
-        bold=True,
-        color=colors["highlight"],
-    )
+    y = _add_slide_heading(slide, problem.headline, colors, text_color=colors["highlight"])
 
-    y = 2.0
-    for point in problem.points:
-        _add_text_box(
-            slide,
-            Inches(1.2),
-            Inches(y),
-            Inches(10),
-            Inches(0.6),
-            f"\u2022 {point}",
-            font_size=20,
-            color=colors["white"],
-        )
-        y += 0.7
+    y = _add_bullet_list(
+        slide, Inches(1.2), y, Inches(10), problem.points, colors, font_size=20, spacing=0.7
+    )
 
     if problem.market_failure:
         y += 0.3
+        font_name = colors.get("font_family")
         _add_text_box(
             slide,
             Inches(0.8),
@@ -372,20 +569,21 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
             font_size=24,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         y += 0.7
-        for failure in problem.market_failure:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.6),
-                f"\u2192 {failure}",
-                font_size=18,
-                color=colors["muted"],
-            )
-            y += 0.6
+        y = _add_bullet_list(
+            slide,
+            Inches(1.2),
+            y,
+            Inches(10),
+            problem.market_failure,
+            colors,
+            font_size=18,
+            spacing=0.6,
+            bullet_char="\u2192",
+            color=colors["muted"],
+        )
 
     notes = problem.speaker_notes
     _add_speaker_notes(slide, notes or f"Problem: {problem.headline}")
@@ -400,19 +598,9 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        solution.headline,
-        font_size=36,
-        bold=True,
-        color=colors["success"],
-    )
+    y = _add_slide_heading(slide, solution.headline, colors, text_color=colors["success"])
 
-    y = 2.0
+    font_name = colors.get("font_family")
     if solution.how_it_works:
         for i, step in enumerate(solution.how_it_works, 1):
             _add_text_box(
@@ -424,6 +612,7 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 f"{i}. {step}",
                 font_size=18,
                 color=colors["white"],
+                font_name=font_name,
             )
             y += 0.6
 
@@ -439,6 +628,7 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
             font_size=20,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         for prop in solution.value_props:
             _add_text_box(
@@ -450,6 +640,7 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 f"\u2713 {prop}",
                 font_size=16,
                 color=colors["white"],
+                font_name=font_name,
             )
             vy += 0.5
 
@@ -466,17 +657,7 @@ def _build_platform_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Platform Overview",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "Platform Overview", colors)
 
     metrics: list[tuple[str, str]] = []
     if ctx.entities:
@@ -560,17 +741,7 @@ def _build_personas_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "User Personas",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "User Personas", colors)
 
     y = 2.0
     for persona in ctx.personas[:6]:
@@ -611,17 +782,7 @@ def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> 
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Market Opportunity",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "Market Opportunity", colors)
 
     currency = ctx.spec.company.currency
     sizes = []
@@ -722,17 +883,7 @@ def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, A
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Business Model",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "Business Model", colors)
 
     currency = ctx.spec.company.currency
     tier_count = len(bm.tiers)
@@ -797,17 +948,7 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Financial Projections",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "Financial Projections", colors)
 
     currency = ctx.spec.company.currency
     col_count = len(fin.projections)
@@ -903,27 +1044,17 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
 
 
 def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
-    """Build team slide."""
+    """Build team slide with light background."""
     from pptx.util import Inches
 
     team = ctx.spec.team
     if not team:
         return
 
-    slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Team",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    slide = _create_light_slide(prs, colors)
+    y = _add_slide_heading(slide, "Team", colors, text_color=colors["dark_text"])
 
-    y = 2.0
+    font_name = colors.get("font_family")
     for member in team.founders:
         _add_text_box(
             slide,
@@ -935,6 +1066,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
             font_size=22,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         _add_text_box(
             slide,
@@ -945,6 +1077,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
             member.role,
             font_size=18,
             color=colors["highlight"],
+            font_name=font_name,
         )
         if member.bio:
             _add_text_box(
@@ -956,6 +1089,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
                 member.bio,
                 font_size=14,
                 color=colors["muted"],
+                font_name=font_name,
             )
             y += 1.0
         else:
@@ -973,6 +1107,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
             font_size=20,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         y += 0.5
         for advisor in team.advisors:
@@ -984,7 +1119,8 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
                 Inches(0.4),
                 f"{advisor.name} \u2014 {advisor.role}",
                 font_size=16,
-                color=colors["white"],
+                color=colors["dark_text"],
+                font_name=font_name,
             )
             y += 0.5
 
@@ -1000,6 +1136,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
             font_size=20,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         y += 0.5
         for hire in team.key_hires:
@@ -1012,7 +1149,8 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
                 Inches(0.4),
                 f"{hire.role}{timing}",
                 font_size=16,
-                color=colors["white"],
+                color=colors["dark_text"],
+                font_name=font_name,
             )
             y += 0.5
 
@@ -1024,96 +1162,30 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
 
 
 def _build_competition_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
-    """Build competition slide."""
+    """Build competition slide with light background and table."""
     from pptx.util import Inches
 
     if not ctx.spec.competitors:
         return
 
-    slide = _create_dark_slide(prs, colors)
-    _add_text_box(
+    slide = _create_light_slide(prs, colors)
+    _add_slide_heading(slide, "Competitive Landscape", colors, text_color=colors["dark_text"])
+
+    headers = ["Competitor", "Strength", "Weakness"]
+    rows = [
+        [comp.name, comp.strength or "", comp.weakness or ""] for comp in ctx.spec.competitors[:6]
+    ]
+    _add_table(
         slide,
         Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Competitive Landscape",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
+        Inches(2.2),
+        Inches(11.5),
+        headers,
+        rows,
+        colors,
+        col_widths=[3.5, 4.0, 4.0],
+        font_size=14,
     )
-
-    y = 2.0
-    _add_text_box(
-        slide,
-        Inches(1.0),
-        Inches(y),
-        Inches(3),
-        Inches(0.5),
-        "Competitor",
-        font_size=16,
-        bold=True,
-        color=colors["accent"],
-    )
-    _add_text_box(
-        slide,
-        Inches(4.5),
-        Inches(y),
-        Inches(3.5),
-        Inches(0.5),
-        "Strength",
-        font_size=16,
-        bold=True,
-        color=colors["success"],
-    )
-    _add_text_box(
-        slide,
-        Inches(8.5),
-        Inches(y),
-        Inches(3.5),
-        Inches(0.5),
-        "Weakness",
-        font_size=16,
-        bold=True,
-        color=colors["highlight"],
-    )
-    y += 0.6
-
-    for comp in ctx.spec.competitors[:6]:
-        _add_text_box(
-            slide,
-            Inches(1.0),
-            Inches(y),
-            Inches(3),
-            Inches(0.5),
-            comp.name,
-            font_size=16,
-            bold=True,
-            color=colors["white"],
-        )
-        if comp.strength:
-            _add_text_box(
-                slide,
-                Inches(4.5),
-                Inches(y),
-                Inches(3.5),
-                Inches(0.5),
-                comp.strength,
-                font_size=14,
-                color=colors["muted"],
-            )
-        if comp.weakness:
-            _add_text_box(
-                slide,
-                Inches(8.5),
-                Inches(y),
-                Inches(3.5),
-                Inches(0.5),
-                comp.weakness,
-                font_size=14,
-                color=colors["muted"],
-            )
-        y += 0.7
 
     _add_speaker_notes(slide, f"{len(ctx.spec.competitors)} competitors analyzed.")
 
@@ -1127,19 +1199,9 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "Milestones & Roadmap",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    y = _add_slide_heading(slide, "Milestones & Roadmap", colors)
 
-    y = 2.0
+    font_name = colors.get("font_family")
 
     if ms.completed:
         _add_text_box(
@@ -1152,20 +1214,21 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             font_size=20,
             bold=True,
             color=colors["success"],
+            font_name=font_name,
         )
         y += 0.5
-        for item in ms.completed:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.4),
-                f"\u2713 {item}",
-                font_size=16,
-                color=colors["muted"],
-            )
-            y += 0.5
+        y = _add_bullet_list(
+            slide,
+            Inches(1.2),
+            y,
+            Inches(10),
+            ms.completed,
+            colors,
+            font_size=16,
+            spacing=0.5,
+            bullet_char="\u2713",
+            color=colors["muted"],
+        )
 
     if ms.next_12_months:
         y += 0.3
@@ -1179,20 +1242,20 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             font_size=20,
             bold=True,
             color=colors["accent"],
+            font_name=font_name,
         )
         y += 0.5
-        for item in ms.next_12_months:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.4),
-                f"\u2192 {item}",
-                font_size=16,
-                color=colors["white"],
-            )
-            y += 0.5
+        y = _add_bullet_list(
+            slide,
+            Inches(1.2),
+            y,
+            Inches(10),
+            ms.next_12_months,
+            colors,
+            font_size=16,
+            spacing=0.5,
+            bullet_char="\u2192",
+        )
 
     if ms.long_term:
         y += 0.3
@@ -1206,20 +1269,21 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
             font_size=20,
             bold=True,
             color=colors["highlight"],
+            font_name=font_name,
         )
         y += 0.5
-        for item in ms.long_term:
-            _add_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.4),
-                f"\u25c6 {item}",
-                font_size=16,
-                color=colors["muted"],
-            )
-            y += 0.5
+        y = _add_bullet_list(
+            slide,
+            Inches(1.2),
+            y,
+            Inches(10),
+            ms.long_term,
+            colors,
+            font_size=16,
+            spacing=0.5,
+            bullet_char="\u25c6",
+            color=colors["muted"],
+        )
 
     notes = ms.speaker_notes
     _add_speaker_notes(slide, notes or "Milestones and roadmap.")
@@ -1234,17 +1298,7 @@ def _build_ask_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> Non
         return
 
     slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        "The Ask",
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    _add_slide_heading(slide, "The Ask", colors)
 
     currency = ctx.spec.company.currency
     ask_str = _fmt_currency(ctx.spec.company.funding_ask, currency)
@@ -1368,33 +1422,26 @@ def _build_extra_slide(
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
 
-    slide = _create_dark_slide(prs, colors)
-    _add_text_box(
-        slide,
-        Inches(0.8),
-        Inches(0.5),
-        Inches(11),
-        Inches(1),
-        extra.title,
-        font_size=36,
-        bold=True,
-        color=colors["white"],
-    )
+    use_light = extra.theme == "light"
+    slide = _create_light_slide(prs, colors) if use_light else _create_dark_slide(prs, colors)
+    heading_color = colors["dark_text"] if use_light else colors["white"]
+    text_color = colors["dark_text"] if use_light else colors["white"]
+    y = _add_slide_heading(slide, extra.title, colors, text_color=heading_color)
+
+    font_name = colors.get("font_family")
 
     if extra.layout == ExtraSlideLayout.BULLETS:
-        y = 2.0
-        for item in extra.items:
-            _add_rich_text_box(
-                slide,
-                Inches(1.2),
-                Inches(y),
-                Inches(10),
-                Inches(0.6),
-                f"\u2022 {item}",
-                font_size=20,
-                color=colors["white"],
-            )
-            y += 0.7
+        _add_bullet_list(
+            slide,
+            Inches(1.2),
+            y,
+            Inches(10),
+            extra.items,
+            colors,
+            font_size=20,
+            spacing=0.7,
+            color=text_color,
+        )
 
     elif extra.layout == ExtraSlideLayout.STATS:
         parsed: list[tuple[str, str]] = []
@@ -1414,28 +1461,80 @@ def _build_extra_slide(
         )
 
     elif extra.layout == ExtraSlideLayout.CARDS:
-        y = 2.0
-        for item in extra.items:
+        # Multi-column card grid
+        items = extra.items
+        col_count = min(3, len(items)) if items else 1
+        margin = 1.0
+        gap = 0.3
+        card_w = (11.0 - gap * (col_count - 1)) / col_count
+        card_h = 0.8
+        row_gap = 0.3
+        for idx, item in enumerate(items):
+            col = idx % col_count
+            row = idx // col_count
+            x = margin + col * (card_w + gap)
+            cy = y + row * (card_h + row_gap)
             _add_card(
                 slide,
-                Inches(1.0),
-                Inches(y),
-                Inches(10.5),
-                Inches(0.8),
+                Inches(x),
+                Inches(cy),
+                Inches(card_w),
+                Inches(card_h),
                 fill_color=colors.get("dark_text"),
                 border_color=colors["accent"],
             )
             _add_rich_text_box(
                 slide,
-                Inches(1.3),
-                Inches(y + 0.1),
-                Inches(10),
+                Inches(x + 0.3),
+                Inches(cy + 0.1),
+                Inches(card_w - 0.6),
                 Inches(0.6),
                 item,
                 font_size=18,
-                color=colors["white"],
+                color=colors["white"] if not use_light else colors["white"],
+                font_name=font_name,
             )
-            y += 1.0
+
+    elif extra.layout == ExtraSlideLayout.TABLE:
+        # Parse items as pipe-separated: first item = headers, rest = rows
+        if extra.items:
+            headers = [h.strip() for h in extra.items[0].split("|")]
+            rows = [[c.strip() for c in item.split("|")] for item in extra.items[1:]]
+            _add_table(
+                slide,
+                Inches(0.8),
+                Inches(y),
+                Inches(11.5),
+                headers,
+                rows,
+                colors,
+                font_size=14,
+            )
+
+    elif extra.layout == ExtraSlideLayout.CALLOUT:
+        # First item as callout box, rest as supporting bullets
+        if extra.items:
+            _add_callout_box(
+                slide,
+                Inches(0.8),
+                Inches(y),
+                Inches(11.5),
+                extra.items[0],
+                colors,
+                font_size=24,
+            )
+            if len(extra.items) > 1:
+                _add_bullet_list(
+                    slide,
+                    Inches(1.2),
+                    y + 1.5,
+                    Inches(10),
+                    extra.items[1:],
+                    colors,
+                    font_size=18,
+                    spacing=0.6,
+                    color=text_color,
+                )
 
     elif extra.layout == ExtraSlideLayout.IMAGE:
         if extra.image_path:

@@ -511,4 +511,5 @@ brand:
   highlight: "#E86F2C"
   success: "#28A745"
   light: "#F8F9FA"
+  # font_family: "Calibri"
 """

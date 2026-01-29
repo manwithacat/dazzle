@@ -345,6 +345,280 @@ class TestExtraSlides:
         assert "revenue" in ctx.chart_paths
 
 
+class TestNewHelpers:
+    def test_create_light_slide(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _create_light_slide, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
+        colors = _resolve_colors(BrandColors())
+        slide = _create_light_slide(prs, colors)
+        # Light background should use the light color
+        assert slide.background.fill.fore_color.rgb == colors["light"]
+
+    def test_add_slide_heading(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_slide_heading, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        prs.slide_width = Inches(13.333)
+        prs.slide_height = Inches(7.5)
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        y = _add_slide_heading(slide, "Test Title", colors)
+        assert y == 2.0
+        # Should have text box + accent bar = 2 shapes
+        assert len(slide.shapes) >= 2
+
+    def test_add_bullet_list(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_bullet_list, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        final_y = _add_bullet_list(
+            slide, Inches(1), 2.0, Inches(10), ["A", "B", "C"], colors, spacing=0.5
+        )
+        assert final_y == pytest.approx(3.5)
+        assert len(slide.shapes) == 3
+
+    def test_add_table(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_table, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        shape = _add_table(
+            slide,
+            Inches(1),
+            Inches(2),
+            Inches(10),
+            ["Name", "Value"],
+            [["A", "1"], ["B", "2"]],
+            colors,
+        )
+        assert shape is not None
+        table = shape.table
+        assert len(table.rows) == 3  # 1 header + 2 data
+        assert len(table.columns) == 2
+
+    def test_add_callout_box(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_callout_box, _resolve_colors
+        from dazzle.pitch.ir import BrandColors
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        colors = _resolve_colors(BrandColors())
+        shape = _add_callout_box(slide, Inches(1), Inches(2), Inches(10), "Big statement", colors)
+        assert shape is not None
+        # Should have box + border + text = 3 shapes
+        assert len(slide.shapes) >= 3
+
+    def test_multi_column_card_grid(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Cards",
+                    layout=ExtraSlideLayout.CARDS,
+                    items=["Card 1", "Card 2", "Card 3", "Card 4"],
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "cards.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        # Verify grid: 4 items with max 3 cols = 2 rows
+        prs = Presentation(str(output))
+        # Extra slide is between title and closing
+        extra_slide = prs.slides[1]
+        # Each card = card shape + text shape = 2; 4 cards = 8; plus heading + bar = 10
+        assert len(extra_slide.shapes) >= 10
+
+    def test_competition_uses_table(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            competitors=[Competitor(name="BigCo", strength="Big", weakness="Slow")],
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "comp.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        # Find competition slide
+        comp_slide = None
+        for s in prs.slides:
+            for shape in s.shapes:
+                if shape.has_table:
+                    comp_slide = s
+                    break
+        assert comp_slide is not None, "Competition slide should contain a table"
+
+    def test_team_uses_light_background(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import _resolve_colors, generate_pptx
+        from dazzle.pitch.ir import BrandColors
+
+        spec = PitchSpec(
+            team=TeamSpec(founders=[TeamMember(name="Alice", role="CEO")]),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "team.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        colors = _resolve_colors(BrandColors())
+        prs = Presentation(str(output))
+        # Team slide is after title
+        team_slide = prs.slides[1]
+        assert team_slide.background.fill.fore_color.rgb == colors["light"]
+
+    def test_font_family_applied(self):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+        from pptx.util import Inches
+
+        from dazzle.pitch.generators.pptx_gen import _add_text_box
+
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        txbox = _add_text_box(
+            slide,
+            Inches(1),
+            Inches(1),
+            Inches(5),
+            Inches(1),
+            "Hello",
+            font_name="Arial",
+        )
+        assert txbox.text_frame.paragraphs[0].font.name == "Arial"
+
+    def test_table_extra_slide_layout(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Data Table",
+                    layout=ExtraSlideLayout.TABLE,
+                    items=["Name|Score", "Alice|95", "Bob|87"],
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "table.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        extra_slide = prs.slides[1]
+        has_table = any(shape.has_table for shape in extra_slide.shapes)
+        assert has_table
+
+    def test_callout_extra_slide_layout(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Key Insight",
+                    layout=ExtraSlideLayout.CALLOUT,
+                    items=["Big statement here", "Supporting detail 1", "Supporting detail 2"],
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "callout.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+        assert result.slide_count >= 3
+
+
 class TestNarrativeGenerator:
     def test_generate_narrative(self, tmp_path: Path):
         from dazzle.pitch.generators.narrative import generate_narrative
