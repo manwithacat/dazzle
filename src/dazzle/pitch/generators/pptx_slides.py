@@ -569,80 +569,109 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
 
     currency = ctx.spec.company.currency
     col_count = len(fin.projections)
-    col_w = min(3.0, 11.0 / max(col_count, 1))
+    gap = 0.3
+    col_w = min(3.0, (11.0 - gap * (col_count - 1)) / max(col_count, 1))
+    card_h = 2.4
+    card_top = 2.2
 
     for i, proj in enumerate(fin.projections):
-        x = 0.8 + i * (col_w + 0.3)
+        x = 0.8 + i * (col_w + gap)
+        # Card background for visual consistency
+        _add_card(
+            slide,
+            Inches(x),
+            Inches(card_top),
+            Inches(col_w),
+            Inches(card_h),
+            fill_color=colors.get("dark_text"),
+            border_color=colors["accent"],
+        )
+        # Year header
         _add_text_box(
             slide,
             Inches(x),
-            Inches(2.0),
+            Inches(card_top + 0.15),
             Inches(col_w),
-            Inches(0.5),
+            Inches(0.4),
             str(proj.year),
-            font_size=20,
+            font_size=16,
             bold=True,
             color=colors["muted"],
             alignment=PP_ALIGN.CENTER,
         )
+        # Revenue value
         _add_text_box(
             slide,
             Inches(x),
-            Inches(2.6),
+            Inches(card_top + 0.55),
             Inches(col_w),
-            Inches(0.8),
+            Inches(0.6),
             _fmt_currency(proj.revenue, currency),
-            font_size=32,
+            font_size=24,
             bold=True,
             color=colors["success"],
             alignment=PP_ALIGN.CENTER,
         )
+        # Revenue label
         _add_text_box(
             slide,
             Inches(x),
-            Inches(3.4),
+            Inches(card_top + 1.15),
+            Inches(col_w),
+            Inches(0.3),
+            "Revenue",
+            font_size=11,
+            color=colors["muted"],
+            alignment=PP_ALIGN.CENTER,
+        )
+        # Customer count
+        _add_text_box(
+            slide,
+            Inches(x),
+            Inches(card_top + 1.6),
             Inches(col_w),
             Inches(0.4),
-            "Revenue",
-            font_size=12,
-            color=colors["muted"],
+            f"{proj.customers:,}",
+            font_size=18,
+            bold=True,
+            color=colors["white"],
             alignment=PP_ALIGN.CENTER,
         )
         _add_text_box(
             slide,
             Inches(x),
-            Inches(4.0),
+            Inches(card_top + 2.0),
             Inches(col_w),
-            Inches(0.5),
-            f"{proj.customers:,} customers",
-            font_size=16,
-            color=colors["white"],
+            Inches(0.3),
+            "Customers",
+            font_size=11,
+            color=colors["muted"],
             alignment=PP_ALIGN.CENTER,
         )
 
     if fin.use_of_funds:
-        y = 5.2
+        y = 5.0
         _add_text_box(
             slide,
             Inches(0.8),
             Inches(y),
             Inches(11),
-            Inches(0.5),
+            Inches(0.4),
             "Use of Funds",
-            font_size=20,
+            font_size=16,
             bold=True,
             color=colors["accent"],
         )
-        y += 0.5
+        y += 0.45
         parts = [f"{f.category} ({f.percent}%)" for f in fin.use_of_funds]
         _add_text_box(
             slide,
             Inches(1.0),
             Inches(y),
             Inches(11),
-            Inches(0.5),
+            Inches(0.4),
             "  |  ".join(parts),
-            font_size=14,
+            font_size=13,
             color=colors["white"],
         )
 
@@ -651,7 +680,7 @@ def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
     if revenue_chart and Path(revenue_chart).exists():
         try:
             slide.shapes.add_picture(
-                str(revenue_chart), Inches(0.8), Inches(4.5), Inches(5), Inches(2.5)
+                str(revenue_chart), Inches(0.8), Inches(4.5), Inches(5), Inches(2.0)
             )
         except Exception as e:
             logger.debug(f"Failed to embed revenue chart: {e}")
