@@ -945,10 +945,12 @@ def _build_milestones_content(
     for i in range(section_index, len(sections)):
         title, items, title_color, bullet_char, item_color = sections[i]
         needs_divider = not is_first_on_slide or i > section_index
-        header_h = 0.8 if needs_divider else 0.5
+        divider_h = 0.2 if needs_divider else 0.0
+        header_h = 0.4
+        item_spacing = 0.4
 
-        if not region.fits(header_h + 0.5):
-            # Create continuation slide with remaining sections
+        if not region.fits(divider_h + header_h + item_spacing):
+            # Can't fit even the header + one item — continue on next slide
             logger.warning("Milestones slide: content overflow, creating continuation slide")
             cont_slide = _create_dark_slide(prs, colors)
             cont_y = _add_slide_heading(cont_slide, "Milestones & Roadmap (continued)", colors)
@@ -957,22 +959,22 @@ def _build_milestones_content(
             return
 
         if needs_divider:
-            _add_divider(slide, region.top + 0.1, colors)
-            region = region.advance(0.3)
+            _add_divider(slide, region.top + 0.05, colors)
+            region = region.advance(divider_h)
 
         _add_text_box(
             slide,
             Inches(0.8),
             Inches(region.top),
             Inches(5),
-            Inches(0.5),
+            Inches(header_h),
             title,
-            font_size=20,
+            font_size=18,
             bold=True,
             color=title_color,
             font_name=font_name,
         )
-        region = region.advance(0.5)
+        region = region.advance(header_h)
 
         lr = _add_bullet_list(
             slide,
@@ -981,8 +983,8 @@ def _build_milestones_content(
             Inches(10),
             items,
             colors,
-            font_size=16,
-            spacing=0.5,
+            font_size=15,
+            spacing=item_spacing,
             bullet_char=bullet_char,
             color=item_color or colors["white"],
         )
