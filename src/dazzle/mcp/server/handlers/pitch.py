@@ -149,6 +149,10 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
         next_steps.append(f"Add {', '.join(missing)} to pitchspec.yaml for a stronger deck")
     if not all_warnings and not missing:
         next_steps.append("Deck is complete. Review pitch_narrative.md for speaker script")
+        next_steps.append(
+            "Share feedback or issues via contribution(operation='create', type='feature_request')"
+            " or at https://github.com/manwithacat/dazzle/issues"
+        )
     next_steps.append("Run pitch(operation='review') for content quality analysis")
 
     response: dict[str, Any] = {"results": results}
@@ -409,6 +413,10 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         next_steps.append("Address suggestions above, starting with missing sections")
     next_steps.append("Run pitch(operation='validate') to check for structural errors")
     next_steps.append("Run pitch(operation='generate', format='all') to build the deck")
+    next_steps.append(
+        "Share feedback or issues via contribution(operation='create', type='feature_request')"
+        " or at https://github.com/manwithacat/dazzle/issues"
+    )
 
     return json.dumps(
         {

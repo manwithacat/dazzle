@@ -78,27 +78,24 @@ class TestCreateGithubIssue:
 
 class TestGhAvailable:
     def test_available(self) -> None:
-        _gh_available.cache_clear()
-        with patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run:
+        with (
+            patch("dazzle.mcp.server.github_issues._find_gh", return_value="/usr/bin/gh"),
+            patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
+        ):
             mock_run.return_value = MagicMock(returncode=0)
             assert _gh_available() is True
-        _gh_available.cache_clear()
 
     def test_not_installed(self) -> None:
-        _gh_available.cache_clear()
-        with patch(
-            "dazzle.mcp.server.github_issues.subprocess.run",
-            side_effect=FileNotFoundError,
-        ):
+        with patch("dazzle.mcp.server.github_issues._find_gh", return_value=None):
             assert _gh_available() is False
-        _gh_available.cache_clear()
 
     def test_not_authenticated(self) -> None:
-        _gh_available.cache_clear()
-        with patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=1)
+        with (
+            patch("dazzle.mcp.server.github_issues._find_gh", return_value="/usr/bin/gh"),
+            patch("dazzle.mcp.server.github_issues.subprocess.run") as mock_run,
+        ):
+            mock_run.return_value = MagicMock(returncode=1, stderr="not logged in")
             assert _gh_available() is False
-        _gh_available.cache_clear()
 
 
 # ---------------------------------------------------------------------------
