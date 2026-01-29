@@ -192,7 +192,7 @@ def get_consolidated_tools() -> list[Tool]:
                     "story_ids": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Story IDs (for generate_stubs, generate_tests)",
+                        "description": "Story IDs (for get: fetch full details; for generate_stubs, generate_tests)",
                     },
                     "output_dir": {
                         "type": "string",
@@ -319,6 +319,11 @@ def get_consolidated_tools() -> list[Tool]:
                             "rejected",
                         ],
                         "description": "Filter by status (for get)",
+                    },
+                    "test_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Test design IDs to fetch full details (for get)",
                     },
                     "focus": {
                         "type": "string",

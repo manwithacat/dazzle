@@ -65,6 +65,33 @@ def _get_trigger_map() -> dict[Any, Any]:
 # =============================================================================
 
 
+def _serialize_story_summary(story: StorySpec) -> dict[str, Any]:
+    """Return a compact summary of a story (ID, title, status only).
+
+    Used by default in list/propose responses to reduce context window usage.
+    """
+    return {
+        "story_id": story.story_id,
+        "title": story.title,
+        "actor": story.actor,
+        "status": story.status.value,
+        "scope": story.scope,
+    }
+
+
+def _serialize_test_design_summary(td: Any) -> dict[str, Any]:
+    """Return a compact summary of a test design.
+
+    Used by default in list/generate responses to reduce context window usage.
+    """
+    return {
+        "test_id": td.test_id,
+        "title": td.title,
+        "persona": td.persona,
+        "status": td.status.value,
+    }
+
+
 def _serialize_story(story: StorySpec) -> dict[str, Any]:
     """Convert a StorySpec to a JSON-serializable dictionary.
 
@@ -318,15 +345,20 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                         )
                     )
 
-        # Convert to JSON-serializable format using shared helper
-        stories_data = [_serialize_story(s) for s in stories]
+        # Auto-save draft stories to avoid requiring a separate save call
+        # (which would force full content through context twice)
+        from dazzle.core.stories_persistence import add_stories
 
+        add_stories(project_root, stories, overwrite=False)
+
+        # Return summaries only — the LLM just generated these and knows
+        # the content; full details can be fetched on demand.
         return json.dumps(
             {
-                "proposed_count": len(stories_data),
+                "proposed_count": len(stories),
                 "max_stories": max_stories,
-                "note": "These are draft stories. Review and call save_stories with accepted stories.",
-                "stories": stories_data,
+                "note": "Draft stories saved. Use story(operation='get', story_ids=['ST-001']) for full details.",
+                "stories": [_serialize_story_summary(s) for s in stories],
             },
             indent=2,
         )
@@ -385,11 +417,17 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 
 def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Retrieve stories filtered by status."""
+    """Retrieve stories filtered by status.
+
+    Returns compact summaries by default. When ``story_ids`` is provided,
+    returns full content for those specific stories only, keeping context
+    usage proportional to what the caller actually needs.
+    """
     from dazzle.core.ir.stories import StoryStatus
     from dazzle.core.stories_persistence import get_stories_by_status, get_stories_file
 
     status_filter = args.get("status_filter", "all")
+    story_ids = args.get("story_ids")
 
     try:
         status = None
@@ -399,15 +437,27 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         stories = get_stories_by_status(project_root, status)
         stories_file = get_stories_file(project_root)
 
-        # Use shared serialization helper
-        stories_data = [_serialize_story(s) for s in stories]
+        if story_ids:
+            # Return full content for requested stories only
+            filtered = [s for s in stories if s.story_id in story_ids]
+            return json.dumps(
+                {
+                    "file": str(stories_file),
+                    "filter": status_filter,
+                    "count": len(filtered),
+                    "stories": [_serialize_story(s) for s in filtered],
+                },
+                indent=2,
+            )
 
+        # Default: return compact summaries
         return json.dumps(
             {
                 "file": str(stories_file),
                 "filter": status_filter,
-                "count": len(stories_data),
-                "stories": stories_data,
+                "count": len(stories),
+                "stories": [_serialize_story_summary(s) for s in stories],
+                "guidance": "Use story(operation='get', story_ids=['ST-001']) to fetch full story details.",
             },
             indent=2,
         )
@@ -657,15 +707,18 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
         # Convert all stories to test designs
         test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
 
-        # Use shared serialization helper
-        designs_data = [_serialize_test_design(td) for td in test_designs]
+        # Auto-save generated test designs to avoid a separate save round-trip
+        from dazzle.testing.test_design_persistence import add_test_designs
 
+        add_test_designs(project_root, test_designs, overwrite=False)
+
+        # Return summaries only to reduce context usage
         return json.dumps(
             {
                 "status": "generated",
-                "count": len(designs_data),
-                "note": "Review these designs and call save_test_designs to persist them.",
-                "test_designs": designs_data,
+                "count": len(test_designs),
+                "note": "Test designs saved. Use test_design(operation='get', status_filter='proposed') for full details.",
+                "test_designs": [_serialize_test_design_summary(td) for td in test_designs],
             },
             indent=2,
         )

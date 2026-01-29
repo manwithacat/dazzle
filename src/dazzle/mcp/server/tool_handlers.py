@@ -2472,7 +2472,11 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 
 def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Retrieve test designs from storage."""
+    """Retrieve test designs from storage.
+
+    Returns compact summaries by default. When ``test_ids`` is provided,
+    returns full content for those specific designs only.
+    """
     from dazzle.core.ir.test_design import TestDesignStatus
     from dazzle.testing.test_design_persistence import (
         get_dsl_tests_dir,
@@ -2480,6 +2484,7 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
     status_filter = args.get("status_filter")
+    test_ids = args.get("test_ids")
 
     try:
         status = (
@@ -2488,6 +2493,46 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         designs = get_test_designs_by_status(project_root, status)
         designs_file = get_dsl_tests_dir(project_root) / "designs.json"
 
+        if test_ids:
+            # Return full content for requested designs only
+            filtered = [d for d in designs if d.test_id in test_ids]
+            return json.dumps(
+                {
+                    "count": len(filtered),
+                    "filter": status_filter or "all",
+                    "file": str(designs_file) if designs_file.exists() else None,
+                    "designs": [
+                        {
+                            "test_id": d.test_id,
+                            "title": d.title,
+                            "description": d.description,
+                            "persona": d.persona,
+                            "scenario": d.scenario,
+                            "trigger": d.trigger.value,
+                            "steps": [
+                                {
+                                    "action": s.action.value,
+                                    "target": s.target,
+                                    "data": s.data,
+                                    "rationale": s.rationale,
+                                }
+                                for s in d.steps
+                            ],
+                            "expected_outcomes": d.expected_outcomes,
+                            "entities": d.entities,
+                            "surfaces": d.surfaces,
+                            "tags": d.tags,
+                            "status": d.status.value,
+                            "implementation_path": d.implementation_path,
+                            "notes": d.notes,
+                        }
+                        for d in filtered
+                    ],
+                },
+                indent=2,
+            )
+
+        # Default: return compact summaries
         return json.dumps(
             {
                 "count": len(designs),
@@ -2497,29 +2542,12 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
                     {
                         "test_id": d.test_id,
                         "title": d.title,
-                        "description": d.description,
                         "persona": d.persona,
-                        "scenario": d.scenario,
-                        "trigger": d.trigger.value,
-                        "steps": [
-                            {
-                                "action": s.action.value,
-                                "target": s.target,
-                                "data": s.data,
-                                "rationale": s.rationale,
-                            }
-                            for s in d.steps
-                        ],
-                        "expected_outcomes": d.expected_outcomes,
-                        "entities": d.entities,
-                        "surfaces": d.surfaces,
-                        "tags": d.tags,
                         "status": d.status.value,
-                        "implementation_path": d.implementation_path,
-                        "notes": d.notes,
                     }
                     for d in designs
                 ],
+                "guidance": "Use test_design(operation='get', test_ids=['TD-001']) to fetch full details.",
             },
             indent=2,
         )

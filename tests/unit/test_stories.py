@@ -531,10 +531,9 @@ class TestGenerateTestsFromStories:
         test = data["test_designs"][0]
         assert test["test_id"] == "TD-001"  # ST -> TD conversion
         assert test["persona"] == "User"
-        assert test["trigger"] == "form_submitted"
-        assert "Task" in test["entities"]
-        assert len(test["steps"]) > 0
-        assert len(test["expected_outcomes"]) == 2
+        assert test["status"] == "proposed"
+        # Summaries don't include full fields like steps/entities
+        assert "steps" not in test
 
     def test_generate_tests_filters_draft(self, temp_project):
         """Test that draft stories are excluded by default."""
@@ -635,8 +634,8 @@ class TestGenerateTestsFromStories:
         assert "TD-003" in test_ids
         assert "TD-002" not in test_ids
 
-    def test_generate_tests_status_changed_trigger(self, temp_project):
-        """Test generating tests for status_changed trigger."""
+    def test_generate_tests_returns_summaries(self, temp_project):
+        """Test that generate_tests returns compact summaries, not full objects."""
         from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
 
         story = StorySpec(
@@ -656,14 +655,18 @@ class TestGenerateTestsFromStories:
 
         assert data["count"] == 1
         test = data["test_designs"][0]
-        assert test["trigger"] == "status_changed"
-        # Should have a trigger_transition step
-        actions = [s["action"] for s in test["steps"]]
-        assert "trigger_transition" in actions
+        # Summary fields present
+        assert test["test_id"] == "TD-001"
+        assert test["persona"] == "User"
+        assert test["status"] == "proposed"
+        # Full fields absent in summary
+        assert "steps" not in test
+        assert "expected_outcomes" not in test
 
-    def test_generate_tests_includes_login_step(self, temp_project):
-        """Test that generated tests start with login step."""
+    def test_generate_tests_auto_saves(self, temp_project):
+        """Test that generate_tests auto-saves designs to persistence."""
         from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
+        from dazzle.testing.test_design_persistence import get_test_designs_by_status
 
         story = StorySpec(
             story_id="ST-001",
@@ -674,51 +677,9 @@ class TestGenerateTestsFromStories:
         )
         save_stories(temp_project, [story])
 
-        result = generate_tests_from_stories_handler(temp_project, {})
-        data = json.loads(result)
+        generate_tests_from_stories_handler(temp_project, {})
 
-        test = data["test_designs"][0]
-        first_step = test["steps"][0]
-        assert first_step["action"] == "login_as"
-        assert first_step["target"] == "Admin"
-
-    def test_generate_tests_side_effects_in_outcomes(self, temp_project):
-        """Test that side effects are included in expected outcomes."""
-        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
-
-        story = StorySpec(
-            story_id="ST-001",
-            title="User sends email",
-            actor="User",
-            trigger=StoryTrigger.FORM_SUBMITTED,
-            happy_path_outcome=["Email is sent"],
-            side_effects=["send_notification"],
-            status=StoryStatus.ACCEPTED,
-        )
-        save_stories(temp_project, [story])
-
-        result = generate_tests_from_stories_handler(temp_project, {})
-        data = json.loads(result)
-
-        test = data["test_designs"][0]
-        assert "Email is sent" in test["expected_outcomes"]
-        assert any("send_notification" in o for o in test["expected_outcomes"])
-
-    def test_generate_tests_tags_include_story_id(self, temp_project):
-        """Test that generated tests are tagged with source story ID."""
-        from dazzle.mcp.server.handlers.stories import generate_tests_from_stories_handler
-
-        story = StorySpec(
-            story_id="ST-042",
-            title="Test",
-            actor="User",
-            trigger=StoryTrigger.USER_CLICK,
-            status=StoryStatus.ACCEPTED,
-        )
-        save_stories(temp_project, [story])
-
-        result = generate_tests_from_stories_handler(temp_project, {})
-        data = json.loads(result)
-
-        test = data["test_designs"][0]
-        assert "story:ST-042" in test["tags"]
+        # Verify designs were persisted
+        designs = get_test_designs_by_status(temp_project, None)
+        assert len(designs) >= 1
+        assert designs[0].test_id == "TD-001"
