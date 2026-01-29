@@ -280,6 +280,18 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
         except Exception as e:
             logger.debug(f"Chart generation skipped: {e}")
 
+        # Capture warnings from slide builders
+        pitch_logger = logging.getLogger("dazzle.pitch")
+        builder_warnings: list[str] = []
+
+        class _WarningCapture(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                if record.levelno >= logging.WARNING:
+                    builder_warnings.append(record.getMessage())
+
+        warning_handler = _WarningCapture()
+        pitch_logger.addHandler(warning_handler)
+
         # Build catalog and extra slide maps
         catalog_map: dict[str, tuple[Callable[..., None], Callable[[PitchContext], bool]]] = {
             entry_name: (builder, condition) for entry_name, builder, condition in SLIDE_CATALOG
@@ -336,10 +348,15 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                     slide_count += 1
                     logger.debug(f"Built extra slide: {slide_name}")
 
+        # Remove warning capture handler
+        pitch_logger.removeHandler(warning_handler)
+
         # Audit bounds before saving
         audit_warnings = _audit_slide_bounds(prs)
         for w in audit_warnings:
             logger.warning(w)
+
+        all_warnings = builder_warnings + audit_warnings
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         prs.save(str(output_path))
@@ -349,7 +366,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
             output_path=output_path,
             files_created=[str(output_path)],
             slide_count=slide_count,
-            warnings=audit_warnings,
+            warnings=all_warnings,
         )
 
     except Exception as e:

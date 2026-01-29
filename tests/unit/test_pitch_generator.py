@@ -1169,6 +1169,85 @@ class TestOverflowHandling:
                 bottom = (shape.top + shape.height) / 914400
                 assert bottom <= SLIDE_HEIGHT + 0.1
 
+    def test_business_model_features_no_overflow(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from pptx import Presentation
+
+        from dazzle.pitch.generators.pptx_gen import SLIDE_HEIGHT, generate_pptx
+
+        spec = PitchSpec(
+            business_model=BusinessModelSpec(
+                tiers=[
+                    PricingTier(
+                        name="Enterprise",
+                        price=999,
+                        highlighted=True,
+                        features="Feature A\nFeature B\nFeature C\nFeature D\nFeature E\n" * 3,
+                    ),
+                ]
+            ),
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "bm_overflow.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
+        prs = Presentation(str(output))
+        for slide in prs.slides:
+            for shape in slide.shapes:
+                bottom = (shape.top + shape.height) / 914400
+                assert bottom <= SLIDE_HEIGHT + 0.1, f"Shape overflows: {bottom}"
+
+    def test_extra_cards_overflow_warns(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Many Cards",
+                    layout=ExtraSlideLayout.CARDS,
+                    items=[f"Card {i}" for i in range(30)],
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "cards_overflow.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+        # Should have a truncation warning captured
+        assert any("truncated" in w.lower() or "cards" in w.lower() for w in result.warnings)
+
+    def test_extra_stats_caps_narrow_items(self, tmp_path: Path):
+        try:
+            import pptx  # noqa: F401
+        except ImportError:
+            pytest.skip("python-pptx not installed")
+
+        from dazzle.pitch.generators.pptx_gen import generate_pptx
+
+        spec = PitchSpec(
+            extra_slides=[
+                ExtraSlide(
+                    title="Many Stats",
+                    layout=ExtraSlideLayout.STATS,
+                    items=[f"{i}|Stat {i}" for i in range(6)],
+                ),
+            ]
+        )
+        ctx = PitchContext(spec=spec)
+        output = tmp_path / "stats_overflow.pptx"
+        result = generate_pptx(ctx, output)
+        assert result.success
+
 
 class TestPluginSystem:
     def test_plugin_registry(self):

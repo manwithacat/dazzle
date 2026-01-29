@@ -27,6 +27,7 @@ from dazzle.pitch.generators.pptx_primitives import (
     _add_text_box,
     _create_dark_slide,
     _create_light_slide,
+    _estimate_text_height,
     _fmt_currency,
 )
 from dazzle.pitch.ir import ExtraSlide, ExtraSlideLayout
@@ -175,7 +176,9 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
     if solution.how_it_works:
         left_region = ContentRegion(left=1.2, top=y, width=5.0, bottom=CONTENT_BOTTOM)
         for i, step in enumerate(solution.how_it_works, 1):
-            if not left_region.fits(0.6):
+            step_text = f"{i}. {step}"
+            est_h = max(0.6, _estimate_text_height(step_text, 5.0, 18))
+            if not left_region.fits(est_h):
                 remaining = len(solution.how_it_works) - i + 1
                 logger.warning(f"Solution slide: truncated {remaining} how_it_works steps")
                 break
@@ -184,13 +187,13 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 Inches(left_region.left),
                 Inches(left_region.top),
                 Inches(5),
-                Inches(0.6),
-                f"{i}. {step}",
+                Inches(est_h),
+                step_text,
                 font_size=18,
                 color=colors["white"],
                 font_name=font_name,
             )
-            left_region = left_region.advance(0.6)
+            left_region = left_region.advance(est_h)
 
     if solution.value_props:
         right_region = ContentRegion(left=7.0, top=2.0, width=5.0, bottom=CONTENT_BOTTOM)
@@ -208,7 +211,9 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
         )
         right_region = right_region.advance(0.2)
         for prop in solution.value_props:
-            if not right_region.fits(0.5):
+            prop_text = f"\u2713 {prop}"
+            est_h = max(0.5, _estimate_text_height(prop_text, 5.0, 16))
+            if not right_region.fits(est_h):
                 logger.warning("Solution slide: truncated value_props")
                 break
             _add_text_box(
@@ -216,13 +221,13 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
                 Inches(7.2),
                 Inches(right_region.top),
                 Inches(5),
-                Inches(0.5),
-                f"\u2713 {prop}",
+                Inches(est_h),
+                prop_text,
                 font_size=16,
                 color=colors["white"],
                 font_name=font_name,
             )
-            right_region = right_region.advance(0.5)
+            right_region = right_region.advance(est_h)
 
     notes = solution.speaker_notes
     _add_speaker_notes(slide, notes or f"Solution: {solution.headline}")
@@ -491,12 +496,13 @@ def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, A
 
         # Card background for each tier
         card_border = colors["accent"] if tier.highlighted else colors["muted"]
+        card_h = min(2.3, CONTENT_BOTTOM - y + 0.1)
         _add_card(
             slide,
             Inches(x - 0.1),
             Inches(y - 0.1),
             Inches(box_w + 0.2),
-            Inches(2.3),
+            Inches(card_h),
             fill_color=colors.get("dark_text"),
             border_color=card_border,
         )
@@ -530,17 +536,20 @@ def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, A
         )
 
         if tier.features:
-            _add_text_box(
-                slide,
-                Inches(x),
-                Inches(y + 1.5),
-                Inches(box_w),
-                Inches(2),
-                tier.features,
-                font_size=14,
-                color=colors["muted"],
-                alignment=PP_ALIGN.CENTER,
-            )
+            feature_h = _estimate_text_height(tier.features, box_w, 14)
+            feature_box_h = min(card_h - 1.5, feature_h + 0.2)
+            if feature_box_h > 0:
+                _add_text_box(
+                    slide,
+                    Inches(x),
+                    Inches(y + 1.5),
+                    Inches(box_w),
+                    Inches(feature_box_h),
+                    tier.features,
+                    font_size=14,
+                    color=colors["muted"],
+                    alignment=PP_ALIGN.CENTER,
+                )
 
     notes = bm.speaker_notes
     _add_speaker_notes(slide, notes or f"Business model with {tier_count} pricing tiers.")
@@ -1173,6 +1182,16 @@ def _build_extra_slide(
                 parsed.append((val.strip(), lbl.strip()))
             else:
                 parsed.append((item, ""))
+        # Cap items when boxes would be too narrow to read
+        max_items = min(6, len(parsed))
+        if max_items > 0:
+            box_w = 11.0 / max_items
+            if box_w < 2.0 and max_items > 4:
+                logger.warning(
+                    f"Stats layout: capping from {max_items} to 4 items (boxes too narrow)"
+                )
+                max_items = 4
+        parsed = parsed[:max_items]
         _add_columns(
             slide,
             Inches(2.0),
@@ -1197,6 +1216,8 @@ def _build_extra_slide(
             x = margin + col * (card_w + gap)
             cy = y + row * (card_h + row_gap)
             if cy + card_h > CONTENT_BOTTOM:
+                remaining = len(items) - idx
+                logger.warning(f"Cards layout: truncated {remaining} cards due to overflow")
                 break
             _add_card(
                 slide,
@@ -1267,12 +1288,13 @@ def _build_extra_slide(
     elif extra.layout == ExtraSlideLayout.IMAGE:
         if extra.image_path:
             try:
+                img_h = min(5.0, CONTENT_BOTTOM - y)
                 slide.shapes.add_picture(
                     extra.image_path,
                     Inches(1.5),
-                    Inches(2.0),
+                    Inches(y),
                     Inches(10),
-                    Inches(5),
+                    Inches(img_h),
                 )
             except Exception as e:
                 logger.warning(f"Failed to embed image {extra.image_path}: {e}")

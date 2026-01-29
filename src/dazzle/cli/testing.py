@@ -866,7 +866,8 @@ def feedback_record_regression(
     failure_type: str = typer.Option(
         "assertion",
         "--type",
-        help="Type: assertion, timeout, crash, flaky, infrastructure, selector_not_found, navigation_error, auth_error",
+        help="Type: assertion, timeout, crash, flaky, infrastructure, "
+        "selector_not_found, navigation_error, auth_error",
     ),
     example: str = typer.Option(..., "--example", "-e", help="Name of the example project"),
     manifest: str = typer.Option("dazzle.toml", "--manifest"),
