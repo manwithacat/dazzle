@@ -233,6 +233,35 @@ def get_active_project_info() -> str:
                 indent=2,
             )
 
+    # In dev mode, check if CWD has a dazzle.toml first
+    project_root = get_project_root()
+    cwd_manifest = project_root / "dazzle.toml"
+    if cwd_manifest.exists():
+        try:
+            manifest = load_manifest(cwd_manifest)
+            result: dict[str, Any] = {
+                "mode": "dev",
+                "source": "cwd",
+                "project_root": str(project_root),
+                "manifest_name": manifest.name,
+                "version": manifest.version,
+            }
+
+            backend_spec_loaded = load_backend_spec_for_project(project_root)
+            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+
+            return json.dumps(result, indent=2)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "mode": "dev",
+                    "source": "cwd",
+                    "project_root": str(project_root),
+                    "error": f"Could not load manifest: {e}",
+                },
+                indent=2,
+            )
+
     active_project = get_active_project()
     available_projects = get_available_projects()
 

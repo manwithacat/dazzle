@@ -77,6 +77,9 @@ def get_active_project_path() -> Path | None:
     """Get the path to the active project, or None if not set."""
     if not _is_dev_mode:
         return _project_root
+    # In dev mode, prefer CWD if it has a dazzle.toml
+    if (_project_root / "dazzle.toml").exists():
+        return _project_root
     if _active_project and _active_project in _available_projects:
         return _available_projects[_active_project]
     return None

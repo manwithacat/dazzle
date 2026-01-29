@@ -1203,7 +1203,8 @@ def dsl_generate(
     typer.secho("Coverage Analysis:", bold=True)
     typer.echo(f"  • Entities: {len(coverage.entities_covered)}/{coverage.entities_total}")
     typer.echo(
-        f"  • State Machines: {len(coverage.state_machines_covered)}/{coverage.state_machines_total}"
+        f"  • State Machines: {len(coverage.state_machines_covered)}"
+        f"/{coverage.state_machines_total}"
     )
     typer.echo(f"  • Personas: {len(coverage.personas_covered)}/{coverage.personas_total}")
     typer.echo(f"  • Workspaces: {len(coverage.workspaces_covered)}/{coverage.workspaces_total}")

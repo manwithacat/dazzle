@@ -491,5 +491,60 @@ class TestMCPDevModeIntegration:
         assert "status" in validate_data
 
 
+class TestMCPDevModeCWDDetection:
+    """Tests for CWD dazzle.toml detection in dev mode."""
+
+    def test_get_active_project_path_prefers_cwd_toml(self, tmp_path: Path):
+        """In dev mode, get_active_project_path returns CWD if it has dazzle.toml."""
+        from dazzle.mcp.server import state as mcp_state
+
+        # Set up dev mode with example projects
+        mcp_state.init_dev_mode(PROJECT_ROOT)
+        assert mcp_state.is_dev_mode()
+        original_root = mcp_state.get_project_root()
+
+        # Point _project_root to a dir with dazzle.toml
+        cwd_project = tmp_path / "my_project"
+        cwd_project.mkdir()
+        (cwd_project / "dazzle.toml").write_text('[project]\nname = "test"\n')
+        mcp_state.set_project_root(cwd_project)
+
+        try:
+            result = mcp_state.get_active_project_path()
+            assert result == cwd_project
+        finally:
+            mcp_state.set_project_root(original_root)
+
+    def test_get_active_project_path_falls_back_to_example(self):
+        """In dev mode without CWD toml, falls back to active example project."""
+        from dazzle.mcp.server import state as mcp_state
+
+        mcp_state.init_dev_mode(PROJECT_ROOT)
+        assert mcp_state.is_dev_mode()
+
+        # PROJECT_ROOT has no dazzle.toml, so should fall back to example
+        result = mcp_state.get_active_project_path()
+        active = mcp_state.get_active_project()
+        assert result == mcp_state.get_available_projects()[active]
+
+    def test_resolve_project_path_prefers_cwd_toml(self, tmp_path: Path):
+        """resolve_project_path prefers CWD dazzle.toml over active example project."""
+        from dazzle.mcp.server import state as mcp_state
+
+        mcp_state.init_dev_mode(PROJECT_ROOT)
+        original_root = mcp_state.get_project_root()
+
+        cwd_project = tmp_path / "my_project"
+        cwd_project.mkdir()
+        (cwd_project / "dazzle.toml").write_text('[project]\nname = "test"\n')
+        mcp_state.set_project_root(cwd_project)
+
+        try:
+            result = mcp_state.resolve_project_path()
+            assert result == cwd_project
+        finally:
+            mcp_state.set_project_root(original_root)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
