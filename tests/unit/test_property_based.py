@@ -423,7 +423,9 @@ class TestParserProperties:
     @settings(max_examples=50)
     def test_parser_module_declaration(self, name: str) -> None:
         """Invariant: Module declaration extracts module name."""
-        assume(name not in ("module", "app", "entity", "surface", "use"))  # Not keywords
+        # Exclude all lexer keywords — they can't be used as identifiers
+        _keywords = {t.value for t in TokenType if t.value.isidentifier()}
+        assume(name not in _keywords)
         text = f"module {name}"
         module_name, _, _, _, _, _ = parse_dsl(text, Path("test.dsl"))
         assert module_name == name
@@ -443,7 +445,8 @@ class TestParserProperties:
     @settings(max_examples=50)
     def test_parser_app_declaration(self, app_name: str, app_title: str) -> None:
         """Invariant: App declaration extracts name and title."""
-        assume(app_name not in ("module", "app", "entity", "surface", "use"))
+        _keywords = {t.value for t in TokenType if t.value.isidentifier()}
+        assume(app_name not in _keywords)
         # Escape quotes in title
         escaped_title = app_title.replace('"', '\\"')
         text = f'app {app_name} "{escaped_title}"'
