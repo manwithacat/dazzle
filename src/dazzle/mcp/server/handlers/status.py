@@ -54,7 +54,15 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         else:
             result["active_project"] = None
 
-    # Get current version info
+    # Project version from package metadata
+    try:
+        from importlib.metadata import version as pkg_version
+
+        result["version"] = pkg_version("dazzle")
+    except Exception:
+        result["version"] = "unknown"
+
+    # Internal KB version info
     version_info = get_mcp_version()
     result["semantics_version"] = version_info
 
