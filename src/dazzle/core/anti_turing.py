@@ -272,7 +272,10 @@ class AntiTuringValidator:
             violations.append(
                 Violation(
                     type=ViolationType.INVALID_FUNCTION_CALL,
-                    message=f"Invalid function call '{func_name}()' - only allowed: {', '.join(sorted(self.ALLOWED_FUNCTIONS))}",
+                    message=(
+                        f"Invalid function call '{func_name}()'"
+                        f" - only allowed: {', '.join(sorted(self.ALLOWED_FUNCTIONS))}"
+                    ),
                     line=line_num,
                     column=match.start() + 1,
                     context=line.strip(),

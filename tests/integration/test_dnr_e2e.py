@@ -431,11 +431,7 @@ class TestSimpleTaskE2E:
     def test_frontend_serves_html(
         self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
     ) -> None:
-        """Test that frontend serves HTML content.
-
-        Note: In local mode, frontend is served via Vite dev server.
-        In Docker mode, it may be served at a different path.
-        """
+        """Test that frontend serves server-rendered HTMX HTML content."""
         resp = requests.get(simple_task_server.ui_url, timeout=REQUEST_TIMEOUT)
         # Frontend might be served at root, or at a subpath
         if resp.status_code == 404:
@@ -450,8 +446,22 @@ class TestSimpleTaskE2E:
         else:
             assert resp.status_code in (200, 302, 304), f"Frontend failed: {resp.status_code}"
             if resp.status_code == 200:
-                # Should have HTML content
-                assert "html" in resp.headers.get("content-type", "").lower() or "<" in resp.text
+                # Should have server-rendered HTML with HTMX/template content
+                content_type = resp.headers.get("content-type", "").lower()
+                assert "html" in content_type, f"Expected HTML content-type, got: {content_type}"
+                body = resp.text
+                # Check for server-rendered template markers
+                assert any(
+                    marker in body
+                    for marker in [
+                        "hx-get",
+                        "hx-post",
+                        "<table",
+                        "daisyui",
+                        "<!DOCTYPE",
+                        "<!doctype",
+                    ]
+                ), "Expected HTMX attributes or server-rendered template markers in response"
 
 
 # Parametrized tests for multiple examples
