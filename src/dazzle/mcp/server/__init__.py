@@ -59,7 +59,7 @@ logger = logging.getLogger("dazzle.mcp")
 try:
     from importlib.metadata import version as _pkg_version
 
-    _dazzle_version = _pkg_version("dazzle")
+    _dazzle_version: str | None = _pkg_version("dazzle")
 except Exception:
     _dazzle_version = None
 

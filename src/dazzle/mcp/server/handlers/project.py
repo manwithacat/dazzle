@@ -232,7 +232,7 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
         if manifest_path.exists():
             try:
                 manifest = load_manifest(manifest_path)
-                result: dict[str, Any] = {
+                result = {
                     "mode": "normal",
                     "project_root": str(project_root),
                     "manifest_name": manifest.name,
@@ -269,7 +269,7 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
     if cwd_manifest.exists():
         try:
             manifest = load_manifest(cwd_manifest)
-            result: dict[str, Any] = {
+            result = {
                 "mode": "dev",
                 "source": "cwd",
                 "project_root": str(project_root),

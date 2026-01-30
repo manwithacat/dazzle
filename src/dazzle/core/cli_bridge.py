@@ -328,7 +328,7 @@ def build_project_json(
         # Generate frontend
         try:
             from dazzle_dnr_ui.converters import convert_appspec_to_ui
-            from dazzle_dnr_ui.runtime import generate_vite_app
+            from dazzle_dnr_ui.runtime.vite_generator import generate_vite_app
 
             shell_config = manifest.shell if manifest else None
             ui_spec = convert_appspec_to_ui(app_spec, shell_config=shell_config)

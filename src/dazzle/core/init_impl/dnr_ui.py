@@ -49,7 +49,7 @@ def generate_dnr_ui(
         # Try to import DNR UI - it's optional
         try:
             from dazzle_dnr_ui.converters import convert_appspec_to_ui
-            from dazzle_dnr_ui.runtime import generate_vite_app
+            from dazzle_dnr_ui.runtime.vite_generator import generate_vite_app
         except ImportError:
             log("  Skipping dnr-ui generation (dazzle-dnr-ui not installed)")
             return False
