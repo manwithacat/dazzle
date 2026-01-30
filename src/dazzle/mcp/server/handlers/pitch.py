@@ -45,20 +45,37 @@ def _completeness_score(spec: Any) -> int:
     return int(total / max_score * 100) if max_score else 0
 
 
+def _has_placeholder_content(spec: Any) -> bool:
+    """Detect scaffold template defaults indicating unedited content."""
+    if spec.company.name == "My App":
+        return True
+    if spec.problem and any(p.startswith("Pain point") for p in spec.problem.points):
+        return True
+    if spec.solution and any(
+        s.startswith("Step ") and "How it works" in s for s in (spec.solution.how_it_works or [])
+    ):
+        return True
+    if spec.team and any(f.name == "Founder Name" for f in spec.team.founders):
+        return True
+    return False
+
+
 def _section_quality_scores(spec: Any) -> dict[str, int]:
     """Score each section 0-3 based on content depth.
 
     0 = missing, 1 = thin/placeholder, 2 = adequate, 3 = strong.
+    Scaffold placeholder content is capped at 1 (thin).
     """
+    cap = 1 if _has_placeholder_content(spec) else 3
     score_map: dict[str, int] = {}
 
     # Problem
     if spec.problem is None:
         score_map["problem"] = 0
     elif len(spec.problem.points) >= 3 and spec.problem.market_failure:
-        score_map["problem"] = 3
+        score_map["problem"] = min(3, cap)
     elif len(spec.problem.points) >= 3:
-        score_map["problem"] = 2
+        score_map["problem"] = min(2, cap)
     else:
         score_map["problem"] = 1
 
@@ -66,9 +83,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     if spec.solution is None:
         score_map["solution"] = 0
     elif spec.solution.how_it_works and spec.solution.value_props:
-        score_map["solution"] = 3
+        score_map["solution"] = min(3, cap)
     elif spec.solution.how_it_works or spec.solution.value_props:
-        score_map["solution"] = 2
+        score_map["solution"] = min(2, cap)
     else:
         score_map["solution"] = 1
 
@@ -78,9 +95,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     else:
         sizes = sum(1 for s in [spec.market.tam, spec.market.sam, spec.market.som] if s is not None)
         if sizes == 3 and spec.market.drivers:
-            score_map["market"] = 3
+            score_map["market"] = min(3, cap)
         elif sizes >= 2:
-            score_map["market"] = 2
+            score_map["market"] = min(2, cap)
         else:
             score_map["market"] = 1
 
@@ -88,9 +105,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     if spec.business_model is None:
         score_map["business_model"] = 0
     elif len(spec.business_model.tiers) >= 2:
-        score_map["business_model"] = 3
+        score_map["business_model"] = min(3, cap)
     elif spec.business_model.tiers:
-        score_map["business_model"] = 2
+        score_map["business_model"] = min(2, cap)
     else:
         score_map["business_model"] = 1
 
@@ -101,9 +118,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
         has_proj = len(spec.financials.projections) >= 2
         has_funds = len(spec.financials.use_of_funds) >= 2
         if has_proj and has_funds:
-            score_map["financials"] = 3
+            score_map["financials"] = min(3, cap)
         elif has_proj or has_funds:
-            score_map["financials"] = 2
+            score_map["financials"] = min(2, cap)
         else:
             score_map["financials"] = 1
 
@@ -111,9 +128,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     if spec.team is None:
         score_map["team"] = 0
     elif len(spec.team.founders) >= 2 and any(f.bio for f in spec.team.founders):
-        score_map["team"] = 3
+        score_map["team"] = min(3, cap)
     elif spec.team.founders:
-        score_map["team"] = 2
+        score_map["team"] = min(2, cap)
     else:
         score_map["team"] = 1
 
@@ -121,9 +138,9 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     if spec.milestones is None:
         score_map["milestones"] = 0
     elif spec.milestones.completed and spec.milestones.next_12_months:
-        score_map["milestones"] = 3
+        score_map["milestones"] = min(3, cap)
     elif spec.milestones.completed or spec.milestones.next_12_months:
-        score_map["milestones"] = 2
+        score_map["milestones"] = min(2, cap)
     else:
         score_map["milestones"] = 1
 
