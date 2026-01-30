@@ -24,12 +24,18 @@ from dazzle.core.ir import (
     SurfaceSection,
     SurfaceSpec,
 )
-from dazzle_dnr_ui.converters.template_compiler import (
+
+# These modules are part of the HTMX template runtime and may not be
+# installed in every CI configuration (they live in unpackaged source).
+pytest.importorskip("dazzle_dnr_ui.converters.template_compiler")
+pytest.importorskip("dazzle_dnr_ui.runtime.template_renderer")
+
+from dazzle_dnr_ui.converters.template_compiler import (  # noqa: E402
     compile_appspec_to_templates,
     compile_surface_to_context,
 )
-from dazzle_dnr_ui.runtime.mock_data import generate_mock_records
-from dazzle_dnr_ui.runtime.template_context import (
+from dazzle_dnr_ui.runtime.mock_data import generate_mock_records  # noqa: E402
+from dazzle_dnr_ui.runtime.template_context import (  # noqa: E402
     ColumnContext,
     DetailContext,
     FieldContext,
@@ -38,12 +44,12 @@ from dazzle_dnr_ui.runtime.template_context import (
     PageContext,
     TableContext,
 )
-from dazzle_dnr_ui.runtime.template_renderer import (
+from dazzle_dnr_ui.runtime.template_renderer import (  # noqa: E402
     create_jinja_env,
     render_fragment,
     render_page,
 )
-from dazzle_dnr_ui.themes.token_compiler import (
+from dazzle_dnr_ui.themes.token_compiler import (  # noqa: E402
     compile_design_tokens,
     tokens_to_css,
 )
