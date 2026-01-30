@@ -34,9 +34,100 @@ def _get_missing_sections(spec: Any) -> list[str]:
 
 
 def _completeness_score(spec: Any) -> int:
-    """Return percentage of sections populated (0-100)."""
-    populated = sum(1 for s in _PITCH_SECTIONS if getattr(spec, s, None) is not None)
-    return int(populated / len(_PITCH_SECTIONS) * 100)
+    """Return quality-weighted completeness percentage (0-100).
+
+    Each section is scored 0-3 based on content depth, not just presence.
+    This prevents scaffold templates from claiming 100% completeness.
+    """
+    scores = _section_quality_scores(spec)
+    max_score = len(_PITCH_SECTIONS) * 3
+    total = sum(scores.values())
+    return int(total / max_score * 100) if max_score else 0
+
+
+def _section_quality_scores(spec: Any) -> dict[str, int]:
+    """Score each section 0-3 based on content depth.
+
+    0 = missing, 1 = thin/placeholder, 2 = adequate, 3 = strong.
+    """
+    score_map: dict[str, int] = {}
+
+    # Problem
+    if spec.problem is None:
+        score_map["problem"] = 0
+    elif len(spec.problem.points) >= 3 and spec.problem.market_failure:
+        score_map["problem"] = 3
+    elif len(spec.problem.points) >= 3:
+        score_map["problem"] = 2
+    else:
+        score_map["problem"] = 1
+
+    # Solution
+    if spec.solution is None:
+        score_map["solution"] = 0
+    elif spec.solution.how_it_works and spec.solution.value_props:
+        score_map["solution"] = 3
+    elif spec.solution.how_it_works or spec.solution.value_props:
+        score_map["solution"] = 2
+    else:
+        score_map["solution"] = 1
+
+    # Market
+    if spec.market is None:
+        score_map["market"] = 0
+    else:
+        sizes = sum(1 for s in [spec.market.tam, spec.market.sam, spec.market.som] if s is not None)
+        if sizes == 3 and spec.market.drivers:
+            score_map["market"] = 3
+        elif sizes >= 2:
+            score_map["market"] = 2
+        else:
+            score_map["market"] = 1
+
+    # Business model
+    if spec.business_model is None:
+        score_map["business_model"] = 0
+    elif len(spec.business_model.tiers) >= 2:
+        score_map["business_model"] = 3
+    elif spec.business_model.tiers:
+        score_map["business_model"] = 2
+    else:
+        score_map["business_model"] = 1
+
+    # Financials
+    if spec.financials is None:
+        score_map["financials"] = 0
+    else:
+        has_proj = len(spec.financials.projections) >= 2
+        has_funds = len(spec.financials.use_of_funds) >= 2
+        if has_proj and has_funds:
+            score_map["financials"] = 3
+        elif has_proj or has_funds:
+            score_map["financials"] = 2
+        else:
+            score_map["financials"] = 1
+
+    # Team
+    if spec.team is None:
+        score_map["team"] = 0
+    elif len(spec.team.founders) >= 2 and any(f.bio for f in spec.team.founders):
+        score_map["team"] = 3
+    elif spec.team.founders:
+        score_map["team"] = 2
+    else:
+        score_map["team"] = 1
+
+    # Milestones
+    if spec.milestones is None:
+        score_map["milestones"] = 0
+    elif spec.milestones.completed and spec.milestones.next_12_months:
+        score_map["milestones"] = 3
+    elif spec.milestones.completed or spec.milestones.next_12_months:
+        score_map["milestones"] = 2
+    else:
+        score_map["milestones"] = 1
+
+    return score_map
 
 
 def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
