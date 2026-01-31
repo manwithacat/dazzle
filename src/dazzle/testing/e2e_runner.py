@@ -399,11 +399,20 @@ class E2ERunner:
                 pass
 
             def resolve_view_url(self, view_id: str) -> str:
-                """Convert view ID to URL."""
-                # Simple convention: view_id -> /view_id
+                """Convert view ID to URL matching HTMX template routes."""
                 parts = view_id.split("_")
                 if len(parts) >= 2:
-                    return f"{self.base_url}/{parts[0]}/{parts[1]}"
+                    mode = parts[-1]
+                    entity = "_".join(parts[:-1]).replace("_", "-")
+                    mode_routes = {
+                        "list": f"{self.base_url}/{entity}",
+                        "create": f"{self.base_url}/{entity}/create",
+                        "view": f"{self.base_url}/{entity}/test-id",
+                        "detail": f"{self.base_url}/{entity}/test-id",
+                        "edit": f"{self.base_url}/{entity}/test-id/edit",
+                    }
+                    if mode in mode_routes:
+                        return mode_routes[mode]
                 return f"{self.base_url}/{view_id}"
 
             def get_entity_count_sync(self, entity_name: str) -> int:

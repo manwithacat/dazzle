@@ -140,7 +140,7 @@ class TestDNRAdapterURLResolution:
         adapter = DNRAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_list")
 
-        assert url == "http://localhost:3000/task/list"
+        assert url == "http://localhost:3000/task"
 
     def test_resolve_create_view_url(self) -> None:
         """Test resolving a create view URL."""

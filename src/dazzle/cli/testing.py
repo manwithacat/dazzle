@@ -542,22 +542,27 @@ def _build_selector(target: str) -> str:
         return f'[data-dazzle-view="{view_id}"]'
     elif target.startswith("field:"):
         field_id = target.split(":", 1)[1]
-        return f'[data-dazzle-field="{field_id}"]'
+        # Strip Entity. prefix if present
+        if "." in field_id:
+            field_id = field_id.split(".", 1)[1]
+        return f'[data-dazzle-field="{field_id}"], [name="{field_id}"]'
     elif target.startswith("action:"):
         action_id = target.split(":", 1)[1]
         # For save/create/update/submit actions, use a flexible selector
         if "." in action_id:
             entity, action = action_id.split(".", 1)
             if action in ("save", "create", "submit"):
-                # Try multiple selectors: full name, entity.create, or action-role
                 return (
                     f'[data-dazzle-action="{action_id}"],'
                     f' [data-dazzle-action="{entity}.create"],'
-                    f' [data-dazzle-action-role="primary"]'
+                    f' button[type="submit"]'
                 )
             if action == "update":
-                # Update forms use Entity.update action
-                return f'[data-dazzle-action="{action_id}"], [data-dazzle-action-role="primary"]'
+                return f'[data-dazzle-action="{action_id}"], button[type="submit"]'
+            if action == "delete":
+                return f'[data-dazzle-action="{action_id}"], button:has-text("Delete")'
+            if action == "edit":
+                return f'[data-dazzle-action="{action_id}"], a:has-text("Edit")'
             return f'[data-dazzle-action="{action_id}"], [data-dazzle-action="{action}"]'
         return f'[data-dazzle-action="{action_id}"]'
     elif target.startswith("entity:"):
@@ -565,7 +570,7 @@ def _build_selector(target: str) -> str:
         return f'[data-dazzle-entity="{entity_name}"]'
     elif target.startswith("row:"):
         entity_name = target.split(":", 1)[1]
-        return f'[data-dazzle-entity="{entity_name}"]'
+        return f'[data-dazzle-row="{entity_name}"], tbody tr'
     elif target.startswith("message:"):
         target_id = target.split(":", 1)[1]
         return f'[data-dazzle-message="{target_id}"]'

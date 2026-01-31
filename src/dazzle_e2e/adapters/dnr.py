@@ -309,7 +309,7 @@ class DNRAdapter(BaseAdapter):
         if len(parts) == 1:
             return f"{self.base_url}/{parts[0]}"
         elif parts[-1] == "list":
-            return f"{self.base_url}/{parts[0]}/list"
+            return f"{self.base_url}/{parts[0]}"
         elif parts[-1] == "create":
             return f"{self.base_url}/{parts[0]}/create"
         elif parts[-1] == "detail":
