@@ -68,6 +68,9 @@ dev = [
     "requests>=2.31",
     "aiosqlite>=0.19.0",
     "mutmut>=2.4",
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.24.0",
 ]
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [

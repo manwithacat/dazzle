@@ -12,8 +12,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-pytest.importorskip("fastapi", reason="FastAPI not installed")
-
 from dazzle.core.ir import (
     AppSpec,
     DomainSpec,
