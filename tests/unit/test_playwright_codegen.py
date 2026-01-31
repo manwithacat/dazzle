@@ -111,9 +111,9 @@ class TestTargetToRoute:
     @pytest.mark.parametrize(
         "target,expected_route",
         [
-            ("view:task_list", "/task/list"),
+            ("view:task_list", "/task"),
             ("view:task_create", "/task/create"),
-            ("view:task_edit", "/task/edit"),
+            ("view:task_edit", "/task/test-id/edit"),
             ("/", "/"),
             ("/admin/dashboard", "/admin/dashboard"),
             ("view:dashboard", "/dashboard"),
@@ -215,7 +215,7 @@ class TestGenerateStepCodeNavigation:
     @pytest.mark.parametrize(
         "target,expected_fragments",
         [
-            ("view:task_list", ["/task/list", "page.goto", "wait_for_load_state"]),
+            ("view:task_list", ["/task", "page.goto", "wait_for_load_state"]),
             ("/admin/dashboard", ["/admin/dashboard"]),
         ],
         ids=["view_target", "admin_path"],

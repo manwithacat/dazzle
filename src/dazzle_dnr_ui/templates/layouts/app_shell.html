@@ -21,7 +21,7 @@
     </div>
 
     {# Page content #}
-    <main class="flex-1 p-4 lg:p-6">
+    <main class="flex-1 p-4 lg:p-6" data-dazzle-view="{{ view_name | default('') }}">
       {% block content %}{% endblock %}
     </main>
   </div>
@@ -41,6 +41,7 @@
         <li>
           <a href="{{ nav_item.route }}"
              class="{% if current_route == nav_item.route %}active{% endif %}"
+             data-dazzle-nav="{{ nav_item.route }}"
              hx-boost="true">
             {{ nav_item.label }}
           </a>

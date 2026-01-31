@@ -293,6 +293,7 @@ def compile_appspec_to_templates(
         ctx = compile_surface_to_context(surface, entity)
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
+        ctx.view_name = surface.name
 
         # Determine the route for this surface
         entity_name = entity.name if entity else (surface.entity_ref or "item")
@@ -317,6 +318,7 @@ def compile_appspec_to_templates(
         root_ctx = compile_surface_to_context(first_list, entity)
         root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         root_ctx.nav_items = nav_items
+        root_ctx.view_name = first_list.name
         root_ctx.current_route = "/"
         contexts["/"] = root_ctx
 

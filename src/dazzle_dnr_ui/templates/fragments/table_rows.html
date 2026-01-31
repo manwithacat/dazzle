@@ -1,7 +1,7 @@
 {# Table rows fragment - swapped by HTMX on search/filter/page change #}
 {% if table and table.rows %}
 {% for item in table.rows %}
-<tr class="hover cursor-pointer"
+<tr class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}"
     {% if table.detail_url_template %}
     hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
     hx-push-url="true"
@@ -32,9 +32,10 @@
         {% if table.detail_url_template %}
         <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}">View</a></li>
         {% endif %}
-        <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning">Edit</a></li>
+        <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning" data-dazzle-action="{{ table.entity_name }}.edit">Edit</a></li>
         <li>
           <button class="text-error"
+                  data-dazzle-action="{{ table.entity_name }}.delete"
                   hx-delete="{{ table.api_endpoint }}/{{ item.id }}"
                   hx-confirm="Delete this {{ table.entity_name | lower }}?"
                   hx-target="closest tr"

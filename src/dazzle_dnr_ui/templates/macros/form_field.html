@@ -9,6 +9,7 @@
     {# Checkbox: label is inline #}
     <label class="label cursor-pointer justify-start gap-3">
       <input type="checkbox" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="checkbox checkbox-primary"
              {% if value %}checked{% endif %} />
       <span class="label-text">{{ field.label }}</span>
@@ -25,6 +26,7 @@
 
     {% if field.type == "textarea" %}
       <textarea id="field-{{ field.name }}" name="{{ field.name }}"
+                data-dazzle-field="{{ field.name }}"
                 class="textarea textarea-bordered w-full {% if error %}textarea-error{% endif %}"
                 placeholder="{{ field.placeholder }}"
                 {% if field.required %}required{% endif %}
@@ -32,6 +34,7 @@
 
     {% elif field.type == "select" %}
       <select id="field-{{ field.name }}" name="{{ field.name }}"
+              data-dazzle-field="{{ field.name }}"
               class="select select-bordered w-full {% if error %}select-error{% endif %}"
               {% if field.required %}required{% endif %}>
         <option value="" disabled {% if not value %}selected{% endif %}>
@@ -46,18 +49,21 @@
 
     {% elif field.type == "date" %}
       <input id="field-{{ field.name }}" type="date" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              {% if field.required %}required{% endif %} />
 
     {% elif field.type == "datetime" %}
       <input id="field-{{ field.name }}" type="datetime-local" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              {% if field.required %}required{% endif %} />
 
     {% elif field.type == "number" %}
       <input id="field-{{ field.name }}" type="number" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
@@ -65,6 +71,7 @@
 
     {% elif field.type == "email" %}
       <input id="field-{{ field.name }}" type="email" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
@@ -73,6 +80,7 @@
     {% else %}
       {# Default: text input #}
       <input id="field-{{ field.name }}" type="text" name="{{ field.name }}"
+             data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"

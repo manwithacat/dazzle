@@ -861,7 +861,8 @@ class EntityParserMixin:
             - Parenthesized expressions: (expr)
 
         Syntax:
-            invariant_primary ::= field_ref | NUMBER | STRING | BOOL | duration | date_expr | "(" invariant_expr ")"
+            invariant_primary ::= field_ref | NUMBER | STRING | BOOL
+                | duration | date_expr | "(" invariant_expr ")"
         """
         # Check for parenthesized expression
         if self.match(TokenType.LPAREN):

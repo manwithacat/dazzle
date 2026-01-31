@@ -51,28 +51,30 @@ def _target_to_selector(target: str) -> str:
         return f'[data-dazzle-view="{target_name}"]'
 
     elif target_type == "field":
-        # Fields use data-dazzle-field attribute
+        # Fields use data-dazzle-field attribute with name fallback
         # Target format: Entity.field_name
         if "." in target_name:
-            entity, field = target_name.split(".", 1)
-            return f'[data-dazzle-field="{field}"]'
-        return f'[data-dazzle-field="{target_name}"]'
+            _entity, field = target_name.split(".", 1)
+            return f'[data-dazzle-field="{field}"], [name="{field}"]'
+        return f'[data-dazzle-field="{target_name}"], [name="{target_name}"]'
 
     elif target_type == "action":
-        # Actions use data-dazzle-action attribute
+        # Actions use data-dazzle-action attribute with text fallbacks
         # Target format: Entity.action or just action
         if "." in target_name:
             entity, action = target_name.split(".", 1)
-            # Try full name first, then action-only, then action-role
-            # For save/create/submit, also check action-role="primary"
             if action in ("save", "create", "submit"):
-                return f'[data-dazzle-action="{target_name}"], [data-dazzle-action="{entity}.create"], [data-dazzle-action-role="primary"]'
+                return f'[data-dazzle-action="{target_name}"], [data-dazzle-action="{entity}.create"], button[type="submit"]'
+            if action == "delete":
+                return f'[data-dazzle-action="{target_name}"], button:has-text("Delete")'
+            if action == "edit":
+                return f'[data-dazzle-action="{target_name}"], a:has-text("Edit")'
             return f'[data-dazzle-action="{target_name}"], [data-dazzle-action="{action}"]'
         return f'[data-dazzle-action="{target_name}"]'
 
     elif target_type == "row":
-        # Table rows use data-dazzle-row attribute
-        return f'[data-dazzle-row="{target_name}"]'
+        # Table rows use data-dazzle-row attribute with tbody fallback
+        return f'[data-dazzle-row="{target_name}"], tbody tr'
 
     elif target_type == "component":
         # Components use data-dazzle-component attribute
@@ -119,8 +121,14 @@ def _target_to_route(target: str) -> str:
     """
     Convert a semantic target to a route path for navigation.
 
-    Example: 'view:task_list' -> '/task/list'
-    Example: '/' -> '/' (direct path)
+    Maps surface names to HTMX template routes:
+      task_list   -> /task        (list surfaces)
+      task_create -> /task/create (create surfaces)
+      task_view   -> /task/test-id (view surfaces, placeholder ID)
+      task_detail -> /task/test-id (detail surfaces, placeholder ID)
+      task_edit   -> /task/test-id/edit (edit surfaces)
+
+    Direct paths (starting with /) are returned as-is.
     """
     # Direct path targets (starting with /)
     if target.startswith("/"):
@@ -129,14 +137,24 @@ def _target_to_route(target: str) -> str:
     target_type, target_name = _parse_target(target)
 
     if target_type == "view":
-        # Convert surface name to route
-        # task_list -> /task/list
-        # task_create -> /task/create
+        # Parse {entity}_{mode} from surface name
+        # Handle multi-word entity names: last segment is the mode
         parts = target_name.split("_")
         if len(parts) >= 2:
-            entity = parts[0]
-            action = "_".join(parts[1:])
-            return f"/{entity}/{action}"
+            mode = parts[-1]
+            entity = "_".join(parts[:-1]).replace("_", "-")
+
+            mode_routes = {
+                "list": f"/{entity}",
+                "create": f"/{entity}/create",
+                "view": f"/{entity}/test-id",
+                "detail": f"/{entity}/test-id",
+                "edit": f"/{entity}/test-id/edit",
+            }
+            if mode in mode_routes:
+                return mode_routes[mode]
+            # Unknown mode — treat as list
+            return f"/{entity}"
         return f"/{target_name}"
 
     return f"/{target_name}"

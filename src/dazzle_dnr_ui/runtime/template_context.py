@@ -102,5 +102,8 @@ class PageContext(BaseModel):
     form: FormContext | None = None
     detail: DetailContext | None = None
 
+    # Semantic identifier for the current view (surface name)
+    view_name: str = ""
+
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)

@@ -9,7 +9,8 @@
   </div>
 
   {# Form #}
-  <form hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
+  <form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
+        hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
         hx-swap="innerHTML"
         hx-headers='{"Content-Type": "application/json"}'
@@ -32,6 +33,7 @@
     {# Actions #}
     <div class="flex gap-3 pt-4">
       <button type="submit" class="btn btn-primary"
+              data-dazzle-action="{{ form.entity_name }}.save"
               :disabled="submitting"
               :class="{ 'loading': submitting }">
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}

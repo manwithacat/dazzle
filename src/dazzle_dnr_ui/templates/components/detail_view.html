@@ -1,6 +1,6 @@
 {# Detail view component - displays entity fields as a definition list #}
 {% if detail %}
-<div class="max-w-3xl">
+<div class="max-w-3xl" data-dazzle-entity="{{ detail.entity_name }}">
   {# Header with actions #}
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
@@ -9,10 +9,11 @@
     </div>
     <div class="flex gap-2">
       {% if detail.edit_url %}
-      <a href="{{ detail.edit_url }}" class="btn btn-outline btn-sm">Edit</a>
+      <a href="{{ detail.edit_url }}" class="btn btn-outline btn-sm" data-dazzle-action="{{ detail.entity_name }}.edit">Edit</a>
       {% endif %}
       {% if detail.delete_url %}
       <button class="btn btn-error btn-outline btn-sm"
+              data-dazzle-action="{{ detail.entity_name }}.delete"
               hx-delete="{{ detail.delete_url }}"
               hx-confirm="Delete this {{ detail.entity_name | lower }}?"
               hx-target="body"

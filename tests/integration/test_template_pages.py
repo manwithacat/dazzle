@@ -217,6 +217,51 @@ class TestNavigation:
             assert "<nav" in html or "navbar" in html or "<a" in html
 
 
+class TestDazzleAttributes:
+    """Tests for data-dazzle-* semantic attributes in rendered HTML."""
+
+    def test_list_page_has_dazzle_view(self, client: TestClient) -> None:
+        resp = client.get("/task")
+        assert 'data-dazzle-view="task_list"' in resp.text
+
+    def test_list_page_has_dazzle_table(self, client: TestClient) -> None:
+        resp = client.get("/task")
+        assert 'data-dazzle-table="Task"' in resp.text
+
+    def test_list_page_has_dazzle_view_on_root(self, client: TestClient) -> None:
+        resp = client.get("/")
+        assert 'data-dazzle-view="task_list"' in resp.text
+
+    def test_list_page_has_dazzle_action_create(self, client: TestClient) -> None:
+        resp = client.get("/task")
+        assert 'data-dazzle-action="Task.create"' in resp.text
+
+    def test_create_page_has_dazzle_form(self, client: TestClient) -> None:
+        resp = client.get("/task/create")
+        assert 'data-dazzle-form="Task"' in resp.text
+        assert 'data-dazzle-form-mode="create"' in resp.text
+
+    def test_create_page_has_dazzle_field(self, client: TestClient) -> None:
+        resp = client.get("/task/create")
+        assert 'data-dazzle-field="title"' in resp.text
+
+    def test_create_page_has_dazzle_action_save(self, client: TestClient) -> None:
+        resp = client.get("/task/create")
+        assert 'data-dazzle-action="Task.save"' in resp.text
+
+    def test_detail_page_has_dazzle_entity(self, client: TestClient) -> None:
+        resp = client.get("/task/some-uuid")
+        assert 'data-dazzle-entity="Task"' in resp.text
+
+    def test_detail_page_has_dazzle_action_edit(self, client: TestClient) -> None:
+        resp = client.get("/task/some-uuid")
+        assert 'data-dazzle-action="Task.edit"' in resp.text
+
+    def test_detail_page_has_dazzle_action_delete(self, client: TestClient) -> None:
+        resp = client.get("/task/some-uuid")
+        assert 'data-dazzle-action="Task.delete"' in resp.text
+
+
 class TestHtmxFragments:
     """Tests for HTMX partial (fragment) responses."""
 

@@ -7,7 +7,7 @@
     <h2 class="text-2xl font-bold">{{ table.title }}</h2>
     <div class="flex gap-2">
       {% if table.create_url %}
-      <a href="{{ table.create_url }}" class="btn btn-primary btn-sm">+ New {{ table.entity_name }}</a>
+      <a href="{{ table.create_url }}" class="btn btn-primary btn-sm" data-dazzle-action="{{ table.entity_name }}.create">+ New {{ table.entity_name }}</a>
       {% endif %}
     </div>
   </div>
@@ -26,7 +26,7 @@
 
   {# Table #}
   <div class="overflow-x-auto">
-    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}">
+    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}" data-dazzle-table="{{ table.entity_name }}">
       <thead>
         <tr>
           {% if table.bulk_actions %}
