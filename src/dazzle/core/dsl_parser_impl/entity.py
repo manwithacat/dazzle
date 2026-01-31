@@ -614,7 +614,8 @@ class EntityParserMixin:
                         TokenType.GREATER_THAN,
                     ):
                         raise make_parse_error(
-                            f"Transition conditions don't support comparison operators like '{token.value}'.\n"
+                            f"Transition conditions don't support comparison operators "
+                            f"like '{token.value}'.\n"
                             f"  Supported syntax:\n"
                             f"    requires field_name     # Field must not be null\n"
                             f"    role(role_name)         # User must have role\n"
