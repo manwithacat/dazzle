@@ -323,6 +323,13 @@ surface user_create "Add Team Member":
 # Workspaces - role-based dashboards
 # =============================================================================
 
+workspace task_board "Task Board":
+  purpose: "Manage tasks visually"
+  tasks:
+    source: Task
+    display: kanban
+    group_by: status
+
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
   purpose: "System-wide overview and management"

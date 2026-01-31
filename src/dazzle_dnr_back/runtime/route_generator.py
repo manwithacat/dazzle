@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 try:
     from fastapi import APIRouter as _APIRouter
     from fastapi import Depends, HTTPException, Query, Request
+    from fastapi.responses import HTMLResponse
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -33,6 +34,16 @@ except ImportError:
     Query = None  # type: ignore
     Request = None  # type: ignore
     Depends = None  # type: ignore
+    HTMLResponse = None  # type: ignore
+
+
+def _is_htmx_request(request: Any) -> bool:
+    """Check if this is an HTMX request that wants HTML fragments."""
+    if not hasattr(request, "headers"):
+        return False
+    return (
+        request.headers.get("HX-Request") == "true" or request.headers.get("Accept") == "text/html"
+    )
 
 
 # =============================================================================
@@ -109,6 +120,33 @@ def create_list_handler(
             filtered_items = filter_records_by_condition(items, post_filter, context)
             result["items"] = filtered_items
             result["total"] = len(filtered_items)
+
+        # HTMX content negotiation: return HTML fragment for HX-Request
+        if _is_htmx_request(request):
+            try:
+                from dazzle_dnr_ui.runtime.template_renderer import render_fragment
+
+                items = result.get("items", []) if isinstance(result, dict) else []
+                # Convert Pydantic models to dicts
+                if items and hasattr(items[0], "model_dump"):
+                    items = [item.model_dump() for item in items]
+                # Render table rows fragment
+                # Pass minimal table context for fragment rendering
+                html = render_fragment(
+                    "fragments/table_rows.html",
+                    table={
+                        "rows": items,
+                        "columns": request.state.htmx_columns
+                        if hasattr(request.state, "htmx_columns")
+                        else [],
+                        "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                        "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
+                        "api_endpoint": str(request.url.path),
+                    },
+                )
+                return HTMLResponse(content=html)
+            except ImportError:
+                pass  # Template renderer not available, fall through to JSON
 
         return result
 

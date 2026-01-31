@@ -30,33 +30,25 @@ def dnr_build_ui(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
     out: str = typer.Option("./dnr-ui", "--out", "-o", help="Output directory"),
     format: str = typer.Option(
-        "vite",
+        "html",
         "--format",
         "-f",
-        help="Output format: 'vite' (default), 'js' (split files), or 'html' (single file)",
+        help="Output format: 'html' (default, static preview files)",
     ),
 ) -> None:
     """
     Generate DNR UI artifacts from AppSpec.
 
-    Converts AppSpec to UISpec and generates:
-    - vite: Full Vite project with ES modules (production-ready)
-    - js: Split HTML/JS files for development
-    - html: Single HTML file with embedded runtime (quick preview)
+    Generates server-rendered HTML preview files from AppSpec.
+    Each surface produces HTML files (e.g., task-list.html, task-create.html).
 
     Examples:
-        dazzle dnr build-ui                         # Vite project in ./dnr-ui
-        dazzle dnr build-ui --format html -o out    # Single HTML file
-        dazzle dnr build-ui --format js             # Split JS files
+        dazzle dnr build-ui                         # Preview files in ./dnr-ui
+        dazzle dnr build-ui -o out                   # Output to ./out
     """
     try:
         # Import DNR UI components
-        from dazzle_dnr_ui.converters import convert_appspec_to_ui
-        from dazzle_dnr_ui.runtime import (
-            generate_js_app,
-            generate_single_html,
-            generate_vite_app,
-        )
+        from dazzle_dnr_ui.runtime.static_preview import generate_preview_files
     except ImportError as e:
         typer.echo(f"DNR UI not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dnr-ui", err=True)
@@ -87,48 +79,16 @@ def dnr_build_ui(
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Convert to UISpec (pass shell config from manifest)
-    typer.echo(f"Converting AppSpec '{appspec.name}' to UISpec...")
-    ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
-    typer.echo(f"  • {len(ui_spec.workspaces)} workspace(s)")
-    typer.echo(f"  • {len(ui_spec.components)} component(s)")
-    typer.echo(f"  • {len(ui_spec.themes)} theme(s)")
-
-    # Generate based on format
+    # Generate preview files
     output_dir = Path(out).resolve()
 
-    if format == "vite":
-        typer.echo(f"\nGenerating Vite project → {output_dir}")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        files = generate_vite_app(ui_spec, str(output_dir))
-        typer.echo(f"  ✓ Generated {len(files)} files")
-        typer.echo("\nTo run:")
-        typer.echo(f"  cd {output_dir}")
-        typer.echo("  npm install")
-        typer.echo("  npm run dev")
-
-    elif format == "js":
-        typer.echo(f"\nGenerating JS app → {output_dir}")
-        output_dir.mkdir(parents=True, exist_ok=True)
-        files = generate_js_app(ui_spec, str(output_dir))
-        typer.echo(f"  ✓ Generated {len(files)} files")
-        typer.echo("\nTo run:")
-        typer.echo(f"  cd {output_dir}")
-        typer.echo("  python -m http.server 8000")
-
-    elif format == "html":
-        output_file = output_dir / "index.html" if output_dir.suffix != ".html" else output_dir
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        typer.echo(f"\nGenerating single HTML → {output_file}")
-        html = generate_single_html(ui_spec)
-        output_file.write_text(html)
-        typer.echo(f"  ✓ Generated {len(html)} bytes")
-        typer.echo(f"\nOpen in browser: file://{output_file}")
-
-    else:
-        typer.echo(f"Unknown format: {format}", err=True)
-        typer.echo("Use one of: vite, js, html", err=True)
-        raise typer.Exit(code=1)
+    typer.echo(f"\nGenerating static preview HTML → {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    files = generate_preview_files(appspec, str(output_dir))
+    typer.echo(f"  ✓ Generated {len(files)} files")
+    typer.echo("\nTo preview:")
+    if files:
+        typer.echo(f"  Open in browser: file://{files[0]}")
 
 
 def dnr_build_api(
@@ -438,8 +398,7 @@ def dnr_build(
     """
     try:
         from dazzle_dnr_back.converters import convert_appspec_to_backend
-        from dazzle_dnr_ui.converters import convert_appspec_to_ui
-        from dazzle_dnr_ui.runtime import generate_vite_app
+        from dazzle_dnr_ui.runtime.static_preview import generate_preview_files
     except ImportError as e:
         typer.echo(f"DNR packages not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dnr-back dazzle-dnr-ui", err=True)
@@ -489,16 +448,9 @@ def dnr_build(
     # 2. Generate Frontend (optional)
     if frontend:
         typer.echo("\n[2/5] Generating frontend...")
-        ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
-        typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
-        typer.echo(f"  • {len(ui_spec.components)} components")
-
         frontend_dir = output_dir / "frontend"
-        files = generate_vite_app(ui_spec, str(frontend_dir))
-        typer.echo(f"  • {len(files)} files generated")
-
-        # Note: In production, you'd run npm build here
-        # For now, we generate the Vite project structure
+        files = generate_preview_files(appspec, str(frontend_dir))
+        typer.echo(f"  • {len(files)} preview files generated")
     else:
         typer.echo("\n[2/5] Skipping frontend (--no-frontend)")
 

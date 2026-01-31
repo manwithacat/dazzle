@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.strings import to_api_plural
-from dazzle_dnr_ui.runtime.js_generator import JSGenerator
 from dazzle_dnr_ui.specs import UISpec
 
 if TYPE_CHECKING:
@@ -83,7 +82,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     """
 
     ui_spec: UISpec | None = None
-    generator: JSGenerator | None = None
     backend_url: str = "http://127.0.0.1:8000"
     test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
@@ -92,6 +90,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     theme_css: str | None = None  # Generated theme CSS (v0.16.0)
     sitespec_data: dict[str, Any] | None = None  # SiteSpec for public site pages (v0.16.0)
     site_page_routes: set[str] = set()  # Routes that are site pages (/, /about, /pricing, etc.)
+    # Template-based rendering (HTMX mode)
+    use_templates: bool = False  # When True, render pages via Jinja2 templates
+    page_contexts: dict[str, Any] | None = None  # route -> PageContext mapping
 
     def _is_api_path(self, path: str) -> bool:
         """Check if a path should be proxied to the backend API."""
@@ -124,6 +125,11 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         """Handle GET requests."""
         path = self.path.split("?")[0]
 
+        # Preview routes for template testing (Phase 1)
+        if path.startswith("/_preview/"):
+            self._serve_preview(path)
+            return
+
         # Proxy API requests to backend
         if self._is_api_path(path):
             self._proxy_request("GET")
@@ -139,15 +145,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path.startswith("/assets/"):
             # Serve static assets (favicon, etc.) (v0.14.2)
             self._serve_asset(path)
-        elif path == "/dnr-runtime.js":
-            self._serve_runtime()
-        elif path == "/app.js":
-            self._serve_app()
         elif path == "/site.js":
             # Serve site page JavaScript (v0.16.0)
             self._serve_site_js()
-        elif path == "/ui-spec.json":
-            self._serve_spec()
         elif path == "/__hot-reload__":
             self._serve_hot_reload()
         elif path == "/docs" or path.startswith("/docs"):
@@ -158,9 +158,11 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             # Serve public site pages (v0.16.0)
             self._serve_site_page(path)
         else:
-            # For SPA: serve HTML for all non-static routes
-            # This enables path-based routing (e.g., /task/create, /task/123)
-            self._serve_html()
+            # Template mode: render server-side HTML via Jinja2
+            if self.use_templates and self.page_contexts:
+                self._serve_template_page(path)
+            else:
+                self._serve_html()
 
     def do_POST(self) -> None:
         """Handle POST requests."""
@@ -248,79 +250,277 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Proxy error: {str(e)}")
 
-    def _serve_html(self) -> None:
-        """Serve the main HTML page."""
-        if not self.generator:
-            self.send_error(500, "No UISpec loaded")
+    def _serve_template_page(self, path: str) -> None:
+        """Serve a server-rendered page using Jinja2 templates."""
+        import json
+        import re
+
+        from dazzle_dnr_ui.runtime.template_renderer import render_page
+
+        if not self.page_contexts:
+            self._serve_html()  # Fallback to SPA
             return
 
-        html = self.generator.generate_html(include_runtime=False)
+        # Try to match path against registered page contexts
+        matched_ctx = None
+        path_id = None
 
-        # Inject Dazzle Bar script in dev mode (v0.8.5)
-        if self.dev_mode:
-            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
-            html = html.replace("</body>", dazzle_bar_script)
+        # Direct match first
+        if path in self.page_contexts:
+            matched_ctx = self.page_contexts[path]
+        else:
+            # Try pattern matching for {id} routes
+            for route_pattern, ctx in self.page_contexts.items():
+                if "{id}" in route_pattern:
+                    # Convert {id} to regex
+                    regex = "^" + re.escape(route_pattern).replace(r"\{id\}", r"([^/]+)") + "$"
+                    m = re.match(regex, path)
+                    if m:
+                        matched_ctx = ctx
+                        path_id = m.group(1)
+                        break
 
-        # Inject hot reload script (disabled in test mode for Playwright compatibility)
-        if not self.test_mode:
-            hot_reload_script = """
+        if not matched_ctx:
+            # No template match — fall back to root if it exists, or SPA
+            if "/" in self.page_contexts:
+                matched_ctx = self.page_contexts["/"]
+            else:
+                self._serve_html()
+                return
+
+        # Deep copy context to avoid mutation across requests
+        import copy
+
+        ctx = copy.deepcopy(matched_ctx)
+        ctx.current_route = path
+
+        # Fetch data from backend if needed
+        if ctx.table:
+            query_string = self.path.split("?", 1)[1] if "?" in self.path else ""
+            fetch_url = f"{self.backend_url}{ctx.table.api_endpoint}"
+            if query_string:
+                fetch_url += f"?{query_string}"
+            try:
+                req = urllib.request.Request(fetch_url)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read())
+                    ctx.table.rows = data.get("items", [])
+                    ctx.table.total = data.get("total", 0)
+            except Exception:
+                ctx.table.rows = []
+                ctx.table.total = 0
+
+        if path_id and ctx.detail:
+            api_base = ctx.detail.delete_url or ""
+            if "{id}" in api_base:
+                fetch_url = f"{self.backend_url}{api_base.replace('{id}', path_id)}"
+            else:
+                fetch_url = None
+            if fetch_url:
+                try:
+                    req = urllib.request.Request(fetch_url)
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        ctx.detail.item = json.loads(resp.read())
+                except Exception:
+                    ctx.detail.item = {"id": path_id}
+            if ctx.detail.edit_url:
+                ctx.detail.edit_url = ctx.detail.edit_url.replace("{id}", path_id)
+            if ctx.detail.delete_url:
+                ctx.detail.delete_url = ctx.detail.delete_url.replace("{id}", path_id)
+
+        if path_id and ctx.form and ctx.form.mode == "edit":
+            fetch_url = f"{self.backend_url}{ctx.form.action_url.replace('{id}', path_id)}"
+            try:
+                req = urllib.request.Request(fetch_url)
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    ctx.form.initial_values = json.loads(resp.read())
+            except Exception:
+                pass
+            ctx.form.action_url = ctx.form.action_url.replace("{id}", path_id)
+            if ctx.form.cancel_url:
+                ctx.form.cancel_url = ctx.form.cancel_url.replace("{id}", path_id)
+
+        try:
+            html = render_page(ctx)
+            # Inject Dazzle Bar in dev mode
+            if self.dev_mode:
+                dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
+                html = html.replace("</body>", dazzle_bar_script)
+            # Inject hot reload script
+            if not self.test_mode:
+                hot_reload_script = """
 <script>
 (function() {
   const eventSource = new EventSource('/__hot-reload__');
   eventSource.onmessage = function(e) {
-    if (e.data === 'reload') {
-      window.location.reload();
-    }
+    if (e.data === 'reload') { window.location.reload(); }
   };
 })();
 </script>
 </body>
 """
-            html = html.replace("</body>", hot_reload_script)
-        # Fix script references - replace inline script placeholders with external references
-        html = html.replace(
-            "<script>\n\n  </script>\n  <script>",
-            '<script src="/dnr-runtime.js"></script>\n  <script src="/app.js"></script>\n  <script>',
-        )
-        # Remove the now-empty inline app script that follows
-        html = html.replace(
-            '<script src="/app.js"></script>\n  <script>\n\n  </script>',
-            '<script src="/app.js"></script>',
-        )
+                html = html.replace("</body>", hot_reload_script)
+            self._send_response(html, "text/html")
+        except Exception as e:
+            self.send_error(500, f"Template render error: {e}")
 
+    def _serve_preview(self, path: str) -> None:
+        """Serve template preview pages for development testing."""
+        from dazzle_dnr_ui.runtime.template_context import (
+            ColumnContext,
+            DetailContext,
+            FieldContext,
+            FormContext,
+            NavItemContext,
+            PageContext,
+            TableContext,
+        )
+        from dazzle_dnr_ui.runtime.template_renderer import render_page
+
+        preview_name = path.removeprefix("/_preview/").strip("/")
+
+        # Build sample nav items
+        nav_items = [
+            NavItemContext(label="Tasks", route="/", active=True),
+            NavItemContext(label="Users", route="/users"),
+        ]
+
+        if preview_name == "base" or preview_name == "":
+            ctx = PageContext(
+                page_title="Preview - Base",
+                layout="app_shell",
+                template="components/filterable_table.html",
+                nav_items=nav_items,
+                table=TableContext(
+                    entity_name="Task",
+                    title="Tasks",
+                    columns=[
+                        ColumnContext(key="title", label="Title"),
+                        ColumnContext(key="status", label="Status", type="badge"),
+                    ],
+                    api_endpoint="/tasks",
+                    rows=[
+                        {"id": "1", "title": "Sample task", "status": "todo"},
+                    ],
+                    total=1,
+                ),
+            )
+        elif preview_name == "task-list":
+            ctx = PageContext(
+                page_title="Preview - Task List",
+                layout="app_shell",
+                template="components/filterable_table.html",
+                nav_items=nav_items,
+                table=TableContext(
+                    entity_name="Task",
+                    title="Tasks",
+                    columns=[
+                        ColumnContext(key="title", label="Title"),
+                        ColumnContext(key="status", label="Status", type="badge"),
+                        ColumnContext(key="completed", label="Done", type="bool"),
+                    ],
+                    api_endpoint="/tasks",
+                    create_url="/tasks/create",
+                    detail_url_template="/tasks/{id}",
+                    rows=[
+                        {
+                            "id": "1",
+                            "title": "Fix login bug",
+                            "status": "in_progress",
+                            "completed": False,
+                        },
+                        {"id": "2", "title": "Add tests", "status": "todo", "completed": False},
+                        {"id": "3", "title": "Deploy v2", "status": "done", "completed": True},
+                    ],
+                    total=3,
+                ),
+            )
+        elif preview_name == "task-create":
+            ctx = PageContext(
+                page_title="Preview - Create Task",
+                layout="app_shell",
+                template="components/form.html",
+                nav_items=nav_items,
+                form=FormContext(
+                    entity_name="Task",
+                    title="Create Task",
+                    fields=[
+                        FieldContext(
+                            name="title",
+                            label="Title",
+                            type="text",
+                            required=True,
+                            placeholder="Task title",
+                        ),
+                        FieldContext(
+                            name="description",
+                            label="Description",
+                            type="textarea",
+                            placeholder="Describe the task",
+                        ),
+                        FieldContext(
+                            name="priority",
+                            label="Priority",
+                            type="select",
+                            options=[
+                                {"value": "low", "label": "Low"},
+                                {"value": "medium", "label": "Medium"},
+                                {"value": "high", "label": "High"},
+                            ],
+                        ),
+                        FieldContext(name="due_date", label="Due Date", type="date"),
+                        FieldContext(name="completed", label="Completed", type="checkbox"),
+                    ],
+                    action_url="/tasks",
+                    cancel_url="/",
+                ),
+            )
+        elif preview_name.startswith("task/"):
+            ctx = PageContext(
+                page_title="Preview - Task Detail",
+                layout="app_shell",
+                template="components/detail_view.html",
+                nav_items=nav_items,
+                detail=DetailContext(
+                    entity_name="Task",
+                    title="Task Details",
+                    fields=[
+                        FieldContext(name="title", label="Title"),
+                        FieldContext(name="status", label="Status", type="badge"),
+                        FieldContext(name="description", label="Description"),
+                        FieldContext(name="due_date", label="Due Date", type="date"),
+                        FieldContext(name="completed", label="Completed", type="checkbox"),
+                    ],
+                    item={
+                        "id": "123",
+                        "title": "Fix login bug",
+                        "status": "in_progress",
+                        "description": "The login page has a CSS issue on mobile.",
+                        "due_date": "2025-06-15",
+                        "completed": False,
+                    },
+                    edit_url="/tasks/123/edit",
+                    delete_url="/tasks/123",
+                    back_url="/",
+                ),
+            )
+        else:
+            self.send_error(404, f"Preview not found: {preview_name}")
+            return
+
+        try:
+            html = render_page(ctx)
+            self._send_response(html, "text/html")
+        except Exception as e:
+            self.send_error(500, f"Template render error: {e}")
+
+    def _serve_html(self) -> None:
+        """Serve a fallback HTML page when templates are not available."""
+        html = """<!DOCTYPE html>
+<html><head><title>Dazzle DNR</title></head>
+<body><h1>Dazzle DNR</h1><p>Template rendering not configured. Start the server with an AppSpec to enable template-based rendering.</p></body>
+</html>"""
         self._send_response(html, "text/html")
-
-    def _get_generator(self) -> JSGenerator | None:
-        """Get the current generator, checking hot reload manager for updates."""
-        if self.hot_reload_manager:
-            _, ui_spec = self.hot_reload_manager.get_specs()
-            if ui_spec:
-                return JSGenerator(ui_spec)
-        return self.generator
-
-    def _serve_runtime(self) -> None:
-        """Serve the runtime JavaScript."""
-        generator = self._get_generator()
-        if not generator:
-            self.send_error(500, "No UISpec loaded")
-            return
-        self._send_response(generator.generate_runtime(), "application/javascript")
-
-    def _serve_app(self) -> None:
-        """Serve the application JavaScript."""
-        generator = self._get_generator()
-        if not generator:
-            self.send_error(500, "No UISpec loaded")
-            return
-        self._send_response(generator.generate_app_js(), "application/javascript")
-
-    def _serve_spec(self) -> None:
-        """Serve the UISpec as JSON."""
-        generator = self._get_generator()
-        if not generator:
-            self.send_error(500, "No UISpec loaded")
-            return
-        self._send_response(generator.generate_spec_json(), "application/json")
 
     def _serve_dazzle_bar(self) -> None:
         """Serve the Dazzle Bar JavaScript bundle (v0.8.5)."""
@@ -329,10 +529,15 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         try:
-            from dazzle_dnr_ui.runtime.js_loader import get_dazzle_bar_js
-
-            js_content = get_dazzle_bar_js()
-            self._send_response(js_content, "application/javascript")
+            # Try loading Dazzle Bar from the static directory
+            dazzle_bar_dir = Path(__file__).parent / "static" / "js" / "dazzle-bar"
+            entry_file = dazzle_bar_dir / "index.js"
+            if entry_file.exists():
+                js_content = entry_file.read_text(encoding="utf-8")
+                self._send_response(js_content, "application/javascript")
+            else:
+                # Dazzle Bar JS not available (removed in HTMX migration)
+                self._send_response("// Dazzle Bar: JS runtime removed", "application/javascript")
         except Exception as e:
             self.send_error(500, f"Failed to load Dazzle Bar: {e}")
 
@@ -914,6 +1119,7 @@ class DNRCombinedServer:
         self.sitespec_data = sitespec_data
         self.theme_preset = theme_preset
         self.theme_overrides = theme_overrides or {}
+        self.appspec: Any = None  # AppSpec for template compilation
 
         self._backend_thread: threading.Thread | None = None
         self._frontend_server: socketserver.TCPServer | None = None
@@ -1049,7 +1255,6 @@ class DNRCombinedServer:
         """Start the frontend dev server (blocking)."""
         # Configure handler
         DNRCombinedHandler.ui_spec = self.ui_spec
-        DNRCombinedHandler.generator = JSGenerator(self.ui_spec)
         DNRCombinedHandler.backend_url = f"http://{self.backend_host}:{self.backend_port}"
         DNRCombinedHandler.test_mode = self.enable_test_mode
         DNRCombinedHandler.dev_mode = self.enable_dev_mode  # v0.24.0: env-aware
@@ -1072,6 +1277,19 @@ class DNRCombinedServer:
             DNRCombinedHandler.theme_css = generate_theme_css(theme)
         except ImportError:
             DNRCombinedHandler.theme_css = None
+
+        # Configure template-based rendering if appspec is available
+        if self.appspec:
+            try:
+                from dazzle_dnr_ui.converters.template_compiler import compile_appspec_to_templates
+
+                page_contexts = compile_appspec_to_templates(self.appspec)
+                DNRCombinedHandler.page_contexts = page_contexts
+                DNRCombinedHandler.use_templates = True
+                print(f"[DNR] Template mode: ENABLED ({len(page_contexts)} page routes)")
+            except Exception as e:
+                print(f"[DNR] Template compilation failed, using SPA: {e}")
+                DNRCombinedHandler.use_templates = False
 
         # Configure site pages (v0.16.0)
         DNRCombinedHandler.sitespec_data = self.sitespec_data
@@ -1168,6 +1386,7 @@ def run_combined_server(
     sitespec_data: dict[str, Any] | None = None,
     theme_preset: str = "saas-default",
     theme_overrides: dict[str, Any] | None = None,
+    appspec: Any = None,  # AppSpec for template-based rendering
 ) -> None:
     """
     Run a combined DNR development server.
@@ -1213,6 +1432,7 @@ def run_combined_server(
         theme_preset=theme_preset,
         theme_overrides=theme_overrides,
     )
+    server.appspec = appspec
     server.start()
 
 
@@ -1233,7 +1453,6 @@ def run_frontend_only(
     """
     # Configure handler
     DNRCombinedHandler.ui_spec = ui_spec
-    DNRCombinedHandler.generator = JSGenerator(ui_spec)
     DNRCombinedHandler.backend_url = backend_url
 
     socketserver.TCPServer.allow_reuse_address = True

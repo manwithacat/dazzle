@@ -21,15 +21,9 @@ def _load_realtime_js() -> str:
 
     Falls back to the inline version if the loader is not available.
     """
-    try:
-        from dazzle_dnr_ui.runtime.js_loader import load_js_module
-
-        # Load and wrap in IIFE for non-module usage
-        source = load_js_module("realtime.js")
-        return _wrap_in_iife(source)
-    except (ImportError, FileNotFoundError):
-        # Fall back to inline version
-        return _REALTIME_CLIENT_JS_INLINE
+    # JS runtime files were removed in the HTMX migration.
+    # Always use the inline version.
+    return _REALTIME_CLIENT_JS_INLINE
 
 
 def _wrap_in_iife(source: str) -> str:

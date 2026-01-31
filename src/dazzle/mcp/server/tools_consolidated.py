@@ -77,7 +77,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl",
-            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec",
+            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -91,6 +91,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "analyze",
                             "lint",
                             "get_spec",
+                            "fidelity",
                         ],
                         "description": "Operation to perform",
                     },
@@ -101,6 +102,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "extended": {
                         "type": "boolean",
                         "description": "Run extended checks (for lint)",
+                    },
+                    "surface_filter": {
+                        "type": "string",
+                        "description": "Filter to a specific surface name (for fidelity)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

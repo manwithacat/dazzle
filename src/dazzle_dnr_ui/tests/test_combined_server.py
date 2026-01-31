@@ -13,7 +13,6 @@ from dazzle_dnr_ui.runtime.combined_server import (
     DNRCombinedHandler,
     DNRCombinedServer,
 )
-from dazzle_dnr_ui.runtime.js_generator import JSGenerator
 from dazzle_dnr_ui.specs import (
     ComponentSpec,
     RouteSpec,
@@ -108,7 +107,6 @@ class TestDNRCombinedHandler:
     def test_handler_has_class_attributes(self):
         """Test that handler has the expected class attributes."""
         assert hasattr(DNRCombinedHandler, "ui_spec")
-        assert hasattr(DNRCombinedHandler, "generator")
         assert hasattr(DNRCombinedHandler, "backend_url")
 
     def test_handler_default_backend_url(self):
@@ -118,16 +116,13 @@ class TestDNRCombinedHandler:
     def test_handler_can_be_configured(self, simple_ui_spec: UISpec):
         """Test that handler can be configured with spec."""
         DNRCombinedHandler.ui_spec = simple_ui_spec
-        DNRCombinedHandler.generator = JSGenerator(simple_ui_spec)
         DNRCombinedHandler.backend_url = "http://localhost:9000"
 
         assert DNRCombinedHandler.ui_spec == simple_ui_spec
-        assert DNRCombinedHandler.generator is not None
         assert DNRCombinedHandler.backend_url == "http://localhost:9000"
 
         # Reset
         DNRCombinedHandler.ui_spec = None
-        DNRCombinedHandler.generator = None
         DNRCombinedHandler.backend_url = "http://127.0.0.1:8000"
 
 
@@ -187,46 +182,6 @@ class TestDNRCombinedServerConfig:
         )
 
         assert server.db_path == Path(".dazzle/data.db")
-
-
-# =============================================================================
-# JS Generator Tests (for combined server)
-# =============================================================================
-
-
-class TestJSGeneratorForCombinedServer:
-    """Test JS generator produces valid output for combined server."""
-
-    def test_generator_produces_html(self, simple_ui_spec: UISpec):
-        """Test that generator produces HTML."""
-        generator = JSGenerator(simple_ui_spec)
-        html = generator.generate_html()
-
-        assert "<!DOCTYPE html>" in html
-        assert "test_app" in html  # Uses name, not title
-
-    def test_generator_produces_runtime(self, simple_ui_spec: UISpec):
-        """Test that generator produces runtime JS."""
-        generator = JSGenerator(simple_ui_spec)
-        runtime = generator.generate_runtime()
-
-        assert "signal" in runtime.lower() or "state" in runtime.lower()
-
-    def test_generator_produces_app_js(self, simple_ui_spec: UISpec):
-        """Test that generator produces app JS."""
-        generator = JSGenerator(simple_ui_spec)
-        app_js = generator.generate_app_js()
-
-        # Should contain app initialization
-        assert len(app_js) > 0
-
-    def test_generator_produces_spec_json(self, simple_ui_spec: UISpec):
-        """Test that generator produces spec JSON."""
-        generator = JSGenerator(simple_ui_spec)
-        spec_json = generator.generate_spec_json()
-
-        assert "test_app" in spec_json
-        assert "main" in spec_json  # Workspace name, not "home"
 
 
 # =============================================================================

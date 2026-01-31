@@ -11,10 +11,6 @@ Note: Uses hand-built AppSpecs for testing instead of parsing DSL to keep tests
 isolated from the DSL parser changes.
 """
 
-import json
-import tempfile
-from pathlib import Path
-
 import pytest
 
 from dazzle.core import ir
@@ -24,11 +20,8 @@ from dazzle_dnr_back.converters import convert_appspec_to_backend
 from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE, create_app
 from dazzle_dnr_back.specs import BackendSpec
 from dazzle_dnr_ui.converters import convert_appspec_to_ui
-from dazzle_dnr_ui.runtime import (
-    generate_js_app,
-    generate_single_html,
-    generate_vite_app,
-)
+from dazzle_dnr_ui.converters.template_compiler import compile_appspec_to_templates
+from dazzle_dnr_ui.runtime.template_renderer import render_page
 from dazzle_dnr_ui.specs import UISpec
 
 # =============================================================================
@@ -391,90 +384,26 @@ class TestFastAPIRuntime:
 # =============================================================================
 
 
-class TestJSRuntime:
-    """Test UISpec to JavaScript runtime generation."""
+class TestTemplateRuntime:
+    """Test AppSpec to server-rendered template generation."""
 
-    def test_generate_single_html(self, simple_appspec: ir.AppSpec) -> None:
-        """Test generating single HTML file."""
-        ui = convert_appspec_to_ui(simple_appspec)
-        html = generate_single_html(ui)
+    def test_compile_templates(self, simple_appspec: ir.AppSpec) -> None:
+        """Test compiling AppSpec to template contexts."""
+        contexts = compile_appspec_to_templates(simple_appspec)
 
-        assert "<!DOCTYPE html>" in html
-        assert "DNR" in html
-        assert "createApp" in html
+        assert len(contexts) > 0
+        # Should have routes for list, detail, create surfaces
+        route_paths = list(contexts.keys())
+        assert any("/task" in r for r in route_paths)
 
-    def test_generate_js_app(self, simple_appspec: ir.AppSpec) -> None:
-        """Test generating split JS app."""
-        ui = convert_appspec_to_ui(simple_appspec)
+    def test_render_all_pages(self, simple_appspec: ir.AppSpec) -> None:
+        """Test rendering all compiled templates to HTML."""
+        contexts = compile_appspec_to_templates(simple_appspec)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            files = generate_js_app(ui, tmpdir)
-
-            assert len(files) == 5  # v0.14.2: Now includes favicon
-            file_names = {f.name for f in files}
-            assert "index.html" in file_names
-            assert "dnr-runtime.js" in file_names
-            assert "app.js" in file_names
-            assert "ui-spec.json" in file_names
-            assert "dazzle-favicon.svg" in file_names
-
-    def test_generated_spec_json(self, simple_appspec: ir.AppSpec) -> None:
-        """Test that generated spec JSON is valid."""
-        ui = convert_appspec_to_ui(simple_appspec)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generate_js_app(ui, tmpdir)
-            spec_path = Path(tmpdir) / "ui-spec.json"
-
-            spec_data = json.loads(spec_path.read_text())
-            assert "name" in spec_data
-            assert "workspaces" in spec_data
-            assert "components" in spec_data
-
-
-class TestViteRuntime:
-    """Test UISpec to Vite project generation."""
-
-    def test_generate_vite_project(self, simple_appspec: ir.AppSpec) -> None:
-        """Test generating complete Vite project."""
-        ui = convert_appspec_to_ui(simple_appspec)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generate_vite_app(ui, tmpdir)
-            tmpdir = Path(tmpdir)
-
-            assert (tmpdir / "package.json").exists()
-            assert (tmpdir / "vite.config.js").exists()
-            assert (tmpdir / "src" / "index.html").exists()
-            assert (tmpdir / "src" / "main.js").exists()
-            assert (tmpdir / "src" / "dnr" / "signals.js").exists()
-
-    def test_vite_package_json(self, simple_appspec: ir.AppSpec) -> None:
-        """Test generated package.json is valid."""
-        ui = convert_appspec_to_ui(simple_appspec)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generate_vite_app(ui, tmpdir)
-            package_path = Path(tmpdir) / "package.json"
-
-            package_data = json.loads(package_path.read_text())
-            assert package_data["type"] == "module"
-            assert "vite" in package_data["devDependencies"]
-            assert "dev" in package_data["scripts"]
-
-    def test_vite_es_modules(self, simple_appspec: ir.AppSpec) -> None:
-        """Test ES modules are properly structured."""
-        ui = convert_appspec_to_ui(simple_appspec)
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generate_vite_app(ui, tmpdir)
-            dnr_dir = Path(tmpdir) / "src" / "dnr"
-
-            signals = (dnr_dir / "signals.js").read_text()
-            assert "export function createSignal" in signals
-
-            state = (dnr_dir / "state.js").read_text()
-            assert "import { createSignal }" in state
+        for route, ctx in contexts.items():
+            html = render_page(ctx)
+            assert len(html) > 0, f"Route {route} produced empty HTML"
+            assert "<!DOCTYPE html>" in html or "<html" in html or "<div" in html
 
 
 # =============================================================================
@@ -494,19 +423,17 @@ class TestFullPipeline:
         assert backend.name == "simple_task"
         assert len(backend.entities) == 1
 
-        # Convert to UISpec
+        # Convert to UISpec (still used by eject system)
         ui = convert_appspec_to_ui(appspec)
         assert "simple_task" in ui.name
         assert len(ui.workspaces) >= 1
 
-        # Generate Vite project
-        with tempfile.TemporaryDirectory() as tmpdir:
-            files = generate_vite_app(ui, tmpdir)
-            assert len(files) > 10
-
-            spec_path = Path(tmpdir) / "src" / "ui-spec.json"
-            spec_data = json.loads(spec_path.read_text())
-            assert len(spec_data["workspaces"]) >= 1
+        # Compile to templates (the new primary path)
+        contexts = compile_appspec_to_templates(appspec)
+        assert len(contexts) > 0
+        for route, ctx in contexts.items():
+            html = render_page(ctx)
+            assert len(html) > 100, f"Route {route} HTML too short"
 
     def test_multi_entity_full_pipeline(self) -> None:
         """Test full pipeline with multi-entity AppSpec."""
@@ -516,18 +443,12 @@ class TestFullPipeline:
         backend = convert_appspec_to_backend(appspec)
         assert len(backend.entities) == 3
 
-        # Convert to UISpec
-        ui = convert_appspec_to_ui(appspec)
-
-        # Generate HTML
-        html = generate_single_html(ui)
-        assert "DNR" in html
-
-        # Generate Vite project
-        with tempfile.TemporaryDirectory() as tmpdir:
-            generate_vite_app(ui, tmpdir)
-            assert (Path(tmpdir) / "src" / "dnr" / "app.js").exists()
-            assert (Path(tmpdir) / "src" / "ui-spec.json").exists()
+        # Compile to templates
+        contexts = compile_appspec_to_templates(appspec)
+        assert len(contexts) > 0
+        for _route, ctx in contexts.items():
+            html = render_page(ctx)
+            assert len(html) > 0
 
     def test_roundtrip_spec_serialization(self, simple_appspec: ir.AppSpec) -> None:
         """Test that specs can be serialized and deserialized."""

@@ -251,7 +251,7 @@ def dnr_serve(
         from dazzle_dnr_back.converters import convert_appspec_to_backend
         from dazzle_dnr_back.runtime import FASTAPI_AVAILABLE
         from dazzle_dnr_ui.converters import compute_persona_default_routes, convert_appspec_to_ui
-        from dazzle_dnr_ui.runtime import generate_single_html, run_combined_server
+        from dazzle_dnr_ui.runtime import run_combined_server
     except ImportError as e:
         typer.echo(f"DNR runtime not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dnr-back dazzle-dnr-ui", err=True)
@@ -294,17 +294,21 @@ def dnr_serve(
             # Continue without SiteSpec - it's optional
 
     if ui_only:
-        # Serve UI only with simple HTTP server
-        ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
-        html = generate_single_html(ui_spec)
+        # Serve UI only with static preview files
+        from dazzle_dnr_ui.runtime.static_preview import generate_preview_files
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            html_path = Path(tmpdir) / "index.html"
-            html_path.write_text(html)
+            preview_files = generate_preview_files(appspec, tmpdir)
+            # Create an index.html that links to all previews
+            if preview_files:
+                # Copy the first list file as index.html
+                first = preview_files[0]
+                (Path(tmpdir) / "index.html").write_text(first.read_text())
 
             os.chdir(tmpdir)
             handler = http.server.SimpleHTTPRequestHandler
-            typer.echo(f"\nServing DNR UI at http://{host}:{port}")
+            typer.echo(f"\nServing DNR UI preview at http://{host}:{port}")
+            typer.echo(f"  {len(preview_files)} preview files generated")
             typer.echo("Press Ctrl+C to stop\n")
 
             with socketserver.TCPServer((host, port), handler) as httpd:
@@ -452,4 +456,5 @@ def dnr_serve(
         sitespec_data=sitespec_data,
         theme_preset=mf.theme.preset,
         theme_overrides=theme_overrides if theme_overrides else None,
+        appspec=appspec,
     )

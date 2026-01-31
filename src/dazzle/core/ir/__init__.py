@@ -7,6 +7,7 @@ Types are organized into logical submodules for maintainability.
 All types are re-exported from this package for backward compatibility.
 """
 
+# Fidelity Scoring
 # Archetypes (v0.7.1, v0.10.3)
 # Fields
 # App Specification
@@ -127,6 +128,12 @@ from .experiences import (
     StepKind,
     StepTransition,
     TransitionEvent,
+)
+from .fidelity import (
+    FidelityGap,
+    FidelityGapCategory,
+    FidelityReport,
+    SurfaceFidelityScore,
 )
 from .fields import (
     FieldModifier,
@@ -503,6 +510,11 @@ from .workspaces import (
 )
 
 __all__ = [
+    # Fidelity Scoring
+    "FidelityGap",
+    "FidelityGapCategory",
+    "FidelityReport",
+    "SurfaceFidelityScore",
     # Archetypes (v0.7.1, v0.10.3)
     "ArchetypeKind",
     "ArchetypeSpec",

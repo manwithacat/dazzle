@@ -13,6 +13,10 @@ from dazzle_dnr_ui.converters.surface_converter import (
     _generate_component_name,
     convert_surfaces_to_components,
 )
+from dazzle_dnr_ui.converters.template_compiler import (
+    compile_appspec_to_templates,
+    compile_surface_to_context,
+)
 from dazzle_dnr_ui.converters.workspace_converter import (
     compute_persona_default_routes,
     convert_workspaces,
@@ -176,6 +180,7 @@ def convert_appspec_to_ui(
         appspec.workspaces,
         appspec.surfaces,
         surface_component_map,
+        entities=appspec.domain.entities if appspec.domain else [],
     )
 
     # Convert shell config (or generate defaults)
@@ -233,4 +238,6 @@ __all__ = [
     "convert_workspaces",
     "convert_surfaces_to_components",
     "compute_persona_default_routes",
+    "compile_appspec_to_templates",
+    "compile_surface_to_context",
 ]

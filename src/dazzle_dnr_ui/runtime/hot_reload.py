@@ -368,8 +368,8 @@ class HotReloadManager:
         modules_to_reload = [
             "dazzle_dnr_ui.runtime.site_renderer",
             "dazzle_dnr_ui.runtime.vite_generator",
-            "dazzle_dnr_ui.runtime.js_generator",
-            "dazzle_dnr_ui.runtime.js_loader",
+            "dazzle_dnr_ui.runtime.template_renderer",
+            "dazzle_dnr_ui.converters.template_compiler",
         ]
 
         reloaded = []
@@ -386,11 +386,14 @@ class HotReloadManager:
             print(f"[DNR] Reloaded: {', '.join(reloaded)}")
 
     def _clear_runtime_cache(self) -> None:
-        """Clear the JS runtime cache."""
+        """Clear the template renderer cache."""
         try:
-            from dazzle_dnr_ui.runtime.js_generator import clear_runtime_cache
+            from dazzle_dnr_ui.runtime.template_renderer import get_jinja_env
 
-            clear_runtime_cache()
+            # Force Jinja2 to reload templates from disk
+            env = get_jinja_env()
+            if hasattr(env, "cache"):
+                env.cache.clear()  # type: ignore[union-attr]
         except ImportError:
             pass
 

@@ -439,45 +439,6 @@ class TestControlPlaneIntegration:
         assert "routes" in data
 
 
-class TestDazzleBarBundle:
-    """Tests for Dazzle Bar JavaScript bundle generation."""
-
-    def test_get_dazzle_bar_js(self) -> None:
-        """Test that the Dazzle Bar JavaScript bundle generates correctly."""
-        from dazzle_dnr_ui.runtime.js_loader import get_dazzle_bar_js
-
-        js = get_dazzle_bar_js()
-
-        # Should contain the header
-        assert "Dazzle Bar - Developer Overlay" in js
-
-        # Should contain signals.js dependency
-        assert "signals.js (dependency)" in js
-
-        # Should contain the bar modules
-        assert "dazzle-bar/runtime.js" in js
-        assert "dazzle-bar/bar.js" in js
-        assert "dazzle-bar/index.js" in js
-
-        # Should contain key functions (with exports stripped)
-        assert "function createSignal" in js
-        assert "function initDazzleBar" in js
-        assert "const DazzleRuntime" in js
-
-        # Should NOT contain import statements (stripped)
-        assert "import { createSignal }" not in js
-        assert "import { createEffect }" not in js
-
-    def test_dazzle_bar_bundle_size(self) -> None:
-        """Test that the bundle is within reasonable size."""
-        from dazzle_dnr_ui.runtime.js_loader import get_dazzle_bar_js
-
-        js = get_dazzle_bar_js()
-
-        # Bundle should be between 20KB and 100KB
-        assert 20000 < len(js) < 100000, f"Bundle size {len(js)} bytes is out of expected range"
-
-
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestDevModeDisabled:
     """Test that control plane endpoints are not available when dev mode is disabled."""

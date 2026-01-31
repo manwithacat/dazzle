@@ -12,8 +12,11 @@ import socketserver
 from pathlib import Path
 from typing import Any
 
-from dazzle_dnr_ui.runtime.js_generator import JSGenerator
 from dazzle_dnr_ui.specs import UISpec
+
+# JSGenerator was removed in the HTMX migration.
+# Dev server now uses template rendering.
+JSGenerator = None  # type: ignore
 
 # =============================================================================
 # Request Handler

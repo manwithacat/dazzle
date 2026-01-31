@@ -1,32 +1,25 @@
 """
 DNR-UI Runtime
 
-Native UI runtime implementation (pure JavaScript + signals).
+Server-rendered UI runtime using Jinja2 templates, HTMX, and Alpine.js.
 
 This module provides:
-- JavaScript generator (UISpec -> pure JS)
-- Vite bundler (UISpec -> ES module Vite project)
+- Template renderer (AppSpec -> Jinja2 -> HTML)
+- Template context models (PageContext, TableContext, etc.)
+- Page routes for server-rendered pages
+- Static preview generator
 - Development server with hot reload
-- DOM rendering engine (built into runtime)
-- Signals-based state management (built into runtime)
+- HTMX fragment endpoints for dynamic interactions
 
 Example usage:
-    >>> from dazzle_dnr_ui.specs import UISpec
-    >>> from dazzle_dnr_ui.runtime import generate_js_app, run_dev_server
+    >>> from dazzle_dnr_ui.runtime import run_combined_server
     >>>
-    >>> # Create spec (from DSL conversion or manual)
-    >>> spec = UISpec(name="my_app", ...)
+    >>> # Run combined server (backend + template-rendered frontend)
+    >>> run_combined_server(backend_spec, ui_spec, appspec=appspec)
     >>>
-    >>> # Generate static files (single HTML or split)
-    >>> generate_js_app(spec, "output/")
-    >>>
-    >>> # Generate Vite project (production-ready bundling)
-    >>> from dazzle_dnr_ui.runtime import generate_vite_app
-    >>> generate_vite_app(spec, "vite-output/")
-    >>> # Then: cd vite-output && npm install && npm run dev
-    >>>
-    >>> # Or run development server
-    >>> run_dev_server(spec, port=3000)
+    >>> # Generate static preview files
+    >>> from dazzle_dnr_ui.runtime.static_preview import generate_preview_files
+    >>> generate_preview_files(appspec, "preview/")
 """
 
 from dazzle_dnr_ui.runtime.combined_server import (
@@ -49,46 +42,38 @@ from dazzle_dnr_ui.runtime.docker_runner import (
     run_in_docker,
     stop_docker_container,
 )
-from dazzle_dnr_ui.runtime.js_generator import (
-    JSGenerator,
-    generate_js_app,
-    generate_single_html,
-    get_runtime_js,
-)
-from dazzle_dnr_ui.runtime.js_loader import (
-    generate_esm_bundle,
-    generate_iife_bundle,
-    load_js_module,
-    load_js_modules,
-)
 from dazzle_dnr_ui.runtime.realtime_client import (
     generate_realtime_init_js,
     get_realtime_client_js,
 )
-from dazzle_dnr_ui.runtime.vite_generator import (
-    ViteGenerator,
-    generate_es_modules,
-    generate_vite_app,
+from dazzle_dnr_ui.runtime.template_context import (
+    ColumnContext,
+    DetailContext,
+    FieldContext,
+    FormContext,
+    NavItemContext,
+    PageContext,
+    TableContext,
+)
+from dazzle_dnr_ui.runtime.template_renderer import (
+    render_fragment,
+    render_page,
 )
 
 __all__ = [
-    # JavaScript generator (single file / split)
-    "JSGenerator",
-    "generate_js_app",
-    "generate_single_html",
-    "get_runtime_js",
-    # JavaScript loader (modular JS files)
-    "load_js_module",
-    "load_js_modules",
-    "generate_iife_bundle",
-    "generate_esm_bundle",
+    # Template rendering
+    "render_page",
+    "render_fragment",
+    "PageContext",
+    "TableContext",
+    "FormContext",
+    "DetailContext",
+    "ColumnContext",
+    "FieldContext",
+    "NavItemContext",
     # Realtime client
     "get_realtime_client_js",
     "generate_realtime_init_js",
-    # Vite generator (ES modules / bundled)
-    "ViteGenerator",
-    "generate_vite_app",
-    "generate_es_modules",
     # Development server
     "DNRDevServer",
     "run_dev_server",

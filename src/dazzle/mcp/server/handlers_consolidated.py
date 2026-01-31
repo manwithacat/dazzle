@@ -83,6 +83,10 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
         return lint_project(project_path, arguments)
     elif operation == "get_spec":
         return get_dsl_spec_handler(project_path, arguments)
+    elif operation == "fidelity":
+        from .handlers.fidelity import score_fidelity_handler
+
+        return score_fidelity_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown DSL operation: {operation}"})
 

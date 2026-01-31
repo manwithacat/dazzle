@@ -230,7 +230,26 @@ line-length = 100
 target-version = "py311"
 src = ["src"]
 # Exclude bundled examples from linting (they may have auto-generated code)
-exclude = ["src/dazzle/examples/*"]
+exclude = [
+    "src/dazzle/examples/*",
+    # Third-party packages accidentally installed into src/
+    "src/PIL/",
+    "src/contourpy/",
+    "src/cycler/",
+    "src/dateutil/",
+    "src/fontTools/",
+    "src/kiwisolver/",
+    "src/matplotlib/",
+    "src/mpl_toolkits/",
+    "src/numpy/",
+    "src/packaging/",
+    "src/pyparsing/",
+    "src/share/",
+    "src/bin/",
+    "src/*.dist-info/",
+    "src/six.py",
+    "src/pylab.py",
+]
 
 [tool.ruff.lint]
 select = [

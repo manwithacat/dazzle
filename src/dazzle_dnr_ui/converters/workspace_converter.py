@@ -6,6 +6,7 @@ leveraging the existing layout engine where possible.
 """
 
 from dazzle.core import ir
+from dazzle.core.strings import to_api_plural
 from dazzle_dnr_ui.specs import (
     AppShellLayout,
     RouteSpec,
@@ -114,11 +115,94 @@ def _infer_layout_from_workspace(
         )
 
 
+def _find_entity_by_name(
+    name: str,
+    entities: list[ir.EntitySpec],
+) -> ir.EntitySpec | None:
+    """Find an entity by name (case-insensitive)."""
+    for entity in entities:
+        if entity.name.lower() == name.lower():
+            return entity
+    return None
+
+
+def _generate_kanban_route(
+    region: ir.WorkspaceRegion,
+    entity: ir.EntitySpec,
+    workspace_prefix: str,
+) -> RouteSpec | None:
+    """
+    Generate a kanban board route for a workspace region.
+
+    Args:
+        region: Workspace region with display=kanban
+        entity: The entity to display on the board
+        workspace_prefix: URL prefix for this workspace
+
+    Returns:
+        RouteSpec with KanbanBoard component and metadata, or None if not possible
+    """
+    group_by = region.group_by
+    if not group_by:
+        return None
+
+    columns: list[str] = []
+    allowed_transitions: dict[str, list[str]] | None = None
+
+    # Check if group_by matches the state machine status field
+    if entity.state_machine and entity.state_machine.status_field == group_by:
+        columns = list(entity.state_machine.states)
+        allowed_transitions = {
+            state: sorted(entity.state_machine.get_allowed_targets(state)) for state in columns
+        }
+    else:
+        # Look for an enum field matching group_by
+        for field in entity.fields:
+            if field.name == group_by and field.type and field.type.enum_values:
+                columns = list(field.type.enum_values)
+                break
+
+    if not columns:
+        return None
+
+    # Build card fields: first 4 non-pk, non-group_by fields
+    card_fields: list[dict[str, str]] = []
+    for field in entity.fields:
+        if field.is_primary_key or field.name == group_by:
+            continue
+        if field.name in ("created_at", "updated_at"):
+            continue
+        label = field.name.replace("_", " ").title()
+        card_fields.append({"key": field.name, "label": label})
+        if len(card_fields) >= 4:
+            break
+
+    entity_lower = entity.name.lower()
+    api_endpoint = f"/api/{to_api_plural(entity.name)}"
+
+    metadata = {
+        "entityName": entity.name,
+        "groupByField": group_by,
+        "columns": columns,
+        "allowedTransitions": allowed_transitions,
+        "cardFields": card_fields,
+        "apiEndpoint": api_endpoint,
+    }
+
+    return RouteSpec(
+        path=f"{workspace_prefix}/{entity_lower}/board",
+        component="KanbanBoard",
+        title=f"{entity.name} Board",
+        metadata=metadata,
+    )
+
+
 def _generate_routes_from_surfaces(
     workspace: ir.WorkspaceSpec,
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
     is_primary: bool = True,
+    entities: list[ir.EntitySpec] | None = None,
 ) -> list[RouteSpec]:
     """
     Generate routes for workspace based on available surfaces.
@@ -151,6 +235,30 @@ def _generate_routes_from_surfaces(
         for surface in surfaces:
             if surface.entity_ref:
                 workspace_entities.add(surface.entity_ref)
+
+    # Generate kanban routes for regions with display=kanban
+    kanban_is_first = False
+    if entities:
+        for idx, region in enumerate(workspace.regions):
+            if region.display == ir.DisplayMode.KANBAN and region.source:
+                entity = _find_entity_by_name(region.source, entities)
+                if entity:
+                    kanban_route = _generate_kanban_route(region, entity, workspace_prefix)
+                    if kanban_route:
+                        routes.append(kanban_route)
+                        if idx == 0:
+                            kanban_is_first = True
+
+    # If kanban is the first region in a primary workspace, add it as root route too
+    if kanban_is_first and routes:
+        root_path = workspace_prefix if workspace_prefix else "/"
+        root_kanban = RouteSpec(
+            path=root_path,
+            component=routes[0].component,
+            title=routes[0].title,
+            metadata=routes[0].metadata,
+        )
+        routes.insert(0, root_kanban)
 
     # Generate routes for each entity's surfaces
     # v0.14.2: Only include surfaces for entities used in this workspace
@@ -265,6 +373,7 @@ def convert_workspace(
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
     is_primary: bool = True,
+    entities: list[ir.EntitySpec] | None = None,
 ) -> WorkspaceSpec:
     """
     Convert a Dazzle IR WorkspaceSpec to DNR UISpec WorkspaceSpec.
@@ -274,6 +383,7 @@ def convert_workspace(
         surfaces: List of all surfaces in the app
         surface_component_map: Mapping of surface names to component names
         is_primary: If True, this workspace gets the root "/" route
+        entities: List of all entities in the app (for kanban route generation)
 
     Returns:
         DNR UISpec workspace specification
@@ -282,7 +392,13 @@ def convert_workspace(
     layout = _infer_layout_from_workspace(workspace, surfaces, surface_component_map)
 
     # Generate routes from surfaces
-    routes = _generate_routes_from_surfaces(workspace, surfaces, surface_component_map, is_primary)
+    routes = _generate_routes_from_surfaces(
+        workspace,
+        surfaces,
+        surface_component_map,
+        is_primary,
+        entities=entities,
+    )
 
     # Extract persona from UX spec if available
     persona = None
@@ -315,6 +431,7 @@ def convert_workspaces(
     workspaces: list[ir.WorkspaceSpec],
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
+    entities: list[ir.EntitySpec] | None = None,
 ) -> list[WorkspaceSpec]:
     """
     Convert a list of Dazzle IR workspaces to DNR UISpec workspaces.
@@ -323,13 +440,20 @@ def convert_workspaces(
         workspaces: List of Dazzle IR workspace specifications
         surfaces: List of all surfaces in the app
         surface_component_map: Mapping of surface names to component names
+        entities: List of all entities in the app (for kanban route generation)
 
     Returns:
         List of DNR UISpec workspace specifications
     """
     # First workspace is primary (gets "/" route), others get workspace-prefixed routes
     return [
-        convert_workspace(w, surfaces, surface_component_map, is_primary=(i == 0))
+        convert_workspace(
+            w,
+            surfaces,
+            surface_component_map,
+            is_primary=(i == 0),
+            entities=entities,
+        )
         for i, w in enumerate(workspaces)
     ]
 
