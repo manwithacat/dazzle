@@ -74,3 +74,24 @@ site/
 
 # Generated API reference docs (built in CI)
 docs/api-reference/
+
+# Third-party packages accidentally installed into src/
+src/PIL/
+src/bin/
+src/share/
+src/contourpy*/
+src/cycler*/
+src/dateutil/
+src/fontTools/
+src/fonttools*/
+src/kiwisolver*/
+src/matplotlib*/
+src/mpl_toolkits/
+src/numpy*/
+src/packaging*/
+src/pyparsing*/
+src/pillow*/
+src/python_dateutil*/
+src/six*/
+src/pylab.py
+src/*.dist-info/
