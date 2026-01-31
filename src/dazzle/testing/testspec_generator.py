@@ -624,6 +624,9 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
 
     # Generate tests for each explicit transition
     for transition in sm.transitions:
+        # Skip transitions with role guards — E2E tests have no auth context
+        if any(g.requires_role for g in transition.guards):
+            continue
         if transition.is_wildcard:
             # For wildcard transitions, pick first non-target state as example
             example_states = [s for s in sm.states if s != transition.to_state]

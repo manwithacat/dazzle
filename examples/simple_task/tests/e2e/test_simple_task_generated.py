@@ -7,8 +7,8 @@ This module uses the console logging infrastructure from conftest.py:
 - page_diagnostics: Captures all browser console output
 - Errors are reported at the end of each test
 
-Test Count: 33
-- High Priority: 12
+Test Count: 32
+- High Priority: 11
 - Medium Priority: 15
 - Low Priority: 6
 """
@@ -407,43 +407,6 @@ def test_Task_transition_review_to_in_progress(
     page.wait_for_load_state("networkidle")
 
     # Assert transition to 'in_progress' succeeded
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.state_machine
-@pytest.mark.transition
-@pytest.mark.task
-def test_Task_transition_done_to_todo(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Valid transition: Task from 'done' to 'todo'
-
-    Entity: Task
-    Tags: state_machine, transition, task
-    """
-    # Execute flow steps
-    # Navigate to Task list
-    page.goto(f"{base_url}/task")
-    page.wait_for_load_state("networkidle")
-
-    # Select Task in state 'done'
-    page.locator('[data-dazzle-row="Task"], tbody tr').click()
-    page.wait_for_load_state("networkidle")
-
-    # Trigger transition to 'todo'
-    page.locator(
-        '[data-dazzle-action="Task.transition.todo"], [data-dazzle-action="transition.todo"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert transition to 'todo' succeeded
 
     # Check for console errors after test
     if page_diagnostics.has_errors():
