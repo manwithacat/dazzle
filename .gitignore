@@ -92,6 +92,7 @@ src/packaging*/
 src/pyparsing*/
 src/pillow*/
 src/python_dateutil*/
-src/six*/
+src/six.py
+src/six-*.dist-info/
 src/pylab.py
 src/*.dist-info/
