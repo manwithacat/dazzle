@@ -70,45 +70,39 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 
 See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
-## What's New in v0.5
+## Current State (v0.19)
 
-### TigerBeetle Ledgers
-Double-entry accounting with [TigerBeetle](https://tigerbeetle.com/) integration:
+The DNR frontend has migrated from a custom signals-based JS runtime to **server-rendered HTMX templates** with Alpine.js for ephemeral client state. This gives us a zero-build-step UI with declarative interactions and no node_modules.
 
-```dsl
-ledger CustomerWallet "Customer Wallet":
-  account_code: 1001
-  ledger_id: 1
-  account_type: asset
-  currency: GBP
-  flags: debits_must_not_exceed_credits
+Recent additions:
+- **HTMX + DaisyUI frontend** — server-rendered pages, HTMX partial swaps
+- **Alpine.js interaction patterns** — inline editing, bulk actions, slide-over panels, debounced search
+- **Template fragment system** — composable HTML partials for HTMX swap targets
+- **TigerBeetle ledgers** — double-entry accounting with typed transactions
+- **Messaging channels** — email, queue, and stream integrations
+- **MCP server** — Claude Code integration with 17 consolidated tools
 
-transaction RecordPayment "Record Payment":
-  transfer revenue:
-    debit: CustomerWallet
-    credit: Revenue
-    amount: payment.amount
-    code: 1
-  idempotency_key: payment.id
+### Roadmap
+
+Frontend UX is the dominant focus area. Next up:
+- `search_select` fragment for relationship field lookups
+- `FragmentContext` base model to standardize fragment rendering inputs
+- Richer workspace layout patterns (dual-pane, monitor wall)
+
+## Quick Start
+
+```bash
+# Navigate to any DAZZLE project
+cd examples/simple_task
+
+# Start the app
+dazzle dev
+
+# Open http://localhost:3000 for the UI
+# Open http://localhost:8000/docs for the API
 ```
 
-### Also in v0.5
-- **Messaging Channels** - Email, queue, and stream integrations with typed messages
-- **UX Semantic Layer** - Attention signals, persona-specific views
-- **Personas & Scenarios** - Test different user archetypes with demo data
-- **MCP Server** - Claude Code integration with 17 consolidated tools
-
-## Version Status
-
-| Version | Features | Status |
-|---------|----------|--------|
-| **v0.5.x** (Current) | TigerBeetle ledgers, messaging, UX layer | Active development |
-| v0.19.x | HTMX migration, server-rendered templates, Alpine.js patterns | Active development |
-| v0.4.x | DNR + Ejection + MCP | Stable |
-| v0.1.x-v0.3.x | Legacy versions | Deprecated |
-
-- **DNR** is for rapid iteration - run your DSL directly without code generation
-- **Ejection** generates standalone FastAPI + React when you need production deployment
+That's it. No code generation, no build step—your DSL runs directly.
 
 ## The DSL
 
@@ -134,31 +128,16 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-## Quick Start
-
-```bash
-# Navigate to any DAZZLE project
-cd examples/simple_task
-
-# Start the app
-dazzle dev
-
-# Open http://localhost:3000 for the UI
-# Open http://localhost:8000/docs for the API
-```
-
-That's it. No code generation, no build step—your DSL runs directly.
-
 ## Dazzle Native Runtime (DNR)
 
 DNR is the primary way to run DAZZLE applications:
 
-- **FastAPI Backend**: Auto-generated CRUD endpoints with SQLite persistence
+- **FastAPI backend**: Auto-generated CRUD endpoints with SQLite persistence
 - **HTMX + DaisyUI frontend**: Server-rendered pages with declarative interactions
 - **Alpine.js interactions**: Client-side state for toggles, selections, and transitions
 - **Zero build toolchain**: Three CDN script tags, no node_modules
-- **Hot Reload**: Changes to DSL files reflect immediately
-- **OpenAPI Docs**: Automatic Swagger UI at `/docs`
+- **Hot reload**: Changes to DSL files reflect immediately
+- **OpenAPI docs**: Automatic Swagger UI at `/docs`
 
 ```bash
 dazzle dev                       # Start the app
