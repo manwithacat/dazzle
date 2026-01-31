@@ -82,9 +82,9 @@ def test_User_create_valid(
         str(fixtures["User_valid"]["department"])
     )
 
-    # Click create button
+    # Click save button
     page.locator(
-        '[data-dazzle-action="User.create"], [data-dazzle-action="User.create"], button[type="submit"]'
+        '[data-dazzle-action="User.save"], [data-dazzle-action="User.create"], button[type="submit"]'
     ).click()
     page.wait_for_load_state("networkidle")
 
@@ -155,9 +155,9 @@ def test_Task_create_valid(
         str(fixtures["Task_valid"]["due_date"])
     )
 
-    # Click create button
+    # Click save button
     page.locator(
-        '[data-dazzle-action="Task.create"], [data-dazzle-action="Task.create"], button[type="submit"]'
+        '[data-dazzle-action="Task.save"], [data-dazzle-action="Task.create"], button[type="submit"]'
     ).click()
     page.wait_for_load_state("networkidle")
 
@@ -1234,11 +1234,11 @@ def test_Task_transition_invalid_review_to_todo(
 @pytest.mark.state_machine
 @pytest.mark.invalid_transition
 @pytest.mark.task
-def test_Task_transition_invalid_done_to_review(
+def test_Task_transition_invalid_done_to_in_progress(
     page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
 ) -> None:
     """
-    Invalid transition: Task cannot go from 'done' to 'review'
+    Invalid transition: Task cannot go from 'done' to 'in_progress'
 
     Entity: Task
     Tags: state_machine, invalid_transition, task
@@ -1252,9 +1252,9 @@ def test_Task_transition_invalid_done_to_review(
     page.locator('[data-dazzle-row="Task"], tbody tr').click()
     page.wait_for_load_state("networkidle")
 
-    # Attempt invalid transition to 'review'
+    # Attempt invalid transition to 'in_progress'
     page.locator(
-        '[data-dazzle-action="Task.transition.review"], [data-dazzle-action="transition.review"]'
+        '[data-dazzle-action="Task.transition.in_progress"], [data-dazzle-action="transition.in_progress"]'
     ).click()
     page.wait_for_load_state("networkidle")
 

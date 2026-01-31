@@ -73,6 +73,14 @@ class FormContext(BaseModel):
     initial_values: dict[str, Any] = Field(default_factory=dict)
 
 
+class TransitionContext(BaseModel):
+    """Context for a state machine transition button."""
+
+    to_state: str
+    label: str
+    api_url: str = ""
+
+
 class DetailContext(BaseModel):
     """Context for rendering a detail/view page."""
 
@@ -83,6 +91,8 @@ class DetailContext(BaseModel):
     edit_url: str | None = None
     delete_url: str | None = None
     back_url: str = "/"
+    transitions: list[TransitionContext] = Field(default_factory=list)
+    status_field: str = "status"
 
 
 class PageContext(BaseModel):

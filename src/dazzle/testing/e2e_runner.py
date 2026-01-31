@@ -349,6 +349,7 @@ class E2ERunner:
             def __init__(self, base_url: str, api_url: str):
                 self.base_url = base_url
                 self.api_url = api_url
+                self._fixture_ids: dict[str, str] = {}
 
             def reset_sync(self) -> None:
                 """Reset test data by calling /__test__/reset endpoint."""
@@ -377,6 +378,7 @@ class E2ERunner:
                                 "id": f.id,
                                 "entity": f.entity,
                                 "data": dict(f.data),
+                                "refs": dict(f.refs) if f.refs else None,
                             }
                             for f in fixtures
                         ]
@@ -389,7 +391,17 @@ class E2ERunner:
                         headers={"Content-Type": "application/json"},
                     )
                     with urllib.request.urlopen(req, timeout=10) as response:
-                        response.read()
+                        result = json.loads(response.read())
+                    # Store created entity IDs back into fixture data
+                    # so _resolve_step_value can find e.g. User_valid.id
+                    if "created" in result:
+                        for f in fixtures:
+                            if f.id in result["created"]:
+                                created = result["created"][f.id]
+                                if "id" in created and "id" not in f.data:
+                                    # FixtureSpec is frozen, so update
+                                    # the lookup dict directly
+                                    self._fixture_ids[f.id] = created["id"]
                 except Exception as e:
                     # Log but don't fail - test mode might not be enabled
                     print(f"Warning: Could not seed fixtures: {e}")
@@ -477,7 +489,14 @@ class E2ERunner:
                     # Execute steps
                     for step in flow.steps:
                         try:
-                            _execute_step_sync(page, step, adapter, fixtures, options.timeout)
+                            _execute_step_sync(
+                                page,
+                                step,
+                                adapter,
+                                fixtures,
+                                options.timeout,
+                                adapter._fixture_ids,
+                            )
                         except Exception as e:
                             flow_result.status = "failed"
                             flow_result.error = f"Step {step.kind.value}: {e}"

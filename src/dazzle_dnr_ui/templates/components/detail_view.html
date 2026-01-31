@@ -24,6 +24,23 @@
     </div>
   </div>
 
+  {# Transition buttons (state machine) #}
+  {% if detail.transitions %}
+  <div class="flex gap-2 mb-4" data-dazzle-transitions="{{ detail.entity_name }}">
+    {% for transition in detail.transitions %}
+    <button class="btn btn-outline btn-sm"
+            data-dazzle-action="{{ detail.entity_name }}.transition.{{ transition.to_state }}"
+            hx-put="{{ transition.api_url }}"
+            hx-vals='{"{{ detail.status_field }}": "{{ transition.to_state }}"}'
+            hx-ext="json-enc"
+            hx-target="body"
+            hx-swap="innerHTML">
+      {{ transition.label }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {# Detail card #}
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">

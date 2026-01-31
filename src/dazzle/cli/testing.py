@@ -472,6 +472,7 @@ def _execute_step_sync(
     adapter: Any,
     fixtures: dict[str, Any],
     timeout: int,
+    created_ids: dict[str, str] | None = None,
 ) -> None:
     """Execute a single flow step synchronously."""
     from dazzle.core.ir import FlowStepKind
@@ -490,7 +491,7 @@ def _execute_step_sync(
             raise ValueError("Fill step requires target")
         # Build selector from semantic target
         selector = _build_selector(step.target)
-        value = _resolve_step_value(step, fixtures)
+        value = _resolve_step_value(step, fixtures, created_ids)
 
         # Use appropriate method based on field type
         field_type = getattr(step, "field_type", None)
@@ -582,7 +583,11 @@ def _build_selector(target: str) -> str:
         return target
 
 
-def _resolve_step_value(step: Any, fixtures: dict[str, Any]) -> str | int | float | bool:
+def _resolve_step_value(
+    step: Any,
+    fixtures: dict[str, Any],
+    created_ids: dict[str, str] | None = None,
+) -> str | int | float | bool:
     """Resolve the value for a fill step."""
     if step.value is not None:
         value: str | int | float | bool = step.value
@@ -592,6 +597,9 @@ def _resolve_step_value(step: Any, fixtures: dict[str, Any]) -> str | int | floa
         parts = step.fixture_ref.split(".")
         if len(parts) == 2:
             fixture_id, field_name = parts
+            # Check created IDs first (for .id lookups after seeding)
+            if field_name == "id" and created_ids and fixture_id in created_ids:
+                return created_ids[fixture_id]
             if fixture_id in fixtures:
                 fixture = fixtures[fixture_id]
                 if field_name in fixture.data:

@@ -21,6 +21,7 @@ from dazzle_dnr_ui.runtime.template_context import (
     NavItemContext,
     PageContext,
     TableContext,
+    TransitionContext,
 )
 
 if TYPE_CHECKING:
@@ -236,6 +237,24 @@ def compile_surface_to_context(
 
     elif surface.mode == SurfaceMode.VIEW:
         fields = _build_form_fields(surface, entity)
+        # Build transition contexts from entity state machine
+        transitions: list[TransitionContext] = []
+        status_field = "status"
+        if entity and entity.state_machine:
+            sm = entity.state_machine
+            status_field = sm.status_field if hasattr(sm, "status_field") else "status"
+            # Collect all unique target states from transitions
+            seen_targets: set[str] = set()
+            for t in sm.transitions:
+                if t.to_state not in seen_targets:
+                    seen_targets.add(t.to_state)
+                    transitions.append(
+                        TransitionContext(
+                            to_state=t.to_state,
+                            label=t.to_state.replace("_", " ").title(),
+                            api_url=f"{api_endpoint}/{{id}}",
+                        )
+                    )
         return PageContext(
             page_title=surface.title or f"{entity_name} Details",
             template="components/detail_view.html",
@@ -246,6 +265,8 @@ def compile_surface_to_context(
                 edit_url=f"/{entity_slug}/{{id}}/edit",
                 delete_url=f"{api_endpoint}/{{id}}",
                 back_url=f"/{entity_slug}",
+                transitions=transitions,
+                status_field=status_field,
             ),
         )
 

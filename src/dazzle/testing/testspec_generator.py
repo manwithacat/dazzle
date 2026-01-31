@@ -92,11 +92,15 @@ def generate_entity_fixtures(entity: EntitySpec) -> list[FixtureSpec]:
 
     # Valid fixture - all required fields
     valid_data: dict[str, str | int | float | bool] = {}
+    valid_refs: dict[str, str] = {}
     for field in entity.fields:
         if field.is_primary_key:
             continue  # Skip auto-generated PKs
         if field.type.kind == FieldTypeKind.REF:
-            continue  # Skip refs, handled separately
+            # Map ref fields to their target entity's fixture
+            if field.type.ref_entity:
+                valid_refs[field.name] = f"{field.type.ref_entity}_valid"
+            continue
         value = _generate_field_value(field)
         if value is not None:
             valid_data[field.name] = value
@@ -106,6 +110,7 @@ def generate_entity_fixtures(entity: EntitySpec) -> list[FixtureSpec]:
             id=f"{entity.name}_valid",
             entity=entity.name,
             data=valid_data,
+            refs=valid_refs,
             description=f"Valid {entity.name} fixture with all required fields",
         )
     )
@@ -124,6 +129,7 @@ def generate_entity_fixtures(entity: EntitySpec) -> list[FixtureSpec]:
             id=f"{entity.name}_updated",
             entity=entity.name,
             data=update_data,
+            refs=valid_refs,  # Same refs as valid fixture
             description=f"Updated {entity.name} fixture for update tests",
         )
     )
@@ -255,13 +261,13 @@ def generate_create_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
             )
         )
 
-    # Submit and assert (use action:Entity.create for create forms)
+    # Submit and assert (use action:Entity.save to match form template)
     steps.extend(
         [
             FlowStep(
                 kind=FlowStepKind.CLICK,
-                target=f"action:{entity.name}.create",
-                description="Click create button",
+                target=f"action:{entity.name}.save",
+                description="Click save button",
             ),
             FlowStep(
                 kind=FlowStepKind.ASSERT,
