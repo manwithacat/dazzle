@@ -115,6 +115,23 @@ def generate_entity_fixtures(entity: EntitySpec) -> list[FixtureSpec]:
         )
     )
 
+    # State-specific fixtures for entities with state machines
+    if entity.state_machine:
+        sm = entity.state_machine
+        status_field = sm.status_field if hasattr(sm, "status_field") else "status"
+        for state in sm.states:
+            state_data = valid_data.copy()
+            state_data[status_field] = state
+            fixtures.append(
+                FixtureSpec(
+                    id=f"{entity.name}_state_{state}",
+                    entity=entity.name,
+                    data=state_data,
+                    refs=valid_refs,
+                    description=f"{entity.name} fixture in '{state}' state",
+                )
+            )
+
     # Additional fixture for update tests
     update_data = valid_data.copy()
     for field in entity.fields:
@@ -662,7 +679,9 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
                     id=flow_id,
                     description=f"Valid transition: {entity.name} from '{from_state}' to '{transition.to_state}'",
                     priority=FlowPriority.HIGH,
-                    preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                    preconditions=FlowPrecondition(
+                        fixtures=[f"{entity.name}_state_{from_state}"],
+                    ),
                     steps=steps,
                     tags=["state_machine", "transition", entity.name.lower()],
                     entity=entity.name,
@@ -709,7 +728,9 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
                     id=flow_id,
                     description=f"Invalid transition: {entity.name} cannot go from '{from_state}' to '{invalid_target}'",
                     priority=FlowPriority.MEDIUM,
-                    preconditions=FlowPrecondition(fixtures=[f"{entity.name}_valid"]),
+                    preconditions=FlowPrecondition(
+                        fixtures=[f"{entity.name}_state_{from_state}"],
+                    ),
                     steps=steps,
                     tags=["state_machine", "invalid_transition", entity.name.lower()],
                     entity=entity.name,

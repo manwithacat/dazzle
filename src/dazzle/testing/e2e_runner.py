@@ -341,8 +341,8 @@ class E2ERunner:
         # Build fixtures dict for test execution
         fixtures = {f.id: f for f in testspec.fixtures}
 
-        # Import the step execution helper
-        from dazzle.cli.testing import _execute_step_sync
+        # Import the step execution helpers
+        from dazzle.cli.testing import _execute_step_sync, _resolve_fixture_deps
 
         # Create a simple adapter for URL resolution
         class SimpleAdapter:
@@ -471,11 +471,10 @@ class E2ERunner:
                     # Apply preconditions
                     if flow.preconditions:
                         if flow.preconditions.fixtures:
-                            fixtures_to_seed = [
-                                fixtures[fid]
-                                for fid in flow.preconditions.fixtures
-                                if fid in fixtures
-                            ]
+                            fixtures_to_seed = _resolve_fixture_deps(
+                                flow.preconditions.fixtures,
+                                fixtures,
+                            )
                             if fixtures_to_seed:
                                 adapter.seed_sync(fixtures_to_seed)
 

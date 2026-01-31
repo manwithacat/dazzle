@@ -394,11 +394,10 @@ def test_run(
                 # Apply preconditions
                 if flow_spec.preconditions:
                     if flow_spec.preconditions.fixtures:
-                        fixtures_to_seed = [
-                            fixtures[fid]
-                            for fid in flow_spec.preconditions.fixtures
-                            if fid in fixtures
-                        ]
+                        fixtures_to_seed = _resolve_fixture_deps(
+                            flow_spec.preconditions.fixtures,
+                            fixtures,
+                        )
                         if fixtures_to_seed:
                             adapter.seed_sync(fixtures_to_seed)
 
@@ -474,6 +473,30 @@ def test_run(
         raise typer.Exit(code=1)
 
 
+def _resolve_fixture_deps(
+    fixture_ids: list[str],
+    all_fixtures: dict[str, Any],
+) -> list[Any]:
+    """Resolve fixture dependencies, returning ordered list with deps first."""
+    resolved: list[str] = []
+    seen: set[str] = set()
+
+    def _add(fid: str) -> None:
+        if fid in seen or fid not in all_fixtures:
+            return
+        seen.add(fid)
+        fixture = all_fixtures[fid]
+        # Add ref dependencies first
+        for ref_fixture_id in getattr(fixture, "refs", {}).values():
+            _add(ref_fixture_id)
+        resolved.append(fid)
+
+    for fid in fixture_ids:
+        _add(fid)
+
+    return [all_fixtures[fid] for fid in resolved]
+
+
 def _execute_step_sync(
     page: Any,
     step: Any,
@@ -503,9 +526,17 @@ def _execute_step_sync(
 
         # Use appropriate method based on field type
         field_type = getattr(step, "field_type", None)
-        if field_type in ("enum", "ref"):
-            # Select/dropdown fields use select_option
+        if field_type == "enum":
+            # Enum/dropdown fields use select_option
             page.locator(selector).select_option(str(value))
+        elif field_type == "ref":
+            # Ref fields may be <select> or <input> depending on template
+            el = page.locator(selector).first
+            tag = el.evaluate("e => e.tagName.toLowerCase()")
+            if tag == "select":
+                el.select_option(str(value))
+            else:
+                el.fill(str(value))
         elif field_type == "bool":
             # Checkbox fields use set_checked
             page.locator(selector).set_checked(bool(value))
