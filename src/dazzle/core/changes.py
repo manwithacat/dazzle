@@ -95,15 +95,18 @@ class ChangeSet:
 
         if self.entities_added:
             lines.append(
-                f"  Entities: +{len(self.entities_added)} ({', '.join(sorted(self.entities_added))})"
+                f"  Entities: +{len(self.entities_added)}"
+                f" ({', '.join(sorted(self.entities_added))})"
             )
         if self.entities_removed:
             lines.append(
-                f"  Entities: -{len(self.entities_removed)} ({', '.join(sorted(self.entities_removed))})"
+                f"  Entities: -{len(self.entities_removed)} "
+                f"({', '.join(sorted(self.entities_removed))})"
             )
         if self.entities_modified:
             lines.append(
-                f"  Entities: ~{len(self.entities_modified)} ({', '.join(sorted(self.entities_modified))})"
+                f"  Entities: ~{len(self.entities_modified)} "
+                f"({', '.join(sorted(self.entities_modified))})"
             )
 
         if self.surfaces_added:

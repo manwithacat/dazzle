@@ -96,14 +96,46 @@ def create_github_issue(
 
 
 def _fallback(title: str, body: str, repo: str) -> dict[str, Any]:
+    gh = _find_gh()
     manual_url = f"https://github.com/{repo}/issues/new"
+    if gh is None:
+        reason = (
+            "GitHub CLI (`gh`) is not installed. "
+            "Install it from https://cli.github.com/ then run `gh auth login`."
+        )
+    else:
+        reason = (
+            "GitHub CLI is installed but not authenticated. "
+            "Run `gh auth login` to authenticate, then retry."
+        )
     return {
         "fallback": True,
         "manual_url": manual_url,
         "title": title,
         "body": body,
-        "message": (
-            "GitHub CLI not available or not authenticated. "
-            f"Create the issue manually at {manual_url}"
-        ),
+        "message": f"{reason} Or create the issue manually at {manual_url}",
+    }
+
+
+def gh_auth_guidance() -> dict[str, Any]:
+    """Return structured guidance for authenticating the GitHub CLI.
+
+    Intended for LLM agents to relay instructions to users.
+    """
+    gh = _find_gh()
+    installed = gh is not None
+    authenticated = _gh_available() if installed else False
+    steps: list[str] = []
+    if not installed:
+        steps.append("Install the GitHub CLI: https://cli.github.com/")
+    if not authenticated:
+        steps.append("Run `gh auth login` and follow the prompts.")
+    steps.append(
+        "Once authenticated, use `contribution(operation='create', type='bug_fix')` "
+        "or `gh issue create --repo manwithacat/dazzle` to file issues."
+    )
+    return {
+        "installed": installed,
+        "authenticated": authenticated,
+        "steps": steps,
     }

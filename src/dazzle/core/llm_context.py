@@ -398,6 +398,8 @@ When helping with this project:
 1. Check if generated code is out of sync with DSL
 2. Suggest `dazzle build --force` to regenerate
 3. Look for validation errors: `dazzle validate`
+4. If the bug is confirmed, file it on GitHub: `gh issue create --repo manwithacat/dazzle`
+   (If `gh` is not authenticated, run `gh auth login` first)
 
 ### When Generating New Code
 1. Follow DAZZLE conventions (check existing generated code)

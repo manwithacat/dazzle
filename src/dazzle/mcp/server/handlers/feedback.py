@@ -189,9 +189,20 @@ async def get_feedback_summary_handler(
             f"There are {summary['by_category']['Bug Report']} bug reports "
             "that should be prioritized."
         )
+        guidance.append(
+            "Escalate bug reports to GitHub using "
+            "`contribution(operation='create', type='bug_fix')` "
+            "or `gh issue create --repo manwithacat/dazzle`."
+        )
+
+    # Check GitHub CLI availability for workflow guidance
+    from dazzle.mcp.server.github_issues import gh_auth_guidance
+
+    gh_status = gh_auth_guidance()
 
     return {
         **summary,
         "guidance": guidance,
-        "file_location": ".dazzle/feedback/feedback.jsonl",
+        "local_log": ".dazzle/feedback/feedback.jsonl",
+        "github_issue_workflow": gh_status,
     }
