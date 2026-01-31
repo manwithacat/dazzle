@@ -269,17 +269,24 @@ jobs:
     - name: Start DNR server in test mode
       run: |
         cd examples/${{ matrix.example }}
-        python -m dazzle dnr serve --test-mode --local &
-        for i in {1..30}; do
+        python -m dazzle dnr serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dnr-server.log 2>&1 &
+        SERVER_PID=$!
+        echo "Server PID: $SERVER_PID"
+        for i in {1..45}; do
           if curl -s http://localhost:8000/health > /dev/null 2>&1; then
             echo "Server is ready"
             break
           fi
-          echo "Waiting for server... ($i/30)"
-          sleep 1
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server process died. Logs:"
+            cat /tmp/dnr-server.log
+            exit 1
+          fi
+          echo "Waiting for server... ($i/45)"
+          sleep 2
         done
-        curl -f http://localhost:8000/health
-      timeout-minutes: 2
+        curl -f http://localhost:8000/health || { echo "Health check failed. Logs:"; cat /tmp/dnr-server.log; exit 1; }
+      timeout-minutes: 3
 
     - name: Run E2E tests
       run: |
