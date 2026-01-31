@@ -52,13 +52,19 @@ async def _parse_request_body(request: Any) -> dict[str, Any]:
     HTMX forms send JSON when the json-enc extension is loaded, but
     fall back to form-urlencoded otherwise.  Accept both so the API
     works regardless of client encoding.
+
+    Empty string values are converted to None so that optional fields
+    (e.g. ref/UUID fields) pass Pydantic validation.
     """
     content_type = (request.headers.get("content-type") or "").lower()
     if "application/x-www-form-urlencoded" in content_type:
         form = await request.form()
-        return dict(form)
-    # Default: JSON (covers application/json and missing header)
-    return await request.json()
+        body = dict(form)
+    else:
+        # Default: JSON (covers application/json and missing header)
+        body = await request.json()
+    # Convert empty strings to None for optional field validation
+    return {k: (None if v == "" else v) for k, v in body.items()}
 
 
 # =============================================================================

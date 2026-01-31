@@ -327,6 +327,10 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
                 ctx.detail.edit_url = ctx.detail.edit_url.replace("{id}", path_id)
             if ctx.detail.delete_url:
                 ctx.detail.delete_url = ctx.detail.delete_url.replace("{id}", path_id)
+            # Replace {id} in transition button URLs
+            for t in ctx.detail.transitions:
+                if "{id}" in t.api_url:
+                    t.api_url = t.api_url.replace("{id}", path_id)
 
         if path_id and ctx.form and ctx.form.mode == "edit":
             fetch_url = f"{self.backend_url}{ctx.form.action_url.replace('{id}', path_id)}"

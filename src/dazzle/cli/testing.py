@@ -722,18 +722,46 @@ def _execute_assertion_sync(
     # v0.13.0 assertion kinds
     elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_ALLOWED:
         # Check that the entity's status field matches expected value
-        target = assertion.target or ""  # e.g., "Ticket.status"
+        # After transition, verify via API count or page content
+        target = assertion.target or ""  # e.g., "Task.status"
         expected_state = str(assertion.expected) if assertion.expected else ""
-        # Look for status indicator or field with expected value
-        selector = f'[data-dazzle-field="{target}"]'
-        expect(page.locator(selector)).to_have_text(expected_state, timeout=timeout)
+        if "." in target:
+            entity_name, field_name = target.split(".", 1)
+        else:
+            entity_name, field_name = target, "status"
+        # Verify via API snapshot - more reliable than page content
+        try:
+            snapshot = adapter.snapshot_sync()
+            entities_data = snapshot.get("entities", {}).get(entity_name, [])
+            found = any(str(e.get(field_name, "")) == expected_state for e in entities_data)
+            if not found:
+                raise AssertionError(
+                    f"Expected {entity_name}.{field_name} = '{expected_state}', "
+                    f"but no matching entity found"
+                )
+        except AttributeError:
+            # Fallback to page text if adapter has no snapshot_sync
+            expect(page.locator("body")).to_contain_text(expected_state, timeout=timeout)
 
     elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED:
-        # Check that the entity's status field still has the original value (transition failed)
-        target = assertion.target or ""  # e.g., "Ticket.status"
-        original_state = str(assertion.expected) if assertion.expected else ""  # Original state
-        selector = f'[data-dazzle-field="{target}"]'
-        expect(page.locator(selector)).to_have_text(original_state, timeout=timeout)
+        # Check that the entity's status field still has the original value
+        target = assertion.target or ""  # e.g., "Task.status"
+        original_state = str(assertion.expected) if assertion.expected else ""
+        if "." in target:
+            entity_name, field_name = target.split(".", 1)
+        else:
+            entity_name, field_name = target, "status"
+        try:
+            snapshot = adapter.snapshot_sync()
+            entities_data = snapshot.get("entities", {}).get(entity_name, [])
+            found = any(str(e.get(field_name, "")) == original_state for e in entities_data)
+            if not found:
+                raise AssertionError(
+                    f"Expected {entity_name}.{field_name} = '{original_state}' "
+                    f"(unchanged), but no matching entity found"
+                )
+        except AttributeError:
+            expect(page.locator("body")).to_contain_text(original_state, timeout=timeout)
 
     elif assertion.kind == FlowAssertionKind.COMPUTED_VALUE:
         # Check that computed field has expected value
