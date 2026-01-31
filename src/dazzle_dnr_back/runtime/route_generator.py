@@ -46,6 +46,21 @@ def _is_htmx_request(request: Any) -> bool:
     )
 
 
+async def _parse_request_body(request: Any) -> dict[str, Any]:
+    """Parse request body as JSON or form data.
+
+    HTMX forms send JSON when the json-enc extension is loaded, but
+    fall back to form-urlencoded otherwise.  Accept both so the API
+    works regardless of client encoding.
+    """
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        return dict(form)
+    # Default: JSON (covers application/json and missing header)
+    return await request.json()
+
+
 # =============================================================================
 # Route Handler Factory
 # =============================================================================
@@ -211,7 +226,7 @@ def create_create_handler(
             except Exception:
                 raise HTTPException(status_code=401, detail="Authentication required")
 
-        body = await request.json()
+        body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
         return result
@@ -241,7 +256,7 @@ def create_update_handler(
             except Exception:
                 raise HTTPException(status_code=401, detail="Authentication required")
 
-        body = await request.json()
+        body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
