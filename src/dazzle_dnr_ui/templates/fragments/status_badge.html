@@ -1,0 +1,6 @@
+{# Status badge fragment - expects 'value' variable in scope #}
+{% if value %}
+<span class="badge {{ value | badge_class }}">{{ value | replace("_", " ") | title }}</span>
+{% else %}
+<span class="text-base-content/30">—</span>
+{% endif %}

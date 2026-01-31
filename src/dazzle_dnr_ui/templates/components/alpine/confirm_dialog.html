@@ -1,0 +1,39 @@
+{# Alpine.js confirmation dialog component #}
+{# Usage: Include once in the page, trigger with Alpine events #}
+{# Example: <button @click="$dispatch('confirm-action', { message: 'Delete?', action: '/api/tasks/1', method: 'delete' })">Delete</button> #}
+<div x-data="{
+  show: false,
+  message: '',
+  actionUrl: '',
+  actionMethod: 'delete',
+  processing: false
+}"
+  @confirm-action.window="show = true; message = $event.detail.message; actionUrl = $event.detail.action; actionMethod = $event.detail.method || 'delete'"
+  x-show="show"
+  x-transition
+  class="fixed inset-0 z-50 flex items-center justify-center"
+  style="display: none;">
+
+  {# Backdrop #}
+  <div class="fixed inset-0 bg-black/50" @click="show = false"></div>
+
+  {# Dialog #}
+  <div class="modal-box relative z-10">
+    <h3 class="font-bold text-lg">Confirm Action</h3>
+    <p class="py-4" x-text="message"></p>
+    <div class="modal-action">
+      <button class="btn btn-ghost" @click="show = false" :disabled="processing">Cancel</button>
+      <button class="btn btn-error"
+              :disabled="processing"
+              :class="{ 'loading': processing }"
+              @click="
+                processing = true;
+                fetch(actionUrl, { method: actionMethod })
+                  .then(() => { show = false; processing = false; window.location.reload(); })
+                  .catch(() => { processing = false; })
+              ">
+        Confirm
+      </button>
+    </div>
+  </div>
+</div>

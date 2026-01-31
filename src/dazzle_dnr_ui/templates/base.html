@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ page_title | default("Dazzle App") }}{% endblock %}</title>
+
+  {# DaisyUI + Tailwind CDN #}
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  {# HTMX #}
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+
+  {# Alpine.js #}
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+
+  {# Design token CSS custom properties #}
+  <style>
+    :root {
+      {% if design_tokens %}
+      {% for key, value in design_tokens.items() %}
+      --dz-{{ key }}: {{ value }};
+      {% endfor %}
+      {% else %}
+      --dz-primary: #3b82f6;
+      --dz-secondary: #6c757d;
+      --dz-success: #28a745;
+      --dz-danger: #dc3545;
+      --dz-warning: #ffc107;
+      --dz-space-xs: 0.25rem;
+      --dz-space-sm: 0.5rem;
+      --dz-space-md: 1rem;
+      --dz-space-lg: 1.5rem;
+      --dz-space-xl: 2rem;
+      --dz-radius: 0.25rem;
+      {% endif %}
+    }
+  </style>
+
+  {# Theme CSS from existing theme system #}
+  {% if theme_css %}
+  <style>{{ theme_css }}</style>
+  {% endif %}
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="min-h-screen bg-base-200" hx-boost="true">
+  {% block body %}
+  {% endblock %}
+
+  {# Toast notifications area #}
+  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"></div>
+
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

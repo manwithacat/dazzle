@@ -1,0 +1,53 @@
+{# Detail view component - displays entity fields as a definition list #}
+{% if detail %}
+<div class="max-w-3xl">
+  {# Header with actions #}
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{{ detail.back_url }}" class="btn btn-ghost btn-sm">&larr; Back</a>
+      <h2 class="text-2xl font-bold">{{ detail.title }}</h2>
+    </div>
+    <div class="flex gap-2">
+      {% if detail.edit_url %}
+      <a href="{{ detail.edit_url }}" class="btn btn-outline btn-sm">Edit</a>
+      {% endif %}
+      {% if detail.delete_url %}
+      <button class="btn btn-error btn-outline btn-sm"
+              hx-delete="{{ detail.delete_url }}"
+              hx-confirm="Delete this {{ detail.entity_name | lower }}?"
+              hx-target="body"
+              hx-swap="innerHTML">
+        Delete
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Detail card #}
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <dl class="divide-y divide-base-200">
+        {% for field in detail.fields %}
+        {% set value = detail.item.get(field.name, "") %}
+        <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm font-medium text-base-content/70">{{ field.label }}</dt>
+          <dd class="mt-1 text-sm sm:col-span-2 sm:mt-0">
+            {% if field.type == "badge" %}
+              {% include 'fragments/status_badge.html' %}
+            {% elif field.type == "bool" or field.type == "checkbox" %}
+              {{ value | bool_icon }}
+            {% elif field.type == "date" %}
+              {{ value | dateformat }}
+            {% elif field.type == "currency" %}
+              {{ value | currency }}
+            {% else %}
+              {{ value | default("—") }}
+            {% endif %}
+          </dd>
+        </div>
+        {% endfor %}
+      </dl>
+    </div>
+  </div>
+</div>
+{% endif %}

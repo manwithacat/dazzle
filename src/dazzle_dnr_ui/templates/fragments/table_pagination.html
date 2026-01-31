@@ -1,0 +1,17 @@
+{# Pagination fragment #}
+{% if table and table.total > table.page_size %}
+<div class="flex justify-center mt-4">
+  <div class="join">
+    {% set total_pages = (table.total + table.page_size - 1) // table.page_size %}
+    {% for p in range(1, total_pages + 1) %}
+    <button class="join-item btn btn-sm {% if p == table.page %}btn-active{% endif %}"
+            hx-get="{{ table.api_endpoint }}?page={{ p }}&page_size={{ table.page_size }}"
+            hx-target="#table-body"
+            hx-swap="innerHTML"
+            hx-headers='{"Accept": "text/html"}'>
+      {{ p }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

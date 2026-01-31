@@ -1,0 +1,47 @@
+{# Filterable table component - server-rendered with HTMX search/filter/pagination #}
+{% if table %}
+<div class="space-y-4">
+  {# Header row: title + actions #}
+  <div class="flex items-center justify-between">
+    <h2 class="text-2xl font-bold">{{ table.title }}</h2>
+    <div class="flex gap-2">
+      {% if table.create_url %}
+      <a href="{{ table.create_url }}" class="btn btn-primary btn-sm">+ New {{ table.entity_name }}</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Search bar #}
+  {% if table.search_enabled %}
+  <div class="form-control">
+    <input type="text" name="search" placeholder="Search {{ table.title | lower }}..."
+           class="input input-bordered input-sm w-full max-w-xs"
+           hx-get="{{ table.api_endpoint }}"
+           hx-target="#table-body"
+           hx-trigger="keyup changed delay:300ms"
+           hx-swap="innerHTML"
+           hx-headers='{"Accept": "text/html"}' />
+  </div>
+  {% endif %}
+
+  {# Table #}
+  <div class="overflow-x-auto">
+    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}">
+      <thead>
+        <tr>
+          {% for col in table.columns %}
+          <th>{{ col.label }}</th>
+          {% endfor %}
+          <th class="w-16"></th>
+        </tr>
+      </thead>
+      <tbody id="table-body" hx-get="{{ table.api_endpoint }}" hx-trigger="load" hx-headers='{"Accept": "text/html"}'>
+        {% include 'fragments/table_rows.html' %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination #}
+  {% include 'fragments/table_pagination.html' %}
+</div>
+{% endif %}

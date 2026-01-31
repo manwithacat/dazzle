@@ -1,0 +1,56 @@
+{# Table rows fragment - swapped by HTMX on search/filter/page change #}
+{% if table and table.rows %}
+{% for item in table.rows %}
+<tr class="hover cursor-pointer"
+    {% if table.detail_url_template %}
+    hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
+    hx-push-url="true"
+    hx-target="body"
+    hx-swap="innerHTML"
+    {% endif %}>
+  {% for col in table.columns %}
+  <td>
+    {% if col.type == "badge" %}
+      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+    {% elif col.type == "bool" %}
+      {{ item[col.key] | bool_icon }}
+    {% elif col.type == "date" %}
+      {{ item[col.key] | dateformat }}
+    {% elif col.type == "currency" %}
+      {{ item[col.key] | currency }}
+    {% else %}
+      {{ item[col.key] | default("") | truncate_text }}
+    {% endif %}
+  </td>
+  {% endfor %}
+  <td>
+    <div class="dropdown dropdown-end" x-data="{ open: false }" @click.stop>
+      <button @click="open = !open" class="btn btn-ghost btn-xs">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
+      </button>
+      <ul x-show="open" @click.away="open = false" x-transition class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
+        {% if table.detail_url_template %}
+        <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}">View</a></li>
+        {% endif %}
+        <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning">Edit</a></li>
+        <li>
+          <button class="text-error"
+                  hx-delete="{{ table.api_endpoint }}/{{ item.id }}"
+                  hx-confirm="Delete this {{ table.entity_name | lower }}?"
+                  hx-target="closest tr"
+                  hx-swap="outerHTML swap:300ms">
+            Delete
+          </button>
+        </li>
+      </ul>
+    </div>
+  </td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+  <td colspan="{{ (table.columns | length) + 1 if table else 1 }}" class="text-center py-8 text-base-content/50">
+    No items found.
+  </td>
+</tr>
+{% endif %}

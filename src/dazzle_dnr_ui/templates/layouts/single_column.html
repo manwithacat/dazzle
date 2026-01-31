@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="min-h-screen flex flex-col">
+  {# Top bar #}
+  <div class="navbar bg-base-100 shadow-sm">
+    <div class="flex-1">
+      <span class="text-lg font-semibold">{{ app_name | default("Dazzle") }}</span>
+    </div>
+    <div class="flex-none gap-2">
+      {% for nav_item in nav_items | default([]) %}
+      <a href="{{ nav_item.route }}" class="btn btn-ghost btn-sm" hx-boost="true">
+        {{ nav_item.label }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Page content #}
+  <main class="flex-1 container mx-auto p-4 lg:p-6 max-w-5xl">
+    {% block content %}{% endblock %}
+  </main>
+
+  {# Footer #}
+  <footer class="footer footer-center p-4 bg-base-100 text-base-content border-t border-base-300">
+    <p>Powered by Dazzle</p>
+  </footer>
+</div>
+{% endblock %}

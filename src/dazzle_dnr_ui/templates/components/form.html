@@ -1,0 +1,43 @@
+{# Form component - HTMX form submission with Alpine.js validation state #}
+{% from 'macros/form_field.html' import render_field %}
+
+{% if form %}
+<div class="max-w-2xl">
+  {# Header #}
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold">{{ form.title }}</h2>
+  </div>
+
+  {# Form #}
+  <form hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
+        hx-target="body"
+        hx-swap="innerHTML"
+        hx-headers='{"Content-Type": "application/json"}'
+        hx-ext="json-enc"
+        x-data="{ submitting: false, errors: {} }"
+        @htmx:before-request="submitting = true"
+        @htmx:after-request="submitting = false"
+        class="space-y-4">
+
+    {# Form errors area (swapped by HTMX on validation failure) #}
+    <div id="form-errors">
+      {% include 'fragments/form_errors.html' %}
+    </div>
+
+    {# Fields #}
+    {% for field in form.fields %}
+      {{ render_field(field, form.initial_values) }}
+    {% endfor %}
+
+    {# Actions #}
+    <div class="flex gap-3 pt-4">
+      <button type="submit" class="btn btn-primary"
+              :disabled="submitting"
+              :class="{ 'loading': submitting }">
+        {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
+      </button>
+      <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endif %}

@@ -1,0 +1,30 @@
+{# Alpine.js dropdown component #}
+{# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
+{# Expects: dropdown_label (str), dropdown_items (list of {label, href?, action?}) #}
+<div x-data="{ open: false }" @click.away="open = false" class="relative">
+  <button @click="open = !open" class="btn btn-ghost btn-sm gap-1">
+    {{ dropdown_label | default("Actions") }}
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" :class="{ 'rotate-180': open }">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+    </svg>
+  </button>
+  <ul x-show="open" x-transition
+      class="absolute right-0 mt-1 menu p-2 shadow bg-base-100 rounded-box w-40 z-50">
+    {% for item in dropdown_items | default([]) %}
+    <li>
+      {% if item.href %}
+      <a href="{{ item.href }}" class="{{ item.class | default('') }}">{{ item.label }}</a>
+      {% elif item.hx_delete %}
+      <button class="{{ item.class | default('') }}"
+              hx-delete="{{ item.hx_delete }}"
+              hx-confirm="{{ item.confirm | default('Are you sure?') }}"
+              hx-target="{{ item.hx_target | default('body') }}">
+        {{ item.label }}
+      </button>
+      {% else %}
+      <a @click="{{ item.action | default('') }}" class="{{ item.class | default('') }}">{{ item.label }}</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
