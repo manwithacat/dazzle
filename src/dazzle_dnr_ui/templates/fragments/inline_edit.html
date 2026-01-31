@@ -1,0 +1,39 @@
+{# Inline editing fragment - click-to-edit with optimistic HTMX save #}
+{# Parameters: field_name, field_value, endpoint, field_type (default: text) #}
+{% set field_type = field_type | default('text') %}
+<div x-data="{ editing: false, value: '{{ field_value }}', saving: false }"
+     class="inline-edit-container group cursor-pointer"
+     @click.away="editing = false">
+
+  {# Display mode #}
+  <span x-show="!editing"
+        @click="editing = true; $nextTick(() => $refs.input.focus())"
+        class="inline-flex items-center gap-1 hover:bg-base-200 rounded px-1 -mx-1 transition-colors">
+    <span x-text="value">{{ field_value }}</span>
+    <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+    </svg>
+  </span>
+
+  {# Edit mode #}
+  <form x-show="editing"
+        hx-put="{{ endpoint }}"
+        hx-target="closest .inline-edit-container"
+        hx-swap="outerHTML"
+        hx-headers='{"Accept": "text/html"}'
+        hx-indicator="next .htmx-indicator"
+        @htmx:before-request="saving = true"
+        @htmx:after-request="saving = false; editing = false"
+        @keydown.escape="editing = false">
+    <div class="flex items-center gap-1">
+      <input x-ref="input"
+             type="{{ field_type }}"
+             name="{{ field_name }}"
+             x-model="value"
+             @blur="if (!saving) $el.form.requestSubmit()"
+             @keydown.enter.prevent="$el.form.requestSubmit()"
+             class="input input-bordered input-sm input-ghost w-full" />
+      <span class="htmx-indicator loading loading-spinner loading-xs"></span>
+    </div>
+  </form>
+</div>

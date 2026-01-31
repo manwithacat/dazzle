@@ -55,6 +55,9 @@ class TableContext(BaseModel):
     total: int = 0
     page: int = 1
     page_size: int = 20
+    bulk_actions: bool = False
+    inline_editable: list[str] = Field(default_factory=list)
+    slide_over: bool = False
 
 
 class FormContext(BaseModel):

@@ -1,6 +1,7 @@
 {# Filterable table component - server-rendered with HTMX search/filter/pagination #}
 {% if table %}
-<div class="space-y-4">
+<div class="space-y-4"
+     {% if table.bulk_actions %}x-data="{ selected: [] }"{% endif %}>
   {# Header row: title + actions #}
   <div class="flex items-center justify-between">
     <h2 class="text-2xl font-bold">{{ table.title }}</h2>
@@ -13,15 +14,14 @@
 
   {# Search bar #}
   {% if table.search_enabled %}
-  <div class="form-control">
-    <input type="text" name="search" placeholder="Search {{ table.title | lower }}..."
-           class="input input-bordered input-sm w-full max-w-xs"
-           hx-get="{{ table.api_endpoint }}"
-           hx-target="#table-body"
-           hx-trigger="keyup changed delay:300ms"
-           hx-swap="innerHTML"
-           hx-headers='{"Accept": "text/html"}' />
-  </div>
+  {% include 'fragments/search_input.html' with context %}
+  {% endif %}
+
+  {# Bulk actions toolbar #}
+  {% if table.bulk_actions %}
+  {% with entity_name=table.entity_name, actions_endpoint=table.api_endpoint %}
+  {% include 'fragments/bulk_actions.html' %}
+  {% endwith %}
   {% endif %}
 
   {# Table #}
@@ -29,6 +29,12 @@
     <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}">
       <thead>
         <tr>
+          {% if table.bulk_actions %}
+          <th class="w-10">
+            <input type="checkbox" class="checkbox checkbox-sm"
+                   @change="selected = $event.target.checked ? {{ table.rows | map(attribute='id') | list | tojson }} : []" />
+          </th>
+          {% endif %}
           {% for col in table.columns %}
           <th>{{ col.label }}</th>
           {% endfor %}
@@ -43,5 +49,10 @@
 
   {# Pagination #}
   {% include 'fragments/table_pagination.html' %}
+
+  {# Slide-over panel for detail views #}
+  {% if table.slide_over %}
+  {% include 'components/alpine/slide_over.html' %}
+  {% endif %}
 </div>
 {% endif %}
