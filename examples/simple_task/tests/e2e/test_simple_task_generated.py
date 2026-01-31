@@ -15,25 +15,10 @@ Test Count: 43
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import pytest
 from playwright.sync_api import Page, expect
-
-# =============================================================================
-# Test Configuration
-# =============================================================================
-
-# Base URL from environment or default
-BASE_URL = os.environ.get("DNR_UI_URL", "http://localhost:3000")
-
-
-@pytest.fixture
-def base_url() -> str:
-    """Get the base URL for the application under test."""
-    return BASE_URL
-
 
 # =============================================================================
 # Generated Tests
@@ -54,8 +39,6 @@ def test_User_create_valid(
     Entity: User
     Tags: crud, create, user
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "User_valid": {
             "email": "Test Email",
@@ -129,8 +112,6 @@ def test_Task_create_valid(
     Entity: Task
     Tags: crud, create, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
@@ -204,8 +185,6 @@ def test_Task_update_valid(
     Entity: Task
     Tags: crud, update, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_updated": {
             "title": "Test Title_updated",
@@ -260,9 +239,6 @@ def test_Task_transition_todo_to_in_progress(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -305,9 +281,6 @@ def test_Task_transition_in_progress_to_review(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -345,9 +318,6 @@ def test_Task_transition_in_progress_to_todo(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -385,9 +355,6 @@ def test_Task_transition_review_to_done(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -425,9 +392,6 @@ def test_Task_transition_review_to_in_progress(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -465,9 +429,6 @@ def test_Task_transition_done_to_todo(
     Entity: Task
     Tags: state_machine, transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -505,9 +466,6 @@ def test_Task_access_create_allowed(
     Entity: Task
     Tags: access_control, create, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list as authenticated user
     page.goto(f"{base_url}/task")
@@ -541,9 +499,6 @@ def test_Task_access_update_allowed(
     Entity: Task
     Tags: access_control, update, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list as authenticated user
     page.goto(f"{base_url}/task")
@@ -579,8 +534,6 @@ def test_Task_ref_assigned_to_valid(
     Entity: Task
     Tags: reference, valid, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
@@ -651,8 +604,6 @@ def test_Task_ref_created_by_valid(
     Entity: Task
     Tags: reference, valid, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
@@ -723,9 +674,6 @@ def test_TaskComment_access_create_allowed(
     Entity: TaskComment
     Tags: access_control, create, taskcomment
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to TaskComment list as authenticated user
     page.goto(f"{base_url}/taskcomment")
@@ -759,9 +707,6 @@ def test_TaskComment_access_update_allowed(
     Entity: TaskComment
     Tags: access_control, update, taskcomment
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to TaskComment list as authenticated user
     page.goto(f"{base_url}/taskcomment")
@@ -797,8 +742,6 @@ def test_TaskComment_ref_task_valid(
     Entity: TaskComment
     Tags: reference, valid, taskcomment
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "TaskComment_valid": {
             "content": "Sample text content for content.",
@@ -864,8 +807,6 @@ def test_TaskComment_ref_author_valid(
     Entity: TaskComment
     Tags: reference, valid, taskcomment
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "TaskComment_valid": {
             "content": "Sample text content for content.",
@@ -930,9 +871,6 @@ def test_User_delete(
     Entity: User
     Tags: crud, delete, user
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to User list
     page.goto(f"{base_url}/user")
@@ -969,9 +907,6 @@ def test_User_validation_required_email(
     Entity: User
     Tags: validation, required, user
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to User list
     page.goto(f"{base_url}/user")
@@ -1012,9 +947,6 @@ def test_User_validation_required_name(
     Entity: User
     Tags: validation, required, user
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to User list
     page.goto(f"{base_url}/user")
@@ -1055,9 +987,6 @@ def test_Task_view_detail(
     Entity: Task
     Tags: crud, read, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1090,9 +1019,6 @@ def test_Task_delete(
     Entity: Task
     Tags: crud, delete, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1129,9 +1055,6 @@ def test_Task_validation_required_title(
     Entity: Task
     Tags: validation, required, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1172,9 +1095,6 @@ def test_TaskComment_validation_required_content(
     Entity: TaskComment
     Tags: validation, required, taskcomment
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to TaskComment list
     page.goto(f"{base_url}/taskcomment")
@@ -1215,9 +1135,6 @@ def test_Task_transition_invalid_todo_to_done(
     Entity: Task
     Tags: state_machine, invalid_transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1254,9 +1171,6 @@ def test_Task_transition_invalid_in_progress_to_done(
     Entity: Task
     Tags: state_machine, invalid_transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1293,9 +1207,6 @@ def test_Task_transition_invalid_review_to_todo(
     Entity: Task
     Tags: state_machine, invalid_transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1323,18 +1234,15 @@ def test_Task_transition_invalid_review_to_todo(
 @pytest.mark.state_machine
 @pytest.mark.invalid_transition
 @pytest.mark.task
-def test_Task_transition_invalid_done_to_in_progress(
+def test_Task_transition_invalid_done_to_review(
     page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
 ) -> None:
     """
-    Invalid transition: Task cannot go from 'done' to 'in_progress'
+    Invalid transition: Task cannot go from 'done' to 'review'
 
     Entity: Task
     Tags: state_machine, invalid_transition, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1344,9 +1252,9 @@ def test_Task_transition_invalid_done_to_in_progress(
     page.locator('[data-dazzle-row="Task"], tbody tr').click()
     page.wait_for_load_state("networkidle")
 
-    # Attempt invalid transition to 'in_progress'
+    # Attempt invalid transition to 'review'
     page.locator(
-        '[data-dazzle-action="Task.transition.in_progress"], [data-dazzle-action="transition.in_progress"]'
+        '[data-dazzle-action="Task.transition.review"], [data-dazzle-action="transition.review"]'
     ).click()
     page.wait_for_load_state("networkidle")
 
@@ -1370,9 +1278,6 @@ def test_Task_computed_days_overdue(
     Entity: Task
     Tags: computed, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list
     page.goto(f"{base_url}/task")
@@ -1408,9 +1313,6 @@ def test_Task_access_create_denied_anon(
     Entity: Task
     Tags: access_control, denied, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list as anonymous user
     page.goto(f"{base_url}/task")
@@ -1443,9 +1345,6 @@ def test_Task_access_update_denied_anon(
     Entity: Task
     Tags: access_control, denied, task
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task list as anonymous user
     page.goto(f"{base_url}/task")
@@ -1476,8 +1375,6 @@ def test_Task_ref_assigned_to_invalid(
     Entity: Task
     Tags: reference, invalid, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
@@ -1538,8 +1435,6 @@ def test_Task_ref_created_by_invalid(
     Entity: Task
     Tags: reference, invalid, task
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "Task_valid": {
             "title": "Test Title",
@@ -1600,9 +1495,6 @@ def test_TaskComment_access_create_denied_anon(
     Entity: TaskComment
     Tags: access_control, denied, taskcomment
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to TaskComment list as anonymous user
     page.goto(f"{base_url}/taskcomment")
@@ -1635,9 +1527,6 @@ def test_TaskComment_access_update_denied_anon(
     Entity: TaskComment
     Tags: access_control, denied, taskcomment
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to TaskComment list as anonymous user
     page.goto(f"{base_url}/taskcomment")
@@ -1668,8 +1557,6 @@ def test_TaskComment_ref_task_invalid(
     Entity: TaskComment
     Tags: reference, invalid, taskcomment
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "TaskComment_valid": {
             "content": "Sample text content for content.",
@@ -1725,8 +1612,6 @@ def test_TaskComment_ref_author_invalid(
     Entity: TaskComment
     Tags: reference, invalid, taskcomment
     """
-
-    # Fixture data
     fixtures: dict[str, Any] = {
         "TaskComment_valid": {
             "content": "Sample text content for content.",
@@ -1781,9 +1666,6 @@ def test_navigate_task_list(
     Entity: Task
     Tags: navigation, task_list
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task List
     page.goto(f"{base_url}/task")
@@ -1810,9 +1692,6 @@ def test_navigate_task_detail(
     Entity: Task
     Tags: navigation, task_detail
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Task Detail
     page.goto(f"{base_url}/task/test-id")
@@ -1839,9 +1718,6 @@ def test_navigate_task_create(
     Entity: Task
     Tags: navigation, task_create
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Create Task
     page.goto(f"{base_url}/task/create")
@@ -1868,9 +1744,6 @@ def test_navigate_task_edit(
     Entity: Task
     Tags: navigation, task_edit
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Edit Task
     page.goto(f"{base_url}/task/test-id/edit")
@@ -1897,9 +1770,6 @@ def test_navigate_user_list(
     Entity: User
     Tags: navigation, user_list
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Team Members
     page.goto(f"{base_url}/user")
@@ -1926,9 +1796,6 @@ def test_navigate_user_create(
     Entity: User
     Tags: navigation, user_create
     """
-
-    # Fixture data
-
     # Execute flow steps
     # Navigate to Add Team Member
     page.goto(f"{base_url}/user/create")
