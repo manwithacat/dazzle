@@ -884,6 +884,11 @@ class TestReferenceFlowGeneration:
                     entity_ref="Task",
                     mode=SurfaceMode.LIST,
                 ),
+                SurfaceSpec(
+                    name="task_create",
+                    entity_ref="Task",
+                    mode=SurfaceMode.CREATE,
+                ),
             ],
         )
 

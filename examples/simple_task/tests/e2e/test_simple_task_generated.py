@@ -7,9 +7,9 @@ This module uses the console logging infrastructure from conftest.py:
 - page_diagnostics: Captures all browser console output
 - Errors are reported at the end of each test
 
-Test Count: 43
-- High Priority: 17
-- Medium Priority: 20
+Test Count: 33
+- High Priority: 12
+- Medium Priority: 15
 - Low Priority: 6
 """
 
@@ -202,6 +202,10 @@ def test_Task_update_valid(
     page.goto(f"{base_url}/task")
     page.wait_for_load_state("networkidle")
 
+    # Click on a Task row to view details
+    page.locator('[data-dazzle-row="Task"], tbody tr').click()
+    page.wait_for_load_state("networkidle")
+
     # Click edit Task button
     page.locator('[data-dazzle-action="Task.edit"], a:has-text("Edit")').click()
     page.wait_for_load_state("networkidle")
@@ -253,11 +257,6 @@ def test_Task_transition_todo_to_in_progress(
         '[data-dazzle-action="Task.transition.in_progress"], [data-dazzle-action="transition.in_progress"]'
     ).click()
     page.wait_for_load_state("networkidle")
-
-    # Fill required guard field 'assigned_to'
-    page.locator('[data-dazzle-field="assigned_to"], [name="assigned_to"]').select_option(
-        "test_value"
-    )
 
     # Assert transition to 'in_progress' succeeded
 
@@ -591,274 +590,6 @@ def test_Task_ref_assigned_to_valid(
 
 
 @pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.reference
-@pytest.mark.valid
-@pytest.mark.task
-def test_Task_ref_created_by_valid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create Task with valid created_by reference
-
-    Entity: Task
-    Tags: reference, valid, task
-    """
-    fixtures: dict[str, Any] = {
-        "Task_valid": {
-            "title": "Test Title",
-            "description": "Sample text content for description.",
-            "status": "todo",
-            "priority": "low",
-            "due_date": "2025-01-15",
-            "created_at": "2025-01-15T10:30:00Z",
-            "updated_at": "2025-01-15T10:30:00Z",
-        },
-        "User_valid": {
-            "email": "Test Email",
-            "name": "Test Name",
-            "role": "admin",
-            "department": "Test Department",
-            "avatar_url": "Test Avatar Url",
-            "is_active": True,
-            "created_at": "2025-01-15T10:30:00Z",
-        },
-    }
-
-    # Execute flow steps
-    # Navigate to Task list
-    page.goto(f"{base_url}/task")
-    page.wait_for_load_state("networkidle")
-
-    # Click create Task
-    page.locator(
-        '[data-dazzle-action="Task.create"], [data-dazzle-action="Task.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Select valid User reference
-    page.locator('[data-dazzle-field="created_by"], [name="created_by"]').select_option(
-        str(fixtures["User_valid"]["id"])
-    )
-
-    # Fill title
-    page.locator('[data-dazzle-field="title"], [name="title"]').fill(
-        str(fixtures["Task_valid"]["title"])
-    )
-
-    # Save entity
-    page.locator(
-        '[data-dazzle-action="Task.save"], [data-dazzle-action="Task.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert created_by reference is valid
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.access_control
-@pytest.mark.create
-@pytest.mark.taskcomment
-def test_TaskComment_access_create_allowed(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Authenticated user can create TaskComment
-
-    Entity: TaskComment
-    Tags: access_control, create, taskcomment
-    """
-    # Execute flow steps
-    # Navigate to TaskComment list as authenticated user
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Click create button
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert create form is accessible
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.access_control
-@pytest.mark.update
-@pytest.mark.taskcomment
-def test_TaskComment_access_update_allowed(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Authenticated user can update TaskComment
-
-    Entity: TaskComment
-    Tags: access_control, update, taskcomment
-    """
-    # Execute flow steps
-    # Navigate to TaskComment list as authenticated user
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Select TaskComment
-    page.locator('[data-dazzle-row="TaskComment"], tbody tr').click()
-    page.wait_for_load_state("networkidle")
-
-    # Click update button
-    page.locator('[data-dazzle-action="TaskComment.edit"], a:has-text("Edit")').click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert update is allowed
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.reference
-@pytest.mark.valid
-@pytest.mark.taskcomment
-def test_TaskComment_ref_task_valid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create TaskComment with valid task reference
-
-    Entity: TaskComment
-    Tags: reference, valid, taskcomment
-    """
-    fixtures: dict[str, Any] = {
-        "TaskComment_valid": {
-            "content": "Sample text content for content.",
-            "created_at": "2025-01-15T10:30:00Z",
-        },
-        "Task_valid": {
-            "title": "Test Title",
-            "description": "Sample text content for description.",
-            "status": "todo",
-            "priority": "low",
-            "due_date": "2025-01-15",
-            "created_at": "2025-01-15T10:30:00Z",
-            "updated_at": "2025-01-15T10:30:00Z",
-        },
-    }
-
-    # Execute flow steps
-    # Navigate to TaskComment list
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Click create TaskComment
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Select valid Task reference
-    page.locator('[data-dazzle-field="task"], [name="task"]').select_option(
-        str(fixtures["Task_valid"]["id"])
-    )
-
-    # Fill content
-    page.locator('[data-dazzle-field="content"], [name="content"]').fill(
-        str(fixtures["TaskComment_valid"]["content"])
-    )
-
-    # Save entity
-    page.locator(
-        '[data-dazzle-action="TaskComment.save"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert task reference is valid
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.high_priority
-@pytest.mark.reference
-@pytest.mark.valid
-@pytest.mark.taskcomment
-def test_TaskComment_ref_author_valid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create TaskComment with valid author reference
-
-    Entity: TaskComment
-    Tags: reference, valid, taskcomment
-    """
-    fixtures: dict[str, Any] = {
-        "TaskComment_valid": {
-            "content": "Sample text content for content.",
-            "created_at": "2025-01-15T10:30:00Z",
-        },
-        "User_valid": {
-            "email": "Test Email",
-            "name": "Test Name",
-            "role": "admin",
-            "department": "Test Department",
-            "avatar_url": "Test Avatar Url",
-            "is_active": True,
-            "created_at": "2025-01-15T10:30:00Z",
-        },
-    }
-
-    # Execute flow steps
-    # Navigate to TaskComment list
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Click create TaskComment
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Select valid User reference
-    page.locator('[data-dazzle-field="author"], [name="author"]').select_option(
-        str(fixtures["User_valid"]["id"])
-    )
-
-    # Fill content
-    page.locator('[data-dazzle-field="content"], [name="content"]').fill(
-        str(fixtures["TaskComment_valid"]["content"])
-    )
-
-    # Save entity
-    page.locator(
-        '[data-dazzle-action="TaskComment.save"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert author reference is valid
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
 @pytest.mark.crud
 @pytest.mark.delete
 @pytest.mark.user
@@ -1126,11 +857,11 @@ def test_TaskComment_validation_required_content(
 @pytest.mark.state_machine
 @pytest.mark.invalid_transition
 @pytest.mark.task
-def test_Task_transition_invalid_todo_to_done(
+def test_Task_transition_invalid_todo_to_review(
     page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
 ) -> None:
     """
-    Invalid transition: Task cannot go from 'todo' to 'done'
+    Invalid transition: Task cannot go from 'todo' to 'review'
 
     Entity: Task
     Tags: state_machine, invalid_transition, task
@@ -1144,9 +875,9 @@ def test_Task_transition_invalid_todo_to_done(
     page.locator('[data-dazzle-row="Task"], tbody tr').click()
     page.wait_for_load_state("networkidle")
 
-    # Attempt invalid transition to 'done'
+    # Attempt invalid transition to 'review'
     page.locator(
-        '[data-dazzle-action="Task.transition.done"], [data-dazzle-action="transition.done"]'
+        '[data-dazzle-action="Task.transition.review"], [data-dazzle-action="transition.review"]'
     ).click()
     page.wait_for_load_state("networkidle")
 
@@ -1234,11 +965,11 @@ def test_Task_transition_invalid_review_to_todo(
 @pytest.mark.state_machine
 @pytest.mark.invalid_transition
 @pytest.mark.task
-def test_Task_transition_invalid_done_to_in_progress(
+def test_Task_transition_invalid_done_to_review(
     page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
 ) -> None:
     """
-    Invalid transition: Task cannot go from 'done' to 'in_progress'
+    Invalid transition: Task cannot go from 'done' to 'review'
 
     Entity: Task
     Tags: state_machine, invalid_transition, task
@@ -1252,9 +983,9 @@ def test_Task_transition_invalid_done_to_in_progress(
     page.locator('[data-dazzle-row="Task"], tbody tr').click()
     page.wait_for_load_state("networkidle")
 
-    # Attempt invalid transition to 'in_progress'
+    # Attempt invalid transition to 'review'
     page.locator(
-        '[data-dazzle-action="Task.transition.in_progress"], [data-dazzle-action="transition.in_progress"]'
+        '[data-dazzle-action="Task.transition.review"], [data-dazzle-action="transition.review"]'
     ).click()
     page.wait_for_load_state("networkidle")
 
@@ -1415,238 +1146,6 @@ def test_Task_ref_assigned_to_invalid(
     page.wait_for_load_state("networkidle")
 
     # Assert assigned_to reference validation failed
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.reference
-@pytest.mark.invalid
-@pytest.mark.task
-def test_Task_ref_created_by_invalid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create Task with invalid created_by reference fails
-
-    Entity: Task
-    Tags: reference, invalid, task
-    """
-    fixtures: dict[str, Any] = {
-        "Task_valid": {
-            "title": "Test Title",
-            "description": "Sample text content for description.",
-            "status": "todo",
-            "priority": "low",
-            "due_date": "2025-01-15",
-            "created_at": "2025-01-15T10:30:00Z",
-            "updated_at": "2025-01-15T10:30:00Z",
-        }
-    }
-
-    # Execute flow steps
-    # Navigate to Task list
-    page.goto(f"{base_url}/task")
-    page.wait_for_load_state("networkidle")
-
-    # Click create Task
-    page.locator(
-        '[data-dazzle-action="Task.create"], [data-dazzle-action="Task.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Enter invalid User reference
-    page.locator('[data-dazzle-field="created_by"], [name="created_by"]').select_option(
-        "00000000-0000-0000-0000-000000000000"
-    )
-
-    # Fill title
-    page.locator('[data-dazzle-field="title"], [name="title"]').fill(
-        str(fixtures["Task_valid"]["title"])
-    )
-
-    # Attempt to save with invalid reference
-    page.locator(
-        '[data-dazzle-action="Task.save"], [data-dazzle-action="Task.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert created_by reference validation failed
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.access_control
-@pytest.mark.denied
-@pytest.mark.taskcomment
-def test_TaskComment_access_create_denied_anon(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Anonymous user cannot create TaskComment
-
-    Entity: TaskComment
-    Tags: access_control, denied, taskcomment
-    """
-    # Execute flow steps
-    # Navigate to TaskComment list as anonymous user
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Attempt create without authentication
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert create is denied for anonymous user
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.access_control
-@pytest.mark.denied
-@pytest.mark.taskcomment
-def test_TaskComment_access_update_denied_anon(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Anonymous user cannot update TaskComment
-
-    Entity: TaskComment
-    Tags: access_control, denied, taskcomment
-    """
-    # Execute flow steps
-    # Navigate to TaskComment list as anonymous user
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Attempt update without authentication
-    page.locator('[data-dazzle-action="TaskComment.edit"], a:has-text("Edit")').click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert update is denied for anonymous user
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.reference
-@pytest.mark.invalid
-@pytest.mark.taskcomment
-def test_TaskComment_ref_task_invalid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create TaskComment with invalid task reference fails
-
-    Entity: TaskComment
-    Tags: reference, invalid, taskcomment
-    """
-    fixtures: dict[str, Any] = {
-        "TaskComment_valid": {
-            "content": "Sample text content for content.",
-            "created_at": "2025-01-15T10:30:00Z",
-        }
-    }
-
-    # Execute flow steps
-    # Navigate to TaskComment list
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Click create TaskComment
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Enter invalid Task reference
-    page.locator('[data-dazzle-field="task"], [name="task"]').select_option(
-        "00000000-0000-0000-0000-000000000000"
-    )
-
-    # Fill content
-    page.locator('[data-dazzle-field="content"], [name="content"]').fill(
-        str(fixtures["TaskComment_valid"]["content"])
-    )
-
-    # Attempt to save with invalid reference
-    page.locator(
-        '[data-dazzle-action="TaskComment.save"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert task reference validation failed
-
-    # Check for console errors after test
-    if page_diagnostics.has_errors():
-        errors = page_diagnostics.get_errors()
-        pytest.fail(f"Browser console errors detected: {errors}")
-
-
-@pytest.mark.e2e
-@pytest.mark.reference
-@pytest.mark.invalid
-@pytest.mark.taskcomment
-def test_TaskComment_ref_author_invalid(
-    page: Page, page_diagnostics: Any, track_route: Any, track_crud: Any, base_url: str
-) -> None:
-    """
-    Create TaskComment with invalid author reference fails
-
-    Entity: TaskComment
-    Tags: reference, invalid, taskcomment
-    """
-    fixtures: dict[str, Any] = {
-        "TaskComment_valid": {
-            "content": "Sample text content for content.",
-            "created_at": "2025-01-15T10:30:00Z",
-        }
-    }
-
-    # Execute flow steps
-    # Navigate to TaskComment list
-    page.goto(f"{base_url}/taskcomment")
-    page.wait_for_load_state("networkidle")
-
-    # Click create TaskComment
-    page.locator(
-        '[data-dazzle-action="TaskComment.create"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Enter invalid User reference
-    page.locator('[data-dazzle-field="author"], [name="author"]').select_option(
-        "00000000-0000-0000-0000-000000000000"
-    )
-
-    # Fill content
-    page.locator('[data-dazzle-field="content"], [name="content"]').fill(
-        str(fixtures["TaskComment_valid"]["content"])
-    )
-
-    # Attempt to save with invalid reference
-    page.locator(
-        '[data-dazzle-action="TaskComment.save"], [data-dazzle-action="TaskComment.create"], button[type="submit"]'
-    ).click()
-    page.wait_for_load_state("networkidle")
-
-    # Assert author reference validation failed
 
     # Check for console errors after test
     if page_diagnostics.has_errors():

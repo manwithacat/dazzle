@@ -202,6 +202,9 @@ def _get_surface_fields(entity: EntitySpec, appspec: AppSpec, mode: SurfaceMode)
     """
     for surface in appspec.surfaces:
         if surface.entity_ref == entity.name and surface.mode == mode:
+            if not surface.sections:
+                # Surface exists but has no explicit sections — all fields visible
+                return None
             field_names: set[str] = set()
             for section in surface.sections:
                 for element in section.elements:
@@ -363,6 +366,11 @@ def generate_update_flow(entity: EntitySpec, appspec: AppSpec) -> FlowSpec:
             kind=FlowStepKind.NAVIGATE,
             target=f"view:{list_surface}",
             description=f"Navigate to {entity.name} list",
+        ),
+        FlowStep(
+            kind=FlowStepKind.CLICK,
+            target=f"row:{entity.name}",
+            description=f"Click on a {entity.name} row to view details",
         ),
         FlowStep(
             kind=FlowStepKind.CLICK,
@@ -643,23 +651,10 @@ def generate_state_machine_flows(entity: EntitySpec, appspec: AppSpec) -> list[F
                 ),
             ]
 
-            # Add guard satisfaction steps if needed
-            for guard in transition.guards:
-                if guard.requires_field:
-                    # Look up field type from entity
-                    guard_field = next(
-                        (f for f in entity.fields if f.name == guard.requires_field), None
-                    )
-                    guard_field_type = guard_field.type.kind.value if guard_field else None
-                    steps.append(
-                        FlowStep(
-                            kind=FlowStepKind.FILL,
-                            target=f"field:{entity.name}.{guard.requires_field}",
-                            value="test_value",
-                            description=f"Fill required guard field '{guard.requires_field}'",
-                            field_type=guard_field_type,
-                        )
-                    )
+            # Guard satisfaction: requires_field guards are satisfied by ensuring
+            # the fixture has the field populated (checked server-side).
+            # HTMX transition buttons send hx-put directly, so there's no form
+            # to fill guard fields in the UI.
 
             steps.append(
                 FlowStep(
@@ -861,6 +856,10 @@ def generate_access_control_flows(entity: EntitySpec, appspec: AppSpec) -> list[
     if not entity.access:
         return []
 
+    # Skip if entity has no surfaces (can't test UI access without surfaces)
+    if not _has_surface_mode(entity, appspec, SurfaceMode.LIST):
+        return []
+
     flows: list[FlowSpec] = []
     list_surface = _get_list_surface_name(entity, appspec)
 
@@ -1015,10 +1014,20 @@ def generate_reference_flows(entity: EntitySpec, appspec: AppSpec) -> list[FlowS
         List of flow specs for reference integrity tests
     """
     flows: list[FlowSpec] = []
+
+    # Skip if entity has no LIST or CREATE surfaces (can't test refs without UI)
+    if not _has_surface_mode(entity, appspec, SurfaceMode.LIST):
+        return []
+    if not _has_surface_mode(entity, appspec, SurfaceMode.CREATE):
+        return []
+
     list_surface = _get_list_surface_name(entity, appspec)
 
-    # Find ref fields
+    # Find ref fields visible on the create surface
     ref_fields = [f for f in entity.fields if f.type.kind == FieldTypeKind.REF]
+    create_surface_fields = _get_surface_fields(entity, appspec, SurfaceMode.CREATE)
+    if create_surface_fields is not None:
+        ref_fields = [f for f in ref_fields if f.name in create_surface_fields]
 
     if not ref_fields:
         return []
