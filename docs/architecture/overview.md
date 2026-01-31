@@ -12,7 +12,7 @@ DSL Files (.dsl)
 AppSpec (Dazzle IR)
     ↓ convert
     ├── BackendSpec ──→ DNR-Back ──→ FastAPI App
-    └── UISpec ──→ DNR-UI ──→ JavaScript Runtime
+    └── PageContext ──→ DNR-UI ──→ HTMX Templates
 ```
 
 ## Core Principles
@@ -84,149 +84,79 @@ The runtime generates:
 
 ## Frontend Architecture (DNR-UI)
 
-### Design Decision: Pure JavaScript
+### Design Decision: Server-Rendered HTMX
 
-**Why pure JS (no React/Vue)**:
-- Maximum control over rendering
-- Minimum bundle size
-- No build step required
-- Easy to understand and modify
-- Aligns with LLM-first architecture
+**Why server-rendered templates over client-side JS**:
+- Server is the single source of truth — no client/server state sync
+- HTMX declarative attributes replace custom JavaScript
+- Alpine.js handles ephemeral UI state (toggles, selections, transitions)
+- Zero build toolchain — three CDN script tags, no node_modules
+- LLM-friendly — templates are plain HTML with predictable attributes
 
-### Layers
+### Template Pipeline
 
 ```
-UISpec (declarative specification)
-    ↓
-Runtime Modules
-    ├── Signals → Reactive state primitives
-    ├── State Manager → Scoped state (local/workspace/app)
-    ├── Renderer → ViewNode → DOM
-    ├── Components → Reusable UI elements
-    ├── Actions → Event handling
-    └── Theme Engine → CSS variables
+AppSpec (Dazzle IR)
+    ↓ template_compiler
+PageContext (Pydantic model)
+    ↓ Jinja2
+HTML + hx-* attributes
+    ↓ browser
+HTMX swaps partial HTML from server
 ```
 
-### UISpec Structure
+### Technology Stack
+
+| Technology | Role |
+|-----------|------|
+| **HTMX** | Declarative server interactions (`hx-get`, `hx-post`, `hx-swap`) |
+| **DaisyUI** | Tailwind CSS component library for consistent styling |
+| **Alpine.js** | Lightweight client-side state (`x-data`, `x-show`, `x-transition`) |
+| **Jinja2** | Server-side template rendering |
+
+### Template Structure
+
+```
+templates/
+├── layouts/             # Page shells (app_shell, single_column)
+├── components/          # Full-page components (filterable_table, form, detail_view)
+│   └── alpine/          # Alpine.js interactive components (slide_over, confirm_dialog)
+├── fragments/           # Partial HTML for HTMX swaps (table_rows, inline_edit, bulk_actions)
+└── macros/              # Reusable Jinja2 macros
+```
+
+- **Layouts** wrap pages with nav, head, and CDN script tags
+- **Components** render full content areas from a `PageContext`
+- **Fragments** return partial HTML — the unit of HTMX interaction
+- **Macros** are Jinja2 helpers for repeated markup patterns
+
+### Fragment Rendering
+
+Fragments are the key interaction primitive. When HTMX fires a request, the server renders a fragment and returns partial HTML:
 
 ```python
-UISpec:
-    name: str
-    workspaces: list[WorkspaceSpec]   # Pages/layouts
-    components: list[ComponentSpec]    # Reusable UI
-    themes: list[ThemeSpec]           # Styling
-    default_theme: str
+# In a FastAPI route handler
+@app.get("/api/tasks")
+async def list_tasks(request: Request, search: str = ""):
+    rows = filter_tasks(search)
+    return templates.TemplateResponse(
+        "fragments/table_rows.html",
+        {"request": request, "table": table_context, "rows": rows}
+    )
 ```
 
-### Signals-Based Reactivity
+The browser swaps the fragment into the target element — no full page reload.
 
-DNR-UI uses a lightweight signals pattern:
+### Interaction Patterns
 
-```javascript
-// Create reactive state
-const [count, setCount] = createSignal(0);
-
-// Automatic updates
-createEffect(() => {
-    document.getElementById('counter').textContent = count();
-});
-
-// Update triggers re-render
-setCount(count() + 1);
-```
-
-Benefits:
-- No virtual DOM overhead
-- Fine-grained reactivity
-- Simple mental model
-
-### State Scopes
-
-| Scope | Lifetime | Use Case |
-|-------|----------|----------|
-| `local` | Component | Form fields, toggles |
-| `workspace` | Page/workspace | Filters, selections |
-| `app` | Application | User settings, auth |
-| `session` | Browser session | Temporary preferences |
-
-### View Rendering
-
-ViewNodes are rendered to DOM:
-
-```python
-# UISpec ViewNode
-ElementNode(
-    tag="div",
-    props={"class": LiteralBinding("card")},
-    children=[
-        ElementNode(tag="h2", children=[...]),
-        ConditionalNode(condition=..., then_branch=..., else_branch=...),
-        LoopNode(source=..., item_name="task", body=...)
-    ]
-)
-```
-
-Becomes:
-```html
-<div class="card">
-    <h2>...</h2>
-    <!-- conditional content -->
-    <!-- loop content -->
-</div>
-```
-
-## Output Formats
-
-### Vite (Production)
-
-Complete project with ES modules:
-
-```
-src/
-├── dnr/
-│   ├── signals.js      # createSignal, createEffect, createMemo
-│   ├── state.js        # StateManager, scoped state
-│   ├── dom.js          # createElement, text, attr utilities
-│   ├── bindings.js     # resolveBinding for data binding
-│   ├── components.js   # ComponentRegistry
-│   ├── renderer.js     # renderViewNode, patch updates
-│   ├── theme.js        # ThemeEngine, CSS variables
-│   ├── actions.js      # ActionDispatcher
-│   ├── app.js          # createApp initialization
-│   └── index.js        # Main exports
-├── main.js             # Application entry
-└── ui-spec.json        # Generated specification
-```
-
-### JS (Development)
-
-Split files for quick iteration:
-
-```
-├── index.html
-├── dnr-runtime.js      # Combined runtime (IIFE)
-├── app.js              # Application bootstrap
-└── ui-spec.json        # Generated specification
-```
-
-### HTML (Preview)
-
-Single self-contained file:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <style>/* Theme CSS */</style>
-</head>
-<body>
-    <div id="app"></div>
-    <script>/* DNR Runtime */</script>
-    <script>/* UI Spec */</script>
-    <script>/* App Bootstrap */</script>
-</body>
-</html>
-```
+| Pattern | Technology | Fragment |
+|---------|-----------|----------|
+| **Search with debounce** | HTMX `hx-trigger="keyup changed delay:300ms"` | `search_input.html` |
+| **Inline editing** | HTMX `hx-put` + Alpine toggle state | `inline_edit.html` |
+| **Bulk actions** | Alpine `x-data="{ selected: [] }"` + HTMX submit | `bulk_actions.html` |
+| **Slide-over detail** | Alpine `x-transition` + HTMX content load | `slide_over.html` |
+| **Form submission** | HTMX `hx-post` with validation fragments | `form.html` + `form_errors.html` |
+| **Pagination** | HTMX `hx-get` with page parameter | `table_pagination.html` |
 
 ## Conversion Pipeline
 

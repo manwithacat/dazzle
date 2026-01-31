@@ -6,7 +6,7 @@
 ## Quick Facts
 
 - **What**: DSL-first toolkit for building apps from specifications
-- **Language**: Python 3.11+, JavaScript (vanilla)
+- **Language**: Python 3.11+, HTMX/Jinja2 templates, Alpine.js
 - **Repository**: https://github.com/manwithacat/dazzle
 - **Docs Site**: https://manwithacat.github.io/dazzle/
 

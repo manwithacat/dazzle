@@ -103,6 +103,7 @@ transaction RecordPayment "Record Payment":
 | Version | Features | Status |
 |---------|----------|--------|
 | **v0.5.x** (Current) | TigerBeetle ledgers, messaging, UX layer | Active development |
+| v0.19.x | HTMX migration, server-rendered templates, Alpine.js patterns | Active development |
 | v0.4.x | DNR + Ejection + MCP | Stable |
 | v0.1.x-v0.3.x | Legacy versions | Deprecated |
 
@@ -153,7 +154,9 @@ That's it. No code generation, no build step—your DSL runs directly.
 DNR is the primary way to run DAZZLE applications:
 
 - **FastAPI Backend**: Auto-generated CRUD endpoints with SQLite persistence
-- **Signals-based UI**: Reactive JavaScript frontend with no virtual DOM
+- **HTMX + DaisyUI frontend**: Server-rendered pages with declarative interactions
+- **Alpine.js interactions**: Client-side state for toggles, selections, and transitions
+- **Zero build toolchain**: Three CDN script tags, no node_modules
 - **Hot Reload**: Changes to DSL files reflect immediately
 - **OpenAPI Docs**: Automatic Swagger UI at `/docs`
 

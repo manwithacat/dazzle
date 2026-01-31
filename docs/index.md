@@ -13,7 +13,7 @@ cd examples/simple_task && dazzle dnr serve
 Dazzle transforms domain specifications written in a human-readable DSL into working applications. Define your entities, surfaces, and workspaces once - get a full-stack app with:
 
 - **FastAPI backend** with automatic CRUD, validation, and OpenAPI docs
-- **JavaScript frontend** with reactive state and component system
+- **HTMX frontend** with server-rendered templates and Alpine.js interactions
 - **Docker deployment** ready out of the box
 
 ## Quick Navigation
@@ -65,7 +65,7 @@ graph LR
     IR --> Back[DNR Backend]
     IR --> UI[DNR UI]
     Back --> API[FastAPI App]
-    UI --> JS[JavaScript Runtime]
+    UI --> JS[HTMX Templates]
 ```
 
 ### Key Constructs

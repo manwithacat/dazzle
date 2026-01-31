@@ -158,7 +158,15 @@ The DSL is parsed into an immutable IR called `AppSpec`:
 - Validated and linked across modules
 - Single source consumed by all backends
 
-### 3. Backends
+### 3. DNR Frontend
+The Dazzle Native Runtime uses server-rendered HTMX templates:
+- Jinja2 templates produce HTML with `hx-*` attributes
+- HTMX handles server interactions (search, forms, pagination)
+- Alpine.js manages ephemeral UI state (toggles, selections, transitions)
+- DaisyUI provides Tailwind CSS components
+- No build step — three CDN script tags, zero node_modules
+
+### 4. Backends
 Backends generate concrete artifacts from AppSpec:
 - `django_api` → Django REST Framework
 - `nextjs_frontend` → Next.js app with TypeScript
@@ -166,13 +174,13 @@ Backends generate concrete artifacts from AppSpec:
 - `docker` → Docker Compose setup
 - `terraform` → Terraform infrastructure
 
-### 4. Stacks
+### 5. Stacks
 Stacks are preset combinations of backends:
 - `django_next` → Django + Next.js + Docker
 - `api_only` → Django API + OpenAPI + Docker
 - Custom stacks can be defined in `dazzle.toml`
 
-### 5. Project Manifest (dazzle.toml)
+### 6. Project Manifest (dazzle.toml)
 Configuration file specifying:
 - Project metadata (name, version)
 - Module paths (where DSL files live)
