@@ -411,9 +411,17 @@ def test_run(
 
                 # Execute steps
                 step_errors: list[str] = []
+                created_ids = getattr(adapter, "_fixture_ids", None)
                 for step in flow_spec.steps:
                     try:
-                        _execute_step_sync(page, step, adapter, fixtures, timeout)
+                        _execute_step_sync(
+                            page,
+                            step,
+                            adapter,
+                            fixtures,
+                            timeout,
+                            created_ids,
+                        )
                     except Exception as e:
                         step_errors.append(f"Step {step.kind.value}: {e}")
                         break

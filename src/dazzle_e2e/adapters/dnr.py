@@ -36,6 +36,7 @@ class DNRAdapter(BaseAdapter):
         super().__init__(base_url, api_url)
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None
+        self._fixture_ids: dict[str, str] = {}  # fixture_id -> created entity ID
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the HTTP client."""
@@ -342,7 +343,17 @@ class DNRAdapter(BaseAdapter):
                 json={"fixtures": fixture_data},
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+
+        # Store created entity IDs for fixture_ref resolution
+        created = result.get("created", {})
+        for fixture in fixtures:
+            if fixture.id in created:
+                entity_data = created[fixture.id]
+                if isinstance(entity_data, dict) and "id" in entity_data:
+                    self._fixture_ids[fixture.id] = entity_data["id"]
+
+        return result
 
     def reset_sync(self) -> None:
         """Synchronous version of reset for CLI usage."""
