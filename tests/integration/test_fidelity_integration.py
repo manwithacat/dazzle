@@ -6,9 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.core.dsl_parser import parse_dsl_directory
 from dazzle.core.fidelity_scorer import score_appspec_fidelity
-from dazzle.core.linker import link
+from dazzle.core.project import load_project
 
 SIMPLE_TASK_DIR = Path(__file__).resolve().parents[2] / "examples" / "simple_task"
 
@@ -18,8 +17,7 @@ def simple_task_appspec():
     """Parse and link the simple_task example."""
     if not (SIMPLE_TASK_DIR / "dsl").exists():
         pytest.skip("simple_task example not found")
-    fragments = parse_dsl_directory(SIMPLE_TASK_DIR / "dsl")
-    return link(fragments)
+    return load_project(SIMPLE_TASK_DIR)
 
 
 @pytest.fixture

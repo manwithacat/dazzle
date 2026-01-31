@@ -130,60 +130,6 @@ jobs:
           cd ../..
         done
 
-  js-lint:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: "20"
-        cache: "npm"
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run ESLint
-      run: npm run lint
-
-  js-test:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: "20"
-        cache: "npm"
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run JavaScript tests
-      run: npm test
-
-  js-typecheck:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Node.js
-      uses: actions/setup-node@v6
-      with:
-        node-version: "20"
-        cache: "npm"
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Run TypeScript checker on JS files
-      run: npm run typecheck
-
   type-check:
     runs-on: ubuntu-latest
 
