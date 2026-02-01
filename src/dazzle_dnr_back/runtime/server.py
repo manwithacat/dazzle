@@ -783,7 +783,7 @@ class DNRBackendApp:
             schemas=self._schemas,
             entity_access_specs=entity_access_specs,
             get_auth_context=get_auth_context,
-            require_auth_by_default=self._enable_auth,
+            require_auth_by_default=self._enable_auth and not self._enable_test_mode,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
