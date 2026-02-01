@@ -1,0 +1,35 @@
+{% extends "layouts/app_shell.html" %}
+
+{% block content %}
+<div class="p-4">
+  {% if workspace.purpose %}
+  <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
+  {% endif %}
+
+  <div class="{{ workspace.grid_class }}">
+    {% for region in workspace.regions %}
+    <div class="{{ region.grid_class }}"
+         id="region-{{ region.name }}"
+         {% if region.endpoint %}
+         hx-get="{{ region.endpoint }}"
+         hx-trigger="load"
+         hx-swap="innerHTML"
+         {% endif %}>
+      {# Initial skeleton while loading #}
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title text-sm">{{ region.title }}</h3>
+          {% if region.endpoint %}
+          <div class="flex justify-center py-8">
+            <span class="loading loading-spinner loading-sm"></span>
+          </div>
+          {% else %}
+          <p class="text-sm opacity-50">{{ region.empty_message }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

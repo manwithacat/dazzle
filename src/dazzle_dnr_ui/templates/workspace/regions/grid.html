@@ -1,0 +1,23 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if items %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {% for item in items %}
+      <div class="card card-compact bg-base-200">
+        <div class="card-body">
+          <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
+          {% for col in columns %}
+          {% if col.key != display_key %}
+          <p class="text-xs"><span class="opacity-60">{{ col.label }}:</span> {{ item[col.key] | default("") }}</p>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>

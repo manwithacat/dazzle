@@ -302,7 +302,8 @@ _Tips for collaborating with LLM agents to turn this spec into DAZZLE DSL:_
 
 ### Example Conversation Flow
 
-> **You**: "I've created a SPEC.md for a task management app. Can you help me create the DAZZLE DSL?"
+> **You**: "I've created a SPEC.md for a task management app.
+> Can you help me create the DAZZLE DSL?"
 >
 > **AI**: "I'll help! Based on your spec, let's start with the Task entity. Here's a first draft..."
 >

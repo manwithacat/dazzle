@@ -532,18 +532,11 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(404, "Dazzle Bar not available in production mode")
             return
 
-        try:
-            # Try loading Dazzle Bar from the static directory
-            dazzle_bar_dir = Path(__file__).parent / "static" / "js" / "dazzle-bar"
-            entry_file = dazzle_bar_dir / "index.js"
-            if entry_file.exists():
-                js_content = entry_file.read_text(encoding="utf-8")
-                self._send_response(js_content, "application/javascript")
-            else:
-                # Dazzle Bar JS not available (removed in HTMX migration)
-                self._send_response("// Dazzle Bar: JS runtime removed", "application/javascript")
-        except Exception as e:
-            self.send_error(500, f"Failed to load Dazzle Bar: {e}")
+        # Dazzle Bar is now server-rendered via HTMX (v0.20.0)
+        self._send_response(
+            "// Dazzle Bar: server-rendered via HTMX at /dazzle/dev/bar",
+            "application/javascript",
+        )
 
     def _serve_css(self) -> None:
         """Serve the bundled CSS (v0.8.11, v0.16.0 theme support)."""

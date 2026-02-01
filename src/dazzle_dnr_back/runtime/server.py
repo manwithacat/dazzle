@@ -633,6 +633,173 @@ class DNRBackendApp:
 
             logging.getLogger("dazzle.server").debug(f"Fragment routes not available: {e}")
 
+    def _init_integration_executor(self) -> None:
+        """Initialize integration action executor (v0.20.0)."""
+        if not self._app:
+            return
+
+        try:
+            from dazzle_dnr_back.runtime.integration_executor import IntegrationExecutor
+
+            # Check if any integrations have actions
+            has_actions = False
+            for integration in getattr(self.spec, "integrations", []):
+                if getattr(integration, "actions", []):
+                    has_actions = True
+                    break
+
+            if not has_actions:
+                return
+
+            self._integration_executor = IntegrationExecutor(
+                app_spec=self.spec,
+                fragment_sources=self._fragment_sources,
+            )
+
+            import logging
+
+            logging.getLogger("dazzle.server").info("Integration executor initialized")
+
+        except ImportError as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Integration executor not available: {e}")
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init integration executor: {e}")
+
+    def _init_workspace_routes(self) -> None:
+        """Initialize workspace layout routes (v0.20.0)."""
+        if not self._app:
+            return
+
+        workspaces = getattr(self.spec, "workspaces", [])
+        if not workspaces:
+            return
+
+        try:
+            from dazzle_dnr_ui.runtime.template_renderer import render_fragment
+            from dazzle_dnr_ui.runtime.workspace_renderer import build_workspace_context
+
+            app = self._app
+            spec = self.spec
+            repositories = self._repositories
+
+            for workspace in workspaces:
+                ws_ctx = build_workspace_context(workspace, spec)
+                ws_name = workspace.name
+
+                # Capture in closure
+                _ws_ctx = ws_ctx
+
+                @app.get(f"/workspaces/{ws_name}", tags=["Workspaces"])
+                async def workspace_page(
+                    request: Request,
+                    _ctx: Any = _ws_ctx,
+                ) -> Any:
+                    """Render workspace page."""
+                    from fastapi.responses import HTMLResponse
+
+                    html = render_fragment(
+                        "workspace/workspace.html",
+                        workspace=_ctx,
+                    )
+                    return HTMLResponse(content=html)
+
+                # Region data endpoints
+                for region in ws_ctx.regions:
+                    if not region.source:
+                        continue
+
+                    _region = region
+                    _source = region.source
+
+                    @app.get(
+                        f"/api/workspaces/{ws_name}/regions/{region.name}",
+                        tags=["Workspaces"],
+                    )
+                    async def workspace_region_data(
+                        request: Request,
+                        page: int = 1,
+                        page_size: int = 20,
+                        _r: Any = _region,
+                        _s: str = _source,
+                    ) -> Any:
+                        """Return rendered HTML for a workspace region."""
+                        from fastapi.responses import HTMLResponse
+
+                        # Query the source entity
+                        items: list[dict[str, Any]] = []
+                        total = 0
+                        columns: list[dict[str, str]] = []
+
+                        repo = repositories.get(_s) if repositories else None
+                        if repo:
+                            try:
+                                limit = _r.limit or page_size
+                                result = await repo.list(page=page, page_size=limit)
+                                if isinstance(result, dict):
+                                    raw_items = result.get("items", [])
+                                    total = result.get("total", 0)
+                                    items = [
+                                        i.model_dump() if hasattr(i, "model_dump") else dict(i)
+                                        for i in raw_items
+                                    ]
+                                # Build columns from first item keys
+                                if items:
+                                    columns = [
+                                        {"key": k, "label": k.replace("_", " ").title()}
+                                        for k in items[0].keys()
+                                        if k != "id"
+                                    ]
+                            except Exception:
+                                pass
+
+                        # Build aggregate metrics if configured
+                        metrics: list[dict[str, Any]] = []
+                        for metric_name, expr in _r.aggregates.items():
+                            value: Any = 0
+                            if expr == "count":
+                                value = total
+                            elif expr.startswith("sum:") and items:
+                                field_name = expr.split(":", 1)[1]
+                                value = sum(float(i.get(field_name, 0) or 0) for i in items)
+                            metrics.append(
+                                {
+                                    "label": metric_name.replace("_", " ").title(),
+                                    "value": value,
+                                }
+                            )
+
+                        html = render_fragment(
+                            _r.template,
+                            title=_r.title,
+                            items=items,
+                            total=total,
+                            columns=columns,
+                            metrics=metrics,
+                            empty_message=_r.empty_message,
+                            display_key=columns[0]["key"] if columns else "name",
+                            item=items[0] if items else None,
+                        )
+                        return HTMLResponse(content=html)
+
+            import logging
+
+            logging.getLogger("dazzle.server").info(
+                f"Workspace routes initialized for {len(workspaces)} workspace(s)"
+            )
+
+        except ImportError as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Workspace renderer not available: {e}")
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init workspace routes: {e}")
+
     def _init_process_manager(self) -> None:
         """Initialize process manager for workflow execution (v0.24.0)."""
         if not self._app:
@@ -972,6 +1139,12 @@ class DNRBackendApp:
 
         # Initialize fragment routes (v0.25.0)
         self._init_fragment_routes()
+
+        # Initialize integration executor (v0.20.0)
+        self._init_integration_executor()
+
+        # Initialize workspace routes (v0.20.0)
+        self._init_workspace_routes()
 
         # Initialize process manager (v0.24.0)
         if self._enable_processes:

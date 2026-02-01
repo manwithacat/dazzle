@@ -1,0 +1,15 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if item %}
+    <dl class="grid grid-cols-2 gap-2">
+      {% for col in columns %}
+      <dt class="text-xs font-semibold opacity-60">{{ col.label }}</dt>
+      <dd class="text-sm">{{ item[col.key] | default("—") }}</dd>
+      {% endfor %}
+    </dl>
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No record selected.") }}</p>
+    {% endif %}
+  </div>
+</div>

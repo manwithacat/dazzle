@@ -105,3 +105,16 @@ def get_fragment_registry() -> dict[str, dict[str, Any]]:
 def get_fragment_info(name: str) -> dict[str, Any] | None:
     """Return info for a single fragment type, or None if not found."""
     return FRAGMENT_REGISTRY.get(name)
+
+
+def get_template_for_source(source: Any) -> str:
+    """Return the fragment template name for a field with a dynamic source.
+
+    Args:
+        source: A ``FieldSourceContext`` (or any object with an ``endpoint`` attr).
+
+    Returns:
+        Template name string, e.g. ``"fragments/search_select.html"``.
+    """
+    # Fields with an external data source always render as search_select
+    return FRAGMENT_REGISTRY["search_select"]["template"]

@@ -1,0 +1,15 @@
+<select data-dazzle-control="persona-select"
+        class="select select-xs select-bordered"
+        hx-post="/dazzle/dev/bar/persona"
+        hx-target="#dazzle-bar-persona"
+        hx-swap="innerHTML"
+        hx-vals='js:{"persona_id": event.target.value}'
+        name="persona_id">
+  <option value="">-- None --</option>
+  {% for p in personas %}
+  <option value="{{ p.id or p.persona_id or p.name }}"
+          {% if current_persona == (p.id or p.persona_id or p.name) %}selected{% endif %}>
+    {{ p.label or p.name }}
+  </option>
+  {% endfor %}
+</select>

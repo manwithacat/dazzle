@@ -17,15 +17,37 @@ logger = logging.getLogger(__name__)
 
 def create_fragment_router(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
+    app_spec: Any | None = None,
 ) -> APIRouter:
     """Create the fragment routes router.
 
     Args:
         fragment_sources: Registry of external API sources keyed by name.
             Each entry should have: url, display_key, value_key, secondary_key, headers.
+        app_spec: Optional AppSpec to resolve sources from integration IR.
+            Falls back to fragment_sources dict for backward compat.
     """
     router = APIRouter(prefix="/api/_fragments", tags=["Fragments"])
-    sources = fragment_sources or {}
+    sources = dict(fragment_sources or {})
+
+    # Resolve additional sources from integration IR if available (v0.20.0)
+    if app_spec:
+        for integration in getattr(app_spec, "integrations", []):
+            for action in getattr(integration, "actions", []):
+                if action.call_service and action.call_service not in sources:
+                    # Register the service as a fragment source if not already present
+                    service_name = action.call_service
+                    env_prefix = service_name.upper().replace("-", "_")
+                    import os
+
+                    base_url = os.environ.get(f"DAZZLE_API_{env_prefix}_URL", "")
+                    if base_url:
+                        sources[service_name] = {
+                            "url": base_url,
+                            "display_key": "name",
+                            "value_key": "id",
+                            "headers": {},
+                        }
 
     @router.get("/search", response_class=HTMLResponse)
     async def fragment_search(

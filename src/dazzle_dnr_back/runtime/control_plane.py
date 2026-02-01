@@ -25,13 +25,14 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, HTTPException, Response
+    from fastapi import APIRouter, HTTPException, Request, Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = None  # type: ignore[misc, assignment]
     HTTPException = None  # type: ignore[misc, assignment]
+    Request = None  # type: ignore[misc, assignment]
     Response = None  # type: ignore[misc, assignment]
 
 
@@ -1742,6 +1743,184 @@ def create_control_plane_routes(
             pass
 
         return metrics
+
+    # -------------------------------------------------------------------------
+    # HTMX Bar Partial Endpoints (v0.20.0)
+    # -------------------------------------------------------------------------
+
+    def _render_bar_template(template_name: str, **context: Any) -> Response:
+        """Render a Dazzle Bar template and return as HTML."""
+        try:
+            from dazzle_dnr_ui.runtime.template_renderer import render_fragment
+
+            html = render_fragment(
+                template_name,
+                personas=available_personas,
+                scenarios=available_scenarios,
+                current_persona=state["current_persona"],
+                current_scenario=state["current_scenario"],
+                **context,
+            )
+            return Response(content=html, media_type="text/html")
+        except Exception as e:
+            logger.warning(f"Failed to render bar template {template_name}: {e}")
+            return Response(
+                content=f'<div class="text-error text-xs">Render error: {e}</div>',
+                media_type="text/html",
+            )
+
+    @router.get("/bar", response_class=Response)
+    async def get_bar() -> Response:
+        """Render the full Dazzle Bar HTML."""
+        return _render_bar_template("dazzle_bar/bar.html")
+
+    @router.get("/bar/health", response_class=Response)
+    async def get_bar_health() -> Response:
+        """Render the health dot partial."""
+        health_status = "ok"
+        health_message = "System OK"
+        if db_manager:
+            try:
+                # Quick DB check
+                db_manager.execute("SELECT 1")
+            except Exception:
+                health_status = "error"
+                health_message = "Database unavailable"
+        return _render_bar_template(
+            "dazzle_bar/partials/health_dot.html",
+            health_status=health_status,
+            health_message=health_message,
+        )
+
+    @router.get("/bar/inspector", response_class=Response)
+    async def get_bar_inspector() -> Response:
+        """Render the inspector panel partial."""
+        entity_infos = []
+        for entity in entities:
+            record_count = 0
+            if repositories:
+                repo = repositories.get(entity.name)
+                if repo:
+                    try:
+                        result = repo.list_sync(page=1, page_size=1)
+                        record_count = result.get("total", 0) if isinstance(result, dict) else 0
+                    except Exception:
+                        pass
+            entity_infos.append(
+                {
+                    "name": entity.name,
+                    "field_count": len(entity.fields) if hasattr(entity, "fields") else 0,
+                    "record_count": record_count,
+                }
+            )
+        return _render_bar_template(
+            "dazzle_bar/partials/inspector_panel.html",
+            entities=entity_infos,
+        )
+
+    @router.post("/bar/persona", response_class=Response)
+    async def set_bar_persona(request: Request) -> Response:
+        """Switch persona and return updated switcher partial."""
+        try:
+            body = await request.json()
+        except Exception:
+            form = await request.form()
+            body = dict(form)
+        persona_id = body.get("persona_id", "")
+        state["current_persona"] = persona_id if persona_id else None
+
+        # Handle auth token for persona login (v0.23.0)
+        if auth_store and persona_id:
+            for p in available_personas:
+                pid = p.get("id") or p.get("persona_id") or p.get("name")
+                if pid == persona_id and "email" in p:
+                    try:
+                        token = auth_store.create_demo_token(p["email"])
+                        if token:
+                            state["persona_token"] = token
+                    except Exception:
+                        pass
+                    break
+
+        return _render_bar_template(
+            "dazzle_bar/partials/persona_switcher.html",
+        )
+
+    @router.post("/bar/scenario", response_class=Response)
+    async def set_bar_scenario(request: Request) -> Response:
+        """Switch scenario and return updated switcher partial."""
+        try:
+            body = await request.json()
+        except Exception:
+            form = await request.form()
+            body = dict(form)
+        scenario_id = body.get("scenario_id", "")
+        state["current_scenario"] = scenario_id if scenario_id else None
+        return _render_bar_template(
+            "dazzle_bar/partials/scenario_switcher.html",
+        )
+
+    @router.post("/bar/reset", response_class=Response)
+    async def bar_reset() -> Response:
+        """Reset data and return toast confirmation."""
+        await reset_data()
+        return Response(
+            content='<div class="alert alert-success text-sm"><span>Data reset complete.</span></div>',
+            media_type="text/html",
+        )
+
+    @router.post("/bar/regenerate", response_class=Response)
+    async def bar_regenerate() -> Response:
+        """Regenerate demo data and return toast confirmation."""
+        try:
+            result = await regenerate_data()
+            counts = result.get("counts", {})
+            total = sum(counts.values())
+            return Response(
+                content=f'<div class="alert alert-success text-sm"><span>Regenerated {total} records.</span></div>',
+                media_type="text/html",
+            )
+        except Exception as e:
+            return Response(
+                content=f'<div class="alert alert-error text-sm"><span>Regenerate failed: {e}</span></div>',
+                media_type="text/html",
+            )
+
+    @router.post("/bar/feedback", response_class=Response)
+    async def bar_feedback(request: Request) -> Response:
+        """Submit feedback and return success/error partial."""
+        try:
+            body = await request.json()
+        except Exception:
+            form = await request.form()
+            body = dict(form)
+
+        message = body.get("message", "").strip()
+        if not message:
+            return Response(
+                content='<div class="text-error text-sm">Message is required.</div>',
+                media_type="text/html",
+            )
+
+        fb = FeedbackRequest(
+            message=message,
+            category=body.get("category"),
+            persona_id=body.get("persona_id") or state.get("current_persona"),
+            scenario_id=body.get("scenario_id") or state.get("current_scenario"),
+            route=body.get("route"),
+        )
+        feedback_id = feedback_logger.append_feedback(fb)
+
+        # Send email notification
+        try:
+            feedback_email_sender.send_feedback_email(fb, feedback_id)
+        except Exception:
+            pass
+
+        return Response(
+            content=f'<div class="text-success text-sm">Feedback submitted (#{feedback_id}).</div>',
+            media_type="text/html",
+        )
 
     return router
 

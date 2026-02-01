@@ -160,23 +160,37 @@ def _build_form_fields(
         source_ctx: FieldSourceContext | None = None
         source_ref = element_options.get("source")
         if source_ref and "." in source_ref:
-            pack_name, op_name = source_ref.rsplit(".", 1)
+            # Try the centralised resolver first (uses pre-built fragment_sources)
             try:
-                from dazzle.api_kb import load_pack
+                from dazzle_dnr_ui.runtime.template_context import build_field_source_context
 
-                pack = load_pack(pack_name)
-                if pack:
-                    source_config = pack.generate_fragment_source(op_name)
-                    source_ctx = FieldSourceContext(
-                        endpoint="/api/_fragments/search",
-                        display_key=source_config.get("display_key", "name"),
-                        value_key=source_config.get("value_key", "id"),
-                        secondary_key=source_config.get("secondary_key", ""),
-                        autofill=source_config.get("autofill", {}),
-                    )
-                    form_type = "search_select"
+                # fragment_sources may be attached to the module-level cache
+                _fs = getattr(_build_form_fields, "_fragment_sources", {})
+                source_ctx = build_field_source_context(source_ref, _fs)
             except Exception:
-                pass  # Fall back to default field type
+                source_ctx = None
+
+            # Fall back to direct API pack resolution
+            if source_ctx is None:
+                pack_name, op_name = source_ref.rsplit(".", 1)
+                try:
+                    from dazzle.api_kb import load_pack
+
+                    pack = load_pack(pack_name)
+                    if pack:
+                        source_config = pack.generate_fragment_source(op_name)
+                        source_ctx = FieldSourceContext(
+                            endpoint="/api/_fragments/search",
+                            display_key=source_config.get("display_key", "name"),
+                            value_key=source_config.get("value_key", "id"),
+                            secondary_key=source_config.get("secondary_key", ""),
+                            autofill=source_config.get("autofill", {}),
+                        )
+                except Exception:
+                    pass  # Fall back to default field type
+
+            if source_ctx:
+                form_type = "search_select"
 
         fields.append(
             FieldContext(

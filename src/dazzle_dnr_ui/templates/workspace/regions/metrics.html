@@ -1,0 +1,19 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    <div class="stats stats-vertical lg:stats-horizontal shadow-sm">
+      {% for metric in metrics %}
+      <div class="stat">
+        <div class="stat-title">{{ metric.label }}</div>
+        <div class="stat-value text-lg">{{ metric.value }}</div>
+        {% if metric.description %}
+        <div class="stat-desc">{{ metric.description }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if not metrics %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No metrics available.") }}</p>
+    {% endif %}
+  </div>
+</div>

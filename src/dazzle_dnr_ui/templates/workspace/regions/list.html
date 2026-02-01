@@ -1,0 +1,32 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if items %}
+    <div class="overflow-x-auto">
+      <table class="table table-sm table-zebra">
+        <thead>
+          <tr>
+            {% for col in columns %}
+            <th>{{ col.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            {% for col in columns %}
+            <td>{{ item[col.key] | default("") }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total > items | length %}
+    <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>

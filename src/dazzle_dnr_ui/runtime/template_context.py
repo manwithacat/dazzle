@@ -142,3 +142,71 @@ class PageContext(BaseModel):
 
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)
+
+
+# =============================================================================
+# Fragment / Source Resolution Helpers (v0.20.0)
+# =============================================================================
+
+
+def build_field_source_context(
+    source_ref: str,
+    fragment_sources: dict[str, dict[str, Any]],
+) -> FieldSourceContext | None:
+    """Resolve a ``source=`` annotation string to a FieldSourceContext.
+
+    Args:
+        source_ref: DSL source reference, e.g. ``"companieshouse.search_companies"``.
+        fragment_sources: Registry of configured fragment sources keyed by name.
+
+    Returns:
+        FieldSourceContext ready for template rendering, or None if the source
+        is not found in the registry.
+    """
+    # source_ref may be "pack.operation" or just "pack"
+    parts = source_ref.split(".", 1)
+    source_name = parts[0]
+
+    config = fragment_sources.get(source_name)
+    if not config and len(parts) > 1:
+        # Try full dotted name
+        config = fragment_sources.get(source_ref)
+    if not config:
+        return None
+
+    return FieldSourceContext(
+        endpoint=f"/api/_fragments/search?source={source_name}",
+        display_key=config.get("display_key", "name"),
+        value_key=config.get("value_key", "id"),
+        secondary_key=config.get("secondary_key", ""),
+        min_chars=config.get("min_chars", 3),
+        debounce_ms=config.get("debounce_ms", 400),
+        autofill=config.get("autofill", {}),
+    )
+
+
+def resolve_fragment_for_field(field: FieldContext) -> FragmentContext | None:
+    """If *field* has a ``source``, wrap it into a FragmentContext for search_select.
+
+    Returns:
+        FragmentContext pointing to the ``search_select`` fragment template,
+        or None when the field has no dynamic source.
+    """
+    if not field.source:
+        return None
+
+    return FragmentContext(
+        fragment_id=f"fragment-{field.name}",
+        template="fragments/search_select.html",
+        endpoint=field.source.endpoint,
+        trigger="load",
+        swap="innerHTML",
+        params={
+            "field_name": field.name,
+            "field_label": field.label,
+            "field_placeholder": field.placeholder or f"Search {field.label}...",
+            "source_endpoint": field.source.endpoint,
+            "debounce_ms": field.source.debounce_ms,
+            "min_chars": field.source.min_chars,
+        },
+    )

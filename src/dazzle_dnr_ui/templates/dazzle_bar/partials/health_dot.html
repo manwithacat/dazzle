@@ -1,0 +1,3 @@
+<div class="tooltip tooltip-right" data-tip="{{ health_message | default('System OK') }}">
+  <span class="badge badge-xs {% if health_status == 'error' %}badge-error{% elif health_status == 'warning' %}badge-warning{% else %}badge-success{% endif %}"></span>
+</div>

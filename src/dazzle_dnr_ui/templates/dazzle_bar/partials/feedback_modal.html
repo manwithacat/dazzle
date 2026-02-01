@@ -1,0 +1,28 @@
+<dialog id="dazzle-feedback-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Send Feedback</h3>
+    <form hx-post="/dazzle/dev/bar/feedback"
+          hx-target="#dazzle-feedback-result"
+          hx-swap="innerHTML"
+          class="flex flex-col gap-3 mt-4">
+      <select name="category" class="select select-bordered select-sm">
+        <option value="general">General</option>
+        <option value="bug">Bug Report</option>
+        <option value="feature">Feature Request</option>
+        <option value="ux">UX Issue</option>
+      </select>
+      <textarea name="message" class="textarea textarea-bordered" rows="4"
+                placeholder="Describe your feedback..." required></textarea>
+      {# Auto-capture context #}
+      <input type="hidden" name="route" x-bind:value="window.location.pathname" />
+      <input type="hidden" name="persona_id" value="{{ current_persona or '' }}" />
+      <input type="hidden" name="scenario_id" value="{{ current_scenario or '' }}" />
+      <div id="dazzle-feedback-result"></div>
+      <div class="modal-action">
+        <button type="submit" class="btn btn-primary btn-sm">Submit</button>
+        <button type="button" class="btn btn-sm" onclick="this.closest('dialog').close()">Cancel</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
