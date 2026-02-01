@@ -283,25 +283,17 @@ template = "github_actions"
 [ejection.output]
 directory = "generated"
 
-# Step 2: Preview what will be generated
-dazzle eject run --dry-run
 
-# Step 3: Generate the code
-dazzle eject run
-
-# Step 4: Run the generated application
+# Step 2: Run the generated application
 cd generated
 docker compose -f docker-compose.dev.yml up
 
-# Step 5: Run the generated tests
+# Step 3: Run the generated tests
 cd generated
 pytest tests/
 
 # Optional: Generate OpenAPI spec
-dazzle eject openapi -o openapi.yaml
-
-# Optional: Check ejection status
-dazzle eject status
+dazzle specs openapi -o openapi.yaml
 
 # Generated file structure:
 generated/

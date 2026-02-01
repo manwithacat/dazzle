@@ -9,7 +9,7 @@ This package contains the main CLI application and modularized sub-commands:
 - testing.py: Test commands
 - e2e.py: Docker-based E2E testing
 - mcp.py: MCP server commands
-- eject.py: Ejection commands
+- specs.py: Specification generation commands (OpenAPI, AsyncAPI)
 - deploy.py: Deploy commands
 - stubs.py: Stub generation commands
 - story.py: Story commands
@@ -84,11 +84,11 @@ app.command(name="example")(example_command)
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.dnr_impl import dnr_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
-from dazzle.cli.eject import eject_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
+from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
@@ -100,7 +100,7 @@ app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")
 app.add_typer(test_app, name="test")
 app.add_typer(e2e_app, name="e2e")
-app.add_typer(eject_app, name="eject")
+app.add_typer(specs_app, name="specs")
 app.add_typer(deploy_app, name="deploy")
 app.add_typer(events_app, name="events")
 app.add_typer(dlq_app, name="dlq")

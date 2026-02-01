@@ -568,53 +568,19 @@ invariant: end_date > start_date
 10. **Archetypes** - Use for cross-cutting concerns (timestamps, audit, soft delete) (v0.7.1)
 11. **Examples** - Include 2-3 representative records per entity (v0.7.1)
 
-## Ejection Toolchain (v0.7.2)
+## Specs Toolchain
 
-### Ejection (NEW in v0.7.2)
-Path from DNR runtime to standalone generated code when projects outgrow the native runtime or have deployment constraints.
+### Spec Generation
+Generate API specifications from your DAZZLE AppSpec.
 
 **Commands:**
 ```bash
-dazzle eject run                    # Full ejection
-dazzle eject run --no-frontend      # Backend only
-dazzle eject run --dry-run          # Preview changes
-dazzle eject status                 # Check configuration
-dazzle eject adapters               # List available adapters
-dazzle eject openapi -o api.yaml    # Generate OpenAPI spec
+dazzle specs openapi -o api.yaml    # Generate OpenAPI spec
+dazzle specs openapi -f json        # Generate in JSON format
+dazzle specs asyncapi -o async.yaml # Generate AsyncAPI spec
 ```
 
-**Configuration (dazzle.toml):**
-```toml
-[ejection]
-enabled = true
-
-[ejection.backend]
-framework = "fastapi"
-models = "sqlalchemy"
-
-[ejection.frontend]
-framework = "react"
-api_client = "tanstack_query"
-
-[ejection.testing]
-contract = "schemathesis"
-unit = "pytest"
-
-[ejection.ci]
-template = "github_actions"
-
-[ejection.output]
-directory = "generated"
-```
-
-### Ejection Adapters (NEW in v0.7.2)
-Pluggable generators for different targets:
-- **Backend**: FastAPI with SQLAlchemy models
-- **Frontend**: React with TanStack Query
-- **Testing**: Schemathesis (contract), Pytest (unit)
-- **CI**: GitHub Actions, GitLab CI
-
-### OpenAPI Generation (NEW in v0.7.2)
+### OpenAPI Generation
 Generates OpenAPI 3.1 specification from AppSpec including:
 - Entity schemas (Base, Create, Update, Read, List)
 - CRUD endpoints with proper HTTP methods
@@ -623,20 +589,9 @@ Generates OpenAPI 3.1 specification from AppSpec including:
 
 **Example:**
 ```bash
-dazzle eject openapi -o openapi.yaml
-dazzle eject openapi -f json
+dazzle specs openapi -o openapi.yaml
+dazzle specs openapi -f json
 ```
-
-### When to Eject
-- Custom deployment requirements (Kubernetes, serverless)
-- Code review/audit requirements for compliance
-- Performance optimization (precompiled code)
-- Migration away from DAZZLE runtime
-
-### When NOT to Eject
-- Rapid prototyping - use DNR for instant iteration
-- Standard deployments - DNR handles most cases
-- Frequent DSL changes - ejected code becomes stale
 
 ## See Also
 

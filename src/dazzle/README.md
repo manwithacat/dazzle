@@ -167,17 +167,12 @@ backends/openapi/
 └── paths.py            # Path/endpoint generation
 ```
 
-### Ejection System (`eject/`)
+### Specification Generators (`specs/`)
 
-For production deployment, the ejection toolchain generates standalone code:
+Generate OpenAPI and AsyncAPI specifications from your DSL:
 
 ```python
-from dazzle.eject import EjectionRunner, EjectionConfig
-
-# Run ejection with configured adapters
-config = EjectionConfig.from_toml("dazzle.toml")
-runner = EjectionRunner(config, appspec)
-result = runner.run()
+from dazzle.specs import generate_openapi, generate_asyncapi
 ```
 
 ## LSP Server

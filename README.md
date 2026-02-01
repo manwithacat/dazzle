@@ -28,7 +28,7 @@ DAZZLE is a DSL-first toolkit that bridges human specifications and production c
 1. **Describe** what you want in natural language
 2. **Generate** a precise DSL specification (LLM-assisted, one-time cost)
 3. **Iterate** instantly with the Dazzle Native Runtime (DNR)
-4. **Eject** to standalone FastAPI + React when ready for production
+4. **Deploy** directly — DNR is the runtime, not a scaffold
 
 ## Install
 
@@ -150,26 +150,25 @@ dazzle build                     # Build for production
 
 ```
                                                     ┌─────────────┐
-                                               ┌──▶ │ DNR Runtime │ (rapid iteration)
+                                               ┌──▶ │ DNR Runtime │ (run directly)
 ┌─────────────┐     ┌─────────────┐     ┌──────┴──┐ └─────────────┘
 │  DSL Files  │ ──▶ │   Parser    │ ──▶ │ AppSpec │
 │  (.dsl)     │     │   + Linker  │     │  (IR)   │ ┌─────────────┐
-└─────────────┘     └─────────────┘     └──────┬──┘ │  Ejection   │ (production code)
-                                               └──▶ │  Toolchain  │
+└─────────────┘     └─────────────┘     └──────┬──┘ │    Specs     │ (OpenAPI/AsyncAPI)
+                                               └──▶ │  Generator  │
                                                     └─────────────┘
 ```
 
 1. **Parse**: DSL files are parsed into an AST
 2. **Link**: Multi-module references are resolved
 3. **AppSpec**: A semantic intermediate representation (IR) captures the full application model
-4. **Run or Eject**:
-   - **DNR**: Execute directly for instant iteration
-   - **Eject**: Generate standalone code for production
+4. **Run**: DNR executes your spec directly — no code generation step
 
 ```bash
 dazzle check                     # Parse + link + validate
 dazzle dev                       # Run instantly with DNR
-dazzle eject                     # Generate standalone code
+dazzle specs openapi             # Generate OpenAPI 3.1 spec
+dazzle specs asyncapi            # Generate AsyncAPI 3.0 spec
 ```
 
 ## DSL Constructs
@@ -284,67 +283,40 @@ Complete reference: [docs/reference/](docs/reference/)
 
 **Scenario Properties**: `seed_script`, `for persona` (per-persona config)
 
-## Ejection: From Prototype to Production
+## Why HTMX, Not React
 
-When your MVP is ready for production, **eject** to standalone code:
+DAZZLE's frontend is server-rendered HTML with HTMX and Alpine.js. This is a
+deliberate architectural choice, not a limitation.
 
-```bash
-dazzle eject                        # Generate full application
-dazzle eject --backend-only         # Backend only
-dazzle eject --dry-run              # Preview what will be generated
-```
+### React's strengths are for humans
 
-### What Gets Generated
+React's component model is designed around how human developers think:
+compositional UI building blocks, a rich ecosystem of community packages, and
+a mental model (declarative state -> view) that maps well to how people reason
+about interfaces. For teams of human engineers iterating on bespoke UIs, React
+is a strong choice.
 
-| Component | Output |
-|-----------|--------|
-| **Backend** | FastAPI + SQLAlchemy + Pydantic |
-| **Frontend** | React + TypeScript + TanStack Query + Zod |
-| **Testing** | Schemathesis (contract) + Pytest (unit) |
-| **CI/CD** | GitHub Actions or GitLab CI |
-| **Infrastructure** | Docker Compose (dev + prod) |
+### React's weaknesses are for LLM agents
 
-### Configuration
+When the primary author is an LLM coding agent, React's strengths become
+liabilities:
 
-Add to your `dazzle.toml`:
+| Concern | React | HTMX + server templates |
+|---------|-------|------------------------|
+| **Token cost** | JSX, hooks, state management, bundler config, type definitions — large surface area per feature | HTML fragments returned by the server; minimal client-side code |
+| **Build toolchain** | Node, npm/yarn/pnpm, Vite/webpack, TypeScript compiler — each a failure surface the agent must diagnose | Zero build step; three CDN script tags |
+| **Implicit context** | Closure scoping, hook ordering rules, render cycle timing — hard for an LLM to hold in context reliably | Explicit: every interaction is an HTTP request with a visible URL and swap target |
+| **Ecosystem churn** | Package versions, peer dependency conflicts, breaking changes across React 18/19 — a moving target | HTML is stable; HTMX has had one major version |
+| **Debugging** | Stack traces span client bundler, React internals, and async state — requires mental model of the runtime | Server logs show the request; `hx-target` shows where the response goes |
+| **Determinism** | Same prompt can produce subtly different hook patterns, each with different edge-case bugs | Server returns HTML; there is one way to render a list |
 
-```toml
-[ejection]
-enabled = true
+In short: React optimises for **human ergonomics** (component reuse,
+ecosystem leverage, IDE tooling). DAZZLE optimises for **agent ergonomics**
+(minimal token cost, zero ambiguity, no build step, deterministic output).
 
-[ejection.backend]
-framework = "fastapi"
-
-[ejection.frontend]
-framework = "react"
-
-[ejection.output]
-directory = "generated"
-```
-
-### Verification
-
-Ejected code is verified to be completely independent from DAZZLE:
-
-```bash
-dazzle eject verify ./generated     # Verify independence
-```
-
-The verification ensures:
-- No Dazzle imports in generated code
-- No runtime DSL/AppSpec loaders
-- No template merge markers
-- Fully standalone, deployable without DAZZLE installed
-
-### When to Eject
-
-| Use Case | Recommendation |
-|----------|----------------|
-| Rapid prototyping | Stay with DNR |
-| Frequent DSL changes | Stay with DNR |
-| Production deployment | Eject |
-| Custom infrastructure | Eject |
-| Code review/audit requirements | Eject |
+The server-rendered approach also means the entire UI is visible in the
+AppSpec IR — DAZZLE can validate, lint, and generate the frontend without
+executing JavaScript or maintaining a shadow DOM model.
 
 ## IDE Support
 

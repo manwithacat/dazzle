@@ -119,7 +119,7 @@ jobs:
         for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
           echo "Generating AsyncAPI for $example..."
           cd examples/$example
-          python -m dazzle eject asyncapi -f json -o asyncapi.json
+          python -m dazzle specs asyncapi -f json -o asyncapi.json
 
           # Validate the generated AsyncAPI spec
           if [ -f asyncapi.json ]; then

@@ -73,17 +73,6 @@ def version_callback(value: bool) -> None:
         except ImportError:
             pass
 
-        # Check ejection adapters
-        ejection_adapters = []
-        try:
-            from dazzle.eject.adapters import AdapterRegistry
-
-            ejection_adapters = sorted(
-                AdapterRegistry.list_backends() + AdapterRegistry.list_frontends()
-            )
-        except Exception:
-            pass
-
         # Check LLM support
         llm_available = False
         llm_providers = []
@@ -125,13 +114,6 @@ def version_callback(value: bool) -> None:
         else:
             llm_status = "✗ Not available (install with: pip install dazzle[llm])"
         typer.echo(f"  LLM Support:   {llm_status}")
-        typer.echo("")
-        if ejection_adapters:
-            typer.echo("Ejection Adapters:")
-            for adapter in ejection_adapters:
-                typer.echo(f"  - {adapter}")
-        else:
-            typer.echo("Ejection Adapters: None")
 
         raise typer.Exit()
 

@@ -39,12 +39,6 @@ class TestCliBridgeImports:
 
         assert callable(build_project_json)
 
-    def test_eject_project_json_imports(self) -> None:
-        """eject_project_json should import without errors."""
-        from dazzle.core.cli_bridge import eject_project_json
-
-        assert callable(eject_project_json)
-
 
 class TestCliBridgeInternalImports:
     """Test that bridge functions' internal imports work.
@@ -71,24 +65,6 @@ class TestCliBridgeInternalImports:
             pytest.fail(f"build_project_json has broken import: {e}")
         except Exception:
             pass  # Other errors are OK (e.g., validation errors)
-
-    def test_eject_project_json_internal_imports(self, tmp_path: Path) -> None:
-        """eject_project_json should not have broken internal imports."""
-        from dazzle.core.cli_bridge import eject_project_json
-
-        # Create minimal project structure
-        (tmp_path / "dazzle.toml").write_text('[project]\nname = "test"\nversion = "0.1.0"')
-        dsl_dir = tmp_path / "dsl"
-        dsl_dir.mkdir()
-        (dsl_dir / "app.dsl").write_text('module test\napp test "Test"')
-
-        # Should not raise ImportError for internal imports
-        try:
-            eject_project_json(path=str(tmp_path), output=str(tmp_path / "ejected"))
-        except ImportError as e:
-            pytest.fail(f"eject_project_json has broken import: {e}")
-        except Exception:
-            pass  # Other errors are OK
 
 
 class TestValidateProjectJson:

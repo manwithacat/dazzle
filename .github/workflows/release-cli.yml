@@ -419,7 +419,7 @@ jobs:
                   dazzle dev      Start development server (API + UI)
                   dazzle check    Validate DSL files
                   dazzle build    Build for production
-                  dazzle eject    Generate standalone code
+                  dazzle specs    Generate API specifications
                   dazzle test     Run E2E tests
 
                 JSON output (for AI agents):

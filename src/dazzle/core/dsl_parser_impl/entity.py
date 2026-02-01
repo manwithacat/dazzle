@@ -876,7 +876,7 @@ class EntityParserMixin:
             date_expr = self._parse_date_expr()
             # Return the date expression - it will be used in comparisons
             # For invariants, we wrap it in InvariantLiteral with the __str__ representation
-            # This is a simplification; for full support we'd need a dedicated InvariantDateExpr type
+            # Simplification; full support would need a dedicated InvariantDateExpr type
             return ir.InvariantLiteral(value=str(date_expr))
 
         # v0.10.2: Check for compact duration literal (7d, 2w, 30min)

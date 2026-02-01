@@ -399,7 +399,7 @@ class TestSecurityDocs:
         from unittest.mock import MagicMock
 
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.eject.security_docs import generate_security_md
+        from dazzle.specs.security_docs import generate_security_md
 
         app_spec = MagicMock()
         app_spec.name = "TestApp"
@@ -418,7 +418,7 @@ class TestSecurityDocs:
         from unittest.mock import MagicMock
 
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.eject.security_docs import generate_security_md
+        from dazzle.specs.security_docs import generate_security_md
 
         app_spec = MagicMock()
         app_spec.name = "SecureApp"
@@ -441,7 +441,7 @@ class TestSecurityDocs:
         from unittest.mock import MagicMock
 
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.eject.security_docs import generate_security_md
+        from dazzle.specs.security_docs import generate_security_md
 
         access = MagicMock()
         access.require_auth = True
@@ -470,7 +470,7 @@ class TestSecurityDocs:
         from unittest.mock import MagicMock
 
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
-        from dazzle.eject.security_docs import write_security_md
+        from dazzle.specs.security_docs import write_security_md
 
         app_spec = MagicMock()
         app_spec.name = "TestApp"

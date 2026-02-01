@@ -12,7 +12,6 @@ Commands for creating, validating, and working with DAZZLE projects:
 
 For code generation, use:
 - dazzle dnr serve: Run your DSL directly (rapid iteration)
-- dazzle eject run: Generate standalone FastAPI + React (production)
 """
 
 from __future__ import annotations
@@ -676,8 +675,6 @@ def example_command(
         cd <project-name>
         dazzle dnr serve
 
-    When ready for production, use the ejection toolchain:
-        dazzle eject run
 
     Examples:
         dazzle example                        # Interactive selection
@@ -899,10 +896,6 @@ def example_command(
         console.print(Text("  • API docs at http://localhost:8000/docs", style="bright_black"))
 
         console.print()
-        console.print(Text("When ready for production:", style="bold"))
-        console.print(Text("  dazzle eject run", style="cyan"))
-        console.print(Text("  # Generates standalone FastAPI + React code", style="bright_black"))
-
         console.print()
         print_divider("=")
         console.print(Text("Ready for LLM-driven development!", style="bold bright_cyan"))

@@ -23,7 +23,7 @@ DSL Files → Parser → IR (AppSpec) → DNR Runtime (live app)
 | `src/dazzle/core/` | Parser, IR, linker, validation |
 | `src/dazzle_dnr_back/` | FastAPI runtime |
 | `src/dazzle_dnr_ui/` | JavaScript UI runtime |
-| `src/dazzle/eject/` | Ejection adapters for production deployment |
+| `src/dazzle/specs/` | OpenAPI and AsyncAPI specification generators |
 
 ## LLM-First Style Guide
 
@@ -125,13 +125,13 @@ transaction RecordPayment "Record Payment":
 3. Implement parser in `src/dazzle/core/dsl_parser.py`
 4. Add tests in `tests/unit/test_parser.py`
 
-### Production Deployment
+### API Specifications
 ```bash
-# Eject to standalone FastAPI + React code
-dazzle eject run
+# Generate OpenAPI spec
+dazzle specs openapi
 
-# Check available adapters
-dazzle eject adapters
+# Generate AsyncAPI spec
+dazzle specs asyncapi
 ```
 
 ## Examples
