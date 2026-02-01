@@ -104,6 +104,16 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Run extended checks (for lint)",
                     },
+                    "entity_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Entity names to fetch full details for (for get_spec). Omit for summary.",
+                    },
+                    "surface_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Surface names to fetch full details for (for get_spec). Omit for summary.",
+                    },
                     "surface_filter": {
                         "type": "string",
                         "description": "Filter to a specific surface name (for fidelity)",

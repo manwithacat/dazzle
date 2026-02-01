@@ -147,92 +147,146 @@ def _serialize_test_design(td: Any) -> dict[str, Any]:
 # =============================================================================
 
 
+def _serialize_entity_summary(entity: Any) -> dict[str, Any]:
+    """Compact entity summary: name, title, field count, state machine presence."""
+    info: dict[str, Any] = {
+        "name": entity.name,
+        "title": entity.title,
+        "field_count": len(entity.fields),
+        "has_state_machine": entity.state_machine is not None,
+    }
+    if entity.state_machine:
+        info["states"] = entity.state_machine.states
+    return info
+
+
+def _serialize_entity_detail(entity: Any) -> dict[str, Any]:
+    """Full entity detail: all fields, state machine with transitions."""
+    info: dict[str, Any] = {
+        "name": entity.name,
+        "title": entity.title,
+        "fields": [
+            {
+                "name": f.name,
+                "type": str(f.type.kind.value) if f.type.kind else str(f.type),
+                "required": f.is_required,
+            }
+            for f in entity.fields
+        ],
+    }
+    if entity.state_machine:
+        sm = entity.state_machine
+        info["state_machine"] = {
+            "field": sm.status_field,
+            "states": sm.states,
+            "transitions": [
+                {
+                    "from": t.from_state,
+                    "to": t.to_state,
+                    "trigger": t.trigger.value if t.trigger else None,
+                }
+                for t in sm.transitions
+            ],
+        }
+    return info
+
+
+def _serialize_surface_summary(surface: Any) -> dict[str, Any]:
+    """Compact surface summary: name, title, entity, mode."""
+    return {
+        "name": surface.name,
+        "title": surface.title,
+        "entity": surface.entity_ref,
+        "mode": surface.mode.value if surface.mode else None,
+    }
+
+
+def _serialize_surface_detail(surface: Any) -> dict[str, Any]:
+    """Full surface detail: includes sections and fields."""
+    info: dict[str, Any] = {
+        "name": surface.name,
+        "title": surface.title,
+        "entity": surface.entity_ref,
+        "mode": surface.mode.value if surface.mode else None,
+    }
+    if hasattr(surface, "sections") and surface.sections:
+        info["sections"] = [
+            {
+                "name": sec.name,
+                "fields": [
+                    {"name": f.name, "title": getattr(f, "title", f.name)}
+                    for f in (sec.fields if hasattr(sec, "fields") else [])
+                ],
+            }
+            for sec in surface.sections
+        ]
+    return info
+
+
 def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Get complete DSL specification for story generation."""
+    """Get DSL specification with lazy loading support.
+
+    Default: returns compact summaries of all entities and surfaces.
+    With entity_names/surface_names: returns full details for those items only.
+    """
     try:
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
-        # Build comprehensive spec
+        entity_names: list[str] = args.get("entity_names") or []
+        surface_names: list[str] = args.get("surface_names") or []
+        detail_requested = bool(entity_names or surface_names)
+
+        if detail_requested:
+            # Return full details for requested items only
+            result: dict[str, Any] = {
+                "project_path": str(project_root),
+                "app_name": app_spec.name,
+            }
+
+            if entity_names:
+                entity_set = set(entity_names)
+                result["entities"] = [
+                    _serialize_entity_detail(e)
+                    for e in app_spec.domain.entities
+                    if e.name in entity_set
+                ]
+
+            if surface_names:
+                surface_set = set(surface_names)
+                result["surfaces"] = [
+                    _serialize_surface_detail(s) for s in app_spec.surfaces if s.name in surface_set
+                ]
+
+            return json.dumps(result, indent=2)
+
+        # Default: compact summaries
         spec: dict[str, Any] = {
             "project_path": str(project_root),
             "app_name": app_spec.name,
-            "entities": [],
-            "surfaces": [],
-            "personas": [],
-            "workspaces": [],
-            "state_machines": [],
+            "entities": [_serialize_entity_summary(e) for e in app_spec.domain.entities],
+            "surfaces": [_serialize_surface_summary(s) for s in app_spec.surfaces],
+            "personas": [
+                {"id": p.id, "label": p.label, "description": p.description}
+                for p in app_spec.personas
+            ],
+            "workspaces": [
+                {
+                    "name": w.name,
+                    "title": w.title,
+                    "purpose": w.purpose,
+                    "regions": [r.name for r in w.regions],
+                }
+                for w in app_spec.workspaces
+            ],
+            "guidance": (
+                "Use dsl(operation='get_spec', entity_names=['EntityName']) "
+                "or dsl(operation='get_spec', surface_names=['surface_name']) "
+                "for full field and section details."
+            ),
         }
-
-        # Entities with fields and state machines
-        for entity in app_spec.domain.entities:
-            entity_info: dict[str, Any] = {
-                "name": entity.name,
-                "title": entity.title,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type.kind.value) if f.type.kind else str(f.type),
-                        "required": f.is_required,
-                    }
-                    for f in entity.fields
-                ],
-            }
-
-            # Add state machine if present
-            if entity.state_machine:
-                sm = entity.state_machine
-                entity_info["state_machine"] = {
-                    "field": sm.status_field,
-                    "states": sm.states,
-                    "transitions": [
-                        {
-                            "from": t.from_state,
-                            "to": t.to_state,
-                            "trigger": t.trigger.value if t.trigger else None,
-                        }
-                        for t in sm.transitions
-                    ],
-                }
-                spec["state_machines"].append(
-                    {"entity": entity.name, "field": sm.status_field, "states": sm.states}
-                )
-
-            spec["entities"].append(entity_info)
-
-        # Surfaces with modes
-        for surface in app_spec.surfaces:
-            spec["surfaces"].append(
-                {
-                    "name": surface.name,
-                    "title": surface.title,
-                    "entity": surface.entity_ref,
-                    "mode": surface.mode.value if surface.mode else None,
-                }
-            )
-
-        # Personas
-        for persona in app_spec.personas:
-            spec["personas"].append(
-                {
-                    "id": persona.id,
-                    "label": persona.label,
-                    "description": persona.description,
-                }
-            )
-
-        # Workspaces
-        for workspace in app_spec.workspaces:
-            spec["workspaces"].append(
-                {
-                    "name": workspace.name,
-                    "title": workspace.title,
-                    "purpose": workspace.purpose,
-                    "regions": [r.name for r in workspace.regions],
-                }
-            )
 
         return json.dumps(spec, indent=2)
     except Exception as e:
