@@ -87,6 +87,9 @@ class ServerConfig:
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
 
+    # Founder Console (v0.26.0)
+    enable_console: bool = True  # Enable /_console/ founder control plane
+
 
 # Runtime import
 try:
@@ -240,6 +243,8 @@ class DNRBackendApp:
         self._process_adapter: Any | None = None  # ProcessAdapter type
         # Fragment sources from DSL source= annotations (v0.25.1)
         self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
+        # Founder Console (v0.26.0)
+        self._enable_console = config.enable_console
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -542,6 +547,62 @@ class DNRBackendApp:
             import logging
 
             logging.getLogger("dazzle.server").warning(f"Failed to init event framework: {e}")
+
+    def _init_console(self) -> None:
+        """Initialize the Founder Console (v0.26.0)."""
+        if not self._app or not self._enable_console:
+            return
+
+        try:
+            from dazzle_dnr_back.runtime.console_routes import create_console_routes
+            from dazzle_dnr_back.runtime.deploy_history import DeployHistoryStore
+            from dazzle_dnr_back.runtime.deploy_routes import create_deploy_routes
+            from dazzle_dnr_back.runtime.ops_database import OpsDatabase
+            from dazzle_dnr_back.runtime.rollback_manager import RollbackManager
+            from dazzle_dnr_back.runtime.spec_versioning import SpecVersionStore
+
+            # Create ops database for console (reuse path convention)
+            ops_db = OpsDatabase(db_path=self._db_path.parent / "ops.db")
+            spec_version_store = SpecVersionStore(ops_db)
+            deploy_history_store = DeployHistoryStore(ops_db)
+
+            # Save current spec version
+            spec_version_store.save_version(self.spec)
+
+            # Rollback manager
+            rollback_manager = RollbackManager(
+                spec_version_store=spec_version_store,
+                deploy_history_store=deploy_history_store,
+            )
+
+            console_router = create_console_routes(
+                ops_db=ops_db,
+                appspec=self.spec,
+                spec_version_store=spec_version_store,
+                deploy_history_store=deploy_history_store,
+            )
+            self._app.include_router(console_router)
+
+            deploy_router = create_deploy_routes(
+                deploy_history_store=deploy_history_store,
+                spec_version_store=spec_version_store,
+                rollback_manager=rollback_manager,
+                appspec=self.spec,
+            )
+            self._app.include_router(deploy_router)
+
+            import logging
+
+            logging.getLogger("dazzle.server").info("Founder Console initialized at /_console/")
+
+        except ImportError as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Console not available: {e}")
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init console: {e}")
 
     def _init_fragment_routes(self) -> None:
         """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
@@ -904,6 +965,10 @@ class DNRBackendApp:
         # Initialize messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:
             self._init_channel_manager()
+
+        # Initialize Founder Console (v0.26.0)
+        if self._enable_console:
+            self._init_console()
 
         # Initialize fragment routes (v0.25.0)
         self._init_fragment_routes()

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Dazzle Console{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex items-center justify-center bg-base-200">
+  <div class="card w-96 bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl font-bold text-center w-full justify-center mb-2">
+        Dazzle Console
+      </h2>
+      <p class="text-center text-sm opacity-70 mb-4">
+        {% if setup_required %}
+          Create your admin account to get started.
+        {% else %}
+          Sign in to your control plane.
+        {% endif %}
+      </p>
+
+      {% if error %}
+      <div class="alert alert-error mb-4">
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="/_console/login">
+        <div class="form-control mb-3">
+          <label class="label"><span class="label-text">Username</span></label>
+          <input type="text" name="username" placeholder="ops_admin"
+                 value="{{ 'ops_admin' if setup_required else '' }}"
+                 class="input input-bordered w-full" required />
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label"><span class="label-text">Password</span></label>
+          <input type="password" name="password" placeholder="{% if setup_required %}Choose a password (min 8 chars){% else %}Enter password{% endif %}"
+                 class="input input-bordered w-full" required
+                 minlength="{% if setup_required %}8{% else %}1{% endif %}" />
+        </div>
+
+        <div class="form-control mt-6">
+          <button type="submit" class="btn btn-primary w-full">
+            {% if setup_required %}Create Account{% else %}Sign In{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

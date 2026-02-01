@@ -29,6 +29,7 @@ from dazzle_dnr_back.runtime.api_tracker import (
     configure_anthropic_tracking,
     configure_openai_tracking,
 )
+from dazzle_dnr_back.runtime.console_routes import create_console_routes
 from dazzle_dnr_back.runtime.email_templates import (
     BrandConfig,
     EmailTemplateEngine,
@@ -91,6 +92,7 @@ class OpsConfig:
         self.sse_heartbeat_interval = sse_heartbeat_interval
         self.brand_config = brand_config
         self.tracking_base_url = tracking_base_url
+        self.enable_console = True
 
 
 class OpsPlatform:
@@ -118,6 +120,10 @@ class OpsPlatform:
         self.api_tracker: ApiTracker | None = None
         self.email_engine: EmailTemplateEngine | None = None
         self.simulator: OpsSimulator | None = None
+        self.appspec: Any = None
+        self.spec_version_store: Any = None
+        self.deploy_history_store: Any = None
+        self.rollback_manager: Any = None
 
     def configure(
         self,
@@ -230,6 +236,41 @@ class OpsPlatform:
         if self.analytics_collector:
             await self.analytics_collector.stop()
 
+    def set_appspec(self, appspec: Any) -> None:
+        """Set the AppSpec for console features (versioning, app map, etc.)."""
+        self.appspec = appspec
+
+        # Initialize spec versioning
+        try:
+            from dazzle_dnr_back.runtime.spec_versioning import SpecVersionStore
+
+            self.spec_version_store = SpecVersionStore(self.ops_db)
+            self.spec_version_store.save_version(appspec)
+        except Exception:
+            import logging
+
+            logging.getLogger("dazzle.ops").debug("Spec versioning not available")
+
+        # Initialize deploy history
+        try:
+            from dazzle_dnr_back.runtime.deploy_history import DeployHistoryStore
+
+            self.deploy_history_store = DeployHistoryStore(self.ops_db)
+        except Exception:
+            pass
+
+        # Initialize rollback manager
+        try:
+            from dazzle_dnr_back.runtime.rollback_manager import RollbackManager
+
+            if self.spec_version_store:
+                self.rollback_manager = RollbackManager(
+                    spec_version_store=self.spec_version_store,
+                    deploy_history_store=self.deploy_history_store,
+                )
+        except Exception:
+            pass
+
     def create_routes(self) -> list[Any]:
         """
         Create all ops routes.
@@ -261,6 +302,34 @@ class OpsPlatform:
         # Email tracking routes
         if self.email_engine:
             routers.append(create_email_tracking_routes(self.email_engine))
+
+        # Founder Console routes
+        if self.config.enable_console:
+            try:
+                console_router = create_console_routes(
+                    ops_db=self.ops_db,
+                    health_aggregator=self.health_aggregator,
+                    appspec=self.appspec,
+                    spec_version_store=self.spec_version_store,
+                    deploy_history_store=self.deploy_history_store,
+                    require_auth=self.config.require_auth,
+                )
+                routers.append(console_router)
+
+                # Deploy routes
+                from dazzle_dnr_back.runtime.deploy_routes import create_deploy_routes
+
+                deploy_router = create_deploy_routes(
+                    deploy_history_store=self.deploy_history_store,
+                    spec_version_store=self.spec_version_store,
+                    rollback_manager=self.rollback_manager,
+                    appspec=self.appspec,
+                )
+                routers.append(deploy_router)
+            except Exception:
+                import logging
+
+                logging.getLogger("dazzle.ops").debug("Console routes not available")
 
         return routers
 
@@ -388,6 +457,7 @@ def mount_ops_platform(
     event_bus: EventBus | None = None,
     ws_manager: WebSocketManager | None = None,
     app_db_path: str | None = None,
+    appspec: Any = None,
 ) -> OpsPlatform:
     """
     Mount the Operations Platform on a FastAPI app.
@@ -427,6 +497,10 @@ def mount_ops_platform(
         ws_manager=ws_manager,
         app_db_path=app_db_path,
     )
+
+    # Set AppSpec for console features
+    if appspec:
+        platform.set_appspec(appspec)
 
     # Add API tracking middleware for request correlation
     if platform.api_tracker:

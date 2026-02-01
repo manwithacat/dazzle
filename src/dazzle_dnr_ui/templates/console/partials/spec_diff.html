@@ -1,0 +1,108 @@
+{# Spec diff partial #}
+<div class="card bg-base-100 shadow-sm border border-base-300 mt-4">
+  <div class="card-body p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold">Version Diff</h3>
+      <button class="btn btn-ghost btn-xs"
+              hx-get="/_console/partials/rollback-confirm/{{ version_id }}"
+              hx-target="#rollback-modal"
+              hx-swap="innerHTML">
+        Rollback to this version
+      </button>
+    </div>
+
+    {% if diff %}
+      {% if diff.summary %}
+      <p class="text-sm opacity-70 mb-3">{{ diff.summary }}</p>
+      {% endif %}
+
+      {# Entity changes #}
+      {% if diff.added_entities %}
+      <div class="mb-2">
+        <span class="text-xs font-semibold text-success">Added Entities:</span>
+        {% for name in diff.added_entities %}
+        <span class="badge badge-success badge-sm ml-1">+ {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if diff.removed_entities %}
+      <div class="mb-2">
+        <span class="text-xs font-semibold text-error">Removed Entities:</span>
+        {% for name in diff.removed_entities %}
+        <span class="badge badge-error badge-sm ml-1">- {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if diff.modified_entities %}
+      <div class="mb-2">
+        <span class="text-xs font-semibold text-warning">Modified Entities:</span>
+        {% for name in diff.modified_entities %}
+        <span class="badge badge-warning badge-sm ml-1">~ {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Surface changes #}
+      {% if diff.added_surfaces %}
+      <div class="mb-2">
+        <span class="text-xs font-semibold text-success">Added Surfaces:</span>
+        {% for name in diff.added_surfaces %}
+        <span class="badge badge-success badge-sm ml-1">+ {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if diff.removed_surfaces %}
+      <div class="mb-2">
+        <span class="text-xs font-semibold text-error">Removed Surfaces:</span>
+        {% for name in diff.removed_surfaces %}
+        <span class="badge badge-error badge-sm ml-1">- {{ name }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {# Field changes table #}
+      {% if diff.field_changes %}
+      <div class="overflow-x-auto mt-3">
+        <table class="table table-xs">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Field</th>
+              <th>Change</th>
+              <th>Old</th>
+              <th>New</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fc in diff.field_changes %}
+            <tr>
+              <td class="font-mono text-xs">{{ fc.entity }}</td>
+              <td class="font-mono text-xs">{{ fc.field_name }}</td>
+              <td>
+                {% if fc.change_type == "added" %}
+                  <span class="badge badge-success badge-xs">added</span>
+                {% elif fc.change_type == "removed" %}
+                  <span class="badge badge-error badge-xs">removed</span>
+                {% else %}
+                  <span class="badge badge-warning badge-xs">modified</span>
+                {% endif %}
+              </td>
+              <td class="text-xs opacity-60">{{ fc.old_value or "-" }}</td>
+              <td class="text-xs opacity-60">{{ fc.new_value or "-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% else %}
+    <p class="text-sm opacity-60">No diff data available (initial version).</p>
+    {% endif %}
+  </div>
+</div>
+
+{# Rollback modal container #}
+<div id="rollback-modal"></div>

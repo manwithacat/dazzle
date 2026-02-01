@@ -1,0 +1,27 @@
+{# Surface list partial #}
+{% if surfaces %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {% for surface in surfaces %}
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-semibold">{{ surface.name }}</h3>
+          <p class="text-xs opacity-60">{{ surface.label }}</p>
+        </div>
+        <span class="badge badge-outline badge-sm">{{ surface.mode }}</span>
+      </div>
+      <div class="flex gap-3 mt-2 text-xs opacity-70">
+        {% if surface.entity %}
+        <span>Entity: <span class="font-mono">{{ surface.entity }}</span></span>
+        {% endif %}
+        <span>{{ surface.field_count }} fields</span>
+        <span>{{ surface.section_count }} sections</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-8 opacity-60">No surfaces defined in the DSL.</div>
+{% endif %}

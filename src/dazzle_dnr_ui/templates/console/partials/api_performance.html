@@ -1,0 +1,40 @@
+{# API performance partial #}
+<div class="card bg-base-100 shadow-sm border border-base-300">
+  <div class="card-body p-4">
+    <h3 class="font-semibold text-lg">API Performance</h3>
+    <p class="text-xs opacity-60 mb-3">Last {{ hours }} hours</p>
+
+    {% if perf_data %}
+    <div class="overflow-x-auto">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Endpoint</th>
+            <th>Method</th>
+            <th>Calls</th>
+            <th>Avg (ms)</th>
+            <th>Max (ms)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in perf_data %}
+          <tr>
+            <td class="font-mono text-xs">{{ row.endpoint }}</td>
+            <td><span class="badge badge-ghost badge-xs">{{ row.method }}</span></td>
+            <td>{{ row.count }}</td>
+            <td>
+              <span class="{% if row.avg_ms > 1000 %}text-error{% elif row.avg_ms > 500 %}text-warning{% else %}text-success{% endif %}">
+                {{ row.avg_ms }}
+              </span>
+            </td>
+            <td>{{ row.max_ms }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 opacity-60 text-sm">No API call data in this period.</div>
+    {% endif %}
+  </div>
+</div>

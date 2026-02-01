@@ -1,0 +1,29 @@
+{# Preflight results partial #}
+{% if checks %}
+<div class="space-y-2 mt-3">
+  {% for check in checks %}
+  <div class="flex items-start gap-2 p-2 rounded-lg bg-base-200">
+    {% if check.severity == "critical" or check.severity == "high" %}
+      <span class="badge badge-error badge-xs mt-1">{{ check.severity }}</span>
+    {% elif check.severity == "warn" or check.severity == "warning" %}
+      <span class="badge badge-warning badge-xs mt-1">{{ check.severity }}</span>
+    {% elif check.severity == "info" %}
+      <span class="badge badge-info badge-xs mt-1">{{ check.severity }}</span>
+    {% else %}
+      <span class="badge badge-ghost badge-xs mt-1">{{ check.severity }}</span>
+    {% endif %}
+    <div>
+      <span class="text-sm font-medium">{{ check.name }}</span>
+      <p class="text-xs opacity-70">{{ check.message }}</p>
+      {% if check.remediation %}
+      <p class="text-xs text-info mt-1">Fix: {{ check.remediation }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-4 opacity-60 text-sm">
+  No checks run yet. Click "Run Preflight" to start.
+</div>
+{% endif %}

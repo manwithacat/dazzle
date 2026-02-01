@@ -1,0 +1,32 @@
+{# Integration list partial #}
+{% if integrations %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {% for item in integrations %}
+  <div class="card bg-base-100 shadow-sm border border-base-300">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="font-semibold">{{ item.name }}</h3>
+          <p class="text-xs opacity-60">{{ item.label }}</p>
+        </div>
+        {% if item.kind == "integration" %}
+          <span class="badge badge-primary badge-sm">Integration</span>
+        {% elif item.kind == "service" %}
+          <span class="badge badge-secondary badge-sm">Service</span>
+        {% elif item.kind == "foreign_model" %}
+          <span class="badge badge-accent badge-sm">Foreign Model</span>
+        {% endif %}
+      </div>
+      {% if item.provider %}
+      <div class="text-xs opacity-70 mt-1">Provider: {{ item.provider }}</div>
+      {% endif %}
+      {% if item.source %}
+      <div class="text-xs opacity-70 mt-1">Source: {{ item.source }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-8 opacity-60">No integrations, services, or foreign models defined.</div>
+{% endif %}

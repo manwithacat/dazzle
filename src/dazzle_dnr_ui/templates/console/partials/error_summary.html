@@ -1,0 +1,40 @@
+{# Error summary partial #}
+<div class="card bg-base-100 shadow-sm border border-base-300">
+  <div class="card-body p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-lg">Errors</h3>
+      <span class="badge {% if error_data.total > 0 %}badge-error{% else %}badge-success{% endif %}">
+        {{ error_data.total }} total
+      </span>
+    </div>
+
+    {% if error_data.by_endpoint %}
+    <div class="space-y-2 mb-4">
+      {% for endpoint, count in error_data.by_endpoint.items() %}
+      <div class="flex items-center justify-between p-2 bg-base-200 rounded">
+        <span class="text-sm font-mono">{{ endpoint }}</span>
+        <span class="badge badge-error badge-sm">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if error_data.recent %}
+    <h4 class="text-sm font-semibold mt-4 mb-2">Recent Errors</h4>
+    <div class="space-y-1">
+      {% for err in error_data.recent %}
+      <div class="text-xs p-2 bg-base-200 rounded">
+        <span class="font-mono">{{ err.method }} {{ err.endpoint }}</span>
+        <span class="badge badge-error badge-xs ml-1">{{ err.status_code or "error" }}</span>
+        {% if err.error_message %}
+        <p class="opacity-70 mt-1">{{ err.error_message }}</p>
+        {% endif %}
+        <span class="opacity-50">{{ err.called_at }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif error_data.total == 0 %}
+    <div class="text-center py-4 opacity-60 text-sm">No errors in this period.</div>
+    {% endif %}
+  </div>
+</div>

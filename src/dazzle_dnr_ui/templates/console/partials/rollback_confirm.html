@@ -1,0 +1,40 @@
+{# Rollback confirmation modal #}
+<dialog class="modal modal-open" id="rollback-dialog">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Confirm Rollback</h3>
+    <p class="py-2 text-sm opacity-70">
+      This will restore DSL files to the selected version and record the rollback.
+    </p>
+
+    {% if diff %}
+    <div class="bg-base-200 rounded-lg p-3 my-3 text-sm">
+      <p class="font-semibold mb-1">Changes that will be reverted:</p>
+      {% if diff.summary %}
+      <p class="opacity-70">{{ diff.summary }}</p>
+      {% endif %}
+      {% if diff.added_entities %}
+      <p class="text-error text-xs mt-1">Will remove: {{ diff.added_entities | join(", ") }}</p>
+      {% endif %}
+      {% if diff.removed_entities %}
+      <p class="text-success text-xs mt-1">Will restore: {{ diff.removed_entities | join(", ") }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="modal-action">
+      <button class="btn btn-ghost"
+              onclick="document.getElementById('rollback-dialog').close(); document.getElementById('rollback-modal').innerHTML = '';">
+        Cancel
+      </button>
+      <button class="btn btn-error"
+              hx-post="/_console/api/rollback/{{ version_id }}"
+              hx-target="#rollback-modal"
+              hx-swap="innerHTML">
+        Rollback
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

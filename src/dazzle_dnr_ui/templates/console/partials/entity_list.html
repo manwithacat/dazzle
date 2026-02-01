@@ -1,0 +1,54 @@
+{# Entity list partial #}
+{% if entities %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {% for entity in entities %}
+  <div class="card bg-base-100 shadow-sm border border-base-300" x-data="{ open: false }">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between cursor-pointer" @click="open = !open">
+        <div>
+          <h3 class="font-semibold">{{ entity.name }}</h3>
+          <p class="text-xs opacity-60">{{ entity.label }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          {% if entity.has_state_machine %}
+          <span class="badge badge-info badge-sm">State Machine</span>
+          {% endif %}
+          <span class="badge badge-ghost badge-sm">{{ entity.field_count }} fields</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+               class="w-4 h-4 transition-transform" :class="open && 'rotate-180'">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </div>
+      </div>
+
+      {# Fields accordion #}
+      <div x-show="open" x-transition class="mt-3 border-t border-base-300 pt-3">
+        <table class="table table-xs">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Type</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for field in entity.fields %}
+            <tr>
+              <td class="font-mono text-xs">{{ field.name }}</td>
+              <td class="text-xs opacity-70">{{ field.type }}</td>
+              <td>
+                {% if field.primary_key %}<span class="badge badge-primary badge-xs">PK</span>{% endif %}
+                {% if field.required %}<span class="badge badge-warning badge-xs">req</span>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-8 opacity-60">No entities defined in the DSL.</div>
+{% endif %}

@@ -37,7 +37,11 @@ The key problem I'm solving is [problem statement].
 Users should be able to [primary actions] with minimal friction.
 
 **Example**:
-> I need a simple task management application where I can keep track of my to-do items. Nothing fancy - just a straightforward way to create tasks, mark their status, and set priorities. I want to be able to see all my tasks at a glance, view details when needed, and mark tasks as complete when I finish them.
+> I need a simple task management application where I can keep track of
+> my to-do items. Nothing fancy - just a straightforward way to create
+> tasks, mark their status, and set priorities. I want to be able to
+> see all my tasks at a glance, view details when needed, and mark
+> tasks as complete when I finish them.
 
 ---
 

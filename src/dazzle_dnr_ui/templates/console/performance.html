@@ -1,0 +1,56 @@
+{% extends "console/base_console.html" %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ hours: 24 }">
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold">Performance</h2>
+      <p class="text-sm opacity-70">API performance, errors, and cost monitoring.</p>
+    </div>
+    <select class="select select-bordered select-sm"
+            x-model="hours"
+            @change="htmx.trigger('#api-perf-section', 'refresh');
+                     htmx.trigger('#error-section', 'refresh');
+                     htmx.trigger('#cost-section', 'refresh')">
+      <option value="1">Last 1 hour</option>
+      <option value="6">Last 6 hours</option>
+      <option value="24" selected>Last 24 hours</option>
+      <option value="72">Last 3 days</option>
+      <option value="168">Last 7 days</option>
+    </select>
+  </div>
+
+  {# API Performance #}
+  <div id="api-perf-section"
+       hx-get="/_console/partials/api-perf?hours=24"
+       hx-trigger="load, refresh"
+       hx-swap="innerHTML"
+       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+    <div class="flex items-center justify-center p-8">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+  </div>
+
+  {# Errors #}
+  <div id="error-section"
+       hx-get="/_console/partials/errors?hours=24"
+       hx-trigger="load, refresh"
+       hx-swap="innerHTML"
+       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+    <div class="flex items-center justify-center p-8">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+  </div>
+
+  {# Costs #}
+  <div id="cost-section"
+       hx-get="/_console/partials/costs?hours=24"
+       hx-trigger="load, refresh"
+       hx-swap="innerHTML"
+       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+    <div class="flex items-center justify-center p-8">
+      <span class="loading loading-spinner loading-md"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}

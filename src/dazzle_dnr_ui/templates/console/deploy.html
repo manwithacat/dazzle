@@ -1,0 +1,90 @@
+{% extends "console/base_console.html" %}
+
+{% block content %}
+<div class="space-y-6" x-data="{ step: 1 }">
+  <h2 class="text-2xl font-bold">Deploy</h2>
+  <p class="text-sm opacity-70">Deployment pipeline: Preflight, Generate, Deploy.</p>
+
+  {# Steps indicator #}
+  <ul class="steps w-full">
+    <li class="step" :class="step >= 1 && 'step-primary'">Preflight</li>
+    <li class="step" :class="step >= 2 && 'step-primary'">Generate</li>
+    <li class="step" :class="step >= 3 && 'step-primary'">Deploy</li>
+  </ul>
+
+  {# Step 1: Preflight #}
+  <div x-show="step === 1" class="space-y-4">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body">
+        <h3 class="card-title text-lg">Pre-Flight Checks</h3>
+        <p class="text-sm opacity-70">Validate your configuration before deploying.</p>
+        <div id="preflight-results"></div>
+        <div class="card-actions justify-end mt-4">
+          <button class="btn btn-primary"
+                  hx-post="/_console/api/preflight"
+                  hx-target="#preflight-results"
+                  hx-swap="innerHTML"
+                  hx-indicator="#preflight-spinner">
+            <span id="preflight-spinner" class="loading loading-spinner loading-sm htmx-indicator"></span>
+            Run Preflight
+          </button>
+          <button class="btn btn-ghost" @click="step = 2">Skip to Generate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Step 2: Generate #}
+  <div x-show="step === 2" class="space-y-4">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body">
+        <h3 class="card-title text-lg">Generate Stacks</h3>
+        <p class="text-sm opacity-70">Generate CDK infrastructure from your DSL.</p>
+        <div id="generate-results"></div>
+        <div class="card-actions justify-end mt-4">
+          <button class="btn btn-ghost" @click="step = 1">Back</button>
+          <button class="btn btn-primary"
+                  hx-post="/_console/api/generate"
+                  hx-target="#generate-results"
+                  hx-swap="innerHTML">
+            Generate
+          </button>
+          <button class="btn btn-ghost" @click="step = 3">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Step 3: Deploy #}
+  <div x-show="step === 3" class="space-y-4">
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body">
+        <h3 class="card-title text-lg">Deploy</h3>
+        <p class="text-sm opacity-70">Execute deployment to your environment.</p>
+        <div id="deploy-results"></div>
+        <div class="card-actions justify-end mt-4">
+          <button class="btn btn-ghost" @click="step = 2">Back</button>
+          <button class="btn btn-error"
+                  hx-post="/_console/api/deploy"
+                  hx-target="#deploy-results"
+                  hx-swap="innerHTML"
+                  hx-confirm="Are you sure you want to deploy?">
+            Deploy Now
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Deployment History #}
+  <div class="divider">History</div>
+  <div id="deploy-history"
+       hx-get="/_console/partials/deploy-history"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <div class="flex items-center justify-center p-4">
+      <span class="loading loading-spinner loading-sm"></span>
+    </div>
+  </div>
+</div>
+{% endblock %}

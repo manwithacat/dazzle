@@ -1,0 +1,63 @@
+{# Health cards partial - loaded via hx-get, auto-refreshes every 30s #}
+<div class="space-y-4">
+  <h3 class="text-lg font-semibold flex items-center gap-2">
+    System Health
+    {% if health.status == "all_healthy" %}
+      <span class="badge badge-success">All Healthy</span>
+    {% elif health.status == "some_degraded" %}
+      <span class="badge badge-warning">Degraded</span>
+    {% elif health.status == "some_unhealthy" or health.status == "all_unhealthy" %}
+      <span class="badge badge-error">Unhealthy</span>
+    {% else %}
+      <span class="badge badge-ghost">Unknown</span>
+    {% endif %}
+    {% if health.checked_at %}
+    <span class="text-xs opacity-50 ml-auto font-normal">Last checked: {{ health.checked_at }}</span>
+    {% endif %}
+  </h3>
+
+  {% if health.components %}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+    {% for component in health.components %}
+    <div class="card bg-base-100 shadow-sm border border-base-300">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between">
+          <span class="font-medium text-sm">{{ component.name }}</span>
+          {% if component.status == "healthy" %}
+            <span class="badge badge-success badge-sm">Healthy</span>
+          {% elif component.status == "degraded" %}
+            <span class="badge badge-warning badge-sm">Degraded</span>
+          {% elif component.status == "unhealthy" %}
+            <span class="badge badge-error badge-sm">Unhealthy</span>
+          {% else %}
+            <span class="badge badge-ghost badge-sm">Unknown</span>
+          {% endif %}
+        </div>
+        <div class="text-xs opacity-60 mt-1">
+          <span>{{ component.type }}</span>
+          {% if component.latency_ms %}
+          <span class="ml-2">{{ component.latency_ms }}ms</span>
+          {% endif %}
+        </div>
+        {% if component.message %}
+        <div class="text-xs mt-1 opacity-70">{{ component.message }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-8 opacity-60">
+    <p>No health checks registered.</p>
+    <p class="text-sm mt-1">Health checks will appear once the ops platform is configured.</p>
+  </div>
+  {% endif %}
+
+  {# Summary bar #}
+  <div class="flex gap-4 text-sm opacity-70">
+    <span>Total: {{ health.summary.total }}</span>
+    <span class="text-success">Healthy: {{ health.summary.healthy }}</span>
+    <span class="text-warning">Degraded: {{ health.summary.degraded }}</span>
+    <span class="text-error">Unhealthy: {{ health.summary.unhealthy }}</span>
+  </div>
+</div>

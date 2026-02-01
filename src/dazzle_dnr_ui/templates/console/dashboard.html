@@ -1,0 +1,49 @@
+{% extends "console/base_console.html" %}
+
+{% block content %}
+<div class="space-y-6">
+  {# Header #}
+  <div class="flex items-center justify-between">
+    <div>
+      <h2 class="text-2xl font-bold">Dashboard</h2>
+      <p class="text-sm opacity-70">{{ app_summary.name }} v{{ app_summary.version }}</p>
+    </div>
+    <button class="btn btn-ghost btn-sm"
+            hx-get="/_console/partials/health-cards"
+            hx-target="#health-section"
+            hx-swap="innerHTML">
+      Refresh
+    </button>
+  </div>
+
+  {# App Summary Stats #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="stat bg-base-100 rounded-box shadow stat-card">
+      <div class="stat-title">Entities</div>
+      <div class="stat-value text-primary">{{ app_summary.entities }}</div>
+      <div class="stat-desc">Data models defined</div>
+    </div>
+    <div class="stat bg-base-100 rounded-box shadow stat-card">
+      <div class="stat-title">Surfaces</div>
+      <div class="stat-value text-secondary">{{ app_summary.surfaces }}</div>
+      <div class="stat-desc">UI views defined</div>
+    </div>
+    <div class="stat bg-base-100 rounded-box shadow stat-card">
+      <div class="stat-title">Integrations</div>
+      <div class="stat-value text-accent">{{ app_summary.integrations }}</div>
+      <div class="stat-desc">Services & integrations</div>
+    </div>
+  </div>
+
+  {# Health Section - auto-refreshing #}
+  <div id="health-section"
+       hx-get="/_console/partials/health-cards"
+       hx-trigger="load, every 30s"
+       hx-swap="innerHTML">
+    <div class="flex items-center justify-center p-8">
+      <span class="loading loading-spinner loading-md"></span>
+      <span class="ml-2 text-sm opacity-70">Loading health status...</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+{# Deploy progress partial - SSE driven #}
+<div class="space-y-2">
+  {% if stacks %}
+  {% for stack in stacks %}
+  <div class="flex items-center gap-3 p-2 bg-base-200 rounded-lg">
+    {% if stack.status == "completed" %}
+      <span class="text-success">&#10003;</span>
+    {% elif stack.status == "in_progress" %}
+      <span class="loading loading-spinner loading-xs"></span>
+    {% elif stack.status == "failed" %}
+      <span class="text-error">&#10007;</span>
+    {% else %}
+      <span class="opacity-30">&#9675;</span>
+    {% endif %}
+    <span class="text-sm font-medium">{{ stack.name }}</span>
+    <span class="text-xs opacity-60 ml-auto">{{ stack.status }}</span>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="text-center py-4 opacity-60 text-sm">
+    Waiting for deployment to start...
+  </div>
+  {% endif %}
+</div>

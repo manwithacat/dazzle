@@ -1,0 +1,41 @@
+{# Deploy history partial #}
+{% if history %}
+<div class="overflow-x-auto">
+  <table class="table table-sm">
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Environment</th>
+        <th>Started</th>
+        <th>Completed</th>
+        <th>By</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for deploy in history %}
+      <tr>
+        <td>
+          {% if deploy.status == "completed" %}
+            <span class="badge badge-success badge-sm">Completed</span>
+          {% elif deploy.status == "failed" %}
+            <span class="badge badge-error badge-sm">Failed</span>
+          {% elif deploy.status == "rolled_back" %}
+            <span class="badge badge-warning badge-sm">Rolled Back</span>
+          {% elif deploy.status == "deploying" %}
+            <span class="badge badge-info badge-sm">Deploying</span>
+          {% else %}
+            <span class="badge badge-ghost badge-sm">{{ deploy.status }}</span>
+          {% endif %}
+        </td>
+        <td class="text-sm">{{ deploy.environment }}</td>
+        <td class="text-xs opacity-70">{{ deploy.started_at }}</td>
+        <td class="text-xs opacity-70">{{ deploy.completed_at or "-" }}</td>
+        <td class="text-sm">{{ deploy.initiated_by }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-4 opacity-60 text-sm">No deployments recorded yet.</div>
+{% endif %}

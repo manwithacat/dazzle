@@ -1,0 +1,53 @@
+{% extends "console/base_console.html" %}
+
+{% block content %}
+<div class="space-y-6">
+  <h2 class="text-2xl font-bold">App Map</h2>
+  <p class="text-sm opacity-70">Explore your DSL entities, surfaces, and integrations.</p>
+
+  {# Tabs #}
+  <div x-data="{ tab: 'entities' }" class="space-y-4">
+    <div role="tablist" class="tabs tabs-boxed">
+      <a role="tab" class="tab" :class="tab === 'entities' && 'tab-active'"
+         @click="tab = 'entities'">Entities</a>
+      <a role="tab" class="tab" :class="tab === 'surfaces' && 'tab-active'"
+         @click="tab = 'surfaces'">Surfaces</a>
+      <a role="tab" class="tab" :class="tab === 'integrations' && 'tab-active'"
+         @click="tab = 'integrations'">Integrations</a>
+    </div>
+
+    {# Entity tab #}
+    <div x-show="tab === 'entities'"
+         id="entities-panel"
+         hx-get="/_console/partials/entities"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+      <div class="flex items-center justify-center p-8">
+        <span class="loading loading-spinner loading-md"></span>
+      </div>
+    </div>
+
+    {# Surfaces tab #}
+    <div x-show="tab === 'surfaces'"
+         id="surfaces-panel"
+         hx-get="/_console/partials/surfaces"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+      <div class="flex items-center justify-center p-8">
+        <span class="loading loading-spinner loading-md"></span>
+      </div>
+    </div>
+
+    {# Integrations tab #}
+    <div x-show="tab === 'integrations'"
+         id="integrations-panel"
+         hx-get="/_console/partials/integrations"
+         hx-trigger="intersect once"
+         hx-swap="innerHTML">
+      <div class="flex items-center justify-center p-8">
+        <span class="loading loading-spinner loading-md"></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
