@@ -9,7 +9,9 @@ This package provides:
 - Converters: Transform Dazzle AppSpec to BackendSpec
 """
 
-__version__ = "0.9.4"
+from dazzle._version import get_version as _get_version
+
+__version__ = _get_version()
 
 from dazzle_dnr_back.specs.backend_spec import BackendSpec
 

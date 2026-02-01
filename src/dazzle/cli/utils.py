@@ -9,19 +9,8 @@ from pathlib import Path
 
 import typer
 
+from dazzle._version import get_version
 from dazzle.core.errors import ParseError
-
-__version__ = "0.5.0"
-
-
-def get_version() -> str:
-    """Get DAZZLE version from package metadata."""
-    try:
-        from importlib.metadata import version
-
-        return version("dazzle")
-    except Exception:
-        return __version__
 
 
 def version_callback(value: bool) -> None:

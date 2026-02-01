@@ -20,8 +20,10 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-# MCP Semantic Index version - should match pyproject.toml version
-MCP_SEMANTICS_VERSION = "0.9.4"
+# MCP Semantic Index version - reads from pyproject.toml
+from dazzle._version import get_version as _get_version
+
+MCP_SEMANTICS_VERSION = _get_version()
 MCP_SEMANTICS_BUILD = 0
 
 # Cache for loaded data

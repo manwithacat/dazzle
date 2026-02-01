@@ -497,7 +497,8 @@ class ProcessParserMixin:
                 from ..errors import make_parse_error
 
                 raise make_parse_error(
-                    f"Invalid entity trigger: expected 'status', 'created', 'updated', or 'deleted', got '{next_val}'",
+                    "Invalid entity trigger: expected 'status', 'created',"
+                    f" 'updated', or 'deleted', got '{next_val}'",
                     self.file,
                     next_token.line,
                     next_token.column,

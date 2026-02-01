@@ -4,12 +4,9 @@ DAZZLE glossary content.
 This module contains the static glossary text for DAZZLE terminology.
 """
 
-GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art (v0.7.2)
+GLOSSARY_TEXT = """# DAZZLE Glossary - Terms of Art
 
-**Version**: 0.7.2
-**Date**: 2025-12-10
-
-This glossary defines DAZZLE DSL v0.7.2 concepts including the Ejection Toolchain (standalone code generation), LLM Cognition features (intent, archetypes, examples, relationship semantics), Business Logic features (state machines, invariants, computed fields), and the UX Semantic Layer.
+This glossary defines DAZZLE DSL concepts including LLM Cognition features (intent, archetypes, examples, relationship semantics), Business Logic features (state machines, invariants, computed fields), and the UX Semantic Layer.
 
 ## Core Concepts
 
@@ -604,5 +601,5 @@ dazzle specs openapi -f json
 
 
 def get_glossary() -> str:
-    """Return DAZZLE v0.7.2 glossary of terms."""
+    """Return DAZZLE glossary of terms."""
     return GLOSSARY_TEXT

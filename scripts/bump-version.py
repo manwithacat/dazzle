@@ -10,9 +10,11 @@ Usage:
 
 Updates version in:
     - pyproject.toml (source of truth)
-    - src/dazzle/cli/utils.py (fallback version)
     - homebrew/dazzle.rb (Homebrew formula)
     - homebrew/dazzle-simple.rb (Simple Homebrew formula)
+    - cli/package.json
+    - package.json (root)
+    - .claude/CLAUDE.md
 """
 
 from __future__ import annotations
@@ -24,14 +26,11 @@ from pathlib import Path
 # Files that contain version strings to update
 VERSION_FILES = [
     ("pyproject.toml", r'^version\s*=\s*["\']([^"\']+)["\']', 'version = "{version}"'),
-    (
-        "src/dazzle/cli/utils.py",
-        r'^__version__\s*=\s*["\']([^"\']+)["\']',
-        '__version__ = "{version}"',
-    ),
     ("homebrew/dazzle.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("homebrew/dazzle-simple.rb", r'^\s*version\s+["\']([^"\']+)["\']', '  version "{version}"'),
     ("cli/package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
+    ("package.json", r'"version":\s*"([^"]+)"', '"version": "{version}"'),
+    (".claude/CLAUDE.md", r"\*\*Version\*\*:\s*[\d.]+", "**Version**: {version}"),
 ]
 
 # Files where version appears in URLs/comments (update tag references)

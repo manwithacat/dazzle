@@ -14,7 +14,7 @@ class DazzleSimple < Formula
 
   # For local testing, install from local directory
   url "file:///Volumes/SSD/Dazzle", using: :git, branch: "main"
-  version "0.16.0"
+  version "0.19.0"
   head "https://github.com/manwithacat/dazzle.git", branch: "main"
 
   depends_on "python@3.12"
