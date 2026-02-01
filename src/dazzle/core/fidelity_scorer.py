@@ -44,9 +44,10 @@ DEFAULT_INPUT_TYPE = "text"
 
 # ── Composite score weights ───────────────────────────────────────────
 
-W_STRUCTURAL = 0.4
-W_SEMANTIC = 0.35
-W_STORY = 0.25
+W_STRUCTURAL = 0.35
+W_SEMANTIC = 0.30
+W_STORY = 0.20
+W_INTERACTION = 0.15
 
 
 # ── Lightweight HTML tree ─────────────────────────────────────────────
@@ -453,6 +454,103 @@ def _check_story_embodiment(
     return gaps
 
 
+# ── Interaction checks ─────────────────────────────────────────────────
+
+
+def _check_interaction_fidelity(
+    surface: SurfaceSpec,
+    root: HTMLElement,
+    html: str,
+) -> list[FidelityGap]:
+    """Check interaction patterns for surfaces using search_select fragments."""
+    gaps: list[FidelityGap] = []
+
+    # Only check surfaces that contain search/fragment patterns
+    has_search_select = (
+        "search-results-" in html or "hx-get" in html and "_fragments/search" in html
+    )
+    if not has_search_select:
+        return gaps
+
+    # Check for loading indicator (hx-indicator)
+    if "hx-indicator" not in html:
+        gaps.append(
+            FidelityGap(
+                category=FidelityGapCategory.MISSING_LOADING_INDICATOR,
+                dimension="interaction",
+                severity="minor",
+                surface_name=surface.name,
+                target="search_select",
+                expected="hx-indicator attribute for loading state",
+                actual="no hx-indicator found",
+                recommendation="Add hx-indicator to search inputs for loading feedback.",
+            )
+        )
+
+    # Check for debounce in hx-trigger
+    if "delay:" not in html:
+        gaps.append(
+            FidelityGap(
+                category=FidelityGapCategory.MISSING_DEBOUNCE,
+                dimension="interaction",
+                severity="major",
+                surface_name=surface.name,
+                target="search_select",
+                expected="delay: in hx-trigger for debounced search",
+                actual="no delay found in triggers",
+                recommendation="Add delay:400ms to hx-trigger to debounce search requests.",
+            )
+        )
+
+    # Check for empty state handling
+    if "no results" not in html.lower() and "type at least" not in html.lower():
+        gaps.append(
+            FidelityGap(
+                category=FidelityGapCategory.MISSING_EMPTY_STATE,
+                dimension="interaction",
+                severity="minor",
+                surface_name=surface.name,
+                target="search_select",
+                expected="Empty state message for no results",
+                actual="no empty state text found",
+                recommendation="Add an empty state message for when no results are found.",
+            )
+        )
+
+    # Check for error handling elements
+    if "text-error" not in html:
+        gaps.append(
+            FidelityGap(
+                category=FidelityGapCategory.MISSING_ERROR_HANDLER,
+                dimension="interaction",
+                severity="minor",
+                surface_name=surface.name,
+                target="search_select",
+                expected="Error display element for failed searches",
+                actual="no error handler found",
+                recommendation="Add error state handling for failed search requests.",
+            )
+        )
+
+    # Composition penalty: surfaces >300 lines with no fragment decomposition
+    line_count = html.count("\n") + 1
+    if line_count > 300 and "hx-target" not in html:
+        gaps.append(
+            FidelityGap(
+                category=FidelityGapCategory.MISSING_HTMX_ATTRIBUTE,
+                dimension="interaction",
+                severity="minor",
+                surface_name=surface.name,
+                target="composition",
+                expected="Fragment decomposition for large surfaces",
+                actual=f"Surface has {line_count} lines with no fragment targets",
+                recommendation="Decompose large surfaces into composable HTMX fragments.",
+            )
+        )
+
+    return gaps
+
+
 # ── Public API ────────────────────────────────────────────────────────
 
 
@@ -490,22 +588,33 @@ def score_surface_fidelity(
     # Story checks
     all_gaps.extend(_check_story_embodiment(surface, entity, root, appspec))
 
+    # Interaction checks (search_select fragments)
+    all_gaps.extend(_check_interaction_fidelity(surface, root, html))
+
     # Compute dimension scores
     structural_gaps = [g for g in all_gaps if g.dimension == "structural"]
     semantic_gaps = [g for g in all_gaps if g.dimension == "semantic"]
     story_gaps = [g for g in all_gaps if g.dimension == "story"]
+    interaction_gaps = [g for g in all_gaps if g.dimension == "interaction"]
 
     structural = _dimension_score(structural_gaps)
     semantic = _dimension_score(semantic_gaps)
     story = _dimension_score(story_gaps)
+    interaction = _dimension_score(interaction_gaps)
 
-    overall = W_STRUCTURAL * structural + W_SEMANTIC * semantic + W_STORY * story
+    overall = (
+        W_STRUCTURAL * structural
+        + W_SEMANTIC * semantic
+        + W_STORY * story
+        + W_INTERACTION * interaction
+    )
 
     return SurfaceFidelityScore(
         surface_name=surface.name,
         structural=round(structural, 4),
         semantic=round(semantic, 4),
         story=round(story, 4),
+        interaction=round(interaction, 4),
         overall=round(overall, 4),
         gaps=all_gaps,
     )

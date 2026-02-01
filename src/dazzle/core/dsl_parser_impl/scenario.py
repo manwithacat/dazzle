@@ -81,7 +81,8 @@ class ScenarioParserMixin:
                 if proficiency not in ("novice", "intermediate", "expert"):
                     token = self.current_token()
                     raise make_parse_error(
-                        f"Invalid proficiency level: {proficiency}. Must be novice, intermediate, or expert",
+                        f"Invalid proficiency level: {proficiency}. "
+                        "Must be novice, intermediate, or expert",
                         self.file,
                         token.line,
                         token.column,

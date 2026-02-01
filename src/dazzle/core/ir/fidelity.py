@@ -19,6 +19,10 @@ class FidelityGapCategory(str, Enum):
     INCORRECT_HTTP_METHOD = "incorrect_http_method"
     MISSING_DESIGN_TOKENS = "missing_design_tokens"
     MISSING_ACTION_AFFORDANCE = "missing_action_affordance"
+    MISSING_LOADING_INDICATOR = "missing_loading_indicator"
+    MISSING_EMPTY_STATE = "missing_empty_state"
+    MISSING_DEBOUNCE = "missing_debounce"
+    MISSING_ERROR_HANDLER = "missing_error_handler"
 
 
 class FidelityGap(BaseModel):
@@ -43,6 +47,7 @@ class SurfaceFidelityScore(BaseModel):
     structural: float = Field(ge=0.0, le=1.0)
     semantic: float = Field(ge=0.0, le=1.0)
     story: float = Field(ge=0.0, le=1.0)
+    interaction: float = Field(ge=0.0, le=1.0, default=1.0)
     overall: float = Field(ge=0.0, le=1.0)
     gaps: list[FidelityGap] = Field(default_factory=list)
 

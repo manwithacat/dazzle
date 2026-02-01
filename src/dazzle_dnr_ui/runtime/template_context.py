@@ -29,6 +29,30 @@ class ColumnContext(BaseModel):
     type: str = "text"  # text, badge, date, currency, bool
 
 
+class FieldSourceContext(BaseModel):
+    """Dynamic data source for a form field (e.g. external API search)."""
+
+    endpoint: str  # "/api/_fragments/search?source=companieshouse"
+    display_key: str  # "company_name"
+    value_key: str  # "company_number"
+    secondary_key: str = ""  # "company_status"
+    min_chars: int = 3
+    debounce_ms: int = 400
+    autofill: dict[str, str] = Field(default_factory=dict)  # result_field → form_field_name
+
+
+class FragmentContext(BaseModel):
+    """Context for rendering a composable HTMX fragment."""
+
+    fragment_id: str  # Unique DOM id, also the HTMX target
+    template: str  # e.g. "fragments/search_select.html"
+    endpoint: str  # URL that returns this fragment's HTML
+    trigger: str = "load"  # HTMX trigger
+    swap: str = "innerHTML"  # HTMX swap strategy
+    children: list[FragmentContext] = []
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
 class FieldContext(BaseModel):
     """Field definition for form rendering."""
 
@@ -39,6 +63,7 @@ class FieldContext(BaseModel):
     placeholder: str = ""
     options: list[dict[str, str]] = Field(default_factory=list)  # For select fields
     default: Any = None
+    source: FieldSourceContext | None = None  # Dynamic data source (e.g. search_select)
 
 
 class TableContext(BaseModel):

@@ -1,0 +1,23 @@
+{# Search results fragment: items returned by search endpoint #}
+
+{% if items %}
+  {% for item in items %}
+  <div class="px-3 py-2 cursor-pointer hover:bg-base-200 transition-colors"
+       hx-get="{{ select_endpoint }}&id={{ item[value_key] }}"
+       hx-target="#search-results-{{ field_name }}"
+       hx-swap="innerHTML">
+    <div class="font-medium text-sm">{{ item[display_key] }}</div>
+    {% if secondary_key and item.get(secondary_key) %}
+    <div class="text-xs text-base-content/60">{{ item[secondary_key] }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="p-3 text-sm text-base-content/50">
+    {% if query %}
+      No results found for "{{ query }}"
+    {% else %}
+      Type at least {{ min_chars }} characters to search...
+    {% endif %}
+  </div>
+{% endif %}

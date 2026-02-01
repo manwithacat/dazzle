@@ -1,0 +1,37 @@
+{# Search-select fragment: debounced search input with dropdown results #}
+
+<div class="relative w-full" x-data="{ open: false }">
+  {# Hidden input stores the selected value #}
+  <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
+         data-dazzle-field="{{ field.name }}" value="" />
+
+  {# Visible search input with HTMX debounced search #}
+  <input type="text"
+         id="search-input-{{ field.name }}"
+         class="input input-bordered w-full"
+         placeholder="{{ field.placeholder or ('Search ' + field.label + '...') }}"
+         autocomplete="off"
+         hx-get="{{ field.source.endpoint }}"
+         hx-trigger="keyup changed delay:{{ field.source.debounce_ms }}ms"
+         hx-target="#search-results-{{ field.name }}"
+         hx-indicator="#search-spinner-{{ field.name }}"
+         hx-params="q"
+         {% if field.source.min_chars %}hx-vals='{"min_chars": {{ field.source.min_chars }}}'{% endif %}
+         @focus="open = true"
+         @click.outside="setTimeout(() => open = false, 200)" />
+
+  {# Loading indicator #}
+  <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3">
+    <span class="loading loading-spinner loading-sm"></span>
+  </span>
+
+  {# Dropdown results container #}
+  <div id="search-results-{{ field.name }}"
+       x-show="open"
+       class="absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+    {# Empty state shown before any search #}
+    <div class="p-3 text-sm text-base-content/50">
+      Type at least {{ field.source.min_chars }} characters to search...
+    </div>
+  </div>
+</div>

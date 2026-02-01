@@ -538,6 +538,32 @@ class DNRBackendApp:
 
             logging.getLogger("dazzle.server").warning(f"Failed to init event framework: {e}")
 
+    def _init_fragment_routes(self) -> None:
+        """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
+        if not self._app:
+            return
+
+        try:
+            from dazzle_dnr_back.runtime.fragment_routes import create_fragment_router
+
+            # Build fragment sources from integration specs if available
+            fragment_sources: dict[str, dict[str, Any]] = {}
+            for integration in getattr(self.spec, "integrations", []):
+                if hasattr(integration, "base_url") and integration.base_url:
+                    fragment_sources[integration.name] = {
+                        "url": integration.base_url,
+                        "display_key": "name",
+                        "value_key": "id",
+                        "headers": getattr(integration, "headers", {}),
+                    }
+
+            fragment_router = create_fragment_router(fragment_sources)
+            self._app.include_router(fragment_router)
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Fragment routes not available: {e}")
+
     def _init_process_manager(self) -> None:
         """Initialize process manager for workflow execution (v0.24.0)."""
         if not self._app:
@@ -870,6 +896,9 @@ class DNRBackendApp:
         # Initialize messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:
             self._init_channel_manager()
+
+        # Initialize fragment routes (v0.25.0)
+        self._init_fragment_routes()
 
         # Initialize process manager (v0.24.0)
         if self._enable_processes:

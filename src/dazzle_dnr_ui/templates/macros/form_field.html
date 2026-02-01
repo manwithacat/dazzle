@@ -15,6 +15,16 @@
       <span class="label-text">{{ field.label }}</span>
     </label>
 
+  {% elif field.source %}
+    {# Search-select: dynamic search with autofill #}
+    <label class="label" for="search-input-{{ field.name }}">
+      <span class="label-text">
+        {{ field.label }}
+        {% if field.required %}<span class="text-error">*</span>{% endif %}
+      </span>
+    </label>
+    {% include "fragments/search_select.html" %}
+
   {% else %}
     {# Standard fields: label above #}
     <label class="label" for="field-{{ field.name }}">

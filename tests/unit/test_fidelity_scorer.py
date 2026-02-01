@@ -216,7 +216,9 @@ class TestSemanticChecks:
 
 class TestCompositeWeighting:
     def test_composite_weighting(self) -> None:
-        """Verify the 0.4/0.35/0.25 composite weights."""
+        """Verify the 0.35/0.30/0.20/0.15 composite weights."""
+        from dazzle.core.fidelity_scorer import W_INTERACTION
+
         surface = _make_list_surface()
         # Perfect HTML for all dimensions
         html = """
@@ -228,6 +230,9 @@ class TestCompositeWeighting:
         """
         score = score_surface_fidelity(surface, None, html)
         expected = (
-            W_STRUCTURAL * score.structural + W_SEMANTIC * score.semantic + W_STORY * score.story
+            W_STRUCTURAL * score.structural
+            + W_SEMANTIC * score.semantic
+            + W_STORY * score.story
+            + W_INTERACTION * score.interaction
         )
         assert abs(score.overall - round(expected, 4)) < 0.001
