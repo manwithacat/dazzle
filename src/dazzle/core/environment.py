@@ -74,12 +74,12 @@ def get_dazzle_env() -> DazzleEnv:
         return DazzleEnv.DEVELOPMENT
     else:
         # Unknown value - default to development with warning
-        import sys
+        import logging
 
-        print(
-            f"Warning: Unknown DAZZLE_ENV value '{env_value}'. "
-            f"Valid values: development, test, production. Defaulting to development.",
-            file=sys.stderr,
+        logging.getLogger(__name__).warning(
+            "Unknown DAZZLE_ENV value '%s'. "
+            "Valid values: development, test, production. Defaulting to development.",
+            env_value,
         )
         return DazzleEnv.DEVELOPMENT
 

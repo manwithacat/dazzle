@@ -171,7 +171,7 @@ def handle_story(arguments: dict[str, Any]) -> str:
 
 def handle_demo_data(arguments: dict[str, Any]) -> str:
     """Handle consolidated demo data operations."""
-    from .tool_handlers import (
+    from .handlers.demo_data import (
         generate_demo_data_handler,
         get_demo_blueprint_handler,
         propose_demo_blueprint_handler,
@@ -203,7 +203,7 @@ def handle_demo_data(arguments: dict[str, Any]) -> str:
 
 def handle_test_design(arguments: dict[str, Any]) -> str:
     """Handle consolidated test design operations."""
-    from .tool_handlers import (
+    from .handlers.test_design import (
         get_coverage_actions_handler,
         get_runtime_coverage_gaps_handler,
         get_test_designs_handler,
@@ -248,7 +248,7 @@ def handle_test_design(arguments: dict[str, Any]) -> str:
 
 def handle_sitespec(arguments: dict[str, Any]) -> str:
     """Handle consolidated sitespec operations."""
-    from .tool_handlers import (
+    from .handlers.sitespec import (
         get_sitespec_handler,
         scaffold_site_handler,
         validate_sitespec_handler,
@@ -376,7 +376,7 @@ def handle_process(arguments: dict[str, Any]) -> str:
 
 def handle_dsl_test(arguments: dict[str, Any]) -> str:
     """Handle consolidated DSL test operations."""
-    from .tool_handlers import (
+    from .handlers.dsl_test import (
         generate_dsl_tests_handler,
         get_dsl_test_coverage_handler,
         list_dsl_tests_handler,

@@ -72,22 +72,24 @@ See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
 ## Current State (v0.19)
 
-The DNR frontend has migrated from a custom signals-based JS runtime to **server-rendered HTMX templates** with Alpine.js for ephemeral client state. This gives us a zero-build-step UI with declarative interactions and no node_modules.
+The DNR frontend uses **server-rendered HTMX templates** with Alpine.js for ephemeral client state. Zero-build-step UI with declarative interactions and no node_modules.
 
 Recent additions:
 - **HTMX + DaisyUI frontend** — server-rendered pages, HTMX partial swaps
-- **Alpine.js interaction patterns** — inline editing, bulk actions, slide-over panels, debounced search
-- **Template fragment system** — composable HTML partials for HTMX swap targets
+- **9 composable fragments** — search_select, inline edit, bulk actions, pagination, and more
+- **API pack → fragment bridge** — DSL `source=` syntax connects fields to external API lookups
+- **Fidelity scoring** — spec-aware measurement of how well rendered HTML matches the DSL
 - **TigerBeetle ledgers** — double-entry accounting with typed transactions
 - **Messaging channels** — email, queue, and stream integrations
-- **MCP server** — Claude Code integration with 17 consolidated tools
+- **MCP server** — Claude Code integration with consolidated tools
 
-### Roadmap
+### Next Up
 
-Frontend UX is the dominant focus area. Next up:
-- `search_select` fragment for relationship field lookups
 - `FragmentContext` base model to standardize fragment rendering inputs
 - Richer workspace layout patterns (dual-pane, monitor wall)
+- Integration runtime — execute DSL `integration` actions against external APIs
+
+See [ROADMAP.md](ROADMAP.md) for the full picture.
 
 ## Quick Start
 

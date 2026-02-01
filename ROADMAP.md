@@ -1,8 +1,7 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2025-12-16
-**Current Version**: v0.17.0
-**Status**: DSL-first toolkit with DNR runtime + Ejection toolchain
+**Last Updated**: 2026-02-01
+**Current Version**: v0.19.0
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
 
@@ -13,92 +12,41 @@ For past releases, see [CHANGELOG.md](CHANGELOG.md).
 DAZZLE is a **DSL-first toolkit** that bridges human specifications and production code.
 
 ```
-Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Deterministic Code
+Human Intent ──▶ LLM ──▶ Structured DSL ──▶ DNR Runtime (live app)
                          (one-time cost)    (zero marginal cost)
 ```
 
 1. **LLM translates intent to DSL** - High-value token spend, done once
 2. **DSL is the compression boundary** - Validated, version-controlled spec
-3. **All downstream is deterministic** - Parser, IR, code gen are mechanical
-
-### Two Paths from DSL
-
-| Path | Use Case | Cost |
-|------|----------|------|
-| **DNR Runtime** | Rapid iteration, prototyping | Zero - runs directly |
-| **Ejection** | Production deployment | One-time generation |
+3. **DNR executes directly** - No code generation step, your spec is the app
 
 ---
 
-## Roadmap
+## Current Focus: Consolidation
 
-### v0.18.0 - Multi-Platform Support
+With one active user building on DAZZLE, the priority is hardening what works
+over adding new capabilities.
 
-**Issue**: [#23](https://github.com/manwithacat/dazzle/issues/23)
-**Status**: Planned
+### In Progress
 
-Beyond web applications.
+- **Fidelity scoring** - Spec-aware interaction checks, `source=` field validation
+- **Fragment system** - `search_select` and `search_results` fragments with API pack bridge
+- **Codebase cleanup** - Splitting oversized modules, removing dead code
 
-- React Native runtime (mobile)
-- Desktop app packaging (Electron/Tauri)
-- Offline-first patterns
-- Cross-platform sync
+### Next Up
 
----
+- **Fragment composition** - Register and document all 9 HTMX fragments for MCP discovery
+- **`FragmentContext` base model** - Standardize fragment rendering inputs
+- **Richer workspace layouts** - Dual-pane, monitor wall patterns
+- **Integration runtime** - Execute `integration` actions against external APIs (parser/IR already complete)
 
-### v1.0.0 - Dazzle Orchestrator Control Plane
+### Deferred
 
-**Issue**: [#22](https://github.com/manwithacat/dazzle/issues/22)
-**Status**: Planned
+These are real plans but not the current priority:
 
-Hosted control plane for production app management.
-
-- SpecVersion snapshots and semantic diffing
-- Migration planning with risk assessment
-- Blue/green deployments with rollback
-- Founder Web UI with LLM-assisted changes
-
----
-
-## Completed Milestones
-
-### v0.17.0 - API Knowledgebase & Integration Assistant ✅
-
-Completed 2025-12-16. Issue [#21](https://github.com/manwithacat/dazzle/issues/21).
-
-- 12 curated API packs (Stripe, HMRC×6, Companies House, Xero, Ordnance Survey, SumSub, DocuSeal)
-- MCP tools: `list_api_packs`, `search_api_packs`, `get_api_pack`, `generate_service_dsl`
-- DSL generation from packs (service blocks, foreign_models, .env.example)
-- Zero hallucinated endpoints - all from curated TOML packs
-
-### v0.16.0 - Documentation, Event-First, SiteSpec, Messaging ✅
-
-Released 2025-12-16. See [CHANGELOG.md](CHANGELOG.md#0160---2025-12-16).
-
-- MkDocs Material documentation site at [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle)
-- Event-First Architecture (Issue #25) - events as invisible substrate
-- SiteSpec: Public Site Shell (Issue #24) - YAML-based public pages
-- Messaging Channels (Issue #20) - outbox pattern, email adapters, provider detection
-- Performance & Reliability Analysis (PRA) framework
-- HLESS (High-Level Event Semantics Specification)
-- Playwright E2E tests
-
-### v0.15.0 - Interactive CLI ✅
-
-Released 2025-12-15.
-
-- `dazzle init`: Interactive project wizard
-- `dazzle doctor`: Environment diagnostics
-- `dazzle explore`: Interactive DSL explorer
-- `dazzle kb`: Knowledgebase browser
-
-### v0.14.0 - MCP Commands Restored ✅
-
-Released 2025-12-14.
-
-- Full MCP server functionality in Bun CLI
-- Deterministic port allocation for DNR serve
-- Semantic E2E attributes for testability
+- **Experience flows** - Multi-step user journeys (parser/IR complete, needs runtime)
+- **Multi-platform support** ([#23](https://github.com/manwithacat/dazzle/issues/23)) - React Native, desktop packaging
+- **Orchestrator control plane** ([#22](https://github.com/manwithacat/dazzle/issues/22)) - Spec versioning, migrations, blue/green deploys
 
 ---
 
@@ -106,10 +54,10 @@ Released 2025-12-14.
 
 **Current Opportunities**:
 
-1. **API Packs**: Contribute curated API pack definitions (Stripe, HMRC, Xero, etc.)
-2. **Queue/Stream Adapters**: Add RabbitMQ, Redis Streams send adapters
-3. **Documentation**: Improve guides and tutorials
-4. **Example Projects**: Create domain-specific examples
+1. **API Packs** - Contribute curated API pack definitions
+2. **Queue/Stream Adapters** - Add RabbitMQ, Redis Streams send adapters
+3. **Documentation** - Improve guides and tutorials
+4. **Example Projects** - Create domain-specific examples
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
