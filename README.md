@@ -318,6 +318,35 @@ The server-rendered approach also means the entire UI is visible in the
 AppSpec IR — DAZZLE can validate, lint, and generate the frontend without
 executing JavaScript or maintaining a shadow DOM model.
 
+## Fidelity Scoring
+
+DAZZLE includes a built-in fidelity scorer that measures how accurately
+rendered HTML reflects the DSL specification. This closes the loop between
+"what you declared" and "what the user sees."
+
+The scorer evaluates four dimensions:
+
+| Dimension | Weight | What it checks |
+|-----------|--------|----------------|
+| **Structural** | 35% | Every declared field, section, and action is present in the HTML |
+| **Semantic** | 30% | Input types match field types, required attributes are set, display names are humanised |
+| **Story** | 20% | User stories have corresponding action affordances (buttons, links) |
+| **Interaction** | 15% | Search/select widgets, loading indicators, debounce, empty states, error handling |
+
+Each gap found is categorised by severity (`critical`, `major`, `minor`) and
+returned with a concrete recommendation. The interaction dimension is
+**spec-aware**: if a surface element declares `source=` (indicating a
+relationship lookup), the scorer verifies that a `search_select` widget was
+actually rendered — not just that the HTML happens to contain search patterns.
+
+```bash
+dazzle fidelity                  # Score all surfaces
+dazzle fidelity --surface orders # Score a single surface
+```
+
+Fidelity scores are also available via the MCP server (`fidelity` tool),
+so Claude Code can check rendering quality as part of its workflow.
+
 ## IDE Support
 
 Full Language Server Protocol (LSP) implementation with:

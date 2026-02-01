@@ -468,6 +468,27 @@ def _check_interaction_fidelity(
     """Check interaction patterns for surfaces using search_select fragments."""
     gaps: list[FidelityGap] = []
 
+    # Spec-aware check: surface elements with source= must have search_select widget
+    for section in surface.sections:
+        for elem in section.elements:
+            source = elem.options.get("source")
+            if source and f"search-input-{elem.field_name}" not in html:
+                gaps.append(
+                    FidelityGap(
+                        category=FidelityGapCategory.MISSING_SOURCE_WIDGET,
+                        dimension="interaction",
+                        severity="critical",
+                        surface_name=surface.name,
+                        target=elem.field_name,
+                        expected=f"search_select widget for source={source}",
+                        actual="no search_select widget rendered",
+                        recommendation=(
+                            f"Render a search_select fragment for field"
+                            f" '{elem.field_name}' with source='{source}'."
+                        ),
+                    )
+                )
+
     # Only check surfaces that contain search/fragment patterns
     has_search_select = (
         "search-results-" in html or "hx-get" in html and "_fragments/search" in html

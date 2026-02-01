@@ -236,3 +236,78 @@ class TestCompositeWeighting:
             + W_INTERACTION * score.interaction
         )
         assert abs(score.overall - round(expected, 4)) < 0.001
+
+
+class TestInteractionDimension:
+    """Tests for spec-aware interaction fidelity checks."""
+
+    def _make_surface_with_source(
+        self, field_name: str = "customer", source: str = "api_packs.customers.search"
+    ) -> ir.SurfaceSpec:
+        return ir.SurfaceSpec(
+            name="order_create",
+            title="Create Order",
+            entity_ref="Order",
+            mode=ir.SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name=field_name,
+                            options={"source": source},
+                        ),
+                    ],
+                )
+            ],
+        )
+
+    def test_source_with_search_select_no_gap(self) -> None:
+        surface = self._make_surface_with_source()
+        html = """
+        <style>:root{}</style>
+        <form hx-post="/api/orders">
+            <div id="search-input-customer" hx-get="/_fragments/search"
+                 hx-trigger="keyup changed delay:400ms" hx-indicator="#spinner">
+                <input type="text" placeholder="Search customers...">
+                <div id="search-results-customer"></div>
+                <span class="text-error"></span>
+                <p>Type at least 2 characters</p>
+            </div>
+        </form>
+        """
+        score = score_surface_fidelity(surface, None, html)
+        source_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
+        ]
+        assert len(source_gaps) == 0
+
+    def test_source_without_search_select_gap(self) -> None:
+        surface = self._make_surface_with_source()
+        html = """
+        <style>:root{}</style>
+        <form hx-post="/api/orders">
+            <input name="customer" type="text">
+        </form>
+        """
+        score = score_surface_fidelity(surface, None, html)
+        source_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
+        ]
+        assert len(source_gaps) == 1
+        assert source_gaps[0].severity == "critical"
+        assert source_gaps[0].target == "customer"
+
+    def test_no_source_option_no_spec_gap(self) -> None:
+        surface = _make_create_surface()
+        html = """
+        <style>:root{}</style>
+        <form hx-post="/api/tasks">
+            <input name="title" type="text">
+        </form>
+        """
+        score = score_surface_fidelity(surface, None, html)
+        source_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
+        ]
+        assert len(source_gaps) == 0

@@ -23,6 +23,7 @@ class FidelityGapCategory(str, Enum):
     MISSING_EMPTY_STATE = "missing_empty_state"
     MISSING_DEBOUNCE = "missing_debounce"
     MISSING_ERROR_HANDLER = "missing_error_handler"
+    MISSING_SOURCE_WIDGET = "missing_source_widget"
 
 
 class FidelityGap(BaseModel):
