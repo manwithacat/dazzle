@@ -1204,19 +1204,46 @@ class DNRCombinedServer:
             try:
                 import uvicorn
 
-                app_builder = DNRBackendApp(
-                    self.backend_spec,
+                # Build fragment sources from DSL source= annotations (v0.25.1)
+                frag_sources: dict[str, dict[str, Any]] = {}
+                if self.appspec:
+                    try:
+                        from dazzle.api_kb import load_pack
+
+                        for surface in self.appspec.surfaces:
+                            for section in getattr(surface, "sections", []):
+                                for element in getattr(section, "elements", []):
+                                    src_ref = getattr(element, "options", {}).get("source")
+                                    if src_ref and "." in src_ref:
+                                        pname, opname = src_ref.rsplit(".", 1)
+                                        if pname not in frag_sources:
+                                            pack = load_pack(pname)
+                                            if pack:
+                                                try:
+                                                    frag_sources[pname] = (
+                                                        pack.generate_fragment_source(opname)
+                                                    )
+                                                except ValueError:
+                                                    pass
+                    except ImportError:
+                        pass
+
+                from dazzle_dnr_back.runtime.server import ServerConfig
+
+                srv_config = ServerConfig(
                     db_path=self.db_path,
                     use_database=True,
                     enable_test_mode=enable_test_mode,
                     enable_auth=enable_auth,
                     auth_config=auth_config,
-                    enable_dev_mode=self.enable_dev_mode,  # v0.24.0: env-aware
+                    enable_dev_mode=self.enable_dev_mode,
                     personas=personas,
                     scenarios=scenarios,
                     sitespec_data=sitespec_data,
                     project_root=project_root,
+                    fragment_sources=frag_sources,
                 )
+                app_builder = DNRBackendApp(self.backend_spec, config=srv_config)
                 app = app_builder.build()
 
                 config = uvicorn.Config(

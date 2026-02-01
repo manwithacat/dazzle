@@ -84,6 +84,9 @@ class ServerConfig:
     enable_processes: bool = True  # Enable process workflow execution
     process_db_path: Path = field(default_factory=lambda: Path(".dazzle/processes.db"))
 
+    # Fragment sources from DSL source= annotations (v0.25.1)
+    fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
+
 
 # Runtime import
 try:
@@ -235,6 +238,8 @@ class DNRBackendApp:
         self._process_db_path = config.process_db_path
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
+        # Fragment sources from DSL source= annotations (v0.25.1)
+        self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -557,27 +562,8 @@ class DNRBackendApp:
                         "headers": getattr(integration, "headers", {}),
                     }
 
-            # Also scan surfaces for source= options referencing API packs
-            try:
-                from dazzle.api_kb import load_pack
-
-                for surface in getattr(self.spec, "surfaces", []):
-                    for section in getattr(surface, "sections", []):
-                        for element in getattr(section, "elements", []):
-                            source_ref = getattr(element, "options", {}).get("source")
-                            if source_ref and "." in source_ref:
-                                pack_name, op_name = source_ref.rsplit(".", 1)
-                                if pack_name not in fragment_sources:
-                                    pack = load_pack(pack_name)
-                                    if pack:
-                                        try:
-                                            fragment_sources[pack_name] = (
-                                                pack.generate_fragment_source(op_name)
-                                            )
-                                        except ValueError:
-                                            pass
-            except ImportError:
-                pass
+            # Merge fragment sources from DSL source= annotations (v0.25.1)
+            fragment_sources.update(self._fragment_sources)
 
             fragment_router = create_fragment_router(fragment_sources)
             self._app.include_router(fragment_router)

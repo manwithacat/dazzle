@@ -48,6 +48,7 @@ entity Device "Device":
   model: str(200) required
   batch_number: str(100) required
   serial_number: str(100) required unique
+  manufacturer: str(200)
   firmware_version: str(50)
   status: enum[prototype,active,recalled,retired]=prototype
   assigned_tester_id: uuid
@@ -303,6 +304,7 @@ surface device_create "Register Device":
   section main "New Device":
     field name "Device Name"
     field model "Model"
+    field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
     field batch_number "Batch Number"
     field serial_number "Serial Number"
     field firmware_version "Firmware Version"
@@ -324,6 +326,7 @@ surface device_edit "Edit Device":
   section main "Edit Device":
     field name "Device Name"
     field model "Model"
+    field manufacturer "Manufacturer" source=companies_house_lookup.search_companies
     field batch_number "Batch Number"
     field firmware_version "Firmware Version"
     field status "Status"
