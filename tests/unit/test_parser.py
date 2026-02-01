@@ -998,5 +998,58 @@ process OrderWorkflow "Order Workflow":
         assert "ST-002" in process.implements
 
 
+class TestSurfaceFieldSourceOption:
+    """Tests for source= option on surface fields."""
+
+    def test_field_with_source_option(self):
+        """Test parser handles field with source=pack.operation."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Client "Client":
+  id: uuid pk
+  company_name: str(200) required
+
+surface client_create "Create Client":
+  uses entity Client
+  mode: create
+  section main "Details":
+    field company_name "Company" source=companies_house_lookup.search_companies
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        surface = fragment.surfaces[0]
+        assert surface.name == "client_create"
+        element = surface.sections[0].elements[0]
+        assert element.field_name == "company_name"
+        assert element.label == "Company"
+        assert element.options.get("source") == "companies_house_lookup.search_companies"
+
+    def test_field_without_source_option(self):
+        """Test parser still works for fields without options."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main "Details":
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        surface = fragment.surfaces[0]
+        element = surface.sections[0].elements[0]
+        assert element.field_name == "title"
+        assert element.label == "Title"
+        assert element.options == {}
+
+
 if __name__ == "__main__":
     main()

@@ -302,6 +302,48 @@ class TestEnvExampleGeneration:
         assert "Test API key" in line
 
 
+class TestFragmentSourceGeneration:
+    """Tests for generate_fragment_source()."""
+
+    def test_generate_fragment_source_companies_house(self):
+        """Test generating fragment source config from Companies House pack."""
+        pack = load_pack("companies_house_lookup")
+        assert pack is not None
+
+        config = pack.generate_fragment_source("search_companies")
+
+        assert config["url"] == "https://api.company-information.service.gov.uk/search/companies"
+        assert config["display_key"] == "company_name"
+        assert config["value_key"] == "company_number"
+        assert "Authorization" in config["headers"]
+        assert config["query_param"] == "q"
+        assert config["items_key"] == "items"
+
+    def test_generate_fragment_source_with_overrides(self):
+        """Test overrides are applied to generated config."""
+        pack = load_pack("companies_house_lookup")
+        assert pack is not None
+
+        config = pack.generate_fragment_source(
+            "search_companies",
+            items_key="results",
+            query_param="search",
+        )
+
+        assert config["items_key"] == "results"
+        assert config["query_param"] == "search"
+
+    def test_generate_fragment_source_invalid_operation(self):
+        """Test ValueError on invalid operation name."""
+        pack = load_pack("companies_house_lookup")
+        assert pack is not None
+
+        import pytest
+
+        with pytest.raises(ValueError, match="Operation 'nonexistent'"):
+            pack.generate_fragment_source("nonexistent")
+
+
 class TestPackDataIntegrity:
     """Tests for pack data integrity and consistency."""
 

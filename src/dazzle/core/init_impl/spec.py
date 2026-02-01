@@ -32,7 +32,9 @@ def create_spec_template(target_dir: Path, project_name: str, title: str) -> Non
 
 _Describe your project in 2-3 sentences from a founder's perspective._
 
-I need a [type of application] that helps [target users] to [main goal]. The key problem I'm solving is [problem statement]. Users should be able to [primary actions] with minimal friction.
+I need a [type of application] that helps [target users] to [main goal].
+The key problem I'm solving is [problem statement].
+Users should be able to [primary actions] with minimal friction.
 
 **Example**:
 > I need a simple task management application where I can keep track of my to-do items. Nothing fancy - just a straightforward way to create tasks, mark their status, and set priorities. I want to be able to see all my tasks at a glance, view details when needed, and mark tasks as complete when I finish them.

@@ -77,7 +77,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl",
-            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity",
+            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -92,6 +92,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "lint",
                             "get_spec",
                             "fidelity",
+                            "list_fragments",
                         ],
                         "description": "Operation to perform",
                     },

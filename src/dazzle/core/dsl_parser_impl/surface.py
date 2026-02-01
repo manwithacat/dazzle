@@ -142,7 +142,7 @@ class SurfaceParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            # field field_name ["label"]
+            # field field_name ["label"] [key=value ...]
             if self.match(TokenType.FIELD):
                 self.advance()
                 field_name = self.expect_identifier_or_keyword().value
@@ -151,10 +151,27 @@ class SurfaceParserMixin:
                 if self.match(TokenType.STRING):
                     label = self.advance().value
 
+                # Parse optional key=value options (e.g. source=pack.operation)
+                options: dict[str, Any] = {}
+                while self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
+                    opt_key = self.advance().value
+                    self.expect(TokenType.EQUALS)
+                    # Value can be identifier.identifier (dotted) or a string
+                    if self.match(TokenType.STRING):
+                        opt_val = self.advance().value
+                    else:
+                        opt_val = self.expect_identifier_or_keyword().value
+                        # Support dotted values: pack_name.operation
+                        while self.match(TokenType.DOT):
+                            self.advance()
+                            opt_val += "." + self.expect_identifier_or_keyword().value
+                    options[opt_key] = opt_val
+
                 elements.append(
                     ir.SurfaceElement(
                         field_name=field_name,
                         label=label,
+                        options=options,
                     )
                 )
 

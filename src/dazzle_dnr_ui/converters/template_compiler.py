@@ -8,7 +8,7 @@ that can be directly rendered by Jinja2 templates.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
@@ -17,6 +17,7 @@ from dazzle_dnr_ui.runtime.template_context import (
     ColumnContext,
     DetailContext,
     FieldContext,
+    FieldSourceContext,
     FormContext,
     NavItemContext,
     PageContext,
@@ -113,19 +114,21 @@ def _build_form_fields(
     """Build form field definitions from surface sections or entity fields."""
     fields: list[FieldContext] = []
 
-    fields_to_process: list[tuple[str, str | None, ir.FieldSpec | None]] = []
+    fields_to_process: list[tuple[str, str | None, ir.FieldSpec | None, dict[str, Any]]] = []
 
     if surface.sections:
         for section in surface.sections:
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
-                fields_to_process.append((element.field_name, element.label, field_spec))
+                fields_to_process.append(
+                    (element.field_name, element.label, field_spec, element.options)
+                )
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
-                fields_to_process.append((field.name, None, field))
+                fields_to_process.append((field.name, None, field, {}))
 
-    for field_name, label, field_spec in fields_to_process:
+    for field_name, label, field_spec, element_options in fields_to_process:
         display_label = label or field_name.replace("_", " ").title()
         form_type = _field_type_to_form_type(field_spec)
 
@@ -153,6 +156,28 @@ def _build_form_fields(
 
         is_required = bool(field_spec and field_spec.is_required)
 
+        # Build FieldSourceContext from source= option (e.g. source=pack.operation)
+        source_ctx: FieldSourceContext | None = None
+        source_ref = element_options.get("source")
+        if source_ref and "." in source_ref:
+            pack_name, op_name = source_ref.rsplit(".", 1)
+            try:
+                from dazzle.api_kb import load_pack
+
+                pack = load_pack(pack_name)
+                if pack:
+                    source_config = pack.generate_fragment_source(op_name)
+                    source_ctx = FieldSourceContext(
+                        endpoint="/api/_fragments/search",
+                        display_key=source_config.get("display_key", "name"),
+                        value_key=source_config.get("value_key", "id"),
+                        secondary_key=source_config.get("secondary_key", ""),
+                        autofill=source_config.get("autofill", {}),
+                    )
+                    form_type = "search_select"
+            except Exception:
+                pass  # Fall back to default field type
+
         fields.append(
             FieldContext(
                 name=field_name,
@@ -161,6 +186,7 @@ def _build_form_fields(
                 required=is_required,
                 placeholder=display_label if form_type not in ("checkbox", "select") else "",
                 options=options,
+                source=source_ctx,
             )
         )
 

@@ -137,6 +137,91 @@ class ApiPack:
             lines.append(f"  # Docs: {self.docs_url}")
         return "\n".join(lines)
 
+    def generate_fragment_source(self, operation: str, **overrides: Any) -> dict[str, Any]:
+        """Convert a pack operation into a fragment source config dict.
+
+        Produces the dict shape expected by ``create_fragment_router()``:
+        ``url``, ``display_key``, ``value_key``, ``secondary_key``, ``headers``,
+        ``query_param``, ``items_key``, ``autofill``.
+
+        Args:
+            operation: Name of the operation (e.g. ``"search_companies"``).
+            **overrides: Override any inferred key (``display_key``, ``value_key``,
+                ``secondary_key``, ``items_key``, ``query_param``, ``autofill``).
+
+        Returns:
+            Config dict ready for ``create_fragment_router()``.
+
+        Raises:
+            ValueError: If the operation is not found in this pack.
+        """
+        op = next((o for o in self.operations if o.name == operation), None)
+        if op is None:
+            raise ValueError(f"Operation '{operation}' not found in pack '{self.name}'")
+
+        url = f"{self.base_url.rstrip('/')}{op.path}"
+
+        # Build auth headers
+        headers: dict[str, str] = {}
+        if self.auth:
+            if self.auth.auth_type == "basic" and self.auth.env_var:
+                import base64
+                import os
+
+                api_key = os.environ.get(self.auth.env_var, "")
+                encoded = base64.b64encode(f"{api_key}:".encode()).decode()
+                headers[self.auth.header or "Authorization"] = f"Basic {encoded}"
+            elif self.auth.auth_type == "api_key" and self.auth.env_var:
+                import os
+
+                api_key = os.environ.get(self.auth.env_var, "")
+                prefix = self.auth.prefix or ""
+                if prefix == "Basic":
+                    import base64
+
+                    encoded = base64.b64encode(f"{api_key}:".encode()).decode()
+                    headers[self.auth.header or "Authorization"] = f"Basic {encoded}"
+                elif prefix:
+                    headers[self.auth.header or "Authorization"] = f"{prefix} {api_key}"
+                else:
+                    headers[self.auth.header or "Authorization"] = api_key
+            elif self.auth.auth_type == "bearer" and self.auth.env_var:
+                import os
+
+                token = os.environ.get(self.auth.env_var, "")
+                headers["Authorization"] = f"Bearer {token}"
+
+        # Infer display/value keys from the first foreign model
+        display_key = "name"
+        value_key = "id"
+        secondary_key = ""
+        if self.foreign_models:
+            fm = self.foreign_models[0]
+            value_key = fm.key_field
+            # Pick a likely display field
+            for candidate in ("name", "company_name", "title", "label", "description"):
+                if candidate in fm.fields:
+                    display_key = candidate
+                    break
+            # Pick a secondary field
+            for candidate in ("company_number", "status", "company_status", "type", "category"):
+                if candidate in fm.fields and candidate != display_key:
+                    secondary_key = candidate
+                    break
+
+        result: dict[str, Any] = {
+            "url": url,
+            "display_key": display_key,
+            "value_key": value_key,
+            "secondary_key": secondary_key,
+            "headers": headers,
+            "query_param": "q",
+            "items_key": "items",
+            "autofill": {},
+        }
+        result.update(overrides)
+        return result
+
     def generate_foreign_model_dsl(self, model: ForeignModelSpec) -> str:
         """Generate DSL foreign_model block for a model."""
         service_name = self.name.replace("_", "")

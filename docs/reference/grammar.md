@@ -346,6 +346,9 @@ surface_element_line
 
 surface_element_option
               ::= IDENT "=" literal ;
+              (* e.g. source=companies_house_lookup.search_companies
+                 Binds the field to an API pack search operation,
+                 rendering it as a search_select widget. *)
 
 surface_action_decl
               ::= "action" IDENT STRING? ":" NEWLINE

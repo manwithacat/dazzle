@@ -557,6 +557,28 @@ class DNRBackendApp:
                         "headers": getattr(integration, "headers", {}),
                     }
 
+            # Also scan surfaces for source= options referencing API packs
+            try:
+                from dazzle.api_kb import load_pack
+
+                for surface in getattr(self.spec, "surfaces", []):
+                    for section in getattr(surface, "sections", []):
+                        for element in getattr(section, "elements", []):
+                            source_ref = getattr(element, "options", {}).get("source")
+                            if source_ref and "." in source_ref:
+                                pack_name, op_name = source_ref.rsplit(".", 1)
+                                if pack_name not in fragment_sources:
+                                    pack = load_pack(pack_name)
+                                    if pack:
+                                        try:
+                                            fragment_sources[pack_name] = (
+                                                pack.generate_fragment_source(op_name)
+                                            )
+                                        except ValueError:
+                                            pass
+            except ImportError:
+                pass
+
             fragment_router = create_fragment_router(fragment_sources)
             self._app.include_router(fragment_router)
         except Exception as e:

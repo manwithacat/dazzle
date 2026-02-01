@@ -291,7 +291,10 @@ def _check_form_structure(
                             target=f"input[{name}]",
                             expected=f"type='{expected_type}'",
                             actual=f"type='{actual_type}'",
-                            recommendation=f"Change input type to '{expected_type}' for {fspec.type.kind.value} field.",
+                            recommendation=(
+                                f"Change input type to '{expected_type}' "
+                                f"for {fspec.type.kind.value} field."
+                            ),
                         )
                     )
 
