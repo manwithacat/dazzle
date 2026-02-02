@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.20.0"
+version = "0.21.0"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -146,11 +146,11 @@ namespaces = false
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
 "dazzle.examples" = ["**/*"]
-# DNR UI runtime static files (JS, CSS)
-"dazzle_dnr_ui.runtime.static" = ["**/*.js", "**/*.css"]
+# Dazzle UI runtime static files (JS, CSS)
+"dazzle_ui.runtime.static" = ["**/*.js", "**/*.css"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "src/dazzle_dnr_back/tests"]
+testpaths = ["tests", "src/dazzle_back/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -163,7 +163,7 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow tests (subprocess spawning, full validation)",
-    "e2e: End-to-end tests for DNR runtime",
+    "e2e: End-to-end tests for Dazzle runtime",
     "story: User story tests (FieldTest Hub)",
     "access_control: Permission/access control tests (FieldTest Hub)",
     "state_machine: State transition tests (FieldTest Hub)",

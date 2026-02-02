@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from dazzle_dnr_back.runtime.service_loader import (
+from dazzle_back.runtime.service_loader import (
     LoadedService,
     ServiceInvocationError,
     ServiceLoader,

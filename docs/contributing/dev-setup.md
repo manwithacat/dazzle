@@ -43,7 +43,7 @@ npm test
 
 # Type check
 mypy src/dazzle
-npx tsc --noEmit -p src/dazzle_dnr_ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/
 ```
 
 ## Project Structure
@@ -67,10 +67,10 @@ dazzle/
 │   │   │           ├── api_packs.py # External API packs
 │   │   │           └── stories.py   # Story generation
 │   │   └── eject/                 # Code generation adapters
-│   ├── dazzle_dnr_back/           # FastAPI backend runtime
+│   ├── dazzle_back/           # FastAPI backend runtime
 │   │   ├── runtime/               # Server and API generation
 │   │   └── converters/            # AppSpec → BackendSpec
-│   └── dazzle_dnr_ui/             # JavaScript UI runtime
+│   └── dazzle_ui/             # JavaScript UI runtime
 │       ├── runtime/
 │       │   ├── combined_server.py # HTTP server
 │       │   ├── site_renderer.py   # Site/auth page HTML generation
@@ -91,7 +91,7 @@ dazzle/
 
 ```bash
 cd examples/simple_task
-dazzle dnr serve --local
+dazzle serve --local
 ```
 
 ### Making Changes
@@ -193,7 +193,7 @@ pre-commit run --all-files -v
 ### JavaScript type errors
 
 ```bash
-npx tsc --noEmit -p src/dazzle_dnr_ui/runtime/static/js/
+npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/
 ```
 
 ## See Also

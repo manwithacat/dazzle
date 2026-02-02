@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..llm_context import create_llm_instrumentation
-from .dnr_ui import generate_dnr_ui
 from .spec import create_spec_template
 from .templates import copy_template
+from .ui_init import generate_ui
 from .validation import InitError, sanitize_name
 
 if TYPE_CHECKING:
@@ -193,7 +193,7 @@ def init_project(
 
     # Generate DNR UI from DSL (ensures we use canonical templates, not stale copies)
     log("Generating DNR UI from DSL...")
-    generate_dnr_ui(target_dir, log)
+    generate_ui(target_dir, log)
 
     # Initialize git repository (unless disabled)
     if not no_git:

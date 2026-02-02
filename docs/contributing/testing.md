@@ -17,7 +17,7 @@ DAZZLE has a multi-layered test infrastructure with **1,300+ test functions** ac
 │                                                                  │
 │                   Integration Tests                              │
 │         ┌─────────────────────────────────────────────┐         │
-│         │  Multi-component, DNR pipeline, GraphQL     │         │
+│         │  Multi-component, runtime pipeline, GraphQL     │         │
 │         └─────────────────────────────────────────────┘         │
 │                                                                  │
 │                        Unit Tests                                │
@@ -92,8 +92,8 @@ Multi-component tests:
 
 | File | Description |
 |------|-------------|
-| `test_dnr_pipeline.py` | AppSpec → BackendSpec/UISpec conversion |
-| `test_dnr_e2e.py` | Full DNR pipeline |
+| `test_runtime_pipeline.py` | AppSpec → BackendSpec/UISpec conversion |
+| `test_runtime_e2e.py` | Full runtime pipeline |
 | `test_end_to_end.py` | Complete workflows |
 | `test_archetype_examples.py` | Archetype expansion |
 | `test_golden_master.py` | Snapshot/golden master testing |
@@ -144,18 +144,18 @@ pytest tests/e2e/test_semantic_dom_contract.py -v --timeout=60
 
 #### 3.3 DNR Serve Tests
 
-**Location:** `tests/e2e/test_dnr_serve.py`
-**Execution:** CI (dnr-e2e job)
+**Location:** `tests/e2e/test_serve.py`
+**Execution:** CI (runtime-e2e job)
 
-Tests `dazzle dnr serve` command functionality:
+Tests `dazzle serve` command functionality:
 
 ```bash
-pytest tests/e2e/test_dnr_serve.py -v --timeout=120
+pytest tests/e2e/test_serve.py -v --timeout=120
 ```
 
 ### 4. DNR Runtime Tests
 
-#### Backend Tests (`src/dazzle_dnr_back/tests/`)
+#### Backend Tests (`src/dazzle_back/tests/`)
 
 | File | Description |
 |------|-------------|
@@ -170,7 +170,7 @@ pytest tests/e2e/test_dnr_serve.py -v --timeout=120
 | `test_file_storage.py` | File uploads |
 | `test_fts.py` | Full-text search |
 
-#### UI Tests (`src/dazzle_dnr_ui/tests/`)
+#### UI Tests (`src/dazzle_ui/tests/`)
 
 | File | Description |
 |------|-------------|
@@ -181,7 +181,7 @@ pytest tests/e2e/test_dnr_serve.py -v --timeout=120
 
 ### 5. JavaScript Tests
 
-**Location:** `src/dazzle_dnr_ui/runtime/static/js/*.test.js`
+**Location:** `src/dazzle_ui/runtime/static/js/*.test.js`
 **Framework:** Vitest (jsdom environment)
 **Execution:** Pre-commit, CI (js-test job)
 
@@ -240,7 +240,7 @@ pytest tests/e2e/test_simple_task_generated.py -v
 ```bash
 # Prerequisites
 cd examples/fieldtest_hub
-dazzle dnr serve --local  # Start the app
+dazzle serve --local  # Start the app
 
 # Install test dependencies
 pip install playwright pytest httpx
@@ -314,7 +314,7 @@ Runs on push to main/develop and pull requests:
 | `js-typecheck` | All PRs | TypeScript checker |
 | `type-check` | All PRs | mypy on core modules |
 | `integration` | After lint | Integration tests |
-| `dnr-e2e` | After lint | DNR serve tests |
+| `runtime-e2e` | After lint | runtime serve tests |
 | `semantic-e2e` | After lint | Semantic DOM tests |
 | `example-e2e` | After lint | P0 examples (simple_task, contact_manager) |
 | `example-e2e-extended` | main only | P1/P2 examples (warnings only) |
@@ -517,8 +517,8 @@ class TestMyExample:
 | Integration | `tests/integration/` | ✅ | ❌ | ✅ |
 | E2E (Docker) | `tests/e2e/docker/` | ✅ | ❌ | ✅ |
 | E2E (Semantic) | `tests/e2e/test_semantic_dom_contract.py` | ✅ | ❌ | ✅ |
-| DNR Backend | `src/dazzle_dnr_back/tests/` | ✅ | ❌ | ✅ |
-| DNR UI | `src/dazzle_dnr_ui/tests/` | ✅ | ❌ | ✅ |
+| DNR Backend | `src/dazzle_back/tests/` | ✅ | ❌ | ✅ |
+| Dazzle UI | `src/dazzle_ui/tests/` | ✅ | ❌ | ✅ |
 | JavaScript | `*.test.js` | ✅ | ✅ | ✅ |
 | Example E2E (P0) | `examples/*/tests/e2e/` | ✅ | ❌ | ✅ |
 | Example E2E (P1/P2) | `examples/*/tests/e2e/` | ✅ | ❌ | ⚠️ (main only) |

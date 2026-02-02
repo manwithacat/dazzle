@@ -6,7 +6,7 @@
 
 ```bash
 cd examples/simple_task
-dazzle dnr serve
+dazzle serve
 # UI: http://localhost:3000
 # API: http://localhost:8000/docs
 ```

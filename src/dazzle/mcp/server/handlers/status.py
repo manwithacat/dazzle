@@ -107,7 +107,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     else:
         project_path = get_active_project_path() or get_project_root()
     log_dir = project_path / ".dazzle" / "logs"
-    log_file = log_dir / "dnr.log"
+    log_file = log_dir / "dazzle.log"
 
     result: dict[str, Any] = {
         "log_file": str(log_file),
@@ -117,7 +117,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     if not log_file.exists():
         result["status"] = "no_logs"
         result["message"] = (
-            "No log file found. Start the DNR server with `dazzle dnr serve` to generate logs."
+            "No log file found. Start the DNR server with `dazzle serve` to generate logs."
         )
         result["hint"] = f"Log file will be created at: {log_file}"
         return json.dumps(result, indent=2)

@@ -25,14 +25,14 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle_dnr_back.events.bus import EventBus, NackReason
-from dazzle_dnr_back.events.dev_memory import DevBusMemory
-from dazzle_dnr_back.events.dev_sqlite import DevBrokerSQLite
-from dazzle_dnr_back.events.envelope import EventEnvelope
+from dazzle_back.events.bus import EventBus, NackReason
+from dazzle_back.events.dev_memory import DevBusMemory
+from dazzle_back.events.dev_sqlite import DevBrokerSQLite
+from dazzle_back.events.envelope import EventEnvelope
 
 # Check if Kafka is available for testing
 try:
-    from dazzle_dnr_back.events.kafka_bus import KAFKA_AVAILABLE, KafkaBus, KafkaConfig
+    from dazzle_back.events.kafka_bus import KAFKA_AVAILABLE, KafkaBus, KafkaConfig
 
     KAFKA_TEST_ENABLED = KAFKA_AVAILABLE and os.getenv("KAFKA_BOOTSTRAP_SERVERS")
 except ImportError:

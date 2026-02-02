@@ -94,7 +94,7 @@ Tools for generating demo/seed data from DSL.
 | `list_backend_services` | List available backend services |
 | `get_backend_service_spec` | Get full ServiceSpec JSON |
 
-### DNR UI Tools
+### Dazzle UI Tools
 
 | Tool | Purpose |
 |------|---------|

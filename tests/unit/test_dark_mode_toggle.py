@@ -12,7 +12,7 @@ class TestDarkModeCSSClasses:
         """Test that toggle button CSS classes are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle_dnr_ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check toggle button styles exist
@@ -26,7 +26,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode header styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle_dnr_ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode header styles
@@ -38,7 +38,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode section styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle_dnr_ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode section styles
@@ -51,7 +51,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode card styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle_dnr_ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode card styles
@@ -63,7 +63,7 @@ class TestDarkModeCSSClasses:
         """Test that dark mode auth page styles are defined."""
         from pathlib import Path
 
-        css_path = Path("src/dazzle_dnr_ui/runtime/static/css/site-sections.css")
+        css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
         # Check dark mode auth styles
@@ -79,7 +79,7 @@ class TestSitePageToggleButton:
         from pathlib import Path
 
         # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
-        py_path = Path("src/dazzle_dnr_ui/runtime/site_renderer.py")
+        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check toggle button is included
@@ -91,7 +91,7 @@ class TestSitePageToggleButton:
         from pathlib import Path
 
         # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
-        py_path = Path("src/dazzle_dnr_ui/runtime/site_renderer.py")
+        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check for sun and moon SVG icons
@@ -102,7 +102,7 @@ class TestSitePageToggleButton:
         """Test that site.js includes theme initialization."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_dnr_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
         py_content = py_path.read_text()
 
         # Check for theme initialization in site.js
@@ -113,7 +113,7 @@ class TestSitePageToggleButton:
         """Test that site.js uses the same storage key."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_dnr_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
         py_content = py_path.read_text()
 
         # Check for storage key in site.js
@@ -123,7 +123,7 @@ class TestSitePageToggleButton:
         """Test that site.js listens for system preference changes."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_dnr_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
         py_content = py_path.read_text()
 
         # Check for system preference listener

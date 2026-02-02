@@ -171,7 +171,7 @@ def get_project_tools() -> list[Tool]:
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "CLI command to get help for (e.g., 'dnr serve', 'test run', 'init'). Omit for overview.",
+                        "description": "CLI command to get help for (e.g., 'serve', 'test run', 'init'). Omit for overview.",
                     }
                 },
                 "required": [],
@@ -1228,7 +1228,7 @@ Returns a test suite with coverage metrics.""",
             name="run_dsl_tests",
             description="""Run DSL-driven tests against a running DNR server.
 
-Requires the application to be running (use 'dazzle dnr serve').
+Requires the application to be running (use 'dazzle serve').
 Tests are generated from DSL and cached in .dazzle/tests/.
 
 Returns test results with pass/fail status and error details.""",
@@ -1667,7 +1667,7 @@ def get_feedback_tools() -> list[Tool]:
 
 def get_all_tools() -> list[Tool]:
     """Get all available tools based on current mode."""
-    from dazzle.mcp.dnr_tools_impl import get_dnr_tools
+    from dazzle.mcp.runtime_tools import get_runtime_tools
 
     tools = []
 
@@ -1679,7 +1679,7 @@ def get_all_tools() -> list[Tool]:
     tools.extend(get_project_tools())
 
     # Add DNR tools (always available)
-    tools.extend(get_dnr_tools())
+    tools.extend(get_runtime_tools())
 
     # Add API Knowledgebase tools (always available)
     tools.extend(get_api_kb_tools())

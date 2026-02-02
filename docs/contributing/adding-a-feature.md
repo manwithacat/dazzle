@@ -8,8 +8,8 @@ Guide to extending Dazzle with new functionality.
 |------|-------|---------|
 | DSL construct | `src/dazzle/core/` | New entity modifier |
 | CLI command | `src/dazzle/cli/` | New subcommand |
-| Backend capability | `src/dazzle_dnr_back/` | New API pattern |
-| UI component | `src/dazzle_dnr_ui/` | New widget |
+| Backend capability | `src/dazzle_back/` | New API pattern |
+| UI component | `src/dazzle_ui/` | New widget |
 | Code generator | `src/dazzle/eject/` | New ejection target |
 
 ## Adding a DSL Construct
@@ -136,7 +136,7 @@ def test_my_command():
 
 ### 1. Define Service
 
-Add to `src/dazzle_dnr_back/services/`:
+Add to `src/dazzle_back/services/`:
 
 ```python
 class MyService:
@@ -147,7 +147,7 @@ class MyService:
 
 ### 2. Add Route
 
-Add to `src/dazzle_dnr_back/routes/`:
+Add to `src/dazzle_back/routes/`:
 
 ```python
 @router.post("/my-endpoint")
@@ -157,7 +157,7 @@ async def my_endpoint(data: MyRequest) -> MyResponse:
 
 ### 3. Add Tests
 
-Create `src/dazzle_dnr_back/tests/test_my_service.py`:
+Create `src/dazzle_back/tests/test_my_service.py`:
 
 ```python
 import pytest
@@ -173,7 +173,7 @@ async def test_my_method():
 
 ### 1. Create Component
 
-Add to `src/dazzle_dnr_ui/runtime/static/js/components/`:
+Add to `src/dazzle_ui/runtime/static/js/components/`:
 
 ```javascript
 // @ts-check
@@ -192,7 +192,7 @@ export function MyComponent(props) {
 
 ### 2. Register Component
 
-Add to `src/dazzle_dnr_ui/runtime/static/js/components.js`:
+Add to `src/dazzle_ui/runtime/static/js/components.js`:
 
 ```javascript
 import { MyComponent } from './components/my-component.js';
@@ -202,7 +202,7 @@ registry.register('MyComponent', MyComponent);
 
 ### 3. Add Tests
 
-Create `src/dazzle_dnr_ui/runtime/static/js/my-component.test.js`:
+Create `src/dazzle_ui/runtime/static/js/my-component.test.js`:
 
 ```javascript
 import { describe, it, expect } from 'vitest';

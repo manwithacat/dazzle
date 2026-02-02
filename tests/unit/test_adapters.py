@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from dazzle_dnr_back.graphql.adapters.base import (
+from dazzle_back.graphql.adapters.base import (
     AdapterConfig,
     AdapterError,
     AdapterResponse,
@@ -21,7 +21,7 @@ from dazzle_dnr_back.graphql.adapters.base import (
     TimeoutError,
     ValidationError,
 )
-from dazzle_dnr_back.graphql.adapters.errors import (
+from dazzle_back.graphql.adapters.errors import (
     ErrorCategory,
     ErrorSeverity,
     NormalizedError,

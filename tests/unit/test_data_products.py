@@ -22,7 +22,7 @@ from dazzle.core.ir.governance import (
     DataProductTransform,
     PoliciesSpec,
 )
-from dazzle_dnr_back.data_products import (
+from dazzle_back.data_products import (
     CrossTenantPolicy,
     CrossTenantValidator,
     CuratedTopicGenerator,
@@ -30,7 +30,7 @@ from dazzle_dnr_back.data_products import (
     PolicyTestGenerator,
     generate_curated_topics,
 )
-from dazzle_dnr_back.data_products.cross_tenant import (
+from dazzle_back.data_products.cross_tenant import (
     CrossTenantAuditAction,
     CrossTenantPermission,
 )

@@ -237,7 +237,7 @@ def examples_handler(args: dict[str, Any]) -> str:
                 ],
                 "expected": "Stay on current page after clearing filter",
                 "actual": "Page resets to 1",
-                "files_changed": ["src/dazzle_dnr_ui/runtime/static/js/components.js"],
+                "files_changed": ["src/dazzle_ui/runtime/static/js/components.js"],
                 "testing_notes": "Verified fix on simple_task example",
             },
         },

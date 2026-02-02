@@ -28,9 +28,9 @@ from dazzle.core.ir import (
 
 # These modules are part of the HTMX template runtime and may not be
 # installed in every CI configuration.
-pytest.importorskip("dazzle_dnr_ui.runtime.page_routes")
+pytest.importorskip("dazzle_ui.runtime.page_routes")
 
-from dazzle_dnr_ui.runtime.page_routes import create_page_routes  # noqa: E402
+from dazzle_ui.runtime.page_routes import create_page_routes  # noqa: E402
 
 if TYPE_CHECKING:
     from fastapi import FastAPI

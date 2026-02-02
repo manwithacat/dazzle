@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dazzle_dnr_ui.runtime.fragment_registry import get_fragment_info, get_fragment_registry
+from dazzle_ui.runtime.fragment_registry import get_fragment_info, get_fragment_registry
 
 EXPECTED_FRAGMENTS = [
     "search_select",

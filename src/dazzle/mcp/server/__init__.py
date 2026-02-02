@@ -395,7 +395,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
    - Creating a new project with `dazzle init`
    - Understanding the project structure
    - Writing their first entity and surface in DSL
-   - Running with `dazzle dnr serve`
+   - Running with `dazzle serve`
 3. Offer to help them customize the starter code for their use case
 4. Point them to lookup_concept("patterns") for common patterns they can use"""
 

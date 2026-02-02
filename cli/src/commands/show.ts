@@ -1,7 +1,7 @@
 /**
  * show command - Inspect project structure
  *
- * Replaces: dazzle inspect, dazzle dnr inspect
+ * Replaces: dazzle inspect, dazzle schema
  */
 
 import { z } from 'zod'

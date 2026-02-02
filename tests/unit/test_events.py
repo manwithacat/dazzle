@@ -21,7 +21,7 @@ from uuid import UUID, uuid4
 import aiosqlite
 import pytest
 
-from dazzle_dnr_back.events import (
+from dazzle_back.events import (
     ConsumerConfig,
     DevBrokerSQLite,
     DevBusMemory,

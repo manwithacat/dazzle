@@ -223,7 +223,7 @@ class UnifiedTestRunner:
         env["PYTHONPATH"] = str(self.project_path.parent.parent / "src")
 
         self._server_process = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dnr", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
             cwd=self.project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -246,13 +246,13 @@ class UnifiedTestRunner:
                 if "API Port:" in line:
                     self.api_port = int(line.split()[-1])
                 elif "Backend:" in line and "http://" in line:
-                    # Extract port from URL like [DNR] Backend: http://localhost:8000
+                    # Extract port from URL like [Dazzle] Backend: http://localhost:8000
                     match = re.search(r":(\d+)", line)
                     if match:
                         self.api_port = int(match.group(1))
                     backend_ready = True
                 elif "Frontend:" in line and "http://" in line:
-                    # Extract port from URL like [DNR] Frontend: http://localhost:3000
+                    # Extract port from URL like [Dazzle] Frontend: http://localhost:3000
                     match = re.search(r":(\d+)", line)
                     if match:
                         self.ui_port = int(match.group(1))
@@ -280,7 +280,7 @@ class UnifiedTestRunner:
             self._server_process = None
 
         # Kill any orphaned processes
-        subprocess.run(["pkill", "-f", "dazzle dnr serve"], capture_output=True)
+        subprocess.run(["pkill", "-f", "dazzle serve"], capture_output=True)
 
     def _find_port(self, start: int) -> int:
         """Find an available port."""

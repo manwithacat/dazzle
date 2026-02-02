@@ -23,7 +23,7 @@ pip install dazzle
 
 # Run an example
 cd examples/simple_task
-dazzle dnr serve
+dazzle serve
 
 # Open http://localhost:3000
 ```

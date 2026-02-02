@@ -12,7 +12,6 @@ This package contains modular implementations for project initialization:
 
 from __future__ import annotations
 
-from .dnr_ui import generate_dnr_ui
 from .project import create_mcp_config, init_project, list_examples
 from .reset import reset_project, verify_project
 from .spec import create_spec_template
@@ -21,6 +20,7 @@ from .templates import (
     copy_template,
     substitute_template_vars,
 )
+from .ui_init import generate_ui
 from .validation import (
     RESERVED_KEYWORDS,
     InitError,
@@ -41,8 +41,8 @@ __all__ = [
     "copy_template",
     # Spec
     "create_spec_template",
-    # DNR UI
-    "generate_dnr_ui",
+    # Runtime UI
+    "generate_ui",
     # Project init
     "list_examples",
     "create_mcp_config",

@@ -26,7 +26,7 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 
 if TYPE_CHECKING:
-    from dazzle_dnr_back.specs import BackendSpec
+    from dazzle_back.specs import BackendSpec
 
 
 @dataclass
@@ -60,7 +60,7 @@ class MockAuthConfig:
 @pytest.fixture
 def minimal_backend_spec() -> BackendSpec:
     """Create a minimal backend spec for testing."""
-    from dazzle_dnr_back.specs import BackendSpec
+    from dazzle_back.specs import BackendSpec
 
     return BackendSpec(
         name="test_app",
@@ -78,7 +78,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """Server starts normally without OAuth config."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         app_builder = DNRBackendApp(
             minimal_backend_spec,
@@ -97,7 +97,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """Server starts normally with empty oauth_providers list."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -121,7 +121,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """Social routes are created when OAuth is configured with valid env vars."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -153,7 +153,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path, caplog
     ) -> None:
         """Missing env vars log warning but server still starts."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -185,7 +185,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """Multiple OAuth providers can be configured."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -227,7 +227,7 @@ class TestSocialAuthWiring:
         self, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """When auth is disabled, no social routes even if OAuth is configured."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DNRBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -260,8 +260,8 @@ class TestBuildSocialAuthConfig:
 
     def test_google_provider_extracts_client_id(self, tmp_path) -> None:
         """Google provider correctly extracts client_id from env."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
-        from dazzle_dnr_back.specs import BackendSpec
+        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 
@@ -287,8 +287,8 @@ class TestBuildSocialAuthConfig:
 
     def test_github_provider_extracts_id_and_secret(self, tmp_path) -> None:
         """GitHub provider correctly extracts client_id and secret from env."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
-        from dazzle_dnr_back.specs import BackendSpec
+        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 
@@ -319,8 +319,8 @@ class TestBuildSocialAuthConfig:
 
     def test_returns_none_when_no_providers_configured(self, tmp_path) -> None:
         """Returns None when no providers have valid credentials."""
-        from dazzle_dnr_back.runtime.server import DNRBackendApp
-        from dazzle_dnr_back.specs import BackendSpec
+        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 

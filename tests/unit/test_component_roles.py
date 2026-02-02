@@ -4,21 +4,21 @@ Unit tests for component roles (v0.5.0 feature).
 Tests ComponentRole and role-based classification of components.
 """
 
-from dazzle_dnr_ui.specs.actions import (
+from dazzle_ui.specs.actions import (
     ActionSpec,
     FetchEffect,
     PatchOp,
     PatchSpec,
     TransitionSpec,
 )
-from dazzle_dnr_ui.specs.component import (
+from dazzle_ui.specs.component import (
     ComponentCategory,
     ComponentRole,
     ComponentSpec,
     PropFieldSpec,
     PropsSchema,
 )
-from dazzle_dnr_ui.specs.state import StateScope, StateSpec
+from dazzle_ui.specs.state import StateScope, StateSpec
 
 
 class TestComponentRoleEnum:

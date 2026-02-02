@@ -10,16 +10,16 @@ from uuid import UUID
 
 import pytest
 
-from dazzle_dnr_back.events.envelope import EventEnvelope
-from dazzle_dnr_back.pra.data_factory import PRADataFactory
-from dazzle_dnr_back.pra.generator import GeneratorConfig, GeneratorStats, LoadGenerator
-from dazzle_dnr_back.pra.hot_keys import (
+from dazzle_back.events.envelope import EventEnvelope
+from dazzle_back.pra.data_factory import PRADataFactory
+from dazzle_back.pra.generator import GeneratorConfig, GeneratorStats, LoadGenerator
+from dazzle_back.pra.hot_keys import (
     HotKeySelector,
     WeightedKeySelector,
     create_extreme_skew_selector,
     create_pareto_selector,
 )
-from dazzle_dnr_back.pra.profiles import (
+from dazzle_back.pra.profiles import (
     BurstProfile,
     FailureInjectionProfile,
     LoadPhase,

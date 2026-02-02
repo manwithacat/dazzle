@@ -16,8 +16,8 @@ Usage (inside Docker):
     pytest test_ux_validation.py -v --screenshot=on
 
 Environment variables:
-    DNR_BASE_URL: API URL (default: http://dnr-app:8000)
-    DNR_UI_URL: UI URL (default: http://dnr-app:3000)
+    DAZZLE_BASE_URL: API URL (default: http://dazzle-app:8000)
+    DAZZLE_UI_URL: UI URL (default: http://dazzle-app:3000)
     SCREENSHOT_DIR: Where to save screenshots (default: /screenshots)
 """
 
@@ -29,8 +29,8 @@ import pytest
 from playwright.sync_api import Page, expect
 
 # Configuration from environment
-DNR_BASE_URL = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
-DNR_UI_URL = os.environ.get("DNR_UI_URL", DNR_BASE_URL.replace(":8000", ":3000"))
+DAZZLE_BASE_URL = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
+DAZZLE_UI_URL = os.environ.get("DAZZLE_UI_URL", DAZZLE_BASE_URL.replace(":8000", ":3000"))
 SCREENSHOT_DIR = os.environ.get("SCREENSHOT_DIR", "/screenshots")
 
 
@@ -184,13 +184,13 @@ def discover_app_structure(api_url: str, ui_url: str) -> AppInfo:
 @pytest.fixture(scope="module")
 def api_client():
     """HTTP client for API operations."""
-    return httpx.Client(base_url=DNR_BASE_URL, timeout=10)
+    return httpx.Client(base_url=DAZZLE_BASE_URL, timeout=10)
 
 
 @pytest.fixture(scope="module")
 def app_info():
     """Discover and cache app structure."""
-    return discover_app_structure(DNR_BASE_URL, DNR_UI_URL)
+    return discover_app_structure(DAZZLE_BASE_URL, DAZZLE_UI_URL)
 
 
 # =============================================================================
@@ -283,7 +283,7 @@ class TestAPIHealth:
 
     def test_ui_spec_available(self):
         """Test that the UI spec is available."""
-        client = httpx.Client(base_url=DNR_UI_URL, timeout=10)
+        client = httpx.Client(base_url=DAZZLE_UI_URL, timeout=10)
         response = client.get("/ui-spec.json")
         assert response.status_code == 200
         data = response.json()
@@ -305,7 +305,7 @@ class TestUXBasics:
 
     def test_page_loads(self, page: Page, ux_tracker, app_info: AppInfo):
         """Test that the main page loads without errors."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
 
         # Track coverage for first entity
         if app_info.entities:
@@ -321,7 +321,7 @@ class TestUXBasics:
 
     def test_page_has_content(self, page: Page, app_info: AppInfo):
         """Test that the page has meaningful content."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(2000)
 
@@ -336,7 +336,7 @@ class TestUXBasics:
 
     def test_has_heading(self, page: Page):
         """Test that the page has a heading."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
 
         heading = page.locator("h1, h2, h3, [data-dazzle-component='heading']").first
@@ -355,7 +355,7 @@ class TestCRUDFlow:
 
     def test_create_button_exists(self, page: Page, ux_tracker, app_info: AppInfo):
         """Test that Create buttons exist for entities."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
 
         if app_info.entities:
@@ -377,7 +377,7 @@ class TestCRUDFlow:
 
     def test_create_form_opens(self, page: Page, app_info: AppInfo):
         """Test that clicking create opens a form."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
 
         create_button = page.locator(
@@ -455,7 +455,7 @@ class TestViewScreenshots:
 
     def test_dashboard_screenshot(self, page: Page, app_info: AppInfo):
         """Take a screenshot of the dashboard/main view."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(2000)
 
@@ -473,7 +473,7 @@ class TestViewScreenshots:
 
             # Navigate to list view using path-based routing (SPA serves same HTML for all routes)
             list_route = entity.routes.get("list", f"/{entity.name.lower()}/list")
-            page.goto(f"{DNR_UI_URL}{list_route}")
+            page.goto(f"{DAZZLE_UI_URL}{list_route}")
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(2000)
 
@@ -489,7 +489,7 @@ class TestViewScreenshots:
         for entity in app_info.entities:
             # Navigate to create form using path-based routing (SPA serves same HTML for all routes)
             create_route = entity.routes.get("create", f"/{entity.name.lower()}/create")
-            page.goto(f"{DNR_UI_URL}{create_route}")
+            page.goto(f"{DAZZLE_UI_URL}{create_route}")
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(1500)
 
@@ -519,7 +519,7 @@ class TestNavigation:
                 continue  # Skip parameterized routes
 
             # Use path-based routing for SPA navigation (server serves same HTML for all routes)
-            full_url = f"{DNR_UI_URL}{path}"
+            full_url = f"{DAZZLE_UI_URL}{path}"
             page.goto(full_url)
             page.wait_for_timeout(500)
 
@@ -543,7 +543,7 @@ class TestStyling:
 
     def test_app_container_exists(self, page: Page):
         """Test that the #app container exists and has styling."""
-        page.goto(DNR_UI_URL)
+        page.goto(DAZZLE_UI_URL)
         page.wait_for_load_state("networkidle")
 
         app_div = page.locator("#app")

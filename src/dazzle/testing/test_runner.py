@@ -102,7 +102,7 @@ class TestRunResult:
         return (self.passed / self.runnable) * 100
 
 
-class DNRClient:
+class DazzleClient:
     """HTTP client for interacting with a DNR server."""
 
     def __init__(self, api_url: str, ui_url: str, timeout: float = 10.0):
@@ -279,7 +279,7 @@ class DNRClient:
     def get_entity_schema(self, entity_name: str) -> dict | None:
         """Get entity schema including required fields."""
         try:
-            resp = self.client.get(f"{self.api_url}/_dnr/entity/{entity_name}")
+            resp = self.client.get(f"{self.api_url}/_dazzle/entity/{entity_name}")
             if resp.status_code == 200:
                 return resp.json()
             return None
@@ -409,7 +409,7 @@ class TestRunner:
         self.api_port = api_port
         self.ui_port = ui_port
         self.designs_path = project_path / "dsl" / "tests" / "designs.json"
-        self.client: DNRClient | None = None
+        self.client: DazzleClient | None = None
         self._server_process: subprocess.Popen | None = None
 
     def load_designs(self) -> list[dict]:
@@ -424,13 +424,13 @@ class TestRunner:
     def start_server(self) -> bool:
         """Start the DNR server."""
         # Kill any existing server
-        subprocess.run(["pkill", "-f", "dazzle dnr serve"], capture_output=True)
+        subprocess.run(["pkill", "-f", "dazzle serve"], capture_output=True)
         time.sleep(1)
 
         # Start new server
         env = os.environ.copy()
         self._server_process = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dnr", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
             cwd=self.project_path,
             env=env,
             stdout=subprocess.PIPE,
@@ -475,7 +475,7 @@ class TestRunner:
             self._server_process = None
 
         # Also kill any orphaned processes
-        subprocess.run(["pkill", "-f", "dazzle dnr serve"], capture_output=True)
+        subprocess.run(["pkill", "-f", "dazzle serve"], capture_output=True)
 
     def run_tests(self, accepted_only: bool = True) -> TestRunResult:
         """Run all test designs."""
@@ -495,7 +495,7 @@ class TestRunner:
         print(f"  Found {len(designs)} test designs")
 
         # Initialize client
-        self.client = DNRClient(
+        self.client = DazzleClient(
             api_url=f"http://localhost:{self.api_port}", ui_url=f"http://localhost:{self.ui_port}"
         )
 
@@ -576,7 +576,7 @@ class TestRunner:
             return result
 
         # Initialize client
-        self.client = DNRClient(
+        self.client = DazzleClient(
             api_url=f"http://localhost:{self.api_port}", ui_url=f"http://localhost:{self.ui_port}"
         )
 

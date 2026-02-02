@@ -20,8 +20,8 @@ Usage (inside Docker):
     pytest test_generated_flows.py -v --screenshot=on
 
 Environment variables:
-    DNR_BASE_URL: API URL (default: http://dnr-app:8000)
-    DNR_UI_URL: UI URL (default: http://dnr-app:3000)
+    DAZZLE_BASE_URL: API URL (default: http://dazzle-app:8000)
+    DAZZLE_UI_URL: UI URL (default: http://dazzle-app:3000)
     SCREENSHOT_DIR: Where to save screenshots (default: /screenshots)
     EXAMPLE_NAME: Name of the example being tested
 """
@@ -41,8 +41,8 @@ from playwright.sync_api import Page, expect
 sys.path.insert(0, "/src")
 
 # Configuration from environment
-DNR_BASE_URL = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
-DNR_UI_URL = os.environ.get("DNR_UI_URL", DNR_BASE_URL.replace(":8000", ":3000"))
+DAZZLE_BASE_URL = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
+DAZZLE_UI_URL = os.environ.get("DAZZLE_UI_URL", DAZZLE_BASE_URL.replace(":8000", ":3000"))
 SCREENSHOT_DIR = os.environ.get("SCREENSHOT_DIR", "/screenshots")
 EXAMPLE_NAME = os.environ.get("EXAMPLE_NAME", "unknown")
 
@@ -148,9 +148,9 @@ class FlowExecutor:
     def _navigate(self, target: str) -> None:
         """Navigate to a route."""
         if target.startswith("/"):
-            url = f"{DNR_UI_URL}{target}"
+            url = f"{DAZZLE_UI_URL}{target}"
         else:
-            url = f"{DNR_UI_URL}/{target}"
+            url = f"{DAZZLE_UI_URL}/{target}"
         self.page.goto(url)
         self.page.wait_for_load_state("networkidle")
 
@@ -261,7 +261,7 @@ class FlowExecutor:
         """Login as a persona."""
         # In DNR test mode, auth is typically disabled
         # Navigate to home to ensure we're in a clean state
-        self.page.goto(f"{DNR_UI_URL}/")
+        self.page.goto(f"{DAZZLE_UI_URL}/")
         self.page.wait_for_load_state("networkidle")
 
     def _execute_inline_assertion(self, target: str) -> None:
@@ -434,7 +434,7 @@ class FlowExecutor:
 @pytest.fixture(scope="module")
 def api_client():
     """HTTP client for API operations."""
-    return httpx.Client(base_url=DNR_BASE_URL, timeout=10)
+    return httpx.Client(base_url=DAZZLE_BASE_URL, timeout=10)
 
 
 @pytest.fixture(scope="module")

@@ -8,7 +8,7 @@ A multi-entity support ticket application demonstrating entity relationships and
 
 ```bash
 cd examples/support_tickets
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000

@@ -135,7 +135,7 @@ class TestGenerator:
         """Load the app spec from the running server."""
         try:
             # Get entity list
-            resp = self.client.get(f"{self.api_url}/_dnr/spec")
+            resp = self.client.get(f"{self.api_url}/_dazzle/spec")
             if resp.status_code != 200:
                 return False
 
@@ -144,7 +144,7 @@ class TestGenerator:
 
             # Load each entity's details
             for name in entity_names:
-                entity_resp = self.client.get(f"{self.api_url}/_dnr/entity/{name}")
+                entity_resp = self.client.get(f"{self.api_url}/_dazzle/entity/{name}")
                 if entity_resp.status_code == 200:
                     entity_data = entity_resp.json()
                     self.entities[name] = self._parse_entity(entity_data)
@@ -406,11 +406,11 @@ if __name__ == "__main__":
     if args.start_server:
         # Start the server
         print(f"Starting server for {project_path.name}...")
-        subprocess.run(["pkill", "-f", "dazzle dnr serve"], capture_output=True)
+        subprocess.run(["pkill", "-f", "dazzle serve"], capture_output=True)
         time.sleep(1)
 
         proc = subprocess.Popen(
-            [sys.executable, "-m", "dazzle", "dnr", "serve", "--local"],
+            [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
             cwd=project_path,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

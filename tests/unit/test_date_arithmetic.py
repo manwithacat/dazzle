@@ -20,8 +20,8 @@ from dazzle.core.ir import (
     DurationUnit,
 )
 from dazzle.core.lexer import Lexer, TokenType
-from dazzle_dnr_back.converters.entity_converter import convert_entity
-from dazzle_dnr_back.runtime.model_generator import _create_date_factory
+from dazzle_back.converters.entity_converter import convert_entity
+from dazzle_back.runtime.model_generator import _create_date_factory
 
 # =============================================================================
 # Lexer Tests

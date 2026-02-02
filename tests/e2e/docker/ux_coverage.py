@@ -259,7 +259,7 @@ class UXCoverageTracker:
         """Fetch UISpec from the running server."""
         try:
             # Try frontend server first (ui-spec.json)
-            ui_url = os.environ.get("DNR_UI_URL", self.api_url)
+            ui_url = os.environ.get("DAZZLE_UI_URL", self.api_url)
             response = httpx.get(f"{ui_url}/ui-spec.json", timeout=5)
             if response.status_code == 200:
                 self.ui_spec = response.json()
@@ -422,7 +422,7 @@ class UXCoveragePlugin:
 
     def pytest_sessionstart(self, session):
         """Initialize tracker at session start."""
-        api_url = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
+        api_url = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
         self.tracker = UXCoverageTracker(api_url=api_url)
 
     def pytest_sessionfinish(self, session, exitstatus):
@@ -459,7 +459,7 @@ def create_coverage_fixtures():
         """Get or create the UX coverage tracker."""
         nonlocal _tracker
         if _tracker is None:
-            api_url = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
+            api_url = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
             _tracker = UXCoverageTracker(api_url=api_url)
         return _tracker
 

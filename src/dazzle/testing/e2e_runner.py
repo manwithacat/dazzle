@@ -189,7 +189,7 @@ class E2ERunner:
         # Start the server
         try:
             self._server_process = subprocess.Popen(
-                [sys.executable, "-m", "dazzle", "dnr", "serve", "--local"],
+                [sys.executable, "-m", "dazzle", "dazzle", "serve", "--local"],
                 cwd=self.project_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -225,7 +225,7 @@ class E2ERunner:
                         if match:
                             self.api_port = int(match.group(1))
 
-                    # Also check the [DNR] output lines
+                    # Also check the [Dazzle] output lines
                     if "Backend:" in line and "http://" in line:
                         match = re.search(r":(\d+)", line)
                         if match:
@@ -262,7 +262,7 @@ class E2ERunner:
         # Kill any orphaned processes (macOS/Linux only)
         try:
             subprocess.run(
-                ["pkill", "-f", "dazzle dnr serve"],
+                ["pkill", "-f", "dazzle serve"],
                 capture_output=True,
                 check=False,
             )
@@ -432,7 +432,7 @@ class E2ERunner:
                 import urllib.request
 
                 try:
-                    # DNR API routes are at /{entity}s, not /api/{entity}s
+                    # Runtime API routes are at /{entity}s, not /api/{entity}s
                     url = f"{self.api_url}/{entity_name.lower()}s"
                     with urllib.request.urlopen(url, timeout=5) as response:
                         data = json.loads(response.read().decode())

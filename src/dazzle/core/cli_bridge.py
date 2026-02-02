@@ -290,7 +290,7 @@ def build_project_json(
     Returns:
         Dict with build results
     """
-    from dazzle.cli.dnr_impl.docker import (
+    from dazzle.cli.runtime_impl.docker import (
         generate_docker_compose,
         generate_dockerfile,
         generate_env_template,
@@ -314,7 +314,7 @@ def build_project_json(
 
         # Generate backend spec
         try:
-            from dazzle_dnr_back.converters import convert_appspec_to_backend
+            from dazzle_back.converters import convert_appspec_to_backend
 
             backend_spec = convert_appspec_to_backend(app_spec)
             backend_dir = output_path / "backend"
@@ -323,12 +323,12 @@ def build_project_json(
             spec_file.write_text(backend_spec.model_dump_json(indent=2))
             files_generated.append("backend/backend-spec.json")
         except ImportError:
-            pass  # DNR backend not installed
+            pass  # Runtime backend not installed
 
         # Generate frontend
         try:
-            from dazzle_dnr_ui.converters import convert_appspec_to_ui
-            from dazzle_dnr_ui.runtime.vite_generator import generate_vite_app
+            from dazzle_ui.converters import convert_appspec_to_ui
+            from dazzle_ui.runtime.vite_generator import generate_vite_app
 
             shell_config = manifest.shell if manifest else None
             ui_spec = convert_appspec_to_ui(app_spec, shell_config=shell_config)
@@ -336,7 +336,7 @@ def build_project_json(
             frontend_files = generate_vite_app(ui_spec, str(frontend_dir))
             files_generated.extend([f"frontend/{f}" for f in frontend_files])
         except ImportError:
-            pass  # DNR UI not installed
+            pass  # Runtime UI not installed
 
         # Generate main.py
         main_content = generate_production_main(app_name, include_frontend=True)
@@ -397,11 +397,11 @@ def db_migrate_json(
 
         # Try to import DNR backend
         try:
-            from dazzle_dnr_back.converters import convert_appspec_to_backend
-            from dazzle_dnr_back.runtime.migrations import auto_migrate, plan_migrations
-            from dazzle_dnr_back.runtime.repository import DatabaseManager
+            from dazzle_back.converters import convert_appspec_to_backend
+            from dazzle_back.runtime.migrations import auto_migrate, plan_migrations
+            from dazzle_back.runtime.repository import DatabaseManager
         except ImportError as e:
-            raise RuntimeError(f"DNR backend not available: {e}") from e
+            raise RuntimeError(f"Dazzle backend not available: {e}") from e
 
         # Convert to backend spec
         backend_spec = convert_appspec_to_backend(app_spec)
@@ -452,12 +452,12 @@ def db_seed_json(
         app_spec, manifest = load_project_with_manifest(project_path)
 
         try:
-            from dazzle_dnr_back.runtime.seeder import seed_demo_data
+            from dazzle_back.runtime.seeder import seed_demo_data
 
-            from dazzle_dnr_back.converters import convert_appspec_to_backend
-            from dazzle_dnr_back.runtime.repository import DatabaseManager
+            from dazzle_back.converters import convert_appspec_to_backend
+            from dazzle_back.runtime.repository import DatabaseManager
         except ImportError as e:
-            raise RuntimeError(f"DNR backend not available: {e}") from e
+            raise RuntimeError(f"Dazzle backend not available: {e}") from e
 
         backend_spec = convert_appspec_to_backend(app_spec)
         db_path = project_path / ".dazzle" / "data.db"
@@ -492,10 +492,10 @@ def db_reset_json(
         app_spec, manifest = load_project_with_manifest(project_path)
 
         try:
-            from dazzle_dnr_back.converters import convert_appspec_to_backend
-            from dazzle_dnr_back.runtime.repository import DatabaseManager
+            from dazzle_back.converters import convert_appspec_to_backend
+            from dazzle_back.runtime.repository import DatabaseManager
         except ImportError as e:
-            raise RuntimeError(f"DNR backend not available: {e}") from e
+            raise RuntimeError(f"Dazzle backend not available: {e}") from e
 
         backend_spec = convert_appspec_to_backend(app_spec)
         db_path = project_path / ".dazzle" / "data.db"

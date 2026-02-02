@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from dazzle_dnr_back.events.envelope import EventEnvelope
-from dazzle_dnr_back.metrics import MetricsCollector
-from dazzle_dnr_back.pra.consumers import (
+from dazzle_back.events.envelope import EventEnvelope
+from dazzle_back.metrics import MetricsCollector
+from dazzle_back.pra.consumers import (
     ConsumerGroup,
     DerivationConsumer,
     FailingConsumer,
@@ -20,14 +20,14 @@ from dazzle_dnr_back.pra.consumers import (
     create_full_test_consumers,
     create_projection_test_consumers,
 )
-from dazzle_dnr_back.pra.harness import (
+from dazzle_back.pra.harness import (
     CriteriaResult,
     RunResult,
     RunStatus,
     StressHarness,
     run_quick_test,
 )
-from dazzle_dnr_back.pra.scenarios import (
+from dazzle_back.pra.scenarios import (
     ScenarioType,
     StressScenario,
     SuccessCriteria,
@@ -381,7 +381,7 @@ class TestRunResult:
         """Test result serialization."""
         from datetime import UTC, datetime
 
-        from dazzle_dnr_back.pra.generator import GeneratorStats
+        from dazzle_back.pra.generator import GeneratorStats
 
         result = RunResult(
             test_id="abc123",
@@ -420,7 +420,7 @@ class TestStressHarness:
     @pytest.mark.asyncio
     async def test_harness_run_minimal_scenario(self) -> None:
         """Test harness can run a minimal test."""
-        from dazzle_dnr_back.pra.profiles import SteadyRampProfile
+        from dazzle_back.pra.profiles import SteadyRampProfile
 
         # Create a very short scenario for testing
         scenario = StressScenario(
@@ -436,7 +436,7 @@ class TestStressHarness:
                 cooldown_seconds=0.05,
             ),
             generator_config=__import__(
-                "dazzle_dnr_back.pra.generator", fromlist=["GeneratorConfig"]
+                "dazzle_back.pra.generator", fromlist=["GeneratorConfig"]
             ).GeneratorConfig(
                 seed=42,
                 batch_size=5,
@@ -486,8 +486,8 @@ class TestStressHarness:
         """Test harness generates human-readable report."""
         from datetime import UTC, datetime
 
-        from dazzle_dnr_back.metrics.reporter import ReportFormat
-        from dazzle_dnr_back.pra.generator import GeneratorStats
+        from dazzle_back.metrics.reporter import ReportFormat
+        from dazzle_back.pra.generator import GeneratorStats
 
         harness = StressHarness()
 
@@ -535,8 +535,8 @@ class TestStressHarness:
         """Test harness generates markdown report."""
         from datetime import UTC, datetime
 
-        from dazzle_dnr_back.metrics.reporter import ReportFormat
-        from dazzle_dnr_back.pra.generator import GeneratorStats
+        from dazzle_back.metrics.reporter import ReportFormat
+        from dazzle_back.pra.generator import GeneratorStats
 
         harness = StressHarness()
 

@@ -113,7 +113,7 @@ cd dazzle
 
 # Run this example
 cd examples/uptime_monitor
-dazzle dnr serve
+dazzle serve
 
 # Open in browser
 # UI: http://localhost:3000

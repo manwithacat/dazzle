@@ -88,7 +88,7 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
 
         return score_fidelity_handler(project_path, arguments)
     elif operation == "list_fragments":
-        from dazzle_dnr_ui.runtime.fragment_registry import get_fragment_registry
+        from dazzle_ui.runtime.fragment_registry import get_fragment_registry
 
         return json.dumps({"fragments": get_fragment_registry()}, indent=2)
     else:

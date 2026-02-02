@@ -27,7 +27,6 @@ def start_server(example_dir: Path) -> subprocess.Popen:
             sys.executable,
             "-m",
             "dazzle.cli",
-            "dnr",
             "serve",
             "--test-mode",
         ],

@@ -70,7 +70,7 @@ from dazzle.testing.playwright_codegen import (
 
 # Test runner
 from dazzle.testing.test_runner import (
-    DNRClient,
+    DazzleClient,
     TestCaseResult,
     TestResult,
     TestRunner,
@@ -105,7 +105,7 @@ __all__ = [
     "TestResult",
     "TestCaseResult",
     "TestRunResult",
-    "DNRClient",
+    "DazzleClient",
     "format_report",
     "run_project_tests",
     # DSL Generator

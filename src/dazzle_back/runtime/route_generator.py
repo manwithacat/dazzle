@@ -1,0 +1,625 @@
+"""
+Route generator - generates FastAPI routes from EndpointSpec.
+
+This module creates FastAPI routers and routes from backend specifications.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+from uuid import UUID
+
+from pydantic import BaseModel
+
+from dazzle.core.strings import to_api_plural
+from dazzle_back.specs.endpoint import EndpointSpec, HttpMethod
+from dazzle_back.specs.service import OperationKind, ServiceSpec
+
+# Type checking imports
+if TYPE_CHECKING:
+    from fastapi import APIRouter
+
+# FastAPI is optional - only import if available
+try:
+    from fastapi import APIRouter as _APIRouter
+    from fastapi import Depends, HTTPException, Query, Request
+    from fastapi.responses import HTMLResponse
+
+    FASTAPI_AVAILABLE = True
+except ImportError:
+    FASTAPI_AVAILABLE = False
+    _APIRouter = None  # type: ignore
+    HTTPException = None  # type: ignore
+    Query = None  # type: ignore
+    Request = None  # type: ignore
+    Depends = None  # type: ignore
+    HTMLResponse = None  # type: ignore
+
+
+def _is_htmx_request(request: Any) -> bool:
+    """Check if this is an HTMX request that wants HTML fragments."""
+    if not hasattr(request, "headers"):
+        return False
+    return (
+        request.headers.get("HX-Request") == "true" or request.headers.get("Accept") == "text/html"
+    )
+
+
+async def _parse_request_body(request: Any) -> dict[str, Any]:
+    """Parse request body as JSON or form data.
+
+    HTMX forms send JSON when the json-enc extension is loaded, but
+    fall back to form-urlencoded otherwise.  Accept both so the API
+    works regardless of client encoding.
+
+    Empty string values are converted to None so that optional fields
+    (e.g. ref/UUID fields) pass Pydantic validation.
+    """
+    content_type = (request.headers.get("content-type") or "").lower()
+    if "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        body = dict(form)
+    else:
+        # Default: JSON (covers application/json and missing header)
+        body = await request.json()
+    # Convert empty strings to None for optional field validation
+    return {k: (None if v == "" else v) for k, v in body.items()}
+
+
+# =============================================================================
+# Route Handler Factory
+# =============================================================================
+
+
+def create_list_handler(
+    service: Any,
+    _response_schema: type[BaseModel] | None = None,
+    access_spec: dict[str, Any] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
+) -> Callable[..., Any]:
+    """Create a handler for list operations with optional access control.
+
+    Args:
+        service: Service instance for data operations
+        _response_schema: Response schema (unused, kept for compatibility)
+        access_spec: Access control specification for this entity
+        get_auth_context: Callable to get auth context from request
+        require_auth_by_default: If True, require authentication when no access_spec is defined
+    """
+    from dazzle_back.runtime.condition_evaluator import (
+        build_visibility_filter,
+        filter_records_by_condition,
+    )
+
+    async def handler(
+        request: Request,
+        page: int = Query(1, ge=1, description="Page number"),
+        page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    ) -> Any:
+        # Get auth context if available
+        auth_context = None
+        user_id = None
+        is_authenticated = False
+
+        if get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if auth_context and auth_context.is_authenticated:
+                    is_authenticated = True
+                    user_id = str(auth_context.user.id) if auth_context.user else None
+            except Exception:
+                # Auth not available or failed - treat as anonymous
+                pass
+
+        # Deny-default: require authentication when enabled and no explicit access rules
+        if require_auth_by_default and not access_spec and not is_authenticated:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required",
+            )
+
+        # Build visibility filters
+        sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+
+        # Execute list with filters
+        result = await service.execute(
+            operation="list",
+            page=page,
+            page_size=page_size,
+            filters=sql_filters if sql_filters else None,
+        )
+
+        # Apply post-filtering if needed (for OR conditions)
+        if post_filter and result and "items" in result:
+            context = {"current_user_id": user_id}
+            # Convert Pydantic models to dicts for filtering
+            items = result["items"]
+            if items and hasattr(items[0], "model_dump"):
+                items = [item.model_dump() for item in items]
+            filtered_items = filter_records_by_condition(items, post_filter, context)
+            result["items"] = filtered_items
+            result["total"] = len(filtered_items)
+
+        # HTMX content negotiation: return HTML fragment for HX-Request
+        if _is_htmx_request(request):
+            try:
+                from dazzle_ui.runtime.template_renderer import render_fragment
+
+                items = result.get("items", []) if isinstance(result, dict) else []
+                # Convert Pydantic models to dicts
+                if items and hasattr(items[0], "model_dump"):
+                    items = [item.model_dump() for item in items]
+                # Render table rows fragment
+                # Pass minimal table context for fragment rendering
+                html = render_fragment(
+                    "fragments/table_rows.html",
+                    table={
+                        "rows": items,
+                        "columns": request.state.htmx_columns
+                        if hasattr(request.state, "htmx_columns")
+                        else [],
+                        "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                        "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
+                        "api_endpoint": str(request.url.path),
+                    },
+                )
+                return HTMLResponse(content=html)
+            except ImportError:
+                pass  # Template renderer not available, fall through to JSON
+
+        return result
+
+    # Set proper annotations for FastAPI
+    handler.__annotations__ = {
+        "request": Request,
+        "page": int,
+        "page_size": int,
+        "return": Any,
+    }
+
+    return handler
+
+
+def create_read_handler(
+    service: Any,
+    _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
+) -> Callable[..., Any]:
+    """Create a handler for read operations."""
+
+    async def handler(id: UUID, request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
+        result = await service.execute(operation="read", id=id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        return result
+
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    return handler
+
+
+def create_create_handler(
+    service: Any,
+    input_schema: type[BaseModel],
+    _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
+) -> Callable[..., Any]:
+    """Create a handler for create operations."""
+
+    async def handler(request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
+        body = await _parse_request_body(request)
+        data = input_schema.model_validate(body)
+        result = await service.execute(operation="create", data=data)
+        return result
+
+    handler.__annotations__ = {"request": Request, "return": Any}
+    return handler
+
+
+def create_update_handler(
+    service: Any,
+    input_schema: type[BaseModel],
+    _response_schema: type[BaseModel] | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
+) -> Callable[..., Any]:
+    """Create a handler for update operations."""
+
+    async def handler(id: UUID, request: Request) -> Any:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
+        body = await _parse_request_body(request)
+        data = input_schema.model_validate(body)
+        result = await service.execute(operation="update", id=id, data=data)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        return result
+
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    return handler
+
+
+def create_delete_handler(
+    service: Any,
+    get_auth_context: Callable[..., Any] | None = None,
+    require_auth_by_default: bool = False,
+) -> Callable[..., Any]:
+    """Create a handler for delete operations."""
+
+    async def handler(id: UUID, request: Request) -> dict[str, bool]:
+        # Deny-default: require authentication when enabled
+        if require_auth_by_default and get_auth_context:
+            try:
+                auth_context = await get_auth_context(request)
+                if not auth_context or not auth_context.is_authenticated:
+                    raise HTTPException(status_code=401, detail="Authentication required")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Authentication required")
+
+        result = await service.execute(operation="delete", id=id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"deleted": True}
+
+    handler.__annotations__ = {"id": UUID, "request": Request, "return": dict[str, bool]}
+    return handler
+
+
+def create_custom_handler(
+    service: Any,
+    input_schema: type[BaseModel] | None = None,
+) -> Callable[..., Any]:
+    """Create a handler for custom operations."""
+    if input_schema:
+
+        async def handler_with_input(request: Request) -> Any:
+            body = await request.json()
+            data = input_schema.model_validate(body)
+            result = await service.execute(**data.model_dump())
+            return result
+
+        # Override annotations with the proper type so FastAPI recognizes it
+        handler_with_input.__annotations__ = {"request": Request, "return": Any}
+
+        return handler_with_input
+    else:
+
+        async def handler_no_input() -> Any:
+            result = await service.execute()
+            return result
+
+        return handler_no_input
+
+
+# =============================================================================
+# Route Generator
+# =============================================================================
+
+
+class RouteGenerator:
+    """
+    Generates FastAPI routes from endpoint specifications.
+
+    Creates routes with appropriate HTTP methods, paths, and handlers.
+    """
+
+    def __init__(
+        self,
+        services: dict[str, Any],
+        models: dict[str, type[BaseModel]],
+        schemas: dict[str, dict[str, type[BaseModel]]] | None = None,
+        entity_access_specs: dict[str, dict[str, Any]] | None = None,
+        get_auth_context: Callable[..., Any] | None = None,
+        require_auth_by_default: bool = False,
+    ):
+        """
+        Initialize the route generator.
+
+        Args:
+            services: Dictionary mapping service names to service instances
+            models: Dictionary mapping entity names to Pydantic models
+            schemas: Optional dictionary with create/update schemas per entity
+            entity_access_specs: Optional dictionary mapping entity names to access specs
+            get_auth_context: Optional callable to get auth context from request
+            require_auth_by_default: If True, require auth for all routes when no access spec
+        """
+        if not FASTAPI_AVAILABLE:
+            raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
+
+        self.services = services
+        self.models = models
+        self.schemas = schemas or {}
+        self.entity_access_specs = entity_access_specs or {}
+        self.get_auth_context = get_auth_context
+        self.require_auth_by_default = require_auth_by_default
+        self._router = _APIRouter()
+
+    def generate_route(
+        self,
+        endpoint: EndpointSpec,
+        service_spec: ServiceSpec | None = None,
+    ) -> None:
+        """
+        Generate a single route from an endpoint specification.
+
+        Args:
+            endpoint: Endpoint specification
+            service_spec: Optional service specification for type hints
+        """
+        service = self.services.get(endpoint.service)
+        if not service:
+            raise ValueError(f"Service not found: {endpoint.service}")
+
+        # Determine entity name for schemas
+        entity_name = None
+        is_crud_service = False
+
+        if service_spec:
+            entity_name = service_spec.domain_operation.entity
+            is_crud_service = service_spec.is_crud
+
+        # Get schemas for the entity
+        entity_schemas = self.schemas.get(entity_name or "", {})
+        model = self.models.get(entity_name or "")
+
+        # For CRUD services, determine operation from HTTP method
+        # For non-CRUD services, use the service's domain_operation.kind
+        operation_kind = None
+        if service_spec and not is_crud_service:
+            operation_kind = service_spec.domain_operation.kind
+
+        # Create appropriate handler based on HTTP method (primary) or operation kind (secondary)
+        handler: Callable[..., Any]
+
+        # POST -> CREATE
+        if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
+            create_schema = entity_schemas.get("create", model)
+            if create_schema:
+                handler = create_create_handler(
+                    service,
+                    create_schema,
+                    model,
+                    get_auth_context=self.get_auth_context,
+                    require_auth_by_default=self.require_auth_by_default,
+                )
+                self._add_route(endpoint, handler, response_model=model)
+            else:
+                raise ValueError(f"No create schema for endpoint: {endpoint.name}")
+
+        # GET with {id} -> READ
+        elif (
+            endpoint.method == HttpMethod.GET and "{id}" in endpoint.path
+        ) or operation_kind == OperationKind.READ:
+            handler = create_read_handler(
+                service,
+                model,
+                get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
+            )
+            self._add_route(endpoint, handler, response_model=model)
+
+        # GET without {id} -> LIST
+        elif (
+            endpoint.method == HttpMethod.GET and "{id}" not in endpoint.path
+        ) or operation_kind == OperationKind.LIST:
+            # Get access spec for this entity
+            access_spec = self.entity_access_specs.get(entity_name or "")
+            handler = create_list_handler(
+                service,
+                model,
+                access_spec=access_spec,
+                get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
+            )
+            self._add_route(endpoint, handler, response_model=None)
+
+        # PUT/PATCH -> UPDATE
+        elif (
+            endpoint.method in (HttpMethod.PUT, HttpMethod.PATCH)
+            or operation_kind == OperationKind.UPDATE
+        ):
+            update_schema = entity_schemas.get("update", model)
+            if update_schema:
+                handler = create_update_handler(
+                    service,
+                    update_schema,
+                    model,
+                    get_auth_context=self.get_auth_context,
+                    require_auth_by_default=self.require_auth_by_default,
+                )
+                self._add_route(endpoint, handler, response_model=model)
+            else:
+                raise ValueError(f"No update schema for endpoint: {endpoint.name}")
+
+        # DELETE -> DELETE
+        elif endpoint.method == HttpMethod.DELETE or operation_kind == OperationKind.DELETE:
+            handler = create_delete_handler(
+                service,
+                get_auth_context=self.get_auth_context,
+                require_auth_by_default=self.require_auth_by_default,
+            )
+            self._add_route(endpoint, handler, response_model=None)
+
+        else:
+            # Custom operation
+            handler = create_custom_handler(service)
+            self._add_route(endpoint, handler, response_model=None)
+
+    def _add_route(
+        self,
+        endpoint: EndpointSpec,
+        handler: Callable[..., Any],
+        response_model: type[BaseModel] | None = None,
+    ) -> None:
+        """Add a route to the router."""
+        # Map HTTP methods to router methods
+        method_map = {
+            HttpMethod.GET: self._router.get,
+            HttpMethod.POST: self._router.post,
+            HttpMethod.PUT: self._router.put,
+            HttpMethod.PATCH: self._router.patch,
+            HttpMethod.DELETE: self._router.delete,
+        }
+
+        router_method = method_map.get(endpoint.method)
+        if not router_method:
+            raise ValueError(f"Unsupported HTTP method: {endpoint.method}")
+
+        # Convert path parameters from {id} to FastAPI format
+        path = endpoint.path
+
+        # Build route decorator kwargs
+        route_kwargs: dict[str, Any] = {
+            "summary": endpoint.description or endpoint.name,
+            "tags": endpoint.tags or [],
+        }
+
+        if response_model:
+            route_kwargs["response_model"] = response_model
+
+        # Add the route
+        router_method(path, **route_kwargs)(handler)
+
+    def generate_all_routes(
+        self,
+        endpoints: list[EndpointSpec],
+        service_specs: dict[str, ServiceSpec] | None = None,
+    ) -> APIRouter:
+        """
+        Generate routes for all endpoints.
+
+        Args:
+            endpoints: List of endpoint specifications
+            service_specs: Optional dictionary mapping service names to specs
+
+        Returns:
+            FastAPI router with all routes
+        """
+        service_specs = service_specs or {}
+
+        for endpoint in endpoints:
+            service_spec = service_specs.get(endpoint.service)
+            self.generate_route(endpoint, service_spec)
+
+        return self._router
+
+    @property
+    def router(self) -> APIRouter:
+        """Get the generated router."""
+        return self._router
+
+
+# =============================================================================
+# Convenience Functions
+# =============================================================================
+
+
+def generate_crud_routes(
+    entity_name: str,
+    service: Any,
+    model: type[BaseModel],
+    create_schema: type[BaseModel],
+    update_schema: type[BaseModel],
+    prefix: str | None = None,
+    tags: list[str] | None = None,
+) -> APIRouter:
+    """
+    Generate standard CRUD routes for an entity.
+
+    This is a convenience function for quickly creating RESTful routes.
+
+    Args:
+        entity_name: Name of the entity
+        service: CRUD service instance
+        model: Pydantic model for the entity
+        create_schema: Schema for create operations
+        update_schema: Schema for update operations
+        prefix: Optional URL prefix (defaults to /entity_name)
+        tags: Optional tags for grouping in OpenAPI docs
+
+    Returns:
+        FastAPI router with CRUD routes
+    """
+    if not FASTAPI_AVAILABLE:
+        raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
+
+    router = _APIRouter()
+    prefix = prefix or f"/{to_api_plural(entity_name)}"
+    tags = tags or [entity_name]
+
+    # List
+    @router.get(prefix, tags=tags, summary=f"List {entity_name}s")
+    async def list_items(
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, ge=1, le=100),
+    ) -> Any:
+        return await service.execute(operation="list", page=page, page_size=page_size)
+
+    # Read
+    @router.get(f"{prefix}/{{id}}", tags=tags, summary=f"Get {entity_name}", response_model=model)
+    async def get_item(id: UUID) -> Any:
+        result = await service.execute(operation="read", id=id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        return result
+
+    # Create
+    @router.post(prefix, tags=tags, summary=f"Create {entity_name}", response_model=model)
+    async def create_item(data: create_schema) -> Any:  # type: ignore
+        return await service.execute(operation="create", data=data)
+
+    # Update
+    @router.put(
+        f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model
+    )
+    async def update_item(id: UUID, data: update_schema) -> Any:  # type: ignore
+        result = await service.execute(operation="update", id=id, data=data)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        return result
+
+    # Delete
+    @router.delete(f"{prefix}/{{id}}", tags=tags, summary=f"Delete {entity_name}")
+    async def delete_item(id: UUID) -> dict[str, bool]:
+        result = await service.execute(operation="delete", id=id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"deleted": True}
+
+    return router

@@ -38,8 +38,8 @@ except ImportError:
     Page = None
 
 # Skip if DNR is not available
-pytest.importorskip("dazzle_dnr_back")
-pytest.importorskip("dazzle_dnr_ui")
+pytest.importorskip("dazzle_back")
+pytest.importorskip("dazzle_ui")
 
 # Configuration
 SERVER_STARTUP_TIMEOUT = 60
@@ -101,7 +101,6 @@ class FieldtestHubServer:
                 sys.executable,
                 "-m",
                 "dazzle",
-                "dnr",
                 "serve",
                 "--local",
                 "--host",

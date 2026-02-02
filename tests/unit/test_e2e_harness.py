@@ -130,50 +130,50 @@ class TestStepResult:
         assert result.error == "Entity not found"
 
 
-class TestDNRAdapterURLResolution:
+class TestDazzleAdapterURLResolution:
     """Tests for DNR adapter URL resolution."""
 
     def test_resolve_list_view_url(self) -> None:
         """Test resolving a list view URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(base_url="http://localhost:3000")
+        adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_list")
 
         assert url == "http://localhost:3000/task"
 
     def test_resolve_create_view_url(self) -> None:
         """Test resolving a create view URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(base_url="http://localhost:3000")
+        adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_create")
 
         assert url == "http://localhost:3000/task/create"
 
     def test_resolve_detail_view_url(self) -> None:
         """Test resolving a detail view URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(base_url="http://localhost:3000")
+        adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_detail")
 
         assert url == "http://localhost:3000/task/{id}"
 
     def test_resolve_edit_view_url(self) -> None:
         """Test resolving an edit view URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(base_url="http://localhost:3000")
+        adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_edit")
 
         assert url == "http://localhost:3000/task/{id}/edit"
 
     def test_resolve_dashboard_url(self) -> None:
         """Test resolving a dashboard view URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(base_url="http://localhost:3000")
+        adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("admin_dashboard")
 
         assert url == "http://localhost:3000/admin/dashboard"
@@ -184,9 +184,9 @@ class TestBaseAdapterURLResolution:
 
     def test_resolve_action_url(self) -> None:
         """Test resolving an action URL."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(
+        adapter = DazzleAdapter(
             base_url="http://localhost:3000",
             api_url="http://localhost:8000",
         )
@@ -196,9 +196,9 @@ class TestBaseAdapterURLResolution:
 
     def test_urls_strip_trailing_slash(self) -> None:
         """Test that URLs have trailing slashes stripped."""
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
 
-        adapter = DNRAdapter(
+        adapter = DazzleAdapter(
             base_url="http://localhost:3000/",
             api_url="http://localhost:8000/",
         )
@@ -533,7 +533,7 @@ class TestE2EPackageImports:
 
     def test_import_adapters(self) -> None:
         """Test importing adapters."""
-        from dazzle_e2e.adapters import BaseAdapter, DNRAdapter
+        from dazzle_e2e.adapters import BaseAdapter, DazzleAdapter
 
         assert BaseAdapter is not None
-        assert DNRAdapter is not None
+        assert DazzleAdapter is not None

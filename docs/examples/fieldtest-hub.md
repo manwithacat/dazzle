@@ -8,7 +8,7 @@ A distributed beta testing platform for hardware field testing. This is the most
 
 ```bash
 cd examples/fieldtest_hub
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000

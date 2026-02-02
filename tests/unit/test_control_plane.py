@@ -13,7 +13,7 @@ import pytest
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
-    from dazzle_dnr_back.specs import BackendSpec
+    from dazzle_back.specs import BackendSpec
 
 # Check if FastAPI is available (needed for integration tests)
 try:
@@ -24,7 +24,7 @@ except ImportError:
     FASTAPI_AVAILABLE = False
 
 # These imports are safe - they only depend on Pydantic
-from dazzle_dnr_back.runtime.control_plane import (
+from dazzle_back.runtime.control_plane import (
     DazzleBarState,
     ExportRequest,
     ExportResponse,
@@ -225,9 +225,9 @@ class TestControlPlaneIntegration:
     @pytest.fixture(scope="class")
     def backend_spec(self) -> BackendSpec:
         """Create a test backend spec (class-scoped for reuse)."""
-        from dazzle_dnr_back.specs import BackendSpec
-        from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
-        from dazzle_dnr_back.specs.service import DomainOperation, OperationKind, ServiceSpec
+        from dazzle_back.specs import BackendSpec
+        from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+        from dazzle_back.specs.service import DomainOperation, OperationKind, ServiceSpec
 
         task_entity = EntitySpec(
             name="Task",
@@ -274,7 +274,7 @@ class TestControlPlaneIntegration:
         """Create a shared test client for the class (reused across tests)."""
         from fastapi.testclient import TestClient
 
-        from dazzle_dnr_back.runtime.server import create_app
+        from dazzle_back.runtime.server import create_app
 
         # Use tmp_path_factory for class-scoped fixtures
         tmp_path = tmp_path_factory.mktemp("control_plane")
@@ -446,8 +446,8 @@ class TestDevModeDisabled:
     @pytest.fixture(scope="class")
     def backend_spec(self) -> BackendSpec:
         """Create a test backend spec."""
-        from dazzle_dnr_back.specs import BackendSpec
-        from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+        from dazzle_back.specs import BackendSpec
+        from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
         task_entity = EntitySpec(
             name="Task",
@@ -478,7 +478,7 @@ class TestDevModeDisabled:
         """Create a test client WITHOUT dev mode enabled."""
         from fastapi.testclient import TestClient
 
-        from dazzle_dnr_back.runtime.server import create_app
+        from dazzle_back.runtime.server import create_app
 
         tmp_path = tmp_path_factory.mktemp("dev_disabled")
         db_path = tmp_path / "test.db"

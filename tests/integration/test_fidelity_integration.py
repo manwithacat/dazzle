@@ -24,12 +24,12 @@ def simple_task_appspec():
 def rendered_pages(simple_task_appspec):
     """Compile and render simple_task surfaces to HTML."""
     compile_mod = pytest.importorskip(
-        "dazzle_dnr_ui.converters.template_compiler",
-        reason="dazzle_dnr_ui not installed",
+        "dazzle_ui.converters.template_compiler",
+        reason="dazzle_ui not installed",
     )
     render_mod = pytest.importorskip(
-        "dazzle_dnr_ui.runtime.template_renderer",
-        reason="dazzle_dnr_ui not installed",
+        "dazzle_ui.runtime.template_renderer",
+        reason="dazzle_ui not installed",
     )
 
     page_contexts = compile_mod.compile_appspec_to_templates(simple_task_appspec)

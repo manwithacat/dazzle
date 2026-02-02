@@ -13,12 +13,12 @@ from typing import Any
 
 CLI_COMMANDS: dict[str, dict[str, Any]] = {
     # =========================================================================
-    # DNR Commands (Primary)
+    # Runtime Commands (Primary)
     # =========================================================================
-    "dnr serve": {
-        "category": "DNR Runtime",
-        "description": "Run a DAZZLE application using the Dazzle Native Runtime. This is the PRIMARY way to run DAZZLE apps.",
-        "syntax": "dazzle dnr serve [OPTIONS]",
+    "serve": {
+        "category": "Dazzle Runtime",
+        "description": "Run a DAZZLE application using the Dazzle Runtime. This is the PRIMARY way to run DAZZLE apps.",
+        "syntax": "dazzle serve [OPTIONS]",
         "options": {
             "--port, -p": "Frontend port (default: 3000)",
             "--api-port": "Backend API port (default: 8000)",
@@ -32,10 +32,10 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
             "--rebuild": "Force Docker image rebuild",
         },
         "examples": [
-            "dazzle dnr serve                    # Run with defaults",
-            "dazzle dnr serve --local            # Run without Docker",
-            "dazzle dnr serve --test-mode        # Enable test endpoints",
-            "dazzle dnr serve -p 4000 --api-port 9000  # Custom ports",
+            "dazzle serve                    # Run with defaults",
+            "dazzle serve --local            # Run without Docker",
+            "dazzle serve --test-mode        # Enable test endpoints",
+            "dazzle serve -p 4000 --api-port 9000  # Custom ports",
         ],
         "output": {
             "ui_url": "http://localhost:3000",
@@ -43,31 +43,31 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
             "docs_url": "http://localhost:8000/docs",
         },
         "notes": [
-            "DNR is the recommended runtime - no code generation needed",
+            "Dazzle is the recommended runtime - no code generation needed",
             "Use --test-mode for E2E testing with Playwright",
             "Use --local for development without Docker",
         ],
     },
-    "dnr info": {
-        "category": "DNR Runtime",
+    "info": {
+        "category": "Dazzle Runtime",
         "description": "Show DNR installation status and project information.",
-        "syntax": "dazzle dnr info",
-        "examples": ["dazzle dnr info"],
+        "syntax": "dazzle info",
+        "examples": ["dazzle info"],
     },
-    "dnr stop": {
-        "category": "DNR Runtime",
+    "stop": {
+        "category": "Dazzle Runtime",
         "description": "Stop running DNR Docker containers.",
-        "syntax": "dazzle dnr stop",
-        "examples": ["dazzle dnr stop"],
+        "syntax": "dazzle stop",
+        "examples": ["dazzle stop"],
     },
-    "dnr logs": {
-        "category": "DNR Runtime",
+    "logs": {
+        "category": "Dazzle Runtime",
         "description": "View logs from running DNR container.",
-        "syntax": "dazzle dnr logs [-f]",
+        "syntax": "dazzle logs [-f]",
         "options": {
             "-f": "Follow log output (like tail -f)",
         },
-        "examples": ["dazzle dnr logs", "dazzle dnr logs -f"],
+        "examples": ["dazzle logs", "dazzle logs -f"],
     },
     # =========================================================================
     # Project Management
@@ -206,7 +206,7 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
             "dazzle test run --headed            # Show browser",
         ],
         "prerequisites": [
-            "App running with: dazzle dnr serve --test-mode",
+            "App running with: dazzle serve --test-mode",
             "Playwright installed: pip install playwright && playwright install chromium",
         ],
     },
@@ -225,7 +225,7 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
     # =========================================================================
     "build": {
         "category": "Code Generation",
-        "description": "Generate code from DSL using a stack. NOTE: DNR is preferred - use 'dazzle dnr serve' instead for most cases.",
+        "description": "Generate code from DSL using a stack. NOTE: DNR is preferred - use 'dazzle serve' instead for most cases.",
         "syntax": "dazzle build [OPTIONS]",
         "options": {
             "--stack, -s": "Stack to use (default: from manifest)",
@@ -239,7 +239,7 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
             "dazzle build --stack base           # Use base builder",
         ],
         "notes": [
-            "DNR runtime is preferred for development",
+            "Dazzle runtime is preferred for development",
             "Code generation is for custom deployments",
             "Legacy stacks (django_micro, express_micro) are deprecated",
         ],
@@ -314,7 +314,7 @@ QUICK_REFERENCE = """
 ## Run an App (Primary Workflow)
 ```bash
 cd my-project
-dazzle dnr serve           # Start the app
+dazzle serve           # Start the app
 # UI: http://localhost:3000
 # API: http://localhost:8000/docs
 ```
@@ -334,7 +334,7 @@ dazzle layout-plan         # Visualize workspaces
 
 ## E2E Testing
 ```bash
-dazzle dnr serve --test-mode  # Start with test endpoints
+dazzle serve --test-mode  # Start with test endpoints
 dazzle test generate -o tests.json
 dazzle test run
 ```
@@ -346,13 +346,13 @@ Run commands from project root (directory containing dazzle.toml)
 
 ### Port already in use
 ```bash
-dazzle dnr stop            # Stop existing container
-dazzle dnr serve -p 4000   # Use different port
+dazzle stop            # Stop existing container
+dazzle serve -p 4000   # Use different port
 ```
 
 ### Docker issues
 ```bash
-dazzle dnr serve --local   # Run without Docker
+dazzle serve --local   # Run without Docker
 ```
 """
 
@@ -367,7 +367,7 @@ def get_cli_help(command: str | None = None) -> dict[str, Any]:
     Get CLI help for a specific command or general overview.
 
     Args:
-        command: Command name (e.g., 'dnr serve', 'test run') or None for overview
+        command: Command name (e.g., 'serve', 'test run') or None for overview
 
     Returns:
         Help information for the command
@@ -385,7 +385,7 @@ def get_cli_help(command: str | None = None) -> dict[str, Any]:
             "overview": True,
             "quick_reference": QUICK_REFERENCE,
             "categories": categories,
-            "primary_command": "dazzle dnr serve",
+            "primary_command": "dazzle serve",
             "hint": "Use get_cli_help with a specific command for detailed help",
         }
 
@@ -493,12 +493,12 @@ surface task_create "New Task":
                 {
                     "step": 5,
                     "action": "Run the application",
-                    "command": "dazzle dnr serve",
+                    "command": "dazzle serve",
                     "output": {
                         "ui": "http://localhost:3000",
                         "api": "http://localhost:8000/docs",
                     },
-                    "notes": "DNR creates the database and runs both frontend and API",
+                    "notes": "Dazzle creates the database and runs both frontend and API",
                 },
             ],
             "next_steps": [
@@ -549,7 +549,7 @@ After validation succeeds, generate realistic demo data:
                 {
                     "step": 5,
                     "action": "Run the app",
-                    "command": "dazzle dnr serve",
+                    "command": "dazzle serve",
                 },
             ],
         },
@@ -588,8 +588,8 @@ surface customer_create "New Customer":
                 {
                     "step": 4,
                     "action": "Restart app",
-                    "command": "dazzle dnr serve",
-                    "notes": "DNR picks up changes automatically on restart",
+                    "command": "dazzle serve",
+                    "notes": "Dazzle picks up changes automatically on restart",
                 },
             ],
         },
@@ -604,7 +604,7 @@ surface customer_create "New Customer":
                 {
                     "step": 2,
                     "action": "Start app in test mode",
-                    "command": "dazzle dnr serve --test-mode",
+                    "command": "dazzle serve --test-mode",
                     "notes": "Enables /__test__/* endpoints for fixtures",
                 },
                 {
@@ -898,8 +898,8 @@ entity Task "Task":
                 {
                     "step": 5,
                     "action": "Restart app",
-                    "command": "dazzle dnr serve",
-                    "notes": "DNR discovers and loads stubs automatically",
+                    "command": "dazzle serve",
+                    "notes": "Dazzle discovers and loads stubs automatically",
                 },
             ],
             "service_kinds": {
@@ -965,11 +965,11 @@ entity Task "Task":
                 },
                 {
                     "problem": "Port already in use",
-                    "solution": "Run 'dazzle dnr stop' or use -p flag for different port",
+                    "solution": "Run 'dazzle stop' or use -p flag for different port",
                 },
                 {
                     "problem": "Docker not running",
-                    "solution": "Start Docker or use 'dazzle dnr serve --local'",
+                    "solution": "Start Docker or use 'dazzle serve --local'",
                 },
                 {
                     "problem": "Validation errors",
@@ -981,11 +981,11 @@ entity Task "Task":
                 },
                 {
                     "problem": "Database locked",
-                    "solution": "Stop any running 'dazzle dnr serve' instances",
+                    "solution": "Stop any running 'dazzle serve' instances",
                 },
                 {
                     "problem": "Changes not appearing",
-                    "solution": "Restart 'dazzle dnr serve' - hot reload coming in v0.3.3",
+                    "solution": "Restart 'dazzle serve' - hot reload coming in v0.3.3",
                 },
             ],
         },

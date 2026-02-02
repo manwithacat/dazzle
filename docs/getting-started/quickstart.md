@@ -10,7 +10,7 @@ Get a working application from your Dazzle DSL in under 5 minutes.
 ## Step 1: Check Your Setup
 
 ```bash
-dazzle dnr info
+dazzle info
 ```
 
 You should see:
@@ -18,7 +18,7 @@ You should see:
 Dazzle Native Runtime (DNR) Status
 ==================================================
 DNR Backend:   ✓ installed
-DNR UI:        ✓ installed
+Dazzle UI:        ✓ installed
 ```
 
 ## Step 2: Validate Your DSL
@@ -34,7 +34,7 @@ Fix any errors before proceeding.
 ### Option A: Single HTML Preview (Fastest)
 
 ```bash
-dazzle dnr build-ui --format html -o ./preview
+dazzle build-ui --format html -o ./preview
 ```
 
 Open `./preview/index.html` in your browser.
@@ -42,7 +42,7 @@ Open `./preview/index.html` in your browser.
 ### Option B: Vite Project (Recommended)
 
 ```bash
-dazzle dnr build-ui --format vite -o ./my-app
+dazzle build-ui --format vite -o ./my-app
 cd my-app
 npm install
 npm run dev
@@ -53,7 +53,7 @@ Visit `http://localhost:5173`
 ### Option C: Split JS Files
 
 ```bash
-dazzle dnr build-ui --format js -o ./app
+dazzle build-ui --format js -o ./app
 cd app
 python -m http.server 8000
 ```
@@ -63,7 +63,7 @@ Visit `http://localhost:8000`
 ## Step 4: Generate API (Optional)
 
 ```bash
-dazzle dnr build-api -o ./api
+dazzle build-api -o ./api
 ```
 
 Creates `backend-spec.json` with your API definition.
@@ -74,7 +74,7 @@ If you have FastAPI installed:
 
 ```bash
 pip install fastapi uvicorn
-dazzle dnr serve
+dazzle serve
 ```
 
 This starts:
@@ -106,7 +106,7 @@ surface task_list "Task List" -> Task list:
 Generate and run:
 
 ```bash
-dazzle dnr build-ui --format html -o ./task-app
+dazzle build-ui --format html -o ./task-app
 open ./task-app/index.html
 ```
 

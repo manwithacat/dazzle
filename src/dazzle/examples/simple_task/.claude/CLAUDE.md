@@ -42,13 +42,13 @@ If the user has requirements in SPEC.md or describes them to you:
 1. Help them write DSL directly
 2. Create entities, surfaces, and other constructs in `.dsl` files
 3. Validate with `dazzle validate`
-4. Run with `dazzle dnr serve`
+4. Run with `dazzle serve`
 
 ### Working with Existing DSL
 1. Read existing `.dsl` files in the `dsl/` directory
 2. Make modifications as requested
 3. Always validate after changes
-4. Run with `dazzle dnr serve` to test
+4. Run with `dazzle serve` to test
 
 ### Running the Application
 ```bash

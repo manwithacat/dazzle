@@ -19,7 +19,7 @@ from ..state import get_project_path
 
 def _get_feedback_logger() -> Any:
     """Get a FeedbackLogger instance for the active project."""
-    from dazzle_dnr_back.runtime.control_plane import FeedbackLogger
+    from dazzle_back.runtime.control_plane import FeedbackLogger
 
     project_path = get_project_path()
     if not project_path:
@@ -51,7 +51,7 @@ async def list_feedback_handler(
         List of feedback entries with id, timestamp, message, category, route, status
     """
     if project_path:
-        from dazzle_dnr_back.runtime.control_plane import FeedbackLogger
+        from dazzle_back.runtime.control_plane import FeedbackLogger
 
         feedback_dir = Path(project_path) / ".dazzle" / "feedback"
         logger = FeedbackLogger(feedback_dir=feedback_dir)
@@ -89,7 +89,7 @@ async def get_feedback_handler(
         Full feedback entry with all fields
     """
     if project_path:
-        from dazzle_dnr_back.runtime.control_plane import FeedbackLogger
+        from dazzle_back.runtime.control_plane import FeedbackLogger
 
         feedback_dir = Path(project_path) / ".dazzle" / "feedback"
         logger = FeedbackLogger(feedback_dir=feedback_dir)
@@ -132,7 +132,7 @@ async def update_feedback_handler(
         return {"error": f"Invalid status. Must be one of: {valid_statuses}"}
 
     if project_path:
-        from dazzle_dnr_back.runtime.control_plane import FeedbackLogger
+        from dazzle_back.runtime.control_plane import FeedbackLogger
 
         feedback_dir = Path(project_path) / ".dazzle" / "feedback"
         logger = FeedbackLogger(feedback_dir=feedback_dir)
@@ -168,7 +168,7 @@ async def get_feedback_summary_handler(
         Summary with total count, counts by status and category
     """
     if project_path:
-        from dazzle_dnr_back.runtime.control_plane import FeedbackLogger
+        from dazzle_back.runtime.control_plane import FeedbackLogger
 
         feedback_dir = Path(project_path) / ".dazzle" / "feedback"
         logger = FeedbackLogger(feedback_dir=feedback_dir)

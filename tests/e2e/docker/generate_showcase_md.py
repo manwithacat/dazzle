@@ -273,7 +273,7 @@ cd dazzle
 cd examples/"""
         + example_name
         + """
-dazzle dnr serve
+dazzle serve
 
 # Open in browser
 # UI: http://localhost:3000

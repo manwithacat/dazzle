@@ -621,8 +621,8 @@ class CrudTracker:
 @pytest.fixture(scope="session")
 def base_url() -> str:
     """UI base URL (env var > runtime.json > default)."""
-    if "DNR_UI_URL" in os.environ:
-        return os.environ["DNR_UI_URL"]
+    if "DAZZLE_UI_URL" in os.environ:
+        return os.environ["DAZZLE_UI_URL"]
     ui, _ = _load_runtime_ports()
     return ui
 

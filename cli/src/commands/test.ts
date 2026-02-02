@@ -1,7 +1,7 @@
 /**
  * test command - Run tests
  *
- * Replaces: dazzle test run, dazzle dnr test
+ * Replaces: dazzle test run, dazzle check
  */
 
 import { z } from 'zod'

@@ -15,7 +15,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.mcp.dnr_tools_impl import set_backend_spec
+from dazzle.mcp.runtime_tools import set_backend_spec
 
 from ..state import (
     get_active_project,
@@ -89,7 +89,7 @@ def load_backend_spec_for_project(project_path: Path) -> bool:
     """
     try:
         # Import here to avoid circular imports
-        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_back.converters import convert_appspec_to_backend
 
         # Load manifest first
         manifest_path = project_path / "dazzle.toml"

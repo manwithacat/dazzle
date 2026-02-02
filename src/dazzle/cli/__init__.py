@@ -3,7 +3,7 @@ DAZZLE CLI Package.
 
 This package contains the main CLI application and modularized sub-commands:
 
-- dnr_impl.py: DNR (Dazzle Native Runtime) commands
+- runtime_impl/: Runtime commands (serve, build, stop, etc.)
 - project.py: Project commands (init, validate, lint, etc.)
 - vocab.py: Vocabulary management commands
 - testing.py: Test commands
@@ -36,7 +36,7 @@ app = typer.Typer(
 Command Types:
   - Project Creation: init
   - Project Operations: validate, lint, inspect, analyze-spec
-  - Runtime: dnr serve
+  - Runtime: serve, build, stop, logs, status
 """,
     no_args_is_help=True,
 )
@@ -79,10 +79,41 @@ app.command(name="example")(example_command)
 
 
 # =============================================================================
+# Runtime Commands (formerly under 'dnr' sub-app, now top-level)
+# =============================================================================
+from dazzle.cli.runtime_impl import (  # noqa: E402
+    build_api_command,
+    build_command,
+    build_ui_command,
+    check_command,
+    info_command,
+    logs_command,
+    migrate_command,
+    rebuild_command,
+    schema_command,
+    serve_command,
+    status_command,
+    stop_command,
+)
+
+app.command(name="serve")(serve_command)
+app.command(name="build")(build_command)
+app.command(name="build-ui")(build_ui_command)
+app.command(name="build-api")(build_api_command)
+app.command(name="info")(info_command)
+app.command(name="stop")(stop_command)
+app.command(name="rebuild")(rebuild_command)
+app.command(name="logs")(logs_command)
+app.command(name="status")(status_command)
+app.command(name="migrate")(migrate_command)
+app.command(name="schema")(schema_command)
+app.command(name="check")(check_command)
+
+
+# =============================================================================
 # Sub-apps
 # =============================================================================
 from dazzle.cli.deploy import deploy_app  # noqa: E402
-from dazzle.cli.dnr_impl import dnr_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
@@ -94,7 +125,6 @@ from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
-app.add_typer(dnr_app, name="dnr")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")
@@ -105,7 +135,7 @@ app.add_typer(deploy_app, name="deploy")
 app.add_typer(events_app, name="events")
 app.add_typer(dlq_app, name="dlq")
 app.add_typer(outbox_app, name="outbox")
-app.add_typer(migrate_app, name="migrate")
+app.add_typer(migrate_app, name="process-migrate")
 app.add_typer(pitch_app, name="pitch")
 app.add_typer(mcp_app, name="mcp")
 

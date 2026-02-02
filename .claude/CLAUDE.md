@@ -7,22 +7,22 @@ Guidance for Claude Code when working with the DAZZLE codebase.
 **DAZZLE** - DSL-first toolkit for building apps from high-level specifications.
 
 ```bash
-cd examples/simple_task && dazzle dnr serve
+cd examples/simple_task && dazzle serve
 # UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```
 
 ## Architecture
 
 ```
-DSL Files → Parser → IR (AppSpec) → DNR Runtime (live app)
+DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
                                   → Code Generation (optional)
 ```
 
 | Directory | Purpose |
 |-----------|---------|
 | `src/dazzle/core/` | Parser, IR, linker, validation |
-| `src/dazzle_dnr_back/` | FastAPI runtime |
-| `src/dazzle_dnr_ui/` | JavaScript UI runtime |
+| `src/dazzle_back/` | FastAPI runtime |
+| `src/dazzle_ui/` | JavaScript UI runtime |
 | `src/dazzle/specs/` | OpenAPI and AsyncAPI specification generators |
 
 ## LLM-First Style Guide
@@ -35,13 +35,13 @@ This is an LLM-first codebase. Optimize for clarity and predictability over clev
 - **Explicit dependencies** - no hidden globals or singletons
 - Avoid metaprogramming, monkey-patching, runtime code generation
 
-### JavaScript (DNR UI)
+### JavaScript (Dazzle UI)
 - **Vanilla JS with JSDoc and `@ts-check`** - TypeScript checker without build step
 - **Shared types in `types.js`** - all `@typedef` definitions go here
 - **All exported functions must have JSDoc** param/return types
 - File structure: `signals.js`, `components.js`, `state.js`, `types.js`
 - ES modules bundled to IIFE at runtime
-- Run `npx tsc --noEmit -p src/dazzle_dnr_ui/runtime/static/js/` for type checking
+- Run `npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/` for type checking
 
 ### General
 - Prefer explicit over magic
@@ -53,8 +53,8 @@ This is an LLM-first codebase. Optimize for clarity and predictability over clev
 
 ```bash
 # Run app
-dazzle dnr serve              # Docker (default)
-dazzle dnr serve --local      # Without Docker
+dazzle serve              # Docker (default)
+dazzle serve --local      # Without Docker
 
 # Validate
 dazzle validate               # Parse and validate DSL
@@ -142,7 +142,7 @@ All in `examples/`: `simple_task`, `contact_manager`, `uptime_monitor`, `email_c
 
 The DAZZLE MCP server (`dazzle mcp`) provides context-aware tools:
 - `list_modules`, `lookup_concept`, `find_examples`
-- `list_dnr_components`, `validate_dsl`, `analyze_patterns`
+- `list_components`, `validate_dsl`, `analyze_patterns`
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 
@@ -153,4 +153,4 @@ Use MCP tools for DSL semantics; this file for codebase conventions.
 - Experiences support basic flows only
 
 ---
-**Version**: 0.20.0 | **Python**: 3.11+ | **Status**: Production Ready
+**Version**: 0.21.0 | **Python**: 3.11+ | **Status**: Production Ready

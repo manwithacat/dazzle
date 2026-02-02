@@ -43,7 +43,7 @@ def tail_events(
 
 async def _tail_events(topic: str, follow: bool, limit: int, db_path: str) -> None:
     """Async implementation of tail command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     async with DevBrokerSQLite(db_path) as bus:
         count = 0
@@ -70,7 +70,7 @@ def event_status(
 
 async def _event_status(db_path: str) -> None:
     """Async implementation of status command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     if not Path(db_path).exists():
         typer.echo(f"Database not found: {db_path}")
@@ -119,7 +119,7 @@ async def _replay_events(
     db_path: str,
 ) -> None:
     """Async implementation of replay command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     from_ts = datetime.fromisoformat(from_time) if from_time else None
     to_ts = datetime.fromisoformat(to_time) if to_time else None
@@ -160,7 +160,7 @@ def dlq_list(
 
 async def _dlq_list(topic: str | None, limit: int, db_path: str) -> None:
     """Async implementation of dlq list command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     async with DevBrokerSQLite(db_path) as bus:
         events = await bus.get_dlq_events(topic=topic, limit=limit)
@@ -194,7 +194,7 @@ def dlq_replay(
 
 async def _dlq_replay(event_id: str, group: str, db_path: str) -> None:
     """Async implementation of dlq replay command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     async with DevBrokerSQLite(db_path) as bus:
         try:
@@ -225,7 +225,7 @@ def dlq_clear(
 
 async def _dlq_clear(topic: str | None, db_path: str) -> None:
     """Async implementation of dlq clear command."""
-    from dazzle_dnr_back.events import DevBrokerSQLite
+    from dazzle_back.events import DevBrokerSQLite
 
     async with DevBrokerSQLite(db_path) as bus:
         count = await bus.clear_dlq(topic=topic)
@@ -251,7 +251,7 @@ async def _outbox_status(db_path: str) -> None:
     """Async implementation of outbox status command."""
     import aiosqlite
 
-    from dazzle_dnr_back.events import EventOutbox
+    from dazzle_back.events import EventOutbox
 
     outbox = EventOutbox()
 
@@ -281,7 +281,7 @@ def outbox_drain(
 
 async def _outbox_drain(timeout: int, db_path: str) -> None:
     """Async implementation of outbox drain command."""
-    from dazzle_dnr_back.events import (
+    from dazzle_back.events import (
         DevBrokerSQLite,
         EventOutbox,
         OutboxPublisher,
@@ -308,7 +308,7 @@ async def _outbox_failed(limit: int, db_path: str) -> None:
     """Async implementation of outbox failed command."""
     import aiosqlite
 
-    from dazzle_dnr_back.events import EventOutbox
+    from dazzle_back.events import EventOutbox
 
     outbox = EventOutbox()
 

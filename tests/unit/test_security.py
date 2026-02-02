@@ -98,7 +98,7 @@ class TestSecurityMiddleware:
 
     def test_basic_cors_config(self) -> None:
         """Test basic profile CORS configuration."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_cors_for_profile
+        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
 
         config = configure_cors_for_profile("basic")
 
@@ -107,7 +107,7 @@ class TestSecurityMiddleware:
 
     def test_standard_cors_config(self) -> None:
         """Test standard profile CORS configuration."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_cors_for_profile
+        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
 
         config = configure_cors_for_profile("standard")
 
@@ -118,7 +118,7 @@ class TestSecurityMiddleware:
 
     def test_strict_cors_config(self) -> None:
         """Test strict profile CORS configuration."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_cors_for_profile
+        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
 
         config = configure_cors_for_profile("strict")
 
@@ -127,7 +127,7 @@ class TestSecurityMiddleware:
 
     def test_custom_origins_override(self) -> None:
         """Test custom origins override profile defaults."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_cors_for_profile
+        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
 
         custom = ["https://example.com"]
         config = configure_cors_for_profile("basic", custom)
@@ -136,7 +136,7 @@ class TestSecurityMiddleware:
 
     def test_basic_headers_config(self) -> None:
         """Test basic profile has minimal headers."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_headers_for_profile
+        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
         config = configure_headers_for_profile("basic")
 
@@ -146,7 +146,7 @@ class TestSecurityMiddleware:
 
     def test_standard_headers_config(self) -> None:
         """Test standard profile has reasonable headers."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_headers_for_profile
+        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
         config = configure_headers_for_profile("standard")
 
@@ -156,7 +156,7 @@ class TestSecurityMiddleware:
 
     def test_strict_headers_config(self) -> None:
         """Test strict profile has full headers."""
-        from dazzle_dnr_back.runtime.security_middleware import configure_headers_for_profile
+        from dazzle_back.runtime.security_middleware import configure_headers_for_profile
 
         config = configure_headers_for_profile("strict")
 
@@ -175,7 +175,7 @@ class TestSurfaceAccess:
 
     def test_no_auth_required(self) -> None:
         """Test access allowed when auth not required."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             check_surface_access,
         )
@@ -186,7 +186,7 @@ class TestSurfaceAccess:
 
     def test_auth_required_no_user(self) -> None:
         """Test access denied when auth required but no user."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             SurfaceAccessDenied,
             check_surface_access,
@@ -201,7 +201,7 @@ class TestSurfaceAccess:
 
     def test_auth_required_with_user(self) -> None:
         """Test access allowed for authenticated user."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             check_surface_access,
         )
@@ -212,7 +212,7 @@ class TestSurfaceAccess:
 
     def test_allow_personas_match(self) -> None:
         """Test access allowed when user has allowed persona."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             check_surface_access,
         )
@@ -226,7 +226,7 @@ class TestSurfaceAccess:
 
     def test_allow_personas_no_match(self) -> None:
         """Test access denied when user lacks allowed persona."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             SurfaceAccessDenied,
             check_surface_access,
@@ -244,7 +244,7 @@ class TestSurfaceAccess:
 
     def test_deny_personas(self) -> None:
         """Test access denied when user has denied persona."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             SurfaceAccessDenied,
             check_surface_access,
@@ -261,7 +261,7 @@ class TestSurfaceAccess:
 
     def test_deny_takes_precedence(self) -> None:
         """Test deny list takes precedence over allow list."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             SurfaceAccessDenied,
             check_surface_access,
@@ -278,7 +278,7 @@ class TestSurfaceAccess:
 
     def test_redirect_url_for_ui(self) -> None:
         """Test redirect URL provided for UI requests."""
-        from dazzle_dnr_back.runtime.surface_access import (
+        from dazzle_back.runtime.surface_access import (
             SurfaceAccessConfig,
             SurfaceAccessDenied,
             check_surface_access,
@@ -304,7 +304,7 @@ class TestTenantIsolation:
 
     def test_tenant_path_generation(self) -> None:
         """Test tenant database path generation."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -315,7 +315,7 @@ class TestTenantIsolation:
 
     def test_tenant_path_sanitization(self) -> None:
         """Test tenant ID is sanitized to prevent path traversal."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -337,7 +337,7 @@ class TestTenantIsolation:
 
     def test_list_tenants_empty(self) -> None:
         """Test listing tenants when none exist."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -347,7 +347,7 @@ class TestTenantIsolation:
 
     def test_tenant_exists_false(self) -> None:
         """Test tenant_exists returns False for non-existent tenant."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -356,7 +356,7 @@ class TestTenantIsolation:
 
     def test_delete_nonexistent_tenant(self) -> None:
         """Test deleting non-existent tenant returns False."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -365,7 +365,7 @@ class TestTenantIsolation:
 
     def test_get_tenant_manager_creates_manager(self) -> None:
         """Test get_tenant_manager creates a DatabaseManager."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)
@@ -376,7 +376,7 @@ class TestTenantIsolation:
 
     def test_get_tenant_manager_cached(self) -> None:
         """Test get_tenant_manager returns cached manager."""
-        from dazzle_dnr_back.runtime.tenant_isolation import TenantDatabaseManager
+        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = TenantDatabaseManager(base_dir=tmpdir)

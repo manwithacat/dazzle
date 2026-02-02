@@ -10,13 +10,13 @@ from pathlib import Path
 import pytest
 
 from dazzle.core.ir import ChannelKind, ChannelSpec
-from dazzle_dnr_back.channels import (
+from dazzle_back.channels import (
     ChannelManager,
     create_channel_manager,
 )
-from dazzle_dnr_back.channels.detection import DetectionResult, ProviderStatus
-from dazzle_dnr_back.channels.outbox import OutboxStatus
-from dazzle_dnr_back.runtime.repository import DatabaseManager
+from dazzle_back.channels.detection import DetectionResult, ProviderStatus
+from dazzle_back.channels.outbox import OutboxStatus
+from dazzle_back.runtime.repository import DatabaseManager
 
 
 @pytest.fixture

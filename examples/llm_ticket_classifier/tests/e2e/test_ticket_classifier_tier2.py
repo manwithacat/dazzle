@@ -24,7 +24,7 @@ from playwright.sync_api import Page, expect
 # Configuration
 # =============================================================================
 
-BASE_URL = os.environ.get("DNR_UI_URL", "http://localhost:3000")
+BASE_URL = os.environ.get("DAZZLE_UI_URL", "http://localhost:3000")
 
 
 @pytest.fixture

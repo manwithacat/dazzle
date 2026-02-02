@@ -1,7 +1,7 @@
 /**
  * db command - Database operations
  *
- * Replaces: dazzle dnr migrate
+ * Replaces: dazzle migrate
  */
 
 import { z } from 'zod'

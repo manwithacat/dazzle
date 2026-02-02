@@ -4,7 +4,7 @@
 
 ```bash
 # Get started in seconds
-cd examples/simple_task && dazzle dnr serve
+cd examples/simple_task && dazzle serve
 # UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```
 
@@ -63,7 +63,7 @@ graph LR
     DSL[DSL Files] --> Parser
     Parser --> IR[AppSpec IR]
     IR --> Back[DNR Backend]
-    IR --> UI[DNR UI]
+    IR --> UI[Dazzle UI]
     Back --> API[FastAPI App]
     UI --> JS[HTMX Templates]
 ```

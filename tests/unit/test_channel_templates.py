@@ -7,7 +7,7 @@ Refactored to use parameterization for reduced redundancy.
 
 import pytest
 
-from dazzle_dnr_back.channels.templates import (
+from dazzle_back.channels.templates import (
     TemplateSyntaxError,
     extract_variables,
     render_template,

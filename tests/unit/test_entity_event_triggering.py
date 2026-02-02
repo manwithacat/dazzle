@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import BaseModel
 
-from dazzle_dnr_back.runtime.service_generator import CRUDService
+from dazzle_back.runtime.service_generator import CRUDService
 
 
 class SampleEntity(BaseModel):

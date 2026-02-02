@@ -20,12 +20,12 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
 
-from dazzle_dnr_back.runtime.email_templates import (
+from dazzle_back.runtime.email_templates import (
     BrandConfig,
     EmailTemplate,
     EmailTemplateEngine,
 )
-from dazzle_dnr_back.runtime.ops_database import (
+from dazzle_back.runtime.ops_database import (
     ApiCallRecord,
     ComponentType,
     HealthCheckRecord,
@@ -33,7 +33,7 @@ from dazzle_dnr_back.runtime.ops_database import (
     OpsDatabase,
     RetentionConfig,
 )
-from dazzle_dnr_back.runtime.ops_integration import OpsConfig, OpsPlatform
+from dazzle_back.runtime.ops_integration import OpsConfig, OpsPlatform
 
 
 class TestOpsDatabase:
@@ -384,7 +384,7 @@ class TestHealthAggregator:
     @pytest.mark.asyncio
     async def test_check_all(self, ops_db: OpsDatabase) -> None:
         """Test running all health checks."""
-        from dazzle_dnr_back.runtime.health_aggregator import (
+        from dazzle_back.runtime.health_aggregator import (
             ComponentHealth,
             HealthAggregator,
         )
@@ -422,7 +422,7 @@ class TestHealthAggregator:
     @pytest.mark.asyncio
     async def test_aggregate_status(self, ops_db: OpsDatabase) -> None:
         """Test aggregate status calculation."""
-        from dazzle_dnr_back.runtime.health_aggregator import (
+        from dazzle_back.runtime.health_aggregator import (
             AggregateStatus,
             ComponentHealth,
             HealthAggregator,
@@ -462,7 +462,7 @@ class TestApiTracker:
     @pytest.fixture
     def tracker(self, tmp_path: Path):
         """Create an API tracker."""
-        from dazzle_dnr_back.runtime.api_tracker import ApiTracker
+        from dazzle_back.runtime.api_tracker import ApiTracker
 
         ops_db = OpsDatabase(db_path=tmp_path / "ops.db")
         return ApiTracker(ops_db=ops_db)
@@ -470,7 +470,7 @@ class TestApiTracker:
     @pytest.mark.asyncio
     async def test_track_api_call(self, tracker) -> None:
         """Test tracking an API call using context manager."""
-        from dazzle_dnr_back.runtime.api_tracker import configure_openai_tracking
+        from dazzle_back.runtime.api_tracker import configure_openai_tracking
 
         configure_openai_tracking(tracker)
 
@@ -488,7 +488,7 @@ class TestApiTracker:
     @pytest.mark.asyncio
     async def test_cost_calculation(self, tracker) -> None:
         """Test that costs are calculated correctly."""
-        from dazzle_dnr_back.runtime.api_tracker import configure_openai_tracking
+        from dazzle_back.runtime.api_tracker import configure_openai_tracking
 
         configure_openai_tracking(tracker)
 

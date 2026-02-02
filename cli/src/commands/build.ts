@@ -1,7 +1,7 @@
 /**
  * build command - Build for production
  *
- * Replaces: dazzle dnr build
+ * Replaces: dazzle build
  */
 
 import { z } from 'zod'
@@ -89,7 +89,7 @@ Output includes:
       if (errorMsg.includes('Static file not found')) {
         hint = 'This may be a packaging issue. Try reinstalling: pip install --force-reinstall dazzle'
       } else if (errorMsg.includes('ImportError') || errorMsg.includes('ModuleNotFoundError')) {
-        hint = 'Missing dependency. Ensure dazzle_dnr_ui is installed: pip install dazzle[dnr]'
+        hint = 'Missing dependency. Ensure dazzle_ui is installed: pip install dazzle'
       }
 
       return error('BUILD_FAILED', errorMsg, hint)

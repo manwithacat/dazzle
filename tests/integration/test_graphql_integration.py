@@ -35,7 +35,6 @@ def graphql_server():
         sys.executable,
         "-m",
         "dazzle.cli",
-        "dnr",
         "serve",
         "--local",
         "--backend-only",

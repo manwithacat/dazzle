@@ -140,12 +140,12 @@ def ui_url() -> str:
     """Get the UI base URL.
 
     Priority:
-    1. DNR_UI_URL environment variable
+    1. DAZZLE_UI_URL environment variable
     2. .dazzle/runtime.json (written by `dazzle dnr serve`)
     3. Default localhost:3000
     """
-    if "DNR_UI_URL" in os.environ:
-        return os.environ["DNR_UI_URL"]
+    if "DAZZLE_UI_URL" in os.environ:
+        return os.environ["DAZZLE_UI_URL"]
     runtime_ui, _ = _load_runtime_ports()
     return runtime_ui
 
@@ -155,12 +155,12 @@ def api_url() -> str:
     """Get the API base URL.
 
     Priority:
-    1. DNR_BASE_URL environment variable
+    1. DAZZLE_BASE_URL environment variable
     2. .dazzle/runtime.json (written by `dazzle dnr serve`)
     3. Default localhost:8000
     """
-    if "DNR_BASE_URL" in os.environ:
-        return os.environ["DNR_BASE_URL"]
+    if "DAZZLE_BASE_URL" in os.environ:
+        return os.environ["DAZZLE_BASE_URL"]
     _, runtime_api = _load_runtime_ports()
     return runtime_api
 

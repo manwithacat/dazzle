@@ -10,14 +10,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from dazzle.core.ir import ChannelKind, ChannelSpec
-from dazzle_dnr_back.channels import (
+from dazzle_back.channels import (
     ChannelConfigError,
     ChannelResolution,
     ChannelResolver,
     DetectionResult,
     ProviderStatus,
 )
-from dazzle_dnr_back.channels.providers import (
+from dazzle_back.channels.providers import (
     FileEmailDetector,
     InMemoryQueueDetector,
     InMemoryStreamDetector,
@@ -81,7 +81,7 @@ class TestMailpitDetector:
         """Test Mailpit detection via environment variable."""
         detector = MailpitDetector()
 
-        with patch.dict(os.environ, {"DNR_EMAIL_PROVIDER": "mailpit"}):
+        with patch.dict(os.environ, {"DAZZLE_EMAIL_PROVIDER": "mailpit"}):
             with patch.object(detector, "health_check", new_callable=AsyncMock, return_value=True):
                 result = await detector.detect()
 
@@ -102,7 +102,7 @@ class TestMailpitDetector:
         }
 
         with patch(
-            "dazzle_dnr_back.channels.providers.email.check_docker_container",
+            "dazzle_back.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=mock_container,
         ):
@@ -120,12 +120,12 @@ class TestMailpitDetector:
         detector = MailpitDetector()
 
         with patch(
-            "dazzle_dnr_back.channels.providers.email.check_docker_container",
+            "dazzle_back.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=None,
         ):
             with patch(
-                "dazzle_dnr_back.channels.providers.email.check_port",
+                "dazzle_back.channels.providers.email.check_port",
                 new_callable=AsyncMock,
                 return_value=True,
             ):
@@ -144,12 +144,12 @@ class TestMailpitDetector:
         detector = MailpitDetector()
 
         with patch(
-            "dazzle_dnr_back.channels.providers.email.check_docker_container",
+            "dazzle_back.channels.providers.email.check_docker_container",
             new_callable=AsyncMock,
             return_value=None,
         ):
             with patch(
-                "dazzle_dnr_back.channels.providers.email.check_port",
+                "dazzle_back.channels.providers.email.check_port",
                 new_callable=AsyncMock,
                 return_value=False,
             ):

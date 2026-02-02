@@ -1,24 +1,24 @@
 # DNR CLI Reference
 
-Complete reference for `dazzle dnr` commands.
+Complete reference for `dazzle` commands.
 
 ## Commands Overview
 
 | Command | Description |
 |---------|-------------|
-| `dazzle dnr info` | Show installation status |
-| `dazzle dnr build-ui` | Generate UI artifacts |
-| `dazzle dnr build-api` | Generate API specification |
-| `dazzle dnr serve` | Run development server |
+| `dazzle info` | Show installation status |
+| `dazzle build-ui` | Generate UI artifacts |
+| `dazzle build-api` | Generate API specification |
+| `dazzle serve` | Run development server |
 
 ---
 
-## dazzle dnr info
+## dazzle info
 
 Show DNR installation status and available features.
 
 ```bash
-dazzle dnr info
+dazzle info
 ```
 
 **Output:**
@@ -26,24 +26,24 @@ dazzle dnr info
 Dazzle Native Runtime (DNR) Status
 ==================================================
 DNR Backend:   ✓ installed
-DNR UI:        ✓ installed
+Dazzle UI:        ✓ installed
 FastAPI:       ✓ installed
 Uvicorn:       ✓ installed
 
 Available Commands:
-  dazzle dnr build-ui   Generate UI (Vite/JS/HTML)
-  dazzle dnr build-api  Generate API spec
-  dazzle dnr serve      Run development server
+  dazzle build-ui   Generate UI (Vite/JS/HTML)
+  dazzle build-api  Generate API spec
+  dazzle serve      Run development server
 ```
 
 ---
 
-## dazzle dnr build-ui
+## dazzle build-ui
 
 Generate UI artifacts from your AppSpec.
 
 ```bash
-dazzle dnr build-ui [OPTIONS]
+dazzle build-ui [OPTIONS]
 ```
 
 ### Options
@@ -51,7 +51,7 @@ dazzle dnr build-ui [OPTIONS]
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
 | `--manifest` | `-m` | `dazzle.toml` | Path to manifest file |
-| `--out` | `-o` | `./dnr-ui` | Output directory |
+| `--out` | `-o` | `./ui` | Output directory |
 | `--format` | `-f` | `vite` | Output format |
 
 ### Formats
@@ -60,7 +60,7 @@ dazzle dnr build-ui [OPTIONS]
 Full Vite project with ES modules. Production-ready.
 
 ```bash
-dazzle dnr build-ui --format vite -o ./my-app
+dazzle build-ui --format vite -o ./my-app
 ```
 
 Generated structure:
@@ -96,7 +96,7 @@ npm run dev
 Split HTML/JS files. Good for development without Node.js.
 
 ```bash
-dazzle dnr build-ui --format js -o ./app
+dazzle build-ui --format js -o ./app
 ```
 
 Generated files:
@@ -115,7 +115,7 @@ python -m http.server 8000
 Single HTML file with embedded runtime. Quickest preview.
 
 ```bash
-dazzle dnr build-ui --format html -o ./preview
+dazzle build-ui --format html -o ./preview
 ```
 
 Generated file:
@@ -127,26 +127,26 @@ Open directly in browser - no server needed.
 
 ```bash
 # Default: Vite project
-dazzle dnr build-ui
+dazzle build-ui
 
 # Single HTML for quick preview
-dazzle dnr build-ui --format html -o ./preview
+dazzle build-ui --format html -o ./preview
 
 # Use different manifest
-dazzle dnr build-ui -m path/to/dazzle.toml
+dazzle build-ui -m path/to/dazzle.toml
 
 # Split JS files
-dazzle dnr build-ui --format js -o ./dev-app
+dazzle build-ui --format js -o ./dev-app
 ```
 
 ---
 
-## dazzle dnr build-api
+## dazzle build-api
 
 Generate API specification from your AppSpec.
 
 ```bash
-dazzle dnr build-api [OPTIONS]
+dazzle build-api [OPTIONS]
 ```
 
 ### Options
@@ -163,7 +163,7 @@ dazzle dnr build-api [OPTIONS]
 BackendSpec as JSON file.
 
 ```bash
-dazzle dnr build-api --format json -o ./api
+dazzle build-api --format json -o ./api
 ```
 
 Generated file:
@@ -173,7 +173,7 @@ Generated file:
 Python stub module with JSON spec.
 
 ```bash
-dazzle dnr build-api --format python -o ./api
+dazzle build-api --format python -o ./api
 ```
 
 Generated files:
@@ -191,23 +191,23 @@ uvicorn api_stub:app --reload
 
 ```bash
 # JSON spec only
-dazzle dnr build-api
+dazzle build-api
 
 # Python stub for quick server
-dazzle dnr build-api --format python -o ./server
+dazzle build-api --format python -o ./server
 
 # Custom manifest location
-dazzle dnr build-api -m ../project/dazzle.toml
+dazzle build-api -m ../project/dazzle.toml
 ```
 
 ---
 
-## dazzle dnr serve
+## dazzle serve
 
 Run development server with API and UI preview.
 
 ```bash
-dazzle dnr serve [OPTIONS]
+dazzle serve [OPTIONS]
 ```
 
 ### Options
@@ -247,19 +247,19 @@ When running with full API:
 
 ```bash
 # Default server on localhost:8000
-dazzle dnr serve
+dazzle serve
 
 # Different port
-dazzle dnr serve --port 3000
+dazzle serve --port 3000
 
 # Auto-reload on DSL changes
-dazzle dnr serve --reload
+dazzle serve --reload
 
 # Bind to all interfaces (for Docker/remote access)
-dazzle dnr serve --host 0.0.0.0
+dazzle serve --host 0.0.0.0
 
 # UI only (no FastAPI required)
-dazzle dnr serve --ui-only
+dazzle serve --ui-only
 ```
 
 ### UI-Only Mode
@@ -267,7 +267,7 @@ dazzle dnr serve --ui-only
 If FastAPI is not installed, use `--ui-only` to serve just the UI:
 
 ```bash
-dazzle dnr serve --ui-only
+dazzle serve --ui-only
 ```
 
 This uses Python's built-in HTTP server and doesn't require any additional packages.
@@ -282,7 +282,7 @@ Quick preview while editing DSL:
 
 ```bash
 # Terminal 1: Serve with reload
-dazzle dnr serve --reload
+dazzle serve --reload
 
 # Terminal 2: Edit your DSL
 vim dsl/app.dsl
@@ -294,10 +294,10 @@ Generate production-ready artifacts:
 
 ```bash
 # Build Vite project
-dazzle dnr build-ui --format vite -o ./dist/frontend
+dazzle build-ui --format vite -o ./dist/frontend
 
 # Build API spec
-dazzle dnr build-api --format python -o ./dist/backend
+dazzle build-api --format python -o ./dist/backend
 
 # Deploy frontend
 cd dist/frontend && npm install && npm run build
@@ -315,8 +315,8 @@ steps:
     run: dazzle validate
 
   - name: Build UI
-    run: dazzle dnr build-ui --format vite -o ./build
+    run: dazzle build-ui --format vite -o ./build
 
   - name: Build API
-    run: dazzle dnr build-api -o ./api
+    run: dazzle build-api -o ./api
 ```

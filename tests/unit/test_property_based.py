@@ -13,7 +13,7 @@ from hypothesis import strategies as st
 from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle.core.errors import ParseError
 from dazzle.core.lexer import Lexer, TokenType
-from dazzle_dnr_back.channels.templates import (
+from dazzle_back.channels.templates import (
     TemplateSyntaxError,
     extract_variables,
     render_template,

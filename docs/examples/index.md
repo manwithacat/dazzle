@@ -25,7 +25,7 @@ All examples follow the same pattern:
 
 ```bash
 cd examples/<example_name>
-dazzle dnr serve
+dazzle serve
 ```
 
 This starts:
@@ -36,13 +36,13 @@ This starts:
 ### Running Without Docker
 
 ```bash
-dazzle dnr serve --local
+dazzle serve --local
 ```
 
 ### Running with Hot Reload
 
 ```bash
-dazzle dnr serve --watch
+dazzle serve --watch
 ```
 
 ## CI Priority Levels
@@ -62,7 +62,7 @@ Start a new project with:
 ```bash
 dazzle init my_app
 cd my_app
-dazzle dnr serve
+dazzle serve
 ```
 
 See [Your First App](../getting-started/first-app.md) for a guided tutorial.

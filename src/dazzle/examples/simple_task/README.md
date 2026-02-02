@@ -8,7 +8,7 @@ A personal task management application demonstrating DAZZLE's core features. Thi
 
 ```bash
 cd examples/simple_task
-dazzle dnr serve
+dazzle serve
 ```
 
 - **UI**: http://localhost:3000
@@ -90,7 +90,7 @@ surface task_list "Task List":
 
 ### 3. Running App - The Result
 
-`dazzle dnr serve` starts a fully functional application:
+`dazzle serve` starts a fully functional application:
 - **Backend**: FastAPI with SQLite persistence
 - **Frontend**: Signals-based reactive UI
 - **Features**: Full CRUD, filtering, search, attention signals

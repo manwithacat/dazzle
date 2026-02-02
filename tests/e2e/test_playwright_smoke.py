@@ -45,8 +45,8 @@ except ImportError:
     ConsoleMessage = None
 
 # Skip if DNR is not available
-pytest.importorskip("dazzle_dnr_back")
-pytest.importorskip("dazzle_dnr_ui")
+pytest.importorskip("dazzle_back")
+pytest.importorskip("dazzle_ui")
 
 # Configuration
 SERVER_STARTUP_TIMEOUT = 60
@@ -140,7 +140,6 @@ class DNRLocalServer:
                 sys.executable,
                 "-m",
                 "dazzle",
-                "dnr",
                 "serve",
                 "--local",
                 "--host",
@@ -172,7 +171,7 @@ class DNRLocalServer:
         # Wait for API health
         if not self._wait_for_health():
             self._cleanup()
-            raise RuntimeError(f"DNR server failed to start for {self.example_dir.name}")
+            raise RuntimeError(f"Dazzle server failed to start for {self.example_dir.name}")
 
         return self
 
@@ -283,7 +282,7 @@ class TestPlaywrightSmokeSimpleTask:
         page.wait_for_load_state("networkidle", timeout=10000)
         page.wait_for_timeout(1000)  # Extra time for JS to render
 
-        # DNR UI uses either #app (old) or #dz-site-main (new SiteSpec)
+        # Runtime UI uses either #app (old) or #dz-site-main (new SiteSpec)
         app_div = page.locator("#app, #dz-site-main")
         assert app_div.count() > 0, "Main container should exist in DOM"
 
@@ -407,7 +406,7 @@ class TestPlaywrightSmokeContactManager:
         page.wait_for_load_state("networkidle", timeout=10000)
         page.wait_for_timeout(1000)
 
-        # DNR UI uses either #app (old) or #dz-site-main (new SiteSpec)
+        # Runtime UI uses either #app (old) or #dz-site-main (new SiteSpec)
         app_div = page.locator("#app, #dz-site-main")
         assert app_div.count() > 0, "Main container should exist in DOM"
 

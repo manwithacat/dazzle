@@ -11,7 +11,7 @@ Commands for creating, validating, and working with DAZZLE projects:
 - example: Create project from example
 
 For code generation, use:
-- dazzle dnr serve: Run your DSL directly (rapid iteration)
+- dazzle serve: Run your DSL directly (rapid iteration)
 """
 
 from __future__ import annotations
@@ -316,7 +316,7 @@ def init_command(
             typer.echo("  # 1. Edit SPEC.md with your project requirements")
             typer.echo("  # 2. Work with an AI assistant to create DSL from your spec")
         typer.echo("  dazzle validate")
-        typer.echo("  dazzle dnr serve  # Run your app with Dazzle Native Runtime")
+        typer.echo("  dazzle serve  # Run your app with Dazzle Runtime")
 
         try:
             from dazzle.mcp.setup import check_mcp_server
@@ -671,9 +671,9 @@ def example_command(
     This command provides an interactive way to explore and use DAZZLE examples.
     It creates a complete project directory with DSL files, ready for development.
 
-    After creation, run your app with DNR (Dazzle Native Runtime):
+    After creation, run your app with Dazzle Runtime:
         cd <project-name>
-        dazzle dnr serve
+        dazzle serve
 
 
     Examples:
@@ -888,7 +888,7 @@ def example_command(
         print_header("Next Steps")
 
         console.print(Text(f"  cd {path}", style="cyan bold"))
-        console.print(Text("  dazzle dnr serve", style="cyan bold"))
+        console.print(Text("  dazzle serve", style="cyan bold"))
         console.print()
         console.print(Text("This will start:", style="bright_black"))
         console.print(Text("  • Backend API at http://localhost:8000", style="bright_black"))

@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_back.channels.outbox import (
+from dazzle_back.channels.outbox import (
     OutboxMessage,
     OutboxRepository,
     OutboxStatus,
     create_outbox_message,
 )
-from dazzle_dnr_back.runtime.repository import DatabaseManager
+from dazzle_back.runtime.repository import DatabaseManager
 
 
 @pytest.fixture

@@ -38,12 +38,12 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     # Try to compile and render surfaces
     try:
-        from dazzle_dnr_ui.converters.template_compiler import compile_appspec_to_templates
-        from dazzle_dnr_ui.runtime.template_renderer import render_page
+        from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
+        from dazzle_ui.runtime.template_renderer import render_page
     except ImportError:
         return json.dumps(
             {
-                "error": "dazzle_dnr_ui not installed. Install it to enable fidelity scoring.",
+                "error": "dazzle_ui not installed. Install it to enable fidelity scoring.",
                 "hint": "pip install -e '.[dnr-ui]'",
             }
         )

@@ -22,7 +22,7 @@ class TestJWTConfig:
 
     def test_default_config(self) -> None:
         """Should create config with sensible defaults."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig
+        from dazzle_back.runtime.jwt_auth import JWTConfig
 
         config = JWTConfig()
 
@@ -34,7 +34,7 @@ class TestJWTConfig:
 
     def test_custom_config(self) -> None:
         """Should allow custom configuration."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig
+        from dazzle_back.runtime.jwt_auth import JWTConfig
 
         config = JWTConfig(
             algorithm="RS256",
@@ -55,7 +55,7 @@ class TestJWTService:
     @pytest.fixture
     def jwt_service(self):
         """Create JWT service with test config."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(secret_key="test-secret-key-for-unit-tests-32bytes")
         return JWTService(config)
@@ -105,7 +105,7 @@ class TestJWTService:
     def test_verify_expired_token(self, jwt_service) -> None:
         """Should reject expired token."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Create token with past expiration
         now = datetime.now(UTC)
@@ -130,7 +130,7 @@ class TestJWTService:
     def test_verify_invalid_token(self, jwt_service) -> None:
         """Should reject invalid token."""
         pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         with pytest.raises(JWTError) as exc_info:
             jwt_service.verify_access_token("invalid.token.here")
@@ -140,7 +140,7 @@ class TestJWTService:
     def test_create_token_pair(self, jwt_service) -> None:
         """Should create access and refresh token pair."""
         pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.auth import UserRecord
+        from dazzle_back.runtime.auth import UserRecord
 
         user = UserRecord(
             id=uuid4(),
@@ -168,14 +168,14 @@ class TestTokenStore:
     @pytest.fixture
     def token_store(self, tmp_path: Path):
         """Create token store with temp database."""
-        from dazzle_dnr_back.runtime.token_store import TokenStore
+        from dazzle_back.runtime.token_store import TokenStore
 
         return TokenStore(db_path=tmp_path / "tokens.db")
 
     @pytest.fixture
     def user(self):
         """Create test user."""
-        from dazzle_dnr_back.runtime.auth import UserRecord
+        from dazzle_back.runtime.auth import UserRecord
 
         return UserRecord(
             id=uuid4(),
@@ -282,7 +282,7 @@ class TestJWTMiddleware:
     @pytest.fixture
     def jwt_service(self):
         """Create JWT service."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(secret_key="test-secret-key-for-unit-tests-32bytes")
         return JWTService(config)
@@ -290,7 +290,7 @@ class TestJWTMiddleware:
     @pytest.fixture
     def middleware(self, jwt_service):
         """Create JWT middleware."""
-        from dazzle_dnr_back.runtime.jwt_middleware import JWTMiddleware
+        from dazzle_back.runtime.jwt_middleware import JWTMiddleware
 
         return JWTMiddleware(jwt_service)
 
@@ -378,13 +378,13 @@ class TestDeviceRegistry:
     @pytest.fixture
     def registry(self, tmp_path: Path):
         """Create device registry with temp database."""
-        from dazzle_dnr_back.runtime.device_registry import DeviceRegistry
+        from dazzle_back.runtime.device_registry import DeviceRegistry
 
         return DeviceRegistry(db_path=tmp_path / "devices.db")
 
     def test_register_device(self, registry) -> None:
         """Should register a device."""
-        from dazzle_dnr_back.runtime.device_registry import DevicePlatform
+        from dazzle_back.runtime.device_registry import DevicePlatform
 
         user_id = uuid4()
         device = registry.register_device(
@@ -403,7 +403,7 @@ class TestDeviceRegistry:
 
     def test_get_user_devices(self, registry) -> None:
         """Should list user's devices."""
-        from dazzle_dnr_back.runtime.device_registry import DevicePlatform
+        from dazzle_back.runtime.device_registry import DevicePlatform
 
         user_id = uuid4()
         registry.register_device(user_id, DevicePlatform.IOS, "token-1")
@@ -418,7 +418,7 @@ class TestDeviceRegistry:
 
     def test_unregister_device(self, registry) -> None:
         """Should unregister (deactivate) a device."""
-        from dazzle_dnr_back.runtime.device_registry import DevicePlatform
+        from dazzle_back.runtime.device_registry import DevicePlatform
 
         user_id = uuid4()
         device = registry.register_device(user_id, DevicePlatform.IOS, "token")
@@ -432,7 +432,7 @@ class TestDeviceRegistry:
 
     def test_duplicate_token_updates(self, registry) -> None:
         """Should update existing device when re-registering same token."""
-        from dazzle_dnr_back.runtime.device_registry import DevicePlatform
+        from dazzle_back.runtime.device_registry import DevicePlatform
 
         user_id = uuid4()
         push_token = "same-token"

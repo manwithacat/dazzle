@@ -27,7 +27,7 @@ import pytest
 @pytest.fixture
 def secure_config():
     """Create a secure JWT config with proper key length."""
-    from dazzle_dnr_back.runtime.jwt_auth import JWTConfig
+    from dazzle_back.runtime.jwt_auth import JWTConfig
 
     # 32+ bytes for HMAC algorithms
     return JWTConfig(
@@ -38,7 +38,7 @@ def secure_config():
 @pytest.fixture
 def jwt_service(secure_config):
     """Create JWT service with secure config."""
-    from dazzle_dnr_back.runtime.jwt_auth import JWTService
+    from dazzle_back.runtime.jwt_auth import JWTService
 
     return JWTService(secure_config)
 
@@ -53,7 +53,7 @@ class TestAlgorithmSecurity:
 
     def test_none_algorithm_blocked_on_config(self) -> None:
         """Should reject 'none' algorithm in configuration."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="none", secret_key="x" * 32)
 
@@ -64,7 +64,7 @@ class TestAlgorithmSecurity:
 
     def test_none_algorithm_case_variations_blocked(self) -> None:
         """Should reject all case variations of 'none' algorithm."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         for variant in ["None", "NONE", "nOnE"]:
             config = JWTConfig(algorithm=variant, secret_key="x" * 32)
@@ -74,7 +74,7 @@ class TestAlgorithmSecurity:
 
     def test_unknown_algorithm_rejected(self) -> None:
         """Should reject unknown algorithms."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="HS999", secret_key="x" * 32)
 
@@ -86,7 +86,7 @@ class TestAlgorithmSecurity:
     def test_algorithm_confusion_attack_blocked(self, jwt_service) -> None:
         """Should reject tokens with algorithm confusion attack (alg:none in header)."""
         pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Create a token with "none" algorithm (attack token)
         payload = {
@@ -113,7 +113,7 @@ class TestAlgorithmSecurity:
     def test_algorithm_substitution_attack_blocked(self, jwt_service) -> None:
         """Should reject tokens signed with different algorithm than expected."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Create token with HS384 when service expects HS256
         payload = {
@@ -146,7 +146,7 @@ class TestSecretKeySecurity:
 
     def test_short_secret_key_rejected(self) -> None:
         """Should reject secret keys shorter than 32 bytes."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="HS256", secret_key="short-key")
 
@@ -157,7 +157,7 @@ class TestSecretKeySecurity:
 
     def test_exactly_32_byte_key_accepted(self) -> None:
         """Should accept exactly 32-byte secret key."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="HS256", secret_key="x" * 32)
 
@@ -166,7 +166,7 @@ class TestSecretKeySecurity:
 
     def test_longer_key_accepted(self) -> None:
         """Should accept keys longer than 32 bytes."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="HS256", secret_key="x" * 64)
 
@@ -175,7 +175,7 @@ class TestSecretKeySecurity:
 
     def test_auto_generated_key_is_secure(self) -> None:
         """Auto-generated secret key should be at least 32 bytes."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig
+        from dazzle_back.runtime.jwt_auth import JWTConfig
 
         config = JWTConfig()
 
@@ -193,7 +193,7 @@ class TestTokenLengthSecurity:
 
     def test_oversized_token_rejected(self, jwt_service) -> None:
         """Should reject tokens exceeding maximum length."""
-        from dazzle_dnr_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
+        from dazzle_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
 
         # Create an oversized token
         oversized_token = "a" * (MAX_TOKEN_LENGTH + 1)
@@ -205,7 +205,7 @@ class TestTokenLengthSecurity:
 
     def test_oversized_token_rejected_unverified_decode(self, jwt_service) -> None:
         """Should reject oversized tokens even in unverified decode."""
-        from dazzle_dnr_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
+        from dazzle_back.runtime.jwt_auth import MAX_TOKEN_LENGTH, JWTError
 
         oversized_token = "a" * (MAX_TOKEN_LENGTH + 1)
 
@@ -241,7 +241,7 @@ class TestTokenManipulation:
     def test_tampered_payload_rejected(self, jwt_service) -> None:
         """Should reject tokens with tampered payload."""
         pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Create valid token
         token, _ = jwt_service.create_access_token(
@@ -270,7 +270,7 @@ class TestTokenManipulation:
     def test_missing_signature_rejected(self, jwt_service) -> None:
         """Should reject tokens with missing signature."""
         pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Create valid token then strip signature
         token, _ = jwt_service.create_access_token(
@@ -287,7 +287,7 @@ class TestTokenManipulation:
 
     def test_malformed_header_rejected(self, jwt_service) -> None:
         """Should reject tokens with malformed headers."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTError
+        from dazzle_back.runtime.jwt_auth import JWTError
 
         # Various malformed tokens
         malformed_tokens = [
@@ -316,7 +316,7 @@ class TestIssuerAudienceValidation:
     def test_wrong_issuer_rejected(self) -> None:
         """Should reject tokens with wrong issuer."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret, issuer="my-app")
@@ -342,7 +342,7 @@ class TestIssuerAudienceValidation:
     def test_wrong_audience_rejected(self) -> None:
         """Should reject tokens with wrong audience."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret, audience="my-audience")
@@ -378,7 +378,7 @@ class TestRequiredClaims:
     def test_missing_sub_rejected(self) -> None:
         """Should reject tokens missing 'sub' claim."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret)
@@ -403,7 +403,7 @@ class TestRequiredClaims:
     def test_missing_jti_rejected(self) -> None:
         """Should reject tokens missing 'jti' claim (needed for revocation)."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret)
@@ -437,7 +437,7 @@ class TestTimingAttacks:
     def test_expired_token_detected(self) -> None:
         """Should reject expired tokens."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTError, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret)
@@ -463,7 +463,7 @@ class TestTimingAttacks:
     def test_future_iat_with_leeway(self) -> None:
         """Should allow tokens with iat slightly in future (clock skew)."""
         jwt_module = pytest.importorskip("jwt")
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         secret = "x" * 32
         config = JWTConfig(secret_key=secret, leeway_seconds=60)
@@ -497,7 +497,7 @@ class TestAsymmetricAlgorithms:
 
     def test_rs256_requires_private_key(self) -> None:
         """RS256 should require private key."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="RS256", public_key="fake-public-key")
 
@@ -508,7 +508,7 @@ class TestAsymmetricAlgorithms:
 
     def test_rs256_requires_public_key(self) -> None:
         """RS256 should require public key."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="RS256", private_key="fake-private-key")
 
@@ -522,7 +522,7 @@ class TestAsymmetricAlgorithms:
 
     def test_es256_requires_keys(self) -> None:
         """ES256 (ECDSA) should require both keys."""
-        from dazzle_dnr_back.runtime.jwt_auth import JWTConfig, JWTService
+        from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
 
         config = JWTConfig(algorithm="ES256")
 

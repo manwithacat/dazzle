@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_back.demo_data.generator import DemoDataGenerator
-from dazzle_dnr_back.demo_data.loader import DemoDataLoader
-from dazzle_dnr_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+from dazzle_back.demo_data.generator import DemoDataGenerator
+from dazzle_back.demo_data.loader import DemoDataLoader
+from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 
 class TestDemoDataGenerator:

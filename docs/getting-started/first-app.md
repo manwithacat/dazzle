@@ -133,7 +133,7 @@ All valid!
 Start the development server:
 
 ```bash
-dazzle dnr serve
+dazzle serve
 ```
 
 Open your browser:
@@ -219,7 +219,7 @@ workspace dashboard "Dashboard":
 ### "Port already in use"
 
 ```bash
-dazzle dnr serve --port 3001
+dazzle serve --port 3001
 ```
 
 ### Validation errors

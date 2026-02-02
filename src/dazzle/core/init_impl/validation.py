@@ -120,14 +120,16 @@ def validate_project_name(name: str) -> tuple[bool, str | None]:
     if name[0].isdigit():
         return (
             False,
-            f"Project name '{name}' cannot start with a digit. Try 'project_{name}' or '{name}_app'",
+            f"Project name '{name}' cannot start with a digit."
+            f" Try 'project_{name}' or '{name}_app'",
         )
 
     # Check reserved keywords
     if name.lower() in RESERVED_KEYWORDS:
         return (
             False,
-            f"Project name '{name}' is a reserved keyword. Try '{name}_app', 'my_{name}', or '{name}_project' instead",
+            f"Project name '{name}' is a reserved keyword."
+            f" Try '{name}_app', 'my_{name}', or '{name}_project' instead",
         )
 
     # Check if it's a valid Python identifier pattern

@@ -19,9 +19,9 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
-from dazzle.mcp.dnr_tools_impl import set_backend_spec
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
+from dazzle.mcp.runtime_tools import set_backend_spec
 from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 
 from .state import (
@@ -100,7 +100,7 @@ def load_backend_spec_for_project(project_path: Path) -> bool:
     """
     try:
         # Import here to avoid circular imports
-        from dazzle_dnr_back.converters import convert_appspec_to_backend
+        from dazzle_back.converters import convert_appspec_to_backend
 
         # Load manifest first
         manifest_path = project_path / "dazzle.toml"
@@ -703,7 +703,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
 
 # ============================================================================
-# DNR Logging Tools
+# Runtime Logging Tools
 # ============================================================================
 
 
@@ -716,7 +716,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     # Get project path
     project_path = get_active_project_path() or get_project_root()
     log_dir = project_path / ".dazzle" / "logs"
-    log_file = log_dir / "dnr.log"
+    log_file = log_dir / "dazzle.log"
 
     result: dict[str, Any] = {
         "log_file": str(log_file),
@@ -726,7 +726,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     if not log_file.exists():
         result["status"] = "no_logs"
         result["message"] = (
-            "No log file found. Start the DNR server with `dazzle dnr serve` to generate logs."
+            "No log file found. Start the DNR server with `dazzle serve` to generate logs."
         )
         result["hint"] = f"Log file will be created at: {log_file}"
         return json.dumps(result, indent=2)

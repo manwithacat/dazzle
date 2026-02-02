@@ -2,7 +2,7 @@
 
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
-from dazzle_dnr_ui.converters.template_compiler import _build_form_fields
+from dazzle_ui.converters.template_compiler import _build_form_fields
 
 
 class TestFormFieldSourceOption:

@@ -159,7 +159,7 @@ The DSL is parsed into an immutable IR called `AppSpec`:
 - Single source consumed by all backends
 
 ### 3. DNR Frontend
-The Dazzle Native Runtime uses server-rendered HTMX templates:
+The Dazzle Runtime uses server-rendered HTMX templates:
 - Jinja2 templates produce HTML with `hx-*` attributes
 - HTMX handles server interactions (search, forms, pagination)
 - Alpine.js manages ephemeral UI state (toggles, selections, transitions)

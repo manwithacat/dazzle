@@ -295,7 +295,7 @@ def test_run(
     # Legacy mode: --no-auto-server requires running server
     try:
         from dazzle.testing.testspec_generator import generate_e2e_testspec
-        from dazzle_e2e.adapters.dnr import DNRAdapter
+        from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
     except ImportError as e:
         typer.echo(f"E2E testing modules not available: {e}", err=True)
         typer.echo("Note: Use --auto-server (default) for built-in server management", err=True)
@@ -381,7 +381,7 @@ def test_run(
         page.set_default_timeout(timeout)
 
         # Create adapter
-        adapter = DNRAdapter(base_url=base_url, api_url=api_url)
+        adapter = DazzleAdapter(base_url=base_url, api_url=api_url)
 
         for flow_spec in flows_to_run:
             if verbose:

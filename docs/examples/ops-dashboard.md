@@ -6,7 +6,7 @@
 
 ```bash
 cd examples/ops_dashboard
-dazzle dnr serve
+dazzle serve
 # UI: http://localhost:3000
 # API: http://localhost:8000/docs
 ```

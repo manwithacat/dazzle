@@ -1,7 +1,7 @@
 /**
  * dev command - Start development server
  *
- * Replaces: dazzle dnr serve
+ * Replaces: dazzle serve
  */
 
 import { z } from 'zod'
@@ -55,7 +55,7 @@ With --graphql, enables /graphql endpoint.
     }
 
     // Build command arguments for Python CLI
-    const cliArgs = ['dnr', 'serve']
+    const cliArgs = ['serve']
 
     if (args.port !== 3000) cliArgs.push('--port', String(args.port))
     if (args['api-port'] !== 8000) cliArgs.push('--api-port', String(args['api-port']))

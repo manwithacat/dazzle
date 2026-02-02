@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from dazzle_dnr_back.runtime.ops_database import OpsDatabase
-from dazzle_dnr_back.runtime.ops_simulator import OpsSimulator
+from dazzle_back.runtime.ops_database import OpsDatabase
+from dazzle_back.runtime.ops_simulator import OpsSimulator
 
 
 class TestOpsSimulator:

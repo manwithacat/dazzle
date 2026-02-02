@@ -12,7 +12,7 @@ graph TD
     Linker --> Validator
     Validator --> Runtime{Runtime}
     Runtime --> Back[DNR Backend]
-    Runtime --> UI[DNR UI]
+    Runtime --> UI[Dazzle UI]
     Back --> API[FastAPI App]
     UI --> JS[JavaScript Runtime]
 ```
@@ -98,7 +98,7 @@ The validated AppSpec feeds into runtime generators:
 ### Backend (DNR-Back)
 
 ```python
-from dazzle_dnr_back.converters import convert_appspec_to_backend
+from dazzle_back.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
@@ -112,7 +112,7 @@ Produces:
 ### Frontend (DNR-UI)
 
 ```python
-from dazzle_dnr_ui.converters import convert_appspec_to_ui
+from dazzle_ui.converters import convert_appspec_to_ui
 
 ui_spec = convert_appspec_to_ui(appspec)
 ```

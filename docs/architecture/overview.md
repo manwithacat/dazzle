@@ -163,7 +163,7 @@ The browser swaps the fragment into the target element — no full page reload.
 ### AppSpec → BackendSpec
 
 ```python
-from dazzle_dnr_back.converters import convert_appspec_to_backend
+from dazzle_back.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
@@ -176,7 +176,7 @@ Transforms:
 ### AppSpec → UISpec
 
 ```python
-from dazzle_dnr_ui.converters import convert_appspec_to_ui
+from dazzle_ui.converters import convert_appspec_to_ui
 
 ui_spec = convert_appspec_to_ui(appspec)
 ```

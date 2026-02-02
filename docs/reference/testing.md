@@ -28,7 +28,7 @@ dazzle test dsl-run --tag crud   # Filter by tag
 **How it works:**
 1. DSL is parsed into AppSpec
 2. Test generator creates test cases from entities and relationships
-3. Tests run via HTTP against the DNR server
+3. Tests run via HTTP against the runtime server
 4. Results are deterministic and fast
 
 ### Tier 2: Scripted E2E (Playwright)

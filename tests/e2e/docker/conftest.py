@@ -103,7 +103,7 @@ def pytest_configure(config):
 def pytest_sessionstart(session):
     """Initialize UX coverage tracker at session start."""
     global _ux_tracker
-    api_url = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
+    api_url = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
     _ux_tracker = UXCoverageTracker(api_url=api_url)
 
 
@@ -127,7 +127,7 @@ def ux_tracker():
     """Get the shared UX coverage tracker."""
     global _ux_tracker
     if _ux_tracker is None:
-        api_url = os.environ.get("DNR_BASE_URL", "http://localhost:8000")
+        api_url = os.environ.get("DAZZLE_BASE_URL", "http://localhost:8000")
         _ux_tracker = UXCoverageTracker(api_url=api_url)
     return _ux_tracker
 
