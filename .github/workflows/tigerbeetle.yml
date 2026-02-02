@@ -4,14 +4,14 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'src/dazzle_dnr_back/pra/tigerbeetle*.py'
+      - 'src/dazzle_back/pra/tigerbeetle*.py'
       - 'src/dazzle/deploy/**/tigerbeetle*'
       - 'tests/integration/test_tigerbeetle.py'
       - '.github/workflows/tigerbeetle.yml'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'src/dazzle_dnr_back/pra/tigerbeetle*.py'
+      - 'src/dazzle_back/pra/tigerbeetle*.py'
       - 'src/dazzle/deploy/**/tigerbeetle*'
       - 'tests/integration/test_tigerbeetle.py'
       - '.github/workflows/tigerbeetle.yml'
@@ -140,7 +140,7 @@ jobs:
                 print('      The PRA wrapper was designed for an older/different API version')
                 exit(0)
 
-            from dazzle_dnr_back.pra.tigerbeetle_client import TigerBeetleConfig, TigerBeetleClient
+            from dazzle_back.pra.tigerbeetle_client import TigerBeetleConfig, TigerBeetleClient
             import asyncio
 
             async def test():

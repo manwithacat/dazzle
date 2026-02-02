@@ -68,7 +68,7 @@ jobs:
     - name: Run bandit security scanner
       run: |
         pip install bandit[toml]
-        bandit -c pyproject.toml -r src/dazzle_dnr_back/runtime/ --severity-level medium
+        bandit -c pyproject.toml -r src/dazzle_back/runtime/ --severity-level medium
 
   lint:
     runs-on: ubuntu-latest

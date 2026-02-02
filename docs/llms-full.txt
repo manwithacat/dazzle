@@ -3147,7 +3147,7 @@ templates/
 ### AppSpec → BackendSpec
 
 ```python
-from dazzle_dnr_back.converters import convert_appspec_to_backend
+from dazzle_back.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
@@ -3324,7 +3324,7 @@ The validated AppSpec feeds into runtime generators:
 ### Backend (DNR-Back)
 
 ```python
-from dazzle_dnr_back.converters import convert_appspec_to_backend
+from dazzle_back.converters import convert_appspec_to_backend
 
 backend_spec = convert_appspec_to_backend(appspec)
 ```
