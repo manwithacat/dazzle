@@ -325,7 +325,8 @@ _Tips for collaborating with LLM agents to turn this spec into DAZZLE DSL:_
 4. **Run `dazzle build`** to generate your application
 5. **Test and iterate** - update DSL based on what you see
 
-**Remember**: Start simple! You can always add more features later. Better to have a working v1 than a perfect plan that never ships. 🚀
+**Remember**: Start simple! You can always add more features later.
+Better to have a working v1 than a perfect plan that never ships. 🚀
 """
 
     spec_path.write_text(spec_content)

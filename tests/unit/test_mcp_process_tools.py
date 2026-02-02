@@ -169,12 +169,18 @@ class TestStoriesCoverage:
             assert "No implementing process" in story["missing_aspects"]
 
     def test_coverage_no_stories(self, mock_app_spec_no_stories: MagicMock, tmp_path: Path) -> None:
-        """Test coverage when no stories exist."""
+        """Test coverage when no stories exist (including persisted)."""
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
-        with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
-            return_value=mock_app_spec_no_stories,
+        with (
+            patch(
+                "dazzle.mcp.server.handlers.process._load_app_spec",
+                return_value=mock_app_spec_no_stories,
+            ),
+            patch(
+                "dazzle.core.stories_persistence.load_stories",
+                return_value=[],
+            ),
         ):
             result = stories_coverage_handler(tmp_path, {})
             data = json.loads(result)
@@ -225,6 +231,28 @@ class TestProposeProcesses:
         assert "error" not in data
         assert data["proposed_count"] == 1
         assert data["proposals"][0]["implements"] == ["ST-001"]
+
+    def test_propose_no_stories_with_fallback(
+        self, mock_app_spec_no_stories: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test propose returns error when no stories found even after fallback."""
+        from dazzle.mcp.server.handlers.process import propose_processes_handler
+
+        with (
+            patch(
+                "dazzle.mcp.server.handlers.process._load_app_spec",
+                return_value=mock_app_spec_no_stories,
+            ),
+            patch(
+                "dazzle.core.stories_persistence.load_stories",
+                return_value=[],
+            ),
+        ):
+            result = propose_processes_handler(tmp_path, {})
+            data = json.loads(result)
+
+        assert "error" in data
+        assert "No stories found" in data["error"]
 
     def test_propose_all_covered(
         self, mock_app_spec_with_coverage: MagicMock, tmp_path: Path

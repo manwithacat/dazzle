@@ -72,7 +72,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             continue
 
     surface_filter = arguments.get("surface_filter")
-    report = score_appspec_fidelity(appspec, rendered_pages, surface_filter)
+    report = score_appspec_fidelity(appspec, rendered_pages, surface_filter, str(project_path))
 
     # Build response
     surface_breakdown = []

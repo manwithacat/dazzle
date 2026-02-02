@@ -24,6 +24,7 @@ from dazzle.core.ir.fidelity import (
     FidelityReport,
     SurfaceFidelityScore,
 )
+from dazzle.core.ir.stories import StorySpec
 
 # ── Field type → expected input type mapping ──────────────────────────
 
@@ -409,50 +410,217 @@ def _check_semantic_fidelity(
 # ── Story embodiment checks ───────────────────────────────────────────
 
 
+def _match_stories_to_surfaces(
+    surface: SurfaceSpec,
+    stories: list[StorySpec],
+) -> list[StorySpec]:
+    """Find stories relevant to a surface based on scope and entity_ref."""
+    entity_name = surface.entity_ref
+    if not entity_name:
+        return []
+
+    relevant: list[StorySpec] = []
+    for s in stories:
+        # Match by scope (preferred) or title fallback
+        if s.scope and entity_name in s.scope:
+            relevant.append(s)
+        elif entity_name.lower() in (s.title or "").lower():
+            relevant.append(s)
+    return relevant
+
+
+# Sub-check weights for story scoring
+_W_SCOPE = 0.30
+_W_GIVEN = 0.20
+_W_WHEN = 0.25
+_W_THEN = 0.20
+_W_UNLESS = 0.05
+
+
+def _extract_field_from_path(field_path: str | None) -> str | None:
+    """Extract field name from a dotted path like 'Task.status' -> 'status'."""
+    if not field_path:
+        return None
+    parts = field_path.split(".")
+    return parts[-1] if len(parts) > 1 else parts[0]
+
+
 def _check_story_embodiment(
     surface: SurfaceSpec,
     entity: EntitySpec | None,
     root: HTMLElement,
     appspec: AppSpec | None,
+    stories: list[StorySpec] | None = None,
 ) -> list[FidelityGap]:
-    """Check that story-referenced entities have action affordances."""
+    """Check how well the surface embodies its related stories.
+
+    Performs five sub-checks per story-surface pair:
+    1. Scope alignment — story scope entities vs surface entity binding
+    2. Given-condition fields — precondition fields present on surface
+    3. When-trigger matching — action triggers have matching buttons/links
+    4. Then-outcome verification — outcome fields visible on surface
+    5. Unless-branch coverage — exception fields/states present
+    """
     gaps: list[FidelityGap] = []
-    if appspec is None:
+    all_stories = stories or (list(appspec.stories) if appspec and appspec.stories else [])
+    if not all_stories:
         return gaps
 
-    # Find stories that reference this surface's entity
     entity_name = surface.entity_ref
     if not entity_name:
         return gaps
 
-    relevant_stories = [
-        s
-        for s in appspec.stories
-        if entity_name.lower() in (s.title or "").lower()
-        or entity_name.lower() in (getattr(s, "entity_ref", "") or "").lower()
-    ]
+    relevant_stories = _match_stories_to_surfaces(surface, all_stories)
     if not relevant_stories:
         return gaps
 
-    # Check for action affordances (buttons, links with action semantics)
+    # Gather surface context
+    surface_field_names = set(_field_names_from_surface(surface))
     buttons = root.find_all("button")
     links = root.find_all("a")
     action_elements = buttons + links
-    has_actions = len(action_elements) > 0
+    action_texts = {el.get_text().strip().lower() for el in action_elements}
+    all_text_lower = root.get_text().lower()
 
-    if not has_actions:
-        gaps.append(
-            FidelityGap(
-                category=FidelityGapCategory.MISSING_ACTION_AFFORDANCE,
-                dimension="story",
-                severity="major",
-                surface_name=surface.name,
-                target="actions",
-                expected="Action buttons/links for story interactions",
-                actual="no action affordances found",
-                recommendation="Add buttons or links for entity actions.",
+    for story in relevant_stories:
+        # 1. Scope alignment
+        if story.scope:
+            uses_entities = {entity_name}
+            missing_scope = [e for e in story.scope if e not in uses_entities]
+            for missing_entity in missing_scope:
+                gaps.append(
+                    FidelityGap(
+                        category=FidelityGapCategory.STORY_SCOPE_MISMATCH,
+                        dimension="story",
+                        severity="minor",
+                        surface_name=surface.name,
+                        target=f"scope[{missing_entity}]",
+                        expected=f"Surface binds entity '{missing_entity}'",
+                        actual=f"Surface only uses '{entity_name}'",
+                        recommendation=(
+                            f"Surface '{surface.name}' may need a related surface "
+                            f"for entity '{missing_entity}' to fully satisfy "
+                            f"story {story.story_id} '{story.title}'."
+                        ),
+                    )
+                )
+
+        # 2. Given-condition fields
+        for cond in story.given:
+            field_name = _extract_field_from_path(cond.field_path)
+            if field_name and field_name not in surface_field_names:
+                gaps.append(
+                    FidelityGap(
+                        category=FidelityGapCategory.STORY_PRECONDITION_MISSING,
+                        dimension="story",
+                        severity="major",
+                        surface_name=surface.name,
+                        target=f"given[{field_name}]",
+                        expected=f"Field '{field_name}' for precondition",
+                        actual="field not present on surface",
+                        recommendation=(
+                            f"Add field '{field_name}' to surface '{surface.name}' "
+                            f"to satisfy story {story.story_id} given-condition: "
+                            f"'{cond.expression}'."
+                        ),
+                    )
+                )
+
+        # 3. When-trigger matching
+        for cond in story.when:
+            expr_lower = cond.expression.lower()
+            # Extract action keywords from the when expression
+            action_words = set(expr_lower.split()) - {
+                "user",
+                "the",
+                "a",
+                "an",
+                "is",
+                "to",
+                "on",
+                "in",
+                "at",
+                "clicks",
+                "click",
+                "presses",
+                "press",
+                "submits",
+                "submit",
+                "changes",
+                "change",
+            }
+            meaningful_words = {w.strip("'\"") for w in action_words if len(w) > 2}
+
+            matched = (
+                any(
+                    any(word in action_text for word in meaningful_words)
+                    for action_text in action_texts
+                )
+                if meaningful_words
+                else bool(action_elements)
             )
-        )
+
+            if not matched and not action_elements:
+                gaps.append(
+                    FidelityGap(
+                        category=FidelityGapCategory.STORY_TRIGGER_MISSING,
+                        dimension="story",
+                        severity="major",
+                        surface_name=surface.name,
+                        target=f"when[{story.story_id}]",
+                        expected=f"Action for trigger: '{cond.expression}'",
+                        actual="no matching button/link found",
+                        recommendation=(
+                            f"Add a button or link to surface '{surface.name}' "
+                            f"matching story {story.story_id} when-trigger: "
+                            f"'{cond.expression}'."
+                        ),
+                    )
+                )
+
+        # 4. Then-outcome verification
+        for cond in story.then:
+            field_name = _extract_field_from_path(cond.field_path)
+            if field_name and field_name not in surface_field_names:
+                # Also check if the field appears in the rendered text
+                if field_name.lower() not in all_text_lower:
+                    gaps.append(
+                        FidelityGap(
+                            category=FidelityGapCategory.STORY_OUTCOME_MISSING,
+                            dimension="story",
+                            severity="major",
+                            surface_name=surface.name,
+                            target=f"then[{field_name}]",
+                            expected=f"Field '{field_name}' for outcome visibility",
+                            actual="field not visible on surface",
+                            recommendation=(
+                                f"Add field '{field_name}' to surface '{surface.name}' "
+                                f"to satisfy story {story.story_id} then-outcome: "
+                                f"'{cond.expression}'."
+                            ),
+                        )
+                    )
+
+        # 5. Unless-branch coverage
+        for exc in story.unless:
+            exc_words = {w.strip("'\"") for w in exc.condition.lower().split() if len(w) > 3}
+            has_coverage = any(word in all_text_lower for word in exc_words)
+            if not has_coverage and exc_words:
+                gaps.append(
+                    FidelityGap(
+                        category=FidelityGapCategory.MISSING_ACTION_AFFORDANCE,
+                        dimension="story",
+                        severity="minor",
+                        surface_name=surface.name,
+                        target=f"unless[{story.story_id}]",
+                        expected=f"Error/validation state for: '{exc.condition}'",
+                        actual="no exception handling visible",
+                        recommendation=(
+                            f"Add validation or error state to surface '{surface.name}' "
+                            f"for story {story.story_id} exception: '{exc.condition}'."
+                        ),
+                    )
+                )
 
     return gaps
 
@@ -583,6 +751,7 @@ def score_surface_fidelity(
     entity: EntitySpec | None,
     html: str,
     appspec: AppSpec | None = None,
+    stories: list[StorySpec] | None = None,
 ) -> SurfaceFidelityScore:
     """Score how well the rendered HTML embodies the surface spec.
 
@@ -610,7 +779,7 @@ def score_surface_fidelity(
     all_gaps.extend(_check_semantic_fidelity(surface, entity, root))
 
     # Story checks
-    all_gaps.extend(_check_story_embodiment(surface, entity, root, appspec))
+    all_gaps.extend(_check_story_embodiment(surface, entity, root, appspec, stories))
 
     # Interaction checks (search_select fragments)
     all_gaps.extend(_check_interaction_fidelity(surface, root, html))
@@ -659,10 +828,26 @@ def _dimension_score(gaps: list[FidelityGap]) -> float:
     return max(0.0, 1.0 - penalty)
 
 
+def _load_stories_for_scoring(
+    appspec: AppSpec,
+    project_root: str | None = None,
+) -> list[StorySpec]:
+    """Get stories from appspec, falling back to persisted stories."""
+    stories = list(appspec.stories) if appspec.stories else []
+    if not stories and project_root:
+        from pathlib import Path
+
+        from dazzle.core.stories_persistence import load_stories
+
+        stories = load_stories(Path(project_root))
+    return stories
+
+
 def score_appspec_fidelity(
     appspec: AppSpec,
     rendered_pages: dict[str, str],
     surface_filter: str | None = None,
+    project_root: str | None = None,
 ) -> FidelityReport:
     """Score all surfaces in an AppSpec against their rendered HTML.
 
@@ -674,6 +859,8 @@ def score_appspec_fidelity(
     Returns:
         Project-level fidelity report.
     """
+    stories = _load_stories_for_scoring(appspec, project_root)
+
     surface_scores: list[SurfaceFidelityScore] = []
     all_gap_counts: dict[str, int] = {}
     total_gaps = 0
@@ -687,7 +874,7 @@ def score_appspec_fidelity(
             continue
 
         entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
-        score = score_surface_fidelity(surface, entity, html, appspec)
+        score = score_surface_fidelity(surface, entity, html, appspec, stories)
         surface_scores.append(score)
 
         for gap in score.gaps:

@@ -24,6 +24,10 @@ class FidelityGapCategory(str, Enum):
     MISSING_DEBOUNCE = "missing_debounce"
     MISSING_ERROR_HANDLER = "missing_error_handler"
     MISSING_SOURCE_WIDGET = "missing_source_widget"
+    STORY_SCOPE_MISMATCH = "story_scope_mismatch"
+    STORY_PRECONDITION_MISSING = "story_precondition_missing"
+    STORY_TRIGGER_MISSING = "story_trigger_missing"
+    STORY_OUTCOME_MISSING = "story_outcome_missing"
 
 
 class FidelityGap(BaseModel):

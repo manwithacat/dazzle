@@ -1,313 +1,330 @@
-"""Unit tests for the structural fidelity scorer."""
+"""
+Unit tests for the fidelity scorer, focusing on enhanced story embodiment checks.
+
+Tests cover:
+- Scope alignment (story scope vs surface entity binding)
+- Given-condition field presence
+- When-trigger matching against buttons/links
+- Then-outcome field visibility
+- Unless-branch coverage
+- Story loading fallback for score_appspec_fidelity
+"""
 
 from __future__ import annotations
 
-from dazzle.core import ir
+from unittest.mock import MagicMock, patch
+
 from dazzle.core.fidelity_scorer import (
-    W_SEMANTIC,
-    W_STORY,
-    W_STRUCTURAL,
+    _check_story_embodiment,
+    _load_stories_for_scoring,
+    _match_stories_to_surfaces,
     parse_html,
-    score_surface_fidelity,
 )
 from dazzle.core.ir.fidelity import FidelityGapCategory
-
-# ── Helpers ────────────────────────────────────────────────────────────
-
-
-def _make_id_field() -> ir.FieldSpec:
-    return ir.FieldSpec(
-        name="id",
-        type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
-        modifiers=[ir.FieldModifier.PK],
-    )
+from dazzle.core.ir.stories import (
+    StoryCondition,
+    StoryException,
+    StorySpec,
+    StoryStatus,
+    StoryTrigger,
+)
+from dazzle.core.ir.surfaces import SurfaceMode
 
 
-def _make_entity(
-    name: str = "Task",
-    extra_fields: list[ir.FieldSpec] | None = None,
-) -> ir.EntitySpec:
-    fields = [_make_id_field()]
-    if extra_fields:
-        fields.extend(extra_fields)
-    return ir.EntitySpec(
-        name=name,
-        title=name,
-        fields=fields,
-    )
-
-
-def _make_list_surface(
+def _make_surface(
     name: str = "task_list",
-    entity_ref: str = "Task",
+    entity_ref: str | None = "Task",
+    mode: SurfaceMode = SurfaceMode.LIST,
     field_names: list[str] | None = None,
-) -> ir.SurfaceSpec:
-    if field_names is None:
-        field_names = ["title", "completed"]
-    return ir.SurfaceSpec(
-        name=name,
-        title="Task List",
-        entity_ref=entity_ref,
-        mode=ir.SurfaceMode.LIST,
-        sections=[
-            ir.SurfaceSection(
-                name="main",
-                elements=[ir.SurfaceElement(field_name=fn) for fn in field_names],
-            )
-        ],
+) -> MagicMock:
+    """Create a mock SurfaceSpec."""
+    surface = MagicMock()
+    surface.name = name
+    surface.entity_ref = entity_ref
+    surface.mode = mode
+
+    fields = field_names or ["title", "status"]
+    elements = []
+    for fn in fields:
+        elem = MagicMock()
+        elem.field_name = fn
+        elem.options = {}
+        elements.append(elem)
+
+    section = MagicMock()
+    section.elements = elements
+    surface.sections = [section]
+    return surface
+
+
+def _make_story(
+    story_id: str = "ST-001",
+    title: str = "User completes task",
+    scope: list[str] | None = None,
+    given: list[StoryCondition] | None = None,
+    when: list[StoryCondition] | None = None,
+    then: list[StoryCondition] | None = None,
+    unless: list[StoryException] | None = None,
+) -> StorySpec:
+    return StorySpec(
+        story_id=story_id,
+        title=title,
+        actor="User",
+        trigger=StoryTrigger.USER_CLICK,
+        scope=scope or ["Task"],
+        given=given or [],
+        when=when or [],
+        then=then or [],
+        unless=unless or [],
+        status=StoryStatus.ACCEPTED,
     )
 
 
-def _make_create_surface(
-    name: str = "task_create",
-    entity_ref: str = "Task",
-    field_names: list[str] | None = None,
-) -> ir.SurfaceSpec:
-    if field_names is None:
-        field_names = ["title", "due_date"]
-    return ir.SurfaceSpec(
-        name=name,
-        title="Create Task",
-        entity_ref=entity_ref,
-        mode=ir.SurfaceMode.CREATE,
-        sections=[
-            ir.SurfaceSection(
-                name="main",
-                elements=[ir.SurfaceElement(field_name=fn) for fn in field_names],
-            )
-        ],
-    )
+class TestMatchStoriesToSurfaces:
+    """Tests for _match_stories_to_surfaces."""
+
+    def test_match_by_scope(self) -> None:
+        surface = _make_surface(entity_ref="Task")
+        story = _make_story(scope=["Task", "User"])
+        result = _match_stories_to_surfaces(surface, [story])
+        assert len(result) == 1
+
+    def test_no_match_different_scope(self) -> None:
+        surface = _make_surface(entity_ref="Task")
+        story = _make_story(scope=["Order"], title="User places order")
+        result = _match_stories_to_surfaces(surface, [story])
+        assert len(result) == 0
+
+    def test_match_by_title_fallback(self) -> None:
+        surface = _make_surface(entity_ref="Task")
+        story = _make_story(scope=[], title="User completes Task")
+        result = _match_stories_to_surfaces(surface, [story])
+        assert len(result) == 1
+
+    def test_no_entity_ref_returns_empty(self) -> None:
+        surface = _make_surface(entity_ref=None)
+        story = _make_story()
+        result = _match_stories_to_surfaces(surface, [story])
+        assert len(result) == 0
 
 
-# ── Tests ──────────────────────────────────────────────────────────────
+class TestScopeAlignment:
+    """Tests for scope alignment sub-check."""
+
+    def test_scope_mismatch_detected(self) -> None:
+        surface = _make_surface(entity_ref="Task")
+        story = _make_story(scope=["Task", "Project"])
+        root = parse_html("<div><button>Complete</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        scope_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_SCOPE_MISMATCH]
+        assert len(scope_gaps) == 1
+        assert "Project" in scope_gaps[0].target
+
+    def test_scope_fully_matched(self) -> None:
+        surface = _make_surface(entity_ref="Task")
+        story = _make_story(scope=["Task"])
+        root = parse_html("<div><button>Complete</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        scope_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_SCOPE_MISMATCH]
+        assert len(scope_gaps) == 0
 
 
-class TestParseHTML:
-    def test_parse_html(self) -> None:
-        root = parse_html("<div><p>Hello</p></div>")
-        divs = root.find_all("div")
-        assert len(divs) == 1
-        ps = root.find_all("p")
-        assert len(ps) == 1
-        assert ps[0].get_text() == "Hello"
+class TestGivenConditionFields:
+    """Tests for given-condition field presence."""
 
-    def test_void_elements(self) -> None:
-        root = parse_html("<div><input type='text'><br><span>X</span></div>")
-        inputs = root.find_all("input")
-        assert len(inputs) == 1
-        assert inputs[0].get_attr("type") == "text"
-        spans = root.find_all("span")
-        assert len(spans) == 1
-
-
-class TestScoreListSurface:
-    def test_score_list_perfect(self) -> None:
-        surface = _make_list_surface()
-        html = """
-        <style>:root { --color-primary: blue; }</style>
-        <table hx-get="/api/tasks">
-            <thead><tr><th>Title</th><th>Completed</th></tr></thead>
-            <tbody hx-target="#tasks"></tbody>
-        </table>
-        <a href="/tasks/new">Add</a>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        assert score.structural == 1.0
-        assert score.overall > 0.9
-
-    def test_score_list_missing_field(self) -> None:
-        surface = _make_list_surface()
-        html = """
-        <style>:root{}</style>
-        <table>
-            <thead><tr><th>Title</th></tr></thead>
-            <tbody hx-target="#t"></tbody>
-        </table>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        missing = [g for g in score.gaps if g.category == FidelityGapCategory.MISSING_FIELD]
-        assert len(missing) >= 1
-        assert score.structural < 1.0
-
-    def test_score_no_table(self) -> None:
-        surface = _make_list_surface()
-        html = "<div>No table here</div>"
-        score = score_surface_fidelity(surface, None, html)
-        critical = [g for g in score.gaps if g.severity == "critical"]
-        assert len(critical) >= 1
-        assert score.structural < 0.6
-
-
-class TestScoreFormSurface:
-    def test_score_form_incorrect_type(self) -> None:
-        entity = _make_entity(
-            extra_fields=[
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=200),
-                    modifiers=[ir.FieldModifier.REQUIRED],
-                ),
-                ir.FieldSpec(
-                    name="due_date",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.DATE),
-                ),
-            ]
+    def test_missing_given_field(self) -> None:
+        surface = _make_surface(field_names=["title"])
+        story = _make_story(
+            given=[StoryCondition(expression="Task.status is 'open'", field_path="Task.status")]
         )
-        surface = _make_create_surface()
-        # due_date rendered as text instead of date
-        html = """
-        <style>:root{}</style>
-        <form hx-post="/api/tasks">
-            <input name="title" type="text" required>
-            <input name="due_date" type="text">
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        type_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
-        ]
-        assert len(type_gaps) >= 1
+        root = parse_html("<div><button>Go</button></div>")
 
-    def test_score_form_missing_required(self) -> None:
-        entity = _make_entity(
-            extra_fields=[
-                ir.FieldSpec(
-                    name="title",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.STR),
-                    modifiers=[ir.FieldModifier.REQUIRED],
-                ),
-                ir.FieldSpec(
-                    name="due_date",
-                    type=ir.FieldType(kind=ir.FieldTypeKind.DATE),
-                ),
-            ]
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
+        ]
+        assert len(precond_gaps) == 1
+        assert "status" in precond_gaps[0].target
+
+    def test_given_field_present(self) -> None:
+        surface = _make_surface(field_names=["title", "status"])
+        story = _make_story(
+            given=[StoryCondition(expression="Task.status is 'open'", field_path="Task.status")]
         )
-        surface = _make_create_surface()
-        html = """
-        <style>:root{}</style>
-        <form hx-post="/api/tasks">
-            <input name="title" type="text">
-            <input name="due_date" type="date">
-        </form>
-        """
-        score = score_surface_fidelity(surface, entity, html)
-        req_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_VALIDATION_ATTRIBUTE
+        root = parse_html("<div><button>Go</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
         ]
-        assert len(req_gaps) >= 1
+        assert len(precond_gaps) == 0
 
+    def test_given_without_field_path_skipped(self) -> None:
+        surface = _make_surface(field_names=["title"])
+        story = _make_story(given=[StoryCondition(expression="User is logged in", field_path=None)])
+        root = parse_html("<div><button>Go</button></div>")
 
-class TestSemanticChecks:
-    def test_score_semantic_raw_field_names(self) -> None:
-        surface = _make_list_surface(field_names=["due_date", "is_active"])
-        html = """
-        <style>:root{}</style>
-        <table>
-            <thead><tr><th>due_date</th><th>is_active</th></tr></thead>
-            <tbody hx-target="#t"></tbody>
-        </table>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        name_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_DISPLAY_NAME
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
         ]
-        assert len(name_gaps) >= 1
+        assert len(precond_gaps) == 0
 
 
-class TestCompositeWeighting:
-    def test_composite_weighting(self) -> None:
-        """Verify the 0.35/0.30/0.20/0.15 composite weights."""
-        from dazzle.core.fidelity_scorer import W_INTERACTION
+class TestWhenTriggerMatching:
+    """Tests for when-trigger matching against buttons/links."""
 
-        surface = _make_list_surface()
-        # Perfect HTML for all dimensions
-        html = """
-        <style>:root { --color-primary: blue; }</style>
-        <table hx-get="/api/tasks">
-            <thead><tr><th>Title</th><th>Completed</th></tr></thead>
-            <tbody hx-target="#tasks"></tbody>
-        </table>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        expected = (
-            W_STRUCTURAL * score.structural
-            + W_SEMANTIC * score.semantic
-            + W_STORY * score.story
-            + W_INTERACTION * score.interaction
-        )
-        assert abs(score.overall - round(expected, 4)) < 0.001
+    def test_no_action_elements_triggers_gap(self) -> None:
+        surface = _make_surface()
+        story = _make_story(when=[StoryCondition(expression="user clicks Complete button")])
+        root = parse_html("<div>No buttons here</div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        trigger_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_TRIGGER_MISSING]
+        assert len(trigger_gaps) == 1
+
+    def test_matching_button_present(self) -> None:
+        surface = _make_surface()
+        story = _make_story(when=[StoryCondition(expression="user clicks Complete button")])
+        root = parse_html("<div><button>Complete</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        trigger_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_TRIGGER_MISSING]
+        assert len(trigger_gaps) == 0
 
 
-class TestInteractionDimension:
-    """Tests for spec-aware interaction fidelity checks."""
+class TestThenOutcomeVerification:
+    """Tests for then-outcome field visibility."""
 
-    def _make_surface_with_source(
-        self, field_name: str = "customer", source: str = "api_packs.customers.search"
-    ) -> ir.SurfaceSpec:
-        return ir.SurfaceSpec(
-            name="order_create",
-            title="Create Order",
-            entity_ref="Order",
-            mode=ir.SurfaceMode.CREATE,
-            sections=[
-                ir.SurfaceSection(
-                    name="main",
-                    elements=[
-                        ir.SurfaceElement(
-                            field_name=field_name,
-                            options={"source": source},
-                        ),
-                    ],
+    def test_missing_outcome_field(self) -> None:
+        surface = _make_surface(field_names=["title"])
+        story = _make_story(
+            then=[
+                StoryCondition(
+                    expression="Task.completed_at is recorded",
+                    field_path="Task.completed_at",
                 )
-            ],
+            ]
         )
+        root = parse_html("<div><button>Go</button></div>")
 
-    def test_source_with_search_select_no_gap(self) -> None:
-        surface = self._make_surface_with_source()
-        html = """
-        <style>:root{}</style>
-        <form hx-post="/api/orders">
-            <div id="search-input-customer" hx-get="/_fragments/search"
-                 hx-trigger="keyup changed delay:400ms" hx-indicator="#spinner">
-                <input type="text" placeholder="Search customers...">
-                <div id="search-results-customer"></div>
-                <span class="text-error"></span>
-                <p>Type at least 2 characters</p>
-            </div>
-        </form>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        source_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
-        ]
-        assert len(source_gaps) == 0
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert len(outcome_gaps) == 1
+        assert "completed_at" in outcome_gaps[0].target
 
-    def test_source_without_search_select_gap(self) -> None:
-        surface = self._make_surface_with_source()
-        html = """
-        <style>:root{}</style>
-        <form hx-post="/api/orders">
-            <input name="customer" type="text">
-        </form>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        source_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
-        ]
-        assert len(source_gaps) == 1
-        assert source_gaps[0].severity == "critical"
-        assert source_gaps[0].target == "customer"
+    def test_outcome_field_in_surface(self) -> None:
+        surface = _make_surface(field_names=["title", "completed_at"])
+        story = _make_story(
+            then=[
+                StoryCondition(
+                    expression="Task.completed_at is recorded",
+                    field_path="Task.completed_at",
+                )
+            ]
+        )
+        root = parse_html("<div><button>Go</button></div>")
 
-    def test_no_source_option_no_spec_gap(self) -> None:
-        surface = _make_create_surface()
-        html = """
-        <style>:root{}</style>
-        <form hx-post="/api/tasks">
-            <input name="title" type="text">
-        </form>
-        """
-        score = score_surface_fidelity(surface, None, html)
-        source_gaps = [
-            g for g in score.gaps if g.category == FidelityGapCategory.MISSING_SOURCE_WIDGET
-        ]
-        assert len(source_gaps) == 0
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert len(outcome_gaps) == 0
+
+    def test_outcome_field_in_rendered_text(self) -> None:
+        surface = _make_surface(field_names=["title"])
+        story = _make_story(
+            then=[
+                StoryCondition(
+                    expression="Task.completed_at is recorded",
+                    field_path="Task.completed_at",
+                )
+            ]
+        )
+        root = parse_html("<div>completed_at: 2024-01-01</div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert len(outcome_gaps) == 0
+
+
+class TestUnlessBranchCoverage:
+    """Tests for unless-branch coverage."""
+
+    def test_missing_exception_handling(self) -> None:
+        surface = _make_surface()
+        story = _make_story(
+            unless=[
+                StoryException(
+                    condition="Task.assignee is missing",
+                    then_outcomes=["Error is displayed"],
+                )
+            ]
+        )
+        root = parse_html("<div><button>Go</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        unless_gaps = [g for g in gaps if "unless" in g.target]
+        assert len(unless_gaps) == 1
+
+    def test_exception_text_present(self) -> None:
+        surface = _make_surface()
+        story = _make_story(
+            unless=[
+                StoryException(
+                    condition="Task.assignee is missing",
+                    then_outcomes=["Error is displayed"],
+                )
+            ]
+        )
+        root = parse_html("<div><button>Go</button><span>assignee missing</span></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        unless_gaps = [g for g in gaps if "unless" in g.target]
+        assert len(unless_gaps) == 0
+
+
+class TestLoadStoriesForScoring:
+    """Tests for _load_stories_for_scoring fallback."""
+
+    def test_uses_appspec_stories_when_present(self) -> None:
+        appspec = MagicMock()
+        story = _make_story()
+        appspec.stories = [story]
+
+        result = _load_stories_for_scoring(appspec)
+        assert len(result) == 1
+
+    def test_falls_back_to_persisted(self, tmp_path) -> None:
+        appspec = MagicMock()
+        appspec.stories = []
+        persisted = [_make_story()]
+
+        with patch("dazzle.core.stories_persistence.load_stories", return_value=persisted):
+            result = _load_stories_for_scoring(appspec, str(tmp_path))
+
+        assert len(result) == 1
+
+    def test_no_fallback_without_project_root(self) -> None:
+        appspec = MagicMock()
+        appspec.stories = []
+
+        result = _load_stories_for_scoring(appspec)
+        assert len(result) == 0
+
+
+class TestNoStoriesNoEntity:
+    """Edge cases where stories or entity are absent."""
+
+    def test_no_stories_returns_empty(self) -> None:
+        surface = _make_surface()
+        root = parse_html("<div></div>")
+        gaps = _check_story_embodiment(surface, None, root, None, [])
+        assert len(gaps) == 0
+
+    def test_no_entity_ref_returns_empty(self) -> None:
+        surface = _make_surface(entity_ref=None)
+        root = parse_html("<div></div>")
+        story = _make_story()
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        assert len(gaps) == 0

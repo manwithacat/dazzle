@@ -281,6 +281,13 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         story_ids = args.get("story_ids")
 
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+
+        # Fall back to persisted stories from .dazzle/stories/stories.json
+        if not stories:
+            from dazzle.core.stories_persistence import load_stories
+
+            stories = load_stories(project_root)
+
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
         if not stories:
@@ -612,6 +619,12 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+
+        # Fall back to persisted stories from .dazzle/stories/stories.json
+        if not stories:
+            from dazzle.core.stories_persistence import load_stories
+
+            stories = load_stories(project_root)
 
         proc = next((p for p in processes if p.name == process_name), None)
         if not proc:
