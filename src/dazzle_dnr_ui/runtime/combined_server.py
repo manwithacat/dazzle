@@ -1223,8 +1223,14 @@ class DNRCombinedServer:
 
                 from dazzle_dnr_back.runtime.server import ServerConfig
 
+                # Check for PostgreSQL DATABASE_URL
+                database_url = os.environ.get("DATABASE_URL", "")
+                if database_url.startswith("postgres://"):
+                    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
                 srv_config = ServerConfig(
                     db_path=self.db_path,
+                    database_url=database_url or None,
                     use_database=True,
                     enable_test_mode=enable_test_mode,
                     enable_auth=enable_auth,

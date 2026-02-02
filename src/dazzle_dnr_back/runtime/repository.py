@@ -269,6 +269,16 @@ class DatabaseManager:
             )
             return cursor.fetchone() is not None
 
+    @property
+    def backend_type(self) -> str:
+        """Return the backend type identifier."""
+        return "sqlite"
+
+    @property
+    def placeholder(self) -> str:
+        """Return the SQL placeholder style."""
+        return "?"
+
     def get_table_columns(self, table_name: str) -> list[str]:
         """Get column names for a table."""
         with self.connection() as conn:
@@ -336,8 +346,8 @@ class SQLiteRepository(Generic[T]):
         data = model.model_dump()
         return {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
 
-    def _row_to_model(self, row: sqlite3.Row) -> T:
-        """Convert SQLite row to Pydantic model."""
+    def _row_to_model(self, row: Any) -> T:
+        """Convert database row to Pydantic model."""
         data = dict(row)
         converted = {k: _sqlite_to_python(v, self._field_types.get(k)) for k, v in data.items()}
         return self.model_class(**converted)
@@ -356,7 +366,8 @@ class SQLiteRepository(Generic[T]):
         sqlite_data = {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
 
         columns = ", ".join(quote_identifier(k) for k in sqlite_data.keys())
-        placeholders = ", ".join("?" * len(sqlite_data))
+        ph = self.db.placeholder
+        placeholders = ", ".join(ph for _ in sqlite_data)
         values = list(sqlite_data.values())
 
         table = quote_identifier(self.table_name)
@@ -386,7 +397,8 @@ class SQLiteRepository(Generic[T]):
             Entity (or dict with nested data if include specified), or None if not found
         """
         table = quote_identifier(self.table_name)
-        sql = f'SELECT * FROM {table} WHERE "id" = ?'
+        ph = self.db.placeholder
+        sql = f'SELECT * FROM {table} WHERE "id" = {ph}'
 
         start = time.perf_counter()
         with self.db.connection() as conn:
@@ -437,12 +449,13 @@ class SQLiteRepository(Generic[T]):
             k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in update_data.items()
         }
 
-        set_clause = ", ".join(f"{quote_identifier(k)} = ?" for k in sqlite_data.keys())
+        ph = self.db.placeholder
+        set_clause = ", ".join(f"{quote_identifier(k)} = {ph}" for k in sqlite_data.keys())
         values = list(sqlite_data.values())
         values.append(str(id))
 
         table = quote_identifier(self.table_name)
-        sql = f'UPDATE {table} SET {set_clause} WHERE "id" = ?'
+        sql = f'UPDATE {table} SET {set_clause} WHERE "id" = {ph}'
 
         start = time.perf_counter()
         with self.db.connection() as conn:
@@ -467,7 +480,8 @@ class SQLiteRepository(Generic[T]):
             True if deleted, False if not found
         """
         table = quote_identifier(self.table_name)
-        sql = f'DELETE FROM {table} WHERE "id" = ?'
+        ph = self.db.placeholder
+        sql = f'DELETE FROM {table} WHERE "id" = {ph}'
 
         start = time.perf_counter()
         with self.db.connection() as conn:
@@ -510,7 +524,7 @@ class SQLiteRepository(Generic[T]):
         from dazzle_dnr_back.runtime.query_builder import QueryBuilder
 
         # Build query using QueryBuilder
-        builder = QueryBuilder(table_name=self.table_name)
+        builder = QueryBuilder(table_name=self.table_name, placeholder_style=self.db.placeholder)
         builder.set_pagination(page, page_size)
 
         if filters:
@@ -608,7 +622,8 @@ class SQLiteRepository(Generic[T]):
     async def exists(self, id: UUID) -> bool:
         """Check if an entity exists."""
         table = quote_identifier(self.table_name)
-        sql = f'SELECT 1 FROM {table} WHERE "id" = ? LIMIT 1'
+        ph = self.db.placeholder
+        sql = f'SELECT 1 FROM {table} WHERE "id" = {ph} LIMIT 1'
 
         start = time.perf_counter()
         with self.db.connection() as conn:

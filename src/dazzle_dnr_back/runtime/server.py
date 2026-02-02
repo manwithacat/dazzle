@@ -47,6 +47,7 @@ class ServerConfig:
 
     # Database settings
     db_path: Path = field(default_factory=lambda: Path(".dazzle/data.db"))
+    database_url: str | None = None  # PostgreSQL URL (e.g. postgresql://user:pass@host/db)
     use_database: bool = True
 
     # Authentication settings
@@ -189,6 +190,7 @@ class DNRBackendApp:
         # Override config with any explicit legacy parameters
         self.spec = spec
         self._db_path = Path(db_path) if db_path else config.db_path
+        self._database_url = config.database_url
         self._use_database = use_database if use_database is not None else config.use_database
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
         self._auth_db_path = Path(auth_db_path) if auth_db_path else config.auth_db_path
@@ -977,7 +979,12 @@ class DNRBackendApp:
 
         # Initialize database if enabled
         if self._use_database:
-            self._db_manager = DatabaseManager(self._db_path)
+            if self._database_url:
+                from dazzle_dnr_back.runtime.pg_backend import PostgresBackend
+
+                self._db_manager = PostgresBackend(self._database_url)
+            else:
+                self._db_manager = DatabaseManager(self._db_path)
 
             # Auto-migrate: creates tables and applies schema changes
             self._last_migration = auto_migrate(

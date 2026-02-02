@@ -159,16 +159,23 @@ class FilterCondition:
             relation_path=relation_path,
         )
 
-    def to_sql(self, table_alias: str | None = None) -> tuple[str, list[Any]]:
+    def to_sql(
+        self,
+        table_alias: str | None = None,
+        placeholder_style: str = "?",
+    ) -> tuple[str, list[Any]]:
         """
         Convert condition to SQL fragment and parameters.
 
         Args:
             table_alias: Optional table alias for the field
+            placeholder_style: SQL placeholder ("?" for SQLite, "%s" for Postgres)
 
         Returns:
             Tuple of (sql_fragment, parameters)
         """
+        ph = placeholder_style
+
         # Build field reference with proper quoting
         quoted_field = quote_identifier(self.field)
         field_ref = f"{table_alias}.{quoted_field}" if table_alias else quoted_field
@@ -186,47 +193,52 @@ class FilterCondition:
         elif self.operator == FilterOperator.IN:
             if not isinstance(converted_value, list | tuple):
                 converted_value = [converted_value]
-            placeholders = ", ".join("?" * len(converted_value))
+            placeholders = ", ".join(ph for _ in converted_value)
             sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.NOT_IN:
             if not isinstance(converted_value, list | tuple):
                 converted_value = [converted_value]
-            placeholders = ", ".join("?" * len(converted_value))
+            placeholders = ", ".join(ph for _ in converted_value)
             sql = OPERATOR_SQL[self.operator].format(field=field_ref, placeholders=placeholders)
             return sql, list(converted_value)
 
         elif self.operator == FilterOperator.BETWEEN:
             if not isinstance(converted_value, list | tuple) or len(converted_value) != 2:
                 raise ValueError("BETWEEN operator requires a list of two values")
-            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
+            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
+            sql = tmpl.replace("?", ph)
             return sql, list(converted_value)
 
         elif self.operator in (
             FilterOperator.CONTAINS,
             FilterOperator.ICONTAINS,
         ):
-            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
+            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
+            sql = tmpl.replace("?", ph)
             return sql, [f"%{converted_value}%"]
 
         elif self.operator in (
             FilterOperator.STARTSWITH,
             FilterOperator.ISTARTSWITH,
         ):
-            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
+            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
+            sql = tmpl.replace("?", ph)
             return sql, [f"{converted_value}%"]
 
         elif self.operator in (
             FilterOperator.ENDSWITH,
             FilterOperator.IENDSWITH,
         ):
-            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
+            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
+            sql = tmpl.replace("?", ph)
             return sql, [f"%{converted_value}"]
 
         else:
             # Standard operator
-            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
+            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
+            sql = tmpl.replace("?", ph)
             return sql, [converted_value]
 
     def _convert_value(self, value: Any) -> Any:
@@ -305,6 +317,7 @@ class QueryBuilder:
     """
 
     table_name: str
+    placeholder_style: str = "?"
     conditions: list[FilterCondition] = field(default_factory=list)
     sorts: list[SortField] = field(default_factory=list)
     page: int = 1
@@ -370,7 +383,7 @@ class QueryBuilder:
         params = []
 
         for condition in self.conditions:
-            sql, condition_params = condition.to_sql()
+            sql, condition_params = condition.to_sql(placeholder_style=self.placeholder_style)
             fragments.append(sql)
             params.extend(condition_params)
 
@@ -388,7 +401,8 @@ class QueryBuilder:
     def build_limit_offset(self) -> tuple[str, list[int]]:
         """Build LIMIT/OFFSET clause."""
         offset = (self.page - 1) * self.page_size
-        return "LIMIT ? OFFSET ?", [self.page_size, offset]
+        ph = self.placeholder_style
+        return f"LIMIT {ph} OFFSET {ph}", [self.page_size, offset]
 
     def build_select(self, count_only: bool = False) -> tuple[str, list[Any]]:
         """

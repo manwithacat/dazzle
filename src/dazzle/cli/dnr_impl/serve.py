@@ -100,6 +100,11 @@ def dnr_serve(
         "--graphql",
         help="Enable GraphQL endpoint at /graphql (requires strawberry-graphql)",
     ),
+    database_url: str = typer.Option(
+        "",
+        "--database-url",
+        help="PostgreSQL URL. Also reads DATABASE_URL env var.",
+    ),
 ) -> None:
     """
     Serve DNR app (backend API + UI with live data).
@@ -174,6 +179,15 @@ def dnr_serve(
     else:
         # CLI explicitly set - honor it
         enable_test_mode = test_mode
+
+    # Resolve DATABASE_URL from CLI flag or environment
+    if not database_url:
+        database_url = os.environ.get("DATABASE_URL", "")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    # Ensure env var is set for subcomponents that read it
+    if database_url:
+        os.environ["DATABASE_URL"] = database_url
 
     # Allocate ports based on project name (deterministic hashing)
     # This prevents collisions when running multiple DNR instances
@@ -327,7 +341,10 @@ def dnr_serve(
         typer.echo(f"Starting DNR backend for '{appspec.name}'...")
         typer.echo(f"  • {len(backend_spec.entities)} entities")
         typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
-        typer.echo(f"  • Database: {db_path}")
+        if database_url:
+            typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
+        else:
+            typer.echo(f"  • Database: {db_path}")
         if enable_test_mode:
             typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
         if graphql:
@@ -365,7 +382,10 @@ def dnr_serve(
     typer.echo(f"  • {len(backend_spec.entities)} entities")
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
-    typer.echo(f"  • Database: {db_path}")
+    if database_url:
+        typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
+    else:
+        typer.echo(f"  • Database: {db_path}")
 
     # Extract personas and scenarios for Dazzle Bar (v0.8.5)
     # Compute default routes from workspace access rules (v0.23.0)

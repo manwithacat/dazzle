@@ -72,6 +72,10 @@ dev = [
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
 ]
+# PostgreSQL database backend (v0.27.0 - Heroku deployment)
+postgres = [
+    "psycopg2-binary>=2.9",
+]
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [
     "temporalio>=1.4.0",
