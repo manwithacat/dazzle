@@ -55,19 +55,11 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     # Render each page and build surface_name → HTML mapping
     rendered_pages: dict[str, str] = {}
-    for route, ctx in page_contexts.items():
+    for _route, ctx in page_contexts.items():
         try:
             html = render_page(ctx)
-            # Map route back to surface name
-            # Routes are like /tasks, /tasks/new — find matching surface
-            for surface in appspec.surfaces:
-                sname = surface.name.replace("_", "-")
-                if sname in route or surface.name in route:
-                    rendered_pages[surface.name] = html
-                    break
-            else:
-                # Use route as key fallback
-                rendered_pages[route] = html
+            # Use view_name from PageContext — this is the surface name
+            rendered_pages[ctx.view_name] = html
         except Exception:  # nosec B112 - skip unrenderable pages gracefully
             continue
 
