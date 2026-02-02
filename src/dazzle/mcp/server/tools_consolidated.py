@@ -435,8 +435,15 @@ def get_consolidated_tools() -> list[Tool]:
         # Feedback (replaces 2 tools)
         # =====================================================================
         Tool(
-            name="feedback",
-            description="Feedback operations: add, list",
+            name="app_feedback",
+            description=(
+                "App-level feedback operations: add, list. "
+                "Record and review feedback about YOUR generated application's DSL, "
+                "surfaces, and behaviour. This is for in-project issues found during "
+                "development — NOT for reporting Dazzle platform bugs. "
+                "For Dazzle bugs or feature requests, use contribution(type='bug_fix') "
+                "or contribution(type='feature_request'), or open a GitHub issue."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -534,9 +541,18 @@ def get_consolidated_tools() -> list[Tool]:
                         ],
                         "description": "Filter by status (for list_runs)",
                     },
+                    "status_filter": {
+                        "type": "string",
+                        "enum": ["all", "covered", "partial", "uncovered"],
+                        "description": "Filter by coverage status (for coverage, default: all)",
+                    },
                     "limit": {
                         "type": "integer",
-                        "description": "Max results (for list_runs)",
+                        "description": "Max results (for list_runs, coverage; default: 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip N results for pagination (for coverage, default: 0)",
                     },
                     "type": {
                         "type": "string",
@@ -881,7 +897,12 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="user_feedback",
-            description="User feedback operations: list, get, update, summary. Monitor feedback and bug reports submitted via Dazzle Bar.",
+            description=(
+                "End-user feedback operations: list, get, update, summary. "
+                "Monitor feedback and bug reports submitted by end-users of your app "
+                "via the Dazzle Bar UI. This is feedback FROM your app's users TO you "
+                "as the developer — not for reporting Dazzle platform issues."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {

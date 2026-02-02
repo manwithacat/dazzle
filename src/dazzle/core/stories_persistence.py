@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from .ir.stories import StoriesContainer, StorySpec, StoryStatus
 
@@ -74,6 +75,47 @@ def _find_stories_file(project_root: Path) -> Path | None:
         return seeds_file
 
     return None
+
+
+def load_story_index(project_root: Path) -> list[dict[str, Any]]:
+    """Load lightweight story summaries without full Pydantic validation.
+
+    Returns only the fields needed for coverage analysis and listing,
+    avoiding the cost of deserializing all 20+ StorySpec fields.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        List of dicts with keys: story_id, title, actor, scope, status,
+        then, unless (raw lists for coverage analysis).
+    """
+    import logging
+
+    stories_file = _find_stories_file(project_root)
+    if stories_file is None:
+        return []
+
+    try:
+        content = stories_file.read_text(encoding="utf-8")
+        data = json.loads(content)
+        raw_stories = data.get("stories", [])
+        return [
+            {
+                "story_id": s.get("story_id", ""),
+                "title": s.get("title", ""),
+                "actor": s.get("actor", ""),
+                "scope": s.get("scope", []),
+                "status": s.get("status", "draft"),
+                "then": s.get("then", []),
+                "happy_path_outcome": s.get("happy_path_outcome", []),
+                "unless": s.get("unless", []),
+            }
+            for s in raw_stories
+        ]
+    except (json.JSONDecodeError, ValueError) as e:
+        logging.getLogger(__name__).warning(f"Failed to load story index from {stories_file}: {e}")
+        return []
 
 
 def load_stories(project_root: Path) -> list[StorySpec]:

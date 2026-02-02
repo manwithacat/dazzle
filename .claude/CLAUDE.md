@@ -153,4 +153,4 @@ Use MCP tools for DSL semantics; this file for codebase conventions.
 - Experiences support basic flows only
 
 ---
-**Version**: 0.19.1 | **Python**: 3.11+ | **Status**: Production Ready
+**Version**: 0.20.0 | **Python**: 3.11+ | **Status**: Production Ready

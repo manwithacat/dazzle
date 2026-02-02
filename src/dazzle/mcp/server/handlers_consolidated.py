@@ -1084,7 +1084,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "test_design": handle_test_design,
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,
-    "feedback": handle_feedback,
+    "app_feedback": handle_feedback,
     "process": handle_process,
     "dsl_test": handle_dsl_test,
     "e2e_test": handle_e2e_test,

@@ -178,7 +178,7 @@ class TestStoriesCoverage:
                 return_value=mock_app_spec_no_stories,
             ),
             patch(
-                "dazzle.core.stories_persistence.load_stories",
+                "dazzle.core.stories_persistence.load_story_index",
                 return_value=[],
             ),
         ):
@@ -187,6 +187,41 @@ class TestStoriesCoverage:
 
         assert "error" in data
         assert "No stories found" in data["error"]
+
+    def test_coverage_pagination(
+        self, mock_app_spec_with_coverage: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test coverage pagination returns subset and has_more flag."""
+        from dazzle.mcp.server.handlers.process import stories_coverage_handler
+
+        with patch(
+            "dazzle.mcp.server.handlers.process._load_app_spec",
+            return_value=mock_app_spec_with_coverage,
+        ):
+            result = stories_coverage_handler(tmp_path, {"limit": 1, "offset": 0})
+            data = json.loads(result)
+
+        assert data["total_stories"] == 2
+        assert data["showing"] == 1
+        assert data["has_more"] is True
+        assert len(data["stories"]) == 1
+
+    def test_coverage_status_filter(
+        self, mock_app_spec_with_coverage: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test coverage filtered to uncovered stories only."""
+        from dazzle.mcp.server.handlers.process import stories_coverage_handler
+
+        with patch(
+            "dazzle.mcp.server.handlers.process._load_app_spec",
+            return_value=mock_app_spec_with_coverage,
+        ):
+            result = stories_coverage_handler(tmp_path, {"status_filter": "uncovered"})
+            data = json.loads(result)
+
+        assert data["total_stories"] == 2  # total is always full count
+        for story in data["stories"]:
+            assert story["status"] == "uncovered"
 
 
 class TestProposeProcesses:

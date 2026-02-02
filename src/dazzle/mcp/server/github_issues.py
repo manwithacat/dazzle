@@ -1,8 +1,15 @@
-"""Helper for creating GitHub issues via the `gh` CLI."""
+"""Helper for creating GitHub issues via the `gh` CLI.
+
+Supports three authentication methods:
+1. Interactive: ``gh auth login`` (for human users)
+2. Token env var: ``GITHUB_TOKEN`` or ``GH_TOKEN`` (for CI/agents)
+3. Token pipe: ``echo $TOKEN | gh auth login --with-token`` (one-time setup)
+"""
 
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import subprocess
 from typing import Any
@@ -24,8 +31,21 @@ def _find_gh() -> str | None:
     return None
 
 
+def _has_token_env() -> bool:
+    """Check if a GitHub token is available via environment variables.
+
+    The ``gh`` CLI automatically uses ``GITHUB_TOKEN`` or ``GH_TOKEN``
+    when present, so explicit ``gh auth login`` is not required.
+    """
+    return bool(os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"))
+
+
 def _gh_available() -> bool:
-    """Check whether `gh` CLI is installed and authenticated.
+    """Check whether ``gh`` CLI is installed and authenticated.
+
+    Checks in order:
+    1. Token env vars (GITHUB_TOKEN / GH_TOKEN) — no subprocess needed
+    2. ``gh auth status`` — validates interactive/stored auth
 
     Not cached — a cached False would be permanently sticky if the first
     call runs before the user authenticates or in a restricted environment.
@@ -34,6 +54,11 @@ def _gh_available() -> bool:
     if gh is None:
         logger.debug("gh CLI not found on PATH")
         return False
+
+    # Fast path: token env var means gh will authenticate automatically
+    if _has_token_env():
+        return True
+
     try:
         result = subprocess.run(
             [gh, "auth", "status"],
@@ -42,7 +67,11 @@ def _gh_available() -> bool:
             timeout=10,
         )
         if result.returncode != 0:
-            logger.debug("gh auth status failed (rc=%d): %s", result.returncode, result.stderr)
+            logger.debug(
+                "gh auth status failed (rc=%d): %s",
+                result.returncode,
+                result.stderr,
+            )
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
         logger.debug("gh auth status error: %s", exc)
@@ -106,30 +135,44 @@ def _fallback(title: str, body: str, repo: str) -> dict[str, Any]:
     else:
         reason = (
             "GitHub CLI is installed but not authenticated. "
-            "Run `gh auth login` to authenticate, then retry."
+            "For interactive use, run `gh auth login`. "
+            "For CI/agent environments, set the GITHUB_TOKEN environment variable "
+            "or run: echo $YOUR_TOKEN | gh auth login --with-token"
         )
     return {
         "fallback": True,
         "manual_url": manual_url,
         "title": title,
         "body": body,
-        "message": f"{reason} Or create the issue manually at {manual_url}",
+        "message": f"{reason}. Or create the issue manually at {manual_url}",
     }
 
 
 def gh_auth_guidance() -> dict[str, Any]:
     """Return structured guidance for authenticating the GitHub CLI.
 
-    Intended for LLM agents to relay instructions to users.
+    Provides context-appropriate instructions: interactive auth for humans,
+    token-based auth for CI/agent environments where interactive prompts
+    are not available.
     """
     gh = _find_gh()
     installed = gh is not None
-    authenticated = _gh_available() if installed else False
+    has_token = _has_token_env()
+    authenticated = has_token or (_gh_available() if installed else False)
     steps: list[str] = []
+
     if not installed:
         steps.append("Install the GitHub CLI: https://cli.github.com/")
     if not authenticated:
-        steps.append("Run `gh auth login` and follow the prompts.")
+        steps.extend(
+            [
+                "Option A (interactive): Run `gh auth login` and follow the prompts.",
+                (
+                    "Option B (token/CI/agent): Set GITHUB_TOKEN as an environment "
+                    "variable, or run: echo $YOUR_TOKEN | gh auth login --with-token"
+                ),
+            ]
+        )
     steps.append(
         "Once authenticated, use `contribution(operation='create', type='bug_fix')` "
         "or `gh issue create --repo manwithacat/dazzle` to file issues."
@@ -137,5 +180,6 @@ def gh_auth_guidance() -> dict[str, Any]:
     return {
         "installed": installed,
         "authenticated": authenticated,
+        "has_token_env": has_token,
         "steps": steps,
     }

@@ -104,6 +104,11 @@ def create_handler(args: dict[str, Any]) -> str:
     if contrib_type not in valid_types:
         return json.dumps({"error": f"Invalid type: {contrib_type}. Valid types: {valid_types}"})
 
+    # Pre-check GitHub auth before doing expensive generation work
+    from dazzle.mcp.server.github_issues import gh_auth_guidance
+
+    gh_status = gh_auth_guidance()
+
     # Generate contribution based on type
     if contrib_type == "api_pack":
         result = _generate_api_pack(title, description, content, output_dir)
@@ -118,24 +123,33 @@ def create_handler(args: dict[str, Any]) -> str:
     else:
         return json.dumps({"error": f"Unhandled type: {contrib_type}"})
 
-    # Attempt to create a GitHub issue
-    from dazzle.mcp.server.github_issues import create_github_issue
+    # Attempt to create a GitHub issue (only if authenticated)
+    if gh_status["authenticated"]:
+        from dazzle.mcp.server.github_issues import create_github_issue
 
-    issue_body = result.get("markdown", "")
-    if not issue_body and "files" in result:
-        # For api_pack, use the markdown file content
-        for fname, fcontent in result["files"].items():
-            if fname.endswith(".md"):
-                issue_body = fcontent
-                break
+        issue_body = result.get("markdown", "")
+        if not issue_body and "files" in result:
+            for fname, fcontent in result["files"].items():
+                if fname.endswith(".md"):
+                    issue_body = fcontent
+                    break
 
-    if issue_body:
-        github_issue = create_github_issue(
-            title=f"[Contribution] {title}",
-            body=issue_body,
-            labels=["contribution", contrib_type.replace("_", "-")],
-        )
-        result["github_issue"] = github_issue
+        if issue_body:
+            github_issue = create_github_issue(
+                title=f"[Contribution] {title}",
+                body=issue_body,
+                labels=["contribution", contrib_type.replace("_", "-")],
+            )
+            result["github_issue"] = github_issue
+    else:
+        result["github_issue"] = {
+            "fallback": True,
+            "manual_url": GITHUB_ISSUE_BASE,
+            "auth_status": gh_status,
+            "message": (
+                "GitHub CLI is not authenticated. See auth_status.steps for setup instructions."
+            ),
+        }
 
     return json.dumps(result, indent=2)
 

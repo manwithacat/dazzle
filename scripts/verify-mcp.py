@@ -122,7 +122,7 @@ async def test_tool_registration() -> bool:
             "test_design",
             "sitespec",
             "semantics",
-            "feedback",
+            "app_feedback",
             "process",
             "dsl_test",
             "e2e_test",

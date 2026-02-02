@@ -134,27 +134,40 @@ def _story_id_to_process_name(story_id: str, title: str) -> str:
 
 
 def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Analyze story coverage by processes."""
+    """Analyze story coverage by processes.
+
+    Supports pagination to keep context usage manageable for large projects.
+
+    Args (via args dict):
+        status_filter: "all" | "covered" | "partial" | "uncovered" (default: "all")
+        limit: Max stories to return (default: 50)
+        offset: Number of stories to skip (default: 0)
+    """
     try:
         app_spec = _load_app_spec(project_root)
 
+        # Use lightweight index when stories aren't in the AppSpec
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+        used_index = False
 
-        # Fall back to persisted stories from .dazzle/stories/stories.json
         if not stories:
-            from dazzle.core.stories_persistence import load_stories
+            from dazzle.core.stories_persistence import load_story_index
 
-            stories = load_stories(project_root)
+            story_index = load_story_index(project_root)
+            used_index = bool(story_index)
+
+            if not used_index:
+                return json.dumps(
+                    {
+                        "error": "No stories found in project",
+                        "hint": (
+                            "Use propose_stories_from_dsl to generate "
+                            "stories, or define them in DSL."
+                        ),
+                    }
+                )
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
-
-        if not stories:
-            return json.dumps(
-                {
-                    "error": "No stories found in project",
-                    "hint": "Use propose_stories_from_dsl to generate stories, or define them in DSL.",
-                }
-            )
 
         # Build implements mapping: story_id -> [process_names]
         implements_map: dict[str, list[str]] = {}
@@ -167,16 +180,30 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         partial_count = 0
         uncovered_count = 0
 
-        for story in stories:
-            implementing = implements_map.get(story.story_id, [])
+        # Iterate using lightweight index or full stories
+        story_index_list: list[dict[str, Any]] = (
+            story_index if used_index else []  # noqa: F821
+        )
+        items: list[Any] = stories if stories else story_index_list
+        for item in items:
+            if used_index:
+                sid = item["story_id"]
+                title = item["title"]
+            else:
+                sid = item.story_id
+                title = item.title
+
+            implementing = implements_map.get(sid, [])
 
             if not implementing:
                 status: Literal["covered", "partial", "uncovered"] = "uncovered"
                 uncovered_count += 1
                 missing = ["No implementing process"]
             else:
-                # Check if all 'then' outcomes are addressed by process steps
-                missing = _find_missing_aspects(story, processes, implementing)
+                if used_index:
+                    missing = _find_missing_aspects_from_index(item, processes, implementing)
+                else:
+                    missing = _find_missing_aspects(item, processes, implementing)
                 if missing:
                     status = "partial"
                     partial_count += 1
@@ -186,37 +213,50 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
 
             coverage_results.append(
                 StoryCoverage(
-                    story_id=story.story_id,
-                    title=story.title,
+                    story_id=sid,
+                    title=title,
                     status=status,
                     implementing_processes=implementing,
                     missing_aspects=missing,
                 )
             )
 
-        total = len(stories)
+        total = len(items)
         coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
 
-        report = CoverageReport(
-            total_stories=total,
-            covered=covered_count,
-            partial=partial_count,
-            uncovered=uncovered_count,
-            coverage_percent=round(coverage_percent, 1),
-            stories=coverage_results,
-        )
+        # Apply status filter
+        status_filter = args.get("status_filter", "all")
+        if status_filter != "all":
+            coverage_results = [r for r in coverage_results if r.status == status_filter]
 
-        return json.dumps(
-            {
-                "total_stories": report.total_stories,
-                "covered": report.covered,
-                "partial": report.partial,
-                "uncovered": report.uncovered,
-                "coverage_percent": report.coverage_percent,
-                "stories": [asdict(s) for s in report.stories],
-            },
-            indent=2,
-        )
+        # Apply pagination
+        limit = args.get("limit", 50)
+        offset = args.get("offset", 0)
+        page = coverage_results[offset : offset + limit]
+        has_more = (offset + limit) < len(coverage_results)
+
+        result: dict[str, Any] = {
+            "total_stories": total,
+            "covered": covered_count,
+            "partial": partial_count,
+            "uncovered": uncovered_count,
+            "coverage_percent": round(coverage_percent, 1),
+            "showing": len(page),
+            "offset": offset,
+            "has_more": has_more,
+            "stories": [asdict(s) for s in page],
+        }
+
+        if has_more:
+            next_offset = offset + limit
+            result["guidance"] = (
+                f"Showing {len(page)} of {len(coverage_results)} stories "
+                f"(filter: {status_filter}). "
+                f"Use process(operation='coverage', offset={next_offset}) "
+                f"for the next page."
+            )
+
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
@@ -265,6 +305,50 @@ def _find_missing_aspects(
         matched = any(any(word in step for word in meaningful_words) for step in all_steps)
         if not matched:
             missing.append(f"Exception: {exception.condition}")
+
+    return missing
+
+
+def _find_missing_aspects_from_index(
+    story_dict: dict[str, Any],
+    processes: list[ProcessSpec],
+    implementing: list[str],
+) -> list[str]:
+    """Like _find_missing_aspects but works with lightweight story dicts."""
+    missing: list[str] = []
+
+    all_steps: list[str] = []
+    for proc_name in implementing:
+        proc = next((p for p in processes if p.name == proc_name), None)
+        if proc:
+            for step in proc.steps:
+                all_steps.append(step.name.lower())
+                for parallel_step in step.parallel_steps:
+                    all_steps.append(parallel_step.name.lower())
+
+    # Extract then outcomes from raw dict
+    then_outcomes: list[str] = []
+    raw_then = story_dict.get("then", [])
+    if raw_then:
+        then_outcomes = [c["expression"] if isinstance(c, dict) else str(c) for c in raw_then]
+    elif story_dict.get("happy_path_outcome"):
+        then_outcomes = story_dict["happy_path_outcome"]
+
+    for outcome in then_outcomes:
+        outcome_words = set(outcome.lower().split())
+        meaningful_words = {w for w in outcome_words if len(w) > 3}
+        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
+        if not matched:
+            missing.append(outcome)
+
+    # Check unless exceptions from raw dict
+    for exception in story_dict.get("unless", []):
+        condition = exception["condition"] if isinstance(exception, dict) else str(exception)
+        unless_words = set(condition.lower().split())
+        meaningful_words = {w for w in unless_words if len(w) > 3}
+        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
+        if not matched:
+            missing.append(f"Exception: {condition}")
 
     return missing
 
