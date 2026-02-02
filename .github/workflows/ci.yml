@@ -181,7 +181,7 @@ jobs:
         python -m dazzle --help
         python -m dazzle --version
 
-  dnr-e2e:
+  runtime-e2e:
     runs-on: ubuntu-latest
     needs: [python-tests, lint, security-tests]
 
@@ -209,12 +209,12 @@ jobs:
 
     - name: Run DNR E2E tests (new)
       run: |
-        pytest tests/e2e/test_dnr_serve.py -v --timeout=120
+        pytest tests/e2e/test_serve.py -v --timeout=120
       timeout-minutes: 5
 
     - name: Run DNR E2E tests (integration)
       run: |
-        pytest tests/integration/test_dnr_e2e.py -v -m e2e --timeout=120
+        pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=120
       timeout-minutes: 10
 
   # Matrix-based E2E testing for example projects
@@ -272,7 +272,7 @@ jobs:
     - name: Start DNR server in test mode
       run: |
         cd examples/${{ matrix.example }}
-        python -m dazzle dnr serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dnr-server.log 2>&1 &
+        python -m dazzle serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dazzle-server.log 2>&1 &
         SERVER_PID=$!
         echo "Server PID: $SERVER_PID"
         for i in {1..45}; do
@@ -282,13 +282,13 @@ jobs:
           fi
           if ! kill -0 $SERVER_PID 2>/dev/null; then
             echo "Server process died. Logs:"
-            cat /tmp/dnr-server.log
+            cat /tmp/dazzle-server.log
             exit 1
           fi
           echo "Waiting for server... ($i/45)"
           sleep 2
         done
-        curl -f http://localhost:8000/health || { echo "Health check failed. Logs:"; cat /tmp/dnr-server.log; exit 1; }
+        curl -f http://localhost:8000/health || { echo "Health check failed. Logs:"; cat /tmp/dazzle-server.log; exit 1; }
       timeout-minutes: 3
 
     - name: Run E2E tests
@@ -310,7 +310,7 @@ jobs:
     - name: Cleanup
       if: always()
       run: |
-        pkill -f "dazzle dnr serve" || true
+        pkill -f "dazzle serve" || true
         # Stop any Docker containers that may have been started
         docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
         docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
@@ -370,7 +370,7 @@ jobs:
     - name: Start server and run tests
       run: |
         cd examples/${{ matrix.example }}
-        python -m dazzle dnr serve --test-mode --local &
+        python -m dazzle serve --test-mode --local &
         sleep 5
         # P1/P2 examples - test failures are informational only
         # Use --no-auto-server since we started the server above
@@ -381,7 +381,7 @@ jobs:
       if: always()
       run: |
         # Kill local server process
-        pkill -f "dazzle dnr serve" || true
+        pkill -f "dazzle serve" || true
         # Stop any Docker containers
         docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
         docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true

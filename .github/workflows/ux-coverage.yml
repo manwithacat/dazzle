@@ -97,10 +97,10 @@ jobs:
           # Auto-generated Docker Compose for E2E testing: ${{ matrix.example }}
 
           services:
-            dnr-app:
+            dazzle-app:
               build:
                 context: .
-                dockerfile: tests/e2e/docker/Dockerfile.dnr
+                dockerfile: tests/e2e/docker/Dockerfile.e2e
                 args:
                   PROJECT_PATH: examples/${{ matrix.example }}
               container_name: dazzle-e2e-${{ matrix.example }}
@@ -125,11 +125,11 @@ jobs:
               image: mcr.microsoft.com/playwright/python:v1.55.0-noble
               container_name: dazzle-e2e-playwright-${{ matrix.example }}
               depends_on:
-                dnr-app:
+                dazzle-app:
                   condition: service_healthy
               environment:
-                - DNR_BASE_URL=http://dnr-app:8000
-                - DNR_UI_URL=http://dnr-app:3000
+                - DAZZLE_BASE_URL=http://dazzle-app:8000
+                - DAZZLE_UI_URL=http://dazzle-app:3000
                 - SCREENSHOT_DIR=/screenshots
                 - EXAMPLE_NAME=${{ matrix.example }}
                 - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -149,11 +149,11 @@ jobs:
 
       - name: Build DNR image
         run: |
-          docker compose -f docker-compose.${{ matrix.example }}.yaml build dnr-app
+          docker compose -f docker-compose.${{ matrix.example }}.yaml build dazzle-app
 
       - name: Start services
         run: |
-          docker compose -f docker-compose.${{ matrix.example }}.yaml up -d dnr-app
+          docker compose -f docker-compose.${{ matrix.example }}.yaml up -d dazzle-app
 
       - name: Wait for health check
         run: |
@@ -165,7 +165,7 @@ jobs:
             fi
             if [ $i -eq 90 ]; then
               echo "Timeout waiting for DNR app"
-              docker compose -f docker-compose.${{ matrix.example }}.yaml logs dnr-app
+              docker compose -f docker-compose.${{ matrix.example }}.yaml logs dazzle-app
               exit 1
             fi
             sleep 1
