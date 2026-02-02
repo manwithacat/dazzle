@@ -380,7 +380,7 @@ def determine_scope(path: Path) -> str:
 
     if parts[0] == "src":
         if len(parts) > 1:
-            return parts[1]  # e.g., "dazzle", "dazzle_dnr_back"
+            return parts[1]  # e.g., "dazzle", "dazzle_back"
     return "unknown"
 
 
@@ -585,8 +585,8 @@ Auto-generated reference documentation for the Dazzle codebase.
 
     module_descriptions = {
         "dazzle": "Core DSL parser, IR, validator, and CLI",
-        "dazzle_dnr_back": "FastAPI backend runtime and services",
-        "dazzle_dnr_ui": "JavaScript UI runtime and components",
+        "dazzle_back": "FastAPI backend runtime and services",
+        "dazzle_ui": "JavaScript UI runtime and components",
     }
 
     for scope in sorted(by_scope.keys()):
@@ -601,8 +601,8 @@ Auto-generated reference documentation for the Dazzle codebase.
 - **IR Types**: [dazzle/core/ir/](modules/dazzle.md#coreir)
 - **Validator**: [dazzle/core/validator.py](files/src/dazzle/core/validator.py.md)
 - **CLI**: [dazzle/cli/](modules/dazzle.md#cli)
-- **Backend Runtime**: [dazzle_dnr_back/runtime/](modules/dazzle_dnr_back.md#runtime)
-- **UI Components**: [dazzle_dnr_ui/runtime/](modules/dazzle_dnr_ui.md#runtimestaticjs)
+- **Backend Runtime**: [dazzle_back/runtime/](modules/dazzle_back.md#runtime)
+- **UI Components**: [dazzle_ui/runtime/](modules/dazzle_ui.md#runtimestaticjs)
 """
 
     return content, module_pages
