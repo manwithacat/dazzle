@@ -14,7 +14,7 @@ Design Documents:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -80,7 +80,7 @@ class MessageSpec(BaseModel):
 # ============================================================================
 
 
-class ChannelKind(str, Enum):
+class ChannelKind(StrEnum):
     """Types of messaging channels."""
 
     EMAIL = "email"  # Human-readable communication (SMTP, API)
@@ -88,14 +88,14 @@ class ChannelKind(str, Enum):
     STREAM = "stream"  # Event sourcing, ordered log (replay support)
 
 
-class DeliveryMode(str, Enum):
+class DeliveryMode(StrEnum):
     """Message delivery modes."""
 
     OUTBOX = "outbox"  # Transactional: write to outbox in same transaction
     DIRECT = "direct"  # Fire-and-forget: no transactional guarantee
 
 
-class ThrottleScope(str, Enum):
+class ThrottleScope(StrEnum):
     """Scope for business throttling."""
 
     PER_RECIPIENT = "per_recipient"  # Limit per email/user
@@ -103,7 +103,7 @@ class ThrottleScope(str, Enum):
     PER_CHANNEL = "per_channel"  # Limit across entire channel
 
 
-class ThrottleExceedAction(str, Enum):
+class ThrottleExceedAction(StrEnum):
     """Action when throttle limit exceeded."""
 
     DROP = "drop"  # Silently drop the message
@@ -147,7 +147,7 @@ class ThrottleSpec(BaseModel):
 # ============================================================================
 
 
-class EntityEvent(str, Enum):
+class EntityEvent(StrEnum):
     """Entity lifecycle events that can trigger sends."""
 
     CREATED = "created"
@@ -155,7 +155,7 @@ class EntityEvent(str, Enum):
     DELETED = "deleted"
 
 
-class SendTriggerKind(str, Enum):
+class SendTriggerKind(StrEnum):
     """Types of send triggers."""
 
     ENTITY_EVENT = "entity_event"  # When entity is created/updated/deleted
@@ -272,7 +272,7 @@ class SendOperationSpec(BaseModel):
 # ============================================================================
 
 
-class MatchPatternKind(str, Enum):
+class MatchPatternKind(StrEnum):
     """Types of match patterns for filtering inbound messages."""
 
     EXACT = "exact"  # Exact string match
@@ -305,7 +305,7 @@ class MatchPatternSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ReceiveActionKind(str, Enum):
+class ReceiveActionKind(StrEnum):
     """Actions to perform when a message is received."""
 
     CREATE = "create"  # Create a new entity
@@ -503,7 +503,7 @@ class ChannelSpec(BaseModel):
 # ============================================================================
 
 
-class AssetKind(str, Enum):
+class AssetKind(StrEnum):
     """Types of static assets."""
 
     FILE = "file"  # Generic file (PDF, etc.)
@@ -535,7 +535,7 @@ class AssetSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class DocumentFormat(str, Enum):
+class DocumentFormat(StrEnum):
     """Output formats for generated documents."""
 
     PDF = "pdf"

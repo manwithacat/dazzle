@@ -10,7 +10,7 @@ import logging
 import os
 import shutil
 import subprocess
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ def _call_claude_cli(prompt: str, system_prompt: str | None = None) -> str:
     return result.stdout
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     """Supported LLM providers."""
 
     ANTHROPIC = "anthropic"

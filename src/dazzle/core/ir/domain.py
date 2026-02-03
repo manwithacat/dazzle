@@ -7,7 +7,7 @@ and the domain specification.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,7 @@ from .invariant import InvariantSpec
 from .state_machine import StateMachineSpec
 
 
-class ConstraintKind(str, Enum):
+class ConstraintKind(StrEnum):
     """Types of constraints that can be applied to entities."""
 
     UNIQUE = "unique"
@@ -42,7 +42,7 @@ class Constraint(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class AuthContext(str, Enum):
+class AuthContext(StrEnum):
     """Authentication context for access control rules."""
 
     ANONYMOUS = "anonymous"  # Not logged in
@@ -66,7 +66,7 @@ class VisibilityRule(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class PermissionKind(str, Enum):
+class PermissionKind(StrEnum):
     """Types of operations that can have permission rules."""
 
     CREATE = "create"

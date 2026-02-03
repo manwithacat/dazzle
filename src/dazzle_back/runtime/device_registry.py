@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class DevicePlatform(str, Enum):
+class DevicePlatform(StrEnum):
     """Supported device platforms."""
 
     IOS = "ios"

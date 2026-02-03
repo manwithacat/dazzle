@@ -4,7 +4,7 @@ Entity specification types for BackendSpec.
 Defines entities, fields, relationships, validators, and access rules.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,7 +16,7 @@ from .auth import EntityAccessSpec
 # =============================================================================
 
 
-class ScalarType(str, Enum):
+class ScalarType(StrEnum):
     """Scalar field types."""
 
     STR = "str"
@@ -150,7 +150,7 @@ RefType = FieldType  # FieldType(kind="ref", ref_entity="...")
 # =============================================================================
 
 
-class ValidatorKind(str, Enum):
+class ValidatorKind(StrEnum):
     """Types of validators."""
 
     MIN = "min"
@@ -225,7 +225,7 @@ class FieldSpec(BaseModel):
 # =============================================================================
 
 
-class RelationKind(str, Enum):
+class RelationKind(StrEnum):
     """Types of relationships between entities."""
 
     ONE_TO_MANY = "one_to_many"
@@ -234,7 +234,7 @@ class RelationKind(str, Enum):
     ONE_TO_ONE = "one_to_one"
 
 
-class OnDeleteAction(str, Enum):
+class OnDeleteAction(StrEnum):
     """Actions to take when referenced entity is deleted."""
 
     RESTRICT = "restrict"
@@ -273,7 +273,7 @@ class RelationSpec(BaseModel):
 # =============================================================================
 
 
-class TimeUnit(str, Enum):
+class TimeUnit(StrEnum):
     """Time units for auto-transition delays."""
 
     MINUTES = "minutes"
@@ -281,7 +281,7 @@ class TimeUnit(str, Enum):
     DAYS = "days"
 
 
-class TransitionTrigger(str, Enum):
+class TransitionTrigger(StrEnum):
     """How a transition can be triggered."""
 
     MANUAL = "manual"
@@ -403,7 +403,7 @@ class StateMachineSpec(BaseModel):
 # =============================================================================
 
 
-class AggregateFunctionKind(str, Enum):
+class AggregateFunctionKind(StrEnum):
     """Supported aggregate functions for computed fields."""
 
     COUNT = "count"
@@ -415,7 +415,7 @@ class AggregateFunctionKind(str, Enum):
     DAYS_SINCE = "days_since"
 
 
-class ArithmeticOperatorKind(str, Enum):
+class ArithmeticOperatorKind(StrEnum):
     """Arithmetic operators for computed expressions."""
 
     ADD = "+"
@@ -476,7 +476,7 @@ ComputedExprSpec.model_rebuild()
 # =============================================================================
 
 
-class InvariantComparisonKind(str, Enum):
+class InvariantComparisonKind(StrEnum):
     """Comparison operators for invariant expressions."""
 
     EQ = "=="
@@ -487,14 +487,14 @@ class InvariantComparisonKind(str, Enum):
     LE = "<="
 
 
-class InvariantLogicalKind(str, Enum):
+class InvariantLogicalKind(StrEnum):
     """Logical operators for combining invariant conditions."""
 
     AND = "and"
     OR = "or"
 
 
-class DurationUnitKind(str, Enum):
+class DurationUnitKind(StrEnum):
     """Time units for duration expressions."""
 
     MINUTES = "minutes"

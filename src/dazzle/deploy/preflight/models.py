@@ -8,12 +8,12 @@ stage results, findings, and the final report.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 
-class PreflightMode(str, Enum):
+class PreflightMode(StrEnum):
     """Pre-flight execution modes."""
 
     STATIC_ONLY = "static_only"  # No AWS credentials required
@@ -21,7 +21,7 @@ class PreflightMode(str, Enum):
     SANDBOX_APPLY = "sandbox_apply"  # Deploy to sandbox, smoke test, teardown
 
 
-class StageStatus(str, Enum):
+class StageStatus(StrEnum):
     """Status of a preflight stage."""
 
     PENDING = "pending"
@@ -31,7 +31,7 @@ class StageStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class FindingSeverity(str, Enum):
+class FindingSeverity(StrEnum):
     """Severity levels for preflight findings."""
 
     INFO = "info"

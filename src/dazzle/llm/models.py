@@ -4,13 +4,13 @@ Data models for LLM-assisted spec analysis.
 These models represent the structured output from LLM analysis of natural language specs.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class QuestionPriority(str, Enum):
+class QuestionPriority(StrEnum):
     """Priority level for clarifying questions."""
 
     HIGH = "high"
@@ -18,7 +18,7 @@ class QuestionPriority(str, Enum):
     LOW = "low"
 
 
-class BusinessRuleType(str, Enum):
+class BusinessRuleType(StrEnum):
     """Type of business rule."""
 
     VALIDATION = "validation"

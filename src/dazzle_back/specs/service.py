@@ -4,7 +4,7 @@ Service specification types for BackendSpec.
 Defines domain services, operations, and business rules.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -60,7 +60,7 @@ class SchemaSpec(BaseModel):
 # =============================================================================
 
 
-class OperationKind(str, Enum):
+class OperationKind(StrEnum):
     """Types of domain operations."""
 
     CREATE = "create"
@@ -96,7 +96,7 @@ class DomainOperation(BaseModel):
 # =============================================================================
 
 
-class EffectKind(str, Enum):
+class EffectKind(StrEnum):
     """Types of side effects."""
 
     SEND_EMAIL = "send_email"
@@ -129,7 +129,7 @@ class EffectSpec(BaseModel):
 # =============================================================================
 
 
-class RuleKind(str, Enum):
+class RuleKind(StrEnum):
     """Types of business rules."""
 
     PRECONDITION = "precondition"

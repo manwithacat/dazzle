@@ -7,12 +7,12 @@ that must always hold true for an entity to be valid.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ComparisonOperator(str, Enum):
+class ComparisonOperator(StrEnum):
     """Comparison operators for invariant expressions."""
 
     EQ = "=="
@@ -23,14 +23,14 @@ class ComparisonOperator(str, Enum):
     LE = "<="
 
 
-class LogicalOperator(str, Enum):
+class LogicalOperator(StrEnum):
     """Logical operators for combining conditions."""
 
     AND = "and"
     OR = "or"
 
 
-class DurationUnit(str, Enum):
+class DurationUnit(StrEnum):
     """Time units for duration expressions."""
 
     MINUTES = "minutes"

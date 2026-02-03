@@ -20,7 +20,7 @@ import logging
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -36,7 +36,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class StreamType(str, Enum):
+class StreamType(StrEnum):
     """Available SSE stream types."""
 
     HEALTH = "health"  # System health updates

@@ -7,7 +7,7 @@ data owned by external services.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .fields import FieldSpec
 
 
-class ForeignConstraintKind(str, Enum):
+class ForeignConstraintKind(StrEnum):
     """Constraint types for foreign models."""
 
     READ_ONLY = "read_only"

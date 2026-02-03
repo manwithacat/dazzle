@@ -13,12 +13,12 @@ Temporal Mapping:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ProcessTriggerKind(str, Enum):
+class ProcessTriggerKind(StrEnum):
     """Types of events that can trigger a process."""
 
     ENTITY_EVENT = "entity_event"  # entity created/updated/deleted
@@ -30,7 +30,7 @@ class ProcessTriggerKind(str, Enum):
     PROCESS_COMPLETED = "process_completed"  # when another process completes
 
 
-class StepKind(str, Enum):
+class StepKind(StrEnum):
     """Types of process steps."""
 
     SERVICE = "service"  # Call a domain service
@@ -42,7 +42,7 @@ class StepKind(str, Enum):
     CONDITION = "condition"  # Conditional branch
 
 
-class RetryBackoff(str, Enum):
+class RetryBackoff(StrEnum):
     """Retry backoff strategies."""
 
     FIXED = "fixed"
@@ -50,7 +50,7 @@ class RetryBackoff(str, Enum):
     LINEAR = "linear"
 
 
-class OverlapPolicy(str, Enum):
+class OverlapPolicy(StrEnum):
     """Policy for handling overlapping process runs."""
 
     SKIP = "skip"  # Skip if already running
@@ -59,7 +59,7 @@ class OverlapPolicy(str, Enum):
     ALLOW = "allow"  # Allow concurrent runs
 
 
-class ParallelFailurePolicy(str, Enum):
+class ParallelFailurePolicy(StrEnum):
     """Policy for handling parallel step failures."""
 
     FAIL_FAST = "fail_fast"  # Stop all on first failure

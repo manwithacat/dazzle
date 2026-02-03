@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from .collector import MetricsCollector
 
 
-class ReportFormat(str, Enum):
+class ReportFormat(StrEnum):
     """Output format for metrics reports."""
 
     JSON = "json"

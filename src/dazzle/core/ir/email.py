@@ -11,7 +11,7 @@ Design Document: dev_docs/architecture/event_first/Dazzle-Email-Integration-Spec
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # ============================================================================
 
 
-class EmailProvider(str, Enum):
+class EmailProvider(StrEnum):
     """Email provider types."""
 
     MAILPIT = "mailpit"  # Local dev

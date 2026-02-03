@@ -7,7 +7,7 @@ attention signals, filters, and other conditional logic.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .dates import DateArithmeticExpr, DateLiteral
 
 
-class ComparisonOperator(str, Enum):
+class ComparisonOperator(StrEnum):
     """Operators for condition expressions."""
 
     EQUALS = "="
@@ -31,7 +31,7 @@ class ComparisonOperator(str, Enum):
     IS_NOT = "is not"
 
 
-class LogicalOperator(str, Enum):
+class LogicalOperator(StrEnum):
     """Logical operators for combining conditions."""
 
     AND = "and"

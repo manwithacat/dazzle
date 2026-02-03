@@ -7,7 +7,7 @@ including modes, elements, sections, actions, and access control.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .ux import UXSpec
 
 
-class SurfaceMode(str, Enum):
+class SurfaceMode(StrEnum):
     """Modes that define surface behavior."""
 
     VIEW = "view"
@@ -25,7 +25,7 @@ class SurfaceMode(str, Enum):
     CUSTOM = "custom"
 
 
-class SurfaceTrigger(str, Enum):
+class SurfaceTrigger(StrEnum):
     """Triggers for surface actions."""
 
     SUBMIT = "submit"
@@ -33,7 +33,7 @@ class SurfaceTrigger(str, Enum):
     AUTO = "auto"
 
 
-class OutcomeKind(str, Enum):
+class OutcomeKind(StrEnum):
     """Types of outcomes for surface actions."""
 
     SURFACE = "surface"

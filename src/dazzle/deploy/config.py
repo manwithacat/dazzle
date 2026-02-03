@@ -7,14 +7,14 @@ Configuration is loaded from dazzle.toml [deploy] section.
 from __future__ import annotations
 
 import tomllib
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class AWSRegion(str, Enum):
+class AWSRegion(StrEnum):
     """Supported AWS regions."""
 
     US_EAST_1 = "us-east-1"
@@ -29,7 +29,7 @@ class AWSRegion(str, Enum):
     AP_NORTHEAST_1 = "ap-northeast-1"
 
 
-class ComputeSize(str, Enum):
+class ComputeSize(StrEnum):
     """ECS Fargate task sizes."""
 
     SMALL = "small"  # 0.25 vCPU, 512MB
@@ -38,7 +38,7 @@ class ComputeSize(str, Enum):
     XLARGE = "xlarge"  # 2 vCPU, 4GB
 
 
-class DatabaseSize(str, Enum):
+class DatabaseSize(StrEnum):
     """RDS instance sizes."""
 
     MICRO = "db.t3.micro"
@@ -48,7 +48,7 @@ class DatabaseSize(str, Enum):
     SERVERLESS = "serverless"  # Aurora Serverless v2
 
 
-class TigerBeetleSize(str, Enum):
+class TigerBeetleSize(StrEnum):
     """TigerBeetle instance sizes (EC2).
 
     TigerBeetle has no managed AWS service, so we deploy on EC2.

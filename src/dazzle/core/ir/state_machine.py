@@ -17,7 +17,7 @@ Example DSL:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -27,7 +27,7 @@ SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 
 
-class TimeUnit(str, Enum):
+class TimeUnit(StrEnum):
     """Time units for auto-transition delays."""
 
     MINUTES = "minutes"
@@ -35,7 +35,7 @@ class TimeUnit(str, Enum):
     DAYS = "days"
 
 
-class TransitionTrigger(str, Enum):
+class TransitionTrigger(StrEnum):
     """How a transition can be triggered."""
 
     MANUAL = "manual"  # User explicitly triggers the transition

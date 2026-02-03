@@ -7,7 +7,7 @@ flows, fixtures, usability rules, and accessibility checks.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .tests import TestComparisonOperator
 
 
-class FlowPriority(str, Enum):
+class FlowPriority(StrEnum):
     """Flow priority levels for regression gating."""
 
     HIGH = "high"  # Must pass for PR merge
@@ -23,7 +23,7 @@ class FlowPriority(str, Enum):
     LOW = "low"  # Nice-to-have coverage
 
 
-class FlowStepKind(str, Enum):
+class FlowStepKind(StrEnum):
     """Types of flow steps in a user journey."""
 
     NAVIGATE = "navigate"  # Go to a view/URL
@@ -34,7 +34,7 @@ class FlowStepKind(str, Enum):
     SNAPSHOT = "snapshot"  # Take database/UI snapshot
 
 
-class FlowAssertionKind(str, Enum):
+class FlowAssertionKind(StrEnum):
     """Types of flow assertions."""
 
     ENTITY_EXISTS = "entity_exists"  # Entity was created/exists

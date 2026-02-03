@@ -7,13 +7,13 @@ in generating realistic, domain-specific demo data.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class FieldStrategy(str, Enum):
+class FieldStrategy(StrEnum):
     """Strategy for generating field values."""
 
     STATIC_LIST = "static_list"
@@ -22,7 +22,7 @@ class FieldStrategy(str, Enum):
     COMPANY_NAME = "company_name"
     EMAIL_FROM_NAME = "email_from_name"
     USERNAME_FROM_NAME = "username_from_name"
-    HASHED_PASSWORD_PLACEHOLDER = "hashed_password_placeholder"
+    HASHED_PASSWORD_PLACEHOLDER = "hashed_password_placeholder"  # nosec B105
     FREE_TEXT_LOREM = "free_text_lorem"
     NUMERIC_RANGE = "numeric_range"
     CURRENCY_AMOUNT = "currency_amount"

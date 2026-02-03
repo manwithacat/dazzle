@@ -10,12 +10,12 @@ Part of Issue #33: LLM Jobs as First-Class Events.
 from __future__ import annotations
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-class LLMProvider(str, Enum):
+class LLMProvider(StrEnum):
     """Supported LLM providers."""
 
     ANTHROPIC = "anthropic"
@@ -24,7 +24,7 @@ class LLMProvider(str, Enum):
     LOCAL = "local"
 
 
-class ModelTier(str, Enum):
+class ModelTier(StrEnum):
     """Model performance/cost tier classification."""
 
     FAST = "fast"  # Lower latency, lower cost
@@ -32,14 +32,14 @@ class ModelTier(str, Enum):
     QUALITY = "quality"  # Best quality, higher cost
 
 
-class RetryBackoff(str, Enum):
+class RetryBackoff(StrEnum):
     """Retry backoff strategy."""
 
     LINEAR = "linear"
     EXPONENTIAL = "exponential"
 
 
-class PIIAction(str, Enum):
+class PIIAction(StrEnum):
     """Action to take when PII is detected."""
 
     WARN = "warn"  # Log warning but proceed
@@ -47,7 +47,7 @@ class PIIAction(str, Enum):
     REJECT = "reject"  # Reject the request
 
 
-class ArtifactStore(str, Enum):
+class ArtifactStore(StrEnum):
     """Storage backend for LLM artifacts (prompts, completions)."""
 
     LOCAL = "local"  # Local filesystem
@@ -228,7 +228,7 @@ class LLMIntentSpec(BaseModel):
 # =============================================================================
 
 
-class ArtifactKind(str, Enum):
+class ArtifactKind(StrEnum):
     """Type of LLM artifact."""
 
     PROMPT = "prompt"

@@ -11,7 +11,7 @@ v0.10.3: Added ArchetypeKind for semantic archetypes (settings, tenant)
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,7 @@ from .fields import FieldSpec
 from .invariant import InvariantSpec
 
 
-class ArchetypeKind(str, Enum):
+class ArchetypeKind(StrEnum):
     """
     Kind of semantic archetype.
 

@@ -7,7 +7,7 @@ information needs into cohesive user experiences.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -15,7 +15,7 @@ from .conditions import ConditionExpr
 from .ux import SortSpec, UXSpec
 
 
-class WorkspaceAccessLevel(str, Enum):
+class WorkspaceAccessLevel(StrEnum):
     """Access levels for workspaces."""
 
     PUBLIC = "public"  # No authentication required
@@ -45,7 +45,7 @@ class WorkspaceAccessSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class DisplayMode(str, Enum):
+class DisplayMode(StrEnum):
     """Display modes for workspace regions."""
 
     LIST = "list"

@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from dazzle_back.events.envelope import EventEnvelope
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.events.multi_tenancy")
 
 
-class TenancyMode(str, Enum):
+class TenancyMode(StrEnum):
     """Multi-tenancy strategy modes."""
 
     SHARED_TOPICS = "shared_topics"

@@ -12,11 +12,11 @@ Available variants:
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class EngineVariant(str, Enum):
+class EngineVariant(StrEnum):
     """Available engine variants for layout rendering."""
 
     CLASSIC = "classic"  # Default, balanced spacing

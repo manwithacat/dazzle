@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,7 +22,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class ProcessStatus(str, Enum):
+class ProcessStatus(StrEnum):
     """Status of a process run."""
 
     PENDING = "pending"  # Created but not started
@@ -36,7 +36,7 @@ class ProcessStatus(str, Enum):
     CANCELLED = "cancelled"  # Manually cancelled
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """Status of a human task."""
 
     PENDING = "pending"  # Awaiting assignment

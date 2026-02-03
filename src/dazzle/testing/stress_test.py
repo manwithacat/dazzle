@@ -27,14 +27,14 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("dazzle.testing.stress")
 
 
-class GapCategory(str, Enum):
+class GapCategory(StrEnum):
     """Categories of generation gaps."""
 
     MISSING_FIELD = "missing_field"  # Field in testspec doesn't exist in form

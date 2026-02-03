@@ -4,7 +4,7 @@ Endpoint specification types for BackendSpec.
 Defines HTTP/RPC endpoint mappings for services.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 # =============================================================================
 
 
-class HttpMethod(str, Enum):
+class HttpMethod(StrEnum):
     """HTTP methods."""
 
     GET = "GET"

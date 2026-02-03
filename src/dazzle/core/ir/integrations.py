@@ -7,7 +7,7 @@ internal entities with external services.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -83,7 +83,7 @@ class IntegrationAction(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class SyncMode(str, Enum):
+class SyncMode(StrEnum):
     """Sync modes for integration syncs."""
 
     SCHEDULED = "scheduled"

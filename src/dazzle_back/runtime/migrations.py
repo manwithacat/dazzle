@@ -20,7 +20,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from dazzle_back.runtime.query_builder import quote_identifier
@@ -38,7 +38,7 @@ DatabaseBackend = Any  # Union[DatabaseManager, PostgresBackend]
 # =============================================================================
 
 
-class MigrationAction(str, Enum):
+class MigrationAction(StrEnum):
     """Types of migration actions."""
 
     CREATE_TABLE = "create_table"

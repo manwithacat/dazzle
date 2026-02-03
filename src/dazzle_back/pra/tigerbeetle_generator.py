@@ -12,7 +12,7 @@ import logging
 import random
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from .tigerbeetle_client import (
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TBLoadPhase(str, Enum):
+class TBLoadPhase(StrEnum):
     """Phases of TigerBeetle load generation."""
 
     WARMUP = "warmup"

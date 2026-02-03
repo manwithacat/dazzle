@@ -29,14 +29,14 @@ Usage:
 from __future__ import annotations
 
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
 
 
-class DazzleEnv(str, Enum):
+class DazzleEnv(StrEnum):
     """Runtime environment values."""
 
     DEVELOPMENT = "development"

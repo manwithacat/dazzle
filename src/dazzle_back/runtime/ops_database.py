@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -33,7 +33,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Health check status."""
 
     HEALTHY = "healthy"
@@ -42,7 +42,7 @@ class HealthStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
-class ComponentType(str, Enum):
+class ComponentType(StrEnum):
     """System component types."""
 
     DATABASE = "database"

@@ -7,12 +7,12 @@ steps, transitions, and orchestrated user journeys.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class StepKind(str, Enum):
+class StepKind(StrEnum):
     """Types of steps in an experience."""
 
     SURFACE = "surface"
@@ -20,7 +20,7 @@ class StepKind(str, Enum):
     INTEGRATION = "integration"
 
 
-class TransitionEvent(str, Enum):
+class TransitionEvent(StrEnum):
     """Commonly used transition events (for documentation/autocomplete)."""
 
     SUCCESS = "success"

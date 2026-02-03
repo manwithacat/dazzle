@@ -17,7 +17,7 @@ import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.email import (
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.email.outbound")
 
 
-class EmailSendStatus(str, Enum):
+class EmailSendStatus(StrEnum):
     """Status of an email send operation."""
 
     PENDING = "pending"

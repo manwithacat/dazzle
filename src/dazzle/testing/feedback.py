@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import subprocess
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel, Field
@@ -37,7 +37,7 @@ CORRECTIONS_FILE = "corrections.json"
 PROMPT_VERSIONS_FILE = "prompt_versions.json"
 
 
-class RegressionStatus(str, Enum):
+class RegressionStatus(StrEnum):
     """Status of a regression in the resolution workflow."""
 
     OPEN = "open"
@@ -46,7 +46,7 @@ class RegressionStatus(str, Enum):
     WONTFIX = "wontfix"
 
 
-class FailureType(str, Enum):
+class FailureType(StrEnum):
     """Types of test failures."""
 
     ASSERTION = "assertion"
@@ -59,7 +59,7 @@ class FailureType(str, Enum):
     AUTH_ERROR = "auth_error"
 
 
-class ChangeType(str, Enum):
+class ChangeType(StrEnum):
     """Types of changes that can fix a regression."""
 
     TEST_FIX = "test_fix"

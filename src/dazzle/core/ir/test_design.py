@@ -12,7 +12,7 @@ should be tested rather than HOW (implementation details).
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,7 +23,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
-class TestDesignTrigger(str, Enum):
+class TestDesignTrigger(StrEnum):
     """Triggers that initiate a test scenario."""
 
     FORM_SUBMITTED = "form_submitted"
@@ -36,7 +36,7 @@ class TestDesignTrigger(str, Enum):
     CRON_HOURLY = "cron_hourly"
 
 
-class TestDesignAction(str, Enum):
+class TestDesignAction(StrEnum):
     """High-level actions that can be performed in a test step."""
 
     LOGIN_AS = "login_as"
@@ -82,7 +82,7 @@ class TestDesignStep(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class TestDesignStatus(str, Enum):
+class TestDesignStatus(StrEnum):
     """Status of a test design in the review workflow."""
 
     PROPOSED = "proposed"  # LLM proposed, awaiting review
@@ -154,7 +154,7 @@ class TestDesignSpec(BaseModel):
     model_config = ConfigDict(frozen=False)  # Mutable for status updates
 
 
-class TestGapCategory(str, Enum):
+class TestGapCategory(StrEnum):
     """Categories of test coverage gaps."""
 
     UNTESTED_ENTITY = "untested_entity"

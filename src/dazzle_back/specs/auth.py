@@ -4,7 +4,7 @@ Authentication and authorization specification types for BackendSpec.
 Defines auth rules, tenancy, permissions, roles, and entity access rules.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -54,7 +54,7 @@ class RoleSpec(BaseModel):
 # =============================================================================
 
 
-class AuthScheme(str, Enum):
+class AuthScheme(StrEnum):
     """Authentication schemes."""
 
     BEARER = "bearer"
@@ -97,7 +97,7 @@ class AuthRuleSpec(BaseModel):
 # =============================================================================
 
 
-class TenancyStrategy(str, Enum):
+class TenancyStrategy(StrEnum):
     """Multi-tenancy strategies."""
 
     NONE = "none"
@@ -142,7 +142,7 @@ class TenancyRuleSpec(BaseModel):
 # =============================================================================
 
 
-class AccessComparisonKind(str, Enum):
+class AccessComparisonKind(StrEnum):
     """Comparison operators for access rule conditions."""
 
     EQUALS = "="
@@ -157,21 +157,21 @@ class AccessComparisonKind(str, Enum):
     IS_NOT = "is not"
 
 
-class AccessLogicalKind(str, Enum):
+class AccessLogicalKind(StrEnum):
     """Logical operators for combining access conditions."""
 
     AND = "and"
     OR = "or"
 
 
-class AccessAuthContext(str, Enum):
+class AccessAuthContext(StrEnum):
     """Authentication context for access rules."""
 
     ANONYMOUS = "anonymous"
     AUTHENTICATED = "authenticated"
 
 
-class AccessOperationKind(str, Enum):
+class AccessOperationKind(StrEnum):
     """Access operation types."""
 
     READ = "read"

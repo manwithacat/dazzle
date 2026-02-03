@@ -24,7 +24,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from threading import Lock
 from typing import TYPE_CHECKING, Any
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MetricType(str, Enum):
+class MetricType(StrEnum):
     """Types of metrics collected."""
 
     COUNTER = "counter"  # Monotonically increasing
@@ -43,7 +43,7 @@ class MetricType(str, Enum):
     SUMMARY = "summary"  # Pre-computed percentiles
 
 
-class ComponentType(str, Enum):
+class ComponentType(StrEnum):
     """System components being monitored."""
 
     EVENT_BUS = "event_bus"

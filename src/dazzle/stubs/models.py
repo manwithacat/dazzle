@@ -7,12 +7,12 @@ This is distinct from external ServiceSpec which represents third-party APIs.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class ServiceKind(str, Enum):
+class ServiceKind(StrEnum):
     """Types of domain services."""
 
     DOMAIN_LOGIC = "domain_logic"  # Business calculations, transformations
@@ -21,7 +21,7 @@ class ServiceKind(str, Enum):
     WORKFLOW = "workflow"  # Multi-step business processes
 
 
-class StubLanguage(str, Enum):
+class StubLanguage(StrEnum):
     """Supported stub implementation languages."""
 
     PYTHON = "python"

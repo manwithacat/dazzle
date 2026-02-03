@@ -7,7 +7,7 @@ and other UX-related specifications.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .conditions import ConditionExpr
 
 
-class SignalLevel(str, Enum):
+class SignalLevel(StrEnum):
     """Levels for attention signals indicating urgency."""
 
     CRITICAL = "critical"

@@ -7,7 +7,7 @@ Supports Firebase Cloud Messaging (FCM) for iOS and Android.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -45,7 +45,7 @@ class PushConfig:
 # =============================================================================
 
 
-class NotificationPriority(str, Enum):
+class NotificationPriority(StrEnum):
     """Push notification priority."""
 
     NORMAL = "normal"

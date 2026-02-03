@@ -7,12 +7,12 @@ calculated from other fields using aggregate functions and arithmetic.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AggregateFunction(str, Enum):
+class AggregateFunction(StrEnum):
     """Supported aggregate functions for computed fields."""
 
     COUNT = "count"
@@ -24,7 +24,7 @@ class AggregateFunction(str, Enum):
     DAYS_SINCE = "days_since"
 
 
-class ArithmeticOperator(str, Enum):
+class ArithmeticOperator(StrEnum):
     """Arithmetic operators for computed expressions."""
 
     ADD = "+"

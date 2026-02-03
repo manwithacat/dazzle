@@ -7,12 +7,12 @@ application security behavior.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
 
 
-class SecurityProfile(str, Enum):
+class SecurityProfile(StrEnum):
     """
     Application security profile levels.
 
