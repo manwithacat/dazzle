@@ -943,6 +943,15 @@ class DNRBackendApp:
             cors_origins=self._cors_origins,
         )
 
+        # Add metrics middleware for control plane observability (v0.27.0)
+        # Only enabled if REDIS_URL is configured
+        try:
+            from dazzle_back.runtime.metrics import add_metrics_middleware
+
+            add_metrics_middleware(self._app)
+        except ImportError:
+            pass  # Metrics module not available
+
         # Add exception handler for state machine transition errors
         @self._app.exception_handler(TransitionError)
         async def transition_error_handler(request: Request, exc: TransitionError) -> JSONResponse:
