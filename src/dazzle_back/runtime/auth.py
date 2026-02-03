@@ -113,36 +113,80 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 # =============================================================================
-# Auth Store (SQLite-based)
+# Auth Store (SQLite or PostgreSQL)
 # =============================================================================
 
 
 class AuthStore:
     """
-    Authentication store using SQLite.
+    Authentication store using SQLite or PostgreSQL.
 
     Manages users and sessions in a separate auth database.
+    Supports both SQLite (default, local dev) and PostgreSQL (production).
     """
 
-    def __init__(self, db_path: str | Path | None = None):
+    def __init__(
+        self,
+        db_path: str | Path | None = None,
+        database_url: str | None = None,
+    ):
         """
         Initialize the auth store.
 
         Args:
             db_path: Path to SQLite database (default: .dazzle/auth.db)
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
-        self.db_path = Path(db_path) if db_path else Path(".dazzle/auth.db")
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._database_url = database_url
+        self._use_postgres = bool(database_url)
+
+        if self._use_postgres:
+            # Parse and store PostgreSQL URL
+            self._pg_url = database_url
+            # Normalize Heroku's postgres:// to postgresql://
+            if self._pg_url and self._pg_url.startswith("postgres://"):
+                self._pg_url = self._pg_url.replace("postgres://", "postgresql://", 1)
+        else:
+            self.db_path = Path(db_path) if db_path else Path(".dazzle/auth.db")
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Get a database connection."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
+    def _get_connection(self):
+        """Get a database connection (SQLite or PostgreSQL)."""
+        if self._use_postgres:
+            import psycopg2
+            import psycopg2.extras
+
+            conn = psycopg2.connect(self._pg_url)
+            conn.cursor_factory = psycopg2.extras.RealDictCursor
+            return conn
+        else:
+            conn = sqlite3.connect(str(self.db_path))
+            conn.row_factory = sqlite3.Row
+            return conn
+
+    def _placeholder(self, index: int = 0) -> str:
+        """Get the parameter placeholder for the current backend."""
+        return "%s" if self._use_postgres else "?"
+
+    def _bool_to_db(self, value: bool) -> int | bool:
+        """Convert boolean to database value."""
+        return value if self._use_postgres else (1 if value else 0)
+
+    def _db_to_bool(self, value) -> bool:
+        """Convert database value to boolean."""
+        return bool(value)
 
     def _init_db(self) -> None:
         """Initialize database tables."""
+        if self._use_postgres:
+            self._init_postgres_db()
+        else:
+            self._init_sqlite_db()
+
+    def _init_sqlite_db(self) -> None:
+        """Initialize SQLite tables."""
         with self._get_connection() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -171,6 +215,75 @@ class AuthStore:
                 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
             """)
             conn.commit()
+
+    def _init_postgres_db(self) -> None:
+        """Initialize PostgreSQL tables."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    username TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    is_superuser BOOLEAN DEFAULT FALSE,
+                    roles TEXT DEFAULT '[]',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    ip_address TEXT,
+                    user_agent TEXT
+                )
+            """)
+            # Create indexes (PostgreSQL syntax)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _execute(self, query: str, params: tuple = ()) -> list[dict]:
+        """Execute a query and return results as list of dicts."""
+        # Convert ? placeholders to %s for PostgreSQL
+        if self._use_postgres:
+            query = query.replace("?", "%s")
+
+        conn = self._get_connection()
+        try:
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                if cursor.description:
+                    columns = [desc[0] for desc in cursor.description]
+                    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
+                conn.commit()
+                return []
+            else:
+                # SQLite
+                cursor = conn.execute(query, params)
+                if cursor.description:
+                    return [dict(row) for row in cursor.fetchall()]
+                conn.commit()
+                return []
+        finally:
+            conn.close()
+
+    def _execute_one(self, query: str, params: tuple = ()) -> dict | None:
+        """Execute a query and return single result."""
+        results = self._execute(query, params)
+        return results[0] if results else None
 
     # =========================================================================
     # User Operations
@@ -207,72 +320,52 @@ class AuthStore:
             roles=roles or [],
         )
 
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO users (id, email, password_hash, username, is_active,
-                                   is_superuser, roles, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    str(user.id),
-                    user.email,
-                    user.password_hash,
-                    user.username,
-                    1 if user.is_active else 0,
-                    1 if user.is_superuser else 0,
-                    json.dumps(user.roles),
-                    user.created_at.isoformat(),
-                    user.updated_at.isoformat(),
-                ),
-            )
-            conn.commit()
+        self._execute(
+            """
+            INSERT INTO users (id, email, password_hash, username, is_active,
+                               is_superuser, roles, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(user.id),
+                user.email,
+                user.password_hash,
+                user.username,
+                self._bool_to_db(user.is_active),
+                self._bool_to_db(user.is_superuser),
+                json.dumps(user.roles),
+                user.created_at.isoformat(),
+                user.updated_at.isoformat(),
+            ),
+        )
 
         return user
 
-    def get_user_by_email(self, email: str) -> UserRecord | None:
-        """Get user by email."""
+    def _row_to_user(self, row: dict) -> UserRecord:
+        """Convert a database row to UserRecord."""
         import json
 
-        with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        return UserRecord(
+            id=UUID(row["id"]),
+            email=row["email"],
+            password_hash=row["password_hash"],
+            username=row["username"],
+            is_active=self._db_to_bool(row["is_active"]),
+            is_superuser=self._db_to_bool(row["is_superuser"]),
+            roles=json.loads(row["roles"]),
+            created_at=datetime.fromisoformat(row["created_at"]),
+            updated_at=datetime.fromisoformat(row["updated_at"]),
+        )
 
-            if row:
-                return UserRecord(
-                    id=UUID(row["id"]),
-                    email=row["email"],
-                    password_hash=row["password_hash"],
-                    username=row["username"],
-                    is_active=bool(row["is_active"]),
-                    is_superuser=bool(row["is_superuser"]),
-                    roles=json.loads(row["roles"]),
-                    created_at=datetime.fromisoformat(row["created_at"]),
-                    updated_at=datetime.fromisoformat(row["updated_at"]),
-                )
-
-        return None
+    def get_user_by_email(self, email: str) -> UserRecord | None:
+        """Get user by email."""
+        row = self._execute_one("SELECT * FROM users WHERE email = ?", (email,))
+        return self._row_to_user(row) if row else None
 
     def get_user_by_id(self, user_id: UUID) -> UserRecord | None:
         """Get user by ID."""
-        import json
-
-        with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM users WHERE id = ?", (str(user_id),)).fetchone()
-
-            if row:
-                return UserRecord(
-                    id=UUID(row["id"]),
-                    email=row["email"],
-                    password_hash=row["password_hash"],
-                    username=row["username"],
-                    is_active=bool(row["is_active"]),
-                    is_superuser=bool(row["is_superuser"]),
-                    roles=json.loads(row["roles"]),
-                    created_at=datetime.fromisoformat(row["created_at"]),
-                    updated_at=datetime.fromisoformat(row["updated_at"]),
-                )
-
-        return None
+        row = self._execute_one("SELECT * FROM users WHERE id = ?", (str(user_id),))
+        return self._row_to_user(row) if row else None
 
     def authenticate(self, email: str, password: str) -> UserRecord | None:
         """
