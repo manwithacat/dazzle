@@ -451,7 +451,8 @@ class HLESSValidator:
                             ),
                             suggestion=(
                                 f"Either:\n"
-                                f"1. Clarify the invariant applies within '{stream.ordering_scope}'\n"
+                                f"1. Clarify the invariant applies within "
+                                f"'{stream.ordering_scope}'\n"
                                 f"2. Remove the ordering assumption\n"
                                 f"3. Change the partition_key if global ordering is needed"
                             ),
@@ -573,7 +574,9 @@ class HLESSValidator:
                                 f"INTENT outcome emits '{schema_name}' but schema not found "
                                 f"in target stream '{target_stream_name}'."
                             ),
-                            suggestion=f"Add schema '{schema_name}' to stream '{target_stream_name}'.",
+                            suggestion=(
+                                f"Add schema '{schema_name}' to stream '{target_stream_name}'."
+                            ),
                             stream_name=stream.name,
                             severity="error",
                         )

@@ -31,9 +31,8 @@ from .runner import (
 # Templates
 from .templates import (
     DAZZLE_BACKEND_DOCKERFILE,
-    DAZZLE_COMPOSE_TEMPLATE,
     DAZZLE_DOCKERIGNORE,
-    DAZZLE_FRONTEND_DOCKERFILE,
+    DAZZLE_SINGLE_COMPOSE_TEMPLATE,
 )
 
 # Utilities
@@ -45,8 +44,7 @@ __all__ = [
     "get_docker_version",
     # Templates
     "DAZZLE_BACKEND_DOCKERFILE",
-    "DAZZLE_FRONTEND_DOCKERFILE",
-    "DAZZLE_COMPOSE_TEMPLATE",
+    "DAZZLE_SINGLE_COMPOSE_TEMPLATE",
     "DAZZLE_DOCKERIGNORE",
     # Runner
     "DockerRunConfig",

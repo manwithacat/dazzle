@@ -325,16 +325,17 @@ def build_project_json(
         except ImportError:
             pass  # Runtime backend not installed
 
-        # Generate frontend
+        # Generate frontend UI spec (JSON only — Vite pipeline removed)
         try:
             from dazzle_ui.converters import convert_appspec_to_ui
-            from dazzle_ui.runtime.vite_generator import generate_vite_app
 
             shell_config = manifest.shell if manifest else None
             ui_spec = convert_appspec_to_ui(app_spec, shell_config=shell_config)
             frontend_dir = output_path / "frontend"
-            frontend_files = generate_vite_app(ui_spec, str(frontend_dir))
-            files_generated.extend([f"frontend/{f}" for f in frontend_files])
+            frontend_dir.mkdir(exist_ok=True)
+            spec_file = frontend_dir / "ui-spec.json"
+            spec_file.write_text(ui_spec.model_dump_json(indent=2))
+            files_generated.append("frontend/ui-spec.json")
         except ImportError:
             pass  # Runtime UI not installed
 

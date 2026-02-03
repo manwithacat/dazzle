@@ -114,7 +114,7 @@ def serve_command(
 
     Runs:
     - FastAPI backend on api-port (default 8000) with SQLite persistence
-    - Vite frontend dev server on port (default 3000)
+    - Jinja2/HTMX frontend on port (default 3000)
     - Auto-migration for schema changes
     - Interactive API docs at http://host:api-port/docs
 

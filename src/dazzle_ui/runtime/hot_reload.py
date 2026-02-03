@@ -367,7 +367,7 @@ class HotReloadManager:
         # Order matters - reload dependencies first
         modules_to_reload = [
             "dazzle_ui.runtime.site_renderer",
-            "dazzle_ui.runtime.vite_generator",
+            "dazzle_ui.runtime.css_loader",
             "dazzle_ui.runtime.template_renderer",
             "dazzle_ui.converters.template_compiler",
         ]
@@ -398,13 +398,8 @@ class HotReloadManager:
             pass
 
     def _clear_css_cache(self) -> None:
-        """Clear the CSS cache."""
-        try:
-            from dazzle_ui.runtime.vite_generator import clear_css_cache
-
-            clear_css_cache()
-        except (ImportError, AttributeError):
-            pass
+        """Clear the CSS cache (no-op — CSS is loaded fresh from disk)."""
+        pass
 
     def _notify_clients(self) -> None:
         """Notify all SSE clients to reload."""

@@ -8,8 +8,14 @@
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
     </svg>
   </button>
-  <ul x-show="open" x-transition
-      class="absolute right-0 mt-1 menu p-2 shadow bg-base-100 rounded-box w-40 z-50">
+  <ul x-show="open"
+      x-transition:enter="transition ease-out duration-150"
+      x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+      x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+      x-transition:leave="transition ease-in duration-100"
+      x-transition:leave-start="opacity-100 scale-100"
+      x-transition:leave-end="opacity-0 scale-95"
+      class="absolute right-0 mt-1 menu p-1 shadow-md bg-base-100 rounded-lg border border-base-300 w-40 z-50">
     {% for item in dropdown_items | default([]) %}
     <li>
       {% if item.href %}

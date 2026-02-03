@@ -1,9 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light"
+      x-data="{ darkMode: localStorage.getItem('dz-dark-mode') === 'true' }"
+      x-init="$watch('darkMode', val => { localStorage.setItem('dz-dark-mode', val); document.documentElement.setAttribute('data-theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val) }); if (darkMode) { document.documentElement.setAttribute('data-theme', 'dark'); document.documentElement.classList.add('dark') }">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ page_title | default("Dazzle App") }}{% endblock %}</title>
+
+  {# Inter font #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   {# DaisyUI + Tailwind CDN #}
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
@@ -46,12 +53,23 @@
 
   {% block head_extra %}{% endblock %}
 </head>
-<body class="min-h-screen bg-base-200" hx-boost="true">
+<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true">
   {% block body %}
   {% endblock %}
 
   {# Toast notifications area #}
-  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"></div>
+  <div id="dz-toast"
+       class="toast toast-end toast-top"
+       aria-live="polite"
+       x-data="{ toasts: [] }"
+       @dz-toast.window="toasts.push({...$event.detail, id: Date.now()}); setTimeout(() => toasts.shift(), 4000)"
+  >
+    <template x-for="t in toasts" :key="t.id">
+      <div class="alert" :class="'alert-' + (t.type || 'info')">
+        <span x-text="t.message"></span>
+      </div>
+    </template>
+  </div>
 
   {# Dazzle Bar (dev mode only) #}
   {% if dev_mode %}

@@ -1,0 +1,781 @@
+/* =============================================================================
+   DAZZLE Design System
+
+   Shadcn/ui-inspired design tokens and component overrides for DaisyUI.
+   Achieves visual parity with shadcn/ui while keeping DaisyUI's component classes.
+
+   Sections:
+   1. Design Tokens (CSS custom properties)
+   2. DaisyUI Theme Bridge
+   3. Typography
+   4. Global Refinements
+   5. Component Overrides
+   6. Loading States & Animations
+   7. Responsive Refinements
+
+   Note: CSS custom properties (--dz-*) are generated from ThemeSpec
+   by the theme system (v0.16.0). See src/dazzle_dnr_ui/themes/presets.py
+   ============================================================================= */
+
+/* =============================================================================
+   1. Design Tokens — Light Mode (default)
+
+   HSL-based colour palette inspired by shadcn/ui zinc theme.
+   ============================================================================= */
+
+:root {
+  /* --- Colour tokens (HSL values) --- */
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 240 5.9% 10%;
+
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 98%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
+
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  /* --- Typography --- */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'Cascadia Code', monospace;
+
+  /* --- Spacing scale --- */
+  --space-0: 0;
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* --- Border radius --- */
+  --radius-sm: 0.25rem;
+  --radius: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+
+  /* --- Shadows (zinc-tinted) --- */
+  --shadow-xs: 0 1px 2px 0 hsl(240 5.9% 10% / 0.03);
+  --shadow-sm: 0 1px 3px 0 hsl(240 5.9% 10% / 0.06), 0 1px 2px -1px hsl(240 5.9% 10% / 0.06);
+  --shadow-md: 0 4px 6px -1px hsl(240 5.9% 10% / 0.07), 0 2px 4px -2px hsl(240 5.9% 10% / 0.05);
+  --shadow-lg: 0 10px 15px -3px hsl(240 5.9% 10% / 0.07), 0 4px 6px -4px hsl(240 5.9% 10% / 0.05);
+  --shadow-xl: 0 20px 25px -5px hsl(240 5.9% 10% / 0.08), 0 8px 10px -6px hsl(240 5.9% 10% / 0.05);
+
+  /* --- Transitions --- */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* --- Legacy --dz-* tokens (backward compat) --- */
+  --dz-shadow-sm: var(--shadow-sm);
+  --dz-shadow-card: var(--shadow-sm);
+  --dz-shadow-md: var(--shadow-md);
+  --dz-shadow-lg: var(--shadow-lg);
+  --dz-transition-fast: var(--duration-fast);
+  --dz-transition-normal: var(--duration-normal);
+  --dz-accent-glow: hsl(var(--ring) / 0.15);
+}
+
+/* =============================================================================
+   1b. Dark Mode Tokens
+   ============================================================================= */
+
+.dark,
+[data-theme="dark"] {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 98%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 98%;
+
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.1);
+  --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+  --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
+  --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.25), 0 4px 6px -4px hsl(0 0% 0% / 0.15);
+  --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 8px 10px -6px hsl(0 0% 0% / 0.2);
+
+  --dz-sidebar-from: hsl(240 10% 5%);
+  --dz-sidebar-to: hsl(240 10% 8%);
+  --dz-accent-glow: hsl(var(--ring) / 0.2);
+}
+
+/* =============================================================================
+   2. DaisyUI Theme Bridge
+
+   Maps our design tokens to DaisyUI's internal CSS variables so existing
+   templates using DaisyUI classes (btn, card, badge, etc.) pick up the
+   new colour palette automatically.
+   ============================================================================= */
+
+:root,
+[data-theme="light"] {
+  /* DaisyUI base colours → zinc neutrals */
+  --b1: 0 0% 100%;         /* base-100: white */
+  --b2: 240 4.8% 95.9%;    /* base-200: zinc-100 */
+  --b3: 240 5.9% 90%;      /* base-300: zinc-200 */
+  --bc: 240 10% 3.9%;      /* base-content: zinc-950 */
+
+  /* DaisyUI semantic colours */
+  --p: 240 5.9% 10%;       /* primary: zinc-900 */
+  --pf: 240 5.2% 16%;      /* primary-focus: zinc-800 */
+  --pc: 0 0% 98%;           /* primary-content */
+
+  --s: 240 4.8% 95.9%;     /* secondary: zinc-100 */
+  --sf: 240 5.9% 90%;      /* secondary-focus: zinc-200 */
+  --sc: 240 5.9% 10%;      /* secondary-content */
+
+  --a: 240 4.8% 95.9%;     /* accent */
+  --af: 240 5.9% 90%;
+  --ac: 240 5.9% 10%;
+
+  --n: 240 5.9% 10%;       /* neutral: zinc-900 */
+  --nf: 240 3.7% 15.9%;
+  --nc: 0 0% 98%;
+
+  /* State colours */
+  --su: 142 76% 36%;       /* success: green */
+  --in: 217 91% 60%;       /* info: blue */
+  --wa: 38 92% 50%;        /* warning: amber */
+  --er: 0 84.2% 60.2%;     /* error: red */
+
+  /* DaisyUI rounded */
+  --rounded-box: var(--radius-lg);
+  --rounded-btn: var(--radius-md);
+  --rounded-badge: var(--radius-full);
+
+  /* DaisyUI animation */
+  --animation-btn: var(--duration-fast);
+  --animation-input: var(--duration-fast);
+  --btn-focus-scale: 0.98;
+}
+
+[data-theme="dark"] {
+  --b1: 240 10% 3.9%;
+  --b2: 240 3.7% 10%;
+  --b3: 240 3.7% 15.9%;
+  --bc: 0 0% 98%;
+
+  --p: 0 0% 98%;
+  --pf: 0 0% 90%;
+  --pc: 240 5.9% 10%;
+
+  --s: 240 3.7% 15.9%;
+  --sf: 240 3.7% 20%;
+  --sc: 0 0% 98%;
+
+  --a: 240 3.7% 15.9%;
+  --af: 240 3.7% 20%;
+  --ac: 0 0% 98%;
+
+  --n: 0 0% 98%;
+  --nf: 0 0% 90%;
+  --nc: 240 5.9% 10%;
+
+  --su: 142 76% 36%;
+  --in: 217 91% 60%;
+  --wa: 38 92% 50%;
+  --er: 0 62.8% 30.6%;
+}
+
+/* =============================================================================
+   3. Typography
+   ============================================================================= */
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--background));
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-mono);
+}
+
+/* =============================================================================
+   4. Global Refinements
+   ============================================================================= */
+
+/* Smooth transitions on interactive elements */
+a, button, .btn, input, select, textarea, .card, .menu li a {
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =============================================================================
+   5. Component Overrides
+   ============================================================================= */
+
+/* --- Sidebar --- */
+
+.drawer-side aside,
+.drawer-side > aside.bg-base-200,
+.drawer-side > aside.bg-base-100 {
+  background: hsl(var(--card));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.drawer-side aside > div:first-child {
+  border-bottom-color: hsl(var(--border));
+}
+
+.drawer-side aside > div:first-child a {
+  color: hsl(var(--foreground));
+  letter-spacing: -0.01em;
+}
+
+.drawer-side .menu a {
+  color: hsl(var(--muted-foreground));
+  border-radius: var(--radius-md);
+  margin-bottom: 0.125rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.drawer-side .menu a:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.drawer-side .menu a.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.drawer-side aside > div:last-child {
+  border-top-color: hsl(var(--border));
+}
+
+/* --- Navbar --- */
+
+.navbar {
+  backdrop-filter: blur(8px);
+  background: hsl(var(--background) / 0.85);
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.navbar .text-xl {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* --- Cards --- */
+
+.card {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  transition: box-shadow var(--duration-normal) var(--ease-default),
+              transform var(--duration-normal) var(--ease-default);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card[onclick]:hover,
+.card a:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-title {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.card-body {
+  gap: 0.75rem;
+}
+
+/* --- Buttons --- */
+
+.btn {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.btn:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:active {
+  transform: scale(var(--btn-focus-scale));
+}
+
+.btn:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.btn-primary:hover {
+  background: hsl(var(--primary) / 0.9);
+  border-color: hsl(var(--primary) / 0.9);
+}
+
+.btn-ghost {
+  box-shadow: none;
+  background: transparent;
+}
+
+.btn-ghost:hover {
+  box-shadow: none;
+  background: hsl(var(--accent));
+}
+
+.btn-outline {
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.btn-outline:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  border-color: hsl(var(--border));
+}
+
+/* Destructive button */
+.btn-error {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+  border-color: hsl(var(--destructive));
+}
+
+.btn-error:hover {
+  background: hsl(var(--destructive) / 0.9);
+}
+
+/* --- Form Inputs --- */
+
+.input,
+.select,
+.textarea {
+  border: 1px solid hsl(var(--input));
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition: border-color var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15);
+  outline: none;
+}
+
+.input:hover:not(:focus),
+.select:hover:not(:focus),
+.textarea:hover:not(:focus) {
+  border-color: hsl(var(--foreground) / 0.2);
+}
+
+.label-text {
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  letter-spacing: 0.01em;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* --- Tables --- */
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  background: hsl(var(--muted));
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0.75rem 1rem;
+}
+
+.table tbody tr {
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.table tbody tr:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.table tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* --- Badges --- */
+
+.badge {
+  font-weight: 500;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+  border: none;
+}
+
+.badge-primary {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.badge-success {
+  background: hsl(var(--success) / 0.1);
+  color: hsl(var(--success));
+}
+
+.badge-warning {
+  background: hsl(var(--warning) / 0.1);
+  color: hsl(var(--warning));
+}
+
+.badge-error {
+  background: hsl(var(--er) / 0.1);
+  color: hsl(var(--er));
+}
+
+.badge-info {
+  background: hsl(var(--info) / 0.1);
+  color: hsl(var(--info));
+}
+
+.badge-ghost {
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+}
+
+/* --- Stats/Metrics --- */
+
+.stats {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid hsl(var(--border));
+}
+
+.stat {
+  padding: 1.25rem 1.5rem;
+}
+
+.stat-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+.stat-value {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stat-desc {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+}
+
+/* --- Alerts --- */
+
+.alert {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+}
+
+.alert-info {
+  background: hsl(var(--info) / 0.08);
+  border-color: hsl(var(--info) / 0.2);
+  color: hsl(var(--info));
+}
+
+.alert-success {
+  background: hsl(var(--success) / 0.08);
+  border-color: hsl(var(--success) / 0.2);
+  color: hsl(var(--success));
+}
+
+.alert-warning {
+  background: hsl(var(--warning) / 0.08);
+  border-color: hsl(var(--warning) / 0.2);
+  color: hsl(var(--warning));
+}
+
+.alert-error {
+  background: hsl(var(--er) / 0.08);
+  border-color: hsl(var(--er) / 0.2);
+  color: hsl(var(--er));
+}
+
+/* --- Modal/Dialog --- */
+
+.modal-box {
+  box-shadow: var(--shadow-xl);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  background: hsl(var(--card));
+}
+
+.modal-backdrop {
+  background: hsl(var(--foreground) / 0.5);
+  backdrop-filter: blur(4px);
+}
+
+/* --- Page Header --- */
+
+.dz-page-header {
+  margin-bottom: 1.5rem;
+}
+
+.dz-page-header h1,
+.dz-page-header .text-2xl {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: hsl(var(--foreground));
+}
+
+.dz-page-header .text-sm {
+  color: hsl(var(--muted-foreground));
+}
+
+/* --- Empty State --- */
+
+.dz-empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.dz-empty-state svg {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1rem;
+  opacity: 0.4;
+}
+
+/* --- Action Bar --- */
+
+.dz-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.dz-action-bar .btn {
+  gap: 0.5rem;
+}
+
+/* --- Dropdown menus --- */
+
+.menu.shadow {
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+}
+
+/* =============================================================================
+   6. Loading States & Animations
+   ============================================================================= */
+
+.loading {
+  color: hsl(var(--primary));
+}
+
+/* Skeleton shimmer */
+.skeleton,
+.dz-skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted) / 0.6) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Spinner for HTMX loading */
+.dz-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid hsl(var(--muted));
+  border-top-color: hsl(var(--primary));
+  border-radius: 50%;
+  animation: dz-spin 0.6s linear infinite;
+}
+
+.dz-spinner--sm {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-width: 1.5px;
+}
+
+@keyframes dz-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* HTMX indicator pattern */
+.htmx-indicator {
+  display: none;
+}
+.htmx-request .htmx-indicator {
+  display: inline-block;
+}
+.htmx-request .htmx-hide-on-request {
+  display: none;
+}
+
+/* Toast slide-in */
+.toast .alert {
+  animation: dz-toast-in var(--duration-slow) var(--ease-out);
+}
+
+@keyframes dz-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* =============================================================================
+   7. Responsive Refinements
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .card-body {
+    padding: 1rem;
+  }
+
+  .table thead th,
+  .table tbody td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .stat {
+    padding: 1rem;
+  }
+}

@@ -1,8 +1,11 @@
 """
-Docker runner for DNR applications.
+Docker runner for Dazzle applications.
 
 Contains the DockerRunner class and DockerRunConfig for running
-DNR applications in Docker containers.
+Dazzle applications in Docker containers.
+
+Uses a single-container architecture: the Python backend serves both
+the API and the Jinja2/HTMX frontend via bundled CSS.
 """
 
 from __future__ import annotations
@@ -15,8 +18,7 @@ from typing import Any
 
 from .templates import (
     DAZZLE_BACKEND_DOCKERFILE,
-    DAZZLE_COMPOSE_TEMPLATE,
-    DAZZLE_FRONTEND_DOCKERFILE,
+    DAZZLE_SINGLE_COMPOSE_TEMPLATE,
 )
 from .utils import is_docker_available
 
@@ -46,28 +48,46 @@ def _copy_container_package(dest_dir: Path) -> None:
         shutil.copy2(py_file, container_dest / py_file.name)
 
 
+def _copy_css_files(dest_dir: Path) -> None:
+    """
+    Copy CSS files to the Docker build context for static serving.
+
+    Args:
+        dest_dir: Destination directory for the build context
+    """
+    from dazzle_ui.runtime.css_loader import get_bundled_css
+
+    styles_dir = dest_dir / "static" / "styles"
+    styles_dir.mkdir(parents=True, exist_ok=True)
+
+    # Write bundled CSS
+    css_content = get_bundled_css()
+    (styles_dir / "dazzle.css").write_text(css_content)
+
+
 @dataclass
 class DockerRunConfig:
-    """Configuration for running DNR in Docker."""
+    """Configuration for running Dazzle in Docker."""
 
     project_path: Path
     frontend_port: int = 3000
     api_port: int = 8000
     container_name: str | None = None
-    project_name: str | None = None  # From manifest [project].name - used for stack naming
+    project_name: str | None = None
     image_name: str = "dazzle-app"
     test_mode: bool = False
-    dev_mode: bool = True  # v0.24.0: Enable Dazzle Bar (env-aware)
-    auth_enabled: bool = True  # Enable authentication by default
+    dev_mode: bool = True
+    auth_enabled: bool = True
     rebuild: bool = False
     detach: bool = False
 
 
 class DockerRunner:
     """
-    Runs DNR applications in Docker containers.
+    Runs Dazzle applications in Docker containers.
 
-    Provides docker-first infrastructure for Dazzle development.
+    Uses a single-container architecture where the Python backend
+    serves both the API and the Jinja2/HTMX frontend.
     """
 
     def __init__(self, config: DockerRunConfig):
@@ -80,47 +100,40 @@ class DockerRunner:
         self.config = config
         self.project_path = config.project_path.resolve()
 
-        # Use project_name from manifest if provided, otherwise fall back to directory name
-        # This allows multiple instances of the same project (in different directories) to coexist
         self.project_name = config.project_name or self.project_path.name
 
-        # Derive container/stack name from project name
         if config.container_name:
             self.container_name = config.container_name
         else:
             self.container_name = f"dazzle-{self.project_name}"
 
-        # Image name includes project context
         self.image_name = f"{config.image_name}:{self.project_name}"
 
     def run(self) -> int:
         """
-        Run the DNR application in Docker containers.
-
-        Uses split containers (frontend + backend) with docker-compose.
+        Run the Dazzle application in a Docker container.
 
         Returns:
             Exit code from Docker run
         """
         print("\n" + "=" * 60)
-        print("  DAZZLE NATIVE RUNTIME (DNR) - Docker Mode")
+        print("  DAZZLE - Docker Mode")
         print("=" * 60)
         print()
 
-        # Check Docker availability
         if not is_docker_available():
             print("[Dazzle] ERROR: Docker is not available")
             print("[Dazzle] Please install Docker or use --local flag")
             return 1
 
-        return self._run_split_containers()
+        return self._run_container()
 
-    def _generate_specs(self) -> tuple[dict[str, Any], dict[str, Any], str]:
+    def _generate_specs(self) -> tuple[dict[str, Any], dict[str, Any]]:
         """
-        Generate backend spec, UI spec, and HTML from DSL files.
+        Generate backend spec and UI spec from DSL files.
 
         Returns:
-            Tuple of (backend_spec_dict, ui_spec_dict, html_content)
+            Tuple of (backend_spec_dict, ui_spec_dict)
         """
         from dazzle.core.fileset import discover_dsl_files
         from dazzle.core.linker import build_appspec
@@ -128,7 +141,6 @@ class DockerRunner:
         from dazzle.core.parser import parse_modules
         from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_ui.converters import convert_appspec_to_ui
-        from dazzle_ui.runtime import generate_single_html
 
         manifest_path = self.project_path / "dazzle.toml"
         mf = load_manifest(manifest_path)
@@ -136,35 +148,29 @@ class DockerRunner:
         modules = parse_modules(dsl_files)
         appspec = build_appspec(modules, mf.project_root)
 
-        # Convert to backend and UI specs (pass shell config from manifest)
         backend_spec = convert_appspec_to_backend(appspec)
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
-
-        # Generate HTML
-        html_content = generate_single_html(ui_spec)
 
         return (
             backend_spec.model_dump(by_alias=True),
             ui_spec.model_dump(by_alias=True),
-            html_content,
         )
 
-    def _run_split_containers(self) -> int:
+    def _run_container(self) -> int:
         """
-        Run split frontend and backend containers using docker-compose.
+        Run a single container with API + Jinja2/HTMX frontend.
 
         Returns:
             Exit code from docker compose
         """
         import json
 
-        print("[Dazzle] Setting up split containers (frontend + backend)...")
+        print("[Dazzle] Setting up container...")
         print()
 
-        # Generate specs from DSL
         print("[Dazzle] Generating specs from DSL...")
         try:
-            backend_spec, ui_spec_dict, _ = self._generate_specs()
+            backend_spec, ui_spec_dict = self._generate_specs()
         except Exception as e:
             print(f"[Dazzle] ERROR: Failed to generate specs: {e}")
             return 1
@@ -175,7 +181,7 @@ class DockerRunner:
             shutil.rmtree(build_dir)
         build_dir.mkdir(parents=True, exist_ok=True)
 
-        # Backend context
+        # Backend context (single container)
         backend_dir = build_dir / "backend"
         backend_dir.mkdir(exist_ok=True)
 
@@ -185,36 +191,16 @@ class DockerRunner:
         (backend_dir / "Dockerfile").write_text(backend_dockerfile)
         (backend_dir / "backend_spec.json").write_text(json.dumps(backend_spec, indent=2))
         (backend_dir / "ui_spec.json").write_text(json.dumps(ui_spec_dict, indent=2))
+
         # Copy container runtime package
         _copy_container_package(backend_dir)
 
-        # Frontend context - generate Vite project
-        frontend_dir = build_dir / "frontend"
-        if frontend_dir.exists():
-            shutil.rmtree(frontend_dir)
-        frontend_dir.mkdir(exist_ok=True)
+        # Copy bundled CSS for static serving
+        _copy_css_files(backend_dir)
 
-        print("[Dazzle] Generating Vite project for frontend...")
-        from dazzle_ui.runtime.vite_generator import ViteGenerator
-        from dazzle_ui.specs import UISpec
-
-        ui_spec = UISpec(**ui_spec_dict)
-        generator = ViteGenerator(
-            ui_spec,
-            frontend_port=self.config.frontend_port,
-            api_port=self.config.api_port,
-        )
-        generator.write_to_directory(frontend_dir)
-
-        # Add frontend Dockerfile
-        frontend_dockerfile = DAZZLE_FRONTEND_DOCKERFILE.format(
-            frontend_port=self.config.frontend_port,
-        )
-        (frontend_dir / "Dockerfile").write_text(frontend_dockerfile)
-
-        # Generate docker-compose.yaml
+        # Generate docker-compose.yaml (single container)
         volume_name = f"{self.container_name}-data".replace("-", "_")
-        compose_content = DAZZLE_COMPOSE_TEMPLATE.format(
+        compose_content = DAZZLE_SINGLE_COMPOSE_TEMPLATE.format(
             project_name=self.project_name,
             container_name=self.container_name,
             api_port=self.config.api_port,
@@ -234,8 +220,8 @@ class DockerRunner:
             capture_output=True,
         )
 
-        # Build and run with docker-compose
-        print("[Dazzle] Building containers...")
+        # Build and run
+        print("[Dazzle] Building container...")
         build_result = subprocess.run(
             ["docker", "compose", "-f", str(compose_file), "build"],
             cwd=str(build_dir),
@@ -245,7 +231,7 @@ class DockerRunner:
             return 1
 
         print()
-        print(f"[Dazzle] Frontend: http://localhost:{self.config.frontend_port}")
+        print(f"[Dazzle] App:      http://localhost:{self.config.frontend_port}")
         print(f"[Dazzle] API Docs: http://localhost:{self.config.api_port}/docs")
         print()
 
@@ -256,9 +242,7 @@ class DockerRunner:
                 cwd=str(build_dir),
             )
             if result.returncode == 0:
-                print(
-                    f"[Dazzle] Containers started: {self.container_name}-backend, {self.container_name}-frontend"
-                )
+                print(f"[Dazzle] Container started: {self.container_name}")
                 print(f"[Dazzle] Stop with: docker compose -f {compose_file} down")
             return result.returncode
         else:
@@ -291,27 +275,25 @@ def run_in_docker(
     frontend_port: int = 3000,
     api_port: int = 8000,
     test_mode: bool = False,
-    dev_mode: bool = True,  # v0.24.0: Enable Dazzle Bar (env-aware)
-    auth_enabled: bool = True,  # Enable authentication by default
+    dev_mode: bool = True,
+    auth_enabled: bool = True,
     rebuild: bool = False,
     detach: bool = False,
     project_name: str | None = None,
 ) -> int:
     """
-    Run a DNR application in Docker.
-
-    Uses split containers (frontend + backend) with docker-compose.
+    Run a Dazzle application in Docker.
 
     Args:
         project_path: Path to the Dazzle project
         frontend_port: Frontend server port
         api_port: Backend API port
         test_mode: Enable test endpoints
-        dev_mode: Enable Dazzle Bar (v0.24.0 - controlled by DAZZLE_ENV)
+        dev_mode: Enable Dazzle Bar
         auth_enabled: Enable authentication endpoints
         rebuild: Force rebuild of Docker image
         detach: Run in background
-        project_name: Project name from manifest (used for stack naming)
+        project_name: Project name from manifest
 
     Returns:
         Exit code
@@ -336,11 +318,11 @@ def stop_docker_container(
     project_name: str | None = None,
 ) -> bool:
     """
-    Stop a running DNR Docker container.
+    Stop a running Dazzle Docker container.
 
     Args:
         project_path: Path to the Dazzle project
-        project_name: Project name from manifest (used for container naming)
+        project_name: Project name from manifest
 
     Returns:
         True if container was stopped

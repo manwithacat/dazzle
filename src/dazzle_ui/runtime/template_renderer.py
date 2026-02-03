@@ -57,14 +57,20 @@ def _badge_filter(value: Any) -> str:
         "active": "badge-success",
         "done": "badge-success",
         "completed": "badge-success",
+        "approved": "badge-success",
         "in_progress": "badge-info",
+        "open": "badge-info",
         "review": "badge-warning",
         "pending": "badge-warning",
+        "on_hold": "badge-warning",
         "todo": "badge-ghost",
         "draft": "badge-ghost",
+        "new": "badge-ghost",
         "inactive": "badge-error",
         "overdue": "badge-error",
         "cancelled": "badge-error",
+        "rejected": "badge-error",
+        "failed": "badge-error",
     }
     css_class = badge_map.get(status, "badge-ghost")
     return css_class

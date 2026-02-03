@@ -541,9 +541,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     def _serve_css(self) -> None:
         """Serve the bundled CSS (v0.8.11, v0.16.0 theme support)."""
         try:
-            from dazzle_ui.runtime.vite_generator import _get_bundled_css
+            from dazzle_ui.runtime.css_loader import get_bundled_css
 
-            css_content = _get_bundled_css(theme_css=self.theme_css)
+            css_content = get_bundled_css(theme_css=self.theme_css)
             self._send_response(css_content, "text/css")
         except Exception as e:
             self.send_error(500, f"Failed to load CSS: {e}")
