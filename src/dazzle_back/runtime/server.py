@@ -85,6 +85,7 @@ class ServerConfig:
     # Process/workflow support (v0.24.0)
     enable_processes: bool = True  # Enable process workflow execution
     process_db_path: Path = field(default_factory=lambda: Path(".dazzle/processes.db"))
+    process_adapter_class: type | None = None  # Custom ProcessAdapter (default: LiteProcessAdapter)
 
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -243,6 +244,7 @@ class DNRBackendApp:
         # Process/workflow support (v0.24.0)
         self._enable_processes = config.enable_processes
         self._process_db_path = config.process_db_path
+        self._process_adapter_class = config.process_adapter_class  # Custom adapter class
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
         # Fragment sources from DSL source= annotations (v0.25.1)
@@ -815,8 +817,9 @@ class DNRBackendApp:
             from dazzle_back.runtime.task_routes import router as task_router
             from dazzle_back.runtime.task_routes import set_process_manager
 
-            # Create the LiteProcessAdapter
-            self._process_adapter = LiteProcessAdapter(db_path=str(self._process_db_path))
+            # Create the ProcessAdapter - use custom class if configured
+            adapter_class = self._process_adapter_class or LiteProcessAdapter
+            self._process_adapter = adapter_class(db_path=str(self._process_db_path))
 
             # Create ProcessManager
             self._process_manager = ProcessManager(adapter=self._process_adapter)
@@ -1527,13 +1530,22 @@ def create_app_from_json(json_path: str) -> FastAPI:
 # =============================================================================
 
 
-def create_app_factory() -> FastAPI:
+def create_app_factory(
+    process_adapter_class: type | None = None,
+) -> FastAPI:
     """
     ASGI factory for production deployment.
 
     Creates a FastAPI application by loading the DSL spec from the project
     directory and configuring from environment variables. Designed for use
     with Uvicorn's --factory flag.
+
+    Args:
+        process_adapter_class: Custom ProcessAdapter class (default: LiteProcessAdapter).
+            Use CeleryProcessAdapter for Heroku/Redis deployments.
+            Can also be set via DAZZLE_PROCESS_ADAPTER env var:
+            - "lite" or "sqlite" -> LiteProcessAdapter (default)
+            - "celery" or "redis" -> CeleryProcessAdapter
 
     Environment Variables:
         DAZZLE_PROJECT_ROOT: Project root directory (default: current directory)
@@ -1543,6 +1555,7 @@ def create_app_factory() -> FastAPI:
         DAZZLE_ENV: Environment name (development/staging/production)
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
         DAZZLE_ENABLE_PROCESSES: Enable/disable process workflows (default: "true")
+        DAZZLE_PROCESS_ADAPTER: Process adapter type ("lite", "celery", "temporal")
 
     Usage:
         uvicorn dazzle_back.runtime.server:create_app_factory --factory --host 0.0.0.0 --port $PORT
@@ -1649,6 +1662,30 @@ def create_app_factory() -> FastAPI:
         else []
     )
 
+    # Resolve process adapter class from parameter or environment
+    resolved_adapter_class = process_adapter_class
+    if resolved_adapter_class is None:
+        adapter_env = os.environ.get("DAZZLE_PROCESS_ADAPTER", "").lower()
+        if adapter_env in ("celery", "redis"):
+            try:
+                from dazzle.core.process import CeleryProcessAdapter
+
+                resolved_adapter_class = CeleryProcessAdapter
+                logger.info("Using CeleryProcessAdapter (DAZZLE_PROCESS_ADAPTER=celery)")
+            except ImportError:
+                logger.warning(
+                    "CeleryProcessAdapter requested but not available (install celery+redis)"
+                )
+        elif adapter_env == "temporal":
+            try:
+                from dazzle.core.process import TemporalAdapter
+
+                resolved_adapter_class = TemporalAdapter
+                logger.info("Using TemporalAdapter (DAZZLE_PROCESS_ADAPTER=temporal)")
+            except ImportError:
+                logger.warning("TemporalAdapter requested but not available (install temporalio)")
+        # Default: None means LiteProcessAdapter will be used
+
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
@@ -1671,6 +1708,7 @@ def create_app_factory() -> FastAPI:
         project_root=project_root,
         enable_processes=enable_processes,
         process_db_path=project_root / ".dazzle" / "processes.db",
+        process_adapter_class=resolved_adapter_class,
         enable_console=enable_dev_mode,
     )
 

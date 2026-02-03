@@ -81,6 +81,11 @@ postgres = [
 temporal = [
     "temporalio>=1.4.0",
 ]
+# Celery/Redis process adapter for Heroku deployments (v0.28.0)
+celery = [
+    "celery>=5.3.0",
+    "redis>=5.0",
+]
 # Messaging adapters (v0.16.0 - Issue #29)
 rabbitmq = ["aio-pika>=9.0"]
 redis = ["redis>=5.0"]

@@ -5,7 +5,8 @@ This module provides the runtime infrastructure for executing
 ProcessSpec and ScheduleSpec definitions from the DSL.
 
 Runtime Modes:
-- LiteProcessAdapter: In-process execution using SQLite/asyncio
+- LiteProcessAdapter: In-process execution using SQLite/asyncio (default)
+- CeleryProcessAdapter: Production execution using Celery/Redis (Heroku)
 - TemporalAdapter: Production execution using Temporal
 
 Factory:
@@ -61,6 +62,14 @@ __all__ = [
     "DrainWatcherConfig",
     "generate_version_id",
 ]
+
+# Optional Celery adapter (requires: pip install dazzle[celery] or celery + redis)
+try:
+    from .celery_adapter import CeleryProcessAdapter
+
+    __all__.append("CeleryProcessAdapter")
+except ImportError:
+    pass  # Celery/Redis not installed
 
 # Optional Temporal adapter (requires: pip install dazzle[temporal])
 try:
