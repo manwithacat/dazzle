@@ -147,6 +147,8 @@ namespaces = false
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
 "dazzle.examples" = ["**/*"]
+# Dazzle UI templates (Jinja2 HTML templates for site pages, components, etc.)
+"dazzle_ui.templates" = ["**/*.html", "**/*.css", "**/*.js"]
 # Dazzle UI runtime static files (JS, CSS)
 "dazzle_ui.runtime.static" = ["**/*.js", "**/*.css"]
 
