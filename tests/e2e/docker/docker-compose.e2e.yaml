@@ -1,5 +1,8 @@
 # Docker Compose stack for E2E testing
-# Runs separate frontend (Vite) and backend (FastAPI) containers + Playwright
+#
+# NOTE: This file uses a deprecated separate frontend/backend split.
+# The Dazzle runtime now serves both from a single container (Dockerfile.e2e).
+# For new tests, use run_ux_coverage.sh which generates a simpler compose file.
 #
 # Usage:
 #   docker compose -f tests/e2e/docker/docker-compose.e2e.yaml up --build
@@ -10,7 +13,7 @@ services:
   # =============================================================================
   # Backend (FastAPI API Server)
   # =============================================================================
-  dnr-backend:
+  dazzle-backend:
     build:
       context: ../../..
       dockerfile: tests/e2e/docker/Dockerfile.backend
@@ -20,9 +23,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DNR_TEST_MODE=1
-      - DNR_HOST=0.0.0.0
-      - DNR_API_PORT=8000
+      - DAZZLE_ENV=test
+      - DAZZLE_HOST=0.0.0.0
+      - DAZZLE_API_PORT=8000
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 5s
@@ -33,9 +36,11 @@ services:
       - e2e-network
 
   # =============================================================================
-  # Frontend (Vite Dev Server)
+  # Frontend (DEPRECATED - Vite Dev Server)
+  # This service uses Dockerfile.frontend which is deprecated.
+  # The Dazzle runtime now serves frontend via HTMX templates from the backend.
   # =============================================================================
-  dnr-frontend:
+  dazzle-frontend:
     build:
       context: ../../..
       dockerfile: tests/e2e/docker/Dockerfile.frontend
@@ -48,7 +53,7 @@ services:
       # Use host.docker.internal to reach backend via exposed host port
       - VITE_API_URL=http://host.docker.internal:8000
     depends_on:
-      dnr-backend:
+      dazzle-backend:
         condition: service_healthy
     # Required for host.docker.internal on Linux
     extra_hosts:
@@ -69,13 +74,13 @@ services:
     image: mcr.microsoft.com/playwright/python:v1.55.0-noble
     container_name: dazzle-e2e-playwright
     depends_on:
-      dnr-frontend:
+      dazzle-frontend:
         condition: service_healthy
-      dnr-backend:
+      dazzle-backend:
         condition: service_healthy
     environment:
-      - DNR_BASE_URL=http://dnr-backend:8000
-      - DNR_UI_URL=http://dnr-frontend:3000
+      - DAZZLE_BASE_URL=http://dazzle-backend:8000
+      - DAZZLE_UI_URL=http://dazzle-frontend:3000
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
       # Mount test files

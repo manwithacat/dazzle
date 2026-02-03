@@ -259,7 +259,7 @@ class FlowExecutor:
 
     def _login(self, persona: str) -> None:
         """Login as a persona."""
-        # In DNR test mode, auth is typically disabled
+        # In Dazzle test mode, auth is typically disabled
         # Navigate to home to ensure we're in a clean state
         self.page.goto(f"{DAZZLE_UI_URL}/")
         self.page.wait_for_load_state("networkidle")

@@ -2,7 +2,7 @@
 """
 Debug script to investigate blank screenshots in E2E tests.
 
-This script starts the DNR server and uses Playwright to navigate to routes
+This script starts the Dazzle server and uses Playwright to navigate to routes
 while capturing browser console output to diagnose rendering issues.
 
 Usage:
@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 
 
 def start_server(example_dir: Path) -> subprocess.Popen:
-    """Start the DNR server for the given example."""
+    """Start the Dazzle server for the given example."""
     env = os.environ.copy()
     proc = subprocess.Popen(
         [
@@ -52,7 +52,7 @@ def main():
     print(f"Example directory: {example_dir}")
 
     # Start the server
-    print("\n--- Starting DNR server ---")
+    print("\n--- Starting Dazzle server ---")
     server = start_server(example_dir)
 
     try:

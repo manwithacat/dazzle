@@ -1,1 +1,1 @@
-# E2E tests for DAZZLE DNR
+# E2E tests for DAZZLE runtime

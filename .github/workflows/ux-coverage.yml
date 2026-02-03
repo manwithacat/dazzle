@@ -108,10 +108,10 @@ jobs:
                 - "8000:8000"
                 - "3000:3000"
               environment:
-                - DNR_TEST_MODE=1
-                - DNR_HOST=0.0.0.0
-                - DNR_API_PORT=8000
-                - DNR_FRONTEND_PORT=3000
+                - DAZZLE_ENV=test
+                - DAZZLE_HOST=0.0.0.0
+                - DAZZLE_API_PORT=8000
+                - DAZZLE_FRONTEND_PORT=3000
               healthcheck:
                 test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
                 interval: 5s
@@ -147,7 +147,7 @@ jobs:
               driver: bridge
           EOF
 
-      - name: Build DNR image
+      - name: Build Dazzle image
         run: |
           docker compose -f docker-compose.${{ matrix.example }}.yaml build dazzle-app
 
@@ -157,14 +157,14 @@ jobs:
 
       - name: Wait for health check
         run: |
-          echo "Waiting for DNR app to be healthy..."
+          echo "Waiting for Dazzle app to be healthy..."
           for i in {1..90}; do
             if docker compose -f docker-compose.${{ matrix.example }}.yaml ps | grep -q "healthy"; then
-              echo "DNR app is healthy after ${i}s!"
+              echo "Dazzle app is healthy after ${i}s!"
               break
             fi
             if [ $i -eq 90 ]; then
-              echo "Timeout waiting for DNR app"
+              echo "Timeout waiting for Dazzle app"
               docker compose -f docker-compose.${{ matrix.example }}.yaml logs dazzle-app
               exit 1
             fi

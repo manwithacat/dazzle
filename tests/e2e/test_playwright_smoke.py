@@ -1,5 +1,5 @@
 """
-Playwright-based smoke tests for DNR examples.
+Playwright-based smoke tests for Dazzle examples.
 
 These tests run locally (no Docker required) and verify:
 1. Page loads without JavaScript errors
@@ -44,7 +44,7 @@ except ImportError:
     Page = None
     ConsoleMessage = None
 
-# Skip if DNR is not available
+# Skip if Dazzle is not available
 pytest.importorskip("dazzle_back")
 pytest.importorskip("dazzle_ui")
 
@@ -109,8 +109,8 @@ class PageDiagnostics:
         return errors
 
 
-class DNRLocalServer:
-    """Context manager for running DNR server locally for Playwright tests."""
+class DazzleLocalServer:
+    """Context manager for running Dazzle server locally for Playwright tests."""
 
     def __init__(self, example_dir: Path):
         self.example_dir = example_dir
@@ -118,7 +118,7 @@ class DNRLocalServer:
         self.api_url: str = ""
         self.ui_url: str = ""
 
-    def __enter__(self) -> DNRLocalServer:
+    def __enter__(self) -> DazzleLocalServer:
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
@@ -240,13 +240,13 @@ class TestPlaywrightSmokeSimpleTask:
     """Playwright smoke tests for simple_task example."""
 
     @pytest.fixture(scope="class")
-    def server(self, dazzle_root: Path) -> Iterator[DNRLocalServer]:
-        """Start DNR server for simple_task."""
+    def server(self, dazzle_root: Path) -> Iterator[DazzleLocalServer]:
+        """Start Dazzle server for simple_task."""
         example_dir = dazzle_root / "examples" / "simple_task"
         if not example_dir.exists():
             pytest.skip("simple_task example not found")
 
-        with DNRLocalServer(example_dir) as srv:
+        with DazzleLocalServer(example_dir) as srv:
             yield srv
 
     @pytest.fixture
@@ -276,7 +276,7 @@ class TestPlaywrightSmokeSimpleTask:
         context.close()
 
     @pytest.mark.e2e
-    def test_page_loads(self, page: Page, server: DNRLocalServer) -> None:
+    def test_page_loads(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that the main page loads."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -293,7 +293,7 @@ class TestPlaywrightSmokeSimpleTask:
         take_screenshot(page, "simple_task", "page_loads")
 
     @pytest.mark.e2e
-    def test_has_content(self, page: Page, server: DNRLocalServer) -> None:
+    def test_has_content(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that the page has meaningful content (not stuck on loading)."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -312,7 +312,7 @@ class TestPlaywrightSmokeSimpleTask:
         take_screenshot(page, "simple_task", "has_content")
 
     @pytest.mark.e2e
-    def test_create_button_exists(self, page: Page, server: DNRLocalServer) -> None:
+    def test_create_button_exists(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that a create/add button exists."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -342,7 +342,7 @@ class TestPlaywrightSmokeSimpleTask:
                 pytest.skip("No buttons found - UI may be in different state")
 
     @pytest.mark.e2e
-    def test_navigation_works(self, page: Page, server: DNRLocalServer) -> None:
+    def test_navigation_works(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that navigation elements work."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -371,13 +371,13 @@ class TestPlaywrightSmokeContactManager:
     """Playwright smoke tests for contact_manager example."""
 
     @pytest.fixture(scope="class")
-    def server(self, dazzle_root: Path) -> Iterator[DNRLocalServer]:
-        """Start DNR server for contact_manager."""
+    def server(self, dazzle_root: Path) -> Iterator[DazzleLocalServer]:
+        """Start Dazzle server for contact_manager."""
         example_dir = dazzle_root / "examples" / "contact_manager"
         if not example_dir.exists():
             pytest.skip("contact_manager example not found")
 
-        with DNRLocalServer(example_dir) as srv:
+        with DazzleLocalServer(example_dir) as srv:
             yield srv
 
     @pytest.fixture
@@ -400,7 +400,7 @@ class TestPlaywrightSmokeContactManager:
         context.close()
 
     @pytest.mark.e2e
-    def test_page_loads(self, page: Page, server: DNRLocalServer) -> None:
+    def test_page_loads(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that the main page loads."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -417,7 +417,7 @@ class TestPlaywrightSmokeContactManager:
         take_screenshot(page, "contact_manager", "page_loads")
 
     @pytest.mark.e2e
-    def test_has_content(self, page: Page, server: DNRLocalServer) -> None:
+    def test_has_content(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that the page has meaningful content."""
         page.goto(server.ui_url)
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -431,7 +431,7 @@ class TestPlaywrightSmokeContactManager:
         take_screenshot(page, "contact_manager", "has_content")
 
     @pytest.mark.e2e
-    def test_no_critical_js_errors(self, page: Page, server: DNRLocalServer) -> None:
+    def test_no_critical_js_errors(self, page: Page, server: DazzleLocalServer) -> None:
         """Test that there are no critical JavaScript errors on page load."""
         diagnostics = PageDiagnostics()
         page.on("console", lambda msg: diagnostics.add_console(msg))

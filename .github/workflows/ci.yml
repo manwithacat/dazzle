@@ -207,12 +207,12 @@ jobs:
           cd ../..
         done
 
-    - name: Run DNR E2E tests (new)
+    - name: Run E2E tests (serve)
       run: |
         pytest tests/e2e/test_serve.py -v --timeout=120
       timeout-minutes: 5
 
-    - name: Run DNR E2E tests (integration)
+    - name: Run E2E tests (integration)
       run: |
         pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=120
       timeout-minutes: 10
@@ -269,7 +269,7 @@ jobs:
         docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
         docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
 
-    - name: Start DNR server in test mode
+    - name: Start Dazzle server in test mode
       run: |
         cd examples/${{ matrix.example }}
         python -m dazzle serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dazzle-server.log 2>&1 &

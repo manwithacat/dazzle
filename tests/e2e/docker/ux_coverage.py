@@ -1,5 +1,5 @@
 """
-UX Coverage Measurement for Dazzle DNR.
+UX Coverage Measurement for the Dazzle runtime.
 
 This module provides a system for measuring "UX Coverage" - the percentage of
 UI surface area that is exercised by our E2E tests.

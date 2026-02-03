@@ -1,5 +1,5 @@
 """
-E2E tests for DNR serve functionality.
+E2E tests for Dazzle serve functionality.
 
 These tests verify that `dazzle serve` produces a working application:
 1. Server starts without errors
@@ -18,13 +18,13 @@ from pathlib import Path
 
 import pytest
 
-# Skip these tests if DNR is not available
+# Skip these tests if runtime modules are not available
 pytest.importorskip("dazzle_back")
 pytest.importorskip("dazzle_ui")
 
 
-class TestDNRServeBasics:
-    """Test that DNR serve starts and serves valid content."""
+class TestDazzleServeBasics:
+    """Test that Dazzle serve starts and serves valid content."""
 
     @pytest.fixture
     def simple_task_dir(self, tmp_path: Path) -> Path:

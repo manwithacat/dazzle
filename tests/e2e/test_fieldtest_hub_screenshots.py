@@ -37,7 +37,7 @@ except ImportError:
     sync_playwright = None
     Page = None
 
-# Skip if DNR is not available
+# Skip if Dazzle is not available
 pytest.importorskip("dazzle_back")
 pytest.importorskip("dazzle_ui")
 

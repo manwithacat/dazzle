@@ -1,5 +1,5 @@
 """
-Playwright-based UX validation tests for Dazzle DNR.
+Playwright-based UX validation tests for the Dazzle runtime.
 
 These tests are **DSL-driven** - they dynamically discover entities, routes,
 and components from the running app's UISpec and Backend API, rather than

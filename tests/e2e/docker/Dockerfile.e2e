@@ -1,12 +1,12 @@
-# DNR E2E Test Container
+# Dazzle E2E Test Container
 # Builds Dazzle from source and serves a specified project
 #
 # Build args:
 #   PROJECT_PATH: Path to the Dazzle project to serve (e.g., examples/simple_task)
 #
 # Usage:
-#   docker build -f tests/e2e/docker/Dockerfile.dnr -t dazzle-dnr-e2e --build-arg PROJECT_PATH=examples/simple_task .
-#   docker run -p 8000:8000 -e DNR_TEST_MODE=1 dazzle-dnr-e2e
+#   docker build -f tests/e2e/docker/Dockerfile.e2e -t dazzle-e2e --build-arg PROJECT_PATH=examples/simple_task .
+#   docker run -p 8000:8000 -p 3000:3000 -e DAZZLE_TEST_MODE=1 dazzle-e2e
 
 FROM python:3.11-slim
 
@@ -26,7 +26,7 @@ WORKDIR /dazzle
 COPY pyproject.toml ./
 COPY src/ ./src/
 
-# Install Dazzle in editable mode with DNR dependencies
+# Install Dazzle in editable mode with runtime dependencies
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn[standard] \
@@ -44,11 +44,11 @@ RUN mkdir -p /project/.dazzle
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV DNR_HOST=0.0.0.0
-ENV DNR_API_PORT=8000
-ENV DNR_FRONTEND_PORT=3000
-ENV DNR_DB_PATH=/project/.dazzle/data.db
-ENV DNR_TEST_MODE=0
+ENV DAZZLE_HOST=0.0.0.0
+ENV DAZZLE_API_PORT=8000
+ENV DAZZLE_FRONTEND_PORT=3000
+ENV DAZZLE_DB_PATH=/project/.dazzle/data.db
+ENV DAZZLE_ENV=test
 
 # Expose ports
 EXPOSE 8000 3000
@@ -57,7 +57,7 @@ EXPOSE 8000 3000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run DNR serve with local mode (single process, both API and UI)
+# Run Dazzle serve with local mode (single process, both API and UI)
 # Use --host 0.0.0.0 to allow external access from Docker
 # Explicit ports to override deterministic allocation (matches EXPOSE and health check)
-CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--test-mode", "--host", "0.0.0.0", "--port", "3000", "--api-port", "8000"]
+CMD ["python", "-m", "dazzle.cli", "serve", "--local", "--test-mode", "--host", "0.0.0.0", "--port", "3000", "--api-port", "8000"]

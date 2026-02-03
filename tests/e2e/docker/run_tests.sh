@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run Dazzle DNR E2E tests using Docker Compose
+# Run Dazzle E2E tests using Docker Compose
 #
 # Usage:
 #   ./run_tests.sh                  # Run all tests
@@ -74,7 +74,7 @@ if [[ "$INTERACTIVE" == "true" ]]; then
 
     log_info ""
     log_info "=== Services Running ==="
-    log_info "DNR App: http://localhost:8000 (API) / http://localhost:3000 (UI)"
+    log_info "Dazzle App: http://localhost:8000 (API) / http://localhost:3000 (UI)"
     log_info ""
     log_info "To run tests interactively:"
     log_info "  docker compose -f $COMPOSE_FILE exec playwright pytest /tests/e2e/docker/test_ux_validation.py -v"
@@ -96,15 +96,15 @@ docker compose -f "$COMPOSE_FILE" up $BUILD -d
 log_info "Waiting for services to be healthy..."
 sleep 15
 
-# Check if DNR is healthy
-if ! docker compose -f "$COMPOSE_FILE" exec -T dnr-app curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-    log_error "DNR app is not healthy!"
-    docker compose -f "$COMPOSE_FILE" logs dnr-app
+# Check if Dazzle backend is healthy
+if ! docker compose -f "$COMPOSE_FILE" exec -T dazzle-backend curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+    log_error "Dazzle app is not healthy!"
+    docker compose -f "$COMPOSE_FILE" logs dazzle-backend
     docker compose -f "$COMPOSE_FILE" down
     exit 1
 fi
 
-log_info "DNR app is healthy, running tests..."
+log_info "Dazzle app is healthy, running tests..."
 
 # Run tests
 # Pin playwright version to match Docker image (v1.55.0-noble)

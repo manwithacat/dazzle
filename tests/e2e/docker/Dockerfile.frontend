@@ -1,83 +1,14 @@
-# DNR Frontend Container - Vite dev server
-# Two-stage build: generate Vite project from DSL, then run with Node
+# DEPRECATED: This Dockerfile is no longer used.
 #
-# Build args:
-#   PROJECT_PATH: Path to the Dazzle project (e.g., examples/simple_task)
+# The Dazzle runtime now serves both frontend (HTMX/server-rendered) and backend
+# from a single container. Use Dockerfile.e2e instead.
 #
-# Usage:
-#   docker build -f tests/e2e/docker/Dockerfile.frontend -t dazzle-frontend --build-arg PROJECT_PATH=examples/simple_task .
-#   docker run -p 3000:3000 dazzle-frontend
+# This file is kept for reference only and will be removed in a future version.
+#
+# Historical context:
+# This was for a Vite-based frontend that has been replaced by HTMX templates.
+# The dazzle_dnr_ui module no longer exists.
 
-# =============================================================================
-# Stage 1: Generate Vite project from DSL
-# =============================================================================
-FROM python:3.11-slim AS generator
+FROM python:3.11-slim
 
-ARG PROJECT_PATH=examples/simple_task
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /dazzle
-
-# Copy Python source code
-COPY pyproject.toml ./
-COPY src/ ./src/
-
-# Install Dazzle
-RUN pip install --no-cache-dir -e .
-
-# Copy the project
-COPY ${PROJECT_PATH} /project
-
-WORKDIR /project
-
-# Generate Vite project from DSL
-RUN python -c "
-from pathlib import Path
-from dazzle.cli import load_manifest, discover_dsl_files, parse_modules, build_appspec
-from dazzle_dnr_ui.converters import convert_appspec_to_ui
-from dazzle_dnr_ui.runtime.vite_generator import generate_vite_app
-
-mf = load_manifest(Path('dazzle.toml'))
-dsl_files = discover_dsl_files(Path('.'), mf)
-modules = parse_modules(dsl_files)
-appspec = build_appspec(modules, mf.project_root)
-ui_spec = convert_appspec_to_ui(appspec)
-generate_vite_app(ui_spec, '/dnr-ui')
-print('Generated Vite project at /dnr-ui')
-"
-
-# =============================================================================
-# Stage 2: Run Vite dev server
-# =============================================================================
-FROM node:20-slim
-
-# Install curl for health checks
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy generated Vite project from generator stage
-COPY --from=generator /dnr-ui ./
-
-# Install npm dependencies
-RUN npm install
-
-# Environment for API proxy (can be overridden at runtime)
-# Use host.docker.internal to reach backend on host ports
-ENV VITE_API_URL=http://host.docker.internal:8000
-
-# Expose frontend port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
-
-# Run Vite dev server with host binding for Docker access
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+RUN echo "ERROR: This Dockerfile is deprecated. Use Dockerfile.e2e instead." && exit 1

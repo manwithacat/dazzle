@@ -1,4 +1,4 @@
-# DNR Backend Container - FastAPI with SQLite
+# Dazzle Backend Container - FastAPI with SQLite
 # Builds Dazzle from source and runs only the API server
 #
 # Build args:
@@ -6,7 +6,7 @@
 #
 # Usage:
 #   docker build -f tests/e2e/docker/Dockerfile.backend -t dazzle-backend --build-arg PROJECT_PATH=examples/simple_task .
-#   docker run -p 8000:8000 -e DNR_TEST_MODE=1 dazzle-backend
+#   docker run -p 8000:8000 -e DAZZLE_ENV=test dazzle-backend
 
 FROM python:3.11-slim
 
@@ -26,7 +26,7 @@ WORKDIR /dazzle
 COPY pyproject.toml ./
 COPY src/ ./src/
 
-# Install Dazzle in editable mode with DNR dependencies
+# Install Dazzle in editable mode with runtime dependencies
 RUN pip install --no-cache-dir \
     fastapi \
     uvicorn[standard] \
@@ -44,10 +44,10 @@ RUN mkdir -p /project/.dazzle
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV DNR_HOST=0.0.0.0
-ENV DNR_API_PORT=8000
-ENV DNR_DB_PATH=/project/.dazzle/data.db
-ENV DNR_TEST_MODE=0
+ENV DAZZLE_HOST=0.0.0.0
+ENV DAZZLE_API_PORT=8000
+ENV DAZZLE_DB_PATH=/project/.dazzle/data.db
+ENV DAZZLE_ENV=test
 
 # Expose API port only
 EXPOSE 8000
@@ -56,6 +56,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run DNR backend only (API server without UI)
+# Run Dazzle backend only (API server without UI)
 # Explicit port to override deterministic allocation (matches EXPOSE and health check)
-CMD ["python", "-m", "dazzle.cli", "dnr", "serve", "--local", "--backend-only", "--test-mode", "--host", "0.0.0.0", "--api-port", "8000"]
+CMD ["python", "-m", "dazzle.cli", "serve", "--local", "--backend-only", "--test-mode", "--host", "0.0.0.0", "--api-port", "8000"]
