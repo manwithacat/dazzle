@@ -275,6 +275,7 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
 def handle_semantics(arguments: dict[str, Any]) -> str:
     """Handle consolidated semantics operations."""
     from dazzle.mcp.event_first_tools import (
+        handle_extract_guards,
         handle_extract_semantics,
         handle_infer_analytics,
         handle_infer_compliance,
@@ -298,6 +299,8 @@ def handle_semantics(arguments: dict[str, Any]) -> str:
         return handle_infer_compliance(arguments, project_path)
     elif operation == "analytics":
         return handle_infer_analytics(arguments, project_path)
+    elif operation == "extract_guards":
+        return handle_extract_guards(arguments, project_path)
     else:
         return json.dumps({"error": f"Unknown semantics operation: {operation}"})
 
@@ -339,6 +342,7 @@ def handle_process(arguments: dict[str, Any]) -> str:
         list_process_runs_handler,
         list_processes_handler,
         propose_processes_handler,
+        save_processes_handler,
         stories_coverage_handler,
     )
 
@@ -350,6 +354,8 @@ def handle_process(arguments: dict[str, Any]) -> str:
 
     if operation == "propose":
         return propose_processes_handler(project_path, arguments)
+    elif operation == "save":
+        return save_processes_handler(project_path, arguments)
     elif operation == "list":
         return list_processes_handler(project_path, arguments)
     elif operation == "inspect":

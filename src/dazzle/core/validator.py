@@ -1142,4 +1142,57 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
                     f"Consider adding a persona for role-based access control."
                 )
 
+    # ---- Integration binding verification (Issue #81b) ----
+    # Check if stories reference external integrations but no API packs are declared
+    _INTEGRATION_KEYWORDS = {
+        "api",
+        "hmrc",
+        "xero",
+        "sync",
+        "webhook",
+        "stripe",
+        "twilio",
+        "sendgrid",
+        "mailgun",
+        "slack",
+        "zapier",
+        "salesforce",
+    }
+
+    stories = list(appspec.stories) if appspec.stories else []
+    if stories:
+        # Collect declared integrations and services
+        declared_integrations = {i.name.lower() for i in appspec.integrations}
+        declared_services = {s.name.lower() for s in appspec.domain_services}
+        declared_bindings = declared_integrations | declared_services
+
+        for story in stories:
+            title_words = set(story.title.lower().split())
+            integration_hits = title_words & _INTEGRATION_KEYWORDS
+
+            if integration_hits and not declared_bindings:
+                warnings.append(
+                    f"Story '{story.story_id}' ({story.title}) references integration "
+                    f"keywords ({', '.join(integration_hits)}) but no integrations or "
+                    f"services are declared in the DSL."
+                )
+            elif integration_hits:
+                # Check if any declared binding matches the story scope
+                scope_entities = {s.lower() for s in story.scope}
+                has_matching_binding = (
+                    any(
+                        any(entity in binding for entity in scope_entities)
+                        for binding in declared_bindings
+                    )
+                    if scope_entities
+                    else bool(declared_bindings)
+                )
+
+                if not has_matching_binding and scope_entities:
+                    warnings.append(
+                        f"Story '{story.story_id}' references integrations but no "
+                        f"service/integration binds to scope entities "
+                        f"({', '.join(story.scope)})."
+                    )
+
     return warnings

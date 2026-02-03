@@ -1076,3 +1076,178 @@ def handle_list_feedback(args: dict[str, Any], project_path: Path) -> str:
 
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+
+# ============================================================================
+# Guard Extraction (Issue #81a)
+# ============================================================================
+
+# Patterns in story constraints that imply state machine guards
+_GUARD_PATTERNS: list[tuple[str, str, list[str]]] = [
+    # (pattern_key, guard_type, keywords)
+    ("differ", "requires_different_field", ["differ", "different", "not the same"]),
+    ("only_can", "requires_role", ["only", "assigned", "authorized"]),
+    ("must_have", "requires_field", ["must have", "must be set"]),
+    ("must_be", "requires_field_value", ["must be"]),
+    ("requires_active", "requires_related", ["requires", "active", "valid"]),
+    ("four_eye", "requires_different_field", ["four-eye", "4-eye", "dual"]),
+    ("approval", "requires_role", ["approval", "approve"]),
+    ("cannot_same", "requires_different_field", ["cannot", "same"]),
+]
+
+
+def extract_guards(appspec: ir.AppSpec) -> list[dict[str, Any]]:
+    """Extract guard proposals from stories and entity state machines.
+
+    Scans story constraints for guard-implying language and cross-references
+    entity state machines to propose guards for transitions.
+    """
+    from dazzle.core.stories_persistence import load_stories
+
+    stories = list(appspec.stories) if appspec.stories else []
+    if not stories and appspec.metadata.get("project_root"):
+        stories = load_stories(Path(appspec.metadata["project_root"]))
+
+    if not stories:
+        return []
+
+    # Build entity state machine index
+    entity_sm: dict[str, Any] = {}
+    for entity in appspec.domain.entities:
+        if entity.state_machine:
+            entity_sm[entity.name] = entity
+
+    proposals: list[dict[str, Any]] = []
+
+    for story in stories:
+        if not story.constraints:
+            continue
+
+        story_entities = story.scope if story.scope else []
+
+        for constraint in story.constraints:
+            constraint_lower = constraint.lower()
+
+            for _key, guard_type, keywords in _GUARD_PATTERNS:
+                if not any(kw in constraint_lower for kw in keywords):
+                    continue
+
+                for entity_name in story_entities:
+                    matched_entity = entity_sm.get(entity_name)
+                    if not matched_entity:
+                        continue
+
+                    sm = matched_entity.state_machine
+                    target_transitions = _match_transitions_to_constraint(constraint_lower, sm)
+
+                    if target_transitions:
+                        for from_s, to_s in target_transitions:
+                            proposals.append(
+                                {
+                                    "entity": entity_name,
+                                    "transition": f"{from_s} → {to_s}",
+                                    "guard_type": guard_type,
+                                    "guard_expression": _build_guard_expression(
+                                        guard_type, constraint, matched_entity
+                                    ),
+                                    "source_story": story.story_id,
+                                    "source_constraint": constraint,
+                                }
+                            )
+                    else:
+                        proposals.append(
+                            {
+                                "entity": entity_name,
+                                "transition": "*",
+                                "guard_type": guard_type,
+                                "guard_expression": _build_guard_expression(
+                                    guard_type, constraint, matched_entity
+                                ),
+                                "source_story": story.story_id,
+                                "source_constraint": constraint,
+                            }
+                        )
+                    break  # One guard per constraint per entity
+
+    # Deduplicate
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+    for p in proposals:
+        key = f"{p['entity']}:{p['transition']}:{p['guard_expression']}"
+        if key not in seen:
+            seen.add(key)
+            unique.append(p)
+
+    return unique
+
+
+def _match_transitions_to_constraint(constraint_lower: str, sm: Any) -> list[tuple[str, str]]:
+    """Try to match a constraint to specific state machine transitions."""
+    matches: list[tuple[str, str]] = []
+    for transition in sm.transitions:
+        from_s = transition.from_state.lower()
+        to_s = transition.to_state.lower()
+        if from_s in constraint_lower or to_s in constraint_lower:
+            matches.append((transition.from_state, transition.to_state))
+    return matches
+
+
+def _build_guard_expression(guard_type: str, constraint: str, entity: Any) -> str:
+    """Build a guard expression string from constraint text."""
+    import re
+
+    if guard_type == "requires_different_field":
+        fields = [f.name for f in entity.fields]
+        mentioned = [f for f in fields if f.lower() in constraint.lower()]
+        if len(mentioned) >= 2:
+            return f"requires_different_field({mentioned[0]}, {mentioned[1]})"
+        return f"requires_different_actors: {constraint}"
+
+    elif guard_type == "requires_role":
+        role_match = re.search(r"(?:only|assigned)\s+(\w+)", constraint.lower())
+        if role_match:
+            return f"requires_role({role_match.group(1)})"
+        return f"requires_role: {constraint}"
+
+    elif guard_type == "requires_field":
+        field_match = re.search(r"must have\s+(\w+)", constraint.lower())
+        if field_match:
+            return f"requires_field({field_match.group(1)})"
+        return f"requires_field: {constraint}"
+
+    elif guard_type == "requires_field_value":
+        field_match = re.search(r"(\w+)\s+must be\s+(.+)", constraint.lower())
+        if field_match:
+            return f"requires({field_match.group(1)}={field_match.group(2).strip()})"
+        return f"requires_value: {constraint}"
+
+    elif guard_type == "requires_related":
+        return f"requires_related: {constraint}"
+
+    return f"guard: {constraint}"
+
+
+def handle_extract_guards(args: dict[str, Any], project_path: Path) -> str:
+    """Handle extract_guards semantics operation."""
+    try:
+        manifest = load_manifest(project_path / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_path, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+
+        proposals = extract_guards(appspec)
+
+        return json.dumps(
+            {
+                "guard_proposals": proposals,
+                "count": len(proposals),
+                "hint": (
+                    "Review proposals and apply as guards on entity state machine "
+                    "transitions in your DSL files."
+                ),
+            },
+            indent=2,
+        )
+
+    except Exception as e:
+        return json.dumps({"error": str(e)})

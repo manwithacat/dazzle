@@ -406,7 +406,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="semantics",
-            description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics",
+            description="Semantic analysis: extract, validate_events, tenancy, compliance, analytics, extract_guards",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -418,6 +418,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "tenancy",
                             "compliance",
                             "analytics",
+                            "extract_guards",
                         ],
                         "description": "Operation to perform",
                     },
@@ -491,7 +492,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="process",
-            description="Process operations: propose, list, inspect, list_runs, get_run, diagram, coverage",
+            description="Process operations: propose, save, list, inspect, list_runs, get_run, diagram, coverage",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -499,6 +500,7 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "enum": [
                             "propose",
+                            "save",
                             "list",
                             "inspect",
                             "list_runs",
@@ -511,6 +513,14 @@ def get_consolidated_tools() -> list[Tool]:
                     "process_name": {
                         "type": "string",
                         "description": "Process name (for inspect, diagram)",
+                    },
+                    "processes": {
+                        "type": "array",
+                        "description": "Process definitions to save (for save)",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "Overwrite existing processes with same name (for save)",
                     },
                     "story_ids": {
                         "type": "array",

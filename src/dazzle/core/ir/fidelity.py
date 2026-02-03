@@ -66,5 +66,14 @@ class FidelityReport(BaseModel):
     gap_counts: dict[str, int] = Field(default_factory=dict)
     total_gaps: int = 0
     story_coverage: float = Field(ge=0.0, le=1.0, default=0.0)
+    integration_fidelity: float = Field(
+        ge=0.0,
+        le=1.0,
+        default=1.0,
+        description=(
+            "Ratio of integration-referencing stories with verified API bindings "
+            "to total integration-referencing stories. 1.0 if no integration stories."
+        ),
+    )
 
     model_config = ConfigDict(frozen=True)

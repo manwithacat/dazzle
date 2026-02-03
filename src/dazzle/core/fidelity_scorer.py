@@ -880,10 +880,71 @@ def score_appspec_fidelity(
     story_scores = [s for s in surface_scores if s.story > 0.0]
     story_coverage = len(story_scores) / len(surface_scores) if surface_scores else 0.0
 
+    # Integration fidelity: fraction of integration-referencing stories
+    # that have verified API bindings (matching service/integration declarations)
+    integration_fidelity = _compute_integration_fidelity(appspec, stories)
+
     return FidelityReport(
         overall=round(overall, 4),
         surface_scores=surface_scores,
         gap_counts=all_gap_counts,
         total_gaps=total_gaps,
         story_coverage=round(story_coverage, 4),
+        integration_fidelity=round(integration_fidelity, 4),
     )
+
+
+_INTEGRATION_KEYWORDS = {
+    "api",
+    "hmrc",
+    "xero",
+    "sync",
+    "webhook",
+    "stripe",
+    "twilio",
+    "sendgrid",
+    "mailgun",
+    "slack",
+    "zapier",
+    "salesforce",
+}
+
+
+def _compute_integration_fidelity(appspec: AppSpec, stories: list[StorySpec] | None) -> float:
+    """Compute integration fidelity score.
+
+    Score = (stories with verified API bindings) / (stories referencing integrations)
+    Returns 1.0 if no stories reference integrations.
+    """
+    if not stories:
+        return 1.0
+
+    declared_bindings = {i.name.lower() for i in appspec.integrations} | {
+        s.name.lower() for s in appspec.domain_services
+    }
+
+    integration_stories = 0
+    bound_stories = 0
+
+    for story in stories:
+        title_words = set(story.title.lower().split())
+        if title_words & _INTEGRATION_KEYWORDS:
+            integration_stories += 1
+            # Check if any declared binding relates to the story's scope
+            scope_lower = {s.lower() for s in story.scope}
+            if declared_bindings:
+                has_binding = (
+                    any(
+                        any(entity in binding for entity in scope_lower)
+                        for binding in declared_bindings
+                    )
+                    if scope_lower
+                    else True
+                )
+                if has_binding:
+                    bound_stories += 1
+
+    if integration_stories == 0:
+        return 1.0
+
+    return bound_stories / integration_stories

@@ -54,6 +54,8 @@ class TestDesignAction(str, Enum):
     ASSERT_TEXT = "assert_text"
     ASSERT_COUNT = "assert_count"
     TRIGGER_TRANSITION = "trigger_transition"
+    FILL_FORM = "fill_form"
+    SUBMIT_FORM = "submit_form"
     UPLOAD = "upload"
     DOWNLOAD = "download"
 

@@ -387,3 +387,15 @@ class ScheduleSpec(BaseModel):
             if step.name == name:
                 return step
         return None
+
+
+class ProcessesContainer(BaseModel):
+    """Container for storing processes with version information.
+
+    This is the root object stored in .dazzle/processes/processes.json.
+    """
+
+    version: str = "1.0"
+    processes: list[ProcessSpec] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=False)

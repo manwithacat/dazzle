@@ -79,6 +79,81 @@ class WorkflowProposal:
     reason: str
 
 
+def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save composed processes to .dazzle/processes/processes.json.
+
+    Accepts a list of process definitions and persists them. Validates
+    that referenced story IDs exist and entity references are valid.
+
+    Args (via args dict):
+        processes: List of process dicts (ProcessSpec-compatible)
+        overwrite: If True, replace processes with matching names (default: False)
+    """
+    try:
+        from dazzle.core.ir.process import ProcessSpec
+        from dazzle.core.process_persistence import add_processes
+
+        raw_processes = args.get("processes")
+        if not raw_processes or not isinstance(raw_processes, list):
+            return json.dumps({"error": "processes list is required"})
+
+        overwrite = args.get("overwrite", False)
+
+        # Validate and parse processes
+        parsed: list[ProcessSpec] = []
+        errors: list[str] = []
+
+        for i, raw in enumerate(raw_processes):
+            try:
+                proc = ProcessSpec.model_validate(raw)
+                parsed.append(proc)
+            except Exception as e:
+                errors.append(f"Process {i}: {e}")
+
+        if errors:
+            return json.dumps({"error": "Validation failed", "details": errors})
+
+        # Validate story references exist
+        app_spec = _load_app_spec(project_root)
+        stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+        if not stories:
+            from dazzle.core.stories_persistence import load_stories
+
+            stories = load_stories(project_root)
+
+        story_ids = {s.story_id for s in stories}
+        warnings: list[str] = []
+        for proc in parsed:
+            for sid in proc.implements:
+                if sid not in story_ids:
+                    warnings.append(f"Process '{proc.name}' references unknown story '{sid}'")
+
+        # Validate entity references
+        entity_names = {e.name for e in app_spec.domain.entities}
+        for proc in parsed:
+            if proc.trigger and proc.trigger.entity_name:
+                if proc.trigger.entity_name not in entity_names:
+                    warnings.append(
+                        f"Process '{proc.name}' trigger references "
+                        f"unknown entity '{proc.trigger.entity_name}'"
+                    )
+
+        # Save
+        all_processes = add_processes(project_root, parsed, overwrite=overwrite)
+
+        result: dict[str, Any] = {
+            "saved": len(parsed),
+            "total": len(all_processes),
+            "process_names": [p.name for p in parsed],
+        }
+        if warnings:
+            result["warnings"] = warnings
+
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
 @dataclass
 class ProcessRunSummary:
     """Summary of a process run."""
@@ -161,6 +236,15 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
                 )
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+
+        # Merge with persisted processes
+        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
+        persisted = load_persisted_processes(project_root)
+        dsl_names = {p.name for p in processes}
+        for p in persisted:
+            if p.name not in dsl_names:
+                processes.append(p)
 
         # Build implements mapping: story_id -> [process_names]
         implements_map: dict[str, list[str]] = {}
@@ -1034,6 +1118,16 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
         app_spec = _load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+
+        # Merge with persisted processes
+        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
+        persisted = load_persisted_processes(project_root)
+        dsl_names = {p.name for p in processes}
+        for p in persisted:
+            if p.name not in dsl_names:
+                processes.append(p)
+
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
 
         # Fall back to persisted stories from .dazzle/stories/stories.json
@@ -1177,6 +1271,15 @@ def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
+        # Merge with persisted processes
+        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
+        persisted = load_persisted_processes(project_root)
+        dsl_names = {p.name for p in processes}
+        for p in persisted:
+            if p.name not in dsl_names:
+                processes.append(p)
+
         process_list = []
         for proc in processes:
             process_list.append(
@@ -1229,6 +1332,15 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
         app_spec = _load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+
+        # Merge with persisted processes
+        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
+        persisted = load_persisted_processes(project_root)
+        dsl_names = {p.name for p in processes}
+        for p in persisted:
+            if p.name not in dsl_names:
+                processes.append(p)
 
         proc = next((p for p in processes if p.name == process_name), None)
         if not proc:
