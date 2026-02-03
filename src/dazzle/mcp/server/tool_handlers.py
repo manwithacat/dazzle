@@ -1346,17 +1346,6 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Removed: story stubs are no longer supported."""
-    return json.dumps(
-        {
-            "error": "Story stubs have been removed.",
-            "hint": "Use process(operation='propose') for workflow design briefs instead.",
-        },
-        indent=2,
-    )
-
-
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate test designs from accepted stories."""
     from .handlers.stories import generate_tests_from_stories_handler as impl

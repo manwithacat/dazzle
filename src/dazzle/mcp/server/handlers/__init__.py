@@ -45,7 +45,6 @@ from .status import (
     get_mcp_status_handler,
 )
 from .stories import (
-    generate_story_stubs_handler,
     get_dsl_spec_handler,
     get_stories_handler,
     propose_stories_from_dsl_handler,
@@ -93,7 +92,6 @@ __all__ = [
     "propose_stories_from_dsl_handler",
     "save_stories_handler",
     "get_stories_handler",
-    "generate_story_stubs_handler",
     # Testing handlers
     "run_e2e_tests_handler",
     "run_agent_e2e_tests_handler",

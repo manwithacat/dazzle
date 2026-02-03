@@ -167,7 +167,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="story",
-            description="Story operations: propose, save, get, generate_stubs, generate_tests, coverage",
+            description="Story operations: propose, save, get, generate_tests, coverage",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -177,7 +177,6 @@ def get_consolidated_tools() -> list[Tool]:
                             "propose",
                             "save",
                             "get",
-                            "generate_stubs",
                             "generate_tests",
                             "coverage",
                         ],
@@ -208,11 +207,7 @@ def get_consolidated_tools() -> list[Tool]:
                     "story_ids": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Story IDs (for get: fetch full details; for generate_stubs, generate_tests)",
-                    },
-                    "output_dir": {
-                        "type": "string",
-                        "description": "Output directory (for generate_stubs)",
+                        "description": "Story IDs (for get: fetch full details; for generate_tests)",
                     },
                     "include_draft": {
                         "type": "boolean",

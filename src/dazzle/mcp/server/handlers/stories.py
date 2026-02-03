@@ -1,7 +1,7 @@
 """
 Story/behaviour tool handlers.
 
-Handles DSL spec extraction, story proposal, saving, retrieval, and stub generation.
+Handles DSL spec extraction, story proposal, saving, and retrieval.
 """
 
 from __future__ import annotations
@@ -517,20 +517,6 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
-
-
-def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Removed: story stubs are no longer supported.
-
-    Use process(operation='propose') for workflow design briefs instead.
-    """
-    return json.dumps(
-        {
-            "error": "Story stubs have been removed.",
-            "hint": "Use process(operation='propose') for workflow design briefs instead.",
-        },
-        indent=2,
-    )
 
 
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:

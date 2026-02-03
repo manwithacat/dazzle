@@ -135,7 +135,6 @@ def handle_story(arguments: dict[str, Any]) -> str:
     """Handle consolidated story operations."""
     from .handlers.process import stories_coverage_handler
     from .handlers.stories import (
-        generate_story_stubs_handler,
         generate_tests_from_stories_handler,
         get_stories_handler,
         propose_stories_from_dsl_handler,
@@ -154,8 +153,6 @@ def handle_story(arguments: dict[str, Any]) -> str:
         return save_stories_handler(project_path, arguments)
     elif operation == "get":
         return get_stories_handler(project_path, arguments)
-    elif operation == "generate_stubs":
-        return generate_story_stubs_handler(project_path, arguments)
     elif operation == "generate_tests":
         return generate_tests_from_stories_handler(project_path, arguments)
     elif operation == "coverage":

@@ -434,26 +434,6 @@ def get_story_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="generate_story_stubs",
-            description="Generate Python service stubs from accepted stories. Each stub contains the story contract as a docstring and raises NotImplementedError.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "story_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "List of story IDs to generate stubs for. If omitted, generates for all accepted stories.",
-                    },
-                    "output_dir": {
-                        "type": "string",
-                        "description": "Directory for generated stubs (default: 'services')",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": [],
-            },
-        ),
-        Tool(
             name="generate_tests_from_stories",
             description="Generate test designs from accepted stories. Converts behavioural stories (WHAT should happen) into test designs (HOW to verify it). Returns proposed test designs for review before saving with save_test_designs.",
             inputSchema={
