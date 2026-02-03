@@ -425,17 +425,23 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
                     skipped_crud.append(proposal.entity)
                 continue
 
-            workflows.append(
-                {
-                    "workflow_name": proposal.workflow_name,
-                    "title": proposal.title,
-                    "stories": proposal.stories,
-                    "story_summaries": proposal.story_summaries,
-                    "entity": proposal.entity,
-                    "design_questions": proposal.design_questions,
-                    "reason": proposal.reason,
-                }
-            )
+            workflow_dict: dict[str, Any] = {
+                "workflow_name": proposal.workflow_name,
+                "title": proposal.title,
+                "stories": proposal.stories,
+                "story_summaries": proposal.story_summaries,
+                "entity": proposal.entity,
+                "design_questions": proposal.design_questions,
+                "reason": proposal.reason,
+            }
+
+            # Build review checklist from story contracts
+            proposal_stories = [s for s in target_stories if s.story_id in proposal.stories]
+            checklist = _build_review_checklist(proposal_stories)
+            if checklist:
+                workflow_dict["review_checklist"] = checklist
+
+            workflows.append(workflow_dict)
 
         result: dict[str, Any] = {
             "workflow_count": len(workflows),
@@ -803,7 +809,93 @@ def _generate_design_questions(
             "for cross-entity operations?"
         )
 
+    # Constraints that imply business rules
+    _GUARD_KEYWORDS = {"only", "must", "cannot", "requires", "four-eye", "reviewer", "approval"}
+    for story in stories:
+        for constraint in story.constraints:
+            words = set(constraint.lower().split())
+            if words & _GUARD_KEYWORDS:
+                questions.append(
+                    f'{story.story_id} constraint: "{constraint}". '
+                    "How is this enforced in the process?"
+                )
+                break  # One question per story max
+
+    # Side effects that need explicit steps
+    for story in stories:
+        for effect in story.side_effects:
+            effect_lower = effect.lower()
+            if any(
+                kw in effect_lower
+                for kw in ("email", "notification", "webhook", "api", "sync", "log")
+            ):
+                questions.append(
+                    f'{story.story_id} declares side effect: "{effect}". Which step emits this?'
+                )
+                break
+
+    # Integration-hinting language in titles
+    _INTEGRATION_KEYWORDS = {"api", "hmrc", "xero", "sync", "file", "pull", "submit", "webhook"}
+    integration_stories = [
+        s for s in stories if set(s.title.lower().split()) & _INTEGRATION_KEYWORDS
+    ]
+    if integration_stories:
+        titles = ", ".join(s.story_id for s in integration_stories[:3])
+        questions.append(
+            f"Stories reference external integrations ({titles}). "
+            "What is the failure/retry/compensation strategy for API calls?"
+        )
+
     return questions
+
+
+def _build_review_checklist(stories: list[StorySpec]) -> list[dict[str, Any]]:
+    """Build a review checklist from story contract obligations.
+
+    Extracts constraints, side effects, and exception branches that the
+    implementing process must handle. Each item maps a story obligation
+    to a verification question.
+    """
+    checklist: list[dict[str, Any]] = []
+
+    for story in stories:
+        # Constraints → guard/invariant checks
+        for constraint in story.constraints:
+            checklist.append(
+                {
+                    "story_id": story.story_id,
+                    "type": "constraint",
+                    "obligation": constraint,
+                    "verify": f"Process must enforce: {constraint}",
+                }
+            )
+
+        # Side effects → explicit step or event emission
+        for effect in story.side_effects:
+            checklist.append(
+                {
+                    "story_id": story.story_id,
+                    "type": "side_effect",
+                    "obligation": effect,
+                    "verify": f"Process must emit or trigger: {effect}",
+                }
+            )
+
+        # Unless branches → compensation or error handling
+        for exception in story.unless:
+            checklist.append(
+                {
+                    "story_id": story.story_id,
+                    "type": "exception",
+                    "obligation": exception.condition,
+                    "verify": (
+                        f"Process must handle: {exception.condition} → "
+                        + ", ".join(exception.then_outcomes)
+                    ),
+                }
+            )
+
+    return checklist
 
 
 # =============================================================================

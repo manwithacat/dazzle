@@ -9,6 +9,7 @@ from dazzle.core.ir.stories import StorySpec, StoryTrigger
 from dazzle.mcp.server.handlers.process import (
     WorkflowProposal,
     _build_entity_context,
+    _build_review_checklist,
     _cluster_stories_into_workflows,
     _generate_design_questions,
     _is_crud_story,
@@ -27,6 +28,8 @@ def _make_story(
     scope: list[str] | None = None,
     happy_path_outcome: list[str] | None = None,
     unless: list | None = None,
+    constraints: list[str] | None = None,
+    side_effects: list[str] | None = None,
 ) -> StorySpec:
     """Create a StorySpec for testing."""
     return StorySpec(
@@ -37,6 +40,8 @@ def _make_story(
         scope=scope or [],
         happy_path_outcome=happy_path_outcome or [],
         unless=unless or [],
+        constraints=constraints or [],
+        side_effects=side_effects or [],
     )
 
 
@@ -268,6 +273,109 @@ class TestDesignQuestions:
         ]
         questions = _generate_design_questions(stories, "Task", _make_app_spec())
         assert any("failure" in q.lower() or "retry" in q.lower() for q in questions)
+
+    def test_constraint_question(self):
+        stories = [
+            _make_story(
+                "ST-001",
+                scope=["Invoice"],
+                trigger=StoryTrigger.STATUS_CHANGED,
+                constraints=["Cannot send twice"],
+            ),
+        ]
+        questions = _generate_design_questions(stories, "Invoice", _make_app_spec())
+        assert any("cannot send twice" in q.lower() for q in questions)
+
+    def test_side_effect_question(self):
+        stories = [
+            _make_story(
+                "ST-001",
+                scope=["Task"],
+                trigger=StoryTrigger.STATUS_CHANGED,
+                side_effects=["send_email_notification"],
+            ),
+        ]
+        questions = _generate_design_questions(stories, "Task", _make_app_spec())
+        assert any("send_email_notification" in q for q in questions)
+
+    def test_integration_title_question(self):
+        stories = [
+            _make_story(
+                "ST-001",
+                title="File VAT return to HMRC via API",
+                scope=["VATReturn"],
+                trigger=StoryTrigger.STATUS_CHANGED,
+            ),
+        ]
+        questions = _generate_design_questions(stories, "VATReturn", _make_app_spec())
+        assert any("integration" in q.lower() for q in questions)
+
+
+# =============================================================================
+# Review Checklist
+# =============================================================================
+
+
+class TestReviewChecklist:
+    """Tests for _build_review_checklist."""
+
+    def test_empty_for_no_obligations(self):
+        stories = [_make_story()]
+        assert _build_review_checklist(stories) == []
+
+    def test_constraint_items(self):
+        stories = [
+            _make_story("ST-001", constraints=["Cannot send twice", "Amount > 0"]),
+        ]
+        checklist = _build_review_checklist(stories)
+        assert len(checklist) == 2
+        assert checklist[0]["type"] == "constraint"
+        assert checklist[0]["obligation"] == "Cannot send twice"
+        assert "ST-001" == checklist[0]["story_id"]
+
+    def test_side_effect_items(self):
+        stories = [
+            _make_story("ST-001", side_effects=["send_confirmation_email"]),
+        ]
+        checklist = _build_review_checklist(stories)
+        assert len(checklist) == 1
+        assert checklist[0]["type"] == "side_effect"
+        assert "send_confirmation_email" in checklist[0]["verify"]
+
+    def test_exception_items(self):
+        from dazzle.core.ir.stories import StoryException
+
+        stories = [
+            _make_story(
+                "ST-001",
+                unless=[
+                    StoryException(
+                        condition="HMRC API returns error",
+                        then_outcomes=["Error is logged", "Retry scheduled"],
+                    )
+                ],
+            ),
+        ]
+        checklist = _build_review_checklist(stories)
+        assert len(checklist) == 1
+        assert checklist[0]["type"] == "exception"
+        assert "HMRC API returns error" in checklist[0]["verify"]
+        assert "Retry scheduled" in checklist[0]["verify"]
+
+    def test_mixed_obligations(self):
+        from dazzle.core.ir.stories import StoryException
+
+        stories = [
+            _make_story(
+                "ST-001",
+                constraints=["Four-eye rule"],
+                side_effects=["audit_log"],
+                unless=[StoryException(condition="Timeout", then_outcomes=["Retry"])],
+            ),
+        ]
+        checklist = _build_review_checklist(stories)
+        types = {item["type"] for item in checklist}
+        assert types == {"constraint", "side_effect", "exception"}
 
 
 # =============================================================================
