@@ -508,9 +508,12 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
     - Tenant entity
     - Organization/Company entities
     - User-to-tenant relationships
+
+    Returns actionable suggestions for implementing multi-tenancy.
     """
     signals: list[dict[str, Any]] = []
     recommendation = "single_tenant"
+    suggested_actions: list[dict[str, Any]] = []
 
     # Check for explicit tenancy config
     if appspec.tenancy:
@@ -518,10 +521,12 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
             "mode": appspec.tenancy.isolation.mode.value,
             "signals": [{"type": "explicit_config", "confidence": 1.0}],
             "recommendation": appspec.tenancy.isolation.mode.value,
+            "status": "configured",
+            "suggested_actions": [],
         }
 
     # Check for tenant_id fields
-    entities_with_tenant = []
+    entities_with_tenant: list[str] = []
     for entity in appspec.domain.entities:
         for f in entity.fields:
             if f.name == "tenant_id":
@@ -535,8 +540,10 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
                 )
 
     # Check for Tenant/Organization entity
+    tenant_entity: str | None = None
     for entity in appspec.domain.entities:
         if entity.name.lower() in ("tenant", "organization", "company", "account"):
+            tenant_entity = entity.name
             signals.append(
                 {
                     "type": "tenant_entity",
@@ -551,11 +558,80 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
     elif len(signals) > 0:
         recommendation = "consider_multi_tenant"
 
+    # Build actionable suggestions
+    if recommendation in ("consider_multi_tenant", "shared_schema"):
+        # Find entities missing tenant_id that likely need it
+        entities_needing_tenant = []
+        # System-managed entities that typically don't need tenant scoping
+        system_entities = {"auditlog", "systemevent", "notification", "log", "event"}
+
+        for entity in appspec.domain.entities:
+            # Skip if already has tenant_id
+            if entity.name in entities_with_tenant:
+                continue
+            # Skip if this IS the tenant entity
+            if tenant_entity and entity.name.lower() == tenant_entity.lower():
+                continue
+            # Skip system-managed entities
+            if entity.name.lower() in system_entities:
+                continue
+            # Skip entities with 'log', 'event', 'audit' in name
+            name_lower = entity.name.lower()
+            if any(hint in name_lower for hint in ["log", "event", "audit", "history"]):
+                continue
+
+            entities_needing_tenant.append(entity.name)
+
+        # Suggest adding tenancy config
+        tenant_ref = tenant_entity or "Tenant"
+        suggested_actions.append(
+            {
+                "action": "add_tenancy_config",
+                "description": "Add tenancy configuration to your DSL",
+                "dsl_snippet": """tenancy:
+  mode: shared_schema
+  partition_key: tenant_id
+  provisioning:
+    auto_create: true""",
+                "priority": "high",
+            }
+        )
+
+        # Suggest adding tenant_id to entities
+        if entities_needing_tenant:
+            suggested_actions.append(
+                {
+                    "action": "add_tenant_id_fields",
+                    "description": f"Add tenant_id field to {len(entities_needing_tenant)} entities",
+                    "entities": entities_needing_tenant,
+                    "dsl_snippet": f"tenant_id: ref {tenant_ref} required",
+                    "priority": "high",
+                }
+            )
+
+        # Suggest creating tenant entity if none exists
+        if not tenant_entity:
+            suggested_actions.append(
+                {
+                    "action": "create_tenant_entity",
+                    "description": "Create a Tenant entity to represent tenant accounts",
+                    "dsl_snippet": """entity Tenant "Tenant":
+  id: uuid pk
+  name: str(200) required
+  slug: str(100) unique required
+  is_active: bool=true
+  created_at: datetime auto_add""",
+                    "priority": "medium",
+                }
+            )
+
     return {
         "mode": recommendation,
         "signals": signals,
         "entities_with_tenant_id": entities_with_tenant,
         "recommendation": recommendation,
+        "tenant_entity": tenant_entity,
+        "suggested_actions": suggested_actions,
     }
 
 

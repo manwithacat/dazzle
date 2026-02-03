@@ -55,6 +55,7 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
     """Handle consolidated DSL operations."""
     from .handlers.dsl import (
         analyze_patterns,
+        get_unified_issues,
         inspect_entity,
         inspect_surface,
         lint_project,
@@ -81,6 +82,8 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
         return analyze_patterns(project_path)
     elif operation == "lint":
         return lint_project(project_path, arguments)
+    elif operation == "issues":
+        return get_unified_issues(project_path, arguments)
     elif operation == "get_spec":
         return get_dsl_spec_handler(project_path, arguments)
     elif operation == "fidelity":

@@ -158,6 +158,7 @@ def analyze_patterns(project_root: Path) -> str:
                         "has_edit": p.has_edit,
                         "is_complete": p.is_complete,
                         "missing_operations": p.missing_operations,
+                        "is_system_managed": p.is_system_managed,
                     }
                     for p in crud_patterns
                 ],
@@ -252,3 +253,156 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
         )
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
+
+
+def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
+    """Get unified view of all issues from lint, compliance, and fidelity.
+
+    Cross-references findings from multiple analysis tools, deduplicating
+    by entity+field and showing which tools flagged each issue.
+    """
+    from dazzle.mcp.event_first_tools import infer_compliance_requirements
+
+    extended = args.get("extended", False)
+
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        # Run lint
+        lint_errors, lint_warnings = lint_appspec(app_spec, extended=extended)
+
+        # Run compliance inference
+        compliance = infer_compliance_requirements(app_spec)
+
+        # Build unified issue map keyed by entity.field (or just message for global)
+        issues: dict[str, dict[str, Any]] = {}
+
+        # Parse lint messages to extract entity+field where possible
+        for msg in lint_errors:
+            key = _extract_issue_key(msg)
+            if key not in issues:
+                issues[key] = {
+                    "key": key,
+                    "severity": "error",
+                    "sources": [],
+                    "messages": [],
+                }
+            issues[key]["sources"].append("lint")
+            issues[key]["messages"].append(msg)
+
+        for msg in lint_warnings:
+            key = _extract_issue_key(msg)
+            if key not in issues:
+                issues[key] = {
+                    "key": key,
+                    "severity": "warning",
+                    "sources": [],
+                    "messages": [],
+                }
+            if "lint" not in issues[key]["sources"]:
+                issues[key]["sources"].append("lint")
+            issues[key]["messages"].append(msg)
+
+        # Add compliance findings
+        for field_info in compliance.get("pii_fields", []):
+            key = f"{field_info['entity']}.{field_info['field']}"
+            if key not in issues:
+                issues[key] = {
+                    "key": key,
+                    "severity": "info",
+                    "sources": [],
+                    "messages": [],
+                }
+            if "compliance" not in issues[key]["sources"]:
+                issues[key]["sources"].append("compliance")
+            issues[key]["messages"].append(
+                f"PII field ({field_info['pattern']}): consider GDPR classification"
+            )
+
+        for field_info in compliance.get("financial_fields", []):
+            key = f"{field_info['entity']}.{field_info['field']}"
+            if key not in issues:
+                issues[key] = {
+                    "key": key,
+                    "severity": "info",
+                    "sources": [],
+                    "messages": [],
+                }
+            if "compliance" not in issues[key]["sources"]:
+                issues[key]["sources"].append("compliance")
+            issues[key]["messages"].append(
+                f"Financial field ({field_info['pattern']}): consider PCI-DSS"
+            )
+
+        for field_info in compliance.get("health_fields", []):
+            key = f"{field_info['entity']}.{field_info['field']}"
+            if key not in issues:
+                issues[key] = {
+                    "key": key,
+                    "severity": "info",
+                    "sources": [],
+                    "messages": [],
+                }
+            if "compliance" not in issues[key]["sources"]:
+                issues[key]["sources"].append("compliance")
+            issues[key]["messages"].append(
+                f"Health field ({field_info['pattern']}): consider HIPAA"
+            )
+
+        # Build cross-reference summary for issues flagged by multiple tools
+        multi_source_issues = [i for i in issues.values() if len(i["sources"]) > 1]
+
+        # Sort by severity then by key
+        severity_order = {"error": 0, "warning": 1, "info": 2}
+        sorted_issues = sorted(
+            issues.values(),
+            key=lambda x: (severity_order.get(x["severity"], 3), x["key"]),
+        )
+
+        return json.dumps(
+            {
+                "total_issues": len(issues),
+                "error_count": len(lint_errors),
+                "warning_count": len(lint_warnings),
+                "compliance_findings": (
+                    len(compliance.get("pii_fields", []))
+                    + len(compliance.get("financial_fields", []))
+                    + len(compliance.get("health_fields", []))
+                ),
+                "multi_source_count": len(multi_source_issues),
+                "recommended_frameworks": compliance.get("recommended_frameworks", []),
+                "issues": sorted_issues,
+                "cross_references": [
+                    {
+                        "key": i["key"],
+                        "flagged_by": i["sources"],
+                        "hint": f"Flagged by {' and '.join(i['sources'])}. "
+                        "Address the underlying issue to resolve all findings.",
+                    }
+                    for i in multi_source_issues
+                ],
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
+def _extract_issue_key(message: str) -> str:
+    """Extract entity.field key from a lint message, or return the message."""
+    import re
+
+    # Try to extract "Entity 'X'" or "entity 'X'" pattern
+    entity_match = re.search(r"[Ee]ntity ['\"](\w+)['\"]", message)
+    field_match = re.search(r"[Ff]ield ['\"](\w+)['\"]", message)
+
+    if entity_match and field_match:
+        return f"{entity_match.group(1)}.{field_match.group(1)}"
+    if entity_match:
+        return entity_match.group(1)
+
+    # Fallback: use a truncated version of the message as key
+    return message[:80] if len(message) > 80 else message

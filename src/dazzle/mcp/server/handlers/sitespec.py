@@ -124,10 +124,31 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     try:
         sitespec = load_sitespec(project_root, use_defaults=True)
+
+        # Try to load AppSpec for DSL route awareness
+        appspec = None
+        try:
+            from dazzle.core.fileset import discover_dsl_files
+            from dazzle.core.linker import build_appspec
+            from dazzle.core.manifest import load_manifest
+            from dazzle.core.parser import parse_modules
+
+            manifest_path = project_root / "dazzle.toml"
+            if manifest_path.exists():
+                manifest = load_manifest(manifest_path)
+                dsl_files = discover_dsl_files(project_root, manifest)
+                if dsl_files:
+                    modules = parse_modules(dsl_files)
+                    if modules:
+                        appspec = build_appspec(modules, manifest.project_root)
+        except Exception:
+            logger.debug("Could not load AppSpec for sitespec validation", exc_info=True)
+
         result = validate_sitespec(
             sitespec,
             project_root,
             check_content_files=check_content_files,
+            appspec=appspec,
         )
 
         return json.dumps(

@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -457,3 +458,168 @@ class TestScaffolding:
             # Verify content updated
             spec = load_sitespec(project_root)
             assert spec.brand.product_name == "Second"
+
+
+class TestNavLinkValidation:
+    """Tests for navigation link validation with DSL routes and fuzzy suggestions."""
+
+    def _make_mock_appspec(
+        self,
+        surfaces: list[tuple[str, str, str]] | None = None,
+        workspaces: list[tuple[str, list[str]]] | None = None,
+    ) -> MagicMock:
+        """Create a mock AppSpec with surfaces and workspaces.
+
+        Args:
+            surfaces: List of (name, entity_ref, mode) tuples
+            workspaces: List of (name, [entity_sources]) tuples
+        """
+        appspec = MagicMock()
+
+        # Build surfaces
+        mock_surfaces = []
+        if surfaces:
+            for name, entity_ref, mode in surfaces:
+                surface = MagicMock()
+                surface.name = name
+                surface.entity_ref = entity_ref
+                surface.mode.value = mode
+                mock_surfaces.append(surface)
+        appspec.surfaces = mock_surfaces
+
+        # Build workspaces
+        mock_workspaces = []
+        if workspaces:
+            for ws_name, entity_sources in workspaces:
+                ws = MagicMock()
+                ws.name = ws_name
+                ws.regions = []
+                for source in entity_sources:
+                    region = MagicMock()
+                    region.source = source
+                    ws.regions.append(region)
+                mock_workspaces.append(ws)
+        appspec.workspaces = mock_workspaces
+
+        return appspec
+
+    def test_nav_href_matches_dsl_route(self) -> None:
+        """Test nav link validation accepts DSL-derived routes."""
+        # Create a sitespec with nav link to a DSL route
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    public=[
+                        NavItemSpec(label="Home", href="/"),
+                    ],
+                    authenticated=[
+                        NavItemSpec(label="Contacts", href="/app/agent_dashboard/contacts"),
+                    ],
+                ),
+            ),
+            pages=[PageSpec(route="/", type=PageKind.LANDING, title="Home")],
+        )
+
+        # Mock appspec with workspace and surface
+        appspec = self._make_mock_appspec(
+            surfaces=[("contact_list", "Contact", "list")],
+            workspaces=[("agent_dashboard", ["Contact"])],
+        )
+
+        result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
+        # Should have no warnings about the /app/agent_dashboard/contacts href
+        nav_warnings = [w for w in result.warnings if "agent_dashboard/contacts" in w]
+        assert len(nav_warnings) == 0
+
+    def test_nav_href_fuzzy_suggestion_suffix_match(self) -> None:
+        """Test fuzzy suggestion when nav href has suffix overlap with DSL route."""
+        # Nav link uses short path that partially matches
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    authenticated=[
+                        NavItemSpec(label="Contacts", href="/app/contacts"),
+                    ],
+                ),
+            ),
+        )
+
+        # Mock appspec with workspace
+        appspec = self._make_mock_appspec(
+            surfaces=[("contact_list", "Contact", "list")],
+            workspaces=[("agent_dashboard", ["Contact"])],
+        )
+
+        result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
+        # Should warn and suggest the correct route
+        nav_warnings = [w for w in result.warnings if "/app/contacts" in w]
+        assert len(nav_warnings) == 1
+        assert "did you mean" in nav_warnings[0]
+        assert "/app/agent_dashboard/contacts" in nav_warnings[0]
+
+    def test_nav_href_no_suggestion_when_no_close_match(self) -> None:
+        """Test no suggestion when href doesn't resemble any known route."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    public=[
+                        NavItemSpec(label="Nonexistent", href="/xyz/totally/different"),
+                    ],
+                ),
+            ),
+        )
+
+        # Mock appspec with unrelated surface
+        appspec = self._make_mock_appspec(
+            surfaces=[("task_list", "Task", "list")],
+            workspaces=[("dashboard", ["Task"])],
+        )
+
+        result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
+        nav_warnings = [w for w in result.warnings if "/xyz/totally/different" in w]
+        assert len(nav_warnings) == 1
+        assert "did you mean" not in nav_warnings[0]
+
+    def test_nav_href_suggestion_from_sitespec_routes(self) -> None:
+        """Test fuzzy suggestion can match sitespec-defined routes too."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    public=[
+                        NavItemSpec(label="About", href="/abut"),  # Typo
+                    ],
+                ),
+            ),
+            pages=[
+                PageSpec(route="/", type=PageKind.LANDING, title="Home"),
+                PageSpec(route="/about", type=PageKind.LANDING, title="About"),
+            ],
+        )
+
+        result = validate_sitespec(spec, check_content_files=False)
+        nav_warnings = [w for w in result.warnings if "/abut" in w]
+        assert len(nav_warnings) == 1
+        assert "did you mean" in nav_warnings[0]
+        assert "/about" in nav_warnings[0]
+
+    def test_nav_external_links_not_validated(self) -> None:
+        """Test that external links are not validated against routes."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    public=[
+                        NavItemSpec(label="Docs", href="https://docs.example.com"),
+                        NavItemSpec(label="Email", href="mailto:support@example.com"),
+                    ],
+                ),
+            ),
+        )
+
+        result = validate_sitespec(spec, check_content_files=False)
+        nav_warnings = [w for w in result.warnings if "Navigation link" in w]
+        assert len(nav_warnings) == 0

@@ -19,6 +19,28 @@ from dazzle.core.parser import parse_modules
 logger = logging.getLogger("dazzle.mcp")
 
 
+def _parse_test_design_action(value: str) -> Any:
+    """Parse a TestDesignAction with descriptive error on invalid input."""
+    from dazzle.core.ir.test_design import TestDesignAction
+
+    try:
+        return TestDesignAction(value)
+    except ValueError:
+        valid = ", ".join(a.value for a in TestDesignAction)
+        raise ValueError(f"'{value}' is not a valid action. Valid actions: {valid}") from None
+
+
+def _parse_test_design_trigger(value: str) -> Any:
+    """Parse a TestDesignTrigger with descriptive error on invalid input."""
+    from dazzle.core.ir.test_design import TestDesignTrigger
+
+    try:
+        return TestDesignTrigger(value)
+    except ValueError:
+        valid = ", ".join(t.value for t in TestDesignTrigger)
+        raise ValueError(f"'{value}' is not a valid trigger. Valid triggers: {valid}") from None
+
+
 def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     Generate test designs from persona goals and workflows.
@@ -480,7 +502,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
             for s in d.get("steps", []):
                 steps.append(
                     TestDesignStep(
-                        action=TestDesignAction(s["action"])
+                        action=_parse_test_design_action(s["action"])
                         if s.get("action")
                         else TestDesignAction.CLICK,
                         target=s.get("target", ""),
@@ -496,7 +518,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
                     description=d.get("description"),
                     persona=d.get("persona"),
                     scenario=d.get("scenario"),
-                    trigger=TestDesignTrigger(d["trigger"])
+                    trigger=_parse_test_design_trigger(d["trigger"])
                     if d.get("trigger")
                     else TestDesignTrigger.USER_CLICK,
                     steps=steps,
@@ -510,19 +532,25 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
 
         # Save designs
-        all_designs = add_test_designs(project_root, designs, overwrite=overwrite, to_dsl=True)
+        result = add_test_designs(project_root, designs, overwrite=overwrite, to_dsl=True)
         designs_file = get_dsl_tests_dir(project_root) / "designs.json"
 
-        return json.dumps(
-            {
-                "status": "saved",
-                "saved_count": len(designs),
-                "total_count": len(all_designs),
-                "file": str(designs_file),
-                "overwrite": overwrite,
-            },
-            indent=2,
-        )
+        response: dict[str, Any] = {
+            "status": "saved",
+            "saved_count": result.added_count,
+            "total_count": len(result.all_designs),
+            "file": str(designs_file),
+            "overwrite": overwrite,
+        }
+
+        if result.remapped_ids:
+            response["remapped_ids"] = result.remapped_ids
+            response["warning"] = (
+                f"{len(result.remapped_ids)} design(s) had colliding IDs and were "
+                "auto-assigned new unique IDs. See remapped_ids for details."
+            )
+
+        return json.dumps(response, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 

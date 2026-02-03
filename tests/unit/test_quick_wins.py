@@ -217,6 +217,63 @@ def test_pattern_detection_incomplete_crud():
     assert not crud_patterns[0].has_create, "Should not have create surface"
 
 
+def test_system_managed_entity_crud_suppression():
+    """Test that system-managed entities don't report missing create/edit as incomplete."""
+    # Entity with 'audit' pattern - should be treated as system-managed
+    audit_log_entity = ir.EntitySpec(
+        name="AuditLog",
+        patterns=["audit"],
+        fields=[],
+    )
+
+    # Entity with system-managed name heuristic
+    system_event_entity = ir.EntitySpec(
+        name="SystemEvent",
+        fields=[],
+    )
+
+    # Normal entity for comparison
+    task_entity = ir.EntitySpec(
+        name="Task",
+        fields=[],
+    )
+
+    appspec = ir.AppSpec(
+        name="test_app",
+        version="0.1.0",
+        domain=ir.DomainSpec(entities=[audit_log_entity, system_event_entity, task_entity]),
+        surfaces=[
+            # AuditLog only has list (typical for audit logs)
+            ir.SurfaceSpec(name="audit_list", entity_ref="AuditLog", mode=ir.SurfaceMode.LIST),
+            # SystemEvent only has list
+            ir.SurfaceSpec(name="event_list", entity_ref="SystemEvent", mode=ir.SurfaceMode.LIST),
+            # Task only has list (incomplete for a normal entity)
+            ir.SurfaceSpec(name="task_list", entity_ref="Task", mode=ir.SurfaceMode.LIST),
+        ],
+    )
+
+    crud_patterns = patterns.detect_crud_patterns(appspec)
+    patterns_by_entity = {p.entity_name: p for p in crud_patterns}
+
+    # AuditLog: system-managed, should be complete with just list
+    audit_pattern = patterns_by_entity["AuditLog"]
+    assert audit_pattern.is_system_managed, "AuditLog should be system-managed (audit pattern)"
+    assert audit_pattern.is_complete, "AuditLog should be complete with just list"
+    assert audit_pattern.missing_operations == [], "AuditLog should have no missing operations"
+
+    # SystemEvent: system-managed by name heuristic
+    event_pattern = patterns_by_entity["SystemEvent"]
+    assert event_pattern.is_system_managed, "SystemEvent should be system-managed (name heuristic)"
+    assert event_pattern.is_complete, "SystemEvent should be complete with just list"
+
+    # Task: normal entity, should be incomplete
+    task_pattern = patterns_by_entity["Task"]
+    assert not task_pattern.is_system_managed, "Task should not be system-managed"
+    assert not task_pattern.is_complete, "Task should be incomplete without full CRUD"
+    assert "create" in task_pattern.missing_operations, "Task should be missing create"
+    assert "edit" in task_pattern.missing_operations, "Task should be missing edit"
+
+
 def test_pattern_analysis():
     """Test comprehensive pattern analysis."""
     task_entity = ir.EntitySpec(name="Task", fields=[])

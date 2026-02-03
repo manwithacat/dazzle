@@ -34,7 +34,7 @@ FLOW_COMPLETE_KEYWORDS = ("complete", "end")
 FLOW_FAILURE_KEYWORDS = ("fail", "error")
 
 # Minimum word length for meaningful coverage matching
-MIN_MEANINGFUL_WORD_LENGTH = 4
+MIN_MEANINGFUL_WORD_LENGTH = 3
 
 
 # =============================================================================
@@ -314,6 +314,9 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         has_process = covered_count + partial_count
         has_process_percent = round(has_process / total * 100, 1) if total > 0 else 0.0
+        effective_coverage_percent = (
+            round((covered_count + partial_count * 0.5) / total * 100, 1) if total > 0 else 0.0
+        )
 
         result: dict[str, Any] = {
             "total_stories": total,
@@ -321,6 +324,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
             "partial": partial_count,
             "uncovered": uncovered_count,
             "coverage_percent": round(coverage_percent, 1),
+            "effective_coverage_percent": effective_coverage_percent,
             "has_process": has_process,
             "has_process_percent": has_process_percent,
             "showing": len(page),
@@ -421,14 +425,21 @@ def _infer_structural_satisfaction(
     from dazzle.core.ir.process import ProcessTriggerKind, StepKind
 
     for proc in impl_procs:
-        # CRUD service binding inference
+        # CRUD service binding inference (check both service and step name)
         for step in proc.steps:
+            sources: list[str] = []
             if step.kind == StepKind.SERVICE and step.service:
-                svc = step.service.lower()
+                sources.append(step.service.lower())
+            sources.append(step.name.lower())
+            for source in sources:
                 for crud_op, patterns in _CRUD_SATISFACTION_PATTERNS.items():
-                    if crud_op in svc:
+                    if crud_op in source:
                         if any(pat in outcome_lower for pat in patterns):
                             return True
+                # Also treat "save" in step name as create alias
+                if "save" in source:
+                    if any(pat in outcome_lower for pat in _CRUD_SATISFACTION_PATTERNS["create"]):
+                        return True
 
         # Status transition trigger inference
         if proc.trigger and proc.trigger.kind == ProcessTriggerKind.ENTITY_STATUS_TRANSITION:
@@ -459,7 +470,13 @@ def _outcome_matches_pool(
     ):
         return True
 
-    # 3. Structural inference (CRUD / status transitions)
+    # 3. UI-concern outcomes auto-satisfied when a process exists
+    if impl_procs:
+        outcome_words = outcome_words or set(outcome_lower.split())
+        if outcome_words & _UI_FEEDBACK_PATTERNS:
+            return True
+
+    # 4. Structural inference (CRUD / status transitions)
     if _infer_structural_satisfaction(outcome_lower, impl_procs):
         return True
 

@@ -13,6 +13,20 @@ from typing import Any
 
 from . import ir
 
+# Patterns that indicate an entity is system-managed (read-only, no user create/edit)
+SYSTEM_MANAGED_PATTERNS = frozenset(
+    {
+        "audit",
+        "system",
+        "read_only",
+        "readonly",
+        "system_managed",
+        "log",
+        "event",
+        "notification",
+    }
+)
+
 
 @dataclass
 class CrudPattern:
@@ -27,24 +41,34 @@ class CrudPattern:
     list_surface: str | None = None
     detail_surface: str | None = None
     edit_surface: str | None = None
+    is_system_managed: bool = False  # True if entity is intentionally read-only
 
     @property
     def is_complete(self) -> bool:
-        """Check if all CRUD operations are present."""
+        """Check if all expected CRUD operations are present."""
+        if self.is_system_managed:
+            # System-managed entities only need list and optionally detail
+            return self.has_list
         return self.has_create and self.has_list and self.has_detail and self.has_edit
 
     @property
     def missing_operations(self) -> list[str]:
-        """Get list of missing CRUD operations."""
+        """Get list of missing CRUD operations (only those expected for this entity)."""
         missing = []
-        if not self.has_create:
-            missing.append("create")
-        if not self.has_list:
-            missing.append("list")
-        if not self.has_detail:
-            missing.append("detail")
-        if not self.has_edit:
-            missing.append("edit")
+        if self.is_system_managed:
+            # System-managed entities only expect list (and optionally detail)
+            if not self.has_list:
+                missing.append("list")
+        else:
+            # Normal entities expect full CRUD
+            if not self.has_create:
+                missing.append("create")
+            if not self.has_list:
+                missing.append("list")
+            if not self.has_detail:
+                missing.append("detail")
+            if not self.has_edit:
+                missing.append("edit")
         return missing
 
 
@@ -84,6 +108,28 @@ class ExperiencePattern:
             self.unreachable_steps = []
 
 
+def _is_system_managed_entity(entity: ir.EntitySpec) -> bool:
+    """Check if an entity is system-managed (read-only) based on patterns or name.
+
+    System-managed entities are those that are created/updated by the system
+    rather than by users, such as audit logs, system events, and notifications.
+    These entities intentionally lack create/edit surfaces.
+    """
+    # Check explicit patterns
+    entity_patterns = {p.lower() for p in entity.patterns}
+    if entity_patterns & SYSTEM_MANAGED_PATTERNS:
+        return True
+
+    # Heuristic: check entity name for common system-managed patterns
+    name_lower = entity.name.lower()
+    name_hints = ["log", "event", "audit", "notification", "history", "activity"]
+    for hint in name_hints:
+        if hint in name_lower:
+            return True
+
+    return False
+
+
 def detect_crud_patterns(spec: ir.AppSpec) -> list[CrudPattern]:
     """
     Detect CRUD patterns for entities.
@@ -100,7 +146,12 @@ def detect_crud_patterns(spec: ir.AppSpec) -> list[CrudPattern]:
 
     # Initialize pattern for each entity
     for entity in spec.domain.entities:
-        patterns[entity.name] = CrudPattern(entity_name=entity.name)
+        # Check if entity is system-managed based on patterns or name heuristics
+        is_system_managed = _is_system_managed_entity(entity)
+        patterns[entity.name] = CrudPattern(
+            entity_name=entity.name,
+            is_system_managed=is_system_managed,
+        )
 
     # Check surfaces for CRUD patterns
     for surface in spec.surfaces:

@@ -162,6 +162,26 @@ def save_test_designs(
     return designs_file
 
 
+def _extract_td_number(test_id: str) -> int | None:
+    """Extract the numeric part from a TD-XXX format ID."""
+    if test_id.startswith("TD-"):
+        try:
+            return int(test_id[3:])
+        except ValueError:
+            pass
+    return None
+
+
+def _get_max_td_number(test_ids: set[str]) -> int:
+    """Get the maximum TD number from a set of test IDs."""
+    max_num = 0
+    for test_id in test_ids:
+        num = _extract_td_number(test_id)
+        if num is not None:
+            max_num = max(max_num, num)
+    return max_num
+
+
 def get_next_test_design_id(project_root: Path) -> str:
     """Generate the next test design ID (TD-001, TD-002, etc.).
 
@@ -176,15 +196,7 @@ def get_next_test_design_id(project_root: Path) -> str:
     if not existing:
         return "TD-001"
 
-    max_num = 0
-    for design in existing:
-        if design.test_id.startswith("TD-"):
-            try:
-                num = int(design.test_id[3:])
-                max_num = max(max_num, num)
-            except ValueError:
-                continue
-
+    max_num = _get_max_td_number({d.test_id for d in existing})
     return f"TD-{max_num + 1:03d}"
 
 
@@ -266,41 +278,70 @@ def update_test_design_status(
     return updated_design
 
 
+class AddTestDesignsResult(BaseModel):
+    """Result of adding test designs, including any ID remappings."""
+
+    all_designs: list[TestDesignSpec]
+    added_count: int
+    remapped_ids: dict[str, str] = Field(default_factory=dict)  # old_id -> new_id
+
+
 def add_test_designs(
     project_root: Path,
     new_designs: list[TestDesignSpec],
     *,
     overwrite: bool = False,
     to_dsl: bool = True,
-) -> list[TestDesignSpec]:
+) -> AddTestDesignsResult:
     """Add new test designs, optionally overwriting existing ones.
+
+    When overwrite=False and a design has a colliding ID, a new unique ID
+    is automatically assigned and the remapping is reported in the result.
 
     Args:
         project_root: Root directory of the DAZZLE project.
         new_designs: Test designs to add.
         overwrite: If True, replace designs with matching IDs.
-            If False, skip designs that already exist.
+            If False, auto-assign new IDs for collisions.
         to_dsl: If True, save to dsl/tests/.
             If False, save to .dazzle/test_designs/.
 
     Returns:
-        List of all test designs after the operation.
+        AddTestDesignsResult with all designs and any ID remappings.
     """
     existing = load_test_designs(project_root)
     existing_ids = {d.test_id for d in existing}
+    remapped_ids: dict[str, str] = {}
+    added_count = 0
 
     if overwrite:
         new_ids = {d.test_id for d in new_designs}
         existing = [d for d in existing if d.test_id not in new_ids]
         existing.extend(new_designs)
+        added_count = len(new_designs)
     else:
+        # Track all IDs (existing + newly added) to avoid collisions
+        all_ids = existing_ids.copy()
+
         for design in new_designs:
-            if design.test_id not in existing_ids:
-                existing.append(design)
-                existing_ids.add(design.test_id)
+            if design.test_id in all_ids:
+                # Collision - assign a new unique ID
+                old_id = design.test_id
+                next_num = _get_max_td_number(all_ids) + 1
+                new_id = f"TD-{next_num:03d}"
+                design.test_id = new_id
+                remapped_ids[old_id] = new_id
+
+            existing.append(design)
+            all_ids.add(design.test_id)
+            added_count += 1
 
     save_test_designs(project_root, existing, to_dsl=to_dsl)
-    return existing
+    return AddTestDesignsResult(
+        all_designs=existing,
+        added_count=added_count,
+        remapped_ids=remapped_ids,
+    )
 
 
 def get_test_designs_by_persona(

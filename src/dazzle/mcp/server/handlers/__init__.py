@@ -14,6 +14,7 @@ from .api_packs import (
 )
 from .dsl import (
     analyze_patterns,
+    get_unified_issues,
     inspect_entity,
     inspect_surface,
     lint_project,
@@ -72,6 +73,7 @@ __all__ = [
     "inspect_surface",
     "analyze_patterns",
     "lint_project",
+    "get_unified_issues",
     # Knowledge handlers
     "lookup_concept_handler",
     "find_examples_handler",

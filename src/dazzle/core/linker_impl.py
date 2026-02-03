@@ -448,9 +448,12 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
                     owner_module = symbols.symbol_sources.get(ref_entity)
                     if owner_module and owner_module not in allowed_modules:
                         errors.append(
-                            f"Module '{module.name}' entity '{entity.name}' field '{entity_field.name}' "
-                            f"references entity '{ref_entity}' from module '{owner_module}' "
-                            f"without importing it (add: use {owner_module})"
+                            f"Module '{module.name}' entity "
+                            f"'{entity.name}' field "
+                            f"'{entity_field.name}' references "
+                            f"entity '{ref_entity}' from module "
+                            f"'{owner_module}' without importing "
+                            f"it (add: use {owner_module})"
                         )
 
         # Check surface entity references
@@ -478,9 +481,10 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
 
                 if target_module and target_module not in allowed_modules:
                     errors.append(
-                        f"Module '{module.name}' surface '{surface.name}' action '{action.name}' "
-                        f"references {outcome.kind.value} '{outcome.target}' from module '{target_module}' "
-                        f"without importing it (add: use {target_module})"
+                        f"Module '{module.name}' surface '{surface.name}' action "
+                        f"'{action.name}' references {outcome.kind.value} '{outcome.target}' "
+                        f"from module '{target_module}' without importing it "
+                        f"(add: use {target_module})"
                     )
 
         # Check experience step references

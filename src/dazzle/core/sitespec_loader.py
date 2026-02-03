@@ -10,12 +10,16 @@ Content directory: {project_root}/site/content/
 
 from __future__ import annotations
 
+import difflib
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import ValidationError
+
+if TYPE_CHECKING:
+    from .ir.appspec import AppSpec
 
 from .ir.sitespec import (
     AuthEntrySpec,
@@ -569,6 +573,7 @@ def validate_sitespec(
     project_root: Path | None = None,
     *,
     check_content_files: bool = True,
+    appspec: AppSpec | None = None,
 ) -> SiteSpecValidationResult:
     """Validate a SiteSpec for semantic correctness.
 
@@ -585,6 +590,7 @@ def validate_sitespec(
         sitespec: SiteSpec to validate.
         project_root: Project root for file existence checks.
         check_content_files: Whether to check content file existence.
+        appspec: Optional AppSpec to derive DSL app routes for nav link validation.
 
     Returns:
         SiteSpecValidationResult with errors and warnings.
@@ -649,8 +655,16 @@ def validate_sitespec(
     if sitespec.auth_pages.signup.enabled:
         check_route(sitespec.auth_pages.signup.route, "Auth signup")
 
+    # Derive DSL app routes if appspec is available
+    dsl_routes: list[str] = []
+    if appspec is not None:
+        dsl_routes = _derive_dsl_routes(appspec, sitespec)
+        for dsl_route in dsl_routes:
+            if dsl_route not in routes:
+                routes[dsl_route] = "DSL app route"
+
     # Validate navigation links
-    _validate_nav_links(sitespec, routes, result)
+    _validate_nav_links(sitespec, routes, result, dsl_routes=dsl_routes)
 
     # Brand completeness warnings
     if not sitespec.brand.tagline:
@@ -706,6 +720,53 @@ def _validate_section(
             result.add_warning(f"{context}: Testimonials section has no items")
 
 
+def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
+    """Derive app routes from AppSpec surfaces/workspaces.
+
+    Lightweight inline version of frontend_spec_export._build_route_map()
+    to avoid circular imports.
+    """
+    routes: list[str] = []
+    mount = sitespec.integrations.app_mount_route.rstrip("/")
+
+    for surface in appspec.surfaces:
+        entity_name = surface.entity_ref or "general"
+        slug = _pluralize_slug(entity_name.lower())
+
+        # Find workspace containing this entity
+        workspace_slug: str | None = None
+        for ws in appspec.workspaces:
+            for region in ws.regions:
+                if region.source == entity_name:
+                    workspace_slug = ws.name
+                    break
+            if workspace_slug:
+                break
+
+        base = f"{mount}/{workspace_slug}/{slug}" if workspace_slug else f"{mount}/{slug}"
+        mode = surface.mode.value
+
+        if mode == "list":
+            routes.append(base)
+        elif mode == "view":
+            routes.append(f"{base}/:id")
+        elif mode == "create":
+            routes.append(f"{base}/new")
+        elif mode == "edit":
+            routes.append(f"{base}/:id/edit")
+
+    return routes
+
+
+def _pluralize_slug(name: str) -> str:
+    """Naive pluralization for URL slugs."""
+    if name.endswith("s"):
+        return name + "es"
+    if name.endswith("y") and name[-2:] not in ("ay", "ey", "oy", "uy"):
+        return name[:-1] + "ies"
+    return name + "s"
+
+
 def _validate_cta(cta: CTASpec, context: str, result: SiteSpecValidationResult) -> None:
     """Validate a CTA."""
     if not cta.label:
@@ -720,12 +781,16 @@ def _validate_nav_links(
     sitespec: SiteSpec,
     defined_routes: dict[str, str],
     result: SiteSpecValidationResult,
+    *,
+    dsl_routes: list[str] | None = None,
 ) -> None:
     """Validate navigation links point to defined routes or valid URLs."""
     all_nav_items = list(sitespec.layout.nav.public) + list(sitespec.layout.nav.authenticated)
 
     for col in sitespec.layout.footer.columns:
         all_nav_items.extend(col.links)
+
+    all_known_routes = list(defined_routes.keys()) + (dsl_routes or [])
 
     for item in all_nav_items:
         href = item.href
@@ -735,9 +800,12 @@ def _validate_nav_links(
         # Internal links should be defined
         if href.startswith("/"):
             if href not in defined_routes and href != sitespec.integrations.app_mount_route:
-                result.add_warning(
-                    f"Navigation link '{item.label}': href '{href}' is not a defined route"
-                )
+                msg = f"Navigation link '{item.label}': href '{href}' is not a defined route"
+                # Suggest closest match
+                matches = difflib.get_close_matches(href, all_known_routes, n=1, cutoff=0.4)
+                if matches:
+                    msg += f" — did you mean '{matches[0]}'?"
+                result.add_warning(msg)
 
 
 # =============================================================================
