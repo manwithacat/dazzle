@@ -58,6 +58,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     # Render each page and build surface_name → HTML mapping
     rendered_pages: dict[str, str] = {}
+    render_failure_details: list[dict[str, str]] = []
     for _route, ctx in page_contexts.items():
         try:
             html = render_page(ctx)
@@ -65,6 +66,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             rendered_pages[ctx.view_name] = html
         except Exception as e:  # nosec B112 - skip unrenderable pages gracefully
             logger.warning("Fidelity: failed to render %s: %s", ctx.view_name, e)
+            render_failure_details.append({"surface": ctx.view_name, "error": str(e)})
             continue
 
     if page_contexts and not rendered_pages:
@@ -72,11 +74,11 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             {
                 "error": "All surfaces failed to render",
                 "surfaces_attempted": len(page_contexts),
+                "render_failure_details": render_failure_details,
                 "hint": "Run status(operation='logs') for details",
             }
         )
 
-    render_failures = len(page_contexts) - len(rendered_pages)
     surface_filter = arguments.get("surface_filter")
     report = score_appspec_fidelity(appspec, rendered_pages, surface_filter, str(project_path))
 
@@ -119,8 +121,9 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         "top_recommendations": top_recommendations,
         "next_steps": _build_next_steps(report),
     }
-    if render_failures > 0:
-        result["render_failures"] = render_failures
+    if render_failure_details:
+        result["render_failures"] = len(render_failure_details)
+        result["render_failure_details"] = render_failure_details
 
     return json.dumps(result, indent=2)
 

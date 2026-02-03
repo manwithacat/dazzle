@@ -395,7 +395,7 @@ def list_modules(project_root: Path) -> str:
 
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
-    entity_name = args.get("entity_name")
+    entity_name = args.get("entity_name") or args.get("name")
     if not entity_name:
         return json.dumps({"error": "entity_name required"})
 
@@ -432,7 +432,7 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
 
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
-    surface_name = args.get("surface_name")
+    surface_name = args.get("surface_name") or args.get("name")
     if not surface_name:
         return json.dumps({"error": "surface_name required"})
 
