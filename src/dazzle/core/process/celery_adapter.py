@@ -68,7 +68,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         del db_path  # Not used - we use Redis
         self._store = store or ProcessStateStore(redis_url=redis_url)
         self._initialized = False
-        self._beat_schedule: dict[str, dict] = {}
+        self._beat_schedule: dict[str, dict[str, Any]] = {}
 
     async def initialize(self) -> None:
         """Initialize the adapter.

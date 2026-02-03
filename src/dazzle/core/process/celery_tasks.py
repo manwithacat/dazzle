@@ -65,7 +65,7 @@ def _get_store() -> ProcessStateStore:
     return ProcessStateStore()
 
 
-@celery_app.task(
+@celery_app.task(  # type: ignore[misc]
     bind=True,
     max_retries=3,
     default_retry_delay=60,
@@ -73,7 +73,7 @@ def _get_store() -> ProcessStateStore:
     retry_backoff=True,
     retry_backoff_max=600,
 )
-def execute_process(self, run_id: str) -> dict[str, Any]:
+def execute_process(self: Any, run_id: str) -> dict[str, Any]:
     """Execute a process from start to finish.
 
     This is the main entry point for process execution. It:
@@ -157,8 +157,8 @@ def execute_process(self, run_id: str) -> dict[str, Any]:
 def _execute_step(
     store: ProcessStateStore,
     run: ProcessRun,
-    spec: dict,
-    step: dict,
+    spec: dict[str, Any],
+    step: dict[str, Any],
 ) -> dict[str, Any]:
     """Execute a single process step."""
     kind = step.get("kind", "")
@@ -176,7 +176,7 @@ def _execute_step(
         return {}
 
 
-def _execute_service_step(run: ProcessRun, step: dict) -> dict[str, Any]:
+def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     """Execute a service call step."""
     service_name = step.get("service")
     if not service_name:
@@ -213,7 +213,7 @@ def _execute_service_step(run: ProcessRun, step: dict) -> dict[str, Any]:
 def _execute_human_task_step(
     store: ProcessStateStore,
     run: ProcessRun,
-    step: dict,
+    step: dict[str, Any],
 ) -> dict[str, Any]:
     """Create a human task and pause the process."""
     import uuid
@@ -243,13 +243,13 @@ def _execute_human_task_step(
     return {"wait": True, "task_id": task_id}
 
 
-def _execute_wait_step(run: ProcessRun, step: dict) -> dict[str, Any]:
+def _execute_wait_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     """Execute a wait step."""
     logger.info(f"Process {run.run_id} waiting at step {step.get('name')}")
     return {"wait": True}
 
 
-def _execute_send_step(run: ProcessRun, step: dict) -> dict[str, Any]:
+def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     """Execute a send step."""
     channel = step.get("channel")
     logger.info(f"Send step {step.get('name')} via channel {channel}")
@@ -259,7 +259,7 @@ def _execute_send_step(run: ProcessRun, step: dict) -> dict[str, Any]:
 def _run_compensation(
     store: ProcessStateStore,
     run: ProcessRun,
-    spec: dict,
+    spec: dict[str, Any],
     completed_steps: list[str],
     error: str,
 ) -> None:
@@ -290,7 +290,7 @@ def _fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
     store.save_run(run)
 
 
-@celery_app.task
+@celery_app.task  # type: ignore[misc]
 def check_human_task_timeout(task_id: str) -> dict[str, Any]:
     """Check if a human task has timed out."""
     store = _get_store()
@@ -326,9 +326,9 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
     return {"status": task.status.value, "not_due": True}
 
 
-@celery_app.task
+@celery_app.task  # type: ignore[misc]
 def resume_process_after_task(
-    task_id: str, outcome: str, outcome_data: dict | None = None
+    task_id: str, outcome: str, outcome_data: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Resume a process after a human task is completed."""
     store = _get_store()
@@ -349,7 +349,7 @@ def resume_process_after_task(
     return {"status": "resumed", "run_id": run.run_id}
 
 
-@celery_app.task
+@celery_app.task  # type: ignore[misc]
 def trigger_scheduled_process(schedule_name: str) -> dict[str, Any]:
     """Trigger a scheduled process."""
     import uuid

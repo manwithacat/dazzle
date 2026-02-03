@@ -16,12 +16,12 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import redis
 
-from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
+from dazzle.core.ir.process import ProcessSpec, ProcessStepSpec, ScheduleSpec
 from dazzle.core.process.adapter import (
     ProcessRun,
     ProcessStatus,
@@ -84,16 +84,17 @@ class ProcessStateStore:
         self._redis.set(key, json.dumps(data))
         logger.debug(f"Registered process spec: {spec.name}")
 
-    def get_process_spec(self, name: str) -> ProcessSpec | None:
+    def get_process_spec(self, name: str) -> dict[str, Any] | None:
         """Get a process specification by name."""
         key = f"process:spec:{name}"
         data = self._redis.get(key)
         if not data:
             return None
         # Return raw dict - caller will need to handle reconstruction
-        return json.loads(data)
+        result: dict[str, Any] = json.loads(data)
+        return result
 
-    def _serialize_step(self, step) -> dict:
+    def _serialize_step(self, step: ProcessStepSpec) -> dict[str, Any]:
         """Serialize a process step to dict."""
         return {
             "name": step.name,
@@ -117,15 +118,16 @@ class ProcessStateStore:
         self._redis.set(key, json.dumps(data))
         logger.debug(f"Registered schedule spec: {spec.name}")
 
-    def get_schedule_spec(self, name: str) -> dict | None:
+    def get_schedule_spec(self, name: str) -> dict[str, Any] | None:
         """Get a schedule specification by name."""
         key = f"schedule:spec:{name}"
         data = self._redis.get(key)
         if not data:
             return None
-        return json.loads(data)
+        result: dict[str, Any] = json.loads(data)
+        return result
 
-    def list_schedule_specs(self) -> list[dict]:
+    def list_schedule_specs(self) -> list[dict[str, Any]]:
         """List all registered schedules."""
         pattern = "schedule:spec:*"
         keys = self._redis.keys(pattern)
@@ -158,8 +160,8 @@ class ProcessStateStore:
             "current_step": run.current_step,
             "error": run.error,
             "idempotency_key": run.idempotency_key,
-            "created_at": run.created_at.isoformat() if run.created_at else None,
-            "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+            "started_at": run.started_at.isoformat(),
+            "updated_at": run.updated_at.isoformat(),
             "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         }
         self._redis.set(key, json.dumps(data))
@@ -178,7 +180,7 @@ class ProcessStateStore:
             return None
         return self._deserialize_run(json.loads(data))
 
-    def _deserialize_run(self, data: dict) -> ProcessRun:
+    def _deserialize_run(self, data: dict[str, Any]) -> ProcessRun:
         """Deserialize a process run from dict."""
         return ProcessRun(
             run_id=data["run_id"],
@@ -192,12 +194,8 @@ class ProcessStateStore:
             current_step=data.get("current_step"),
             error=data.get("error"),
             idempotency_key=data.get("idempotency_key"),
-            created_at=(
-                datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None
-            ),
-            updated_at=(
-                datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None
-            ),
+            started_at=datetime.fromisoformat(data["started_at"]),
+            updated_at=datetime.fromisoformat(data["updated_at"]),
             completed_at=(
                 datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
             ),
@@ -297,7 +295,7 @@ class ProcessStateStore:
             return None
         return self._deserialize_task(json.loads(data))
 
-    def _deserialize_task(self, data: dict) -> ProcessTask:
+    def _deserialize_task(self, data: dict[str, Any]) -> ProcessTask:
         """Deserialize a task from dict."""
         return ProcessTask(
             task_id=data["task_id"],
@@ -311,10 +309,8 @@ class ProcessStateStore:
             status=TaskStatus(data["status"]),
             outcome=data.get("outcome"),
             outcome_data=data.get("outcome_data"),
-            due_at=datetime.fromisoformat(data["due_at"]) if data.get("due_at") else None,
-            created_at=(
-                datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None
-            ),
+            due_at=datetime.fromisoformat(data["due_at"]),
+            created_at=datetime.fromisoformat(data["created_at"]),
             completed_at=(
                 datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
             ),
