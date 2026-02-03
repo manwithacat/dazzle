@@ -1542,6 +1542,7 @@ def create_app_factory() -> FastAPI:
         REDIS_URL: Redis connection URL (for sessions/cache)
         DAZZLE_ENV: Environment name (development/staging/production)
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
+        DAZZLE_ENABLE_PROCESSES: Enable/disable process workflows (default: "true")
 
     Usage:
         uvicorn dazzle_back.runtime.server:create_app_factory --factory --host 0.0.0.0 --port $PORT
@@ -1609,6 +1610,9 @@ def create_app_factory() -> FastAPI:
     enable_dev_mode = dazzle_env == "development"
     enable_test_mode = dazzle_env in ("development", "test")
 
+    # Process workflow support (can be disabled via env var)
+    enable_processes = os.environ.get("DAZZLE_ENABLE_PROCESSES", "true").lower() == "true"
+
     # Parse DSL and build spec
     try:
         dsl_files = discover_dsl_files(project_root, manifest)
@@ -1665,7 +1669,7 @@ def create_app_factory() -> FastAPI:
         scenarios=[],
         sitespec_data=sitespec_data,
         project_root=project_root,
-        enable_processes=True,
+        enable_processes=enable_processes,
         process_db_path=project_root / ".dazzle" / "processes.db",
         enable_console=enable_dev_mode,
     )
