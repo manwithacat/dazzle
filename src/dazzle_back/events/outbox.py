@@ -9,6 +9,8 @@ This prevents the "dual write" problem where a database commit succeeds
 but event publishing fails (or vice versa).
 
 Rule 1: No dual writes (DB and bus must not drift)
+
+Supports both SQLite (default, local dev) and PostgreSQL (production).
 """
 
 from __future__ import annotations
@@ -22,6 +24,10 @@ from uuid import UUID
 import aiosqlite
 
 from dazzle_back.events.envelope import EventEnvelope
+
+# Type alias for connection types (aiosqlite or asyncpg)
+# Using Any to avoid import issues with asyncpg which is optional
+OutboxConnection = aiosqlite.Connection | Any
 
 
 class OutboxStatus(StrEnum):
@@ -56,8 +62,8 @@ class OutboxEntry:
         return EventEnvelope.from_json(self.envelope_json)
 
 
-# SQL statements for outbox table
-CREATE_OUTBOX_TABLE = """
+# SQL statements for outbox table (SQLite)
+CREATE_OUTBOX_TABLE_SQLITE = """
 CREATE TABLE IF NOT EXISTS _dazzle_event_outbox (
     id TEXT PRIMARY KEY,
     topic TEXT NOT NULL,
@@ -74,16 +80,46 @@ CREATE TABLE IF NOT EXISTS _dazzle_event_outbox (
 );
 """
 
-CREATE_OUTBOX_INDEXES = """
+CREATE_OUTBOX_INDEXES_SQLITE = """
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON _dazzle_event_outbox(status);
 CREATE INDEX IF NOT EXISTS idx_outbox_created ON _dazzle_event_outbox(created_at);
 CREATE INDEX IF NOT EXISTS idx_outbox_topic ON _dazzle_event_outbox(topic);
 """
 
+# SQL statements for outbox table (PostgreSQL)
+CREATE_OUTBOX_TABLE_POSTGRES = """
+CREATE TABLE IF NOT EXISTS _dazzle_event_outbox (
+    id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    key TEXT NOT NULL,
+    envelope_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT (now()::text),
+    published_at TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    lock_token TEXT,
+    lock_expires_at TEXT
+);
+"""
+
+CREATE_OUTBOX_INDEXES_POSTGRES = [
+    "CREATE INDEX IF NOT EXISTS idx_outbox_status ON _dazzle_event_outbox(status)",
+    "CREATE INDEX IF NOT EXISTS idx_outbox_created ON _dazzle_event_outbox(created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_outbox_topic ON _dazzle_event_outbox(topic)",
+]
+
+# Backwards compatibility
+CREATE_OUTBOX_TABLE = CREATE_OUTBOX_TABLE_SQLITE
+CREATE_OUTBOX_INDEXES = CREATE_OUTBOX_INDEXES_SQLITE
+
 
 class EventOutbox:
     """
     Event outbox for transactional publishing.
+
+    Supports both SQLite (default, local dev) and PostgreSQL (production).
 
     Usage in a service:
         async with db.transaction() as conn:
@@ -96,23 +132,41 @@ class EventOutbox:
     The publisher loop then drains the outbox asynchronously.
     """
 
-    def __init__(self, table_name: str = "_dazzle_event_outbox") -> None:
+    def __init__(
+        self,
+        table_name: str = "_dazzle_event_outbox",
+        use_postgres: bool = False,
+    ) -> None:
         """
         Initialize the outbox.
 
         Args:
             table_name: Name of the outbox table
+            use_postgres: Whether to use PostgreSQL instead of SQLite
         """
         self._table = table_name
+        self._use_postgres = use_postgres
 
-    async def create_table(self, conn: aiosqlite.Connection) -> None:
+    def _is_postgres_conn(self, conn: OutboxConnection) -> bool:
+        """Check if connection is PostgreSQL (asyncpg)."""
+        # Check by module name to avoid import
+        return type(conn).__module__.startswith("asyncpg")
+
+    async def create_table(self, conn: OutboxConnection) -> None:
         """Create the outbox table if it doesn't exist."""
-        await conn.executescript(CREATE_OUTBOX_TABLE + CREATE_OUTBOX_INDEXES)
-        await conn.commit()
+        if self._use_postgres or self._is_postgres_conn(conn):
+            # PostgreSQL (asyncpg)
+            await conn.execute(CREATE_OUTBOX_TABLE_POSTGRES)
+            for index_sql in CREATE_OUTBOX_INDEXES_POSTGRES:
+                await conn.execute(index_sql)
+        else:
+            # SQLite (aiosqlite)
+            await conn.executescript(CREATE_OUTBOX_TABLE_SQLITE + CREATE_OUTBOX_INDEXES_SQLITE)
+            await conn.commit()
 
     async def append(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         envelope: EventEnvelope,
         topic: str | None = None,
     ) -> OutboxEntry:
@@ -132,23 +186,34 @@ class EventOutbox:
             The created OutboxEntry
         """
         target_topic = topic or envelope.topic
-
-        await conn.execute(
-            f"""
-            INSERT INTO {self._table} (
-                id, topic, event_type, key, envelope_json, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                str(envelope.event_id),
-                target_topic,
-                envelope.event_type,
-                envelope.key,
-                envelope.to_json(),
-                OutboxStatus.PENDING.value,
-                datetime.now(UTC).isoformat(),
-            ),
+        params = (
+            str(envelope.event_id),
+            target_topic,
+            envelope.event_type,
+            envelope.key,
+            envelope.to_json(),
+            OutboxStatus.PENDING.value,
+            datetime.now(UTC).isoformat(),
         )
+
+        if self._use_postgres or self._is_postgres_conn(conn):
+            await conn.execute(
+                f"""
+                INSERT INTO {self._table} (
+                    id, topic, event_type, key, envelope_json, status, created_at
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                """,
+                *params,
+            )
+        else:
+            await conn.execute(
+                f"""
+                INSERT INTO {self._table} (
+                    id, topic, event_type, key, envelope_json, status, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                params,
+            )
 
         return OutboxEntry(
             id=envelope.event_id,
@@ -161,7 +226,7 @@ class EventOutbox:
 
     async def fetch_pending(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         *,
         limit: int = 100,
         lock_token: str | None = None,
@@ -182,10 +247,35 @@ class EventOutbox:
         Returns:
             List of pending OutboxEntry
         """
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+
+        if is_postgres:
+            return await self._fetch_pending_postgres(
+                conn,
+                limit=limit,
+                lock_token=lock_token,
+                lock_duration_seconds=lock_duration_seconds,
+            )
+        else:
+            return await self._fetch_pending_sqlite(
+                conn,
+                limit=limit,
+                lock_token=lock_token,
+                lock_duration_seconds=lock_duration_seconds,
+            )
+
+    async def _fetch_pending_sqlite(
+        self,
+        conn: aiosqlite.Connection,
+        *,
+        limit: int,
+        lock_token: str | None,
+        lock_duration_seconds: int,
+    ) -> list[OutboxEntry]:
+        """Fetch pending entries using SQLite."""
         conn.row_factory = aiosqlite.Row
 
         if lock_token:
-            # Lock entries for this publisher
             lock_expires = datetime.now(UTC).isoformat()
 
             await conn.execute(
@@ -205,7 +295,6 @@ class EventOutbox:
             )
             await conn.commit()
 
-            # Fetch locked entries
             cursor = await conn.execute(
                 f"""
                 SELECT * FROM {self._table}
@@ -231,27 +320,90 @@ class EventOutbox:
 
         return entries
 
+    async def _fetch_pending_postgres(
+        self,
+        conn: Any,
+        *,
+        limit: int,
+        lock_token: str | None,
+        lock_duration_seconds: int,
+    ) -> list[OutboxEntry]:
+        """Fetch pending entries using PostgreSQL."""
+        if lock_token:
+            lock_expires = datetime.now(UTC).isoformat()
+
+            await conn.execute(
+                f"""
+                UPDATE {self._table}
+                SET lock_token = $1,
+                    lock_expires_at = (now() + interval '{lock_duration_seconds} seconds')::text
+                WHERE id IN (
+                    SELECT id FROM {self._table}
+                    WHERE status = 'pending'
+                    AND (lock_token IS NULL OR lock_expires_at < $2)
+                    ORDER BY created_at ASC
+                    LIMIT $3
+                )
+                """,
+                lock_token,
+                lock_expires,
+                limit,
+            )
+
+            rows = await conn.fetch(
+                f"""
+                SELECT * FROM {self._table}
+                WHERE lock_token = $1 AND status = 'pending'
+                ORDER BY created_at ASC
+                """,
+                lock_token,
+            )
+        else:
+            rows = await conn.fetch(
+                f"""
+                SELECT * FROM {self._table}
+                WHERE status = 'pending'
+                ORDER BY created_at ASC
+                LIMIT $1
+                """,
+                limit,
+            )
+
+        return [self._row_to_entry(dict(row)) for row in rows]
+
     async def mark_published(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         entry_id: UUID,
     ) -> None:
         """Mark an entry as successfully published."""
-        await conn.execute(
-            f"""
-            UPDATE {self._table}
-            SET status = 'published',
-                published_at = datetime('now'),
-                lock_token = NULL
-            WHERE id = ?
-            """,
-            (str(entry_id),),
-        )
-        await conn.commit()
+        if self._use_postgres or self._is_postgres_conn(conn):
+            await conn.execute(
+                f"""
+                UPDATE {self._table}
+                SET status = 'published',
+                    published_at = now()::text,
+                    lock_token = NULL
+                WHERE id = $1
+                """,
+                str(entry_id),
+            )
+        else:
+            await conn.execute(
+                f"""
+                UPDATE {self._table}
+                SET status = 'published',
+                    published_at = datetime('now'),
+                    lock_token = NULL
+                WHERE id = ?
+                """,
+                (str(entry_id),),
+            )
+            await conn.commit()
 
     async def mark_failed(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         entry_id: UUID,
         error: str,
         *,
@@ -269,53 +421,90 @@ class EventOutbox:
         Returns:
             True if entry should be retried, False if max attempts reached
         """
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+
         # Get current attempts
-        cursor = await conn.execute(
-            f"SELECT attempts FROM {self._table} WHERE id = ?",
-            (str(entry_id),),
-        )
-        row = await cursor.fetchone()
-        attempts = (row[0] if row else 0) + 1
+        if is_postgres:
+            row = await conn.fetchrow(  # type: ignore[union-attr]
+                f"SELECT attempts FROM {self._table} WHERE id = $1",
+                str(entry_id),
+            )
+            attempts = (row["attempts"] if row else 0) + 1
+        else:
+            cursor = await conn.execute(
+                f"SELECT attempts FROM {self._table} WHERE id = ?",
+                (str(entry_id),),
+            )
+            row = await cursor.fetchone()
+            attempts = (row[0] if row else 0) + 1
 
         if attempts >= max_attempts:
             # Permanent failure
-            await conn.execute(
-                f"""
-                UPDATE {self._table}
-                SET status = 'failed',
-                    attempts = ?,
-                    last_error = ?,
-                    lock_token = NULL
-                WHERE id = ?
-                """,
-                (attempts, error, str(entry_id)),
-            )
-            await conn.commit()
+            if is_postgres:
+                await conn.execute(
+                    f"""
+                    UPDATE {self._table}
+                    SET status = 'failed',
+                        attempts = $1,
+                        last_error = $2,
+                        lock_token = NULL
+                    WHERE id = $3
+                    """,
+                    attempts,
+                    error,
+                    str(entry_id),
+                )
+            else:
+                await conn.execute(
+                    f"""
+                    UPDATE {self._table}
+                    SET status = 'failed',
+                        attempts = ?,
+                        last_error = ?,
+                        lock_token = NULL
+                    WHERE id = ?
+                    """,
+                    (attempts, error, str(entry_id)),
+                )
+                await conn.commit()
             return False
         else:
             # Retry later
-            await conn.execute(
-                f"""
-                UPDATE {self._table}
-                SET attempts = ?,
-                    last_error = ?,
-                    lock_token = NULL
-                WHERE id = ?
-                """,
-                (attempts, error, str(entry_id)),
-            )
-            await conn.commit()
+            if is_postgres:
+                await conn.execute(
+                    f"""
+                    UPDATE {self._table}
+                    SET attempts = $1,
+                        last_error = $2,
+                        lock_token = NULL
+                    WHERE id = $3
+                    """,
+                    attempts,
+                    error,
+                    str(entry_id),
+                )
+            else:
+                await conn.execute(
+                    f"""
+                    UPDATE {self._table}
+                    SET attempts = ?,
+                        last_error = ?,
+                        lock_token = NULL
+                    WHERE id = ?
+                    """,
+                    (attempts, error, str(entry_id)),
+                )
+                await conn.commit()
             return True
 
     async def get_stats(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
     ) -> dict[str, Any]:
         """Get outbox statistics."""
-        conn.row_factory = aiosqlite.Row
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
 
-        cursor = await conn.execute(
-            f"""
+        query = f"""
             SELECT
                 status,
                 COUNT(*) as count,
@@ -323,8 +512,7 @@ class EventOutbox:
                 MAX(created_at) as newest
             FROM {self._table}
             GROUP BY status
-            """
-        )
+        """
 
         stats: dict[str, Any] = {
             "pending": 0,
@@ -334,17 +522,27 @@ class EventOutbox:
             "oldest_pending": None,
         }
 
-        async for row in cursor:
-            status = row["status"]
-            stats[status] = row["count"]
-            if status == "pending" and row["oldest"]:
-                stats["oldest_pending"] = row["oldest"]
+        if is_postgres:
+            rows = await conn.fetch(query)  # type: ignore[union-attr]
+            for row in rows:
+                status = row["status"]
+                stats[status] = row["count"]
+                if status == "pending" and row["oldest"]:
+                    stats["oldest_pending"] = row["oldest"]
+        else:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute(query)
+            async for row in cursor:
+                status = row["status"]
+                stats[status] = row["count"]
+                if status == "pending" and row["oldest"]:
+                    stats["oldest_pending"] = row["oldest"]
 
         return stats
 
     async def cleanup_published(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         *,
         older_than_hours: int = 24,
     ) -> int:
@@ -358,60 +556,96 @@ class EventOutbox:
         Returns:
             Number of entries deleted
         """
-        cursor = await conn.execute(
-            f"""
-            DELETE FROM {self._table}
-            WHERE status = 'published'
-            AND published_at < datetime('now', '-{older_than_hours} hours')
-            """
-        )
-        await conn.commit()
-        return int(cursor.rowcount)
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+
+        if is_postgres:
+            result = await conn.execute(
+                f"""
+                DELETE FROM {self._table}
+                WHERE status = 'published'
+                AND published_at < (now() - interval '{older_than_hours} hours')::text
+                """
+            )
+            # asyncpg returns a string like "DELETE 5"
+            return int(result.split()[-1]) if result else 0  # type: ignore[union-attr]
+        else:
+            cursor = await conn.execute(
+                f"""
+                DELETE FROM {self._table}
+                WHERE status = 'published'
+                AND published_at < datetime('now', '-{older_than_hours} hours')
+                """
+            )
+            await conn.commit()
+            return int(cursor.rowcount)
 
     async def get_failed_entries(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         *,
         limit: int = 100,
     ) -> list[OutboxEntry]:
         """Get failed entries for inspection or manual retry."""
-        conn.row_factory = aiosqlite.Row
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
 
-        cursor = await conn.execute(
-            f"""
-            SELECT * FROM {self._table}
-            WHERE status = 'failed'
-            ORDER BY created_at DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
-
-        return [self._row_to_entry(row) async for row in cursor]
+        if is_postgres:
+            rows = await conn.fetch(  # type: ignore[union-attr]
+                f"""
+                SELECT * FROM {self._table}
+                WHERE status = 'failed'
+                ORDER BY created_at DESC
+                LIMIT $1
+                """,
+                limit,
+            )
+            return [self._row_to_entry(dict(row)) for row in rows]
+        else:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute(
+                f"""
+                SELECT * FROM {self._table}
+                WHERE status = 'failed'
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            return [self._row_to_entry(row) async for row in cursor]
 
     async def get_recent_entries(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         *,
         limit: int = 10,
     ) -> list[OutboxEntry]:
         """Get recent entries regardless of status (for event explorer)."""
-        conn.row_factory = aiosqlite.Row
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
 
-        cursor = await conn.execute(
-            f"""
-            SELECT * FROM {self._table}
-            ORDER BY created_at DESC
-            LIMIT ?
-            """,
-            (limit,),
-        )
-
-        return [self._row_to_entry(row) async for row in cursor]
+        if is_postgres:
+            rows = await conn.fetch(  # type: ignore[union-attr]
+                f"""
+                SELECT * FROM {self._table}
+                ORDER BY created_at DESC
+                LIMIT $1
+                """,
+                limit,
+            )
+            return [self._row_to_entry(dict(row)) for row in rows]
+        else:
+            conn.row_factory = aiosqlite.Row
+            cursor = await conn.execute(
+                f"""
+                SELECT * FROM {self._table}
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            return [self._row_to_entry(row) async for row in cursor]
 
     async def retry_failed(
         self,
-        conn: aiosqlite.Connection,
+        conn: OutboxConnection,
         entry_id: UUID,
     ) -> bool:
         """
@@ -420,18 +654,32 @@ class EventOutbox:
         Returns:
             True if entry was found and reset
         """
-        cursor = await conn.execute(
-            f"""
-            UPDATE {self._table}
-            SET status = 'pending', attempts = 0
-            WHERE id = ? AND status = 'failed'
-            """,
-            (str(entry_id),),
-        )
-        await conn.commit()
-        return int(cursor.rowcount) > 0
+        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
 
-    def _row_to_entry(self, row: aiosqlite.Row) -> OutboxEntry:
+        if is_postgres:
+            result = await conn.execute(
+                f"""
+                UPDATE {self._table}
+                SET status = 'pending', attempts = 0
+                WHERE id = $1 AND status = 'failed'
+                """,
+                str(entry_id),
+            )
+            # asyncpg returns a string like "UPDATE 1"
+            return result.endswith("1") if result else False  # type: ignore[union-attr]
+        else:
+            cursor = await conn.execute(
+                f"""
+                UPDATE {self._table}
+                SET status = 'pending', attempts = 0
+                WHERE id = ? AND status = 'failed'
+                """,
+                (str(entry_id),),
+            )
+            await conn.commit()
+            return int(cursor.rowcount) > 0
+
+    def _row_to_entry(self, row: aiosqlite.Row | dict[str, Any]) -> OutboxEntry:
         """Convert a database row to an OutboxEntry."""
         return OutboxEntry(
             id=UUID(row["id"]),
