@@ -495,29 +495,7 @@ def _check_story_embodiment(
     all_text_lower = root.get_text().lower()
 
     for story in relevant_stories:
-        # 1. Scope alignment
-        if story.scope:
-            uses_entities = {entity_name}
-            missing_scope = [e for e in story.scope if e not in uses_entities]
-            for missing_entity in missing_scope:
-                gaps.append(
-                    FidelityGap(
-                        category=FidelityGapCategory.STORY_SCOPE_MISMATCH,
-                        dimension="story",
-                        severity="minor",
-                        surface_name=surface.name,
-                        target=f"scope[{missing_entity}]",
-                        expected=f"Surface binds entity '{missing_entity}'",
-                        actual=f"Surface only uses '{entity_name}'",
-                        recommendation=(
-                            f"Surface '{surface.name}' may need a related surface "
-                            f"for entity '{missing_entity}' to fully satisfy "
-                            f"story {story.story_id} '{story.title}'."
-                        ),
-                    )
-                )
-
-        # 2. Given-condition fields
+        # 1. Given-condition fields
         for cond in story.given:
             field_name = _extract_field_from_path(cond.field_path)
             if field_name and field_name not in surface_field_names:

@@ -109,17 +109,17 @@ class TestMatchStoriesToSurfaces:
 
 
 class TestScopeAlignment:
-    """Tests for scope alignment sub-check."""
+    """Tests for scope alignment — scope mismatches are no longer fidelity gaps."""
 
-    def test_scope_mismatch_detected(self) -> None:
+    def test_scope_mismatch_not_reported(self) -> None:
+        """Multi-entity scope no longer produces fidelity gaps."""
         surface = _make_surface(entity_ref="Task")
         story = _make_story(scope=["Task", "Project"])
         root = parse_html("<div><button>Complete</button></div>")
 
         gaps = _check_story_embodiment(surface, None, root, None, [story])
-        scope_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_SCOPE_MISMATCH]
-        assert len(scope_gaps) == 1
-        assert "Project" in scope_gaps[0].target
+        scope_gaps = [g for g in gaps if "scope" in g.target.lower()]
+        assert len(scope_gaps) == 0
 
     def test_scope_fully_matched(self) -> None:
         surface = _make_surface(entity_ref="Task")
@@ -127,7 +127,7 @@ class TestScopeAlignment:
         root = parse_html("<div><button>Complete</button></div>")
 
         gaps = _check_story_embodiment(surface, None, root, None, [story])
-        scope_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_SCOPE_MISMATCH]
+        scope_gaps = [g for g in gaps if "scope" in g.target.lower()]
         assert len(scope_gaps) == 0
 
 

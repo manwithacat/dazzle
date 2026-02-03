@@ -76,6 +76,18 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
                 reload_cache()
 
+                # Reload fidelity-related modules if already imported
+                import importlib
+                import sys as _sys
+
+                for mod_name in [
+                    "dazzle.core.ir.fidelity",
+                    "dazzle.core.fidelity_scorer",
+                    "dazzle.mcp.server.handlers.fidelity",
+                ]:
+                    if mod_name in _sys.modules:
+                        importlib.reload(_sys.modules[mod_name])
+
                 # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version
 

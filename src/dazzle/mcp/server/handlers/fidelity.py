@@ -39,6 +39,18 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     except Exception as e:
         return json.dumps({"error": f"Failed to parse/link DSL: {e}"})
 
+    # Validate DSL before proceeding
+    from dazzle.core.lint import lint_appspec
+
+    lint_errors, lint_warnings = lint_appspec(appspec)
+    if lint_errors:
+        return json.dumps(
+            {
+                "error": "DSL has validation errors. Fix these before running fidelity.",
+                "lint_errors": lint_errors,
+            }
+        )
+
     # Try to compile and render surfaces
     try:
         from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
@@ -124,6 +136,8 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     if render_failure_details:
         result["render_failures"] = len(render_failure_details)
         result["render_failure_details"] = render_failure_details
+    if lint_warnings:
+        result["lint_warnings"] = lint_warnings
 
     return json.dumps(result, indent=2)
 

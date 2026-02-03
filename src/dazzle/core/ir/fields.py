@@ -63,7 +63,9 @@ class FieldType(BaseModel):
         - ref Client: FieldType(kind=REF, ref_entity="Client")
 
     v0.7.1 Relationship examples:
-        - has_many OrderItem cascade: FieldType(kind=HAS_MANY, ref_entity="OrderItem", relationship_behavior=CASCADE)
+        - has_many OrderItem cascade: FieldType(
+            kind=HAS_MANY, ref_entity="OrderItem",
+            relationship_behavior=CASCADE)
         - has_one Profile: FieldType(kind=HAS_ONE, ref_entity="Profile")
         - embeds Address: FieldType(kind=EMBEDS, ref_entity="Address")
         - belongs_to Order: FieldType(kind=BELONGS_TO, ref_entity="Order")
