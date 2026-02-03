@@ -245,9 +245,9 @@ class TestProposeProcesses:
         assert data["workflow_count"] >= 1
 
         for workflow in data["workflows"]:
-            assert "workflow_name" in workflow
+            assert "name" in workflow
             assert "title" in workflow
-            assert "stories" in workflow
+            assert "implements" in workflow
 
     def test_propose_for_specific_story(
         self, mock_app_spec_no_processes: MagicMock, tmp_path: Path
@@ -264,7 +264,7 @@ class TestProposeProcesses:
 
         assert "error" not in data
         assert data["workflow_count"] >= 1
-        assert "ST-001" in data["workflows"][0]["stories"]
+        assert "ST-001" in data["workflows"][0]["implements"]
 
     def test_propose_no_stories_with_fallback(
         self, mock_app_spec_no_stories: MagicMock, tmp_path: Path

@@ -261,3 +261,70 @@ tips = [
   "Match stage to user needs: novices prefer simpler stages, experts prefer command_center",
   "Consider persona when choosing stage - same workspace can use different stages per persona"
 ]
+
+
+[concepts.process]
+category = "Core Construct"
+definition = """
+A durable workflow process that orchestrates multi-step operations across entities
+and services. Processes handle lifecycle transitions, scheduled jobs, event-driven
+pipelines, and cross-entity operations that go beyond simple CRUD.
+
+Workflow: propose → save → inspect → coverage
+- propose: clusters uncovered stories into workflow design briefs
+- save: persists composed ProcessSpec definitions
+- inspect: shows a single process with steps, trigger, and linked stories
+- coverage: checks which story outcomes are satisfied by processes
+"""
+
+syntax = """
+Key fields in ProcessSpec:
+  name: str               # Process identifier
+  title: str              # Human-readable title
+  implements: list[str]   # Story IDs this process covers (e.g. ['ST-001', 'ST-002'])
+  trigger: ProcessTriggerSpec  # What starts the process (entity event, cron, manual, etc.)
+  steps: list[ProcessStepSpec] # Ordered activities (SERVICE, SEND, WAIT, HUMAN_TASK, etc.)
+  outputs: list[ProcessOutputField]  # Process output fields
+  compensations: list[CompensationSpec]  # Saga rollback handlers
+
+Steps and outputs can declare satisfies refs for explicit coverage traceability:
+  satisfies:
+    - story: "ST-002"
+      outcome: "the invoice is marked as sent"
+"""
+
+example = """
+# CRUD process (simple — usually handled by surfaces, not processes):
+#   Entity.create / Entity.update / Entity.delete via surface handlers
+
+# Lifecycle process (status transitions):
+process order_lifecycle:
+  trigger: entity Order status -> confirmed
+  steps:
+    - name: validate_inventory
+      kind: service
+      service: Inventory.check_availability
+    - name: process_payment
+      kind: service
+      service: Payment.charge
+      compensate_with: refund_payment
+    - name: fulfill_order
+      kind: service
+      service: Fulfillment.ship
+  implements: [ST-010, ST-011, ST-012]
+
+# Scheduled process (cron):
+process daily_report:
+  trigger: cron "0 8 * * *"
+  steps:
+    - name: generate_report
+      kind: service
+      service: Reporting.daily_summary
+    - name: send_email
+      kind: send
+      channel: email
+      message: daily_report
+  implements: [ST-020]
+"""
+
+related = ["entity", "service", "story", "state_machine", "compensation"]

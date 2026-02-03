@@ -588,7 +588,8 @@ class HLESSValidator:
                     HLESSViolation(
                         rule="INTENT_OUTCOME_PARTITION_MISMATCH",
                         message=(
-                            f"INTENT stream '{stream.name}' has partition_key '{stream.partition_key}' "
+                            f"INTENT stream '{stream.name}' has "
+                            f"partition_key '{stream.partition_key}' "
                             f"but outcome target '{target_stream_name}' has "
                             f"partition_key '{target_stream.partition_key}'. "
                             f"This may cause ordering issues."

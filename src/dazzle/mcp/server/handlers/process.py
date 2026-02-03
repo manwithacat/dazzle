@@ -69,9 +69,9 @@ class CoverageReport:
 class WorkflowProposal:
     """A workflow-oriented design brief generated from clustered stories."""
 
-    workflow_name: str
+    name: str
     title: str
-    stories: list[str]
+    implements: list[str]
     story_summaries: list[dict[str, Any]]
     entity: str | None  # Entity name — full context in top-level entities dict
     design_questions: list[str]
@@ -312,12 +312,17 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         page = coverage_results[offset : offset + limit]
         has_more = (offset + limit) < len(coverage_results)
 
+        has_process = covered_count + partial_count
+        has_process_percent = round(has_process / total * 100, 1) if total > 0 else 0.0
+
         result: dict[str, Any] = {
             "total_stories": total,
             "covered": covered_count,
             "partial": partial_count,
             "uncovered": uncovered_count,
             "coverage_percent": round(coverage_percent, 1),
+            "has_process": has_process,
+            "has_process_percent": has_process_percent,
             "showing": len(page),
             "offset": offset,
             "has_more": has_more,
@@ -338,6 +343,129 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
+def _collect_process_match_pool(
+    processes: list[ProcessSpec],
+    implementing: list[str],
+) -> tuple[list[str], set[str], list[ProcessSpec]]:
+    """Collect the full text pool and explicit satisfies refs from implementing processes.
+
+    Returns:
+        match_pool: lowered text fragments to match against
+        satisfies_outcomes: set of outcome texts explicitly declared as satisfied
+        impl_procs: the resolved ProcessSpec objects
+    """
+    match_pool: list[str] = []
+    satisfies_outcomes: set[str] = set()
+    impl_procs: list[ProcessSpec] = []
+
+    for proc_name in implementing:
+        proc = next((p for p in processes if p.name == proc_name), None)
+        if not proc:
+            continue
+        impl_procs.append(proc)
+
+        for step in proc.steps:
+            match_pool.append(step.name.lower())
+            if step.service:
+                match_pool.append(step.service.lower())
+            for ps in step.parallel_steps:
+                match_pool.append(ps.name.lower())
+                if ps.service:
+                    match_pool.append(ps.service.lower())
+            for ref in step.satisfies:
+                satisfies_outcomes.add(ref.outcome.lower())
+            for ps in step.parallel_steps:
+                for ref in ps.satisfies:
+                    satisfies_outcomes.add(ref.outcome.lower())
+
+        for comp in proc.compensations:
+            match_pool.append(comp.name.lower())
+
+        for out in proc.outputs:
+            match_pool.append(out.name.lower())
+            if out.description:
+                match_pool.append(out.description.lower())
+            for ref in out.satisfies:
+                satisfies_outcomes.add(ref.outcome.lower())
+
+    return match_pool, satisfies_outcomes, impl_procs
+
+
+# Patterns that can be inferred from CRUD service bindings
+_CRUD_SATISFACTION_PATTERNS: dict[str, list[str]] = {
+    "create": ["created", "saved", "stored", "persisted", "added", "recorded"],
+    "update": ["updated", "modified", "changed", "saved", "stored"],
+    "delete": ["deleted", "removed", "archived"],
+}
+
+# Patterns for status transition inference
+_STATUS_TRANSITION_PATTERNS = [
+    "status",
+    "transition",
+    "changed",
+    "moved",
+    "set to",
+    "becomes",
+    "timestamp",
+    "recorded",
+    "logged",
+    "tracked",
+]
+
+
+def _infer_structural_satisfaction(
+    outcome_lower: str,
+    impl_procs: list[ProcessSpec],
+) -> bool:
+    """Check if outcome is structurally satisfied by CRUD bindings or triggers."""
+    from dazzle.core.ir.process import ProcessTriggerKind, StepKind
+
+    for proc in impl_procs:
+        # CRUD service binding inference
+        for step in proc.steps:
+            if step.kind == StepKind.SERVICE and step.service:
+                svc = step.service.lower()
+                for crud_op, patterns in _CRUD_SATISFACTION_PATTERNS.items():
+                    if crud_op in svc:
+                        if any(pat in outcome_lower for pat in patterns):
+                            return True
+
+        # Status transition trigger inference
+        if proc.trigger and proc.trigger.kind == ProcessTriggerKind.ENTITY_STATUS_TRANSITION:
+            if any(pat in outcome_lower for pat in _STATUS_TRANSITION_PATTERNS):
+                return True
+
+    return False
+
+
+def _outcome_matches_pool(
+    outcome: str,
+    match_pool: list[str],
+    satisfies_outcomes: set[str],
+    impl_procs: list[ProcessSpec],
+) -> bool:
+    """Check if an outcome is matched by the pool, satisfies refs, or structural inference."""
+    outcome_lower = outcome.lower()
+
+    # 1. Explicit satisfies declaration
+    if outcome_lower in satisfies_outcomes:
+        return True
+
+    # 2. Word overlap with match pool
+    outcome_words = set(outcome_lower.split())
+    meaningful_words = {w for w in outcome_words if len(w) > MIN_MEANINGFUL_WORD_LENGTH}
+    if meaningful_words and any(
+        any(word in item for word in meaningful_words) for item in match_pool
+    ):
+        return True
+
+    # 3. Structural inference (CRUD / status transitions)
+    if _infer_structural_satisfaction(outcome_lower, impl_procs):
+        return True
+
+    return False
+
+
 def _find_missing_aspects(
     story: StorySpec,
     processes: list[ProcessSpec],
@@ -345,17 +473,9 @@ def _find_missing_aspects(
 ) -> list[str]:
     """Identify story aspects not covered by implementing processes."""
     missing: list[str] = []
-
-    # Get all step names from implementing processes
-    all_steps: list[str] = []
-    for proc_name in implementing:
-        proc = next((p for p in processes if p.name == proc_name), None)
-        if proc:
-            for step in proc.steps:
-                all_steps.append(step.name.lower())
-                # Include parallel steps
-                for parallel_step in step.parallel_steps:
-                    all_steps.append(parallel_step.name.lower())
+    match_pool, satisfies_outcomes, impl_procs = _collect_process_match_pool(
+        processes, implementing
+    )
 
     # Get 'then' outcomes from story (both legacy and Gherkin-style)
     then_outcomes: list[str] = []
@@ -364,23 +484,15 @@ def _find_missing_aspects(
     elif story.happy_path_outcome:
         then_outcomes = story.happy_path_outcome
 
-    # Check each outcome against step names (simple word matching)
     for outcome in then_outcomes:
-        outcome_words = set(outcome.lower().split())
-        # Filter to meaningful words (> 3 chars)
-        meaningful_words = {w for w in outcome_words if len(w) > 3}
-
-        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
-        if not matched:
+        if not _outcome_matches_pool(outcome, match_pool, satisfies_outcomes, impl_procs):
             missing.append(outcome)
 
     # Check 'unless' exceptions
     for exception in story.unless:
-        unless_words = set(exception.condition.lower().split())
-        meaningful_words = {w for w in unless_words if len(w) > 3}
-
-        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
-        if not matched:
+        if not _outcome_matches_pool(
+            exception.condition, match_pool, satisfies_outcomes, impl_procs
+        ):
             missing.append(f"Exception: {exception.condition}")
 
     return missing
@@ -393,15 +505,9 @@ def _find_missing_aspects_from_index(
 ) -> list[str]:
     """Like _find_missing_aspects but works with lightweight story dicts."""
     missing: list[str] = []
-
-    all_steps: list[str] = []
-    for proc_name in implementing:
-        proc = next((p for p in processes if p.name == proc_name), None)
-        if proc:
-            for step in proc.steps:
-                all_steps.append(step.name.lower())
-                for parallel_step in step.parallel_steps:
-                    all_steps.append(parallel_step.name.lower())
+    match_pool, satisfies_outcomes, impl_procs = _collect_process_match_pool(
+        processes, implementing
+    )
 
     # Extract then outcomes from raw dict
     then_outcomes: list[str] = []
@@ -412,19 +518,13 @@ def _find_missing_aspects_from_index(
         then_outcomes = story_dict["happy_path_outcome"]
 
     for outcome in then_outcomes:
-        outcome_words = set(outcome.lower().split())
-        meaningful_words = {w for w in outcome_words if len(w) > 3}
-        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
-        if not matched:
+        if not _outcome_matches_pool(outcome, match_pool, satisfies_outcomes, impl_procs):
             missing.append(outcome)
 
     # Check unless exceptions from raw dict
     for exception in story_dict.get("unless", []):
         condition = exception["condition"] if isinstance(exception, dict) else str(exception)
-        unless_words = set(condition.lower().split())
-        meaningful_words = {w for w in unless_words if len(w) > 3}
-        matched = any(any(word in step for word in meaningful_words) for step in all_steps)
-        if not matched:
+        if not _outcome_matches_pool(condition, match_pool, satisfies_outcomes, impl_procs):
             missing.append(f"Exception: {condition}")
 
     return missing
@@ -499,28 +599,36 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         workflows: list[dict[str, Any]] = []
         skipped_crud: list[str] = []
 
+        include_crud = args.get("include_crud", False)
+
         for proposal in proposals:
             if proposal.entity and proposal.entity not in entities:
                 entities[proposal.entity] = _build_entity_context(proposal.entity, app_spec)
 
-            if proposal.recommendation == "process_not_recommended":
+            if proposal.recommendation == "process_not_recommended" and not include_crud:
                 # Collapse to just the entity name — agent doesn't need details
                 if proposal.entity and proposal.entity not in skipped_crud:
                     skipped_crud.append(proposal.entity)
                 continue
 
+            # When include_crud is True, upgrade CRUD proposals
+            rec = proposal.recommendation
+            if include_crud and rec == "process_not_recommended":
+                rec = "compose_process"
+
             workflow_dict: dict[str, Any] = {
-                "workflow_name": proposal.workflow_name,
+                "name": proposal.name,
                 "title": proposal.title,
-                "stories": proposal.stories,
+                "implements": proposal.implements,
                 "story_summaries": proposal.story_summaries,
                 "entity": proposal.entity,
                 "design_questions": proposal.design_questions,
+                "recommendation": rec,
                 "reason": proposal.reason,
             }
 
             # Build review checklist from story contracts
-            proposal_stories = [s for s in target_stories if s.story_id in proposal.stories]
+            proposal_stories = [s for s in target_stories if s.story_id in proposal.implements]
             checklist = _build_review_checklist(proposal_stories)
             if checklist:
                 workflow_dict["review_checklist"] = checklist
@@ -778,9 +886,9 @@ def _build_proposal(
     )
 
     return WorkflowProposal(
-        workflow_name=workflow_name,
+        name=workflow_name,
         title=title,
-        stories=[s.story_id for s in stories],
+        implements=[s.story_id for s in stories],
         story_summaries=story_summaries,
         entity=entity_name,
         design_questions=design_questions,

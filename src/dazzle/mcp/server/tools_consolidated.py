@@ -543,6 +543,10 @@ def get_consolidated_tools() -> list[Tool]:
                         "items": {"type": "string"},
                         "description": "Story IDs (for propose)",
                     },
+                    "include_crud": {
+                        "type": "boolean",
+                        "description": "Include CRUD stories as compose_process proposals (for propose, default: false)",
+                    },
                     "run_id": {
                         "type": "string",
                         "description": "Run ID (for get_run)",

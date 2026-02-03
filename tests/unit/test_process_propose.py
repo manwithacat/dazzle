@@ -158,7 +158,7 @@ class TestStoryClustering:
 
         crud_proposals = [p for p in proposals if p.recommendation == "process_not_recommended"]
         assert len(crud_proposals) == 1
-        assert set(crud_proposals[0].stories) == {"ST-001", "ST-002"}
+        assert set(crud_proposals[0].implements) == {"ST-001", "ST-002"}
 
     def test_lifecycle_stories_clustered(self):
         stories = [
@@ -173,10 +173,10 @@ class TestStoryClustering:
 
         proposals = _cluster_stories_into_workflows(stories, app_spec)
 
-        lifecycle = [p for p in proposals if "lifecycle" in p.workflow_name]
+        lifecycle = [p for p in proposals if "lifecycle" in p.name]
         assert len(lifecycle) == 1
         assert lifecycle[0].recommendation == "compose_process"
-        assert set(lifecycle[0].stories) == {"ST-001", "ST-002"}
+        assert set(lifecycle[0].implements) == {"ST-001", "ST-002"}
 
     def test_cron_stories_clustered(self):
         stories = [
@@ -191,7 +191,7 @@ class TestStoryClustering:
 
         proposals = _cluster_stories_into_workflows(stories, app_spec)
 
-        scheduled = [p for p in proposals if "scheduled" in p.workflow_name]
+        scheduled = [p for p in proposals if "scheduled" in p.name]
         assert len(scheduled) == 1
         assert scheduled[0].recommendation == "compose_process"
 
@@ -209,7 +209,7 @@ class TestStoryClustering:
         proposals = _cluster_stories_into_workflows(stories, app_spec)
 
         assert len(proposals) == 2
-        names = {p.workflow_name for p in proposals}
+        names = {p.name for p in proposals}
         assert "task_lifecycle" in names or any("task" in n for n in names)
 
     def test_unscoped_stories_grouped(self):
@@ -221,7 +221,7 @@ class TestStoryClustering:
         proposals = _cluster_stories_into_workflows(stories, app_spec)
 
         assert len(proposals) == 1
-        assert proposals[0].workflow_name == "unscoped_workflow"
+        assert proposals[0].name == "unscoped_workflow"
 
 
 # =============================================================================
@@ -434,9 +434,9 @@ class TestWorkflowProposal:
 
     def test_asdict(self):
         p = WorkflowProposal(
-            workflow_name="test",
+            name="test",
             title="Test",
-            stories=["ST-001"],
+            implements=["ST-001"],
             story_summaries=[
                 {"story_id": "ST-001", "title": "T", "trigger": "form_submitted", "actor": "User"}
             ],
@@ -446,6 +446,6 @@ class TestWorkflowProposal:
             reason="Test reason",
         )
         d = asdict(p)
-        assert d["workflow_name"] == "test"
+        assert d["name"] == "test"
         assert d["recommendation"] == "compose_process"
         assert len(d["design_questions"]) == 1

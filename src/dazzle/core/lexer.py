@@ -693,7 +693,8 @@ class Lexer:
 
             if self.indent_stack[-1] != indent_level:
                 raise make_parse_error(
-                    f"Inconsistent indentation (expected {self.indent_stack[-1]} spaces, got {indent_level})",
+                    f"Inconsistent indentation (expected "
+                    f"{self.indent_stack[-1]} spaces, got {indent_level})",
                     self.file,
                     self.line,
                     1,

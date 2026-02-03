@@ -100,12 +100,25 @@ class ProcessInputField(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class SatisfiesRef(BaseModel):
+    """Reference to a story outcome that a step or output satisfies."""
+
+    story: str = Field(..., description="Story ID, e.g. 'ST-002'")
+    outcome: str = Field(..., description="Exact outcome text or outcome index")
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ProcessOutputField(BaseModel):
     """Output field definition for a process."""
 
     name: str
     type: str = "str"
     description: str | None = None
+    satisfies: list[SatisfiesRef] = Field(
+        default_factory=list,
+        description="Story outcomes this output satisfies",
+    )
 
     model_config = ConfigDict(frozen=True)
 
@@ -234,6 +247,12 @@ class ProcessStepSpec(BaseModel):
     on_success: str | None = Field(default=None, description="Step/action on success")
     on_failure: str | None = Field(default=None, description="Step/action on failure")
     compensate_with: str | None = Field(default=None, description="Compensation handler name")
+
+    # Coverage traceability
+    satisfies: list[SatisfiesRef] = Field(
+        default_factory=list,
+        description="Story outcomes this step satisfies",
+    )
 
     model_config = ConfigDict(frozen=True)
 
