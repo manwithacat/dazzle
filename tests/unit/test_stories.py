@@ -27,10 +27,6 @@ from dazzle.core.stories_persistence import (
     save_stories,
     update_story_status,
 )
-from dazzle.stubs.story_stub_generator import (
-    generate_story_stub,
-    generate_story_stubs_file,
-)
 
 
 class TestStorySpec:
@@ -377,113 +373,6 @@ class TestStoriesPersistence:
         assert content["stories"][0]["story_id"] == "ST-001"
         assert content["stories"][0]["trigger"] == "form_submitted"
         assert content["stories"][0]["status"] == "accepted"
-
-
-class TestStoryStubGenerator:
-    """Tests for story stub generation."""
-
-    def test_generate_minimal_stub(self):
-        """Test generating a stub for a minimal story."""
-        story = StorySpec(
-            story_id="ST-001",
-            title="User creates a task",
-            actor="User",
-            trigger=StoryTrigger.FORM_SUBMITTED,
-        )
-
-        stub = generate_story_stub(story)
-
-        assert "def handle_st_001(context: Context)" in stub
-        assert "Story ST-001: User creates a task" in stub
-        assert "Actor: User" in stub
-        assert "Trigger: form_submitted" in stub
-        assert 'raise NotImplementedError("ST-001 not implemented yet")' in stub
-
-    def test_generate_full_stub(self):
-        """Test generating a stub with all sections."""
-        story = StorySpec(
-            story_id="ST-002",
-            title="Staff sends invoice",
-            actor="StaffUser",
-            trigger=StoryTrigger.STATUS_CHANGED,
-            scope=["Invoice", "Client"],
-            preconditions=["Invoice is Draft"],
-            happy_path_outcome=["Invoice becomes Sent"],
-            side_effects=["send_email"],
-            constraints=["Cannot send twice"],
-            variants=["Email missing"],
-        )
-
-        stub = generate_story_stub(story)
-
-        assert "Scope: Invoice, Client" in stub
-        assert "Preconditions:" in stub
-        assert "- Invoice is Draft" in stub
-        assert "Happy Path Outcome:" in stub
-        assert "- Invoice becomes Sent" in stub
-        assert "Side Effects:" in stub
-        assert "- send_email" in stub
-        assert "Constraints:" in stub
-        assert "- Cannot send twice" in stub
-        assert "Variants:" in stub
-        assert "- Email missing" in stub
-
-    def test_generate_stubs_file(self):
-        """Test generating a complete stubs file."""
-        stories = [
-            StorySpec(
-                story_id="ST-001",
-                title="Create task",
-                actor="User",
-                trigger=StoryTrigger.FORM_SUBMITTED,
-            ),
-            StorySpec(
-                story_id="ST-002",
-                title="Complete task",
-                actor="User",
-                trigger=StoryTrigger.STATUS_CHANGED,
-            ),
-        ]
-
-        code = generate_story_stubs_file(stories)
-
-        # Check header
-        assert "Story handlers generated from DAZZLE Behaviour Layer" in code
-        assert "AUTO-GENERATED" in code
-        assert "from __future__ import annotations" in code
-        assert "class Context:" in code
-
-        # Check both stubs
-        assert "def handle_st_001" in code
-        assert "def handle_st_002" in code
-
-    def test_stub_function_name_format(self):
-        """Test that function names are correctly formatted."""
-        story = StorySpec(
-            story_id="ST-123",
-            title="Test",
-            actor="User",
-            trigger=StoryTrigger.USER_CLICK,
-        )
-
-        stub = generate_story_stub(story)
-
-        assert "def handle_st_123(context: Context)" in stub
-
-    def test_stub_is_valid_python(self):
-        """Test that generated stubs are valid Python."""
-        story = StorySpec(
-            story_id="ST-001",
-            title="Test with 'quotes' and special chars",
-            actor="User",
-            trigger=StoryTrigger.USER_CLICK,
-            preconditions=["Condition with 'quotes'"],
-        )
-
-        code = generate_story_stubs_file([story])
-
-        # Should compile without errors
-        compile(code, "<test>", "exec")
 
 
 class TestGenerateTestsFromStories:

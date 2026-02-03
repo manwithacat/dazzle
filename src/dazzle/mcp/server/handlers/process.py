@@ -66,15 +66,17 @@ class CoverageReport:
 
 
 @dataclass
-class ProposedProcess:
-    """A proposed process generated from stories."""
+class WorkflowProposal:
+    """A workflow-oriented design brief generated from clustered stories."""
 
-    name: str
+    workflow_name: str
     title: str
-    implements: list[str]
-    trigger_suggestion: str
-    steps_outline: list[str]
-    dsl_code: str
+    stories: list[str]
+    story_summaries: list[dict[str, Any]]
+    entity_context: dict[str, Any]
+    design_questions: list[str]
+    recommendation: str  # "compose_process" | "process_not_recommended"
+    reason: str
 
 
 @dataclass
@@ -117,15 +119,6 @@ def _slugify(text: str) -> str:
     text = re.sub(r"[^\w\s-]", "", text)
     text = re.sub(r"[-\s]+", "_", text)
     return text[:30]
-
-
-def _story_id_to_process_name(story_id: str, title: str) -> str:
-    """Convert story ID and title to process name."""
-    # Clean title to create base name
-    base = _slugify(title)
-    # Append story ID suffix
-    suffix = story_id.lower().replace("-", "_")
-    return f"proc_{base}_{suffix}"
 
 
 # =============================================================================
@@ -359,7 +352,12 @@ def _find_missing_aspects_from_index(
 
 
 def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate process proposals for uncovered stories."""
+    """Generate workflow design briefs from uncovered stories.
+
+    Clusters stories into workflow-oriented groups and returns design briefs
+    that guide the agent in composing processes, rather than generating
+    ready-made DSL stubs.
+    """
     try:
         app_spec = _load_app_spec(project_root)
         story_ids = args.get("story_ids")
@@ -408,10 +406,8 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
                 }
             )
 
-        proposals: list[ProposedProcess] = []
-        for story in target_stories:
-            proposal = _generate_proposal(story, app_spec)
-            proposals.append(proposal)
+        # Cluster stories into workflows and build design briefs
+        proposals = _cluster_stories_into_workflows(target_stories, app_spec)
 
         return json.dumps(
             {
@@ -424,146 +420,354 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def _generate_proposal(story: StorySpec, app_spec: AppSpec) -> ProposedProcess:
-    """Generate a process proposal from a story."""
+# =============================================================================
+# Workflow Clustering & Design Brief Generation
+# =============================================================================
 
-    name = _story_id_to_process_name(story.story_id, story.title)
+# Simple CRUD outcome patterns — stories matching these don't need a process
+_CRUD_OUTCOME_PATTERNS = {
+    "saved",
+    "created",
+    "updated",
+    "deleted",
+    "displayed",
+    "listed",
+}
 
-    # Infer trigger from story
-    trigger = _infer_trigger(story, app_spec)
+# UI feedback patterns — these don't indicate non-trivial behavior
+_UI_FEEDBACK_PATTERNS = {
+    "confirmation",
+    "message",
+    "success",
+    "toast",
+    "notification",
+    "sees",
+    "shown",
+    "redirected",
+    "navigated",
+    "refreshed",
+}
 
-    # Generate steps from 'then' outcomes
-    steps = _infer_steps(story, app_spec)
 
-    # Generate DSL code
-    dsl = _generate_process_dsl(name, story, trigger, steps)
+def _is_crud_story(story: StorySpec) -> bool:
+    """Detect if a story is simple CRUD handled by surface handlers."""
+    from dazzle.core.ir.stories import StoryTrigger
 
-    return ProposedProcess(
-        name=name,
-        title=story.title,
-        implements=[story.story_id],
-        trigger_suggestion=trigger,
-        steps_outline=[s["name"] for s in steps],
-        dsl_code=dsl,
+    # Must be user-initiated
+    if story.trigger not in (StoryTrigger.FORM_SUBMITTED, StoryTrigger.USER_CLICK):
+        return False
+
+    # Must not have exception branches
+    if story.unless:
+        return False
+
+    # Must have single entity in scope
+    if len(story.scope) != 1:
+        return False
+
+    # At least one outcome must be a CRUD action, and the rest must be
+    # either CRUD actions or simple UI feedback (confirmation messages etc.)
+    outcomes = story.effective_then
+    if not outcomes:
+        return False
+
+    has_crud_outcome = False
+    for outcome in outcomes:
+        words = set(outcome.lower().split())
+        if words & _CRUD_OUTCOME_PATTERNS:
+            has_crud_outcome = True
+        elif not (words & _UI_FEEDBACK_PATTERNS):
+            # Outcome is neither CRUD nor UI feedback — not simple CRUD
+            return False
+
+    return has_crud_outcome
+
+
+def _cluster_stories_into_workflows(
+    stories: list[StorySpec], app_spec: AppSpec
+) -> list[WorkflowProposal]:
+    """Cluster stories into workflow-oriented design briefs.
+
+    Algorithm:
+    1. Group by shared primary entity (scope[0])
+    2. Within each group, detect lifecycle chains (STATUS_CHANGED triggers)
+    3. Flag CRUD stories as process_not_recommended
+    4. Group remaining by trigger affinity (CRON, EXTERNAL_EVENT)
+    """
+    from dazzle.core.ir.stories import StoryTrigger
+
+    proposals: list[WorkflowProposal] = []
+
+    # Step 1: Group by primary entity
+    entity_groups: dict[str, list[StorySpec]] = {}
+    ungrouped: list[StorySpec] = []
+
+    for story in stories:
+        if story.scope:
+            key = story.scope[0]
+            entity_groups.setdefault(key, []).append(story)
+        else:
+            ungrouped.append(story)
+
+    for entity_name, group in entity_groups.items():
+        # Step 2: Separate CRUD vs lifecycle vs other
+        crud_stories: list[StorySpec] = []
+        lifecycle_stories: list[StorySpec] = []
+        cron_stories: list[StorySpec] = []
+        event_stories: list[StorySpec] = []
+        other_stories: list[StorySpec] = []
+
+        for story in group:
+            if _is_crud_story(story):
+                crud_stories.append(story)
+            elif story.trigger == StoryTrigger.STATUS_CHANGED:
+                lifecycle_stories.append(story)
+            elif story.trigger in (StoryTrigger.CRON_DAILY, StoryTrigger.CRON_HOURLY):
+                cron_stories.append(story)
+            elif story.trigger in (StoryTrigger.EXTERNAL_EVENT, StoryTrigger.TIMER_ELAPSED):
+                event_stories.append(story)
+            else:
+                other_stories.append(story)
+
+        # Step 3: CRUD stories → process_not_recommended
+        if crud_stories:
+            proposals.append(
+                _build_proposal(
+                    workflow_name=f"{_slugify(entity_name)}_crud",
+                    title=f"{entity_name} CRUD Operations",
+                    stories=crud_stories,
+                    entity_name=entity_name,
+                    app_spec=app_spec,
+                    recommendation="process_not_recommended",
+                    reason=(
+                        "These stories describe standard create/read/update/delete operations "
+                        "that are handled by surface CRUD handlers. No process needed."
+                    ),
+                )
+            )
+
+        # Step 4: Lifecycle stories → compose_process
+        if lifecycle_stories:
+            proposals.append(
+                _build_proposal(
+                    workflow_name=f"{_slugify(entity_name)}_lifecycle",
+                    title=f"{entity_name} Lifecycle",
+                    stories=lifecycle_stories,
+                    entity_name=entity_name,
+                    app_spec=app_spec,
+                    recommendation="compose_process",
+                    reason=(
+                        f"Stories drive status transitions on {entity_name}. "
+                        "Compose a process that orchestrates this lifecycle."
+                    ),
+                )
+            )
+
+        # Cron stories → compose_process
+        if cron_stories:
+            proposals.append(
+                _build_proposal(
+                    workflow_name=f"{_slugify(entity_name)}_scheduled",
+                    title=f"{entity_name} Scheduled Tasks",
+                    stories=cron_stories,
+                    entity_name=entity_name,
+                    app_spec=app_spec,
+                    recommendation="compose_process",
+                    reason=f"Scheduled operations on {entity_name}.",
+                )
+            )
+
+        # External event stories → compose_process
+        if event_stories:
+            proposals.append(
+                _build_proposal(
+                    workflow_name=f"{_slugify(entity_name)}_events",
+                    title=f"{entity_name} Event Handling",
+                    stories=event_stories,
+                    entity_name=entity_name,
+                    app_spec=app_spec,
+                    recommendation="compose_process",
+                    reason=f"External event-driven operations on {entity_name}.",
+                )
+            )
+
+        # Other stories that aren't CRUD but aren't lifecycle/cron/event
+        if other_stories:
+            proposals.append(
+                _build_proposal(
+                    workflow_name=f"{_slugify(entity_name)}_workflow",
+                    title=f"{entity_name} Workflow",
+                    stories=other_stories,
+                    entity_name=entity_name,
+                    app_spec=app_spec,
+                    recommendation="compose_process",
+                    reason=f"Non-CRUD operations on {entity_name} that need orchestration.",
+                )
+            )
+
+    # Ungrouped stories (no scope entity)
+    if ungrouped:
+        proposals.append(
+            _build_proposal(
+                workflow_name="unscoped_workflow",
+                title="Unscoped Workflow",
+                stories=ungrouped,
+                entity_name=None,
+                app_spec=app_spec,
+                recommendation="compose_process",
+                reason="Stories without a primary entity scope.",
+            )
+        )
+
+    return proposals
+
+
+def _build_proposal(
+    *,
+    workflow_name: str,
+    title: str,
+    stories: list[StorySpec],
+    entity_name: str | None,
+    app_spec: AppSpec,
+    recommendation: str,
+    reason: str,
+) -> WorkflowProposal:
+    """Build a WorkflowProposal with entity context and design questions."""
+    story_summaries = [
+        {
+            "story_id": s.story_id,
+            "title": s.title,
+            "trigger": s.trigger.value,
+            "actor": s.actor,
+        }
+        for s in stories
+    ]
+
+    entity_context = _build_entity_context(entity_name, app_spec) if entity_name else {}
+
+    design_questions = (
+        _generate_design_questions(stories, entity_name, app_spec)
+        if recommendation == "compose_process"
+        else []
+    )
+
+    return WorkflowProposal(
+        workflow_name=workflow_name,
+        title=title,
+        stories=[s.story_id for s in stories],
+        story_summaries=story_summaries,
+        entity_context=entity_context,
+        design_questions=design_questions,
+        recommendation=recommendation,
+        reason=reason,
     )
 
 
-def _infer_trigger(story: StorySpec, app_spec: AppSpec) -> str:
-    """Infer process trigger from story."""
+def _build_entity_context(entity_name: str, app_spec: AppSpec) -> dict[str, Any]:
+    """Build inline entity context for a design brief."""
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
+    if not entity:
+        return {"entity": entity_name, "note": "Entity not found in AppSpec"}
+
+    context: dict[str, Any] = {
+        "entity": entity_name,
+        "fields": [f.name for f in entity.fields],
+    }
+
+    # State machine
+    if entity.state_machine:
+        sm = entity.state_machine
+        context["state_machine"] = {
+            "status_field": sm.status_field,
+            "states": sm.states,
+            "transitions": [
+                {
+                    "from": t.from_state,
+                    "to": t.to_state,
+                    "guards": [str(g) for g in t.guards] if t.guards else None,
+                }
+                for t in sm.transitions
+            ],
+        }
+
+    # Relationships (from field types)
+    relationships: list[dict[str, str]] = []
+    for field in entity.fields:
+        if (
+            field.type.kind
+            in (
+                FieldTypeKind.REF,
+                FieldTypeKind.HAS_MANY,
+                FieldTypeKind.HAS_ONE,
+                FieldTypeKind.BELONGS_TO,
+            )
+            and field.type.ref_entity
+        ):
+            relationships.append({"type": field.type.kind.value, "target": field.type.ref_entity})
+    if relationships:
+        context["relationships"] = relationships
+
+    return context
+
+
+def _generate_design_questions(
+    stories: list[StorySpec], entity_name: str | None, app_spec: AppSpec
+) -> list[str]:
+    """Generate design questions based on story patterns."""
     from dazzle.core.ir.stories import StoryTrigger
 
-    if story.trigger == StoryTrigger.STATUS_CHANGED:
-        # Try to extract entity and status from 'when' conditions
-        for when_cond in story.when:
-            expr_lower = when_cond.expression.lower()
-            if "changes to" in expr_lower or "status" in expr_lower:
-                # Extract the target status if possible
-                if story.scope:
-                    entity = story.scope[0]
-                    return f"entity {entity} status_change"
-        if story.scope:
-            return f"entity {story.scope[0]} status_change"
-        return "manual"
+    questions: list[str] = []
 
-    elif story.trigger == StoryTrigger.FORM_SUBMITTED:
-        if story.scope:
-            return f"entity {story.scope[0]} created"
-        return "manual"
+    triggers = {s.trigger for s in stories}
+    actors = {s.actor for s in stories}
 
-    elif story.trigger == StoryTrigger.CRON_DAILY:
-        return 'cron "0 8 * * *"'
+    # No user trigger (automated)
+    automated_triggers = {
+        StoryTrigger.CRON_DAILY,
+        StoryTrigger.CRON_HOURLY,
+        StoryTrigger.EXTERNAL_EVENT,
+        StoryTrigger.TIMER_ELAPSED,
+    }
+    if triggers & automated_triggers:
+        questions.append(
+            "What triggers this workflow? Consider: scheduled job, webhook, "
+            "or event from another process."
+        )
 
-    elif story.trigger == StoryTrigger.CRON_HOURLY:
-        return 'cron "0 * * * *"'
+    # Multiple actors
+    if len(actors) > 1:
+        actor_list = ", ".join(sorted(actors))
+        questions.append(
+            f"Multiple actors involved ({actor_list}). How are handoffs between them managed?"
+        )
 
-    elif story.trigger == StoryTrigger.TIMER_ELAPSED:
-        return "schedule interval 3600"
+    # Entity has state machine
+    if entity_name:
+        entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
+        if entity and entity.state_machine:
+            states = ", ".join(entity.state_machine.states)
+            questions.append(
+                f"Entity has states: {states}. Which transitions does this workflow drive?"
+            )
 
-    return "manual"
+    # Exception paths
+    has_unless = any(s.unless for s in stories)
+    if has_unless:
+        questions.append("Exception paths exist. Are compensations needed if a step fails?")
 
+    # External service references (heuristic: scope mentions multiple entities)
+    all_scopes: set[str] = set()
+    for s in stories:
+        all_scopes.update(s.scope)
+    if len(all_scopes) > 1:
+        questions.append(
+            "Multiple entities in scope. What's the failure/retry strategy "
+            "for cross-entity operations?"
+        )
 
-def _infer_steps(story: StorySpec, app_spec: AppSpec) -> list[dict[str, Any]]:
-    """Infer process steps from story outcomes."""
-    steps: list[dict[str, Any]] = []
-
-    # Get 'then' outcomes
-    outcomes: list[str] = story.effective_then
-
-    for i, outcome in enumerate(outcomes, 1):
-        step: dict[str, Any] = {
-            "name": f"step_{i}",
-            "description": outcome,
-        }
-
-        # Detect step type from outcome text
-        expr_lower = outcome.lower()
-        if "email" in expr_lower or "notification" in expr_lower or "sent" in expr_lower:
-            step["kind"] = "send"
-            step["suggestion"] = "channel: notifications"
-        elif "saved" in expr_lower or "created" in expr_lower or "recorded" in expr_lower:
-            step["kind"] = "service"
-            if story.scope:
-                step["suggestion"] = f"service: {story.scope[0].lower()}_service"
-            else:
-                step["suggestion"] = "service: entity_service"
-        elif "wait" in expr_lower:
-            step["kind"] = "wait"
-            step["suggestion"] = "duration: 1h"
-        else:
-            step["kind"] = "service"
-            step["suggestion"] = "service: handle_outcome"
-
-        steps.append(step)
-
-    # Add exception handling steps from 'unless' branches
-    for exception in story.unless:
-        step = {
-            "name": f"handle_{_slugify(exception.condition)}",
-            "kind": "service",
-            "description": f"Handle exception: {exception.condition}",
-            "condition": exception.condition,
-            "suggestion": "service: handle_exception",
-        }
-        steps.append(step)
-
-    return steps
-
-
-def _generate_process_dsl(
-    name: str,
-    story: StorySpec,
-    trigger: str,
-    steps: list[dict[str, Any]],
-) -> str:
-    """Generate DSL code for a process."""
-    lines = [
-        f'process {name} "{story.title}":',
-        f"  implements: [{story.story_id}]",
-        "",
-        "  trigger:",
-        f"    {trigger}",
-        "",
-        "  steps:",
-    ]
-
-    for step in steps:
-        lines.append(f"    - step {step['name']}:")
-        lines.append(f"        # {step['description']}")
-
-        if step.get("kind") == "send":
-            lines.append(f"        {step.get('suggestion', 'channel: notifications')}")
-        elif step.get("kind") == "wait":
-            lines.append(f"        {step.get('suggestion', 'duration: 1h')}")
-        else:
-            lines.append(f"        {step.get('suggestion', 'service: TODO')}")
-
-        if step.get("condition"):
-            lines.append(f"        condition: when {step['condition']}")
-
-        lines.append("        timeout: 30s")
-        lines.append("")
-
-    return "\n".join(lines)
+    return questions
 
 
 # =============================================================================

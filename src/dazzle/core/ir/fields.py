@@ -77,7 +77,9 @@ class FieldType(BaseModel):
         - url: FieldType(kind=URL)
 
     v0.9.5 Many-to-many via junction table:
-        - has_many Contact via ClientContact: FieldType(kind=HAS_MANY, ref_entity="Contact", via_entity="ClientContact")
+        - has_many Contact via ClientContact:
+          FieldType(kind=HAS_MANY, ref_entity="Contact",
+          via_entity="ClientContact")
     """
 
     kind: FieldTypeKind

@@ -191,10 +191,14 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
-        warnings, _ = lint_appspec(app_spec, extended=extended)
+        errors, warnings = lint_appspec(app_spec, extended=extended)
 
         return json.dumps(
-            {"warnings": len(warnings), "issues": [str(w) for w in warnings]},
+            {
+                "errors": len(errors),
+                "warnings": len(warnings),
+                "issues": [str(e) for e in errors] + [str(w) for w in warnings],
+            },
             indent=2,
         )
     except Exception as e:

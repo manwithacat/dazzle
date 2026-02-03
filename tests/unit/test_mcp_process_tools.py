@@ -241,14 +241,13 @@ class TestProposeProcesses:
             data = json.loads(result)
 
         assert "error" not in data
-        assert data["proposed_count"] == 2
+        assert data["proposed_count"] >= 1
 
         for proposal in data["proposals"]:
-            assert "name" in proposal
+            assert "workflow_name" in proposal
             assert "title" in proposal
-            assert "implements" in proposal
-            assert "dsl_code" in proposal
-            assert "process" in proposal["dsl_code"]
+            assert "stories" in proposal
+            assert "recommendation" in proposal
 
     def test_propose_for_specific_story(
         self, mock_app_spec_no_processes: MagicMock, tmp_path: Path
@@ -264,8 +263,8 @@ class TestProposeProcesses:
             data = json.loads(result)
 
         assert "error" not in data
-        assert data["proposed_count"] == 1
-        assert data["proposals"][0]["implements"] == ["ST-001"]
+        assert data["proposed_count"] >= 1
+        assert "ST-001" in data["proposals"][0]["stories"]
 
     def test_propose_no_stories_with_fallback(
         self, mock_app_spec_no_stories: MagicMock, tmp_path: Path
@@ -515,11 +514,25 @@ class TestHelperFunctions:
         assert _slugify("Test-123-Value") == "test_123_value"
         assert _slugify("  spaced  text  ") == "spaced_text"
 
-    def test_story_id_to_process_name(self) -> None:
-        """Test _story_id_to_process_name function."""
-        from dazzle.mcp.server.handlers.process import _story_id_to_process_name
+    def test_is_crud_story(self) -> None:
+        """Test _is_crud_story function."""
+        from dazzle.mcp.server.handlers.process import _is_crud_story
 
-        name = _story_id_to_process_name("ST-001", "User creates order")
-        assert name.startswith("proc_")
-        assert "st_001" in name
-        assert "user_creates_order" in name
+        crud = StorySpec(
+            story_id="ST-001",
+            title="Create task",
+            actor="User",
+            trigger=StoryTrigger.FORM_SUBMITTED,
+            scope=["Task"],
+            happy_path_outcome=["Task is saved"],
+        )
+        assert _is_crud_story(crud) is True
+
+        non_crud = StorySpec(
+            story_id="ST-002",
+            title="Submit task",
+            actor="User",
+            trigger=StoryTrigger.STATUS_CHANGED,
+            scope=["Task"],
+        )
+        assert _is_crud_story(non_crud) is False

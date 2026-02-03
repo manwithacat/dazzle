@@ -520,49 +520,17 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 
 def generate_story_stubs_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate Python service stubs from accepted stories."""
-    from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status
-    from dazzle.stubs.story_stub_generator import generate_story_stubs_file
+    """Removed: story stubs are no longer supported.
 
-    story_ids = args.get("story_ids")
-    output_dir = args.get("output_dir", "services")
-
-    try:
-        # Get accepted stories
-        stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
-
-        if story_ids:
-            stories = [s for s in stories if s.story_id in story_ids]
-
-        if not stories:
-            return json.dumps(
-                {
-                    "status": "no_stories",
-                    "message": "No accepted stories found. Use get_stories to see available stories.",
-                }
-            )
-
-        # Generate stubs
-        stubs_code = generate_story_stubs_file(stories)
-
-        # Write to file
-        output_path = project_root / output_dir
-        output_path.mkdir(parents=True, exist_ok=True)
-        stubs_file = output_path / "story_handlers.py"
-        stubs_file.write_text(stubs_code, encoding="utf-8")
-
-        return json.dumps(
-            {
-                "status": "generated",
-                "file": str(stubs_file),
-                "story_count": len(stories),
-                "stories": [s.story_id for s in stories],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    Use process(operation='propose') for workflow design briefs instead.
+    """
+    return json.dumps(
+        {
+            "error": "Story stubs have been removed.",
+            "hint": "Use process(operation='propose') for workflow design briefs instead.",
+        },
+        indent=2,
+    )
 
 
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
