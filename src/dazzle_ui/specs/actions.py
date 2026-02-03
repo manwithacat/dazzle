@@ -4,7 +4,7 @@ Action and effect specification types for UISpec.
 Defines actions, effects, transitions, and state patches.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,7 +16,7 @@ from dazzle_ui.specs.state import Binding
 # =============================================================================
 
 
-class PatchOp(str, Enum):
+class PatchOp(StrEnum):
     """Patch operations (JSON Patch style)."""
 
     SET = "set"
@@ -167,7 +167,7 @@ EffectSpec = FetchEffect | NavigateEffect | LogEffect | ToastEffect | CustomEffe
 # =============================================================================
 
 
-class ActionPurity(str, Enum):
+class ActionPurity(StrEnum):
     """
     Action purity classification (v0.5.0).
 

@@ -4,7 +4,7 @@ State specification types for UISpec.
 Defines state scopes and data bindings.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # =============================================================================
 
 
-class StateScope(str, Enum):
+class StateScope(StrEnum):
     """State scopes for UI state management."""
 
     LOCAL = "local"  # Component-local state
