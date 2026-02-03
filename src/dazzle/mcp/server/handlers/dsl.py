@@ -181,6 +181,55 @@ def analyze_patterns(project_root: Path) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
+def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Export a framework-agnostic frontend specification from DSL."""
+    try:
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
+
+        # Load sitespec (optional)
+        sitespec = None
+        try:
+            from dazzle.core.sitespec_loader import load_sitespec
+
+            sitespec = load_sitespec(project_root, use_defaults=True)
+        except Exception:
+            pass
+
+        # Load stories (optional)
+        stories = []
+        try:
+            from dazzle.core.stories_persistence import load_stories
+
+            stories = load_stories(project_root)
+        except Exception:
+            pass
+
+        # Load test designs (optional)
+        test_designs = []
+        try:
+            from dazzle.testing.test_design_persistence import load_test_designs
+
+            test_designs = load_test_designs(project_root)
+        except Exception:
+            pass
+
+        from dazzle.core.frontend_spec_export import export_frontend_spec
+
+        fmt = args.get("format", "markdown")
+        sections = args.get("sections")
+        entities = args.get("entities")
+
+        result = export_frontend_spec(
+            app_spec, sitespec, stories, test_designs, fmt, sections, entities
+        )
+        return result
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
     extended = args.get("extended", False)

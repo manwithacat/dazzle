@@ -87,6 +87,10 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
         from .handlers.fidelity import score_fidelity_handler
 
         return score_fidelity_handler(project_path, arguments)
+    elif operation == "export_frontend_spec":
+        from .handlers.dsl import export_frontend_spec_handler
+
+        return export_frontend_spec_handler(project_path, arguments)
     elif operation == "list_fragments":
         from dazzle_ui.runtime.fragment_registry import get_fragment_registry
 

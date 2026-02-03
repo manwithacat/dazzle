@@ -77,7 +77,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl",
-            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments",
+            description="DSL operations: validate, list_modules, inspect_entity, inspect_surface, analyze, lint, get_spec, fidelity, list_fragments, export_frontend_spec",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -93,6 +93,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "get_spec",
                             "fidelity",
                             "list_fragments",
+                            "export_frontend_spec",
                         ],
                         "description": "Operation to perform",
                     },
@@ -117,6 +118,21 @@ def get_consolidated_tools() -> list[Tool]:
                     "surface_filter": {
                         "type": "string",
                         "description": "Filter to a specific surface name (for fidelity)",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["markdown", "json"],
+                        "description": "Output format (for export_frontend_spec, default: markdown)",
+                    },
+                    "sections": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter to specific sections (for export_frontend_spec). Options: typescript_interfaces, route_map, component_inventory, state_machines, api_contract, workspace_layouts, test_criteria",
+                    },
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter to specific entity names (for export_frontend_spec)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
