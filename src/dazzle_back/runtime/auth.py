@@ -285,6 +285,29 @@ class AuthStore:
         results = self._execute(query, params)
         return results[0] if results else None
 
+    def _execute_modify(self, query: str, params: tuple = ()) -> int:
+        """Execute a modification query and return rowcount."""
+        # Convert ? placeholders to %s for PostgreSQL
+        if self._use_postgres:
+            query = query.replace("?", "%s")
+
+        conn = self._get_connection()
+        try:
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+                rowcount = cursor.rowcount
+                conn.commit()
+                return rowcount
+            else:
+                # SQLite
+                cursor = conn.execute(query, params)
+                rowcount = cursor.rowcount
+                conn.commit()
+                return rowcount
+        finally:
+            conn.close()
+
     # =========================================================================
     # User Operations
     # =========================================================================
@@ -382,17 +405,15 @@ class AuthStore:
 
     def update_password(self, user_id: UUID, new_password: str) -> bool:
         """Update user password."""
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                """
-                UPDATE users
-                SET password_hash = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
-            )
-            conn.commit()
-            return cursor.rowcount > 0
+        rowcount = self._execute_modify(
+            """
+            UPDATE users
+            SET password_hash = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
+        )
+        return rowcount > 0
 
     # =========================================================================
     # Session Operations
@@ -424,39 +445,36 @@ class AuthStore:
             user_agent=user_agent,
         )
 
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    session.id,
-                    str(session.user_id),
-                    session.created_at.isoformat(),
-                    session.expires_at.isoformat(),
-                    session.ip_address,
-                    session.user_agent,
-                ),
-            )
-            conn.commit()
+        self._execute(
+            """
+            INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                session.id,
+                str(session.user_id),
+                session.created_at.isoformat(),
+                session.expires_at.isoformat(),
+                session.ip_address,
+                session.user_agent,
+            ),
+        )
 
         return session
 
     def get_session(self, session_id: str) -> SessionRecord | None:
         """Get session by ID."""
-        with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+        row = self._execute_one("SELECT * FROM sessions WHERE id = ?", (session_id,))
 
-            if row:
-                return SessionRecord(
-                    id=row["id"],
-                    user_id=UUID(row["user_id"]),
-                    created_at=datetime.fromisoformat(row["created_at"]),
-                    expires_at=datetime.fromisoformat(row["expires_at"]),
-                    ip_address=row["ip_address"],
-                    user_agent=row["user_agent"],
-                )
+        if row:
+            return SessionRecord(
+                id=row["id"],
+                user_id=UUID(row["user_id"]),
+                created_at=datetime.fromisoformat(row["created_at"]),
+                expires_at=datetime.fromisoformat(row["expires_at"]),
+                ip_address=row["ip_address"],
+                user_agent=row["user_agent"],
+            )
 
         return None
 
@@ -492,27 +510,19 @@ class AuthStore:
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a session."""
-        with self._get_connection() as conn:
-            cursor = conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
-            conn.commit()
-            return cursor.rowcount > 0
+        rowcount = self._execute_modify("DELETE FROM sessions WHERE id = ?", (session_id,))
+        return rowcount > 0
 
     def delete_user_sessions(self, user_id: UUID) -> int:
         """Delete all sessions for a user."""
-        with self._get_connection() as conn:
-            cursor = conn.execute("DELETE FROM sessions WHERE user_id = ?", (str(user_id),))
-            conn.commit()
-            return cursor.rowcount
+        return self._execute_modify("DELETE FROM sessions WHERE user_id = ?", (str(user_id),))
 
     def cleanup_expired_sessions(self) -> int:
         """Delete all expired sessions."""
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                "DELETE FROM sessions WHERE expires_at < ?",
-                (datetime.now(UTC).isoformat(),),
-            )
-            conn.commit()
-            return cursor.rowcount
+        return self._execute_modify(
+            "DELETE FROM sessions WHERE expires_at < ?",
+            (datetime.now(UTC).isoformat(),),
+        )
 
 
 # =============================================================================
