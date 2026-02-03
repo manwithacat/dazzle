@@ -1504,3 +1504,159 @@ def create_app_from_json(json_path: str) -> FastAPI:
 
     spec_dict = json.loads(Path(json_path).read_text())
     return create_app_from_dict(spec_dict)
+
+
+# =============================================================================
+# Production Factory (Heroku, etc.)
+# =============================================================================
+
+
+def create_app_factory() -> FastAPI:
+    """
+    ASGI factory for production deployment.
+
+    Creates a FastAPI application by loading the DSL spec from the project
+    directory and configuring from environment variables. Designed for use
+    with Uvicorn's --factory flag.
+
+    Environment Variables:
+        DAZZLE_PROJECT_ROOT: Project root directory (default: current directory)
+        DATABASE_URL: PostgreSQL connection URL (Heroku format supported)
+        REDIS_URL: Redis connection URL (for sessions/cache)
+        DAZZLE_ENV: Environment name (development/staging/production)
+        DAZZLE_SECRET_KEY: Secret key for sessions/tokens
+
+    Usage:
+        uvicorn dazzle_back.runtime.server:create_app_factory --factory --host 0.0.0.0 --port $PORT
+
+    Procfile example:
+        web: uvicorn dazzle_back.runtime.server:create_app_factory --factory --host 0.0.0.0 --port $PORT
+
+    Returns:
+        FastAPI application configured for production
+    """
+    import logging
+    import os
+    from pathlib import Path
+
+    logger = logging.getLogger(__name__)
+
+    # Determine project root
+    project_root = Path(os.environ.get("DAZZLE_PROJECT_ROOT", ".")).resolve()
+    manifest_path = project_root / "dazzle.toml"
+
+    if not manifest_path.exists():
+        raise RuntimeError(
+            f"dazzle.toml not found at {manifest_path}. "
+            "Set DAZZLE_PROJECT_ROOT to the project directory."
+        )
+
+    # Import Dazzle core modules (deferred to avoid circular imports)
+    try:
+        from dazzle.core.errors import DazzleError, ParseError
+        from dazzle.core.fileset import discover_dsl_files
+        from dazzle.core.linker import build_appspec
+        from dazzle.core.manifest import load_manifest
+        from dazzle.core.parser import parse_modules
+        from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
+        from dazzle_back.converters import convert_appspec_to_backend
+    except ImportError as e:
+        raise RuntimeError(
+            f"Dazzle core modules not available: {e}. "
+            "Ensure dazzle is installed: pip install dazzle"
+        )
+
+    # Load manifest
+    logger.info(f"Loading Dazzle project from {project_root}")
+    manifest = load_manifest(manifest_path)
+
+    # Parse DATABASE_URL (convert Heroku's postgres:// to postgresql://)
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+        logger.info("Converted postgres:// to postgresql:// for SQLAlchemy compatibility")
+
+    # Parse REDIS_URL (Heroku format: redis://h:password@host:port)
+    redis_url = os.environ.get("REDIS_URL", "")
+    if redis_url:
+        logger.info("Redis URL configured")
+
+    # Determine environment
+    dazzle_env = os.environ.get("DAZZLE_ENV", "production")
+    enable_dev_mode = dazzle_env == "development"
+    enable_test_mode = dazzle_env in ("development", "test")
+
+    # Parse DSL and build spec
+    try:
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        appspec = build_appspec(modules, manifest.project_root)
+    except (ParseError, DazzleError) as e:
+        raise RuntimeError(f"Failed to parse DSL: {e}")
+
+    # Convert to backend spec
+    backend_spec = convert_appspec_to_backend(appspec)
+
+    # Load SiteSpec if available
+    sitespec_data = None
+    if sitespec_exists(project_root):
+        try:
+            sitespec = load_sitespec(project_root)
+            sitespec_data = sitespec.model_dump()
+            logger.info(f"Loaded SiteSpec with {len(sitespec.pages)} pages")
+        except Exception as e:
+            logger.warning(f"Failed to load sitespec.yaml: {e}")
+
+    # Extract personas for Dazzle Bar (if enabled)
+    personas = (
+        [
+            {
+                "id": p.id,
+                "label": p.label,
+                "description": p.description,
+                "goals": p.goals,
+            }
+            for p in appspec.personas
+        ]
+        if enable_dev_mode
+        else []
+    )
+
+    # Build server config
+    config = ServerConfig(
+        database_url=database_url if database_url else None,
+        db_path=project_root / ".dazzle" / "data.db",
+        use_database=True,
+        enable_auth=manifest.auth.enabled,
+        auth_config=manifest.auth if manifest.auth.enabled else None,
+        auth_db_path=project_root / ".dazzle" / "auth.db",
+        enable_files=True,
+        files_path=project_root / ".dazzle" / "uploads",
+        files_db_path=project_root / ".dazzle" / "files.db",
+        enable_test_mode=enable_test_mode,
+        services_dir=project_root / "services",
+        enable_dev_mode=enable_dev_mode,
+        feedback_dir=project_root / ".dazzle" / "feedback",
+        personas=personas,
+        scenarios=[],
+        sitespec_data=sitespec_data,
+        project_root=project_root,
+        enable_processes=True,
+        process_db_path=project_root / ".dazzle" / "processes.db",
+        enable_console=enable_dev_mode,
+    )
+
+    # Build and return the FastAPI app
+    builder = DNRBackendApp(backend_spec, config=config)
+    app = builder.build()
+
+    # Log startup info
+    logger.info(f"Dazzle app '{appspec.name}' ready")
+    logger.info(f"  Entities: {len(backend_spec.entities)}")
+    logger.info(f"  Endpoints: {len(backend_spec.endpoints)}")
+    logger.info(f"  Environment: {dazzle_env}")
+    logger.info(f"  Database: {'PostgreSQL' if database_url else 'SQLite'}")
+    if enable_dev_mode:
+        logger.info("  Dazzle Bar: enabled")
+
+    return app
