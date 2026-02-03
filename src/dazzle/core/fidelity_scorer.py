@@ -144,6 +144,16 @@ def _field_names_from_surface(surface: SurfaceSpec) -> list[str]:
     return names
 
 
+def _field_labels_from_surface(surface: SurfaceSpec) -> dict[str, str]:
+    """Extract field_name → label mapping from surface sections."""
+    labels: dict[str, str] = {}
+    for section in surface.sections:
+        for elem in section.elements:
+            if elem.label:
+                labels[elem.field_name] = elem.label
+    return labels
+
+
 def _check_table_structure(
     surface: SurfaceSpec,
     entity: EntitySpec | None,
@@ -171,9 +181,11 @@ def _check_table_structure(
     ths = root.find_all("th")
     th_texts = {th.get_text().strip().lower() for th in ths}
     field_names = _field_names_from_surface(surface)
+    field_labels = _field_labels_from_surface(surface)
     for fname in field_names:
-        label = fname.replace("_", " ").lower()
-        if not any(label in t or fname.lower() in t for t in th_texts):
+        dsl_label = field_labels.get(fname, fname.replace("_", " ")).lower()
+        fname_normalized = fname.replace("_", " ").lower()
+        if not any(dsl_label in t or fname_normalized in t or fname.lower() in t for t in th_texts):
             gaps.append(
                 FidelityGap(
                     category=FidelityGapCategory.MISSING_FIELD,

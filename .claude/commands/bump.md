@@ -16,6 +16,7 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    - `.claude/CLAUDE.md` — the `**Version**: X.Y.Z` line at the bottom
    - `ROADMAP.md` — the `**Current Version**: vX.Y.Z` line near the top
    - `src/dazzle/mcp/semantics_kb/core.toml` — the `version = "..."` line
+   - `cli/package.json` — the `"version": "X.Y.Z"` line
 
    **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version.
 

@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger("dazzle.mcp")
 
 
 def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str:
@@ -44,7 +47,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         return json.dumps(
             {
                 "error": "dazzle_ui not installed. Install it to enable fidelity scoring.",
-                "hint": "pip install -e '.[dnr-ui]'",
+                "hint": "pip install -e '.[dazzle-ui]'",
             }
         )
 
@@ -60,9 +63,20 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             html = render_page(ctx)
             # Use view_name from PageContext — this is the surface name
             rendered_pages[ctx.view_name] = html
-        except Exception:  # nosec B112 - skip unrenderable pages gracefully
+        except Exception as e:  # nosec B112 - skip unrenderable pages gracefully
+            logger.warning("Fidelity: failed to render %s: %s", ctx.view_name, e)
             continue
 
+    if page_contexts and not rendered_pages:
+        return json.dumps(
+            {
+                "error": "All surfaces failed to render",
+                "surfaces_attempted": len(page_contexts),
+                "hint": "Run status(operation='logs') for details",
+            }
+        )
+
+    render_failures = len(page_contexts) - len(rendered_pages)
     surface_filter = arguments.get("surface_filter")
     report = score_appspec_fidelity(appspec, rendered_pages, surface_filter, str(project_path))
 
@@ -96,7 +110,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         for g in all_gaps[:5]
     ]
 
-    result = {
+    result: dict[str, Any] = {
         "overall_fidelity": report.overall,
         "story_coverage": report.story_coverage,
         "total_gaps": report.total_gaps,
@@ -105,6 +119,8 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         "top_recommendations": top_recommendations,
         "next_steps": _build_next_steps(report),
     }
+    if render_failures > 0:
+        result["render_failures"] = render_failures
 
     return json.dumps(result, indent=2)
 

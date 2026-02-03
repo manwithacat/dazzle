@@ -136,7 +136,8 @@ def validate_project_name(name: str) -> tuple[bool, str | None]:
     if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", name):
         return (
             False,
-            f"Project name '{name}' must contain only letters, numbers, and underscores, and cannot start with a number",
+            f"Project name '{name}' must contain only letters, numbers,"
+            " and underscores, and cannot start with a number",
         )
 
     return (True, None)
