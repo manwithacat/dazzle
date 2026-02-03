@@ -24,11 +24,79 @@
 
 DAZZLE is a DSL-first toolkit that bridges human specifications and production code. An LLM translates your intent into a structured DSL; from there, all code generation is deterministic and token-efficient.
 
+## The Pipeline: Determinism → Cognition
+
+DAZZLE separates work into two distinct phases: a **deterministic foundation** that requires zero LLM involvement, and a **cognitive layer** where LLM creativity adds value.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        DETERMINISTIC PHASE (no LLM)                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌───────────┐      ┌────────────┐      ┌───────────┐      ┌─────────────────┐  │
+│  │ DSL Files │ ───▶ │   Parser   │ ───▶ │  AppSpec  │ ───▶ │ Runtime / Specs │  │
+│  │  (.dsl)   │      │  + Linker  │      │   (IR)    │      │                 │  │
+│  └───────────┘      └────────────┘      └───────────┘      └─────────────────┘  │
+│       │                   │                   │                     │           │
+│       ▼                   ▼                   ▼                     ▼           │
+│   Artifacts:         Artifacts:          Artifacts:            Artifacts:       │
+│   • core.dsl         • AST               • Entity graph        • OpenAPI spec   │
+│   • ui.dsl           • Symbol table      • Surface defs        • AsyncAPI spec  │
+│   • *.dsl            • Module graph      • Type catalog        • Running app    │
+│                                          • Validation          • HTML templates │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         COGNITIVE PHASE (LLM-assisted)                          │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐  │
+│  │  Story Proposal │    │  Test Design    │    │  Process Orchestration      │  │
+│  │                 │    │                 │    │                             │  │
+│  │  "User creates  │    │  Persona-based  │    │  Multi-step workflows       │  │
+│  │   a task and    │    │  test coverage  │    │  with compensations         │  │
+│  │   assigns it"   │    │  proposals      │    │                             │  │
+│  └─────────────────┘    └─────────────────┘    └─────────────────────────────┘  │
+│          │                      │                          │                    │
+│          ▼                      ▼                          ▼                    │
+│      Artifacts:             Artifacts:                 Artifacts:               │
+│      • stories.yaml         • test_designs.yaml        • processes.yaml        │
+│      • CRUD coverage        • Playwright tests         • State diagrams        │
+│      • Edge cases           • E2E scenarios            • Saga definitions      │
+│                                                                                 │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐  │
+│  │  Demo Data      │    │  Tenancy &      │    │  Fidelity & Gap Analysis    │  │
+│  │                 │    │  Compliance     │    │                             │  │
+│  │  Realistic      │    │  Inference      │    │  Spec vs. rendered HTML     │  │
+│  │  seed data      │    │                 │    │  cross-tool issue reports   │  │
+│  │  per-persona    │    │                 │    │                             │  │
+│  └─────────────────┘    └─────────────────┘    └─────────────────────────────┘  │
+│          │                      │                          │                    │
+│          ▼                      ▼                          ▼                    │
+│      Artifacts:             Artifacts:                 Artifacts:               │
+│      • demo_blueprint.yaml  • Tenancy config           • Fidelity scores       │
+│      • CSV/JSONL exports    • PII/GDPR hints           • Unified issues        │
+│      • Tenant fixtures      • Compliance frameworks    • Coverage gaps         │
+│                                                                                 │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why This Matters
+
+| Phase | Characteristics | Token Cost | Error Rate |
+|-------|----------------|------------|------------|
+| **Deterministic** | Parsing, linking, validation, runtime execution | Zero | Near-zero (compiler-checked) |
+| **Cognitive** | Story generation, test proposals, gap analysis | One-time per feature | Reviewable artifacts |
+
+The deterministic phase handles all the mechanical work that LLMs do poorly: parsing grammars, resolving references, type checking, and generating correct code. The cognitive phase leverages what LLMs do well: understanding intent, proposing test scenarios, and identifying gaps.
+
 **The workflow:**
 1. **Describe** what you want in natural language
 2. **Generate** a precise DSL specification (LLM-assisted, one-time cost)
-3. **Iterate** instantly with the Dazzle Native Runtime (DNR)
-4. **Deploy** directly — DNR is the runtime, not a scaffold
+3. **Iterate** instantly with the Dazzle runtime
+4. **Deploy** directly — the runtime executes your spec, no scaffold to maintain
 
 ## Install
 
@@ -70,11 +138,14 @@ When using Claude Code with a DAZZLE project, you'll have access to tools like:
 
 See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
-## Current State (v0.19)
+## Current State (v0.21)
 
-The DNR frontend uses **server-rendered HTMX templates** with Alpine.js for ephemeral client state. Zero-build-step UI with declarative interactions and no node_modules.
+The Dazzle runtime uses **server-rendered HTMX templates** with Alpine.js for ephemeral client state. Zero-build-step UI with declarative interactions and no node_modules.
 
 Recent additions:
+- **Process orchestration** — multi-step workflows with saga patterns and compensations
+- **Unified issue tracking** — cross-references lint, compliance, and fidelity findings
+- **Actionable tenancy inference** — DSL snippets for multi-tenant setup
 - **HTMX + DaisyUI frontend** — server-rendered pages, HTMX partial swaps
 - **9 composable fragments** — search_select, inline edit, bulk actions, pagination, and more
 - **API pack → fragment bridge** — DSL `source=` syntax connects fields to external API lookups
@@ -130,9 +201,9 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-## Dazzle Native Runtime (DNR)
+## The Dazzle Runtime
 
-DNR is the primary way to run DAZZLE applications:
+The Dazzle runtime executes your DSL spec directly:
 
 - **FastAPI backend**: Auto-generated CRUD endpoints with SQLite persistence
 - **HTMX + DaisyUI frontend**: Server-rendered pages with declarative interactions
@@ -148,27 +219,27 @@ dazzle show                      # Show project info
 dazzle build                     # Build for production
 ```
 
-## Workflow
+## Deterministic Pipeline Detail
 
 ```
                                                     ┌─────────────┐
-                                               ┌──▶ │ DNR Runtime │ (run directly)
+                                               ┌──▶ │   Runtime   │ (run directly)
 ┌─────────────┐     ┌─────────────┐     ┌──────┴──┐ └─────────────┘
 │  DSL Files  │ ──▶ │   Parser    │ ──▶ │ AppSpec │
 │  (.dsl)     │     │   + Linker  │     │  (IR)   │ ┌─────────────┐
-└─────────────┘     └─────────────┘     └──────┬──┘ │    Specs     │ (OpenAPI/AsyncAPI)
+└─────────────┘     └─────────────┘     └──────┬──┘ │    Specs    │ (OpenAPI/AsyncAPI)
                                                └──▶ │  Generator  │
                                                     └─────────────┘
 ```
 
 1. **Parse**: DSL files are parsed into an AST
-2. **Link**: Multi-module references are resolved
+2. **Link**: Multi-module references are resolved into a symbol table
 3. **AppSpec**: A semantic intermediate representation (IR) captures the full application model
-4. **Run**: DNR executes your spec directly — no code generation step
+4. **Run**: The runtime executes your spec directly — no code generation step
 
 ```bash
 dazzle check                     # Parse + link + validate
-dazzle dev                       # Run instantly with DNR
+dazzle dev                       # Run instantly
 dazzle specs openapi             # Generate OpenAPI 3.1 spec
 dazzle specs asyncapi            # Generate AsyncAPI 3.0 spec
 ```
