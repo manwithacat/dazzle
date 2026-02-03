@@ -97,3 +97,4 @@ src/six.py
 src/six-*.dist-info/
 src/pylab.py
 src/*.dist-info/
+dev_docs/

@@ -75,6 +75,7 @@ dev = [
 # PostgreSQL database backend (v0.27.0 - Heroku deployment)
 postgres = [
     "psycopg2-binary>=2.9",
+    "asyncpg>=0.29",  # Async PostgreSQL driver for event bus
 ]
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [

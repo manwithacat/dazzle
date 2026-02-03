@@ -118,7 +118,8 @@ pytest  # (if tests are generated or added)
 ### Common Questions
 
 **Q: Can I edit generated code?**
-A: Generally no. Always edit DSL and rebuild. However, infrastructure configs (Docker, Terraform) can be customized.
+A: Generally no. Always edit DSL and rebuild. Infrastructure configs (Docker, Terraform)
+can be customized.
 
 **Q: How do I add a new field?**
 A: Edit the entity in your DSL file, then run `dazzle build`.

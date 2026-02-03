@@ -62,10 +62,31 @@ from dazzle_back.events.multi_tenancy import (
     create_strategy,
 )
 from dazzle_back.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
+
+# v0.22.0 - PostgreSQL event bus (Tier 1 - Heroku pilots)
+from dazzle_back.events.postgres_bus import (
+    ASYNCPG_AVAILABLE,
+    PostgresConfig,
+)
 from dazzle_back.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
+
+# v0.22.0 - Redis Streams event bus (Tier 2 - Heroku growth)
+from dazzle_back.events.redis_bus import (
+    REDIS_AVAILABLE,
+    RedisConfig,
+)
 from dazzle_back.events.service_mixin import (
     EventEmittingCRUDService,
     EventEmittingMixin,
+)
+
+# v0.22.0 - Tier configuration and factory
+from dazzle_back.events.tier import (
+    EventTier,
+    TierConfig,
+    create_bus,
+    detect_tier,
+    get_tier_info,
 )
 from dazzle_back.events.topology_drift import (
     DriftIssue,
@@ -86,6 +107,18 @@ if KAFKA_AVAILABLE:
     from dazzle_back.events.kafka_bus import KafkaBus
 else:
     KafkaBus = None  # type: ignore[misc,assignment]
+
+# Conditional import for PostgresBus
+if ASYNCPG_AVAILABLE:
+    from dazzle_back.events.postgres_bus import PostgresBus
+else:
+    PostgresBus = None  # type: ignore[misc,assignment]
+
+# Conditional import for RedisBus
+if REDIS_AVAILABLE:
+    from dazzle_back.events.redis_bus import RedisBus
+else:
+    RedisBus = None  # type: ignore[misc,assignment]
 
 __all__ = [
     # Envelope
@@ -137,6 +170,20 @@ __all__ = [
     "KAFKA_AVAILABLE",
     "KafkaBus",
     "KafkaConfig",
+    # v0.22.0 - PostgreSQL event bus (Tier 1)
+    "ASYNCPG_AVAILABLE",
+    "PostgresBus",
+    "PostgresConfig",
+    # v0.22.0 - Redis Streams event bus (Tier 2)
+    "REDIS_AVAILABLE",
+    "RedisBus",
+    "RedisConfig",
+    # v0.22.0 - Tier configuration and factory
+    "EventTier",
+    "TierConfig",
+    "create_bus",
+    "detect_tier",
+    "get_tier_info",
     # v0.18.0 Phase I - Multi-tenancy
     "TenancyMode",
     "TenancyStrategy",
