@@ -65,7 +65,7 @@ def _get_store() -> ProcessStateStore:
     return ProcessStateStore()
 
 
-@celery_app.task(  # type: ignore[misc]
+@celery_app.task(
     bind=True,
     max_retries=3,
     default_retry_delay=60,
@@ -290,7 +290,7 @@ def _fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
     store.save_run(run)
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task
 def check_human_task_timeout(task_id: str) -> dict[str, Any]:
     """Check if a human task has timed out."""
     store = _get_store()
@@ -326,7 +326,7 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
     return {"status": task.status.value, "not_due": True}
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task
 def resume_process_after_task(
     task_id: str, outcome: str, outcome_data: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -349,7 +349,7 @@ def resume_process_after_task(
     return {"status": "resumed", "run_id": run.run_id}
 
 
-@celery_app.task  # type: ignore[misc]
+@celery_app.task
 def trigger_scheduled_process(schedule_name: str) -> dict[str, Any]:
     """Trigger a scheduled process."""
     import uuid
