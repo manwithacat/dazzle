@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
@@ -36,7 +36,7 @@ from .tigerbeetle_scenarios import (
 logger = logging.getLogger(__name__)
 
 
-class TBRunStatus(str, Enum):
+class TBRunStatus(StrEnum):
     """Status of a TigerBeetle test run."""
 
     PENDING = "pending"

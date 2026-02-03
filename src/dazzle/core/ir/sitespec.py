@@ -13,7 +13,7 @@ Design Document: dev_docs/content_management.md
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # =============================================================================
 
 
-class LogoMode(str, Enum):
+class LogoMode(StrEnum):
     """How the logo is displayed."""
 
     TEXT = "text"
@@ -147,7 +147,7 @@ class NavSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ThemeKind(str, Enum):
+class ThemeKind(StrEnum):
     """Available site themes."""
 
     SAAS_DEFAULT = "saas-default"
@@ -194,7 +194,7 @@ class CTASpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class MediaKind(str, Enum):
+class MediaKind(StrEnum):
     """Media types for sections."""
 
     NONE = "none"
@@ -219,7 +219,7 @@ class MediaSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class SectionKind(str, Enum):
+class SectionKind(StrEnum):
     """Types of page sections."""
 
     HERO = "hero"
@@ -356,7 +356,7 @@ class SectionSpec(BaseModel):
 # =============================================================================
 
 
-class ContentFormat(str, Enum):
+class ContentFormat(StrEnum):
     """Supported content formats."""
 
     MARKDOWN = "md"
@@ -383,7 +383,7 @@ class ContentSourceSpec(BaseModel):
 # =============================================================================
 
 
-class PageKind(str, Enum):
+class PageKind(StrEnum):
     """Types of pages."""
 
     LANDING = "landing"
@@ -431,7 +431,7 @@ class LegalPageSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class AuthPageMode(str, Enum):
+class AuthPageMode(StrEnum):
     """Auth page generation mode."""
 
     GENERATED = "generated"
@@ -490,7 +490,7 @@ class LegalPagesSpec(BaseModel):
 # =============================================================================
 
 
-class AuthProvider(str, Enum):
+class AuthProvider(StrEnum):
     """Authentication provider options."""
 
     DAZZLE = "dazzle"

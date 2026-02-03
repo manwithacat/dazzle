@@ -237,6 +237,13 @@ async def read_resource(uri: str) -> str:
             return dsl_ref.read_text()
         return "DSL reference not found"
 
+    elif uri == "dazzle://docs/htmx-templates":
+        docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
+        htmx_spec = docs_dir / "reference" / "htmx-templates.md"
+        if htmx_spec.exists():
+            return htmx_spec.read_text()
+        return "HTMX template specification not found"
+
     # Semantic resources
     elif uri == "dazzle://semantics/index":
         return json.dumps(get_semantic_index(), indent=2)

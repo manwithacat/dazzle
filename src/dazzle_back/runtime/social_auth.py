@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class SocialProvider(str, Enum):
+class SocialProvider(StrEnum):
     """Supported social login providers."""
 
     GOOGLE = "google"

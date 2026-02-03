@@ -7,7 +7,7 @@ Provides owner-based and tenant-based access control for entities.
 from __future__ import annotations
 
 from collections.abc import Callable
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -50,7 +50,7 @@ class AccessContext(BaseModel):
 # =============================================================================
 
 
-class AccessOperation(str, Enum):
+class AccessOperation(StrEnum):
     """CRUD operations for access control."""
 
     CREATE = "create"

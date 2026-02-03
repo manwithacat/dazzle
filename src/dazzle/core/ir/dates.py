@@ -13,7 +13,7 @@ Examples:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Union
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .invariant import DurationUnit
 
 
-class DateLiteralKind(str, Enum):
+class DateLiteralKind(StrEnum):
     """Date literal keywords."""
 
     TODAY = "today"  # Current date (date type)
@@ -45,7 +45,7 @@ class DateLiteral(BaseModel):
         return self.kind.value
 
 
-class DateArithmeticOp(str, Enum):
+class DateArithmeticOp(StrEnum):
     """Operators for date arithmetic."""
 
     ADD = "+"

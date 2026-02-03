@@ -1,0 +1,154 @@
+# Frontend Concepts - HTMX Template System
+# Light references for LLM cognition support
+
+[meta]
+file = "frontend"
+concept_count = 4
+
+[concepts.htmx]
+category = "Frontend"
+definition = "Declarative HTTP interaction layer for Dazzle-generated frontends. All interactions expressed via HTML attributes (hx-get, hx-post, hx-target, hx-swap, hx-trigger). Server renders HTML fragments; HTMX swaps them into the DOM."
+syntax = '''
+<element
+  hx-{verb}="/endpoint"   <!-- get, post, put, delete -->
+  hx-target="#target-id"
+  hx-swap="innerHTML"     <!-- innerHTML, outerHTML, beforeend, etc. -->
+  hx-trigger="click"      <!-- click, keyup, change, load, etc. -->
+  hx-indicator="#spinner">
+'''
+example = '''
+<!-- Debounced search -->
+<input type="text"
+  hx-get="/api/search"
+  hx-target="#results"
+  hx-trigger="keyup changed delay:400ms"
+  hx-indicator="#search-spinner">
+
+<!-- Row click navigation -->
+<tr hx-get="/contacts/{{ id }}"
+    hx-target="body"
+    hx-push-url="true">
+
+<!-- Inline delete with confirmation -->
+<button hx-delete="/api/tasks/{{ id }}"
+        hx-target="closest tr"
+        hx-swap="outerHTML"
+        hx-confirm="Delete this task?">
+'''
+related = ["templates", "fragment_contract", "oob_swap"]
+cognition_tips = [
+    "All behavior is visible in HTML attributes - no hidden JavaScript",
+    "Server is source of truth; client just displays rendered HTML",
+    "Use hx-indicator for loading states, hx-confirm for destructive actions",
+    "Combine with Alpine.js for UI-only state (dropdowns, modals)"
+]
+mcp_resource = "dazzle://docs/htmx-templates"
+
+[concepts.templates]
+category = "Frontend"
+definition = "Three-layer Jinja2 template architecture: Components (full page content), Fragments (HTMX-swappable partials), Macros (pure rendering helpers). Each layer has distinct responsibilities."
+syntax = '''
+templates/
+├── base.html                 # Document shell
+├── components/               # Full page content (one per surface mode)
+│   ├── list_view.html
+│   ├── detail_view.html
+│   └── form_edit.html
+├── fragments/                # HTMX-swappable partials
+│   ├── table_rows.html
+│   ├── search_select.html
+│   └── form_errors.html
+└── macros/                   # Pure rendering helpers
+    ├── form_field.html
+    └── table_cell.html
+'''
+related = ["htmx", "fragment_contract", "surface"]
+cognition_tips = [
+    "Components: ~100-150 lines, one per surface mode",
+    "Fragments: ~20-50 lines, single responsibility, HTMX-addressable",
+    "Macros: ~10-30 lines, pure functions, no side effects",
+    "An entire feature fits in ~300 lines (component + 2-3 fragments)"
+]
+layer_rules = [
+    "Components define layout and include fragments",
+    "Fragments are swapped by HTMX, communicate via events",
+    "Macros are called by components/fragments, never by HTMX directly"
+]
+mcp_resource = "dazzle://docs/htmx-templates"
+
+[concepts.fragment_contract]
+category = "Frontend"
+definition = "A fragment's formal interface specifying required/optional params, events it emits, events it listens to, and swap targets. Enables LLM agents to compose fragments without reading implementation."
+syntax = '''
+fragment: <name>
+template: fragments/<name>.html
+
+params:
+  required: [field.name, field.label, endpoint]
+  optional: [placeholder, debounce_ms]
+
+emits: [itemSelected, formSaved]
+listens: [searchCleared]
+
+swap_targets: ["#{{ field.name }}-results"]
+oob_targets: ["#field-{{ autofill_target }}"]
+'''
+example = '''
+# Discovery before modification
+mcp__dazzle__dsl(operation="list_fragments")
+
+# Returns structured contracts:
+{
+  "search_select": {
+    "params": ["field.name", "field.source.endpoint", ...],
+    "emits": ["itemSelected"],
+    "listens": [],
+    "description": "Debounced search with autofill"
+  }
+}
+'''
+related = ["templates", "htmx"]
+cognition_tips = [
+    "Always check contracts before modifying fragments",
+    "Contracts tell you WHAT without reading HOW",
+    "Events are the communication mechanism between fragments",
+    "Use list_fragments to discover available fragments"
+]
+
+[concepts.oob_swap]
+category = "Frontend"
+definition = "Out-of-band swap pattern (hx-swap-oob) for updating multiple DOM elements from a single server response. Used for autofill: selecting a search result populates multiple related form fields."
+syntax = '''
+<!-- Server response includes multiple elements -->
+
+<!-- Primary swap (goes to hx-target) -->
+<div id="search-selected">Selected: Acme Ltd</div>
+
+<!-- OOB swaps (go to their own ids) -->
+<input id="field-company_number" value="12345678"
+       hx-swap-oob="outerHTML" readonly />
+<input id="field-status" value="active"
+       hx-swap-oob="outerHTML" readonly />
+'''
+example = '''
+# Python endpoint returning OOB response
+from dazzle_back.runtime.htmx import render_oob_fields
+
+@router.get("/select/{id}")
+async def select_company(id: str):
+    company = await get_company(id)
+    return render_oob_fields(
+        primary=f"Selected: {company.name}",
+        autofill={
+            "company_number": company.number,
+            "company_status": company.status,
+        }
+    )
+'''
+related = ["htmx", "fragment_contract", "search_select"]
+cognition_tips = [
+    "OOB is for updating MULTIPLE targets from ONE response",
+    "Primary swap goes to hx-target; OOB goes to element's own id",
+    "Use for autofill patterns: select item -> populate related fields",
+    "Server renders OOB fields using same macro as original form"
+]

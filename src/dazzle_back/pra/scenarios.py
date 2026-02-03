@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from dazzle_back.metrics import MetricsCollector
@@ -38,7 +38,7 @@ from .profiles import (
 )
 
 
-class ScenarioType(str, Enum):
+class ScenarioType(StrEnum):
     """Types of test scenarios."""
 
     QUICK = "quick"

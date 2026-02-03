@@ -8,13 +8,13 @@ surfaces, and layout plans.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class AttentionSignalKind(str, Enum):
+class AttentionSignalKind(StrEnum):
     """
     Semantic kinds of UI attention signals.
 
@@ -188,7 +188,7 @@ class PersonaLayout(BaseModel):
         return v
 
 
-class Stage(str, Enum):
+class Stage(StrEnum):
     """
     Named layout stages with specific compositional rules.
 

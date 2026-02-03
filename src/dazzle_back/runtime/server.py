@@ -53,6 +53,7 @@ class ServerConfig:
     # Authentication settings
     enable_auth: bool = False
     auth_db_path: Path = field(default_factory=lambda: Path(".dazzle/auth.db"))
+    auth_database_url: str | None = None  # PostgreSQL URL for auth DB (separate from main DB)
     auth_config: Any = None  # AuthConfig from manifest (for OAuth providers)
 
     # File upload settings
@@ -194,6 +195,7 @@ class DNRBackendApp:
         self._use_database = use_database if use_database is not None else config.use_database
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
         self._auth_db_path = Path(auth_db_path) if auth_db_path else config.auth_db_path
+        self._auth_database_url = config.auth_database_url
         self._auth_config = auth_config if auth_config is not None else config.auth_config
         self._enable_files = enable_files if enable_files is not None else config.enable_files
         self._files_path = Path(files_path) if files_path else config.files_path
@@ -1027,7 +1029,10 @@ class DNRBackendApp:
         # Initialize auth if enabled (needed before route generation)
         get_auth_context = None
         if self._enable_auth:
-            self._auth_store = AuthStore(self._auth_db_path)
+            self._auth_store = AuthStore(
+                db_path=self._auth_db_path,
+                database_url=self._auth_database_url,
+            )
             self._auth_middleware = AuthMiddleware(self._auth_store)
             auth_router = create_auth_routes(self._auth_store)
             self._app.include_router(auth_router)
@@ -1533,6 +1538,7 @@ def create_app_factory() -> FastAPI:
     Environment Variables:
         DAZZLE_PROJECT_ROOT: Project root directory (default: current directory)
         DATABASE_URL: PostgreSQL connection URL (Heroku format supported)
+        AUTH_DATABASE_URL: PostgreSQL URL for auth DB (defaults to DATABASE_URL)
         REDIS_URL: Redis connection URL (for sessions/cache)
         DAZZLE_ENV: Environment name (development/staging/production)
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
@@ -1586,6 +1592,12 @@ def create_app_factory() -> FastAPI:
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
         logger.info("Converted postgres:// to postgresql:// for SQLAlchemy compatibility")
+
+    # Parse AUTH_DATABASE_URL (separate auth DB, defaults to DATABASE_URL)
+    # Allows auth data to live in a separate database for scaling/security
+    auth_database_url = os.environ.get("AUTH_DATABASE_URL", "") or database_url
+    if auth_database_url.startswith("postgres://"):
+        auth_database_url = auth_database_url.replace("postgres://", "postgresql://", 1)
 
     # Parse REDIS_URL (Heroku format: redis://h:password@host:port)
     redis_url = os.environ.get("REDIS_URL", "")
@@ -1641,6 +1653,7 @@ def create_app_factory() -> FastAPI:
         enable_auth=manifest.auth.enabled,
         auth_config=manifest.auth if manifest.auth.enabled else None,
         auth_db_path=project_root / ".dazzle" / "auth.db",
+        auth_database_url=auth_database_url if auth_database_url else None,
         enable_files=True,
         files_path=project_root / ".dazzle" / "uploads",
         files_db_path=project_root / ".dazzle" / "files.db",
@@ -1667,6 +1680,8 @@ def create_app_factory() -> FastAPI:
     logger.info(f"  Endpoints: {len(backend_spec.endpoints)}")
     logger.info(f"  Environment: {dazzle_env}")
     logger.info(f"  Database: {'PostgreSQL' if database_url else 'SQLite'}")
+    if manifest.auth.enabled:
+        logger.info(f"  Auth DB: {'PostgreSQL' if auth_database_url else 'SQLite'}")
     if enable_dev_mode:
         logger.info("  Dazzle Bar: enabled")
 

@@ -7,7 +7,7 @@ modifiers, and field specifications.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .dates import DateArithmeticExpr, DateLiteral
 
 
-class FieldTypeKind(str, Enum):
+class FieldTypeKind(StrEnum):
     """Enumeration of supported field types in DAZZLE."""
 
     STR = "str"
@@ -44,7 +44,7 @@ class FieldTypeKind(str, Enum):
     BELONGS_TO = "belongs_to"
 
 
-class RelationshipBehavior(str, Enum):
+class RelationshipBehavior(StrEnum):
     """Delete behavior for relationships (v0.7.1)."""
 
     CASCADE = "cascade"  # Delete children when parent deleted
@@ -108,7 +108,7 @@ class FieldType(BaseModel):
         return v
 
 
-class FieldModifier(str, Enum):
+class FieldModifier(StrEnum):
     """Modifiers that can be applied to fields."""
 
     REQUIRED = "required"

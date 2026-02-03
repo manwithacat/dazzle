@@ -24,7 +24,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.events.topology_drift")
 
 
-class DriftType(str, Enum):
+class DriftType(StrEnum):
     """Types of topology drift."""
 
     MISSING_TOPIC = "missing_topic"
@@ -47,7 +47,7 @@ class DriftType(str, Enum):
     RETENTION_DRIFT = "retention_drift"
 
 
-class DriftSeverity(str, Enum):
+class DriftSeverity(StrEnum):
     """Severity levels for drift issues."""
 
     CRITICAL = "critical"  # System may not function correctly

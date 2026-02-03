@@ -13,14 +13,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 import aiosqlite
 
 
-class ProcessingResult(str, Enum):
+class ProcessingResult(StrEnum):
     """Result of processing an event."""
 
     SUCCESS = "success"

@@ -14,13 +14,13 @@ features in the DAZZLE DSL:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class EventTriggerKind(str, Enum):
+class EventTriggerKind(StrEnum):
     """Trigger conditions for automatic event publishing."""
 
     CREATED = "created"  # Entity created
@@ -30,7 +30,7 @@ class EventTriggerKind(str, Enum):
     STATUS_CHANGED = "status_changed"  # Status field changed (state machine)
 
 
-class ProjectionAction(str, Enum):
+class ProjectionAction(StrEnum):
     """Actions for projection handlers."""
 
     UPSERT = "upsert"  # Insert or update

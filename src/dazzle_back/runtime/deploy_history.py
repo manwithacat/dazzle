@@ -10,14 +10,14 @@ import json
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger("dazzle.deploy_history")
 
 
-class DeployStatus(str, Enum):
+class DeployStatus(StrEnum):
     """Deployment status."""
 
     PENDING = "pending"

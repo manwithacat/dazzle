@@ -26,7 +26,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -38,7 +38,7 @@ logger = logging.getLogger("dazzle.testing.agent_e2e")
 # =============================================================================
 
 
-class ActionType(str, Enum):
+class ActionType(StrEnum):
     """Types of actions the agent can take."""
 
     CLICK = "click"

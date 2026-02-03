@@ -12,7 +12,7 @@ import logging
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
@@ -29,7 +29,7 @@ from .scenarios import ScenarioType, StressScenario, SuccessCriteria, get_scenar
 logger = logging.getLogger(__name__)
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     """Status of a test run."""
 
     PENDING = "pending"

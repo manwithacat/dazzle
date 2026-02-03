@@ -13,7 +13,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -217,7 +217,7 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
 # ============================================================================
 
 
-class ValidationSeverity(str, Enum):
+class ValidationSeverity(StrEnum):
     """Severity level for validation issues."""
 
     ERROR = "error"
@@ -844,7 +844,7 @@ def infer_analytics_intent(appspec: ir.AppSpec) -> dict[str, Any]:
 # ============================================================================
 
 
-class FeedbackSeverity(str, Enum):
+class FeedbackSeverity(StrEnum):
     """Severity of feedback."""
 
     CRITICAL = "critical"
@@ -853,7 +853,7 @@ class FeedbackSeverity(str, Enum):
     LOW = "low"
 
 
-class FeedbackScope(str, Enum):
+class FeedbackScope(StrEnum):
     """Scope of feedback impact."""
 
     GLOBAL = "global"

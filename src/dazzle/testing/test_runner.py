@@ -21,14 +21,14 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 import httpx
 
 
-class TestResult(str, Enum):
+class TestResult(StrEnum):
     """Result of a single test."""
 
     PASSED = "passed"

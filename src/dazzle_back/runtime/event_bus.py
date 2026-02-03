@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-class EntityEventType(str, Enum):
+class EntityEventType(StrEnum):
     """Entity event types."""
 
     CREATED = "entity:created"

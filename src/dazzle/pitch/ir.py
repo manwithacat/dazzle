@@ -13,13 +13,13 @@ Defines the specification for investor pitch materials:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class FundingStage(str, Enum):
+class FundingStage(StrEnum):
     PRE_SEED = "pre_seed"
     SEED = "seed"
     SERIES_A = "series_a"
@@ -27,7 +27,7 @@ class FundingStage(str, Enum):
     GROWTH = "growth"
 
 
-class ExtraSlideLayout(str, Enum):
+class ExtraSlideLayout(StrEnum):
     BULLETS = "bullets"
     STATS = "stats"
     CARDS = "cards"

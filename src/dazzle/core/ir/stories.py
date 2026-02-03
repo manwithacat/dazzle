@@ -17,12 +17,12 @@ conditions for clearer acceptance criteria.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class StoryTrigger(str, Enum):
+class StoryTrigger(StrEnum):
     """
     Constrained set of event triggers for stories.
 
@@ -39,7 +39,7 @@ class StoryTrigger(str, Enum):
     CRON_HOURLY = "cron_hourly"
 
 
-class StoryStatus(str, Enum):
+class StoryStatus(StrEnum):
     """
     Acceptance status of a story.
 

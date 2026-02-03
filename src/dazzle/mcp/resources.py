@@ -34,6 +34,12 @@ def create_static_resources() -> list[dict[str, Any]]:
             "description": "Step-by-step guides for common tasks (getting_started, add_entity, add_workspace, etc.)",
             "mimeType": "application/json",
         },
+        {
+            "uri": "dazzle://docs/htmx-templates",
+            "name": "HTMX Template Specification",
+            "description": "HTMX template patterns, fragment contracts, and LLM cognition strategies for rich UI development",
+            "mimeType": "text/markdown",
+        },
     ]
 
 

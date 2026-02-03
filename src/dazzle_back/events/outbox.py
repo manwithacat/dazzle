@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -24,7 +24,7 @@ import aiosqlite
 from dazzle_back.events.envelope import EventEnvelope
 
 
-class OutboxStatus(str, Enum):
+class OutboxStatus(StrEnum):
     """Status of an outbox entry."""
 
     PENDING = "pending"

@@ -8,13 +8,13 @@ identify bottlenecks and validate performance characteristics.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from .tigerbeetle_generator import TBGeneratorConfig
 
 
-class TBScenarioType(str, Enum):
+class TBScenarioType(StrEnum):
     """Types of TigerBeetle test scenarios."""
 
     TB_QUICK = "tb_quick"

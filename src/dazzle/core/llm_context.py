@@ -358,8 +358,8 @@ def generate_claude_project_context(project_name: str, stack_name: str | None = 
 
     return f"""# Claude Project Context: {project_name}
 
-{stack_info}This is a DAZZLE-generated project. DAZZLE is a DSL-first application generator that transforms
-domain specifications into production code.
+{stack_info}This is a DAZZLE-generated project. DAZZLE is a DSL-first application
+generator that transforms domain specifications into production code.
 
 ## Your Role
 

@@ -7,13 +7,13 @@ including setup steps, actions, and assertions.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class TestActionKind(str, Enum):
+class TestActionKind(StrEnum):
     """Types of test actions."""
 
     CREATE = "create"
@@ -23,7 +23,7 @@ class TestActionKind(str, Enum):
     GET = "get"
 
 
-class TestAssertionKind(str, Enum):
+class TestAssertionKind(StrEnum):
     """Types of test assertions."""
 
     STATUS = "status"
@@ -33,7 +33,7 @@ class TestAssertionKind(str, Enum):
     COUNT = "count"
 
 
-class TestComparisonOperator(str, Enum):
+class TestComparisonOperator(StrEnum):
     """Comparison operators for test assertions."""
 
     EQUALS = "equals"

@@ -18,7 +18,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +27,7 @@ import httpx
 from dazzle.core.ir.domain import EntitySpec
 
 
-class EventTestResult(str, Enum):
+class EventTestResult(StrEnum):
     """Result of an event test."""
 
     PASSED = "passed"

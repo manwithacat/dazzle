@@ -8,12 +8,12 @@ This module contains:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class AuthKind(str, Enum):
+class AuthKind(StrEnum):
     """Authentication profile types."""
 
     OAUTH2_LEGACY = "oauth2_legacy"
@@ -69,7 +69,7 @@ class APISpec(BaseModel):
 # ============================================================================
 
 
-class DomainServiceKind(str, Enum):
+class DomainServiceKind(StrEnum):
     """Types of domain services."""
 
     DOMAIN_LOGIC = "domain_logic"  # Business calculations, transformations
@@ -78,7 +78,7 @@ class DomainServiceKind(str, Enum):
     WORKFLOW = "workflow"  # Multi-step business processes
 
 
-class StubLanguage(str, Enum):
+class StubLanguage(StrEnum):
     """Supported stub implementation languages."""
 
     PYTHON = "python"

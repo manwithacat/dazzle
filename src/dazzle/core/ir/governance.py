@@ -11,7 +11,7 @@ Part of v0.18.0 Event-First Architecture (Issue #25).
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # =============================================================================
 
 
-class DataClassification(str, Enum):
+class DataClassification(StrEnum):
     """
     Data classification levels for governance.
 
@@ -45,7 +45,7 @@ class DataClassification(str, Enum):
     UNCLASSIFIED = "unclassified"  # Not yet classified
 
 
-class RetentionPolicy(str, Enum):
+class RetentionPolicy(StrEnum):
     """Retention policy for classified data."""
 
     EPHEMERAL = "ephemeral"  # Delete immediately after use
@@ -75,7 +75,7 @@ class ClassificationSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ErasurePolicy(str, Enum):
+class ErasurePolicy(StrEnum):
     """How to handle data erasure requests (GDPR right to be forgotten)."""
 
     DELETE = "delete"  # Hard delete
@@ -126,7 +126,7 @@ class PoliciesSpec(BaseModel):
 # =============================================================================
 
 
-class TenancyMode(str, Enum):
+class TenancyMode(StrEnum):
     """Multi-tenancy isolation mode."""
 
     SINGLE = "single"  # Single tenant (no isolation)
@@ -135,7 +135,7 @@ class TenancyMode(str, Enum):
     DATABASE_PER_TENANT = "database_per_tenant"  # Separate database per tenant
 
 
-class TopicNamespaceMode(str, Enum):
+class TopicNamespaceMode(StrEnum):
     """How topics are namespaced for multi-tenancy."""
 
     SHARED = "shared"  # All tenants share topics (partition by tenant_id)
@@ -207,7 +207,7 @@ class TenancySpec(BaseModel):
 # =============================================================================
 
 
-class InterfaceFormat(str, Enum):
+class InterfaceFormat(StrEnum):
     """Supported interface formats."""
 
     REST = "rest"
@@ -218,7 +218,7 @@ class InterfaceFormat(str, Enum):
     EDIFACT = "edifact"  # EDI
 
 
-class InterfaceAuthMethod(str, Enum):
+class InterfaceAuthMethod(StrEnum):
     """Authentication methods for interfaces."""
 
     NONE = "none"
@@ -306,7 +306,7 @@ class InterfacesSpec(BaseModel):
 # =============================================================================
 
 
-class DataProductTransform(str, Enum):
+class DataProductTransform(StrEnum):
     """Transformations applied to data products."""
 
     NONE = "none"  # Pass through

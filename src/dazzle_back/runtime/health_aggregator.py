@@ -18,7 +18,7 @@ import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from dazzle_back.events.bus import EventBus
 
 
-class AggregateStatus(str, Enum):
+class AggregateStatus(StrEnum):
     """Overall system health status."""
 
     ALL_HEALTHY = "all_healthy"

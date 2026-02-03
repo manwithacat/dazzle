@@ -17,7 +17,7 @@ See: dev_docs/architecture/event_first/high_level_event_semantics.md
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 from .fields import FieldSpec
 
 
-class RecordKind(str, Enum):
+class RecordKind(StrEnum):
     """
     The four permitted record kinds.
 
@@ -56,7 +56,7 @@ class RecordKind(str, Enum):
     DERIVATION = "derivation"
 
 
-class HLESSMode(str, Enum):
+class HLESSMode(StrEnum):
     """HLESS enforcement mode."""
 
     STRICT = "strict"  # Default - parser rejects non-compliant code
@@ -90,7 +90,7 @@ class TimeSemantics(BaseModel):
     )
 
 
-class IdempotencyType(str, Enum):
+class IdempotencyType(StrEnum):
     """Strategy types for duplicate detection."""
 
     DETERMINISTIC_ID = "deterministic_id"  # ID derived from content
@@ -142,7 +142,7 @@ class SideEffectPolicy(BaseModel):
     )
 
 
-class OutcomeCondition(str, Enum):
+class OutcomeCondition(StrEnum):
     """Conditions for INTENT stream outcomes."""
 
     SUCCESS = "success"
@@ -173,7 +173,7 @@ class ExpectedOutcome(BaseModel):
     )
 
 
-class DerivationType(str, Enum):
+class DerivationType(StrEnum):
     """Types of derivation operations."""
 
     AGGREGATE = "aggregate"  # SUM, COUNT, AVG over records
@@ -184,7 +184,7 @@ class DerivationType(str, Enum):
     WINDOW = "window"  # Time-windowed computation
 
 
-class RebuildStrategy(str, Enum):
+class RebuildStrategy(StrEnum):
     """How a DERIVATION stream can be rebuilt."""
 
     FULL_REPLAY = "full_replay"  # Delete and rebuild from all sources
@@ -192,7 +192,7 @@ class RebuildStrategy(str, Enum):
     WINDOWED = "windowed"  # Only recent window matters
 
 
-class WindowType(str, Enum):
+class WindowType(StrEnum):
     """Types of time windows for derivations."""
 
     TUMBLING = "tumbling"  # Non-overlapping fixed windows
@@ -243,7 +243,7 @@ class DerivationLineage(BaseModel):
     )
 
 
-class SchemaCompatibility(str, Enum):
+class SchemaCompatibility(StrEnum):
     """Compatibility level for schema evolution."""
 
     ADDITIVE = "additive"  # Backwards compatible (add fields, widen enums)

@@ -17,7 +17,7 @@ import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.channels.outbox")
 
 
-class OutboxStatus(str, Enum):
+class OutboxStatus(StrEnum):
     """Status of an outbox message."""
 
     PENDING = "pending"

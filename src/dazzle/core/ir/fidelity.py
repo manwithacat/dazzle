@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class FidelityGapCategory(str, Enum):
+class FidelityGapCategory(StrEnum):
     """Categories of fidelity gaps between spec and rendered output."""
 
     MISSING_FIELD = "missing_field"

@@ -42,14 +42,14 @@ DSL Syntax Examples:
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .computed import ArithmeticExpr, FieldReference, LiteralValue
 
 
-class AccountType(str, Enum):
+class AccountType(StrEnum):
     """
     Standard accounting account types following double-entry bookkeeping.
 
@@ -66,7 +66,7 @@ class AccountType(str, Enum):
     EXPENSE = "expense"
 
 
-class AccountFlag(str, Enum):
+class AccountFlag(StrEnum):
     """
     TigerBeetle account flags controlling balance constraints.
 
@@ -82,7 +82,7 @@ class AccountFlag(str, Enum):
     HISTORY = "history"  # Maintain full history (vs. balance-only)
 
 
-class TransferFlag(str, Enum):
+class TransferFlag(StrEnum):
     """
     TigerBeetle transfer flags controlling transfer behavior.
 
@@ -96,7 +96,7 @@ class TransferFlag(str, Enum):
     BALANCING = "balancing"  # Auto-calculate amount to balance accounts
 
 
-class TransactionPriority(str, Enum):
+class TransactionPriority(StrEnum):
     """
     Transaction queue priority for Celery routing.
 
@@ -109,7 +109,7 @@ class TransactionPriority(str, Enum):
     LOW = "low"  # Batch operations, reports → celery.ledger.low
 
 
-class TransactionExecution(str, Enum):
+class TransactionExecution(StrEnum):
     """
     Transaction execution mode.
 
@@ -121,7 +121,7 @@ class TransactionExecution(str, Enum):
     ASYNC = "async"  # Queue for background processing
 
 
-class SyncTrigger(str, Enum):
+class SyncTrigger(StrEnum):
     """
     Trigger for TigerBeetle → PostgreSQL cache synchronization.
     """

@@ -6,7 +6,7 @@ Defines workspaces, layouts, and routes.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 # =============================================================================
 
 
-class LayoutKind(str, Enum):
+class LayoutKind(StrEnum):
     """Layout types for workspaces."""
 
     SINGLE_COLUMN = "singleColumn"
@@ -97,7 +97,7 @@ class RouteSpec(BaseModel):
 # =============================================================================
 
 
-class WorkspaceAccessLevel(str, Enum):
+class WorkspaceAccessLevel(StrEnum):
     """Access levels for workspaces."""
 
     PUBLIC = "public"  # No authentication required

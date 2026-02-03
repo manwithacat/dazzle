@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -65,7 +65,7 @@ def quote_identifier(name: str) -> str:
     return f'"{escaped}"'
 
 
-class FilterOperator(str, Enum):
+class FilterOperator(StrEnum):
     """Supported filter operators."""
 
     EQ = "eq"  # Equal (default)

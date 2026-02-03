@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from dazzle.core.ir.governance import DataProductSpec
@@ -23,7 +23,7 @@ from dazzle.core.ir.governance import DataProductSpec
 logger = logging.getLogger("dazzle.data_products.cross_tenant")
 
 
-class CrossTenantPermission(str, Enum):
+class CrossTenantPermission(StrEnum):
     """Permissions for cross-tenant operations."""
 
     NONE = "none"  # No cross-tenant access
@@ -33,7 +33,7 @@ class CrossTenantPermission(str, Enum):
     ADMIN = "admin"  # Platform admin access
 
 
-class CrossTenantAuditAction(str, Enum):
+class CrossTenantAuditAction(StrEnum):
     """Actions that are audited for cross-tenant operations."""
 
     QUERY = "query"

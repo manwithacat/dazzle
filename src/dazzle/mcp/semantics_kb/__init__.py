@@ -44,6 +44,7 @@ TOML_FILES = [
     "ejection.toml",
     "misc.toml",
     "patterns.toml",
+    "frontend.toml",
 ]
 
 # Alias mapping for common term variations
