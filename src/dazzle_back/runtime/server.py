@@ -1128,13 +1128,24 @@ class DNRBackendApp:
 
         # Initialize site routes (v0.16.0)
         if self._sitespec_data:
-            from dazzle_back.runtime.site_routes import create_site_routes
+            from dazzle_back.runtime.site_routes import (
+                create_site_page_routes,
+                create_site_routes,
+            )
 
+            # API routes for site data (/_site/*)
             site_router = create_site_routes(
                 sitespec_data=self._sitespec_data,
                 project_root=self._project_root,
             )
             self._app.include_router(site_router)
+
+            # HTML page routes (/, /features, /pricing, etc.)
+            page_router = create_site_page_routes(
+                sitespec_data=self._sitespec_data,
+                project_root=self._project_root,
+            )
+            self._app.include_router(page_router)
 
         # Initialize messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:
