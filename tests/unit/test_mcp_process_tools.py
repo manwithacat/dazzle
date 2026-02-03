@@ -241,13 +241,13 @@ class TestProposeProcesses:
             data = json.loads(result)
 
         assert "error" not in data
-        assert data["proposed_count"] >= 1
+        # Both stories are STATUS_CHANGED on Task → lifecycle workflow
+        assert data["workflow_count"] >= 1
 
-        for proposal in data["proposals"]:
-            assert "workflow_name" in proposal
-            assert "title" in proposal
-            assert "stories" in proposal
-            assert "recommendation" in proposal
+        for workflow in data["workflows"]:
+            assert "workflow_name" in workflow
+            assert "title" in workflow
+            assert "stories" in workflow
 
     def test_propose_for_specific_story(
         self, mock_app_spec_no_processes: MagicMock, tmp_path: Path
@@ -263,8 +263,8 @@ class TestProposeProcesses:
             data = json.loads(result)
 
         assert "error" not in data
-        assert data["proposed_count"] >= 1
-        assert "ST-001" in data["proposals"][0]["stories"]
+        assert data["workflow_count"] >= 1
+        assert "ST-001" in data["workflows"][0]["stories"]
 
     def test_propose_no_stories_with_fallback(
         self, mock_app_spec_no_stories: MagicMock, tmp_path: Path
@@ -303,7 +303,7 @@ class TestProposeProcesses:
 
         # ST-002 is still uncovered, so it should propose
         assert "error" not in data
-        assert data["proposed_count"] >= 1
+        assert data["workflow_count"] >= 1
 
 
 class TestListProcesses:

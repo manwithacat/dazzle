@@ -73,7 +73,7 @@ class WorkflowProposal:
     title: str
     stories: list[str]
     story_summaries: list[dict[str, Any]]
-    entity_context: dict[str, Any]
+    entity: str | None  # Entity name — full context in top-level entities dict
     design_questions: list[str]
     recommendation: str  # "compose_process" | "process_not_recommended"
     reason: str
@@ -409,13 +409,51 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         # Cluster stories into workflows and build design briefs
         proposals = _cluster_stories_into_workflows(target_stories, app_spec)
 
-        return json.dumps(
-            {
-                "proposed_count": len(proposals),
-                "proposals": [asdict(p) for p in proposals],
-            },
-            indent=2,
-        )
+        # Build deduplicated output: entity contexts emitted once,
+        # process_not_recommended collapsed to a summary list
+        entities: dict[str, dict[str, Any]] = {}
+        workflows: list[dict[str, Any]] = []
+        skipped_crud: list[str] = []
+
+        for proposal in proposals:
+            if proposal.entity and proposal.entity not in entities:
+                entities[proposal.entity] = _build_entity_context(proposal.entity, app_spec)
+
+            if proposal.recommendation == "process_not_recommended":
+                # Collapse to just the entity name — agent doesn't need details
+                if proposal.entity and proposal.entity not in skipped_crud:
+                    skipped_crud.append(proposal.entity)
+                continue
+
+            workflows.append(
+                {
+                    "workflow_name": proposal.workflow_name,
+                    "title": proposal.title,
+                    "stories": proposal.stories,
+                    "story_summaries": proposal.story_summaries,
+                    "entity": proposal.entity,
+                    "design_questions": proposal.design_questions,
+                    "reason": proposal.reason,
+                }
+            )
+
+        result: dict[str, Any] = {
+            "workflow_count": len(workflows),
+            "workflows": workflows,
+        }
+
+        # Only include entities referenced by compose_process workflows
+        workflow_entities = {w["entity"] for w in workflows if w["entity"]}
+        if workflow_entities:
+            result["entities"] = {
+                name: ctx for name, ctx in entities.items() if name in workflow_entities
+            }
+
+        if skipped_crud:
+            result["skipped_crud"] = skipped_crud
+            result["skipped_crud_count"] = len(skipped_crud)
+
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
@@ -643,8 +681,6 @@ def _build_proposal(
         for s in stories
     ]
 
-    entity_context = _build_entity_context(entity_name, app_spec) if entity_name else {}
-
     design_questions = (
         _generate_design_questions(stories, entity_name, app_spec)
         if recommendation == "compose_process"
@@ -656,7 +692,7 @@ def _build_proposal(
         title=title,
         stories=[s.story_id for s in stories],
         story_summaries=story_summaries,
-        entity_context=entity_context,
+        entity=entity_name,
         design_questions=design_questions,
         recommendation=recommendation,
         reason=reason,

@@ -332,7 +332,7 @@ class TestWorkflowProposal:
             story_summaries=[
                 {"story_id": "ST-001", "title": "T", "trigger": "form_submitted", "actor": "User"}
             ],
-            entity_context={},
+            entity=None,
             design_questions=["Q1?"],
             recommendation="compose_process",
             reason="Test reason",
