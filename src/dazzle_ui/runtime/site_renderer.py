@@ -717,8 +717,8 @@ def get_site_js() -> str:
             }
         }
 
-        // Handle markdown page content
-        if (pageData.content && pageData.type === 'markdown') {
+        // Handle markdown and legal page content
+        if (pageData.content && (pageData.type === 'markdown' || pageData.type === 'legal')) {
             html = renderMarkdown({ content: pageData.content });
         }
 
