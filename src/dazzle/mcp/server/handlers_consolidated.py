@@ -1082,6 +1082,23 @@ def handle_contribution(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Bootstrap Handler
+# =============================================================================
+
+
+def handle_bootstrap(arguments: dict[str, Any]) -> str:
+    """Handle bootstrap tool - entry point for naive app requests."""
+    from .handlers.bootstrap import handle_bootstrap as _handle
+
+    # Get project path from arguments or pre-resolved path
+    project_path = arguments.get("_resolved_project_path") or arguments.get("project_path")
+    if isinstance(project_path, str):
+        project_path = Path(project_path)
+
+    return _handle(arguments, project_path)
+
+
+# =============================================================================
 # Spec Analyze Handler
 # =============================================================================
 
@@ -1188,6 +1205,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "mailpit": handle_mailpit,
     "contribution": handle_contribution,
     "user_feedback": handle_user_feedback,
+    "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
 }

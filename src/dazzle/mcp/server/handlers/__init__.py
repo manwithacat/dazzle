@@ -12,6 +12,7 @@ from .api_packs import (
     list_api_packs_handler,
     search_api_packs_handler,
 )
+from .bootstrap import handle_bootstrap
 from .dsl import (
     analyze_patterns,
     get_unified_issues,
@@ -108,4 +109,6 @@ __all__ = [
     "get_feedback_summary_handler",
     # Spec analyze handlers
     "handle_spec_analyze",
+    # Bootstrap handler
+    "handle_bootstrap",
 ]

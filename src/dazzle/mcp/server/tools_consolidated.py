@@ -965,6 +965,39 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         # Spec Analyze (cognition pass for narrative specs)
         # =====================================================================
+        # Bootstrap (entry point for naive app requests)
+        # =====================================================================
+        Tool(
+            name="bootstrap",
+            description=(
+                "Entry point for 'build me an app' requests. Scans for spec files, "
+                "runs cognition pass, and returns a mission briefing with agent instructions. "
+                "Call this first when a user wants to build an app. Returns structured "
+                "guidance for the next steps: either questions to ask the user, or "
+                "instructions for DSL generation."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "spec_text": {
+                        "type": "string",
+                        "description": "Optional: spec text if provided directly by user",
+                    },
+                    "spec_path": {
+                        "type": "string",
+                        "description": "Optional: path to spec file",
+                    },
+                    "project_path": {
+                        "type": "string",
+                        "description": "Optional: project directory to scan for specs",
+                    },
+                },
+                "required": [],
+            },
+        ),
+        # =====================================================================
+        # Spec Analyze (individual cognition operations)
+        # =====================================================================
         Tool(
             name="spec_analyze",
             description=(
