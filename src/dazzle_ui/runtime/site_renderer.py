@@ -382,3 +382,356 @@ def get_task_header_script_tag() -> str:
     Include this in pages that may render with task context.
     """
     return '<script src="/js/components/task-header.js" type="module" defer></script>'
+
+
+def get_site_js() -> str:
+    """
+    Get the site page JavaScript content.
+
+    This JS handles theme toggling and fetches page data from the /_site/page API
+    to render marketing page sections client-side.
+
+    Returns:
+        JavaScript content for /site.js route
+    """
+    return """/**
+ * Dazzle Site Page Renderer
+ * Fetches page data from /_site/page/{route} and renders sections.
+ */
+(function() {
+    'use strict';
+
+    // ==========================================================================
+    // Theme System (v0.16.0 - Issue #26)
+    // ==========================================================================
+
+    const STORAGE_KEY = 'dz-theme-variant';
+    const THEME_LIGHT = 'light';
+    const THEME_DARK = 'dark';
+
+    function getSystemPreference() {
+        if (typeof window === 'undefined') return THEME_LIGHT;
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        return mediaQuery.matches ? THEME_DARK : THEME_LIGHT;
+    }
+
+    function getStoredPreference() {
+        if (typeof localStorage === 'undefined') return null;
+        return localStorage.getItem(STORAGE_KEY);
+    }
+
+    function storePreference(variant) {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(STORAGE_KEY, variant);
+    }
+
+    function applyTheme(variant) {
+        const root = document.documentElement;
+        root.setAttribute('data-theme', variant);
+        root.style.colorScheme = variant;
+        root.classList.remove('dz-theme-light', 'dz-theme-dark');
+        root.classList.add('dz-theme-' + variant);
+    }
+
+    function initTheme() {
+        const stored = getStoredPreference();
+        const system = getSystemPreference();
+        const variant = stored || system || THEME_LIGHT;
+        applyTheme(variant);
+
+        // Listen for system preference changes
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', function(e) {
+            if (!getStoredPreference()) {
+                applyTheme(e.matches ? THEME_DARK : THEME_LIGHT);
+            }
+        });
+
+        return variant;
+    }
+
+    function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme') || THEME_LIGHT;
+        const newVariant = current === THEME_LIGHT ? THEME_DARK : THEME_LIGHT;
+        applyTheme(newVariant);
+        storePreference(newVariant);
+        return newVariant;
+    }
+
+    // Initialize theme immediately (before DOMContentLoaded)
+    initTheme();
+
+    // Set up toggle button
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('dz-theme-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', toggleTheme);
+        }
+    });
+
+    // ==========================================================================
+    // Page Rendering
+    // ==========================================================================
+
+    const main = document.getElementById('dz-site-main');
+    const route = main?.dataset.route || '/';
+
+    // Section renderers
+    const renderers = {
+        hero: renderHero,
+        features: renderFeatures,
+        feature_grid: renderFeatureGrid,
+        cta: renderCTA,
+        faq: renderFAQ,
+        testimonials: renderTestimonials,
+        stats: renderStats,
+        steps: renderSteps,
+        logo_cloud: renderLogoCloud,
+        pricing: renderPricing,
+        markdown: renderMarkdown,
+    };
+
+    function renderHero(section) {
+        const headline = section.headline || '';
+        const subhead = section.subhead || '';
+        const primaryCta = section.primary_cta;
+        const secondaryCta = section.secondary_cta;
+
+        let ctaHtml = '';
+        if (primaryCta) {
+            ctaHtml += `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>`;
+        }
+        if (secondaryCta) {
+            ctaHtml += `<a href="${secondaryCta.href || '#'}" class="btn btn-secondary btn-outline">${secondaryCta.label || 'Learn More'}</a>`;
+        }
+
+        return `
+            <section class="dz-section dz-section-hero">
+                <div class="dz-section-content">
+                    <h1>${headline}</h1>
+                    ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
+                    ${ctaHtml ? `<div class="dz-cta-group">${ctaHtml}</div>` : ''}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFeatures(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-feature-item">
+                ${item.icon ? `<div class="dz-feature-icon">${item.icon}</div>` : ''}
+                <h3>${item.title || ''}</h3>
+                <p>${item.body || ''}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-features">
+                <div class="dz-section-content">
+                    <div class="dz-features-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFeatureGrid(section) {
+        return renderFeatures(section);  // Same layout
+    }
+
+    function renderCTA(section) {
+        const headline = section.headline || '';
+        const body = section.body || '';
+        const primaryCta = section.primary_cta;
+
+        return `
+            <section class="dz-section dz-section-cta">
+                <div class="dz-section-content">
+                    <h2>${headline}</h2>
+                    ${body ? `<p>${body}</p>` : ''}
+                    ${primaryCta ? `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>` : ''}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderFAQ(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <details class="dz-faq-item">
+                <summary>${item.question || ''}</summary>
+                <p>${item.answer || ''}</p>
+            </details>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-faq">
+                <div class="dz-section-content">
+                    <h2>Frequently Asked Questions</h2>
+                    <div class="dz-faq-list">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderTestimonials(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-testimonial-item">
+                <blockquote>"${item.quote || ''}"</blockquote>
+                <div class="dz-testimonial-author">
+                    ${item.avatar ? `<img src="${item.avatar}" alt="${item.author}" class="dz-avatar">` : ''}
+                    <div>
+                        <strong>${item.author || ''}</strong>
+                        ${item.role ? `<span>${item.role}${item.company ? `, ${item.company}` : ''}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-testimonials">
+                <div class="dz-section-content">
+                    <div class="dz-testimonials-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderStats(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-stat-item">
+                <span class="dz-stat-value">${item.value || ''}</span>
+                <span class="dz-stat-label">${item.label || ''}</span>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-stats">
+                <div class="dz-section-content">
+                    <div class="dz-stats-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderSteps(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <div class="dz-step-item">
+                <span class="dz-step-number">${item.step || ''}</span>
+                <h3>${item.title || ''}</h3>
+                <p>${item.body || ''}</p>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-steps">
+                <div class="dz-section-content">
+                    <div class="dz-steps-list">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderLogoCloud(section) {
+        const items = section.items || [];
+        const itemsHtml = items.map(item => `
+            <a href="${item.href || '#'}" class="dz-logo-item" title="${item.name || ''}">
+                <img src="${item.src || ''}" alt="${item.name || ''}">
+            </a>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-logo-cloud">
+                <div class="dz-section-content">
+                    <div class="dz-logos-grid">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderPricing(section) {
+        const tiers = section.tiers || [];
+        const tiersHtml = tiers.map(tier => {
+            const features = (tier.features || []).map(f => `<li>${f}</li>`).join('');
+            const highlighted = tier.highlighted ? ' dz-pricing-highlighted' : '';
+            const btnClass = tier.highlighted ? 'btn btn-secondary' : 'btn btn-primary';
+            return `
+                <div class="dz-pricing-tier${highlighted}">
+                    <h3>${tier.name || ''}</h3>
+                    <div class="dz-pricing-price">
+                        <span class="dz-price">${tier.price || ''}</span>
+                        ${tier.period ? `<span class="dz-period">/${tier.period}</span>` : ''}
+                    </div>
+                    <ul class="dz-pricing-features">${features}</ul>
+                    ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="${btnClass}">${tier.cta.label || 'Get Started'}</a>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <section class="dz-section dz-section-pricing">
+                <div class="dz-section-content">
+                    <div class="dz-pricing-grid">${tiersHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderMarkdown(section) {
+        const content = section.content || '';
+        return `
+            <section class="dz-section dz-section-markdown">
+                <div class="dz-section-content dz-prose">
+                    ${content}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderPage(pageData) {
+        if (!main) return;
+
+        const sections = pageData.sections || [];
+        let html = '';
+
+        for (const section of sections) {
+            const renderer = renderers[section.type];
+            if (renderer) {
+                html += renderer(section);
+            } else {
+                console.warn(`Unknown section type: ${section.type}`);
+            }
+        }
+
+        // Handle markdown page content
+        if (pageData.content && pageData.type === 'markdown') {
+            html = renderMarkdown({ content: pageData.content });
+        }
+
+        main.innerHTML = html || '<p>No content</p>';
+    }
+
+    // Fetch and render page
+    async function init() {
+        try {
+            const apiRoute = route === '/' ? '' : route;
+            const response = await fetch(`/_site/page${apiRoute}`);
+            if (!response.ok) {
+                throw new Error(`Failed to load page: ${response.status}`);
+            }
+            const pageData = await response.json();
+            renderPage(pageData);
+        } catch (error) {
+            console.error('Error loading page:', error);
+            if (main) {
+                main.innerHTML = '<p class="dz-error">Failed to load page content.</p>';
+            }
+        }
+    }
+
+    init();
+})();
+"""

@@ -198,11 +198,24 @@ def create_site_page_routes(
         FastAPI router with HTML page routes
     """
     from fastapi import APIRouter
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, Response
 
-    from dazzle_ui.runtime.site_renderer import render_site_page_html
+    from dazzle_ui.runtime.css_loader import get_bundled_css
+    from dazzle_ui.runtime.site_renderer import get_site_js, render_site_page_html
 
     router = APIRouter()
+
+    # Serve the site JavaScript (required for page rendering)
+    @router.get("/site.js", include_in_schema=False)
+    async def serve_site_js() -> Response:
+        """Serve the site JavaScript for marketing pages."""
+        return Response(content=get_site_js(), media_type="application/javascript")
+
+    # Serve the bundled CSS (required for styling)
+    @router.get("/styles/dazzle.css", include_in_schema=False)
+    async def serve_dazzle_css() -> Response:
+        """Serve the bundled Dazzle CSS stylesheet."""
+        return Response(content=get_bundled_css(), media_type="text/css")
 
     pages = sitespec_data.get("pages", [])
 

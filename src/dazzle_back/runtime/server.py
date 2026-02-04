@@ -1725,10 +1725,22 @@ def create_app_factory(
     builder = DNRBackendApp(backend_spec, config=config)
     app = builder.build()
 
-    # Add auth page routes if sitespec exists (/login, /signup)
+    # Add site page routes if sitespec exists (landing pages, /site.js)
     if sitespec_data:
-        from dazzle_back.runtime.site_routes import create_auth_page_routes
+        from dazzle_back.runtime.site_routes import (
+            create_auth_page_routes,
+            create_site_page_routes,
+        )
 
+        # Landing pages (/, /features, /pricing, etc.) and /site.js
+        site_page_router = create_site_page_routes(
+            sitespec_data=sitespec_data,
+            project_root=project_root,
+        )
+        app.include_router(site_page_router)
+        logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
+
+        # Auth pages (/login, /signup)
         auth_page_router = create_auth_page_routes(sitespec_data)
         app.include_router(auth_page_router)
         logger.info("  Auth pages: /login, /signup")
