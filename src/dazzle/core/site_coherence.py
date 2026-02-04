@@ -250,22 +250,27 @@ def _collect_all_routes(sitespec_data: dict[str, Any]) -> set[str]:
         if route:
             routes.add(route)
 
-    # Legal pages
-    legal = sitespec_data.get("legal", {})
-    if legal.get("terms", {}).get("route"):
-        routes.add(legal["terms"]["route"])
-    if legal.get("privacy", {}).get("route"):
-        routes.add(legal["privacy"]["route"])
+    # Legal pages (handle None values - keys may exist with None values)
+    legal = sitespec_data.get("legal") or {}
+    terms = legal.get("terms") or {}
+    privacy = legal.get("privacy") or {}
+    if terms.get("route"):
+        routes.add(terms["route"])
+    if privacy.get("route"):
+        routes.add(privacy["route"])
 
-    # Auth pages
-    auth = sitespec_data.get("auth_pages", {})
-    if auth.get("login", {}).get("enabled", True):
-        routes.add(auth.get("login", {}).get("route", "/login"))
-    if auth.get("signup", {}).get("enabled", True):
-        routes.add(auth.get("signup", {}).get("route", "/signup"))
+    # Auth pages (handle None values - keys may exist with None values)
+    auth = sitespec_data.get("auth_pages") or {}
+    login_config = auth.get("login") or {}
+    signup_config = auth.get("signup") or {}
+    if login_config.get("enabled", True):
+        routes.add(login_config.get("route", "/login"))
+    if signup_config.get("enabled", True):
+        routes.add(signup_config.get("route", "/signup"))
 
-    # App mount route
-    app_mount = sitespec_data.get("integrations", {}).get("app_mount_route", "/app")
+    # App mount route (handle None values)
+    integrations = sitespec_data.get("integrations") or {}
+    app_mount = integrations.get("app_mount_route", "/app")
     routes.add(app_mount)
 
     return routes
@@ -277,7 +282,7 @@ def _check_navigation(
     report: CoherenceReport,
 ) -> None:
     """Check that navigation links resolve."""
-    layout = sitespec_data.get("layout", {})
+    layout = sitespec_data.get("layout") or {}
     nav = layout.get("nav", {})
 
     all_nav_items = []
@@ -339,7 +344,8 @@ def _check_ctas(
                     empty_ctas.append((section_loc, f"'{label}' has no destination"))
                 elif href.startswith("/") and href not in all_routes:
                     # Check if it's an app route
-                    app_mount = sitespec_data.get("integrations", {}).get("app_mount_route", "/app")
+                    integrations = sitespec_data.get("integrations") or {}
+                    app_mount = integrations.get("app_mount_route", "/app")
                     if not href.startswith(app_mount):
                         broken_ctas.append((section_loc, label, href))
 
@@ -350,7 +356,8 @@ def _check_ctas(
                 label = secondary.get("label", "")
 
                 if label and href.startswith("/") and href not in all_routes:
-                    app_mount = sitespec_data.get("integrations", {}).get("app_mount_route", "/app")
+                    integrations = sitespec_data.get("integrations") or {}
+                    app_mount = integrations.get("app_mount_route", "/app")
                     if not href.startswith(app_mount):
                         broken_ctas.append((section_loc, label, href))
 
@@ -441,10 +448,12 @@ def _check_required_pages(
 
 def _check_legal_pages(sitespec_data: dict[str, Any], report: CoherenceReport) -> None:
     """Check legal pages are configured."""
-    legal = sitespec_data.get("legal", {})
+    legal = sitespec_data.get("legal") or {}
+    terms = legal.get("terms") or {}
+    privacy = legal.get("privacy") or {}
 
-    has_terms = bool(legal.get("terms", {}).get("route"))
-    has_privacy = bool(legal.get("privacy", {}).get("route"))
+    has_terms = bool(terms.get("route"))
+    has_privacy = bool(privacy.get("route"))
 
     if not has_terms:
         report.add_warning(
@@ -470,12 +479,14 @@ def _check_auth_flow(
     report: CoherenceReport,
 ) -> None:
     """Check authentication flow is complete."""
-    auth_pages = sitespec_data.get("auth_pages", {})
-    layout = sitespec_data.get("layout", {})
-    auth_entry = layout.get("auth", {})
+    auth_pages = sitespec_data.get("auth_pages") or {}
+    layout = sitespec_data.get("layout") or {}
+    auth_entry = layout.get("auth") or {}
+    login_config = auth_pages.get("login") or {}
+    signup_config = auth_pages.get("signup") or {}
 
-    login_enabled = auth_pages.get("login", {}).get("enabled", True)
-    signup_enabled = auth_pages.get("signup", {}).get("enabled", True)
+    login_enabled = login_config.get("enabled", True)
+    signup_enabled = signup_config.get("enabled", True)
 
     # Check if there's a way to sign up from the site
     has_signup_cta = False
@@ -560,7 +571,7 @@ def _check_placeholder_content(
     placeholders_found: list[tuple[str, str]] = []
 
     # Check brand
-    brand = sitespec_data.get("brand", {})
+    brand = sitespec_data.get("brand") or {}
     product_name = brand.get("product_name", "")
     tagline = brand.get("tagline", "")
 
@@ -616,7 +627,7 @@ def _check_footer(
     report: CoherenceReport,
 ) -> None:
     """Check footer has expected links."""
-    layout = sitespec_data.get("layout", {})
+    layout = sitespec_data.get("layout") or {}
     footer = layout.get("footer", {})
     columns = footer.get("columns", [])
 
@@ -635,9 +646,11 @@ def _check_footer(
             footer_hrefs.add(link.get("href", ""))
 
     # Check for legal links
-    legal = sitespec_data.get("legal", {})
-    terms_route = legal.get("terms", {}).get("route")
-    privacy_route = legal.get("privacy", {}).get("route")
+    legal = sitespec_data.get("legal") or {}
+    terms_config = legal.get("terms") or {}
+    privacy_config = legal.get("privacy") or {}
+    terms_route = terms_config.get("route")
+    privacy_route = privacy_config.get("route")
 
     if terms_route and terms_route not in footer_hrefs:
         report.add_suggestion(
@@ -672,7 +685,7 @@ def _check_footer(
 
 def _check_branding(sitespec_data: dict[str, Any], report: CoherenceReport) -> None:
     """Check branding is configured."""
-    brand = sitespec_data.get("brand", {})
+    brand = sitespec_data.get("brand") or {}
 
     product_name = brand.get("product_name", "")
     tagline = brand.get("tagline", "")
