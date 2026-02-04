@@ -218,6 +218,7 @@ def create_site_page_routes(
         return Response(content=get_bundled_css(), media_type="text/css")
 
     pages = sitespec_data.get("pages", [])
+    legal = sitespec_data.get("legal", {})
 
     # Create route for each page
     for page in pages:
@@ -232,6 +233,29 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve a site page as HTML using DaisyUI renderer."""
+            return render_site_page_html(sitespec, r)
+
+    # Create routes for legal pages
+    if legal.get("terms"):
+        terms_route = legal["terms"].get("route", "/terms")
+
+        @router.get(terms_route, response_class=HTMLResponse, include_in_schema=False)
+        async def serve_terms_page(
+            r: str = terms_route,
+            sitespec: dict[str, Any] = sitespec_data,
+        ) -> str:
+            """Serve the terms of service page."""
+            return render_site_page_html(sitespec, r)
+
+    if legal.get("privacy"):
+        privacy_route = legal["privacy"].get("route", "/privacy")
+
+        @router.get(privacy_route, response_class=HTMLResponse, include_in_schema=False)
+        async def serve_privacy_page(
+            r: str = privacy_route,
+            sitespec: dict[str, Any] = sitespec_data,
+        ) -> str:
+            """Serve the privacy policy page."""
             return render_site_page_html(sitespec, r)
 
     return router
