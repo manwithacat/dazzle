@@ -1598,7 +1598,7 @@ def create_app_factory(
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest
         from dazzle.core.parser import parse_modules
-        from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
+        from dazzle.core.sitespec_loader import load_sitespec_with_copy, sitespec_exists
         from dazzle_back.converters import convert_appspec_to_backend
     except ImportError as e:
         raise RuntimeError(
@@ -1646,11 +1646,11 @@ def create_app_factory(
     # Convert to backend spec
     backend_spec = convert_appspec_to_backend(appspec)
 
-    # Load SiteSpec if available
+    # Load SiteSpec if available (merges copy.md content if present)
     sitespec_data = None
     if sitespec_exists(project_root):
         try:
-            sitespec = load_sitespec(project_root)
+            sitespec = load_sitespec_with_copy(project_root)
             sitespec_data = sitespec.model_dump()
             logger.info(f"Loaded SiteSpec with {len(sitespec.pages)} pages")
         except Exception as e:

@@ -3,7 +3,7 @@
 
 [meta]
 file = "frontend"
-concept_count = 4
+concept_count = 6
 
 [concepts.htmx]
 category = "Frontend"
@@ -152,3 +152,123 @@ cognition_tips = [
     "Use for autofill patterns: select item -> populate related fields",
     "Server renders OOB fields using same macro as original form"
 ]
+
+[concepts.sitespec]
+category = "Frontend"
+definition = "Site configuration file (sitespec.yaml) defining brand, navigation, page structure, legal pages, auth pages, and integrations. Structural configuration for the marketing/public site shell, NOT content."
+syntax = '''
+# site/sitespec.yaml
+version: "1.0"
+brand:
+  product_name: "FreshMeals"
+  tagline: "Chef-quality meals delivered"
+  support_email: "support@freshmeals.com"
+layout:
+  nav:
+    public:
+      - label: "Features"
+        href: "/features"
+  footer:
+    columns:
+      - title: "Product"
+        links: [...]
+pages:
+  - route: "/"
+    type: landing
+    sections: []  # Content comes from copy.md
+'''
+example = '''
+# Minimal sitespec.yaml
+version: "1.0"
+brand:
+  product_name: "My SaaS"
+  tagline: "Do more with less"
+layout:
+  nav:
+    public:
+      - label: "Home"
+        href: "/"
+pages:
+  - route: "/"
+    type: landing
+'''
+related = ["copy_md", "site_coherence"]
+cognition_tips = [
+    "sitespec.yaml = STRUCTURE (what pages exist, how nav works)",
+    "copy.md = CONTENT (headlines, features, testimonials)",
+    "At runtime, copy.md is merged INTO sitespec sections",
+    "If copy.md exists, its sections REPLACE inline sitespec sections",
+    "Use sitespec for: brand, nav, footer, page routes, legal, auth",
+    "Use copy.md for: hero text, features, pricing, FAQ, testimonials"
+]
+
+[concepts.copy_md]
+category = "Frontend"
+definition = "Founder-friendly markdown file for marketing content. Contains hero, features, testimonials, pricing, FAQ, and CTA sections. Merged into sitespec at runtime - copy.md content REPLACES inline sitespec sections."
+syntax = '''
+# site/content/copy.md
+
+# Hero
+**Your Headline Here**
+Subheadline text explaining the value proposition.
+[Get Started](/signup) | [Learn More](/features)
+
+---
+
+# Features
+## Fast Performance
+Description of the speed benefit.
+
+## Easy to Use
+Description of the UX benefit.
+
+---
+
+# Pricing
+## Free
+$0/month
+- Basic features
+- Community support
+
+## Pro
+$29/month
+- All features
+- Priority support
+'''
+example = '''
+# Hero
+**Run your business, not your admin**
+Automate repetitive tasks and focus on growth.
+[Start Free Trial](/signup)
+
+---
+
+# Features
+## Automated Workflows
+Set up once, run forever. No coding required. [icon: bolt]
+
+## Real-time Analytics
+See what matters, when it matters. [icon: chart]
+
+---
+
+# Testimonials
+> "Saved us 20 hours per week!"
+> — Jane Smith, CEO at Acme Inc
+'''
+related = ["sitespec", "site_coherence"]
+cognition_tips = [
+    "copy.md is the SOURCE OF TRUTH for marketing content",
+    "Use --- separators between sections",
+    "Section types: Hero, Features, Testimonials, Pricing, FAQ, CTA, How It Works",
+    "CTAs use markdown links: [Button Text](/path)",
+    "Features/Pricing use ## for each item",
+    "Icons: add [icon: name] at end of description",
+    "At runtime: copy.md merged into landing page sections"
+]
+workflow = '''
+1. Scaffold: sitespec(operation="scaffold") creates sitespec.yaml + copy.md
+2. Edit copy.md with marketing content (LLM-friendly format)
+3. Validate: sitespec(operation="coherence") checks site feels complete
+4. Runtime: load_sitespec_with_copy() merges copy.md into sitespec
+'''

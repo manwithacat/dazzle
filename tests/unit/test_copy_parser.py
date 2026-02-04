@@ -4,6 +4,10 @@ from dazzle.core.copy_parser import (
     generate_copy_template,
     parse_copy_file,
 )
+from dazzle.core.sitespec_loader import (
+    SiteSpec,
+    merge_copy_into_sitespec,
+)
 
 
 class TestParseCopyFile:
@@ -279,3 +283,134 @@ class TestGenerateCopyTemplate:
         assert len(result.sections) >= 6  # At least 6 standard sections
         assert result.get_section("hero") is not None
         assert result.get_section("features") is not None
+
+
+class TestMergeCopyIntoSitespec:
+    """Tests for merging copy.md into SiteSpec."""
+
+    def test_empty_copy_returns_original(self) -> None:
+        """Empty copy data returns original sitespec unchanged."""
+        sitespec = SiteSpec()
+        result = merge_copy_into_sitespec(sitespec, {})
+        assert result == sitespec
+
+    def test_none_copy_returns_original(self) -> None:
+        """None copy data returns original sitespec unchanged."""
+        sitespec = SiteSpec()
+        result = merge_copy_into_sitespec(sitespec, None)  # type: ignore
+        assert result == sitespec
+
+    def test_hero_section_merged(self) -> None:
+        """Hero section from copy.md is merged into landing page."""
+        sitespec = SiteSpec()
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {
+                        "headline": "Welcome to FreshMeals",
+                        "subheadline": "Chef-quality meals delivered",
+                        "ctas": [{"text": "Get Started", "url": "/signup"}],
+                    },
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        # Should have created a landing page
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        assert len(landing.sections) == 1
+        assert landing.sections[0].headline == "Welcome to FreshMeals"
+
+    def test_features_section_merged(self) -> None:
+        """Features section from copy.md is converted correctly."""
+        sitespec = SiteSpec()
+        copy_data = {
+            "sections": [
+                {
+                    "type": "features",
+                    "title": "Features",
+                    "metadata": {},
+                    "subsections": [
+                        {"title": "Fast", "description": "Lightning speed"},
+                        {"title": "Secure", "description": "Bank-level security"},
+                    ],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        assert len(landing.sections) == 1
+        assert len(landing.sections[0].items) == 2
+        assert landing.sections[0].items[0].title == "Fast"
+
+    def test_copy_replaces_sitespec_sections(self) -> None:
+        """Copy.md sections replace existing inline sitespec sections."""
+        from dazzle.core.sitespec_loader import PageSpec, SectionKind, SectionSpec
+
+        # Create sitespec with existing landing page sections
+        sitespec = SiteSpec(
+            pages=[
+                PageSpec(
+                    route="/",
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Old Headline",
+                        )
+                    ],
+                )
+            ]
+        )
+
+        # Copy.md with new content
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {"headline": "New Headline from copy.md"},
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        # copy.md content should take precedence
+        assert landing.sections[0].headline == "New Headline from copy.md"
+
+    def test_multiple_sections_in_order(self) -> None:
+        """Multiple sections are added in standard order."""
+        sitespec = SiteSpec()
+        copy_data = {
+            "sections": [
+                {"type": "cta", "title": "CTA", "metadata": {}, "subsections": []},
+                {"type": "hero", "title": "Hero", "metadata": {}, "subsections": []},
+                {
+                    "type": "features",
+                    "title": "Features",
+                    "metadata": {},
+                    "subsections": [],
+                },
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        # Should be ordered: hero, features, cta
+        assert len(landing.sections) == 3
+        section_types = [s.type.value for s in landing.sections]
+        assert section_types == ["hero", "features", "cta"]

@@ -1146,26 +1146,35 @@ def merge_copy_into_sitespec(
     # Build section lookup from copy data
     copy_sections = {s["type"]: s for s in copy_data["sections"]}
 
-    # Find or create the landing page
-    landing_page = None
-    for page in sitespec.pages:
-        if page.route == "/":
-            landing_page = page
-            break
-
-    if landing_page is None:
-        # Create a landing page if it doesn't exist
-        landing_page = PageSpec(route="/", type=PageKind.LANDING, title="Home")
-        sitespec.pages.insert(0, landing_page)
-
     # Convert copy sections to sitespec sections
     new_sections = _copy_sections_to_sitespec(copy_sections)
 
-    # Replace or append sections on landing page
-    if new_sections:
-        landing_page.sections = new_sections
+    if not new_sections:
+        return sitespec
 
-    return sitespec
+    # Find landing page index or create new
+    landing_idx = None
+    for i, page in enumerate(sitespec.pages):
+        if page.route == "/":
+            landing_idx = i
+            break
+
+    # Build updated pages list (Pydantic models are frozen)
+    new_pages = list(sitespec.pages)
+    if landing_idx is not None:
+        # Create updated landing page with new sections
+        old_landing = new_pages[landing_idx]
+        new_landing = old_landing.model_copy(update={"sections": new_sections})
+        new_pages[landing_idx] = new_landing
+    else:
+        # Create a new landing page
+        new_landing = PageSpec(
+            route="/", type=PageKind.LANDING, title="Home", sections=new_sections
+        )
+        new_pages.insert(0, new_landing)
+
+    # Return updated SiteSpec
+    return sitespec.model_copy(update={"pages": new_pages})
 
 
 def _copy_sections_to_sitespec(copy_sections: dict[str, Any]) -> list[SectionSpec]:
