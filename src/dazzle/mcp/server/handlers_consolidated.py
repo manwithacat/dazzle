@@ -253,7 +253,11 @@ def handle_test_design(arguments: dict[str, Any]) -> str:
 def handle_sitespec(arguments: dict[str, Any]) -> str:
     """Handle consolidated sitespec operations."""
     from .handlers.sitespec import (
+        coherence_handler,
+        get_copy_handler,
         get_sitespec_handler,
+        review_copy_handler,
+        scaffold_copy_handler,
         scaffold_site_handler,
         validate_sitespec_handler,
     )
@@ -270,6 +274,14 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         return validate_sitespec_handler(project_path, arguments)
     elif operation == "scaffold":
         return scaffold_site_handler(project_path, arguments)
+    elif operation == "get_copy":
+        return get_copy_handler(project_path, arguments)
+    elif operation == "scaffold_copy":
+        return scaffold_copy_handler(project_path, arguments)
+    elif operation == "review_copy":
+        return review_copy_handler(project_path, arguments)
+    elif operation == "coherence":
+        return coherence_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown sitespec operation: {operation}"})
 

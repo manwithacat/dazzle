@@ -383,17 +383,25 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # SiteSpec (replaces 3 tools)
+        # SiteSpec (replaces 3 tools + copy + coherence operations)
         # =====================================================================
         Tool(
             name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold",
+            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness).",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["get", "validate", "scaffold"],
+                        "enum": [
+                            "get",
+                            "validate",
+                            "scaffold",
+                            "get_copy",
+                            "scaffold_copy",
+                            "review_copy",
+                            "coherence",
+                        ],
                         "description": "Operation to perform",
                     },
                     "use_defaults": {
@@ -406,11 +414,15 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "product_name": {
                         "type": "string",
-                        "description": "Product name (for scaffold)",
+                        "description": "Product name (for scaffold, scaffold_copy)",
                     },
                     "overwrite": {
                         "type": "boolean",
-                        "description": "Overwrite existing (for scaffold)",
+                        "description": "Overwrite existing (for scaffold, scaffold_copy)",
+                    },
+                    "business_context": {
+                        "type": "string",
+                        "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

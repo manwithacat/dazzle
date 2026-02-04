@@ -419,11 +419,12 @@ class TestScaffolding:
             assert result["sitespec"] is not None
             assert (project_root / "sitespec.yaml").exists()
 
-            # Check content files were created
-            assert len(result["content"]) == 3
+            # Check content files were created (including copy.md)
+            assert len(result["content"]) == 4
             assert (project_root / "site/content/legal/terms.md").exists()
             assert (project_root / "site/content/legal/privacy.md").exists()
             assert (project_root / "site/content/pages/about.md").exists()
+            assert (project_root / "site/content/copy.md").exists()
 
     def test_scaffold_idempotent(self) -> None:
         """Test scaffolding doesn't overwrite existing files."""

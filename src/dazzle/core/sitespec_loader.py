@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 # Default file paths
 SITESPEC_FILE = "sitespec.yaml"
 SITE_CONTENT_DIR = "site/content"
+COPY_FILE = "copy.md"
 
 
 class SiteSpecError(Exception):
@@ -947,17 +948,19 @@ def scaffold_site_content(
     sitespec: SiteSpec | None = None,
     *,
     overwrite: bool = False,
+    include_copy: bool = True,
 ) -> list[Path]:
     """Create default site content files.
 
     Creates the site/content/ directory structure with default
-    template files for terms, privacy, and about pages.
+    template files for terms, privacy, about pages, and marketing copy.
 
     Args:
         project_root: Root directory of the DAZZLE project.
         sitespec: SiteSpec for template variable substitution.
             If None, uses defaults from create_default_sitespec().
         overwrite: If True, overwrite existing files.
+        include_copy: If True, also create copy.md for marketing content.
 
     Returns:
         List of created file paths.
@@ -992,6 +995,18 @@ def scaffold_site_content(
         file_path.write_text(content, encoding="utf-8")
         created_files.append(file_path)
         logger.info(f"Created content file: {file_path}")
+
+    # Create copy.md for marketing content
+    if include_copy:
+        from dazzle.core.copy_parser import generate_copy_template
+
+        copy_path = content_dir / COPY_FILE
+
+        if not copy_path.exists() or overwrite:
+            content = generate_copy_template(sitespec.brand.product_name)
+            copy_path.write_text(content, encoding="utf-8")
+            created_files.append(copy_path)
+            logger.info(f"Created copy file: {copy_path}")
 
     return created_files
 
@@ -1033,9 +1048,14 @@ def scaffold_site(
 
     Creates:
     - sitespec.yaml
+    - site/content/copy.md (founder-friendly marketing content)
     - site/content/legal/terms.md
     - site/content/legal/privacy.md
     - site/content/pages/about.md
+
+    The copy.md file is the primary place for founders to edit marketing
+    content. It uses a simple markdown format that's easy to read and
+    works well with LLM-generated content.
 
     Args:
         project_root: Root directory of the DAZZLE project.
@@ -1054,3 +1074,294 @@ def scaffold_site(
         "sitespec": sitespec_path,
         "content": content_files,
     }
+
+
+# =============================================================================
+# Copy File Integration (v0.22.0)
+# =============================================================================
+
+
+def get_copy_file_path(project_root: Path) -> Path:
+    """Get the path to the copy.md file.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        Path to site/content/copy.md.
+    """
+    return get_content_dir(project_root) / COPY_FILE
+
+
+def copy_file_exists(project_root: Path) -> bool:
+    """Check if copy.md exists in the project.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        True if copy.md exists.
+    """
+    return get_copy_file_path(project_root).exists()
+
+
+def load_copy(project_root: Path) -> dict[str, Any] | None:
+    """Load and parse copy.md from the project.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+
+    Returns:
+        Parsed copy as dictionary, or None if file doesn't exist.
+    """
+    from dazzle.core.copy_parser import load_copy_file
+
+    parsed = load_copy_file(project_root)
+    if parsed is None:
+        return None
+
+    return parsed.to_dict()
+
+
+def merge_copy_into_sitespec(
+    sitespec: SiteSpec,
+    copy_data: dict[str, Any],
+) -> SiteSpec:
+    """Merge parsed copy data into SiteSpec sections.
+
+    This allows founders to write marketing copy in copy.md while
+    keeping structural configuration in sitespec.yaml. Copy content
+    takes precedence over inline sitespec content.
+
+    Args:
+        sitespec: Base SiteSpec (from sitespec.yaml).
+        copy_data: Parsed copy data (from copy.md).
+
+    Returns:
+        SiteSpec with merged content.
+    """
+    if not copy_data or "sections" not in copy_data:
+        return sitespec
+
+    # Build section lookup from copy data
+    copy_sections = {s["type"]: s for s in copy_data["sections"]}
+
+    # Find or create the landing page
+    landing_page = None
+    for page in sitespec.pages:
+        if page.route == "/":
+            landing_page = page
+            break
+
+    if landing_page is None:
+        # Create a landing page if it doesn't exist
+        landing_page = PageSpec(route="/", type=PageKind.LANDING, title="Home")
+        sitespec.pages.insert(0, landing_page)
+
+    # Convert copy sections to sitespec sections
+    new_sections = _copy_sections_to_sitespec(copy_sections)
+
+    # Replace or append sections on landing page
+    if new_sections:
+        landing_page.sections = new_sections
+
+    return sitespec
+
+
+def _copy_sections_to_sitespec(copy_sections: dict[str, Any]) -> list[SectionSpec]:
+    """Convert copy sections to SiteSpec sections.
+
+    Args:
+        copy_sections: Dict of section_type -> section_data from copy parser.
+
+    Returns:
+        List of SectionSpec objects.
+    """
+    result: list[SectionSpec] = []
+
+    # Map section types to their order
+    section_order = ["hero", "features", "how-it-works", "testimonials", "pricing", "faq", "cta"]
+
+    for section_type in section_order:
+        if section_type not in copy_sections:
+            continue
+
+        section_data = copy_sections[section_type]
+        spec = _copy_section_to_spec(section_type, section_data)
+        if spec:
+            result.append(spec)
+
+    # Add any remaining sections not in the standard order
+    for section_type, section_data in copy_sections.items():
+        if section_type not in section_order:
+            spec = _copy_section_to_spec(section_type, section_data)
+            if spec:
+                result.append(spec)
+
+    return result
+
+
+def _copy_section_to_spec(section_type: str, data: dict[str, Any]) -> SectionSpec | None:
+    """Convert a single copy section to a SectionSpec.
+
+    Args:
+        section_type: Type of section (hero, features, etc.).
+        data: Section data from copy parser.
+
+    Returns:
+        SectionSpec or None if conversion fails.
+    """
+    metadata = data.get("metadata", {})
+    subsections = data.get("subsections", [])
+
+    # Map section types to SectionKind
+    type_mapping = {
+        "hero": SectionKind.HERO,
+        "features": SectionKind.FEATURES,
+        "how-it-works": SectionKind.STEPS,
+        "testimonials": SectionKind.TESTIMONIALS,
+        "pricing": SectionKind.PRICING,
+        "faq": SectionKind.FAQ,
+        "cta": SectionKind.CTA,
+        "about": SectionKind.HERO,  # Treat about as a hero-style section
+    }
+
+    kind = type_mapping.get(section_type, SectionKind.HERO)
+
+    # Build the section spec
+    primary_cta = None
+    secondary_cta = None
+
+    # Extract CTAs from metadata
+    ctas = metadata.get("ctas", [])
+    if ctas:
+        primary_cta = CTASpec(label=ctas[0].get("text", ""), href=ctas[0].get("url", "/"))
+        if len(ctas) > 1:
+            secondary_cta = CTASpec(label=ctas[1].get("text", ""), href=ctas[1].get("url", "/"))
+
+    # Build items from subsections
+    items: list[Any] = []
+    tiers: list[PricingTier] = []
+
+    if kind == SectionKind.FEATURES:
+        items = [
+            FeatureItem(
+                title=sub.get("title", ""),
+                body=sub.get("description", ""),
+                icon=sub.get("icon"),
+            )
+            for sub in subsections
+        ]
+    elif kind == SectionKind.STEPS:
+        items = [
+            StepItem(
+                step=i + 1,
+                title=sub.get("title", ""),
+                body=sub.get("content", sub.get("description", "")),
+            )
+            for i, sub in enumerate(subsections)
+        ]
+    elif kind == SectionKind.TESTIMONIALS:
+        items = [
+            TestimonialItem(
+                quote=sub.get("quote", ""),
+                author=sub.get("name", sub.get("attribution", "")),
+                role=sub.get("role"),
+            )
+            for sub in subsections
+        ]
+    elif kind == SectionKind.PRICING:
+        for sub in subsections:
+            tier_cta = None
+            if sub.get("name"):
+                tier_cta = CTASpec(label=f"Get {sub['name']}", href="/signup")
+            tiers.append(
+                PricingTier(
+                    name=sub.get("name", ""),
+                    price=sub.get("price", "0"),
+                    period=sub.get("period", "month"),
+                    features=sub.get("features", []),
+                    cta=tier_cta,
+                )
+            )
+    elif kind == SectionKind.FAQ:
+        items = [
+            FAQItem(
+                question=sub.get("question", ""),
+                answer=sub.get("answer", ""),
+            )
+            for sub in subsections
+        ]
+
+    return SectionSpec(
+        type=kind,
+        headline=metadata.get("headline") or data.get("title"),
+        subhead=metadata.get("subheadline") or metadata.get("description"),
+        primary_cta=primary_cta,
+        secondary_cta=secondary_cta,
+        items=items if items else [],
+        tiers=tiers if tiers else [],
+    )
+
+
+def load_sitespec_with_copy(
+    project_root: Path,
+    *,
+    use_defaults: bool = True,
+) -> SiteSpec:
+    """Load SiteSpec and merge copy.md content if available.
+
+    This is the recommended way to load site configuration as it
+    combines both sitespec.yaml (structure) and copy.md (content).
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+        use_defaults: If True, return default SiteSpec when file doesn't exist.
+
+    Returns:
+        SiteSpec with copy content merged in.
+    """
+    sitespec = load_sitespec(project_root, use_defaults=use_defaults)
+
+    # Load and merge copy if available
+    copy_data = load_copy(project_root)
+    if copy_data:
+        logger.debug("Merging copy.md content into SiteSpec")
+        sitespec = merge_copy_into_sitespec(sitespec, copy_data)
+
+    return sitespec
+
+
+def scaffold_copy_file(
+    project_root: Path,
+    product_name: str = "My App",
+    *,
+    overwrite: bool = False,
+) -> Path | None:
+    """Create a template copy.md file.
+
+    Args:
+        project_root: Root directory of the DAZZLE project.
+        product_name: Product name to use in the template.
+        overwrite: If True, overwrite existing file.
+
+    Returns:
+        Path to created file, or None if skipped.
+    """
+    from dazzle.core.copy_parser import generate_copy_template
+
+    copy_path = get_copy_file_path(project_root)
+
+    if copy_path.exists() and not overwrite:
+        logger.debug(f"Skipping existing copy file: {copy_path}")
+        return None
+
+    # Ensure parent directory exists
+    copy_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Generate and write template
+    content = generate_copy_template(product_name)
+    copy_path.write_text(content, encoding="utf-8")
+    logger.info(f"Created copy file: {copy_path}")
+
+    return copy_path
