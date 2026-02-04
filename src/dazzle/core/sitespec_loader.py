@@ -1147,10 +1147,13 @@ def merge_copy_into_sitespec(
     copy_sections = {s["type"]: s for s in copy_data["sections"]}
 
     # Convert copy sections to sitespec sections
-    new_sections = _copy_sections_to_sitespec(copy_sections)
+    copy_spec_sections = _copy_sections_to_sitespec(copy_sections)
 
-    if not new_sections:
+    if not copy_spec_sections:
         return sitespec
+
+    # Build lookup of copy.md section types that were successfully parsed
+    copy_section_types = {s.type for s in copy_spec_sections}
 
     # Find landing page index or create new
     landing_idx = None
@@ -1162,14 +1165,26 @@ def merge_copy_into_sitespec(
     # Build updated pages list (Pydantic models are frozen)
     new_pages = list(sitespec.pages)
     if landing_idx is not None:
-        # Create updated landing page with new sections
         old_landing = new_pages[landing_idx]
-        new_landing = old_landing.model_copy(update={"sections": new_sections})
+
+        # MERGE sections: copy.md sections replace same-type sitespec sections,
+        # but sitespec sections NOT in copy.md are preserved (e.g., pricing)
+        merged_sections: list[SectionSpec] = []
+
+        # First, add sections from copy.md in their order
+        merged_sections.extend(copy_spec_sections)
+
+        # Then, add sitespec sections that weren't in copy.md
+        for existing_section in old_landing.sections:
+            if existing_section.type not in copy_section_types:
+                merged_sections.append(existing_section)
+
+        new_landing = old_landing.model_copy(update={"sections": merged_sections})
         new_pages[landing_idx] = new_landing
     else:
         # Create a new landing page
         new_landing = PageSpec(
-            route="/", type=PageKind.LANDING, title="Home", sections=new_sections
+            route="/", type=PageKind.LANDING, title="Home", sections=copy_spec_sections
         )
         new_pages.insert(0, new_landing)
 
@@ -1281,15 +1296,28 @@ def _copy_section_to_spec(section_type: str, data: dict[str, Any]) -> SectionSpe
         ]
     elif kind == SectionKind.PRICING:
         for sub in subsections:
+            # Skip tiers with missing required fields (price parsing failed)
+            # This prevents copy.md from overwriting valid sitespec pricing
+            tier_price = sub.get("price")
+            if tier_price is None:
+                logger.debug(
+                    f"Skipping pricing tier '{sub.get('name')}' - price not parsed. "
+                    "Define structured pricing in sitespec.yaml instead."
+                )
+                continue
+
             tier_cta = None
-            if sub.get("name"):
-                tier_cta = CTASpec(label=f"Get {sub['name']}", href="/signup")
+            tier_name = sub.get("name", "")
+            if tier_name:
+                tier_cta = CTASpec(label=f"Get {tier_name}", href="/signup")
+
+            # Use parsed values, with sensible defaults for optional fields
             tiers.append(
                 PricingTier(
-                    name=sub.get("name", ""),
-                    price=sub.get("price", "0"),
-                    period=sub.get("period", "month"),
-                    features=sub.get("features", []),
+                    name=tier_name,
+                    price=str(tier_price),  # Ensure string
+                    period=sub.get("period") or "month",
+                    features=sub.get("features") or [],
                     cta=tier_cta,
                 )
             )
@@ -1301,6 +1329,15 @@ def _copy_section_to_spec(section_type: str, data: dict[str, Any]) -> SectionSpe
             )
             for sub in subsections
         ]
+
+    # Skip pricing sections with no valid tiers (parsing failed)
+    # This prevents copy.md from overwriting valid sitespec pricing
+    if kind == SectionKind.PRICING and not tiers:
+        logger.debug(
+            "Skipping pricing section from copy.md - no valid tiers parsed. "
+            "Define structured pricing in sitespec.yaml instead."
+        )
+        return None
 
     return SectionSpec(
         type=kind,

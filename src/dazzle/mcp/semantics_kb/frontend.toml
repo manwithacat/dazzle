@@ -204,7 +204,7 @@ cognition_tips = [
 
 [concepts.copy_md]
 category = "Frontend"
-definition = "Founder-friendly markdown file for marketing content. Contains hero, features, testimonials, pricing, FAQ, and CTA sections. Merged into sitespec at runtime - copy.md content REPLACES inline sitespec sections."
+definition = "Founder-friendly markdown file for PROSE marketing content. Best for: hero headlines, feature descriptions, testimonials, FAQ text. NOT for structured data like pricing tiers - those belong in sitespec.yaml."
 syntax = '''
 # site/content/copy.md
 
@@ -217,23 +217,25 @@ Subheadline text explaining the value proposition.
 
 # Features
 ## Fast Performance
-Description of the speed benefit.
+Description of the speed benefit. [icon: bolt]
 
 ## Easy to Use
-Description of the UX benefit.
+Description of the UX benefit. [icon: sparkles]
 
 ---
 
-# Pricing
-## Free
-$0/month
-- Basic features
-- Community support
+# Testimonials
+> "This transformed our workflow!"
+> — Jane Smith, CEO at Acme Inc
 
-## Pro
-$29/month
-- All features
-- Priority support
+---
+
+# FAQ
+## What is this product?
+Clear answer explaining the product.
+
+## How do I get started?
+Step by step instructions.
 '''
 example = '''
 # Hero
@@ -249,26 +251,46 @@ Set up once, run forever. No coding required. [icon: bolt]
 
 ## Real-time Analytics
 See what matters, when it matters. [icon: chart]
-
----
-
-# Testimonials
-> "Saved us 20 hours per week!"
-> — Jane Smith, CEO at Acme Inc
 '''
 related = ["sitespec", "site_coherence"]
 cognition_tips = [
-    "copy.md is the SOURCE OF TRUTH for marketing content",
+    "copy.md = PROSE content (headlines, descriptions, quotes)",
+    "sitespec.yaml = STRUCTURED data (pricing tiers, navigation)",
+    "IMPORTANT: Define pricing in sitespec.yaml, not copy.md",
+    "Pricing in copy.md is best-effort parsing; may skip unparseable tiers",
     "Use --- separators between sections",
-    "Section types: Hero, Features, Testimonials, Pricing, FAQ, CTA, How It Works",
     "CTAs use markdown links: [Button Text](/path)",
-    "Features/Pricing use ## for each item",
-    "Icons: add [icon: name] at end of description",
-    "At runtime: copy.md merged into landing page sections"
+    "Icons: add [icon: name] at end of description"
 ]
-workflow = '''
-1. Scaffold: sitespec(operation="scaffold") creates sitespec.yaml + copy.md
-2. Edit copy.md with marketing content (LLM-friendly format)
-3. Validate: sitespec(operation="coherence") checks site feels complete
-4. Runtime: load_sitespec_with_copy() merges copy.md into sitespec
+methodology = '''
+## Clear Methodology for LLM Agents
+
+### What goes WHERE:
+
+**sitespec.yaml** (structure + structured data):
+- Brand info (product_name, tagline, support_email)
+- Navigation links
+- Page routes and types
+- Footer columns
+- Legal pages (terms, privacy routes)
+- Auth pages config
+- **PRICING TIERS** (structured: name, price, period, features)
+
+**copy.md** (prose content):
+- Hero headlines and subheadlines
+- Feature titles and descriptions
+- Testimonial quotes
+- FAQ questions and answers
+- CTA headlines
+
+### Why this split?
+Pricing requires structured data (exact price, period, feature lists).
+Markdown parsing is fragile - £49/month may not parse correctly.
+Keep structured data in YAML where it's explicit and reliable.
+
+### Workflow:
+1. Define structure in sitespec.yaml (including pricing)
+2. Write prose content in copy.md
+3. At runtime, copy.md merges into landing page sections
+4. Unparseable pricing sections are SKIPPED (not merged)
 '''

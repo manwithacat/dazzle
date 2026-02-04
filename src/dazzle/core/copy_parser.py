@@ -304,7 +304,13 @@ def _parse_testimonials_section(title: str, content: str) -> ContentBlock:
 
 
 def _parse_pricing_section(title: str, content: str) -> ContentBlock:
-    """Parse pricing section with tiers."""
+    """Parse pricing section with tiers.
+
+    Note: Pricing is inherently structured data (price, period, features).
+    For complex pricing, prefer defining tiers in sitespec.yaml directly.
+    copy.md pricing parsing is best-effort for simple formats like:
+        $29/month, £49/month, €99/year, Free, Contact us
+    """
     block = ContentBlock(section_type="pricing", title=title)
 
     # Split by ## headers to get pricing tiers
@@ -320,7 +326,8 @@ def _parse_pricing_section(title: str, content: str) -> ContentBlock:
         lines = part.split("\n")
         tier_name = lines[0][3:].strip()
 
-        # Look for price pattern: $X/month, $X/year, Free, etc.
+        # Look for price pattern: $X/month, £X/month, €X/year, Free, Contact us, etc.
+        # Supports: $29, £49/month, €99.99/year, Free, Contact us, Custom
         price = None
         price_period = None
         features: list[str] = []
@@ -328,16 +335,49 @@ def _parse_pricing_section(title: str, content: str) -> ContentBlock:
         for line in lines[1:]:
             line = line.strip()
 
-            # Price patterns
-            price_match = re.match(r"\$?(\d+(?:\.\d{2})?|\w+)(?:/(\w+))?", line.replace(",", ""))
-            if price_match and price is None:
-                price = price_match.group(1)
-                price_period = price_match.group(2)
+            # Skip empty lines
+            if not line:
                 continue
 
-            # Feature list items
+            # Feature list items (process before price to avoid false matches)
             if line.startswith("- ") or line.startswith("* "):
                 features.append(line[2:].strip())
+                continue
+
+            # Price patterns - handle multiple currencies and formats
+            # Pattern: optional currency symbol, number or word, optional /period
+            if price is None:
+                # Try structured format: £49/month, $29.99/year, €99/mo
+                currency_match = re.match(
+                    r"^[£$€]?\s*(\d+(?:[.,]\d{2})?)\s*/\s*(\w+)",
+                    line.replace(",", ""),
+                )
+                if currency_match:
+                    price = currency_match.group(1)
+                    price_period = currency_match.group(2)
+                    # Normalize period
+                    if price_period in ("mo", "mth"):
+                        price_period = "month"
+                    elif price_period in ("yr", "pa", "annual"):
+                        price_period = "year"
+                    continue
+
+                # Try simple number: $29, £49, €99
+                simple_price = re.match(r"^[£$€]?\s*(\d+(?:[.,]\d{2})?)\s*$", line)
+                if simple_price:
+                    price = simple_price.group(1)
+                    price_period = "month"  # Default to month
+                    continue
+
+                # Try word-based: Free, Contact us, Custom, Enterprise
+                word_price = re.match(
+                    r"^(free|contact\s+us|custom|enterprise|call\s+us)$",
+                    line.lower(),
+                )
+                if word_price:
+                    price = line  # Keep original case
+                    price_period = None  # No period for non-numeric
+                    continue
 
         block.subsections.append(
             {

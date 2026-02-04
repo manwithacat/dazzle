@@ -149,6 +149,44 @@ $29/month
         assert pricing.subsections[1]["price"] == "29"
         assert len(pricing.subsections[1]["features"]) == 3
 
+    def test_pricing_multi_currency(self) -> None:
+        """Pricing section handles GBP, EUR, and other currencies."""
+        content = """# Pricing
+
+## Starter
+£49/month
+
+- Up to 25 clients
+
+## Professional
+€99/year
+
+- Unlimited clients
+
+## Enterprise
+Contact us
+
+- Custom pricing
+"""
+        result = parse_copy_file(content)
+        pricing = result.sections[0]
+        assert len(pricing.subsections) == 3
+
+        # GBP
+        assert pricing.subsections[0]["name"] == "Starter"
+        assert pricing.subsections[0]["price"] == "49"
+        assert pricing.subsections[0]["period"] == "month"
+
+        # EUR with year
+        assert pricing.subsections[1]["name"] == "Professional"
+        assert pricing.subsections[1]["price"] == "99"
+        assert pricing.subsections[1]["period"] == "year"
+
+        # Contact us (non-numeric)
+        assert pricing.subsections[2]["name"] == "Enterprise"
+        assert pricing.subsections[2]["price"] == "Contact us"
+        assert pricing.subsections[2]["period"] is None
+
     def test_faq_parsing(self) -> None:
         """FAQ section parses Q&A pairs."""
         content = """# FAQ
@@ -414,3 +452,119 @@ class TestMergeCopyIntoSitespec:
         assert len(landing.sections) == 3
         section_types = [s.type.value for s in landing.sections]
         assert section_types == ["hero", "features", "cta"]
+
+    def test_pricing_with_null_price_skipped(self) -> None:
+        """Pricing tiers with null prices are skipped to avoid validation errors."""
+        sitespec = SiteSpec()
+        copy_data = {
+            "sections": [
+                {
+                    "type": "pricing",
+                    "title": "Pricing",
+                    "metadata": {},
+                    "subsections": [
+                        # This tier has no price (parsing failed)
+                        {"name": "Starter", "price": None, "period": None, "features": []},
+                        # This tier is valid
+                        {"name": "Pro", "price": "29", "period": "month", "features": []},
+                    ],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        # Pricing section should exist with only the valid tier
+        assert len(landing.sections) == 1
+        assert landing.sections[0].type.value == "pricing"
+        assert len(landing.sections[0].tiers) == 1
+        assert landing.sections[0].tiers[0].name == "Pro"
+
+    def test_pricing_all_null_skips_section(self) -> None:
+        """Pricing section is skipped entirely if no tiers have valid prices."""
+        sitespec = SiteSpec()
+        copy_data = {
+            "sections": [
+                {"type": "hero", "title": "Hero", "metadata": {}, "subsections": []},
+                {
+                    "type": "pricing",
+                    "title": "Pricing",
+                    "metadata": {},
+                    "subsections": [
+                        # All tiers have null prices
+                        {"name": "Starter", "price": None, "features": []},
+                        {"name": "Pro", "price": None, "features": []},
+                    ],
+                },
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+        # Should only have hero section, pricing skipped
+        assert len(landing.sections) == 1
+        assert landing.sections[0].type.value == "hero"
+
+    def test_sitespec_sections_preserved_when_not_in_copy(self) -> None:
+        """Sitespec sections not present in copy.md are preserved after merge."""
+        from dazzle.core.sitespec_loader import (
+            PageSpec,
+            PricingTier,
+            SectionKind,
+            SectionSpec,
+        )
+
+        # Create sitespec with hero AND pricing
+        sitespec = SiteSpec(
+            pages=[
+                PageSpec(
+                    route="/",
+                    title="Home",
+                    sections=[
+                        SectionSpec(type=SectionKind.HERO, headline="Old Hero"),
+                        SectionSpec(
+                            type=SectionKind.PRICING,
+                            tiers=[
+                                PricingTier(name="Pro", price="49", period="month", features=[])
+                            ],
+                        ),
+                    ],
+                )
+            ]
+        )
+
+        # copy.md only has hero (no pricing)
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {"headline": "New Hero from copy.md"},
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+
+        # Should have both hero and pricing
+        section_types = [s.type.value for s in landing.sections]
+        assert "hero" in section_types
+        assert "pricing" in section_types
+
+        # Hero should be updated from copy.md
+        hero = next(s for s in landing.sections if s.type.value == "hero")
+        assert hero.headline == "New Hero from copy.md"
+
+        # Pricing should be preserved from sitespec
+        pricing = next(s for s in landing.sections if s.type.value == "pricing")
+        assert len(pricing.tiers) == 1
+        assert pricing.tiers[0].name == "Pro"
+        assert pricing.tiers[0].price == "49"
