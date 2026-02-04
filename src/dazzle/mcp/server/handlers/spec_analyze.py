@@ -57,8 +57,220 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
     if not spec_text:
         return json.dumps({"error": "spec_text is required"})
 
-    # Common patterns for entity discovery
-    # These are heuristics, not perfect NLP
+    # Strip markdown headers to avoid extracting header words as entities
+    # But keep the content for analysis
+    header_words: set[str] = set()
+    for match in re.finditer(r"^#+\s+(.+)$", spec_text, re.MULTILINE):
+        header_words.update(word for word in match.group(1).split() if word[0].isupper())
+
+    # Extensive skip list for false positives
+    skip_words = {
+        # Common English words
+        "The",
+        "This",
+        "That",
+        "These",
+        "Those",
+        "We",
+        "They",
+        "Our",
+        "Your",
+        "Its",
+        "And",
+        "For",
+        "With",
+        "From",
+        "Into",
+        "About",
+        "After",
+        "Before",
+        "Between",
+        "Each",
+        "Every",
+        "Some",
+        "Any",
+        "All",
+        "Most",
+        "Other",
+        "Such",
+        "Only",
+        "App",
+        "Application",
+        "System",
+        "Platform",
+        "Service",
+        "Tool",
+        "Software",
+        # Document structure words
+        "Overview",
+        "Summary",
+        "Introduction",
+        "Background",
+        "Description",
+        "Details",
+        "How",
+        "What",
+        "Why",
+        "When",
+        "Where",
+        "Who",
+        "Which",
+        "Key",
+        "Main",
+        "Core",
+        "Primary",
+        "Secondary",
+        "Important",
+        "Note",
+        "Notes",
+        "Features",
+        "Requirements",
+        "Flows",
+        "Steps",
+        "Process",
+        "Workflow",
+        "Section",
+        "Part",
+        "Chapter",
+        "Appendix",
+        "Example",
+        "Examples",
+        # Days and time
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+        "Today",
+        "Tomorrow",
+        "Yesterday",
+        "Week",
+        "Month",
+        "Year",
+        "Day",
+        "Hour",
+        # Common verbs that get capitalized at sentence start
+        "Can",
+        "Will",
+        "Would",
+        "Should",
+        "Could",
+        "Might",
+        "Must",
+        "Get",
+        "Gets",
+        "Got",
+        "Set",
+        "Sets",
+        "Let",
+        "Lets",
+        "See",
+        "Sees",
+        "Look",
+        "Looks",
+        "Find",
+        "Finds",
+        "Show",
+        "Shows",
+        "Make",
+        "Makes",
+        "Take",
+        "Takes",
+        "Give",
+        "Gives",
+        "Keep",
+        "Keeps",
+        "Use",
+        "Uses",
+        "Used",
+        "Using",
+        "Based",
+        "Works",
+        "Help",
+        "Helps",
+        # Miscellaneous false positives
+        "Here",
+        "There",
+        "Now",
+        "Then",
+        "Once",
+        "Also",
+        "Just",
+        "Even",
+        "First",
+        "Second",
+        "Third",
+        "Last",
+        "Next",
+        "Previous",
+        "New",
+        "Old",
+        "If",
+        "Unless",
+        "Whether",
+        "Either",
+        "Neither",
+        "Both",
+        "Same",
+        "Different",
+        # Adjectives that get capitalized
+        "Available",
+        "Ready",
+        "Complete",
+        "Active",
+        "Pending",
+        "Open",
+        "Closed",
+    }
+
+    # Common verbs that form false compound entities
+    verb_prefixes = {
+        "get",
+        "set",
+        "is",
+        "are",
+        "was",
+        "were",
+        "has",
+        "have",
+        "had",
+        "do",
+        "does",
+        "did",
+        "can",
+        "could",
+        "will",
+        "would",
+        "should",
+        "may",
+        "might",
+        "must",
+        "being",
+        "been",
+        "receive",
+        "send",
+        "create",
+        "update",
+        "delete",
+        "add",
+        "remove",
+        "check",
+        "verify",
+    }
 
     # Find capitalized nouns (likely entity names)
     capitalized = set(re.findall(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b", spec_text))
@@ -68,14 +280,14 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
 
     # Find role-like words (owner, user, admin, customer, etc.)
     role_patterns = re.findall(
-        r"\b(owner|user|admin|customer|seller|buyer|manager|staff|employee|member|guest|visitor|sitter|driver|host)\w*\b",
+        r"\b(owner|user|admin|customer|seller|buyer|manager|staff|employee|member|guest|visitor|sitter|driver|host|chef)\w*\b",
         spec_text.lower(),
     )
     roles = set(role_patterns)
 
     # Find action verbs that suggest state transitions
     action_patterns = re.findall(
-        r"\b(create|post|submit|approve|reject|cancel|complete|assign|accept|decline|review|pay|ship|deliver)\w*\b",
+        r"\b(create|post|submit|approve|reject|cancel|complete|assign|accept|decline|review|pay|ship|deliver|skip|pause|charge|retry|rate)\w*\b",
         spec_text.lower(),
     )
     actions = set(action_patterns)
@@ -90,24 +302,56 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
     # Build entity candidates
     entities = []
 
-    # Add roles as User-type entities
+    # Add roles as User-type entities (dedupe plurals)
+    seen_roles: set[str] = set()
     for role in roles:
-        entities.append(
-            {
-                "name": role.title(),
-                "type": "user_role",
-                "source": "role_pattern",
-                "suggested_fields": ["email", "name", "created_at"],
-            }
-        )
-
-    # Add capitalized nouns as potential entities
-    skip_words = {"App", "The", "This", "We", "They", "Our", "And", "For", "With"}
-    for noun in capitalized:
-        if noun not in skip_words and noun.lower() not in roles:
+        base_role = role.rstrip("s")  # Remove trailing 's' for dedup
+        if base_role not in seen_roles:
+            seen_roles.add(base_role)
             entities.append(
                 {
-                    "name": noun,
+                    "name": role.title().rstrip("s"),  # Singularize
+                    "type": "user_role",
+                    "source": "role_pattern",
+                    "suggested_fields": ["email", "name", "created_at"],
+                }
+            )
+
+    def _is_valid_entity(noun: str) -> bool:
+        """Check if a noun is likely a valid entity name."""
+        # Skip if in skip list
+        if noun in skip_words:
+            return False
+        # Skip if only appears in headers
+        if noun in header_words and spec_text.count(noun) <= 2:
+            return False
+        # Skip if it's a role (already handled)
+        if noun.lower().rstrip("s") in seen_roles:
+            return False
+        # Skip if starts with common verb (likely verb+noun compound)
+        lower = noun.lower()
+        for prefix in verb_prefixes:
+            if lower.startswith(prefix) and len(lower) > len(prefix):
+                # Check if the rest starts with uppercase (compound like "PaymentFails")
+                rest = noun[len(prefix) :]
+                if rest and rest[0].isupper():
+                    return False
+        # Skip very short words
+        if len(noun) < 3:
+            return False
+        # Skip words ending in common suffixes that indicate non-entities
+        if noun.endswith(("ing", "tion", "ment", "ness", "able", "ible")):
+            # But allow words that are genuinely nouns (e.g., "Rating", "Subscription")
+            if noun not in {"Rating", "Subscription", "Notification", "Payment", "Shipment"}:
+                return False
+        return True
+
+    # Add capitalized nouns as potential entities
+    for noun in capitalized:
+        if _is_valid_entity(noun):
+            entities.append(
+                {
+                    "name": noun.rstrip("s"),  # Singularize
                     "type": "domain_entity",
                     "source": "capitalized_noun",
                     "suggested_fields": ["id", "created_at"],
@@ -115,20 +359,109 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
             )
 
     # Add article nouns that look like entities
-    common_words = {"app", "system", "platform", "way", "time", "day", "week", "side", "job"}
+    common_article_words = {
+        "app",
+        "system",
+        "platform",
+        "way",
+        "time",
+        "day",
+        "week",
+        "side",
+        "job",
+        "same",
+        "first",
+        "last",
+        "next",
+        "other",
+        "following",
+        "upcoming",
+        "door",
+        "friend",
+        "thing",
+        "stuff",
+        "end",
+        "start",
+        "beginning",
+        "price",
+        "cost",
+        "amount",
+        "number",
+        "list",
+        "set",
+        "group",
+    }
+    # Words that indicate the phrase is not an entity when they're the second word
+    connector_words = {
+        "and",
+        "or",
+        "is",
+        "are",
+        "was",
+        "were",
+        "has",
+        "have",
+        "had",
+        "can",
+        "will",
+        "would",
+        "should",
+        "could",
+        "may",
+        "might",
+        "must",
+        "for",
+        "to",
+        "of",
+        "in",
+        "on",
+        "at",
+        "by",
+        "with",
+        "from",
+        "if",
+        "then",
+        "when",
+        "where",
+        "who",
+        "that",
+        "which",
+    }
+    existing_names = {e["name"].lower() for e in entities}
+    skip_words_lower = {w.lower() for w in skip_words}
     for noun in article_nouns:
-        normalized = noun.replace(" ", "_")
-        if normalized not in common_words and normalized not in [
-            e["name"].lower() for e in entities
-        ]:
+        # Skip two-word phrases where second word is a connector/verb
+        words = noun.split()
+        if len(words) == 2 and words[1] in connector_words:
+            continue
+        # Take only the first word for multi-word phrases to avoid compounds
+        if len(words) > 1:
+            noun = words[0]
+        if (
+            noun not in common_article_words
+            and noun not in existing_names
+            and noun not in skip_words_lower
+            and len(noun) >= 4
+            and noun not in seen_roles  # Don't duplicate roles
+        ):
             entities.append(
                 {
-                    "name": normalized.title().replace("_", ""),
+                    "name": noun.title(),
                     "type": "domain_entity",
                     "source": "article_noun",
                     "suggested_fields": ["id", "created_at"],
                 }
             )
+
+    # Deduplicate entities by name (case-insensitive)
+    seen_names: set[str] = set()
+    deduped_entities = []
+    for entity in entities:
+        name_lower = entity["name"].lower()
+        if name_lower not in seen_names:
+            seen_names.add(name_lower)
+            deduped_entities.append(entity)
+    entities = deduped_entities
 
     # Build relationships
     relationships = []
