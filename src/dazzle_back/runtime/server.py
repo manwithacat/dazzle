@@ -1779,4 +1779,30 @@ def create_app_factory(
     if enable_dev_mode:
         logger.info("  Dazzle Bar: enabled")
 
+    # Add custom 404 handler for site pages
+    if sitespec_data:
+        from starlette.exceptions import HTTPException as StarletteHTTPException
+
+        from dazzle_ui.runtime.site_renderer import render_404_page_html
+
+        @app.exception_handler(StarletteHTTPException)
+        async def custom_404_handler(request, exc):
+            if exc.status_code == 404:
+                from fastapi.responses import HTMLResponse
+
+                # Only serve HTML 404 for browser requests (not API calls)
+                accept = request.headers.get("accept", "")
+                if "text/html" in accept:
+                    return HTMLResponse(
+                        content=render_404_page_html(sitespec_data, str(request.url.path)),
+                        status_code=404,
+                    )
+            # For non-404 or API requests, return default JSON response
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+            )
+
     return app

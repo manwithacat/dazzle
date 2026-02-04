@@ -103,6 +103,69 @@ def render_site_page_html(
 </html>"""
 
 
+def render_404_page_html(
+    sitespec_data: dict[str, Any],
+    path: str = "/",
+) -> str:
+    """
+    Render a styled 404 page with site chrome (nav, footer).
+
+    Args:
+        sitespec_data: Site specification data
+        path: The path that was not found
+
+    Returns:
+        Complete HTML page string
+    """
+    brand = sitespec_data.get("brand", {})
+    product_name = brand.get("product_name", "My App")
+    layout = sitespec_data.get("layout", {})
+    nav = layout.get("nav", {})
+    footer = layout.get("footer", {})
+
+    nav_items_html = _build_nav_items(nav)
+    footer_html = _build_footer(footer)
+    copyright_text = footer.get("copyright", f"© 2025 {product_name}")
+
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    {get_shared_head_html(f"Page Not Found - {product_name}")}
+</head>
+<body class="dz-site bg-base-100">
+    <header class="dz-site-header">
+        <nav class="dz-site-nav">
+            <a href="/" class="dz-site-logo">{product_name}</a>
+            <div class="dz-nav-items">
+                {nav_items_html}
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="dz-section dz-section-hero">
+            <div class="dz-section-content" style="text-align: center; padding: 4rem 1rem;">
+                <h1 style="font-size: 4rem; font-weight: 700; margin-bottom: 1rem;">404</h1>
+                <p class="dz-subhead">The page you're looking for doesn't exist.</p>
+                <div class="dz-cta-group" style="margin-top: 2rem;">
+                    <a href="/" class="btn btn-primary">Go Home</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="dz-site-footer">
+        <div class="dz-footer-content">
+            {footer_html}
+        </div>
+        <div class="dz-footer-bottom">
+            <p>{copyright_text}</p>
+        </div>
+    </footer>
+</body>
+</html>"""
+
+
 def _build_nav_items(nav: dict[str, Any]) -> str:
     """Build navigation items HTML."""
     nav_items_html = ""
