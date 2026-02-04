@@ -11,14 +11,14 @@ import json
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from redis import Redis
 
 
-class ProcessStatus(str, Enum):
+class ProcessStatus(StrEnum):
     """Process run status (matches Dazzle core)."""
 
     PENDING = "pending"
@@ -31,7 +31,7 @@ class ProcessStatus(str, Enum):
     CANCELLED = "cancelled"
 
 
-class TaskStatus(str, Enum):
+class TaskStatus(StrEnum):
     """Human task status."""
 
     PENDING = "pending"
