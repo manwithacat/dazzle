@@ -63,6 +63,17 @@ def create_prompts() -> list[dict[str, Any]]:
             "description": "Get a complete getting started guide for new DAZZLE users",
             "arguments": [],
         },
+        {
+            "name": "napkin_to_app",
+            "description": "Transform a rough narrative spec into a running DAZZLE app. Includes cognition pass (entity discovery, lifecycle analysis, persona extraction, business rules) before DSL generation.",
+            "arguments": [
+                {
+                    "name": "spec_path",
+                    "description": "Path to the spec file (markdown or text)",
+                    "required": False,
+                }
+            ],
+        },
     ]
 
 

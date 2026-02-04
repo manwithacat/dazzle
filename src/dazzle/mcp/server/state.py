@@ -2,18 +2,20 @@
 MCP Server state management.
 
 This module contains the global server state and accessor functions
-for project root, dev mode, and active project management.
+for project root, dev mode, active project management, and knowledge graph.
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
 
 if TYPE_CHECKING:
     from mcp.server.session import ServerSession
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -28,6 +30,10 @@ _project_root: Path = Path.cwd()
 _is_dev_mode: bool = False
 _active_project: str | None = None  # Name of the active example project
 _available_projects: dict[str, Path] = {}  # project_name -> project_path
+
+# Knowledge graph state
+_knowledge_graph: KnowledgeGraph | None = None
+_graph_db_path: Path | None = None
 
 
 def set_project_root(path: Path) -> None:
@@ -262,3 +268,105 @@ def init_dev_mode(root: Path) -> None:
     else:
         _available_projects = {}
         _active_project = None
+
+
+# ============================================================================
+# Knowledge Graph Management
+# ============================================================================
+
+
+def init_knowledge_graph(root: Path) -> None:
+    """
+    Initialize the knowledge graph for the server.
+
+    In dev mode, uses the Dazzle source code as the graph source.
+    In normal mode, uses the project's .dazzle directory.
+    """
+    global _knowledge_graph, _graph_db_path
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
+
+    # Determine database path
+    if _is_dev_mode:
+        # Dev mode: store in Dazzle's .dazzle directory
+        _graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+    else:
+        # Normal mode: store in project's .dazzle directory
+        _graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+
+    _graph_db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Initialize the graph
+    _knowledge_graph = KnowledgeGraph(_graph_db_path)
+    logger.info(f"Knowledge graph initialized at: {_graph_db_path}")
+
+    # Check if graph needs population
+    stats = _knowledge_graph.get_stats()
+    if stats["entity_count"] == 0:
+        logger.info("Knowledge graph is empty, auto-populating...")
+        _auto_populate_graph(root)
+
+
+def _auto_populate_graph(root: Path) -> None:
+    """Auto-populate the knowledge graph from source code."""
+    if _knowledge_graph is None:
+        return
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
+
+    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+
+    # In dev mode, populate from src/
+    if _is_dev_mode:
+        src_path = root / "src"
+        if src_path.exists():
+            result = handlers.handle_auto_populate(
+                root_path=str(src_path),
+                max_files=1000,
+            )
+            logger.info(f"Auto-populated graph from {src_path}: {result}")
+    else:
+        # Normal mode: populate from project directory
+        result = handlers.handle_auto_populate(
+            root_path=str(root),
+            max_files=500,
+        )
+        logger.info(f"Auto-populated graph from {root}: {result}")
+
+
+def get_knowledge_graph() -> KnowledgeGraph | None:
+    """Get the knowledge graph instance."""
+    return _knowledge_graph
+
+
+def get_graph_db_path() -> Path | None:
+    """Get the path to the knowledge graph database."""
+    return _graph_db_path
+
+
+def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:
+    """
+    Refresh the knowledge graph by re-populating from source.
+
+    Args:
+        root_path: Optional specific path to populate from
+
+    Returns:
+        Population statistics
+    """
+    if _knowledge_graph is None:
+        return {"error": "Knowledge graph not initialized"}
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
+
+    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+
+    populate_path = root_path or str(_project_root)
+    if _is_dev_mode and not root_path:
+        populate_path = str(_project_root / "src")
+
+    result = handlers.handle_auto_populate(
+        root_path=populate_path,
+        max_files=1000,
+    )
+    return result

@@ -31,8 +31,10 @@ from .handlers_consolidated import dispatch_consolidated_tool
 from .state import (
     get_active_project_path,
     get_available_projects,
+    get_knowledge_graph,
     get_project_root,
     init_dev_mode,
+    init_knowledge_graph,
     is_dev_mode,
     set_project_root,
 )
@@ -406,6 +408,69 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
 3. Offer to help them customize the starter code for their use case
 4. Point them to lookup_concept("patterns") for common patterns they can use"""
 
+    elif name == "napkin_to_app":
+        spec_path = args.get("spec_path", "spec.md")
+        return f"""Transform a narrative spec into a running DAZZLE application.
+
+## Phase 1: Read and Understand
+
+1. Read the spec file at: {spec_path}
+2. This is a rough "napkin spec" from a founder - expect it to be incomplete
+
+## Phase 2: Cognition Pass (REQUIRED before writing ANY DSL)
+
+Run these spec_analyze operations in sequence:
+
+1. `spec_analyze(operation="discover_entities", spec_text=<spec content>)`
+   - Extracts nouns, relationships, user roles
+   - Review output, remove false positives
+
+2. `spec_analyze(operation="identify_lifecycles", spec_text=<spec>, entities=<from step 1>)`
+   - Identifies state transitions for key entities
+   - Not every entity needs a state machine
+
+3. `spec_analyze(operation="extract_personas", spec_text=<spec>)`
+   - Identifies user roles and their primary actions
+   - Each persona should have a workspace
+
+4. `spec_analyze(operation="surface_rules", spec_text=<spec>)`
+   - Extracts business rules (fees, constraints, validations)
+   - Translate to computed fields, invariants, or guards
+
+5. `spec_analyze(operation="generate_questions", spec_text=<spec>, entities=<from step 1>)`
+   - Surfaces genuine ambiguities
+   - ASK THE USER these questions before proceeding
+
+6. After getting answers: `spec_analyze(operation="refine_spec", spec_text=<spec>, answers=<user answers>)`
+   - Produces structured refined spec
+
+## Phase 3: DSL Generation
+
+Use `knowledge(operation="concept", term=<construct>)` for syntax - NOT examples.
+
+Generate in this order:
+1. Module header (app name, description)
+2. Entities (domain model)
+3. State machines (attach to status fields)
+4. Surfaces (CRUD views per entity)
+5. Workspaces (group by persona)
+6. Services (if external integrations needed)
+
+After each major section: `dsl(operation="validate")`
+
+## Phase 4: Refinement
+
+1. `dsl(operation="lint", extended=true)` - catch issues
+2. `story(operation="propose")` - verify coverage
+3. `dazzle serve` - run the app
+
+## Key Principles
+
+- Do NOT anchor to examples - generate from first principles
+- ASK clarifying questions - don't assume
+- Validate incrementally - don't write 500 lines then validate
+- Document decisions in the refined spec"""
+
     return f"Unknown prompt: {name}"
 
 
@@ -433,6 +498,10 @@ async def run_server(project_root: Path | None = None) -> None:
         logger.info(f"Active project: {get_active_project()}")
     else:
         logger.info("Running in NORMAL MODE")
+
+    # Initialize knowledge graph
+    init_knowledge_graph(get_project_root())
+    logger.info("Knowledge graph initialized")
 
     logger.info("Starting DAZZLE MCP server...")
     try:
@@ -464,7 +533,9 @@ __all__ = [
     "get_project_root",
     "is_dev_mode",
     "get_active_project_path",
+    "get_knowledge_graph",
     "init_dev_mode",
+    "init_knowledge_graph",
     "call_tool",
     "list_tools_handler",
 ]

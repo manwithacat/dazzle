@@ -962,6 +962,129 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Spec Analyze (cognition pass for narrative specs)
+        # =====================================================================
+        Tool(
+            name="spec_analyze",
+            description=(
+                "Analyze narrative specs before DSL generation. Operations: "
+                "discover_entities (extract nouns/relationships), "
+                "identify_lifecycles (find state transitions), "
+                "extract_personas (identify user roles), "
+                "surface_rules (extract business rules), "
+                "generate_questions (surface ambiguities), "
+                "refine_spec (produce structured spec from all analyses)"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "discover_entities",
+                            "identify_lifecycles",
+                            "extract_personas",
+                            "surface_rules",
+                            "generate_questions",
+                            "refine_spec",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "spec_text": {
+                        "type": "string",
+                        "description": "The narrative spec text to analyze",
+                    },
+                    "entities": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Entity names (for identify_lifecycles, generate_questions)",
+                    },
+                    "answers": {
+                        "type": "object",
+                        "description": "Answers to generated questions (for refine_spec)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
+        # Graph (knowledge graph operations)
+        # =====================================================================
+        Tool(
+            name="graph",
+            description=(
+                "Knowledge graph operations for codebase understanding. Operations: "
+                "query (search entities by text), "
+                "dependencies (what does X depend on?), "
+                "dependents (what depends on X?), "
+                "neighbourhood (entities within N hops), "
+                "paths (find paths between entities), "
+                "stats (graph statistics), "
+                "populate (refresh graph from source)"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "query",
+                            "dependencies",
+                            "dependents",
+                            "neighbourhood",
+                            "paths",
+                            "stats",
+                            "populate",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Search text (for query)",
+                    },
+                    "entity_id": {
+                        "type": "string",
+                        "description": "Entity ID with prefix like file:, module:, class: (for dependencies, dependents, neighbourhood)",
+                    },
+                    "source_id": {
+                        "type": "string",
+                        "description": "Source entity ID (for paths)",
+                    },
+                    "target_id": {
+                        "type": "string",
+                        "description": "Target entity ID (for paths)",
+                    },
+                    "depth": {
+                        "type": "integer",
+                        "description": "Traversal depth (for neighbourhood, default: 1)",
+                    },
+                    "transitive": {
+                        "type": "boolean",
+                        "description": "Include transitive deps (for dependencies, dependents)",
+                    },
+                    "relation_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by relation types: imports, contains, inherits, depends_on",
+                    },
+                    "entity_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by entity types: file, module, class, function",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default: 20)",
+                    },
+                    "root_path": {
+                        "type": "string",
+                        "description": "Path to populate from (for populate)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

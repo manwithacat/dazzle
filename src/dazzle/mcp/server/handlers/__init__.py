@@ -41,6 +41,7 @@ from .project import (
     select_project,
     validate_all_projects,
 )
+from .spec_analyze import handle_spec_analyze
 from .status import (
     get_dnr_logs_handler,
     get_mcp_status_handler,
@@ -105,4 +106,6 @@ __all__ = [
     "get_feedback_handler",
     "update_feedback_handler",
     "get_feedback_summary_handler",
+    # Spec analyze handlers
+    "handle_spec_analyze",
 ]

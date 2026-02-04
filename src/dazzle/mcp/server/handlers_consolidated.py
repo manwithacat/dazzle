@@ -1082,6 +1082,90 @@ def handle_contribution(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Spec Analyze Handler
+# =============================================================================
+
+
+def handle_spec_analyze(arguments: dict[str, Any]) -> str:
+    """Handle spec_analyze tool for cognition pass on narrative specs."""
+    from .handlers.spec_analyze import handle_spec_analyze as _handle
+
+    return _handle(arguments)
+
+
+# =============================================================================
+# Graph Handler
+# =============================================================================
+
+
+def handle_graph(arguments: dict[str, Any]) -> str:
+    """Handle knowledge graph operations."""
+    from .state import get_knowledge_graph, refresh_knowledge_graph
+
+    graph = get_knowledge_graph()
+    if graph is None:
+        return json.dumps({"error": "Knowledge graph not initialized"})
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
+
+    handlers = KnowledgeGraphHandlers(graph)
+    operation = arguments.get("operation")
+
+    if operation == "query":
+        return json.dumps(
+            handlers.handle_query(
+                text=arguments.get("text", ""),
+                entity_types=arguments.get("entity_types"),
+                limit=arguments.get("limit", 20),
+            ),
+            indent=2,
+        )
+    elif operation == "dependencies":
+        return json.dumps(
+            handlers.handle_get_dependencies(
+                entity_id=arguments.get("entity_id", ""),
+                relation_types=arguments.get("relation_types"),
+                transitive=arguments.get("transitive", False),
+            ),
+            indent=2,
+        )
+    elif operation == "dependents":
+        return json.dumps(
+            handlers.handle_get_dependents(
+                entity_id=arguments.get("entity_id", ""),
+                relation_types=arguments.get("relation_types"),
+                transitive=arguments.get("transitive", False),
+            ),
+            indent=2,
+        )
+    elif operation == "neighbourhood":
+        return json.dumps(
+            handlers.handle_get_neighbourhood(
+                entity_id=arguments.get("entity_id", ""),
+                depth=arguments.get("depth", 1),
+                relation_types=arguments.get("relation_types"),
+            ),
+            indent=2,
+        )
+    elif operation == "paths":
+        return json.dumps(
+            handlers.handle_find_paths(
+                source_id=arguments.get("source_id", ""),
+                target_id=arguments.get("target_id", ""),
+                relation_types=arguments.get("relation_types"),
+            ),
+            indent=2,
+        )
+    elif operation == "stats":
+        return json.dumps(handlers.handle_get_stats(), indent=2)
+    elif operation == "populate":
+        root_path = arguments.get("root_path")
+        return json.dumps(refresh_knowledge_graph(root_path), indent=2)
+    else:
+        return json.dumps({"error": f"Unknown graph operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1104,6 +1188,8 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "mailpit": handle_mailpit,
     "contribution": handle_contribution,
     "user_feedback": handle_user_feedback,
+    "spec_analyze": handle_spec_analyze,
+    "graph": handle_graph,
 }
 
 
