@@ -1725,6 +1725,37 @@ def create_app_factory(
     builder = DNRBackendApp(backend_spec, config=config)
     app = builder.build()
 
+    # Add auth page routes if sitespec exists (/login, /signup)
+    if sitespec_data:
+        from dazzle_back.runtime.site_routes import create_auth_page_routes
+
+        auth_page_router = create_auth_page_routes(sitespec_data)
+        app.include_router(auth_page_router)
+        logger.info("  Auth pages: /login, /signup")
+
+    # Add app page routes (/app/*)
+    try:
+        from dazzle_ui.runtime.page_routes import create_page_routes
+
+        # Get theme CSS if available
+        theme_css = ""
+        try:
+            from dazzle_ui.runtime.css_loader import get_bundled_css
+
+            theme_css = get_bundled_css()
+        except Exception:
+            pass
+
+        page_router = create_page_routes(
+            appspec,
+            backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
+            theme_css=theme_css,
+        )
+        app.include_router(page_router, prefix="/app")
+        logger.info(f"  App pages: {len(appspec.workspaces)} workspaces mounted at /app")
+    except ImportError as e:
+        logger.warning(f"Page routes not available: {e}")
+
     # Log startup info
     logger.info(f"Dazzle app '{appspec.name}' ready")
     logger.info(f"  Entities: {len(backend_spec.entities)}")

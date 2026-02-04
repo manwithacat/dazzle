@@ -187,7 +187,7 @@ def create_site_page_routes(
     """
     Create FastAPI routes that serve HTML pages directly.
 
-    This is for server-side rendering of site pages.
+    This is for server-side rendering of site pages using the DaisyUI renderer.
     For SPA mode, use create_site_routes() API endpoints instead.
 
     Args:
@@ -200,96 +200,57 @@ def create_site_page_routes(
     from fastapi import APIRouter
     from fastapi.responses import HTMLResponse
 
+    from dazzle_ui.runtime.site_renderer import render_site_page_html
+
     router = APIRouter()
 
-    brand = sitespec_data.get("brand", {})
     pages = sitespec_data.get("pages", [])
 
     # Create route for each page
     for page in pages:
         route = page.get("route", "/")
-        title = page.get("title", brand.get("product_name", "Page"))
 
-        # Capture page data in closure
-        page_data = page
+        # Capture route in closure
+        page_route = route
 
         @router.get(route, response_class=HTMLResponse, include_in_schema=False)
-        async def serve_page(p: dict[str, Any] = page_data, t: str = title) -> str:
-            """Serve a site page as HTML."""
-            return _render_page_html(p, brand, t)
+        async def serve_page(
+            r: str = page_route,
+            sitespec: dict[str, Any] = sitespec_data,
+        ) -> str:
+            """Serve a site page as HTML using DaisyUI renderer."""
+            return render_site_page_html(sitespec, r)
 
     return router
 
 
-def _render_page_html(
-    page: dict[str, Any],
-    brand: dict[str, Any],
-    title: str,
-) -> str:
-    """Render a page as simple HTML (placeholder implementation)."""
-    product_name = brand.get("product_name", "My App")
+def create_auth_page_routes(
+    sitespec_data: dict[str, Any],
+) -> APIRouter:
+    """
+    Create FastAPI routes for authentication pages (/login, /signup).
 
-    sections_html = ""
-    for section in page.get("sections", []):
-        section_type = section.get("type", "")
-        headline = section.get("headline", "")
-        subhead = section.get("subhead", "")
-        body = section.get("body", "")
+    Args:
+        sitespec_data: SiteSpec as dict
 
-        sections_html += f"""
-        <section class="section section-{section_type}">
-            {f"<h2>{headline}</h2>" if headline else ""}
-            {f'<p class="subhead">{subhead}</p>' if subhead else ""}
-            {f"<p>{body}</p>" if body else ""}
-        </section>
-        """
+    Returns:
+        FastAPI router with auth page routes
+    """
+    from fastapi import APIRouter
+    from fastapi.responses import HTMLResponse
 
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - {product_name}</title>
-    <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1a1a1a;
-            background: #fff;
-        }}
-        .container {{ max-width: 1200px; margin: 0 auto; padding: 0 20px; }}
-        header {{
-            padding: 20px 0;
-            border-bottom: 1px solid #eee;
-        }}
-        .logo {{ font-size: 1.5rem; font-weight: 700; color: #333; text-decoration: none; }}
-        .section {{ padding: 80px 20px; text-align: center; }}
-        .section-hero {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }}
-        .section h2 {{ font-size: 2.5rem; margin-bottom: 20px; }}
-        .section .subhead {{ font-size: 1.25rem; opacity: 0.9; margin-bottom: 20px; }}
-        footer {{
-            padding: 40px 20px;
-            background: #f8f9fa;
-            text-align: center;
-            font-size: 0.875rem;
-            color: #666;
-        }}
-    </style>
-</head>
-<body>
-    <header>
-        <div class="container">
-            <a href="/" class="logo">{product_name}</a>
-        </div>
-    </header>
-    <main>
-        {sections_html}
-    </main>
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 {product_name}. All rights reserved.</p>
-        </div>
-    </footer>
-</body>
-</html>"""
+    from dazzle_ui.runtime.site_renderer import render_auth_page_html
+
+    router = APIRouter()
+
+    @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
+    async def login_page(sitespec: dict[str, Any] = sitespec_data) -> str:
+        """Serve the login page."""
+        return render_auth_page_html(sitespec, "login")
+
+    @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
+    async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:
+        """Serve the signup page."""
+        return render_auth_page_html(sitespec, "signup")
+
+    return router
