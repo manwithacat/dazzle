@@ -496,6 +496,7 @@ def get_site_js() -> str:
         const subhead = section.subhead || '';
         const primaryCta = section.primary_cta;
         const secondaryCta = section.secondary_cta;
+        const media = section.media;
 
         let ctaHtml = '';
         if (primaryCta) {
@@ -505,12 +506,22 @@ def get_site_js() -> str:
             ctaHtml += `<a href="${secondaryCta.href || '#'}" class="btn btn-secondary btn-outline">${secondaryCta.label || 'Learn More'}</a>`;
         }
 
+        let mediaHtml = '';
+        if (media && media.type === 'image' && media.src) {
+            mediaHtml = `<div class="dz-hero-media"><img src="${media.src}" alt="${media.alt || ''}" class="dz-hero-image" /></div>`;
+        }
+
+        const hasMedia = mediaHtml ? 'dz-hero-with-media' : '';
+
         return `
-            <section class="dz-section dz-section-hero">
+            <section class="dz-section dz-section-hero ${hasMedia}">
                 <div class="dz-section-content">
-                    <h1>${headline}</h1>
-                    ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
-                    ${ctaHtml ? `<div class="dz-cta-group">${ctaHtml}</div>` : ''}
+                    <div class="dz-hero-text">
+                        <h1>${headline}</h1>
+                        ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
+                        ${ctaHtml ? `<div class="dz-cta-group">${ctaHtml}</div>` : ''}
+                    </div>
+                    ${mediaHtml}
                 </div>
             </section>
         `;

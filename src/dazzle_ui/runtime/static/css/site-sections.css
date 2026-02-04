@@ -87,6 +87,50 @@
   border-color: oklch(1 0 0 / 0.6);
 }
 
+/* Hero with Media Image */
+.dz-hero-with-media .dz-section-content {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  text-align: left;
+}
+
+.dz-hero-text {
+  flex: 1;
+}
+
+.dz-hero-with-media .dz-cta-group {
+  justify-content: flex-start;
+}
+
+.dz-hero-media {
+  flex: 1;
+  max-width: 50%;
+}
+
+.dz-hero-image {
+  width: 100%;
+  height: auto;
+  border-radius: var(--dz-radius-lg, 1rem);
+  box-shadow: var(--dz-shadow-xl, 0 20px 50px -12px oklch(0 0 0 / 0.3));
+}
+
+@media (max-width: 768px) {
+  .dz-hero-with-media .dz-section-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .dz-hero-with-media .dz-cta-group {
+    justify-content: center;
+  }
+
+  .dz-hero-media {
+    max-width: 100%;
+    order: -1;
+  }
+}
+
 /* =============================================================================
    Features Section
    ============================================================================= */
