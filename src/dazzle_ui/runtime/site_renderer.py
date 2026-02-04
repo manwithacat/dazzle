@@ -507,7 +507,7 @@ def get_site_js() -> str:
         }
 
         let mediaHtml = '';
-        if (media && media.type === 'image' && media.src) {
+        if (media && media.kind === 'image' && media.src) {
             mediaHtml = `<div class="dz-hero-media"><img src="${media.src}" alt="${media.alt || ''}" class="dz-hero-image" /></div>`;
         }
 
