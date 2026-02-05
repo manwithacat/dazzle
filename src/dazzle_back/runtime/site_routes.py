@@ -134,10 +134,11 @@ def _format_page_response(page: dict[str, Any], project_root: Path | None) -> di
     # Load content if this is a markdown page
     source = page.get("source")
     if source and project_root:
-        content = _load_content_file(project_root, source.get("path", ""))
-        if content:
-            response["content"] = content
-            response["content_format"] = source.get("format", "md")
+        raw = _load_content_file(project_root, source.get("path", ""))
+        if raw:
+            fmt = source.get("format", "md")
+            response["content"] = _render_content(raw, fmt)
+            response["content_format"] = "html"
 
     return response
 
@@ -155,12 +156,30 @@ def _format_legal_page_response(
     # Load content
     source = page_data.get("source", {})
     if source and project_root:
-        content = _load_content_file(project_root, source.get("path", ""))
-        if content:
-            response["content"] = content
-            response["content_format"] = source.get("format", "md")
+        raw = _load_content_file(project_root, source.get("path", ""))
+        if raw:
+            fmt = source.get("format", "md")
+            response["content"] = _render_content(raw, fmt)
+            response["content_format"] = "html"
 
     return response
+
+
+def _render_content(raw: str, fmt: str) -> str:
+    """Convert raw content to HTML.
+
+    Markdown (``md``) is converted using the ``markdown`` library.
+    HTML content is returned as-is.
+    """
+    if fmt in ("md", "markdown"):
+        try:
+            import markdown  # type: ignore[import-untyped]
+
+            return str(markdown.markdown(raw, extensions=["extra", "sane_lists"]))
+        except ImportError:
+            logger.warning("markdown package not available; serving raw content")
+            return raw
+    return raw
 
 
 def _load_content_file(project_root: Path, content_path: str) -> str | None:

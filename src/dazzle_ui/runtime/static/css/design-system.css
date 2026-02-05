@@ -112,6 +112,46 @@
   --dz-transition-fast: var(--duration-fast);
   --dz-transition-normal: var(--duration-normal);
   --dz-accent-glow: hsl(var(--ring) / 0.15);
+
+  /* --- Site section tokens (marketing pages) --- */
+  /* Hero gradient — overridden by ThemeSpec when a custom palette is set */
+  --dz-hero-bg-from: oklch(0.45 0.18 265);
+  --dz-hero-bg-to: oklch(0.38 0.20 280);
+  --dz-shadow-hero: 0 20px 60px -12px oklch(0 0 0 / 0.25);
+  --dz-shadow-xl: var(--shadow-xl);
+
+  /* Section spacing */
+  --dz-spacing-hero-y: 6rem;
+  --dz-spacing-section-y: 5rem;
+  --dz-spacing-feature-gap: 2rem;
+  --dz-spacing-card-padding: 1.5rem;
+
+  /* Typography — hero */
+  --dz-font-size-hero-headline: 3.5rem;
+  --dz-font-weight-hero-headline: 800;
+  --dz-line-height-hero-headline: 1.1;
+  --dz-letter-spacing-hero-headline: -0.02em;
+  --dz-font-size-subhead: 1.25rem;
+  --dz-line-height-subhead: 1.5;
+
+  /* Typography — sections */
+  --dz-font-size-section-headline: 2.25rem;
+  --dz-font-weight-section-headline: 700;
+  --dz-line-height-section-headline: 1.2;
+  --dz-letter-spacing-section-headline: -0.01em;
+  --dz-font-size-body: 1rem;
+  --dz-line-height-body: 1.6;
+
+  /* Radii */
+  --dz-radius-button: 0.5rem;
+  --dz-radius-card: 0.75rem;
+  --dz-radius-lg: 1rem;
+  --dz-radius-sm: 0.375rem;
+
+  /* Surfaces */
+  --dz-feature-icon-bg: oklch(0.92 0.03 260);
+  --dz-section-alt-bg: oklch(0.97 0.01 260);
+  --dz-pricing-highlight-bg: oklch(0.45 0.18 270);
 }
 
 /* =============================================================================
@@ -166,6 +206,10 @@
   --dz-sidebar-from: hsl(240 10% 5%);
   --dz-sidebar-to: hsl(240 10% 8%);
   --dz-accent-glow: hsl(var(--ring) / 0.2);
+
+  /* Site section overrides for dark mode */
+  --dz-section-alt-bg: oklch(0.08 0.01 260);
+  --dz-feature-icon-bg: oklch(0.20 0.04 260);
 }
 
 /* =============================================================================
