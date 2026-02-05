@@ -266,8 +266,8 @@ class AuthStore:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
                 if cursor.description:
-                    columns = [desc[0] for desc in cursor.description]
-                    return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
+                    # RealDictCursor returns dict-like rows, just convert to dict
+                    return [dict(row) for row in cursor.fetchall()]
                 conn.commit()
                 return []
             else:

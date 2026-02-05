@@ -81,6 +81,24 @@ class TestSiteSpecIR:
         assert section.primary_cta is not None
         assert section.primary_cta.label == "Sign Up"
 
+    def test_section_spec_with_explicit_id(self) -> None:
+        """Test section with explicit anchor ID."""
+        section = SectionSpec(
+            type=SectionKind.FEATURES,
+            id="my-features",
+            headline="Why Choose Us",
+        )
+        assert section.id == "my-features"
+        assert section.headline == "Why Choose Us"
+
+    def test_section_spec_id_is_optional(self) -> None:
+        """Test section ID defaults to None (auto-generated from headline at render)."""
+        section = SectionSpec(
+            type=SectionKind.CTA,
+            headline="Get Started Today",
+        )
+        assert section.id is None  # Will be slugified to "get-started-today" at render
+
     def test_section_spec_features(self) -> None:
         """Test features section."""
         section = SectionSpec(

@@ -568,6 +568,27 @@ def get_site_js() -> str:
     const main = document.getElementById('dz-site-main');
     const route = main?.dataset.route || '/';
 
+    // Slugify helper for auto-generating anchor IDs from headlines
+    function slugify(text) {
+        if (!text) return null;
+        return text
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    // Get section ID: explicit id > auto-generated from headline > null
+    function getSectionId(section) {
+        if (section.id) return section.id;
+        if (section.headline) return slugify(section.headline);
+        return null;
+    }
+
+    // Generate id attribute string for section element
+    function idAttr(section) {
+        return section._computedId ? `id="${section._computedId}"` : '';
+    }
+
     // Section renderers
     const renderers = {
         hero: renderHero,
@@ -623,7 +644,7 @@ def get_site_js() -> str:
         const hasMedia = mediaHtml ? 'dz-hero-with-media' : '';
 
         return `
-            <section class="dz-section dz-section-hero ${hasMedia}">
+            <section ${idAttr(section)} class="dz-section dz-section-hero ${hasMedia}">
                 <div class="dz-section-content">
                     <div class="dz-hero-text">
                         <h1>${headline}</h1>
@@ -648,7 +669,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-features">
+            <section ${idAttr(section)} class="dz-section dz-section-features">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-features-grid">${itemsHtml}</div>
@@ -676,7 +697,7 @@ def get_site_js() -> str:
         }
 
         return `
-            <section class="dz-section dz-section-cta">
+            <section ${idAttr(section)} class="dz-section dz-section-cta">
                 <div class="dz-section-content">
                     <h2>${headline}</h2>
                     ${body ? `<p class="dz-subhead">${body}</p>` : ''}
@@ -697,7 +718,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-faq">
+            <section ${idAttr(section)} class="dz-section dz-section-faq">
                 <div class="dz-section-content">
                     <h2>${headline}</h2>
                     <div class="dz-faq-list">${itemsHtml}</div>
@@ -723,7 +744,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-testimonials">
+            <section ${idAttr(section)} class="dz-section dz-section-testimonials">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-testimonials-grid">${itemsHtml}</div>
@@ -743,7 +764,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-stats">
+            <section ${idAttr(section)} class="dz-section dz-section-stats">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-stats-grid">${itemsHtml}</div>
@@ -766,7 +787,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-steps">
+            <section ${idAttr(section)} class="dz-section dz-section-steps">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-steps-list">${itemsHtml}</div>
@@ -785,7 +806,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-logo-cloud">
+            <section ${idAttr(section)} class="dz-section dz-section-logo-cloud">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-logos-grid">${itemsHtml}</div>
@@ -816,7 +837,7 @@ def get_site_js() -> str:
         }).join('');
 
         return `
-            <section class="dz-section dz-section-pricing">
+            <section ${idAttr(section)} class="dz-section dz-section-pricing">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-pricing-grid">${tiersHtml}</div>
@@ -828,7 +849,7 @@ def get_site_js() -> str:
     function renderMarkdown(section) {
         const content = section.content || '';
         return `
-            <section class="dz-section dz-section-markdown">
+            <section ${idAttr(section)} class="dz-section dz-section-markdown">
                 <div class="dz-section-content dz-prose">
                     ${content}
                 </div>
@@ -856,7 +877,7 @@ def get_site_js() -> str:
         }).join('');
 
         return `
-            <section class="dz-section dz-section-comparison">
+            <section ${idAttr(section)} class="dz-section dz-section-comparison">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-comparison-wrapper">
@@ -882,7 +903,7 @@ def get_site_js() -> str:
         }
 
         return `
-            <section class="dz-section dz-section-value-highlight">
+            <section ${idAttr(section)} class="dz-section dz-section-value-highlight">
                 <div class="dz-section-content">
                     <h2 class="dz-value-headline">${headline}</h2>
                     ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
@@ -913,7 +934,7 @@ def get_site_js() -> str:
         const orderCls = alignment === 'right' ? ' dz-split--reversed' : '';
 
         return `
-            <section class="dz-section dz-section-split-content${orderCls}">
+            <section ${idAttr(section)} class="dz-section dz-section-split-content${orderCls}">
                 <div class="dz-section-content dz-split-grid">
                     <div class="dz-split-text">
                         <h2>${headline}</h2>
@@ -946,7 +967,7 @@ def get_site_js() -> str:
         }).join('');
 
         return `
-            <section class="dz-section dz-section-card-grid">
+            <section ${idAttr(section)} class="dz-section dz-section-card-grid">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-card-grid">${cardsHtml}</div>
@@ -967,7 +988,7 @@ def get_site_js() -> str:
         `).join('');
 
         return `
-            <section class="dz-section dz-section-trust-bar">
+            <section ${idAttr(section)} class="dz-section dz-section-trust-bar">
                 <div class="dz-section-content">
                     ${headerHtml}
                     <div class="dz-trust-strip">${itemsHtml}</div>
@@ -987,9 +1008,30 @@ def get_site_js() -> str:
             sections.push({ type: 'markdown', content: pageData.content });
         }
 
+        // Track used IDs to handle duplicates
+        const usedIds = new Set();
+
         let html = '';
 
         for (const section of sections) {
+            // Compute section ID (explicit > headline-based > null)
+            let sectionId = getSectionId(section);
+
+            // Handle duplicate IDs by appending a suffix
+            if (sectionId && usedIds.has(sectionId)) {
+                let suffix = 2;
+                while (usedIds.has(`${sectionId}-${suffix}`)) {
+                    suffix++;
+                }
+                sectionId = `${sectionId}-${suffix}`;
+            }
+            if (sectionId) {
+                usedIds.add(sectionId);
+            }
+
+            // Inject computed ID into section for renderers to use
+            section._computedId = sectionId;
+
             const renderer = renderers[section.type];
             if (renderer) {
                 html += renderer(section);
@@ -1003,6 +1045,14 @@ def get_site_js() -> str:
         // Initialize Lucide icons after DOM update
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
+        }
+
+        // Scroll to fragment if present
+        if (window.location.hash) {
+            const target = document.getElementById(window.location.hash.slice(1));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
         }
     }
 

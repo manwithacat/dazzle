@@ -361,6 +361,7 @@ class SectionSpec(BaseModel):
 
     Attributes:
         type: Section type
+        id: Optional anchor ID for deep linking (auto-generated from headline if not set)
         headline: Main heading (hero, cta)
         subhead: Secondary heading (hero)
         body: Body text (cta, value_highlight)
@@ -375,6 +376,7 @@ class SectionSpec(BaseModel):
     """
 
     type: SectionKind
+    id: str | None = None  # Explicit anchor ID (auto-generated from headline if not set)
     headline: str | None = None
     subhead: str | None = None
     body: str | None = None

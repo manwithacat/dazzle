@@ -377,9 +377,11 @@ definition = """All available section types for sitespec.yaml page sections. Eac
 site_renderer.py JS engine. IR models are in dazzle.core.ir.sitespec."""
 syntax = '''
 # Available section types and their key fields:
+# All sections support: id (optional anchor ID for deep links)
 
 # hero — Main landing section
 - type: hero
+  id: "hero"             # optional: explicit anchor ID
   headline: "..."
   subhead: "..."
   body: "..."
@@ -527,6 +529,9 @@ related = ["sitespec", "hybrid_pages", "directive_syntax"]
 cognition_tips = [
     "12 section types available: hero, features, testimonials, pricing, faq, cta, markdown, comparison, value_highlight, split_content, card_grid, trust_bar",
     "Each type has specific fields — see syntax above for the full schema",
+    "All sections support 'id' field for explicit anchor IDs (e.g., id: 'compliance')",
+    "If 'id' not set, anchor is auto-generated from headline (e.g., 'Why Choose Us' → 'why-choose-us')",
+    "Deep link to sections via fragment URLs: /features#compliance scrolls to that section",
     "IR models: SectionSpec (main), ComparisonColumn, ComparisonRow, CardItem, TrustBarItem",
     "Source file: src/dazzle/core/ir/sitespec.py",
     "items field is a union type: list of FeatureItem | PricingTier | FAQItem | TestimonialItem | ComparisonRow | CardItem | TrustBarItem",
