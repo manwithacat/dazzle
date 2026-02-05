@@ -261,6 +261,42 @@ def create_site_page_routes(
     return router
 
 
+def create_site_404_handler(
+    sitespec_data: dict[str, Any],
+) -> Any:
+    """
+    Create a 404 exception handler that returns a styled HTML page for site routes.
+
+    Non-API paths (i.e. those not starting with ``/api/``, ``/_site/``, etc.)
+    receive the branded 404 page from :func:`render_404_page_html`.
+    API paths fall through to a standard JSON 404 response.
+
+    Args:
+        sitespec_data: SiteSpec as dict
+
+    Returns:
+        An async exception handler suitable for ``app.add_exception_handler(404, ...)``.
+    """
+    from fastapi.responses import HTMLResponse, JSONResponse
+
+    from dazzle_ui.runtime.site_renderer import render_404_page_html
+
+    async def handle_404(request: Any, exc: Any) -> HTMLResponse | JSONResponse:
+        path: str = request.url.path
+        # Let API, internal, and static routes return JSON 404
+        if path.startswith(("/api/", "/_site/", "/static/", "/assets/", "/docs", "/openapi")):
+            return JSONResponse(
+                status_code=404,
+                content={"detail": str(exc.detail) if hasattr(exc, "detail") else "Not Found"},
+            )
+        return HTMLResponse(
+            content=render_404_page_html(sitespec_data, path),
+            status_code=404,
+        )
+
+    return handle_404
+
+
 def create_auth_page_routes(
     sitespec_data: dict[str, Any],
 ) -> APIRouter:

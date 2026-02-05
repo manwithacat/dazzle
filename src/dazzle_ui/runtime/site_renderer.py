@@ -8,6 +8,7 @@ Includes support for TaskContext injection when rendering surfaces as human task
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from typing import Any
 
 from dazzle_ui.runtime.task_context import TaskContext
@@ -39,7 +40,9 @@ def get_shared_head_html(title: str) -> str:
     <!-- Tailwind Browser - minimal utilities for layout -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- DAZZLE design system layer -->
-    <link rel="stylesheet" href="/styles/dazzle.css">"""
+    <link rel="stylesheet" href="/styles/dazzle.css">
+    <!-- Lucide icons for feature/section icons -->
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>"""
 
 
 def render_site_page_html(
@@ -60,14 +63,15 @@ def render_site_page_html(
     product_name = brand.get("product_name", "My App")
     layout = sitespec_data.get("layout", {})
     nav = layout.get("nav", {})
+    auth_config = layout.get("auth") or {}
     footer = layout.get("footer", {})
 
     # Build nav HTML
-    nav_items_html = _build_nav_items(nav)
+    nav_items_html = _build_nav_items(nav, auth_config=auth_config)
 
     # Build footer HTML
     footer_html = _build_footer(footer)
-    copyright_text = footer.get("copyright", f"© 2025 {product_name}")
+    copyright_text = _build_copyright(footer, brand)
 
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -121,11 +125,12 @@ def render_404_page_html(
     product_name = brand.get("product_name", "My App")
     layout = sitespec_data.get("layout", {})
     nav = layout.get("nav", {})
+    auth_config = layout.get("auth") or {}
     footer = layout.get("footer", {})
 
-    nav_items_html = _build_nav_items(nav)
+    nav_items_html = _build_nav_items(nav, auth_config=auth_config)
     footer_html = _build_footer(footer)
-    copyright_text = footer.get("copyright", f"© 2025 {product_name}")
+    copyright_text = _build_copyright(footer, brand)
 
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -166,21 +171,35 @@ def render_404_page_html(
 </html>"""
 
 
-def _build_nav_items(nav: dict[str, Any]) -> str:
-    """Build navigation items HTML."""
+def _build_nav_items(
+    nav: dict[str, Any],
+    auth_config: dict[str, Any] | None = None,
+) -> str:
+    """Build navigation items HTML.
+
+    Args:
+        nav: Navigation config with ``public`` (and optionally ``authenticated``) item lists.
+        auth_config: Auth layout config (``primary_entry``, etc.) used to add a login CTA.
+    """
     nav_items_html = ""
-    for item in nav.get("items", []):
+    # NavSpec model uses 'public' and 'authenticated' keys (not 'items')
+    items = nav.get("public") or nav.get("items") or []
+    for item in items:
         label = item.get("label", "")
         href = item.get("href", "#")
         # Use DaisyUI-compatible link styling
         nav_items_html += f'<a href="{href}" class="dz-nav-link">{label}</a>\n'
 
-    # Add CTA button if present - use DaisyUI btn classes
+    # Add explicit CTA if present, otherwise derive from auth config
     cta = nav.get("cta")
     if cta:
         cta_label = cta.get("label", "Get Started")
         cta_href = cta.get("href", "/app")
         nav_items_html += f'<a href="{cta_href}" class="btn btn-primary btn-sm">{cta_label}</a>\n'
+    elif auth_config:
+        primary_entry = auth_config.get("primary_entry", "/login")
+        label = "Sign In" if "login" in primary_entry else "Get Started"
+        nav_items_html += f'<a href="{primary_entry}" class="btn btn-primary btn-sm">{label}</a>\n'
 
     # Add theme toggle button - use DaisyUI btn-ghost for consistency
     nav_items_html += """<button class="btn btn-ghost btn-sm btn-circle dz-theme-toggle" id="dz-theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
@@ -207,6 +226,23 @@ def _build_footer(footer: dict[str, Any]) -> str:
             footer_html += f'<li><a href="{link_href}">{link_label}</a></li>'
         footer_html += "</ul></div>"
     return footer_html
+
+
+def _build_copyright(footer: dict[str, Any], brand: dict[str, Any]) -> str:
+    """Build copyright/disclaimer text with template variable substitution."""
+    product_name = brand.get("product_name", "My App")
+    text = (
+        footer.get("disclaimer")
+        or footer.get("copyright")
+        or f"\u00a9 {datetime.now(tz=UTC).year} {product_name}"
+    )
+    # Substitute template variables
+    text = text.replace("{{year}}", str(datetime.now(tz=UTC).year))
+    text = text.replace(
+        "{{company_legal_name}}",
+        brand.get("company_legal_name", product_name),
+    )
+    return text
 
 
 def render_auth_page_html(
@@ -554,6 +590,18 @@ def get_site_js() -> str:
         markdown: renderMarkdown,
     };
 
+    function renderSectionHeader(section) {
+        const headline = section.headline || '';
+        const subhead = section.subhead || '';
+        if (!headline && !subhead) return '';
+        return `
+            <div class="dz-section-header" style="text-align: center; max-width: 40rem; margin: 0 auto 3rem;">
+                ${headline ? `<h2>${headline}</h2>` : ''}
+                ${subhead ? `<p class="dz-subhead" style="opacity: 0.7;">${subhead}</p>` : ''}
+            </div>
+        `;
+    }
+
     function renderHero(section) {
         const headline = section.headline || '';
         const subhead = section.subhead || '';
@@ -592,9 +640,10 @@ def get_site_js() -> str:
 
     function renderFeatures(section) {
         const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
         const itemsHtml = items.map(item => `
             <div class="dz-feature-item">
-                ${item.icon ? `<div class="dz-feature-icon">${item.icon}</div>` : ''}
+                ${item.icon ? `<div class="dz-feature-icon"><i data-lucide="${item.icon}"></i></div>` : ''}
                 <h3>${item.title || ''}</h3>
                 <p>${item.body || ''}</p>
             </div>
@@ -603,6 +652,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-features">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-features-grid">${itemsHtml}</div>
                 </div>
             </section>
@@ -615,21 +665,31 @@ def get_site_js() -> str:
 
     function renderCTA(section) {
         const headline = section.headline || '';
-        const body = section.body || '';
+        const body = section.body || section.subhead || '';
         const primaryCta = section.primary_cta;
+        const secondaryCta = section.secondary_cta;
+
+        let ctaHtml = '';
+        if (primaryCta) {
+            ctaHtml += `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>`;
+        }
+        if (secondaryCta) {
+            ctaHtml += `<a href="${secondaryCta.href || '#'}" class="btn btn-secondary btn-outline">${secondaryCta.label || 'Learn More'}</a>`;
+        }
 
         return `
             <section class="dz-section dz-section-cta">
                 <div class="dz-section-content">
                     <h2>${headline}</h2>
-                    ${body ? `<p>${body}</p>` : ''}
-                    ${primaryCta ? `<a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a>` : ''}
+                    ${body ? `<p class="dz-subhead">${body}</p>` : ''}
+                    ${ctaHtml ? `<div class="dz-cta-group">${ctaHtml}</div>` : ''}
                 </div>
             </section>
         `;
     }
 
     function renderFAQ(section) {
+        const headline = section.headline || 'Frequently Asked Questions';
         const items = section.items || [];
         const itemsHtml = items.map(item => `
             <details class="dz-faq-item">
@@ -641,7 +701,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-faq">
                 <div class="dz-section-content">
-                    <h2>Frequently Asked Questions</h2>
+                    <h2>${headline}</h2>
                     <div class="dz-faq-list">${itemsHtml}</div>
                 </div>
             </section>
@@ -650,6 +710,7 @@ def get_site_js() -> str:
 
     function renderTestimonials(section) {
         const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
         const itemsHtml = items.map(item => `
             <div class="dz-testimonial-item">
                 <blockquote>"${item.quote || ''}"</blockquote>
@@ -666,6 +727,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-testimonials">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-testimonials-grid">${itemsHtml}</div>
                 </div>
             </section>
@@ -674,6 +736,7 @@ def get_site_js() -> str:
 
     function renderStats(section) {
         const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
         const itemsHtml = items.map(item => `
             <div class="dz-stat-item">
                 <span class="dz-stat-value">${item.value || ''}</span>
@@ -684,6 +747,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-stats">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-stats-grid">${itemsHtml}</div>
                 </div>
             </section>
@@ -692,17 +756,21 @@ def get_site_js() -> str:
 
     function renderSteps(section) {
         const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
         const itemsHtml = items.map(item => `
             <div class="dz-step-item">
                 <span class="dz-step-number">${item.step || ''}</span>
-                <h3>${item.title || ''}</h3>
-                <p>${item.body || ''}</p>
+                <div>
+                    <h3>${item.title || ''}</h3>
+                    <p>${item.body || ''}</p>
+                </div>
             </div>
         `).join('');
 
         return `
             <section class="dz-section dz-section-steps">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-steps-list">${itemsHtml}</div>
                 </div>
             </section>
@@ -711,6 +779,7 @@ def get_site_js() -> str:
 
     function renderLogoCloud(section) {
         const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
         const itemsHtml = items.map(item => `
             <a href="${item.href || '#'}" class="dz-logo-item" title="${item.name || ''}">
                 <img src="${item.src || ''}" alt="${item.name || ''}">
@@ -720,6 +789,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-logo-cloud">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-logos-grid">${itemsHtml}</div>
                 </div>
             </section>
@@ -728,6 +798,7 @@ def get_site_js() -> str:
 
     function renderPricing(section) {
         const tiers = section.tiers || [];
+        const headerHtml = renderSectionHeader(section);
         const tiersHtml = tiers.map(tier => {
             const features = (tier.features || []).map(f => `<li>${f}</li>`).join('');
             const highlighted = tier.highlighted ? ' dz-pricing-highlighted' : '';
@@ -739,6 +810,7 @@ def get_site_js() -> str:
                         <span class="dz-price">${tier.price || ''}</span>
                         ${tier.period ? `<span class="dz-period">/${tier.period}</span>` : ''}
                     </div>
+                    ${tier.description ? `<p style="color: oklch(0.5 0 0); margin: 0 0 1.5rem;">${tier.description}</p>` : ''}
                     <ul class="dz-pricing-features">${features}</ul>
                     ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="${btnClass}">${tier.cta.label || 'Get Started'}</a>` : ''}
                 </div>
@@ -748,6 +820,7 @@ def get_site_js() -> str:
         return `
             <section class="dz-section dz-section-pricing">
                 <div class="dz-section-content">
+                    ${headerHtml}
                     <div class="dz-pricing-grid">${tiersHtml}</div>
                 </div>
             </section>
@@ -786,6 +859,11 @@ def get_site_js() -> str:
         }
 
         main.innerHTML = html || '<p>No content</p>';
+
+        // Initialize Lucide icons after DOM update
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
     }
 
     // Fetch and render page
@@ -793,6 +871,21 @@ def get_site_js() -> str:
         try {
             const apiRoute = route === '/' ? '' : route;
             const response = await fetch(`/_site/page${apiRoute}`);
+            if (response.status === 404) {
+                if (main) {
+                    main.innerHTML = `
+                        <section class="dz-section dz-section-hero">
+                            <div class="dz-section-content" style="text-align: center; padding: 4rem 1rem;">
+                                <h1 style="font-size: 4rem; font-weight: 700; margin-bottom: 1rem;">404</h1>
+                                <p class="dz-subhead">The page you&rsquo;re looking for doesn&rsquo;t exist.</p>
+                                <div class="dz-cta-group" style="margin-top: 2rem;">
+                                    <a href="/" class="btn btn-primary">Go Home</a>
+                                </div>
+                            </div>
+                        </section>`;
+                }
+                return;
+            }
             if (!response.ok) {
                 throw new Error(`Failed to load page: ${response.status}`);
             }
