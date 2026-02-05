@@ -23,16 +23,25 @@ class TestDarkModeCSSClasses:
         assert ".dz-theme-toggle__moon" in css_content
 
     def test_dark_mode_site_header_styles(self):
-        """Test that dark mode header styles are defined."""
+        """Test that dark mode header styles are defined via token overrides."""
         from pathlib import Path
 
+        # Header/logo/nav dark mode is now handled by token overrides
+        # in design-system.css rather than explicit selectors in site-sections.css
+        ds_path = Path("src/dazzle_ui/runtime/static/css/design-system.css")
+        ds_content = ds_path.read_text()
+
+        assert "--dz-header-bg:" in ds_content
+        assert "--dz-logo-color:" in ds_content
+        assert "--dz-text-body:" in ds_content
+
+        # Base rules in site-sections.css consume these tokens
         css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
-        # Check dark mode header styles
-        assert '[data-theme="dark"] .dz-site-header' in css_content
-        assert '[data-theme="dark"] .dz-site-logo' in css_content
-        assert '[data-theme="dark"] .dz-nav-link' in css_content
+        assert "var(--dz-header-bg)" in css_content
+        assert "var(--dz-logo-color)" in css_content
+        assert "var(--dz-text-body)" in css_content
 
     def test_dark_mode_section_styles(self):
         """Test that dark mode section styles are defined."""
@@ -54,8 +63,7 @@ class TestDarkModeCSSClasses:
         css_path = Path("src/dazzle_ui/runtime/static/css/site-sections.css")
         css_content = css_path.read_text()
 
-        # Check dark mode card styles
-        assert '[data-theme="dark"] .dz-feature-card' in css_content
+        # Check dark mode card styles (flat classes, not BEM)
         assert '[data-theme="dark"] .dz-feature-item' in css_content
         assert '[data-theme="dark"] .dz-testimonial-item' in css_content
 

@@ -250,6 +250,37 @@
   /* Site section overrides for dark mode */
   --dz-section-alt-bg: oklch(0.08 0.01 260);
   --dz-feature-icon-bg: oklch(0.20 0.04 260);
+
+  /* Text hierarchy */
+  --dz-text-foreground: oklch(0.95 0 0);
+  --dz-text-emphasis: oklch(0.85 0 0);
+  --dz-text-body: oklch(0.70 0 0);
+  --dz-text-muted: oklch(0.55 0 0);
+
+  /* Surfaces */
+  --dz-surface-card: oklch(0.18 0.01 260);
+
+  /* Borders */
+  --dz-border-default: oklch(1 0 0 / 0.12);
+  --dz-border-subtle: oklch(1 0 0 / 0.08);
+  --dz-border-input: oklch(1 0 0 / 0.15);
+
+  /* Header / Footer */
+  --dz-header-bg: oklch(0.15 0.01 260 / 0.95);
+  --dz-footer-bg: oklch(0.08 0.01 260);
+  --dz-footer-text: oklch(0.65 0 0);
+  --dz-footer-link: oklch(0.55 0 0);
+  --dz-footer-border: oklch(1 0 0 / 0.1);
+
+  /* Logo */
+  --dz-logo-color: oklch(0.95 0 0);
+
+  /* Error feedback */
+  --dz-error-bg: oklch(0.20 0.06 25);
+  --dz-error-text: oklch(0.80 0.15 25);
+
+  /* Focus ring */
+  --dz-ring-glow: 0 0 0 3px oklch(0.60 0.18 270 / 0.15);
 }
 
 /* =============================================================================

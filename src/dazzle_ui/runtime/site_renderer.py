@@ -284,7 +284,7 @@ def render_auth_page_html(
                 <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{product_name}</a>
                 <h1 class="card-title text-2xl justify-center">{title}</h1>
 
-                <div id="dz-auth-error" class="alert alert-error hidden"></div>
+                <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
 
                 <form id="dz-auth-form" method="POST" action="{action_url}">
                     {fields_html}
@@ -445,13 +445,6 @@ def render_task_surface_page(
 <html lang="en" data-theme="light">
 <head>
     {get_shared_head_html(title)}
-    <style>
-        .task-surface-container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }}
-    </style>
 </head>
 <body class="dz-site bg-base-100">
     <header class="dz-site-header">
@@ -463,7 +456,7 @@ def render_task_surface_page(
         </nav>
     </header>
 
-    <main class="task-surface-container">
+    <main class="dz-task-surface-container">
         <div class="surface-container" data-surface="{surface_name}" data-entity-id="{entity_id}">
             {surface_html}
         </div>
