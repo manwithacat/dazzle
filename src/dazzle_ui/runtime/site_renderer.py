@@ -595,9 +595,9 @@ def get_site_js() -> str:
         const subhead = section.subhead || '';
         if (!headline && !subhead) return '';
         return `
-            <div class="dz-section-header" style="text-align: center; max-width: 40rem; margin: 0 auto 3rem;">
+            <div class="dz-section-header">
                 ${headline ? `<h2>${headline}</h2>` : ''}
-                ${subhead ? `<p class="dz-subhead" style="opacity: 0.7;">${subhead}</p>` : ''}
+                ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
             </div>
         `;
     }
