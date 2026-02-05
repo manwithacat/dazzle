@@ -73,6 +73,23 @@ ALIASES = {
     "has_one": "relationships",
     "belongs_to": "relationships",
     "embeds": "relationships",
+    # Site/frontend aliases
+    "sections": "section_types",
+    "section": "section_types",
+    "section_type": "section_types",
+    "page_sections": "section_types",
+    "directives": "directive_syntax",
+    "directive": "directive_syntax",
+    "markdown_directives": "directive_syntax",
+    "fences": "directive_syntax",
+    "hybrid": "hybrid_pages",
+    "hybrid_page": "hybrid_pages",
+    "markdown_sections": "hybrid_pages",
+    "comparison": "section_types",
+    "card_grid": "section_types",
+    "trust_bar": "section_types",
+    "value_highlight": "section_types",
+    "split_content": "section_types",
 }
 
 

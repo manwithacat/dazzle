@@ -1665,3 +1665,126 @@ commentable_id: uuid required
 # Query comments for a specific post:
 # filter: commentable_type = post and commentable_id = <post_id>
 """
+
+# =============================================================================
+# SITESPEC SECTION INFERENCE
+# =============================================================================
+# Patterns for inferring sitespec section types from page descriptions
+
+[[sitespec_section_inference]]
+id = "comparison_table"
+name = "Comparison Table Section"
+triggers = ["comparison", "compare", "versus", "vs", "competitor", "alternative", "feature matrix"]
+suggests = "type: comparison with columns and items (rows)"
+rationale = "Feature comparison language suggests a comparison table section with highlighted columns"
+example = """
+# In sitespec.yaml sections:
+- type: comparison
+  headline: "How we compare"
+  columns:
+    - label: "Us"
+      highlighted: true
+    - label: "Competitor A"
+    - label: "Competitor B"
+  items:
+    - feature: "Price"
+      cells: ["$29/mo", "$49/mo", "$99/mo"]
+    - feature: "SSO"
+      cells: ["Included", "Add-on", "Enterprise only"]
+"""
+
+[[sitespec_section_inference]]
+id = "card_grid"
+name = "Card Grid Section"
+triggers = ["card grid", "cards", "feature cards", "use cases", "solutions", "offerings", "capabilities"]
+suggests = "type: card_grid with items (title, body, icon, optional cta)"
+rationale = "Card-based layouts work well for presenting multiple offerings or capabilities"
+example = """
+# In sitespec.yaml sections:
+- type: card_grid
+  headline: "Our Solutions"
+  items:
+    - title: "For Startups"
+      body: "Ship your MVP fast"
+      icon: "rocket"
+      cta:
+        label: "Learn More"
+        href: "/startups"
+    - title: "For Enterprise"
+      body: "Scale with confidence"
+      icon: "building"
+      cta:
+        label: "Contact Sales"
+        href: "/enterprise"
+"""
+
+[[sitespec_section_inference]]
+id = "trust_bar"
+name = "Trust Bar Section"
+triggers = ["trust", "trust signals", "social proof", "certifications", "badges", "credentials", "compliance"]
+suggests = "type: trust_bar with items (text, optional icon)"
+rationale = "Trust signals like certifications and metrics build credibility"
+example = """
+# In sitespec.yaml sections:
+- type: trust_bar
+  items:
+    - text: "SOC 2 Certified"
+      icon: "shield-check"
+    - text: "GDPR Compliant"
+      icon: "shield"
+    - text: "99.9% Uptime"
+      icon: "clock"
+    - text: "500+ Customers"
+"""
+
+[[sitespec_section_inference]]
+id = "value_highlight"
+name = "Value Highlight Section"
+triggers = ["value proposition", "highlight", "big number", "key metric", "callout", "impact", "result"]
+suggests = "type: value_highlight with headline, body, and optional CTA"
+rationale = "Large typography callouts emphasize key value propositions or metrics"
+example = """
+# In sitespec.yaml sections:
+- type: value_highlight
+  headline: "10x faster deployments"
+  subhead: "Ship with confidence"
+  body: "Our platform reduces deploy time by 90%."
+  primary_cta:
+    label: "See the data"
+    href: "/benchmarks"
+"""
+
+[[sitespec_section_inference]]
+id = "split_content"
+name = "Split Content Section"
+triggers = ["split", "side by side", "text and image", "image and text", "two column", "visual"]
+suggests = "type: split_content with headline, body, media, and alignment"
+rationale = "Text+image side-by-side layouts are effective for explaining features with visuals"
+example = """
+# In sitespec.yaml sections:
+- type: split_content
+  headline: "Built for teams"
+  body: "Collaborate in real time with your team."
+  media:
+    kind: image
+    src: "/img/team.png"
+    alt: "Team collaboration"
+  alignment: right   # image on right, text on left
+"""
+
+[[sitespec_section_inference]]
+id = "hybrid_markdown"
+name = "Hybrid Markdown Section"
+triggers = ["markdown content", "rich text", "content page", "about page", "story", "long form", "prose"]
+suggests = "type: markdown with source.path to a .md file"
+rationale = "Rich prose content is best authored in markdown files and embedded as hybrid page sections"
+example = """
+# In sitespec.yaml sections:
+- type: markdown
+  source:
+    path: "pages/about-story.md"
+    format: md
+
+# The markdown file (site/content/pages/about-story.md) can also
+# use :::type directive fences for inline typed sections.
+"""

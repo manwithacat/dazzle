@@ -421,9 +421,9 @@ def format_pattern_report(patterns: dict[str, list[Any]]) -> str:
 
     for pattern in experience_patterns:
         lines.append(f"• {pattern.experience_name}")
-        lines.append(
-            f"  Steps: {pattern.step_count} (surfaces: {len(pattern.surface_steps)}, integrations: {len(pattern.integration_steps)})"
-        )
+        surf = len(pattern.surface_steps)
+        intg = len(pattern.integration_steps)
+        lines.append(f"  Steps: {pattern.step_count} (surfaces: {surf}, integrations: {intg})")
         if pattern.has_cycles:
             lines.append("  ⚠ Contains cycles")
         if pattern.unreachable_steps:

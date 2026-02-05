@@ -190,6 +190,23 @@ def lookup_inference(
             all_suggestions.append(suggestion)
             matches += 1
 
+    # Search sitespec section inference - section type suggestions
+    matches = 0
+    for pattern in kb.get("sitespec_section_inference", []):
+        if matches >= max_per_category:
+            break
+        triggers = [t.lower() for t in pattern.get("triggers", [])]
+        if _matches_triggers(query_lower, query_words, triggers):
+            suggestion = {
+                "type": "sitespec_section",
+                "add": pattern.get("suggests"),
+                "why": pattern.get("rationale"),
+            }
+            if detail == "full":
+                suggestion["example"] = pattern.get("example")
+            all_suggestions.append(suggestion)
+            matches += 1
+
     results["suggestions"] = all_suggestions
     results["count"] = len(all_suggestions)
 
@@ -249,6 +266,11 @@ def list_all_patterns() -> dict[str, Any]:
     for w in kb.get("workflow_templates", []):
         workflow_triggers.extend(w.get("triggers", []))
 
+    # Sitespec section triggers
+    sitespec_section_triggers: list[str] = []
+    for s in kb.get("sitespec_section_inference", []):
+        sitespec_section_triggers.extend(s.get("triggers", []))
+
     # Domain summary
     domains: dict[str, list[str]] = {}
     for e in kb.get("domain_entities", []):
@@ -264,6 +286,7 @@ def list_all_patterns() -> dict[str, Any]:
         "archetype_indicators": sorted(set(archetype_indicators)),
         "domain_triggers": sorted(set(domain_triggers)),
         "workflow_triggers": sorted(set(workflow_triggers)),
+        "sitespec_section_triggers": sorted(set(sitespec_section_triggers)),
         "spec_phrases": [m.get("phrase") for m in kb.get("spec_language", [])],
         "domains": domains,
         "counts": {
@@ -273,6 +296,7 @@ def list_all_patterns() -> dict[str, Any]:
             "workflow_templates": len(kb.get("workflow_templates", [])),
             "relationship_patterns": len(kb.get("relationship_patterns", [])),
             "spec_language": len(kb.get("spec_language", [])),
+            "sitespec_section_inference": len(kb.get("sitespec_section_inference", [])),
         },
     }
 
@@ -290,6 +314,7 @@ def get_pattern_by_id(pattern_id: str) -> dict[str, Any] | None:
         "workspace_inference",
         "domain_entities",
         "workflow_templates",
+        "sitespec_section_inference",
     ]:
         for pattern in kb.get(category, []):
             if pattern.get("id") == pattern_id:

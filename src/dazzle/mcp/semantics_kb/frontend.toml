@@ -3,7 +3,7 @@
 
 [meta]
 file = "frontend"
-concept_count = 6
+concept_count = 9
 
 [concepts.htmx]
 category = "Frontend"
@@ -155,7 +155,11 @@ cognition_tips = [
 
 [concepts.sitespec]
 category = "Frontend"
-definition = "Site configuration file (sitespec.yaml) defining brand, navigation, page structure, legal pages, auth pages, and integrations. Structural configuration for the marketing/public site shell, NOT content."
+definition = """Site configuration file (sitespec.yaml) defining brand, navigation, page structure, \
+legal pages, auth pages, and integrations. Structural configuration for the marketing/public site \
+shell. Pages use typed sections (hero, features, cta, markdown, comparison, card_grid, trust_bar, \
+etc.) and can be hybrid — mixing structured sections with markdown content blocks. See \
+'section_types' for all available section types."""
 syntax = '''
 # site/sitespec.yaml
 version: "1.0"
@@ -175,36 +179,95 @@ layout:
 pages:
   - route: "/"
     type: landing
-    sections: []  # Content comes from copy.md
+    sections:
+      - type: hero
+        headline: "Chef-quality meals"
+      - type: markdown                    # Inline markdown section
+        source:
+          path: "pages/our-story.md"
+          format: md
+      - type: comparison                  # Structured comparison table
+        headline: "How we compare"
+        columns:
+          - label: "Us"
+            highlighted: true
+          - label: "Competitor"
+        items:
+          - feature: "Delivery"
+            cells: ["Same day", "3-5 days"]
+      - type: card_grid
+        headline: "Our plans"
+        items:
+          - title: "Starter"
+            body: "For individuals"
+            icon: "user"
+            cta:
+              label: "Choose"
+              href: "/signup?plan=starter"
+      - type: trust_bar
+        items:
+          - text: "SOC 2 Certified"
+            icon: "shield-check"
+          - text: "99.9% Uptime"
+      - type: cta
+        headline: "Ready to eat well?"
+        primary_cta:
+          label: "Start Free Trial"
+          href: "/signup"
 '''
 example = '''
-# Minimal sitespec.yaml
-version: "1.0"
-brand:
-  product_name: "My SaaS"
-  tagline: "Do more with less"
-layout:
-  nav:
-    public:
-      - label: "Home"
-        href: "/"
+# Hybrid page: structured sections + markdown content
 pages:
-  - route: "/"
+  - route: "/about"
     type: landing
+    title: "About Us"
+    sections:
+      - type: hero
+        headline: "About Our Company"
+        subhead: "Building the future of food delivery"
+      - type: markdown
+        source:
+          path: "pages/about-story.md"
+          format: md
+      - type: split_content
+        headline: "Built for teams"
+        body: "Collaborate in real time."
+        media:
+          kind: image
+          src: "/img/team.png"
+          alt: "Team collaboration"
+        alignment: right
+      - type: value_highlight
+        headline: "10x faster deliveries"
+        subhead: "Ship with confidence"
+        body: "Our platform reduces delivery time by 90%."
+        primary_cta:
+          label: "Try Free"
+          href: "/signup"
+      - type: cta
+        headline: "Join us today"
+        primary_cta:
+          label: "Sign Up"
+          href: "/signup"
 '''
-related = ["copy_md", "site_coherence"]
+related = ["copy_md", "site_coherence", "section_types", "hybrid_pages"]
 cognition_tips = [
-    "sitespec.yaml = STRUCTURE (what pages exist, how nav works)",
-    "copy.md = CONTENT (headlines, features, testimonials)",
+    "sitespec.yaml = STRUCTURE (what pages exist, how nav works, section layout)",
+    "copy.md = PROSE CONTENT (headlines, features, testimonials)",
+    "Pages use TYPED SECTIONS — see 'section_types' for all 12 available types",
+    "Hybrid pages can mix structured sections (hero, cta) with markdown content blocks",
+    "Use type: markdown with source.path to embed .md files as sections",
+    "New section types: comparison, value_highlight, split_content, card_grid, trust_bar",
     "At runtime, copy.md is merged INTO sitespec sections",
-    "If copy.md exists, its sections REPLACE inline sitespec sections",
-    "Use sitespec for: brand, nav, footer, page routes, legal, auth",
-    "Use copy.md for: hero text, features, pricing, FAQ, testimonials"
+    "Use sitespec for: brand, nav, footer, page routes, legal, auth, section layout"
 ]
 
 [concepts.copy_md]
 category = "Frontend"
-definition = "Founder-friendly markdown file for PROSE marketing content. Best for: hero headlines, feature descriptions, testimonials, FAQ text. NOT for structured data like pricing tiers - those belong in sitespec.yaml."
+definition = """Founder-friendly markdown file for PROSE marketing content. Best for: hero headlines, \
+feature descriptions, testimonials, FAQ text. NOT for structured data like pricing tiers — those \
+belong in sitespec.yaml. Supports :::type directive fences to create typed sections inline \
+(see 'directive_syntax')."""
 syntax = '''
 # site/content/copy.md
 
@@ -252,7 +315,7 @@ Set up once, run forever. No coding required. [icon: bolt]
 ## Real-time Analytics
 See what matters, when it matters. [icon: chart]
 '''
-related = ["sitespec", "site_coherence"]
+related = ["sitespec", "site_coherence", "directive_syntax", "section_types"]
 cognition_tips = [
     "copy.md = PROSE content (headlines, descriptions, quotes)",
     "sitespec.yaml = STRUCTURED data (pricing tiers, navigation)",
@@ -260,7 +323,9 @@ cognition_tips = [
     "Pricing in copy.md is best-effort parsing; may skip unparseable tiers",
     "Use --- separators between sections",
     "CTAs use markdown links: [Button Text](/path)",
-    "Icons: add [icon: name] at end of description"
+    "Icons: add [icon: name] at end of description",
+    "Supports :::type directive fences for typed sections in markdown files",
+    "Section type aliases: Cards→card-grid, Trust→trust-bar, Compare→comparison"
 ]
 methodology = '''
 ## Clear Methodology for LLM Agents
@@ -275,6 +340,9 @@ methodology = '''
 - Legal pages (terms, privacy routes)
 - Auth pages config
 - **PRICING TIERS** (structured: name, price, period, features)
+- **COMPARISON TABLES** (structured: columns, rows, highlighted)
+- **CARD GRIDS** (structured: title, body, icon, per-card CTAs)
+- **TRUST BARS** (structured: text, icon items)
 
 **copy.md** (prose content):
 - Hero headlines and subheadlines
@@ -283,14 +351,337 @@ methodology = '''
 - FAQ questions and answers
 - CTA headlines
 
+**Markdown content files** (site/content/pages/*.md):
+- Rich prose content for hybrid pages
+- Can use :::type directive fences (see directive_syntax concept)
+- Embedded in landing pages via type: markdown sections
+
 ### Why this split?
 Pricing requires structured data (exact price, period, feature lists).
 Markdown parsing is fragile - £49/month may not parse correctly.
 Keep structured data in YAML where it's explicit and reliable.
 
 ### Workflow:
-1. Define structure in sitespec.yaml (including pricing)
+1. Define structure in sitespec.yaml (including pricing, section types)
 2. Write prose content in copy.md
-3. At runtime, copy.md merges into landing page sections
-4. Unparseable pricing sections are SKIPPED (not merged)
+3. Write rich content pages in site/content/pages/*.md
+4. At runtime, copy.md merges into landing page sections
+5. Markdown sources are resolved and rendered as HTML
+6. Directive fences in .md files produce typed sections
 '''
+
+[concepts.section_types]
+category = "Frontend"
+definition = """All available section types for sitespec.yaml page sections. Each section has a \
+'type' field and type-specific fields on SectionSpec. Sections are rendered client-side by the \
+site_renderer.py JS engine. IR models are in dazzle.core.ir.sitespec."""
+syntax = '''
+# Available section types and their key fields:
+
+# hero — Main landing section
+- type: hero
+  headline: "..."
+  subhead: "..."
+  body: "..."
+  primary_cta: {label: "...", href: "..."}
+  secondary_cta: {label: "...", href: "..."}
+  media: {kind: image, src: "...", alt: "..."}
+
+# features — Feature grid
+- type: features
+  headline: "..."
+  items:  # list of {title, description, icon}
+
+# testimonials — Customer quotes
+- type: testimonials
+  headline: "..."
+  items:  # list of {quote, name, role, attribution}
+
+# pricing — Pricing tiers
+- type: pricing
+  headline: "..."
+  items:  # list of {name, price, period, features, cta}
+
+# faq — Q&A accordion
+- type: faq
+  headline: "..."
+  items:  # list of {question, answer}
+
+# cta — Call-to-action block
+- type: cta
+  headline: "..."
+  subhead: "..."
+  primary_cta: {label: "...", href: "..."}
+
+# markdown — Embedded markdown content (hybrid pages)
+- type: markdown
+  source:
+    path: "pages/about.md"   # relative to site/content/
+    format: md               # md or html
+
+# comparison — Feature comparison table
+- type: comparison
+  headline: "..."
+  columns:                   # list of ComparisonColumn
+    - label: "Us"
+      highlighted: true      # optional, highlights the column
+    - label: "Competitor"
+  items:                     # list of ComparisonRow
+    - feature: "Price"
+      cells: ["$29", "$49"]  # one cell per column
+
+# value_highlight — Large typography callout
+- type: value_highlight
+  headline: "10x faster"
+  subhead: "Ship with confidence"
+  body: "Detailed explanation..."
+  primary_cta: {label: "Try Free", href: "/signup"}
+
+# split_content — Text + image side-by-side
+- type: split_content
+  headline: "Built for teams"
+  body: "Collaborate in real time."
+  media: {kind: image, src: "/img/team.png", alt: "Team"}
+  alignment: right           # left (default) or right
+
+# card_grid — Cards with per-card CTAs
+- type: card_grid
+  headline: "Solutions"
+  items:                     # list of CardItem
+    - title: "Feature A"
+      body: "Description"
+      icon: "zap"            # optional icon name
+      cta:                   # optional per-card CTA
+        label: "Learn More"
+        href: "/features/a"
+
+# trust_bar — Horizontal signal strip
+- type: trust_bar
+  items:                     # list of TrustBarItem
+    - text: "SOC 2 Certified"
+      icon: "shield-check"   # optional icon name
+    - text: "99.9% Uptime"
+'''
+example = '''
+# A landing page using multiple section types
+pages:
+  - route: "/"
+    type: landing
+    title: "Home"
+    sections:
+      - type: hero
+        headline: "Ship Faster"
+        subhead: "The developer platform"
+        primary_cta:
+          label: "Get Started"
+          href: "/signup"
+      - type: trust_bar
+        items:
+          - text: "SOC 2"
+            icon: "shield-check"
+          - text: "GDPR"
+          - text: "99.9% Uptime"
+      - type: features
+        headline: "Why choose us"
+        items:
+          - title: "Fast"
+            description: "Blazing speed"
+            icon: "bolt"
+          - title: "Secure"
+            description: "Enterprise grade"
+            icon: "shield"
+      - type: comparison
+        headline: "How we compare"
+        columns:
+          - label: "Us"
+            highlighted: true
+          - label: "Competitor A"
+          - label: "Competitor B"
+        items:
+          - feature: "Price"
+            cells: ["$29/mo", "$49/mo", "$99/mo"]
+          - feature: "SSO"
+            cells: ["Included", "Add-on", "Enterprise only"]
+      - type: card_grid
+        headline: "Use cases"
+        items:
+          - title: "Startups"
+            body: "Ship your MVP fast"
+            icon: "rocket"
+            cta:
+              label: "Learn more"
+              href: "/startups"
+      - type: value_highlight
+        headline: "10x faster deployments"
+        body: "Our platform reduces deploy time by 90%."
+        primary_cta:
+          label: "See the data"
+          href: "/benchmarks"
+      - type: cta
+        headline: "Ready to start?"
+        primary_cta:
+          label: "Sign Up Free"
+          href: "/signup"
+'''
+related = ["sitespec", "hybrid_pages", "directive_syntax"]
+cognition_tips = [
+    "12 section types available: hero, features, testimonials, pricing, faq, cta, markdown, comparison, value_highlight, split_content, card_grid, trust_bar",
+    "Each type has specific fields — see syntax above for the full schema",
+    "IR models: SectionSpec (main), ComparisonColumn, ComparisonRow, CardItem, TrustBarItem",
+    "Source file: src/dazzle/core/ir/sitespec.py",
+    "items field is a union type: list of FeatureItem | PricingTier | FAQItem | TestimonialItem | ComparisonRow | CardItem | TrustBarItem",
+    "Comparison sections need both 'columns' and 'items' (rows)",
+    "split_content 'alignment' controls which side the image appears on",
+    "card_grid items can each have their own CTA button",
+    "trust_bar is a horizontal strip — keep items short (2-5 words each)"
+]
+
+[concepts.directive_syntax]
+category = "Frontend"
+definition = """Directive fence syntax for embedding typed sections inside markdown content files. \
+Use :::type to open a directive block and ::: to close it. Prose between fences becomes markdown \
+sections. Reuses copy_parser section parsers for typed blocks. Source: dazzle.core.directive_parser."""
+syntax = '''
+# In any markdown content file (e.g. site/content/pages/about.md)
+
+Prose paragraph — rendered as a markdown section.
+
+:::features
+## Fast Performance
+Our app is blazingly fast.
+
+## Easy to Use
+Simple and intuitive interface.
+:::
+
+More prose here — becomes another markdown section.
+
+:::cta
+## Ready to start?
+[Sign Up Free](/signup)
+:::
+'''
+example = '''
+# site/content/pages/landing.md
+# This file produces 5 sections when processed:
+
+Welcome to our platform. We make development easy.
+
+:::hero
+**Ship Faster Than Ever**
+The platform built for modern teams.
+[Get Started](/signup)
+:::
+
+Our customers love us because we focus on what matters.
+
+:::features
+## Automated Deploys
+Push to main, we handle the rest.
+
+## Real-time Monitoring
+See everything at a glance.
+:::
+
+:::faq
+## What languages do you support?
+All major languages and frameworks.
+
+## Is there a free tier?
+Yes, free for up to 3 projects.
+:::
+
+Ready to join? Start your free trial today.
+'''
+related = ["copy_md", "section_types", "hybrid_pages"]
+cognition_tips = [
+    ":::type opens a fence, ::: on its own line closes it",
+    "Prose between fences becomes {type: 'markdown', content: '<html>'}",
+    "Supported directive types: hero, features, testimonials, pricing, faq, cta",
+    "Type names are normalized via copy_parser: 'Cards' -> 'card-grid', 'Trust' -> 'trust-bar'",
+    "Unclosed fences are treated as prose (no crash)",
+    "No directives at all -> single markdown section (backward compatible)",
+    "Empty/whitespace-only input -> empty list",
+    "The directive parser lives in dazzle.core.directive_parser",
+    "Entry point: process_markdown_with_directives(raw, fmt) -> list[dict]"
+]
+
+[concepts.hybrid_pages]
+category = "Frontend"
+definition = """Hybrid pages mix structured sections (hero, cta, comparison) with markdown content \
+blocks in a single page. Use type: markdown sections with a source.path to embed .md files \
+inline alongside structured sections. This enables rich content pages that combine the \
+flexibility of markdown with the structure of typed sections."""
+syntax = '''
+# Hybrid page in sitespec.yaml
+pages:
+  - route: "/about"
+    type: landing
+    title: "About Us"
+    sections:
+      # Structured section
+      - type: hero
+        headline: "About Our Company"
+
+      # Markdown content block (loaded from file)
+      - type: markdown
+        source:
+          path: "pages/about-story.md"
+          format: md
+
+      # Another structured section
+      - type: cta
+        headline: "Join us"
+        primary_cta:
+          label: "Sign Up"
+          href: "/signup"
+'''
+example = '''
+# Example: /about page mixing 3 section types
+# sitespec.yaml:
+pages:
+  - route: "/about"
+    type: landing
+    title: "About"
+    sections:
+      - type: hero
+        headline: "Our Story"
+        subhead: "From garage to global"
+      - type: markdown
+        source:
+          path: "pages/about-founding.md"
+      - type: split_content
+        headline: "Our Mission"
+        body: "Making technology accessible to everyone."
+        media:
+          kind: image
+          src: "/img/mission.png"
+          alt: "Mission"
+        alignment: right
+      - type: markdown
+        source:
+          path: "pages/about-team.md"
+      - type: trust_bar
+        items:
+          - text: "Founded 2020"
+          - text: "500+ Customers"
+          - text: "SOC 2 Certified"
+
+# site/content/pages/about-founding.md:
+# (plain markdown — rendered as HTML at runtime)
+We started in a garage with a simple idea...
+
+# site/content/pages/about-team.md:
+Meet the people behind the product...
+'''
+related = ["sitespec", "section_types", "directive_syntax", "copy_md"]
+cognition_tips = [
+    "Hybrid pages interleave structured sections with markdown blocks",
+    "Use type: markdown + source.path to embed .md files as sections",
+    "Content files live in site/content/ (path is relative to that directory)",
+    "source.format defaults to 'md' — also supports 'html'",
+    "Multiple markdown sections can appear in the same page",
+    "At runtime, markdown sources are loaded and rendered to HTML",
+    "SectionSpec.source field is ContentSourceSpec(path, format)",
+    "IR: SectionKind.MARKDOWN = 'markdown' in dazzle.core.ir.sitespec"
+]

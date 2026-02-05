@@ -72,21 +72,33 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         else:
             # Reload the semantics data from TOML files
             try:
+                from dazzle.mcp.inference import reload_inference_kb
                 from dazzle.mcp.semantics_kb import reload_cache
 
                 reload_cache()
+                reload_inference_kb()
 
-                # Reload fidelity-related modules if already imported
+                # Reload modules that cache data from TOML/config files
                 import importlib
                 import sys as _sys
 
                 for mod_name in [
+                    "dazzle.mcp.inference",
                     "dazzle.core.ir.fidelity",
                     "dazzle.core.fidelity_scorer",
                     "dazzle.mcp.server.handlers.fidelity",
                 ]:
                     if mod_name in _sys.modules:
                         importlib.reload(_sys.modules[mod_name])
+
+                # Also force-clear the inference KB cache directly
+                # in case the module reload above didn't take effect yet
+                try:
+                    from dazzle.mcp.inference import reload_inference_kb
+
+                    reload_inference_kb()
+                except Exception:
+                    pass
 
                 # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version
