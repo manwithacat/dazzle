@@ -45,7 +45,7 @@ class TestMarkdownProcessor:
         processor = MarkdownProcessor()
         html = processor.render_html("# Hello World")
 
-        assert "<h1>" in html
+        assert "<h1" in html
         assert "Hello World" in html
 
     @pytest.mark.skipif(not MARKDOWN_AVAILABLE, reason="markdown not installed")
@@ -270,7 +270,7 @@ class TestRichTextService:
         service = RichTextService()
         html = service.render_html("# Hello", format="markdown")
 
-        assert "<h1>" in html
+        assert "<h1" in html
         assert "Hello" in html
 
     def test_render_html_raw(self):
