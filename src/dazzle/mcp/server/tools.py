@@ -1645,6 +1645,91 @@ def get_feedback_tools() -> list[Tool]:
     ]
 
 
+def get_user_management_tools() -> list[Tool]:
+    """Get tools for user management (auth, sessions, roles)."""
+    return [
+        Tool(
+            name="user_management",
+            description=(
+                "Manage users in Dazzle applications. Operations: list, create, get, update, "
+                "reset_password, deactivate, list_sessions, revoke_session, config. "
+                "Supports both SQLite and PostgreSQL backends."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "description": "Operation to perform",
+                        "enum": [
+                            "list",
+                            "create",
+                            "get",
+                            "update",
+                            "reset_password",
+                            "deactivate",
+                            "list_sessions",
+                            "revoke_session",
+                            "config",
+                        ],
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "User's email address (for create, get)",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "User's display name (for create, update)",
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "description": "User's UUID (for get, update, reset_password, deactivate, list_sessions)",
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Roles to assign (for create, update). Maps to DSL personas.",
+                    },
+                    "is_superuser": {
+                        "type": "boolean",
+                        "description": "Whether user has superuser privileges (for create, update)",
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "description": "Whether user is active (for update)",
+                    },
+                    "username": {
+                        "type": "string",
+                        "description": "New display name (for update)",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID to revoke (for revoke_session)",
+                    },
+                    "role": {
+                        "type": "string",
+                        "description": "Filter by role (for list)",
+                    },
+                    "active_only": {
+                        "type": "boolean",
+                        "description": "Only return active users/sessions (default: true)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum results to return (default: 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Number of results to skip for pagination",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+    ]
+
+
 def get_all_tools() -> list[Tool]:
     """Get all available tools based on current mode."""
     from dazzle.mcp.runtime_tools import get_runtime_tools
@@ -1690,6 +1775,9 @@ def get_all_tools() -> list[Tool]:
 
     # Add Feedback management tools (for LLM ingestion)
     tools.extend(get_feedback_tools())
+
+    # Add User management tools (v0.22.0)
+    tools.extend(get_user_management_tools())
 
     # Add internal tools (always available, but some features dev-only)
     tools.extend(get_internal_tools())

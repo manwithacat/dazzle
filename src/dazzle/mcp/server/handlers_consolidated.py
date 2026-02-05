@@ -599,6 +599,129 @@ async def handle_user_feedback(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# User Management Handler
+# =============================================================================
+
+
+async def handle_user_management(arguments: dict[str, Any]) -> str:
+    """Handle consolidated user management operations (async)."""
+    from .handlers.user_management import (
+        create_user_handler,
+        deactivate_user_handler,
+        get_auth_config_handler,
+        get_user_handler,
+        list_sessions_handler,
+        list_users_handler,
+        reset_password_handler,
+        revoke_session_handler,
+        update_user_handler,
+    )
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    pp = str(project_path)
+
+    if operation == "list":
+        return json.dumps(
+            await list_users_handler(
+                role=arguments.get("role"),
+                active_only=arguments.get("active_only", True),
+                limit=arguments.get("limit", 50),
+                offset=arguments.get("offset", 0),
+                project_path=pp,
+            ),
+            indent=2,
+        )
+    elif operation == "create":
+        email = arguments.get("email")
+        if not email:
+            return json.dumps({"error": "email is required"})
+        return json.dumps(
+            await create_user_handler(
+                email=email,
+                name=arguments.get("name"),
+                roles=arguments.get("roles"),
+                is_superuser=arguments.get("is_superuser", False),
+                project_path=pp,
+            ),
+            indent=2,
+        )
+    elif operation == "get":
+        user_id = arguments.get("user_id")
+        email = arguments.get("email")
+        if not user_id and not email:
+            return json.dumps({"error": "user_id or email is required"})
+        return json.dumps(
+            await get_user_handler(
+                user_id=user_id,
+                email=email,
+                project_path=pp,
+            ),
+            indent=2,
+        )
+    elif operation == "update":
+        user_id = arguments.get("user_id")
+        if not user_id:
+            return json.dumps({"error": "user_id is required"})
+        return json.dumps(
+            await update_user_handler(
+                user_id=user_id,
+                username=arguments.get("username"),
+                roles=arguments.get("roles"),
+                is_active=arguments.get("is_active"),
+                is_superuser=arguments.get("is_superuser"),
+                project_path=pp,
+            ),
+            indent=2,
+        )
+    elif operation == "reset_password":
+        user_id = arguments.get("user_id")
+        if not user_id:
+            return json.dumps({"error": "user_id is required"})
+        return json.dumps(
+            await reset_password_handler(user_id=user_id, project_path=pp),
+            indent=2,
+        )
+    elif operation == "deactivate":
+        user_id = arguments.get("user_id")
+        if not user_id:
+            return json.dumps({"error": "user_id is required"})
+        return json.dumps(
+            await deactivate_user_handler(user_id=user_id, project_path=pp),
+            indent=2,
+        )
+    elif operation == "list_sessions":
+        return json.dumps(
+            await list_sessions_handler(
+                user_id=arguments.get("user_id"),
+                active_only=arguments.get("active_only", True),
+                limit=arguments.get("limit", 50),
+                project_path=pp,
+            ),
+            indent=2,
+        )
+    elif operation == "revoke_session":
+        session_id = arguments.get("session_id")
+        if not session_id:
+            return json.dumps({"error": "session_id is required"})
+        return json.dumps(
+            await revoke_session_handler(session_id=session_id, project_path=pp),
+            indent=2,
+        )
+    elif operation == "config":
+        return json.dumps(
+            await get_auth_config_handler(project_path=pp),
+            indent=2,
+        )
+    else:
+        return json.dumps({"error": f"Unknown user_management operation: {operation}"})
+
+
+# =============================================================================
 # Helper Functions for Enhanced Operations
 # =============================================================================
 
@@ -1217,6 +1340,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "mailpit": handle_mailpit,
     "contribution": handle_contribution,
     "user_feedback": handle_user_feedback,
+    "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
