@@ -149,10 +149,10 @@ def render_404_page_html(
 
     <main>
         <section class="dz-section dz-section-hero">
-            <div class="dz-section-content" style="text-align: center; padding: 4rem 1rem;">
-                <h1 style="font-size: 4rem; font-weight: 700; margin-bottom: 1rem;">404</h1>
+            <div class="dz-section-content dz-404-section">
+                <h1 class="dz-404-headline">404</h1>
                 <p class="dz-subhead">The page you're looking for doesn't exist.</p>
-                <div class="dz-cta-group" style="margin-top: 2rem;">
+                <div class="dz-cta-group dz-404-cta">
                     <a href="/" class="btn btn-primary">Go Home</a>
                 </div>
             </div>
@@ -810,7 +810,7 @@ def get_site_js() -> str:
                         <span class="dz-price">${tier.price || ''}</span>
                         ${tier.period ? `<span class="dz-period">/${tier.period}</span>` : ''}
                     </div>
-                    ${tier.description ? `<p style="color: oklch(0.5 0 0); margin: 0 0 1.5rem;">${tier.description}</p>` : ''}
+                    ${tier.description ? `<p class="dz-pricing-description">${tier.description}</p>` : ''}
                     <ul class="dz-pricing-features">${features}</ul>
                     ${tier.cta ? `<a href="${tier.cta.href || '#'}" class="${btnClass}">${tier.cta.label || 'Get Started'}</a>` : ''}
                 </div>
@@ -875,10 +875,10 @@ def get_site_js() -> str:
                 if (main) {
                     main.innerHTML = `
                         <section class="dz-section dz-section-hero">
-                            <div class="dz-section-content" style="text-align: center; padding: 4rem 1rem;">
-                                <h1 style="font-size: 4rem; font-weight: 700; margin-bottom: 1rem;">404</h1>
+                            <div class="dz-section-content dz-404-section">
+                                <h1 class="dz-404-headline">404</h1>
                                 <p class="dz-subhead">The page you&rsquo;re looking for doesn&rsquo;t exist.</p>
-                                <div class="dz-cta-group" style="margin-top: 2rem;">
+                                <div class="dz-cta-group dz-404-cta">
                                     <a href="/" class="btn btn-primary">Go Home</a>
                                 </div>
                             </div>

@@ -114,11 +114,56 @@
   --dz-accent-glow: hsl(var(--ring) / 0.15);
 
   /* --- Site section tokens (marketing pages) --- */
+
   /* Hero gradient — overridden by ThemeSpec when a custom palette is set */
   --dz-hero-bg-from: oklch(0.45 0.18 265);
   --dz-hero-bg-to: oklch(0.38 0.20 280);
   --dz-shadow-hero: 0 20px 60px -12px oklch(0 0 0 / 0.25);
   --dz-shadow-xl: var(--shadow-xl);
+
+  /* Text hierarchy (oklch neutrals) */
+  --dz-text-foreground: oklch(0.15 0 0);
+  --dz-text-emphasis: oklch(0.35 0 0);
+  --dz-text-body: oklch(0.45 0 0);
+  --dz-text-muted: oklch(0.5 0 0);
+
+  /* Surfaces */
+  --dz-surface-card: white;
+  --dz-feature-icon-bg: oklch(0.92 0.03 260);
+  --dz-section-alt-bg: oklch(0.97 0.01 260);
+  --dz-pricing-highlight-bg: oklch(0.45 0.18 270);
+
+  /* Borders (transparent black) */
+  --dz-border-default: oklch(0 0 0 / 0.1);
+  --dz-border-subtle: oklch(0 0 0 / 0.08);
+  --dz-border-input: oklch(0 0 0 / 0.15);
+
+  /* Hero overlays (transparent white, for dark backgrounds) */
+  --dz-hero-overlay: oklch(1 0 0 / 0.1);
+  --dz-hero-border: oklch(1 0 0 / 0.5);
+  --dz-hero-border-hover: oklch(1 0 0 / 0.7);
+  --dz-hero-text-dimmed: oklch(1 0 0 / 0.8);
+  --dz-hero-border-dim: oklch(1 0 0 / 0.15);
+  --dz-hero-btn-hover: oklch(0.98 0 0);
+
+  /* Header */
+  --dz-header-bg: oklch(1 0 0 / 0.95);
+
+  /* Footer */
+  --dz-footer-bg: oklch(0.15 0.01 260);
+  --dz-footer-text: oklch(0.7 0 0);
+  --dz-footer-link: oklch(0.6 0 0);
+  --dz-footer-border: oklch(1 0 0 / 0.1);
+
+  /* Logo */
+  --dz-logo-color: oklch(0.25 0.02 260);
+
+  /* Error feedback */
+  --dz-error-bg: oklch(0.95 0.03 25);
+  --dz-error-text: oklch(0.45 0.15 25);
+
+  /* Focus ring */
+  --dz-ring-glow: 0 0 0 3px oklch(0.50 0.18 270 / 0.15);
 
   /* Section spacing */
   --dz-spacing-hero-y: 6rem;
@@ -147,11 +192,6 @@
   --dz-radius-card: 0.75rem;
   --dz-radius-lg: 1rem;
   --dz-radius-sm: 0.375rem;
-
-  /* Surfaces */
-  --dz-feature-icon-bg: oklch(0.92 0.03 260);
-  --dz-section-alt-bg: oklch(0.97 0.01 260);
-  --dz-pricing-highlight-bg: oklch(0.45 0.18 270);
 }
 
 /* =============================================================================
