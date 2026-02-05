@@ -147,6 +147,226 @@
 }
 
 /* =============================================================================
+   Comparison Section
+   ============================================================================= */
+
+.dz-section-comparison {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.dz-comparison-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dz-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.dz-comparison-table th,
+.dz-comparison-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.dz-comparison-table thead th {
+  font-weight: 600;
+  font-size: 1rem;
+  padding-bottom: 1rem;
+}
+
+.dz-comparison-feature {
+  text-align: left;
+  font-weight: 500;
+}
+
+.dz-comparison-highlighted {
+  background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
+}
+
+/* =============================================================================
+   Value Highlight Section
+   ============================================================================= */
+
+.dz-section-value-highlight {
+  padding: var(--dz-spacing-hero-y, 6rem) 1.5rem;
+  text-align: center;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.dz-value-headline {
+  font-size: var(--dz-font-size-hero-headline, 3.5rem);
+  font-weight: var(--dz-font-weight-hero-headline, 800);
+  line-height: var(--dz-line-height-hero-headline, 1.1);
+  letter-spacing: var(--dz-letter-spacing-hero-headline, -0.02em);
+}
+
+.dz-value-body {
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--dz-text-body);
+}
+
+/* =============================================================================
+   Split Content Section
+   ============================================================================= */
+
+.dz-section-split-content {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+
+.dz-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.dz-split--reversed .dz-split-grid {
+  direction: rtl;
+}
+
+.dz-split--reversed .dz-split-grid > * {
+  direction: ltr;
+}
+
+.dz-split-text h2 {
+  text-align: left;
+}
+
+.dz-split-text p {
+  color: var(--dz-text-body);
+}
+
+.dz-cta-group--left {
+  justify-content: flex-start;
+}
+
+.dz-split-media img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--dz-radius-lg, 1rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+}
+
+@media (max-width: 768px) {
+  .dz-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dz-split--reversed .dz-split-grid {
+    direction: ltr;
+  }
+
+  .dz-split-text h2 {
+    text-align: center;
+  }
+
+  .dz-cta-group--left {
+    justify-content: center;
+  }
+}
+
+/* =============================================================================
+   Card Grid Section
+   ============================================================================= */
+
+.dz-section-card-grid {
+  padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.dz-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.dz-card-item {
+  background: var(--dz-surface-card);
+  padding: var(--dz-spacing-card-padding, 1.5rem);
+  border-radius: var(--dz-radius-card, 0.75rem);
+  box-shadow: var(--dz-shadow-card, 0 1px 3px oklch(0 0 0 / 0.1));
+  display: flex;
+  flex-direction: column;
+  transition: transform var(--dz-transition-fast, 150ms),
+              box-shadow var(--dz-transition-fast, 150ms);
+}
+
+.dz-card-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--dz-shadow-lg, 0 10px 15px -3px oklch(0 0 0 / 0.1));
+}
+
+.dz-card-item h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.dz-card-item p {
+  color: var(--dz-text-body);
+  margin: 0 0 1rem;
+  line-height: var(--dz-line-height-body, 1.6);
+  flex: 1;
+}
+
+.dz-card-icon {
+  width: 3rem;
+  height: 3rem;
+  background: var(--dz-feature-icon-bg, oklch(0.92 0.03 260));
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--dz-hero-bg-from);
+}
+
+.dz-card-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* =============================================================================
+   Trust Bar Section
+   ============================================================================= */
+
+.dz-section-trust-bar {
+  padding: 2rem 1.5rem;
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+  border-top: 1px solid var(--dz-border-subtle);
+  border-bottom: 1px solid var(--dz-border-subtle);
+}
+
+.dz-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  align-items: center;
+}
+
+.dz-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--dz-text-body);
+}
+
+.dz-trust-item svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--dz-hero-bg-from);
+}
+
+/* =============================================================================
    Dark Mode Adjustments
    ============================================================================= */
 
@@ -196,15 +416,34 @@
 [data-theme="dark"] .dz-section-pricing,
 [data-theme="dark"] .dz-section-testimonials,
 [data-theme="dark"] .dz-section-logo-cloud,
-[data-theme="dark"] .dz-section-cta {
+[data-theme="dark"] .dz-section-cta,
+[data-theme="dark"] .dz-section-value-highlight,
+[data-theme="dark"] .dz-section-card-grid,
+[data-theme="dark"] .dz-section-trust-bar {
   background: oklch(0.08 0.01 260);
+}
+
+[data-theme="dark"] .dz-section-comparison,
+[data-theme="dark"] .dz-section-split-content {
+  background: oklch(0.12 0.01 260);
 }
 
 /* Cards and items */
 [data-theme="dark"] .dz-feature-item,
 [data-theme="dark"] .dz-testimonial-item,
+[data-theme="dark"] .dz-card-item,
 [data-theme="dark"] .dz-pricing-tier:not(.dz-pricing-highlighted) {
   background: oklch(0.18 0.01 260);
+}
+
+/* Comparison table */
+[data-theme="dark"] .dz-comparison-table th,
+[data-theme="dark"] .dz-comparison-table td {
+  border-color: oklch(1 0 0 / 0.1);
+}
+
+[data-theme="dark"] .dz-comparison-highlighted {
+  background: oklch(0.18 0.03 260);
 }
 
 /* Headings */

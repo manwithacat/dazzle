@@ -581,6 +581,11 @@ def get_site_js() -> str:
         logo_cloud: renderLogoCloud,
         pricing: renderPricing,
         markdown: renderMarkdown,
+        comparison: renderComparison,
+        value_highlight: renderValueHighlight,
+        split_content: renderSplitContent,
+        card_grid: renderCardGrid,
+        trust_bar: renderTrustBar,
     };
 
     function renderSectionHeader(section) {
@@ -831,10 +836,157 @@ def get_site_js() -> str:
         `;
     }
 
+    function renderComparison(section) {
+        const columns = section.columns || [];
+        const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
+
+        const thHtml = columns.map(col => {
+            const cls = col.highlighted ? ' class="dz-comparison-highlighted"' : '';
+            return `<th${cls}>${col.label || ''}</th>`;
+        }).join('');
+
+        const rowsHtml = items.map(row => {
+            const cellsHtml = (row.cells || []).map((cell, i) => {
+                const col = columns[i] || {};
+                const cls = col.highlighted ? ' class="dz-comparison-highlighted"' : '';
+                return `<td${cls}>${cell}</td>`;
+            }).join('');
+            return `<tr><td class="dz-comparison-feature">${row.feature || ''}</td>${cellsHtml}</tr>`;
+        }).join('');
+
+        return `
+            <section class="dz-section dz-section-comparison">
+                <div class="dz-section-content">
+                    ${headerHtml}
+                    <div class="dz-comparison-wrapper">
+                        <table class="dz-comparison-table">
+                            <thead><tr><th></th>${thHtml}</tr></thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderValueHighlight(section) {
+        const headline = section.headline || '';
+        const subhead = section.subhead || '';
+        const body = section.body || '';
+        const primaryCta = section.primary_cta;
+
+        let ctaHtml = '';
+        if (primaryCta) {
+            ctaHtml = `<div class="dz-cta-group"><a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Get Started'}</a></div>`;
+        }
+
+        return `
+            <section class="dz-section dz-section-value-highlight">
+                <div class="dz-section-content">
+                    <h2 class="dz-value-headline">${headline}</h2>
+                    ${subhead ? `<p class="dz-subhead">${subhead}</p>` : ''}
+                    ${body ? `<p class="dz-value-body">${body}</p>` : ''}
+                    ${ctaHtml}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderSplitContent(section) {
+        const headline = section.headline || '';
+        const body = section.body || '';
+        const media = section.media;
+        const primaryCta = section.primary_cta;
+        const alignment = section.alignment || 'left';
+
+        let ctaHtml = '';
+        if (primaryCta) {
+            ctaHtml = `<div class="dz-cta-group dz-cta-group--left"><a href="${primaryCta.href || '#'}" class="btn btn-primary">${primaryCta.label || 'Learn More'}</a></div>`;
+        }
+
+        let mediaHtml = '';
+        if (media && media.kind === 'image' && media.src) {
+            mediaHtml = `<div class="dz-split-media"><img src="${media.src}" alt="${media.alt || ''}" /></div>`;
+        }
+
+        const orderCls = alignment === 'right' ? ' dz-split--reversed' : '';
+
+        return `
+            <section class="dz-section dz-section-split-content${orderCls}">
+                <div class="dz-section-content dz-split-grid">
+                    <div class="dz-split-text">
+                        <h2>${headline}</h2>
+                        ${body ? `<p>${body}</p>` : ''}
+                        ${ctaHtml}
+                    </div>
+                    ${mediaHtml}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderCardGrid(section) {
+        const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
+
+        const cardsHtml = items.map(item => {
+            let ctaHtml = '';
+            if (item.cta) {
+                ctaHtml = `<a href="${item.cta.href || '#'}" class="btn btn-primary btn-sm">${item.cta.label || 'Learn More'}</a>`;
+            }
+            return `
+                <div class="dz-card-item">
+                    ${item.icon ? `<div class="dz-card-icon"><i data-lucide="${item.icon}"></i></div>` : ''}
+                    <h3>${item.title || ''}</h3>
+                    <p>${item.body || ''}</p>
+                    ${ctaHtml}
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <section class="dz-section dz-section-card-grid">
+                <div class="dz-section-content">
+                    ${headerHtml}
+                    <div class="dz-card-grid">${cardsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderTrustBar(section) {
+        const items = section.items || [];
+        const headerHtml = renderSectionHeader(section);
+
+        const itemsHtml = items.map(item => `
+            <div class="dz-trust-item">
+                ${item.icon ? `<i data-lucide="${item.icon}"></i>` : ''}
+                <span>${item.text || ''}</span>
+            </div>
+        `).join('');
+
+        return `
+            <section class="dz-section dz-section-trust-bar">
+                <div class="dz-section-content">
+                    ${headerHtml}
+                    <div class="dz-trust-strip">${itemsHtml}</div>
+                </div>
+            </section>
+        `;
+    }
+
     function renderPage(pageData) {
         if (!main) return;
 
         const sections = pageData.sections || [];
+
+        // Backward compat: if no sections but content exists,
+        // synthesize a markdown section
+        if (!sections.length && pageData.content) {
+            sections.push({ type: 'markdown', content: pageData.content });
+        }
+
         let html = '';
 
         for (const section of sections) {
@@ -844,11 +996,6 @@ def get_site_js() -> str:
             } else {
                 console.warn(`Unknown section type: ${section.type}`);
             }
-        }
-
-        // Handle markdown and legal page content
-        if (pageData.content && (pageData.type === 'markdown' || pageData.type === 'legal')) {
-            html = renderMarkdown({ content: pageData.content });
         }
 
         main.innerHTML = html || '<p>No content</p>';

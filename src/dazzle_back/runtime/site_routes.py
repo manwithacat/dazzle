@@ -124,17 +124,51 @@ def create_site_routes(
 
 def _format_page_response(page: dict[str, Any], project_root: Path | None) -> dict[str, Any]:
     """Format page data for API response."""
+    sections = list(page.get("sections", []))
+
+    # Resolve section-level markdown sources
+    if project_root:
+        for section in sections:
+            source = section.get("source")
+            if section.get("type") == "markdown" and source:
+                raw = _load_content_file(
+                    project_root,
+                    source.get("path", ""),
+                )
+                if raw:
+                    fmt = source.get("format", "md")
+                    section["content"] = _render_content(raw, fmt)
+
     response: dict[str, Any] = {
         "route": page.get("route"),
         "type": page.get("type"),
         "title": page.get("title"),
-        "sections": page.get("sections", []),
+        "sections": sections,
     }
 
-    # Load content if this is a markdown page
+    # For markdown/legal pages with page-level source
+    # but no sections, process through directive parser
+    page_type = page.get("type")
     source = page.get("source")
-    if source and project_root:
-        raw = _load_content_file(project_root, source.get("path", ""))
+    if source and project_root and not sections:
+        raw = _load_content_file(
+            project_root,
+            source.get("path", ""),
+        )
+        if raw:
+            fmt = source.get("format", "md")
+            directive_sections = _process_directives(raw, fmt)
+            response["sections"] = directive_sections
+            # Keep content key for backward compat
+            response["content"] = _render_content(raw, fmt)
+            response["content_format"] = "html"
+    elif source and project_root and page_type in ("markdown", "legal"):
+        # Page has both source and sections — still provide
+        # top-level content for backward compat
+        raw = _load_content_file(
+            project_root,
+            source.get("path", ""),
+        )
         if raw:
             fmt = source.get("format", "md")
             response["content"] = _render_content(raw, fmt)
@@ -144,25 +178,50 @@ def _format_page_response(page: dict[str, Any], project_root: Path | None) -> di
 
 
 def _format_legal_page_response(
-    page_type: str, page_data: dict[str, Any], project_root: Path | None
+    page_type: str,
+    page_data: dict[str, Any],
+    project_root: Path | None,
 ) -> dict[str, Any]:
     """Format legal page data for API response."""
+    title = "Terms of Service" if page_type == "terms" else "Privacy Policy"
     response: dict[str, Any] = {
         "route": page_data.get("route"),
         "type": "legal",
-        "title": "Terms of Service" if page_type == "terms" else "Privacy Policy",
+        "title": title,
     }
 
-    # Load content
+    # Load content and process through directive parser
     source = page_data.get("source", {})
     if source and project_root:
         raw = _load_content_file(project_root, source.get("path", ""))
         if raw:
             fmt = source.get("format", "md")
+            directive_sections = _process_directives(raw, fmt)
+            response["sections"] = directive_sections
+            # Keep content key for backward compat
             response["content"] = _render_content(raw, fmt)
             response["content_format"] = "html"
 
     return response
+
+
+def _process_directives(raw: str, fmt: str) -> list[dict[str, Any]]:
+    """Process markdown through the directive parser.
+
+    Falls back to a single markdown section if the parser
+    is unavailable.
+    """
+    try:
+        from dazzle.core.directive_parser import (
+            process_markdown_with_directives,
+        )
+
+        return process_markdown_with_directives(raw, fmt)
+    except Exception:
+        logger.debug("Directive parser unavailable, using plain markdown")
+        return [
+            {"type": "markdown", "content": _render_content(raw, fmt)},
+        ]
 
 
 def _render_content(raw: str, fmt: str) -> str:

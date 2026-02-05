@@ -232,6 +232,12 @@ class SectionKind(StrEnum):
     STEPS = "steps"
     LOGO_CLOUD = "logo_cloud"
     PRICING = "pricing"
+    MARKDOWN = "markdown"
+    COMPARISON = "comparison"
+    VALUE_HIGHLIGHT = "value_highlight"
+    SPLIT_CONTENT = "split_content"
+    CARD_GRID = "card_grid"
+    TRUST_BAR = "trust_bar"
 
 
 class FeatureItem(BaseModel):
@@ -308,6 +314,44 @@ class PricingTier(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ComparisonColumn(BaseModel):
+    """A column in a comparison table."""
+
+    label: str
+    highlighted: bool = False
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ComparisonRow(BaseModel):
+    """A row in a comparison table."""
+
+    feature: str
+    cells: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
+class CardItem(BaseModel):
+    """A card in a card grid."""
+
+    title: str
+    body: str
+    icon: str | None = None
+    cta: CTASpec | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TrustBarItem(BaseModel):
+    """An item in a trust bar strip."""
+
+    text: str
+    icon: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SectionSpec(BaseModel):
     """
     A section within a landing page.
@@ -319,12 +363,15 @@ class SectionSpec(BaseModel):
         type: Section type
         headline: Main heading (hero, cta)
         subhead: Secondary heading (hero)
-        body: Body text (cta)
+        body: Body text (cta, value_highlight)
         primary_cta: Primary call-to-action (hero, cta)
         secondary_cta: Secondary call-to-action (hero)
-        media: Media content (hero)
-        items: List items (features, faq, testimonials, stats, steps, logos)
+        media: Media content (hero, split_content)
+        items: List items (features, faq, testimonials, etc.)
         tiers: Pricing tiers (pricing)
+        source: Content source (markdown sections)
+        columns: Comparison table columns (comparison)
+        alignment: Layout alignment (split_content)
     """
 
     type: SectionKind
@@ -343,10 +390,22 @@ class SectionSpec(BaseModel):
         | list[StatItem]
         | list[StepItem]
         | list[LogoItem]
+        | list[ComparisonRow]
+        | list[CardItem]
+        | list[TrustBarItem]
     ) = Field(default_factory=list)
 
     # Pricing-specific
     tiers: list[PricingTier] = Field(default_factory=list)
+
+    # Markdown section source
+    source: ContentSourceSpec | None = None
+
+    # Comparison-specific
+    columns: list[ComparisonColumn] = Field(default_factory=list)
+
+    # Split content alignment
+    alignment: str | None = None
 
     model_config = ConfigDict(frozen=True)
 

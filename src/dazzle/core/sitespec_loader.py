@@ -26,6 +26,9 @@ from .ir.sitespec import (
     AuthPageSpec,
     AuthPagesSpec,
     BrandSpec,
+    CardItem,
+    ComparisonColumn,
+    ComparisonRow,
     ContentSourceSpec,
     CTASpec,
     FAQItem,
@@ -51,6 +54,7 @@ from .ir.sitespec import (
     StepItem,
     TestimonialItem,
     ThemeKind,
+    TrustBarItem,
     create_default_sitespec,
 )
 
@@ -126,6 +130,21 @@ def _parse_section_items(section_type: SectionKind, items_data: list[dict[str, A
         return [StepItem(**item) for item in items_data]
     elif section_type == SectionKind.LOGO_CLOUD:
         return [LogoItem(**item) for item in items_data]
+    elif section_type == SectionKind.COMPARISON:
+        return [ComparisonRow(**item) for item in items_data]
+    elif section_type == SectionKind.CARD_GRID:
+        parsed = []
+        for item in items_data:
+            cta = None
+            if "cta" in item and item["cta"]:
+                cta = CTASpec(**item["cta"])
+                item = {k: v for k, v in item.items() if k != "cta"}
+            parsed.append(CardItem(**item, cta=cta))
+        return parsed
+    elif section_type == SectionKind.TRUST_BAR:
+        return [TrustBarItem(**item) for item in items_data]
+    elif section_type == SectionKind.MARKDOWN:
+        return []  # Markdown sections don't have typed items
     return items_data
 
 
@@ -170,6 +189,19 @@ def _parse_section(data: dict[str, Any]) -> SectionSpec:
                 tier_data = {k: v for k, v in tier_data.items() if k != "cta"}
             tiers.append(PricingTier(**tier_data, cta=cta))
 
+    # Parse content source (for markdown sections)
+    source = None
+    if "source" in data and data["source"]:
+        source = ContentSourceSpec(**data["source"])
+
+    # Parse comparison columns
+    columns = []
+    if "columns" in data:
+        columns = [ComparisonColumn(**col) for col in data["columns"]]
+
+    # Parse alignment (for split_content)
+    alignment = data.get("alignment")
+
     return SectionSpec(
         type=section_type,
         headline=data.get("headline"),
@@ -180,6 +212,9 @@ def _parse_section(data: dict[str, Any]) -> SectionSpec:
         media=media,
         items=items,
         tiers=tiers,
+        source=source,
+        columns=columns,
+        alignment=alignment,
     )
 
 
@@ -1204,7 +1239,20 @@ def _copy_sections_to_sitespec(copy_sections: dict[str, Any]) -> list[SectionSpe
     result: list[SectionSpec] = []
 
     # Map section types to their order
-    section_order = ["hero", "features", "how-it-works", "testimonials", "pricing", "faq", "cta"]
+    section_order = [
+        "hero",
+        "features",
+        "how-it-works",
+        "testimonials",
+        "pricing",
+        "faq",
+        "cta",
+        "comparison",
+        "value-highlight",
+        "split-content",
+        "card-grid",
+        "trust-bar",
+    ]
 
     for section_type in section_order:
         if section_type not in copy_sections:
@@ -1248,6 +1296,12 @@ def _copy_section_to_spec(section_type: str, data: dict[str, Any]) -> SectionSpe
         "faq": SectionKind.FAQ,
         "cta": SectionKind.CTA,
         "about": SectionKind.HERO,  # Treat about as a hero-style section
+        "markdown": SectionKind.MARKDOWN,
+        "comparison": SectionKind.COMPARISON,
+        "value-highlight": SectionKind.VALUE_HIGHLIGHT,
+        "split-content": SectionKind.SPLIT_CONTENT,
+        "card-grid": SectionKind.CARD_GRID,
+        "trust-bar": SectionKind.TRUST_BAR,
     }
 
     kind = type_mapping.get(section_type, SectionKind.HERO)

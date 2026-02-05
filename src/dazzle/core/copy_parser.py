@@ -176,6 +176,18 @@ def _normalize_section_type(title: str) -> str:
         "about us": "about",
         "how it works": "how-it-works",
         "process": "how-it-works",
+        "comparison": "comparison",
+        "compare": "comparison",
+        "vs": "comparison",
+        "value highlight": "value-highlight",
+        "highlight": "value-highlight",
+        "split content": "split-content",
+        "split": "split-content",
+        "card grid": "card-grid",
+        "cards": "card-grid",
+        "trust bar": "trust-bar",
+        "trust": "trust-bar",
+        "trust signals": "trust-bar",
     }
 
     return mappings.get(lower, lower.replace(" ", "-"))

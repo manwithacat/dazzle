@@ -80,7 +80,8 @@ def _load_vocabulary_expander(files: list[Path]) -> VocabExpander | None:
         return None
 
     # Look for manifest relative to first DSL file
-    # Assume project structure: project_root/dsl/*.dsl and project_root/dazzle/local_vocab/manifest.yml
+    # Assume: project_root/dsl/*.dsl and
+    # project_root/dazzle/local_vocab/manifest.yml
     first_file = files[0]
     project_root = (
         first_file.parent.parent if first_file.parent.name == "dsl" else first_file.parent
