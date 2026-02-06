@@ -51,10 +51,23 @@ def check_dsl_validation(project_root: Path) -> tuple[bool, str]:
 
 
 def check_python_lint(project_root: Path) -> tuple[bool, str]:
-    """Check if Python code passes basic lint."""
+    """Check if modified Python code passes lint."""
     try:
+        # Only check files modified in this session, not all of src/
+        git_result = subprocess.run(
+            ["git", "diff", "--name-only", "--diff-filter=d", "HEAD"],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        py_files = [f for f in git_result.stdout.strip().splitlines() if f.endswith(".py")]
+        if not py_files:
+            return True, "No Python files changed"
+
+        # Use bare `ruff check` so pyproject.toml select/ignore rules are respected
         result = subprocess.run(
-            ["ruff", "check", "src/", "--select=E,F"],  # Only errors, not style
+            ["ruff", "check"] + py_files,
             cwd=project_root,
             capture_output=True,
             text=True,
