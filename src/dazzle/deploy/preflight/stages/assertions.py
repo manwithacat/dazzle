@@ -278,7 +278,7 @@ class AssertionsStage(PreflightStage):
                             Finding(
                                 severity=FindingSeverity.CRITICAL,
                                 code="SG_DB_OPEN",
-                                message=f"Security group allows database port {db_port} from 0.0.0.0/0",
+                                message=f"Security group allows DB port {db_port} from 0.0.0.0/0",
                                 resource=resource_id,
                                 remediation="Restrict database access to VPC CIDR only",
                             )

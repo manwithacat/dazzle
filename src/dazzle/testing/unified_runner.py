@@ -24,10 +24,12 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .dsl_test_generator import (
     DSLTestGenerator,
     GeneratedTestSuite,
+    TestCoverage,
     save_generated_tests,
 )
 from .event_test_runner import (
@@ -59,7 +61,7 @@ class UnifiedTestResult:
     tests_generated: int = 0
     tests_from_cache: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "project_name": self.project_name,
             "started_at": self.started_at.isoformat(),
@@ -72,7 +74,7 @@ class UnifiedTestResult:
             "summary": self.get_summary(),
         }
 
-    def get_summary(self) -> dict:
+    def get_summary(self) -> dict[str, Any]:
         total_tests = 0
         passed = 0
         failed = 0
@@ -124,7 +126,7 @@ class UnifiedTestRunner:
         self.project_path = project_path.resolve()
         self.designs_path = self.project_path / "dsl" / "tests" / "dsl_generated_tests.json"
         self.cache_path = self.project_path / ".dazzle" / "test_cache.json"
-        self._server_process = None
+        self._server_process: subprocess.Popen[bytes] | None = None
         self.api_port = 8000
         self.ui_port = 3000
         self.server_timeout = server_timeout
@@ -186,7 +188,7 @@ class UnifiedTestRunner:
         try:
             with open(self.cache_path) as f:
                 cache = json.load(f)
-            return cache.get("dsl_hash") == current_hash
+            return bool(cache.get("dsl_hash") == current_hash)
         except Exception:
             return False
 
@@ -215,7 +217,7 @@ class UnifiedTestRunner:
             coverage=coverage,
         )
 
-    def _save_cache(self, suite: GeneratedTestSuite):
+    def _save_cache(self, suite: GeneratedTestSuite) -> None:
         """Save test suite metadata to cache."""
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.cache_path, "w") as f:
@@ -260,13 +262,15 @@ class UnifiedTestRunner:
         start_time = time.time()
         backend_ready = False
         frontend_ready = False
+        stdout = self._server_process.stdout
 
         while time.time() - start_time < timeout:
             if self._server_process.poll() is not None:
                 return False
 
             try:
-                line = self._server_process.stdout.readline().decode()
+                assert stdout is not None
+                line = stdout.readline().decode()
                 if "API Port:" in line:
                     self.api_port = int(line.split()[-1])
                 elif "Backend:" in line and "http://" in line:
@@ -293,7 +297,7 @@ class UnifiedTestRunner:
 
         return True
 
-    def stop_server(self):
+    def stop_server(self) -> None:
         """Stop the DNR server."""
         if self._server_process:
             self._server_process.terminate()
@@ -421,7 +425,7 @@ class UnifiedTestRunner:
                         generated_at="",
                         project_name=self.project_path.name,
                         designs=[],
-                        coverage=None,
+                        coverage=TestCoverage(),
                     )
                 )
 
@@ -497,7 +501,7 @@ def format_unified_report(result: UnifiedTestResult) -> str:
 def run_all_examples(base_path: Path, generate: bool = True) -> list[UnifiedTestResult]:
     """Run tests for all example projects."""
     examples_dir = base_path / "examples"
-    results = []
+    results: list[UnifiedTestResult] = []
 
     if not examples_dir.exists():
         print(f"Examples directory not found: {examples_dir}")
@@ -530,7 +534,7 @@ def run_all_examples(base_path: Path, generate: bool = True) -> list[UnifiedTest
     return results
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="DAZZLE Unified Test Runner",
         formatter_class=argparse.RawDescriptionHelpFormatter,

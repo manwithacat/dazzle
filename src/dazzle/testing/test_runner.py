@@ -111,7 +111,7 @@ class DazzleClient:
         self.client = httpx.Client(timeout=timeout)
         self._auth_token: str | None = None
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()
 
     def health_check(self) -> bool:
@@ -218,17 +218,17 @@ class DazzleClient:
         except Exception:
             return False
 
-    def get_entities(self, entity_name: str) -> list[dict]:
+    def get_entities(self, entity_name: str) -> list[dict[str, Any]]:
         """Get all entities of a type."""
         try:
             resp = self.client.get(f"{self.api_url}/__test__/entity/{entity_name}")
             if resp.status_code == 200:
-                return resp.json()
+                return list(resp.json())
             return []
         except Exception:
             return []
 
-    def create_entity(self, entity_name: str, data: dict) -> dict | None:
+    def create_entity(self, entity_name: str, data: dict[str, Any]) -> dict[str, Any] | None:
         """Create a new entity using the test seed endpoint."""
         try:
             # Use __test__/seed endpoint to bypass auth
@@ -236,8 +236,8 @@ class DazzleClient:
             fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
             resp = self.client.post(f"{self.api_url}/__test__/seed", json={"fixtures": fixtures})
             if resp.status_code == 200:
-                result = resp.json()
-                created = result.get("created", {})
+                result: dict[str, Any] = resp.json()
+                created: dict[str, Any] = result.get("created", {})
                 return created.get(fixture_id)
 
             # Fallback to standard endpoint
@@ -246,13 +246,15 @@ class DazzleClient:
                 f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
             if resp.status_code in (200, 201):
-                return resp.json()
+                return dict(resp.json())
             return None
         except Exception as e:
             print(f"    Create error: {e}")
             return None
 
-    def update_entity(self, entity_name: str, entity_id: str, data: dict) -> dict | None:
+    def update_entity(
+        self, entity_name: str, entity_id: str, data: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """Update an entity."""
         try:
             endpoint = f"/{entity_name.lower()}s/{entity_id}"
@@ -260,35 +262,35 @@ class DazzleClient:
                 f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
             if resp.status_code == 200:
-                return resp.json()
+                return dict(resp.json())
             return None
         except Exception:
             return None
 
-    def get_spec(self) -> dict | None:
+    def get_spec(self) -> dict[str, Any] | None:
         """Get the app spec."""
         try:
             # Use /spec endpoint which returns full spec including workspaces
             resp = self.client.get(f"{self.api_url}/spec")
             if resp.status_code == 200:
-                return resp.json()
+                return dict(resp.json())
             return None
         except Exception:
             return None
 
-    def get_entity_schema(self, entity_name: str) -> dict | None:
+    def get_entity_schema(self, entity_name: str) -> dict[str, Any] | None:
         """Get entity schema including required fields."""
         try:
             resp = self.client.get(f"{self.api_url}/_dazzle/entity/{entity_name}")
             if resp.status_code == 200:
-                return resp.json()
+                return dict(resp.json())
             return None
         except Exception:
             return None
 
     def generate_entity_data(
-        self, entity_name: str, overrides: dict | None = None, create_refs: bool = True
-    ) -> dict:
+        self, entity_name: str, overrides: dict[str, Any] | None = None, create_refs: bool = True
+    ) -> dict[str, Any]:
         """Generate valid test data for an entity based on its schema.
 
         Args:
@@ -394,7 +396,7 @@ class DazzleClient:
         except Exception:
             return False
 
-    def _auth_headers(self) -> dict:
+    def _auth_headers(self) -> dict[str, str]:
         """Get authentication headers."""
         if self._auth_token:
             return {"Authorization": f"Bearer {self._auth_token}"}
@@ -419,16 +421,16 @@ class TestRunner:
         self.ui_url = ui_url or f"http://localhost:{ui_port}"
         self.designs_path = project_path / "dsl" / "tests" / "designs.json"
         self.client: DazzleClient | None = None
-        self._server_process: subprocess.Popen | None = None
+        self._server_process: subprocess.Popen[str] | None = None
 
-    def load_designs(self) -> list[dict]:
+    def load_designs(self) -> list[dict[str, Any]]:
         """Load test designs from JSON file."""
         if not self.designs_path.exists():
             return []
 
         with open(self.designs_path) as f:
             data = json.load(f)
-            return data.get("designs", [])
+            return list(data.get("designs", []))
 
     def start_server(self) -> bool:
         """Start the DNR server."""
@@ -449,12 +451,14 @@ class TestRunner:
 
         # Wait for startup and extract ports
         start_time = time.time()
+        stdout = self._server_process.stdout
         while time.time() - start_time < 15:
             if self._server_process.poll() is not None:
                 # Process exited
                 return False
 
-            line = self._server_process.stdout.readline()
+            assert stdout is not None
+            line = stdout.readline()
             if "UI:" in line:
                 # Extract port
                 try:
@@ -473,7 +477,7 @@ class TestRunner:
 
         return True
 
-    def stop_server(self):
+    def stop_server(self) -> None:
         """Stop the DNR server."""
         if self._server_process:
             self._server_process.terminate()
@@ -541,7 +545,9 @@ class TestRunner:
 
         return result
 
-    def run_tests_from_designs(self, designs: list[dict], skip_e2e: bool = True) -> TestRunResult:
+    def run_tests_from_designs(
+        self, designs: list[dict[str, Any]], skip_e2e: bool = True
+    ) -> TestRunResult:
         """Run tests from a provided list of designs (used by unified runner).
 
         Args:
@@ -620,8 +626,9 @@ class TestRunner:
 
         return result
 
-    def run_single_test(self, design: dict) -> TestCaseResult:
+    def run_single_test(self, design: dict[str, Any]) -> TestCaseResult:
         """Run a single test design."""
+        assert self.client is not None
         test_id = design.get("test_id", "UNKNOWN")
         title = design.get("title", "Untitled")
         scenario = design.get("scenario")
@@ -680,7 +687,7 @@ class TestRunner:
             )
 
     def execute_step(
-        self, step: dict, design: dict, context: dict[str, Any] | None = None
+        self, step: dict[str, Any], design: dict[str, Any], context: dict[str, Any] | None = None
     ) -> StepResult:
         """Execute a single test step.
 
@@ -689,6 +696,7 @@ class TestRunner:
             design: The full test design (for context)
             context: Shared context for storing step results (e.g., created entity IDs)
         """
+        assert self.client is not None
         action = step.get("action", "unknown")
         target = step.get("target", "")
         data = step.get("data", {}) or {}
@@ -933,7 +941,7 @@ class TestRunner:
                 duration_ms=(time.time() - start_time) * 1000,
             )
 
-    def _resolve_refs(self, data: dict, context: dict[str, Any]) -> dict:
+    def _resolve_refs(self, data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
         """Resolve $ref: placeholders in data using stored context values.
 
         Placeholders have the format: $ref:stored_name.field_name
@@ -1061,7 +1069,7 @@ def run_project_tests(project_path: Path) -> TestRunResult:
         runner.stop_server()
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 

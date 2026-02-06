@@ -139,7 +139,7 @@ class EventTestClient:
         self._event_log: list[EventLogEntry] = []
         self._offset = 0
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()
 
     def reset(self) -> bool:
@@ -368,7 +368,7 @@ class EventTestRunner:
         self.api_url = api_url
         self.client = EventTestClient(api_url)
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()
 
     def run_test(self, test_case: EventTestCase) -> EventTestCaseResult:
