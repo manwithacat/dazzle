@@ -99,12 +99,8 @@ try:
     from fastapi import FastAPI as _FastAPI
     from fastapi import Request
     from fastapi.middleware.cors import CORSMiddleware
-    from fastapi.responses import JSONResponse
-    from pydantic import ValidationError
 
-    from dazzle_back.runtime.invariant_evaluator import InvariantViolationError
     from dazzle_back.runtime.route_generator import RouteGenerator
-    from dazzle_back.runtime.state_machine import TransitionError
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -113,10 +109,6 @@ except ImportError:
     CORSMiddleware = None  # type: ignore
     RouteGenerator = None  # type: ignore
     Request = None  # type: ignore
-    JSONResponse = None  # type: ignore
-    TransitionError = Exception  # type: ignore
-    InvariantViolationError = Exception  # type: ignore
-    ValidationError = Exception  # type: ignore
 
 
 # =============================================================================
@@ -952,34 +944,10 @@ class DNRBackendApp:
         except ImportError:
             pass  # Metrics module not available
 
-        # Add exception handler for state machine transition errors
-        @self._app.exception_handler(TransitionError)
-        async def transition_error_handler(request: Request, exc: TransitionError) -> JSONResponse:
-            """Convert state machine errors to 422 Unprocessable Entity."""
-            return JSONResponse(
-                status_code=422,
-                content={"detail": str(exc), "type": "transition_error"},
-            )
+        # Register exception handlers (v0.28.0 - extracted to exception_handlers.py)
+        from dazzle_back.runtime.exception_handlers import register_exception_handlers
 
-        # Add exception handler for invariant violations (v0.14.2)
-        @self._app.exception_handler(InvariantViolationError)
-        async def invariant_error_handler(
-            request: Request, exc: InvariantViolationError
-        ) -> JSONResponse:
-            """Convert invariant violations to 422 Unprocessable Entity."""
-            return JSONResponse(
-                status_code=422,
-                content={"detail": str(exc), "type": "invariant_violation"},
-            )
-
-        # Add exception handler for Pydantic validation errors (v0.14.2)
-        @self._app.exception_handler(ValidationError)
-        async def validation_error_handler(request: Request, exc: ValidationError) -> JSONResponse:
-            """Convert validation errors to 422 Unprocessable Entity with field details."""
-            return JSONResponse(
-                status_code=422,
-                content={"detail": exc.errors(), "type": "validation_error"},
-            )
+        register_exception_handlers(self._app)
 
         # Generate models
         self._models = generate_all_entity_models(self.spec.entities)
@@ -1779,30 +1747,10 @@ def create_app_factory(
     if enable_dev_mode:
         logger.info("  Dazzle Bar: enabled")
 
-    # Add custom 404 handler for site pages
+    # Add custom 404 handler for site pages (v0.28.0 - extracted to exception_handlers.py)
     if sitespec_data:
-        from starlette.exceptions import HTTPException as StarletteHTTPException
+        from dazzle_back.runtime.exception_handlers import register_site_404_handler
 
-        from dazzle_ui.runtime.site_renderer import render_404_page_html
-
-        @app.exception_handler(StarletteHTTPException)
-        async def custom_404_handler(request, exc):
-            if exc.status_code == 404:
-                from fastapi.responses import HTMLResponse
-
-                # Only serve HTML 404 for browser requests (not API calls)
-                accept = request.headers.get("accept", "")
-                if "text/html" in accept:
-                    return HTMLResponse(
-                        content=render_404_page_html(sitespec_data, str(request.url.path)),
-                        status_code=404,
-                    )
-            # For non-404 or API requests, return default JSON response
-            from fastapi.responses import JSONResponse
-
-            return JSONResponse(
-                status_code=exc.status_code,
-                content={"detail": exc.detail},
-            )
+        register_site_404_handler(app, sitespec_data)
 
     return app
