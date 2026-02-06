@@ -131,8 +131,8 @@ surface task_list "Tasks":
     filter: status, assigned_to
 """
 
-related = ["entity", "ux_block", "surface_modes"]
-v0_2_changes = "Added optional ux: block for semantic layer"
+related = ["entity", "ux_block", "surface_modes", "datatable"]
+v0_2_changes = "Added optional ux: block for semantic layer. List surfaces render as DataTables — add sort/filter/search in ux: block for interactive features."
 
 
 [concepts.workspace]

@@ -81,7 +81,7 @@ v0_2_changes = "NEW in v0.2"
 
 [concepts.information_needs]
 category = "UX Semantic Layer (v0.2)"
-definition = "Specifications for how data should be displayed, sorted, filtered, and searched - the 'what' without the 'how'."
+definition = "Specifications for how data should be displayed, sorted, filtered, and searched - the 'what' without the 'how'. On list surfaces these directives control the DataTable's interactive features."
 syntax = '''
 show: field1, field2, field3
 sort: field1 desc, field2 asc
@@ -89,7 +89,7 @@ filter: status, category, assigned_to
 search: title, description, tags
 empty: "No items found. Create your first item."
 '''
-related = ["ux_block"]
+related = ["ux_block", "datatable"]
 v0_2_changes = "NEW in v0.2"
 
 [concepts.persona]
@@ -220,5 +220,68 @@ ux:
     scope: id = current_user.id
     read_only: true
 '''
-related = ["purpose", "information_needs", "attention_signals", "persona"]
+related = ["purpose", "information_needs", "attention_signals", "persona", "datatable"]
 v0_2_changes = "NEW in v0.2"
+
+[concepts.datatable]
+category = "Runtime Rendering"
+definition = """
+What the Dazzle runtime renders when a surface has mode: list. The base DataTable
+always includes rows, action menu (View/Edit/Delete), pagination, and HTMX partial
+updates. Adding sort/filter/search/empty directives in the ux: block enables
+interactive features: clickable sort headers, filter dropdowns, debounced search,
+column visibility toggle, and custom empty messages.
+"""
+
+syntax = '''
+surface <name> "<Title>":
+  uses entity <Entity>
+  mode: list
+
+  section main:
+    field <field1> "<Label>"
+    field <field2> "<Label>"
+
+  ux:
+    sort: <field> [asc|desc], ...
+    filter: <enum_field>, <bool_field>, ...
+    search: <text_field1>, <text_field2>, ...
+    empty: "<message when no results>"
+'''
+
+example = '''
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title "Title"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due"
+
+  ux:
+    sort: due_date asc
+    filter: status, priority
+    search: title, description
+    empty: "No tasks yet. Create your first task!"
+
+# Produces: sortable column headers, status + priority dropdown filters,
+# debounced search input, column visibility toggle (>3 cols), custom empty message
+'''
+
+related = ["ux_block", "surface", "information_needs"]
+best_practices = [
+    "sort: pick the field users care about most (e.g. created_at desc for recent-first, name asc for alphabetical)",
+    "filter: list enum, bool, and state machine fields — they render as dropdowns",
+    "search: list text/string fields users would type into a search box",
+    "empty: write a friendly message with a call to action (e.g. 'No tasks yet. Create your first task!')",
+    "Every list surface should have a ux: block — the lint rule will warn if missing",
+]
+rendering_details = [
+    "sort: All columns become clickable. Active column shows direction arrow. Click toggles asc/desc. State preserved across pagination.",
+    "filter: enum/bool/state_machine → <select> dropdown with All option. text/other → debounced text input (300ms). Filters combine with AND logic.",
+    "search: Debounced type-ahead (300ms). Clear button when text present. Targets listed fields. Combines with active filters and sort.",
+    "empty: Custom message shown when no items match filters/search. Defaults to 'No items found.' if omitted.",
+    "Column visibility: Toggle dropdown appears when >3 columns. Preferences persist in localStorage.",
+]

@@ -100,6 +100,101 @@ ALIASES = {
     "trust_bar": "section_types",
     "value_highlight": "section_types",
     "split_content": "section_types",
+    # DataTable / list surface rendering aliases
+    "datatable": "datatable",
+    "data_table": "datatable",
+    "table": "datatable",
+    "list_table": "datatable",
+    "sortable_table": "datatable",
+    "filterable_table": "datatable",
+    "sort": "datatable",
+    "sorting": "datatable",
+    "filter": "datatable",
+    "filtering": "datatable",
+    "search": "datatable",
+    "column_visibility": "datatable",
+    "empty_message": "datatable",
+    "empty_state": "datatable",
+    # Authentication aliases
+    "authorization": "authentication",
+    "login": "authentication",
+    "password": "authentication",
+    "auth": "authentication",
+    "session": "authentication",
+    # Surface action aliases
+    "action": "surface_actions",
+    "actions": "surface_actions",
+    "on_submit": "surface_actions",
+    "submit": "surface_actions",
+    "outcome": "surface_actions",
+    "outcomes": "surface_actions",
+    # Surface mode aliases
+    "mode": "surface_modes",
+    "list_mode": "surface_modes",
+    "view_mode": "surface_modes",
+    "create_mode": "surface_modes",
+    "edit_mode": "surface_modes",
+    "form": "surface_modes",
+    # Testing & demo aliases
+    "scenarios": "scenario",
+    "demo_data": "demo_data",
+    "seed_data": "demo_data",
+    "seed": "demo_data",
+    "fixtures": "demo_data",
+    # Financial aliases
+    "ledger": "ledger",
+    "tigerbeetle": "ledger",
+    "double_entry": "ledger",
+    "transaction": "transaction",
+    "transfer": "transaction",
+    # LLM aliases
+    "llm_intent": "llm_intent",
+    "llm_job": "llm_intent",
+    "ai_job": "llm_intent",
+    "llm_model": "llm_model",
+    "ai_model": "llm_model",
+    "llm_config": "llm_config",
+    # Integration aliases
+    "integration": "integration",
+    "external_api": "integration",
+    "api_connection": "integration",
+    "foreign_model": "foreign_model",
+    "external_model": "foreign_model",
+    # Workspace aggregates
+    "aggregate": "aggregate",
+    "aggregates": "aggregate",
+    "count": "aggregate",
+    "sum": "aggregate",
+    "avg": "aggregate",
+    "metrics": "aggregate",
+    # Constraint aliases
+    "unique": "unique_constraint",
+    "unique_constraint": "unique_constraint",
+    "constraint": "unique_constraint",
+    # Pagination
+    "pagination": "pagination",
+    "paging": "pagination",
+    # UI chrome aliases (point to closest concept)
+    "routing": "surface_modes",
+    "navigation": "surface_modes",
+    "sidebar": "workspace",
+    "modal": "surface_actions",
+    "dialog": "surface_actions",
+    # File handling aliases
+    "file_upload": "field_types",
+    "image": "field_types",
+    "csv": "demo_data",
+    "export": "demo_data",
+    # API aliases
+    "rest": "domain_service",
+    "endpoint": "domain_service",
+    "api": "domain_service",
+    "webhook": "integration",
+    # Workflow aliases
+    "automation": "process",
+    # Source/autocomplete
+    "autocomplete": "field_types",
+    "source": "field_types",
 }
 
 

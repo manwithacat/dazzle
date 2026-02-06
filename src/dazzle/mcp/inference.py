@@ -207,6 +207,42 @@ def lookup_inference(
             all_suggestions.append(suggestion)
             matches += 1
 
+    # Search surface inference - UX block and DataTable suggestions
+    matches = 0
+    for pattern in kb.get("surface_inference", []):
+        if matches >= max_per_category:
+            break
+        triggers = [t.lower() for t in pattern.get("triggers", [])]
+        if _matches_triggers(query_lower, query_words, triggers):
+            suggestion = {
+                "type": "surface",
+                "pattern": pattern.get("name"),
+                "add": pattern.get("suggests"),
+                "why": pattern.get("rationale"),
+            }
+            if detail == "full":
+                suggestion["example"] = pattern.get("example")
+            all_suggestions.append(suggestion)
+            matches += 1
+
+    # Search workspace inference - dashboard and layout suggestions
+    matches = 0
+    for pattern in kb.get("workspace_inference", []):
+        if matches >= max_per_category:
+            break
+        triggers = [t.lower() for t in pattern.get("triggers", [])]
+        if _matches_triggers(query_lower, query_words, triggers):
+            suggestion = {
+                "type": "workspace",
+                "pattern": pattern.get("name"),
+                "add": pattern.get("suggests"),
+                "why": pattern.get("rationale"),
+            }
+            if detail == "full":
+                suggestion["example"] = pattern.get("example")
+            all_suggestions.append(suggestion)
+            matches += 1
+
     results["suggestions"] = all_suggestions
     results["count"] = len(all_suggestions)
 
@@ -220,7 +256,8 @@ def lookup_inference(
     # Add hint if no matches
     if not all_suggestions:
         results["hint"] = (
-            "No patterns matched. Try keywords like: upload, person, status, assigned, created by"
+            "No patterns matched. Try keywords like: upload, person, status, assigned, "
+            "created by, sort, filter, search, datatable, dashboard, overview"
         )
 
     return results
@@ -271,6 +308,16 @@ def list_all_patterns() -> dict[str, Any]:
     for s in kb.get("sitespec_section_inference", []):
         sitespec_section_triggers.extend(s.get("triggers", []))
 
+    # Surface inference triggers
+    surface_triggers: list[str] = []
+    for s in kb.get("surface_inference", []):
+        surface_triggers.extend(s.get("triggers", []))
+
+    # Workspace inference triggers
+    workspace_triggers: list[str] = []
+    for w in kb.get("workspace_inference", []):
+        workspace_triggers.extend(w.get("triggers", []))
+
     # Domain summary
     domains: dict[str, list[str]] = {}
     for e in kb.get("domain_entities", []):
@@ -286,6 +333,8 @@ def list_all_patterns() -> dict[str, Any]:
         "archetype_indicators": sorted(set(archetype_indicators)),
         "domain_triggers": sorted(set(domain_triggers)),
         "workflow_triggers": sorted(set(workflow_triggers)),
+        "surface_triggers": sorted(set(surface_triggers)),
+        "workspace_triggers": sorted(set(workspace_triggers)),
         "sitespec_section_triggers": sorted(set(sitespec_section_triggers)),
         "spec_phrases": [m.get("phrase") for m in kb.get("spec_language", [])],
         "domains": domains,
@@ -296,6 +345,8 @@ def list_all_patterns() -> dict[str, Any]:
             "workflow_templates": len(kb.get("workflow_templates", [])),
             "relationship_patterns": len(kb.get("relationship_patterns", [])),
             "spec_language": len(kb.get("spec_language", [])),
+            "surface_inference": len(kb.get("surface_inference", [])),
+            "workspace_inference": len(kb.get("workspace_inference", [])),
             "sitespec_section_inference": len(kb.get("sitespec_section_inference", [])),
         },
     }

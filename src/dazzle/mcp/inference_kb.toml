@@ -718,7 +718,7 @@ rationale = "Quick entry forms show only essential fields for fast data capture"
 [[surface_inference]]
 id = "filterable_list"
 name = "Filterable List Surface"
-triggers = ["filter", "search", "sort", "find", "browse", "look up", "sortable", "searchable"]
+triggers = ["filter", "search", "sort", "find", "browse", "look up", "sortable", "searchable", "datatable", "data table", "table", "column"]
 suggests = [
     "Add ux block with sort: for default ordering (e.g. created_at desc)",
     "Add ux block with filter: for enum/status/bool fields (renders as dropdowns)",
@@ -726,6 +726,29 @@ suggests = [
     "Add ux block with empty: for user-friendly empty state message",
 ]
 rationale = "List surfaces with sort/filter/search produce sortable column headers, filter dropdowns, and search inputs — much better UX than bare tables"
+example = """
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+    field status "Status"
+    field priority "Priority"
+    field due_date "Due"
+
+  ux:
+    sort: due_date asc
+    filter: status, priority
+    search: title, description
+    empty: "No tasks yet. Create your first task!"
+
+# Runtime renders:
+# - Clickable column headers with sort direction arrows
+# - Status dropdown filter, Priority dropdown filter (enum fields → <select>)
+# - Debounced search input (300ms) targeting title + description
+# - Column visibility toggle (>3 columns)
+# - Custom empty message when no items match
+"""
 
 [[surface_inference]]
 id = "ux_attention_signals"

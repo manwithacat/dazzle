@@ -110,6 +110,274 @@ best_practices = ["Use descriptive section names (main, address, meta)", "Group 
 
 [concepts.surface_modes]
 category = "Surface System"
-definition = "Interaction modes for surfaces."
-related = ["surface"]
+definition = """
+Interaction modes for surfaces. Each mode renders a different UI:
+- list: DataTable with rows, pagination, action menu. Add sort/filter/search in ux: block.
+- view: Read-only detail page with Edit/Delete buttons and state machine action buttons.
+- create: Form with field inputs mapped by type (str→text input, enum→select, bool→checkbox, ref→search-select).
+- edit: Pre-populated form. State machine fields show only valid transitions in dropdown.
+- custom: Free-form surface for dashboard panels or specialized views.
+"""
+related = ["surface", "datatable"]
 v0_2_changes = "No changes from v0.1"
+
+[concepts.surface_actions]
+category = "Surface System"
+definition = "Buttons on surfaces that trigger navigation or side effects. Actions define what happens on user interaction (submit, click) and where to go next."
+syntax = '''
+action <action_name> "<Button Label>":
+  on submit -> surface <target_surface>
+  on submit -> experience <experience_name>
+  on submit -> experience <experience_name> step <step_name>
+  on submit -> integration <integration_name> action <action_name>
+'''
+example = '''
+surface task_create "New Task":
+  uses entity Task
+  mode: create
+
+  section main:
+    field title
+    field description
+
+  action save "Create Task":
+    on submit -> surface task_list
+
+  action cancel "Cancel":
+    on submit -> surface task_list
+'''
+related = ["surface", "experience"]
+
+[concepts.scenario]
+category = "Testing & Demo"
+definition = "Named demo state that sets up context for testing or demonstration. Scenarios define per-persona entry points and optional demo data."
+syntax = '''
+scenario <name> "<Title>":
+  description: "<what this scenario tests>"
+
+  for persona <persona_name>:
+    start_route: "<url>"
+
+  [demo:]
+    [<EntityName>:]
+      [- <field>: <value>, <field>: <value>]
+'''
+example = '''
+scenario happy_path "Happy Path":
+  description: "Normal user flow - create, edit, complete"
+
+  for persona customer:
+    start_route: "/tickets/new"
+
+  for persona agent:
+    start_route: "/queue"
+
+scenario with_data "Populated State":
+  description: "Pre-loaded data for testing"
+
+  for persona agent:
+    start_route: "/queue"
+
+  demo:
+    Task:
+      - title: "Fix login bug", status: open, priority: high
+      - title: "Update docs", status: in_progress, priority: medium
+'''
+related = ["persona", "demo_data"]
+
+[concepts.demo_data]
+category = "Testing & Demo"
+definition = "Seed data embedded in scenarios or generated from demo data blueprints. Provides realistic starting state for testing and demonstrations."
+syntax = '''
+# Inline in scenario:
+demo:
+  <EntityName>:
+    - <field>: <value>, <field>: <value>
+    - <field>: <value>, <field>: <value>
+
+# Or via MCP tool:
+# demo_data(operation="propose") → generates blueprint
+# demo_data(operation="generate") → creates seed files
+'''
+related = ["scenario", "persona"]
+
+[concepts.pagination]
+category = "Runtime Rendering"
+definition = "Automatic pagination on list surfaces. Renders page navigation buttons below the table. Preserves sort/filter/search state across page transitions. Default 20 items per page."
+related = ["datatable", "surface"]
+
+[concepts.aggregate]
+category = "Workspace Feature"
+definition = "Computed metrics on workspace regions. Aggregates calculate summary values from entity data using count(), sum(), avg(), min(), max() functions with optional WHERE conditions."
+syntax = '''
+aggregate:
+  <metric_name>: count(<Entity>)
+  <metric_name>: count(<Entity> where <condition>)
+  <metric_name>: sum(<field>)
+  <metric_name>: avg(<field>)
+'''
+example = '''
+workspace dashboard "Dashboard":
+  purpose: "Team overview"
+
+  metrics:
+    source: Task
+    aggregate:
+      total_tasks: count(Task)
+      open_tasks: count(Task where status = open)
+      critical: count(Task where priority = critical and status != closed)
+'''
+related = ["workspace"]
+
+[concepts.foreign_model]
+category = "External Data"
+definition = "Declaration of data structures from external systems (APIs, services) that Dazzle surfaces can display but doesn't own. Foreign models define the shape of external data for type-safe rendering."
+syntax = '''
+foreign_model <ModelName> "<Title>":
+  <field_name>: <type>
+  ...
+'''
+related = ["integration", "domain_service"]
+
+[concepts.ledger]
+category = "Financial (v0.24)"
+definition = "TigerBeetle-backed double-entry ledger account. Defines account codes, types, and constraints for financial transactions. Supports sync_to for caching balances in entity fields."
+syntax = '''
+ledger <LedgerName> "<Title>":
+  account_code: <int>
+  ledger_id: <int>
+  account_type: <asset|liability|equity|revenue|expense>
+  currency: <ISO_code>
+  [flags: <debits_must_not_exceed_credits|credits_must_not_exceed_debits>]
+  [sync_to: <Entity.field>]
+'''
+example = '''
+ledger CustomerWallet "Customer Wallet":
+  account_code: 1001
+  ledger_id: 1
+  account_type: asset
+  currency: GBP
+  flags: debits_must_not_exceed_credits
+  sync_to: Customer.balance_cache
+'''
+related = ["transaction", "entity"]
+
+[concepts.transaction]
+category = "Financial (v0.24)"
+definition = "TigerBeetle-backed financial transaction with one or more transfers between ledger accounts. Supports linked transfers, idempotency, and async execution."
+syntax = '''
+transaction <TransactionName> "<Title>":
+  execution: <sync|async>
+  [priority: <normal|high>]
+
+  transfer <name>:
+    debit: <LedgerName>
+    credit: <LedgerName>
+    amount: <expression>
+    code: <int>
+    [flags: linked]
+
+  [idempotency_key: <expression>]
+'''
+example = '''
+transaction RecordPayment "Record Payment":
+  execution: async
+  priority: high
+
+  transfer revenue:
+    debit: CustomerWallet
+    credit: Revenue
+    amount: payment.amount
+    code: 1
+    flags: linked
+
+  idempotency_key: payment.id
+'''
+related = ["ledger"]
+
+[concepts.llm_intent]
+category = "LLM Jobs (v0.24)"
+definition = "LLM job definition for AI-powered tasks like classification, extraction, or generation. Defines model, prompt template, timeout, retry, and PII policies."
+syntax = '''
+llm_intent <name> "<Title>":
+  model: <llm_model_name>
+  prompt: "<template with {{ input.field }} variables>"
+  [output_schema: <EntityName>]
+  [timeout: <seconds>]
+  [retry:]
+    [max_attempts: <int>]
+    [backoff: <linear|exponential>]
+  [pii:]
+    [scan: true|false]
+    [action: <redact|warn>]
+'''
+related = ["llm_model", "llm_config"]
+
+[concepts.llm_model]
+category = "LLM Jobs (v0.24)"
+definition = "LLM provider and model configuration. Defines provider, model ID, performance tier, and token limits."
+syntax = '''
+llm_model <name> "<Title>":
+  provider: <anthropic|openai>
+  model_id: <model_identifier>
+  tier: <fast|balanced|quality>
+  max_tokens: <int>
+'''
+related = ["llm_intent", "llm_config"]
+
+[concepts.llm_config]
+category = "LLM Jobs (v0.24)"
+definition = "Global LLM configuration for the application. Sets default model, artifact storage, logging, and per-model rate limits."
+syntax = '''
+llm_config:
+  default_model: <llm_model_name>
+  artifact_store: <local|s3>
+  logging:
+    log_prompts: true|false
+    log_completions: true|false
+    redact_pii: true|false
+  rate_limits:
+    <model_name>: <requests_per_minute>
+'''
+related = ["llm_model", "llm_intent"]
+
+[concepts.integration]
+category = "Extensibility"
+definition = "External service integration declaration. Defines API connections, actions, and data sync points for external systems."
+syntax = '''
+integration <name> "<Title>":
+  provider: <provider_name>
+  action <action_name> "<Label>":
+    method: <GET|POST|PUT|DELETE>
+    endpoint: "<url>"
+    maps_to: <EntityName>
+  [sync:]
+    direction: <inbound|outbound|bidirectional>
+    entity: <EntityName>
+'''
+related = ["domain_service", "foreign_model"]
+
+[concepts.unique_constraint]
+category = "Entity Performance"
+definition = "Uniqueness constraint on one or more fields. Single-field unique uses the 'unique' modifier. Multi-field unique uses the 'unique' statement."
+syntax = '''
+# Single field
+<field_name>: <type> unique
+
+# Multi-field composite unique
+unique <field1>, <field2>
+'''
+example = '''
+entity User "User":
+  id: uuid pk
+  email: str(255) required unique    # Single field unique
+
+entity Membership "Membership":
+  id: uuid pk
+  user: ref User required
+  organization: ref Organization required
+
+  # Composite unique: one membership per user per org
+  unique user, organization
+'''
+related = ["index", "entity"]
