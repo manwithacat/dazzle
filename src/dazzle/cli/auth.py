@@ -11,6 +11,7 @@ import json
 import os
 import secrets
 import string
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
@@ -376,8 +377,8 @@ def list_sessions(
         params.append(user_id_filter)
 
     if not include_expired:
-        now_expr = "NOW()" if store._use_postgres else "datetime('now')"
-        conditions.append(f"expires_at > {now_expr}")
+        conditions.append("expires_at > ?")
+        params.append(datetime.now(UTC).isoformat())
 
     where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
     query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT ?"
@@ -443,9 +444,9 @@ def config(
     )
     active_users = active_rows[0]["count"] if active_rows else 0
 
-    now_expr = "NOW()" if store._use_postgres else "datetime('now')"
     session_rows = store._execute(
-        f"SELECT COUNT(*) as count FROM sessions WHERE expires_at > {now_expr}"
+        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?",
+        (datetime.now(UTC).isoformat(),),
     )
     active_sessions = session_rows[0]["count"] if session_rows else 0
 

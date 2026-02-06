@@ -396,7 +396,10 @@ async def list_sessions_handler(
         params.append(user_id)
 
     if active_only:
-        conditions.append("expires_at > datetime('now')")
+        from datetime import UTC, datetime
+
+        conditions.append("expires_at > ?")
+        params.append(datetime.now(UTC).isoformat())
 
     where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
     query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT ?"
@@ -483,8 +486,11 @@ async def get_auth_config_handler(
     active_user_count = auth_store._execute(
         f"SELECT COUNT(*) as count FROM users WHERE is_active = {auth_store._bool_to_db(True)}"
     )
+    from datetime import UTC, datetime
+
     session_count = auth_store._execute(
-        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime('now')"
+        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?",
+        (datetime.now(UTC).isoformat(),),
     )
 
     # Get roles in use

@@ -522,10 +522,9 @@ class AuthStore:
         Returns:
             Number of active sessions
         """
-        now_expr = "NOW()" if self._use_postgres else "datetime('now')"
         rows = self._execute(
-            f"SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND expires_at > {now_expr}",
-            (str(user_id),),
+            "SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND expires_at > ?",
+            (str(user_id), datetime.now(UTC).isoformat()),
         )
         return rows[0]["count"] if rows else 0
 
