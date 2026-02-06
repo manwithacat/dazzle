@@ -19,7 +19,7 @@ def _import_feedback():
     # Create mock modules to satisfy imports
     mock_state = MagicMock()
     mock_state.get_project_path = MagicMock(return_value=Path("/tmp/test_project"))
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     # Create mock feedback entry

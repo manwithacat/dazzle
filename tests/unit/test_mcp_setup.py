@@ -26,9 +26,9 @@ def _import_module():
         return
 
     # Mock the MCP server packages to prevent import errors
-    sys.modules["mcp"] = MagicMock()
-    sys.modules["mcp.server"] = MagicMock()
-    sys.modules["mcp.server.fastmcp"] = MagicMock()
+    sys.modules["mcp"] = MagicMock(pytest_plugins=[])
+    sys.modules["mcp.server"] = MagicMock(pytest_plugins=[])
+    sys.modules["mcp.server.fastmcp"] = MagicMock(pytest_plugins=[])
 
     # Get path to setup.py
     src_path = Path(__file__).parent.parent.parent / "src"

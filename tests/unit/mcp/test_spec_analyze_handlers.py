@@ -18,7 +18,7 @@ def _import_spec_analyze():
     # Create mock modules to satisfy imports
     mock_state = MagicMock()
     mock_state.get_project_path = MagicMock(return_value=None)
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     module_path = (

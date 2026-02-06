@@ -28,11 +28,11 @@ def _import_modules():
         return
 
     # Mock the MCP server packages to prevent import errors
-    sys.modules["mcp"] = MagicMock()
-    sys.modules["mcp.server"] = MagicMock()
-    sys.modules["mcp.server.fastmcp"] = MagicMock()
-    sys.modules["mcp.server.stdio"] = MagicMock()
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+    sys.modules["mcp"] = MagicMock(pytest_plugins=[])
+    sys.modules["mcp.server"] = MagicMock(pytest_plugins=[])
+    sys.modules["mcp.server.fastmcp"] = MagicMock(pytest_plugins=[])
+    sys.modules["mcp.server.stdio"] = MagicMock(pytest_plugins=[])
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
     # Mock the github_issues module that contribution.py imports lazily
     github_issues_mock = MagicMock()

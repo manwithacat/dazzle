@@ -25,7 +25,7 @@ def _import_project():
     mock_state.get_available_projects = MagicMock(return_value={})
     mock_state.is_dev_mode = MagicMock(return_value=True)
     mock_state.set_active_project = MagicMock()
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     # Mock runtime_tools module

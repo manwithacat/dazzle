@@ -19,7 +19,7 @@ def _import_fidelity():
     in test environments. We need to import the handlers module directly.
     """
     # Create mock modules to satisfy imports
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
     module_path = (
         Path(__file__).parent.parent.parent.parent
