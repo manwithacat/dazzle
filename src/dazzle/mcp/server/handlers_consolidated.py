@@ -681,7 +681,7 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
     from dazzle.core.linker import build_appspec
     from dazzle.core.manifest import load_manifest
     from dazzle.core.parser import parse_modules
-    from dazzle.core.stories_persistence import add_stories, get_next_story_id
+    from dazzle.core.stories_persistence import add_stories, get_next_story_id, load_stories
     from dazzle.testing.test_design_persistence import add_test_designs
 
     max_stories = arguments.get("max_stories", 30)
@@ -694,6 +694,10 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
         appspec = build_appspec(modules, manifest.project_root)
     except Exception as e:
         return json.dumps({"error": f"Failed to load DSL: {e}"})
+
+    # Load existing stories and build a title set for dedup
+    existing_stories = load_stories(project_path)
+    existing_titles = {s.title for s in existing_stories}
 
     # Get starting story ID
     base_id = get_next_story_id(project_path)
@@ -712,33 +716,41 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
         default_actor = appspec.personas[0].label or appspec.personas[0].id
 
     stories: list[StorySpec] = []
+    skipped = 0
 
     # Generate stories from entities
     for entity in appspec.domain.entities:
         if story_count >= max_stories:
             break
 
-        # Create story
-        stories.append(
-            StorySpec(
-                story_id=next_story_id(),
-                title=f"{default_actor} creates a new {entity.title or entity.name}",
-                actor=default_actor,
-                trigger=StoryTrigger.FORM_SUBMITTED,
-                scope=[entity.name],
-                preconditions=[f"{default_actor} has permission to create {entity.name}"],
-                happy_path_outcome=[
-                    f"New {entity.name} is saved to database",
-                    f"{default_actor} sees confirmation message",
-                ],
-                side_effects=[],
-                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][:3],
-                variants=["Validation error on required field"],
-                status=StoryStatus.ACCEPTED,
-                created_at=now,
-                accepted_at=now,
+        # Create story (skip if title already exists)
+        title = f"{default_actor} creates a new {entity.title or entity.name}"
+        if title in existing_titles:
+            skipped += 1
+        else:
+            existing_titles.add(title)
+            stories.append(
+                StorySpec(
+                    story_id=next_story_id(),
+                    title=title,
+                    actor=default_actor,
+                    trigger=StoryTrigger.FORM_SUBMITTED,
+                    scope=[entity.name],
+                    preconditions=[f"{default_actor} has permission to create {entity.name}"],
+                    happy_path_outcome=[
+                        f"New {entity.name} is saved to database",
+                        f"{default_actor} sees confirmation message",
+                    ],
+                    side_effects=[],
+                    constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][
+                        :3
+                    ],
+                    variants=["Validation error on required field"],
+                    status=StoryStatus.ACCEPTED,
+                    created_at=now,
+                    accepted_at=now,
+                )
             )
-        )
 
         # State machine transitions
         if entity.state_machine:
@@ -746,10 +758,15 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
                 if story_count >= max_stories:
                     break
                 sm = entity.state_machine
+                title = f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}"
+                if title in existing_titles:
+                    skipped += 1
+                    continue
+                existing_titles.add(title)
                 stories.append(
                     StorySpec(
                         story_id=next_story_id(),
-                        title=f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}",
+                        title=title,
                         actor=default_actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],
@@ -773,6 +790,7 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
 
     result: dict[str, Any] = {
         "stories_proposed": len(stories),
+        "stories_skipped_as_duplicates": skipped,
         "stories_total": len(all_stories),
         "status": "success",
     }
