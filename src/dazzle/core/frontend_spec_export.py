@@ -317,15 +317,31 @@ def _build_component_inventory(
                 }
             )
 
-        result.append(
-            {
-                "name": surface.name,
-                "title": surface.title,
-                "mode": surface.mode.value,
-                "entity": surface.entity_ref,
-                "sections": sections,
-            }
-        )
+        component: dict[str, Any] = {
+            "name": surface.name,
+            "title": surface.title,
+            "mode": surface.mode.value,
+            "entity": surface.entity_ref,
+            "sections": sections,
+        }
+        if hasattr(surface, "ux") and surface.ux:
+            ux = surface.ux
+            ux_info: dict[str, Any] = {}
+            if ux.sort:
+                ux_info["sort"] = [str(s) for s in ux.sort]
+            if getattr(ux, "filter", None):
+                ux_info["filter"] = list(ux.filter)
+            if ux.search:
+                ux_info["search"] = list(ux.search)
+            if ux.empty_message:
+                ux_info["empty_message"] = ux.empty_message
+            if ux.attention_signals:
+                ux_info["attention_signals"] = len(ux.attention_signals)
+            if ux.persona_variants:
+                ux_info["personas"] = [p.persona for p in ux.persona_variants]
+            if ux_info:
+                component["ux"] = ux_info
+        result.append(component)
     return result
 
 

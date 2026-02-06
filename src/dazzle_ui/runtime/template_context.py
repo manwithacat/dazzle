@@ -27,6 +27,10 @@ class ColumnContext(BaseModel):
     label: str
     sortable: bool = False
     type: str = "text"  # text, badge, date, currency, bool
+    filterable: bool = False
+    filter_type: str = "text"  # text, select
+    filter_options: list[dict[str, str]] = Field(default_factory=list)
+    hidden: bool = False
 
 
 class FieldSourceContext(BaseModel):
@@ -83,6 +87,14 @@ class TableContext(BaseModel):
     bulk_actions: bool = False
     inline_editable: list[str] = Field(default_factory=list)
     slide_over: bool = False
+    sort_field: str = ""
+    sort_dir: str = "asc"
+    default_sort_field: str = ""
+    default_sort_dir: str = "asc"
+    search_fields: list[str] = Field(default_factory=list)
+    empty_message: str = "No items found."
+    filter_values: dict[str, str] = Field(default_factory=dict)
+    table_id: str = ""
 
 
 class FormContext(BaseModel):
@@ -139,6 +151,11 @@ class PageContext(BaseModel):
 
     # Semantic identifier for the current view (surface name)
     view_name: str = ""
+
+    # Auth context (populated at render time when auth is enabled)
+    is_authenticated: bool = False
+    user_email: str = ""
+    user_name: str = ""
 
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)

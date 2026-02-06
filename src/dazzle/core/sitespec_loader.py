@@ -899,7 +899,8 @@ DEFAULT_PRIVACY_TEMPLATE = """# Privacy Policy
 
 **Last Updated:** {{year}}
 
-This Privacy Policy describes how {{company_legal_name}} ("we", "us", or "our") collects, uses, and shares your personal information when you use {{product_name}} ("Service").
+This Privacy Policy describes how {{company_legal_name}} ("we", "us", or "our") collects,
+uses, and shares your personal information when you use {{product_name}} ("Service").
 
 ## 1. Information We Collect
 

@@ -1,11 +1,39 @@
 {# Filterable table component - server-rendered with HTMX search/filter/pagination #}
 {% if table %}
-<div class="space-y-4"
-     {% if table.bulk_actions %}x-data="{ selected: [] }"{% endif %}>
+<script src="/static/js/datatable.js"></script>
+<div id="{{ table.table_id or 'dt-table' }}"
+     class="space-y-4"
+     x-data="dazzleTable({
+       tableId: '{{ table.table_id or 'dt-table' }}',
+       columns: {{ table.columns | map(attribute='key') | list | tojson }},
+       sortField: '{{ table.sort_field }}',
+       sortDir: '{{ table.sort_dir }}',
+       apiEndpoint: '{{ table.api_endpoint }}'
+     })">
   {# Header row: title + actions #}
   <div class="flex items-center justify-between">
     <h2 class="text-2xl font-bold">{{ table.title }}</h2>
     <div class="flex gap-2">
+      {# Column visibility toggle #}
+      {% if table.columns | length > 3 %}
+      <div class="relative" x-data="{ open: false }">
+        <button @click="open = !open" class="btn btn-ghost btn-sm" title="Toggle columns">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
+          Columns
+        </button>
+        <div x-show="open" @click.away="open = false" x-transition
+             class="absolute right-0 mt-2 w-48 bg-base-100 shadow-lg rounded-box p-2 z-50">
+          {% for col in table.columns %}
+          <label class="flex items-center gap-2 py-1 px-2 hover:bg-base-200 rounded cursor-pointer">
+            <input type="checkbox" class="checkbox checkbox-xs"
+                   :checked="isVisible('{{ col.key }}')"
+                   @change="toggleColumn('{{ col.key }}')" />
+            <span class="text-sm">{{ col.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       {% if table.create_url %}
       <a href="{{ table.create_url }}" class="btn btn-primary btn-sm" data-dazzle-action="{{ table.entity_name }}.create">+ New {{ table.entity_name }}</a>
       {% endif %}
@@ -14,7 +42,15 @@
 
   {# Search bar #}
   {% if table.search_enabled %}
+  {% with endpoint=table.api_endpoint, target='#' + (table.table_id or 'dt-table') + '-body' %}
   {% include 'fragments/search_input.html' with context %}
+  {% endwith %}
+  {% endif %}
+
+  {# Filter bar #}
+  {% set has_filters = table.columns | selectattr('filterable') | list | length > 0 %}
+  {% if has_filters %}
+  {% include 'fragments/filter_bar.html' with context %}
   {% endif %}
 
   {# Bulk actions toolbar #}
@@ -23,6 +59,11 @@
   {% include 'fragments/bulk_actions.html' %}
   {% endwith %}
   {% endif %}
+
+  {# Loading indicator #}
+  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator flex justify-center py-4">
+    <span class="loading loading-spinner loading-md"></span>
+  </div>
 
   {# Table #}
   <div class="overflow-x-auto">
@@ -36,12 +77,34 @@
           </th>
           {% endif %}
           {% for col in table.columns %}
-          <th>{{ col.label }}</th>
+          <th x-show="isVisible('{{ col.key }}')"
+              {% if col.sortable %}
+              class="cursor-pointer select-none hover:bg-base-200"
+              @click="toggleSort('{{ col.key }}')"
+              :aria-sort="sortField === '{{ col.key }}' ? sortDir + 'ending' : 'none'"
+              {% endif %}>
+            <span class="inline-flex items-center gap-1">
+              {{ col.label }}
+              {% if col.sortable %}
+              <template x-if="sortField === '{{ col.key }}'">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                     class="w-3 h-3 stroke-current transition-transform"
+                     :class="sortDir === 'desc' ? 'rotate-180' : ''">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                </svg>
+              </template>
+              {% endif %}
+            </span>
+          </th>
           {% endfor %}
           <th class="w-16"></th>
         </tr>
       </thead>
-      <tbody id="table-body" hx-get="{{ table.api_endpoint }}" hx-trigger="load" hx-headers='{"Accept": "text/html"}'>
+      <tbody id="{{ table.table_id or 'dt-table' }}-body"
+             hx-get="{{ table.api_endpoint }}{% if table.sort_field %}?sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}"
+             hx-trigger="load"
+             hx-headers='{"Accept": "text/html"}'
+             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
         {% include 'fragments/table_rows.html' %}
       </tbody>
     </table>

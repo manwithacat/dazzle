@@ -1,0 +1,45 @@
+{# Filter bar fragment - renders filter inputs for filterable columns #}
+{% set tbody_target = '#' + (table.table_id or 'dt-table') + '-body' %}
+<div class="flex flex-wrap gap-2 items-end">
+  {% for col in table.columns %}
+  {% if col.filterable %}
+  <div class="form-control w-40">
+    <label class="label py-0">
+      <span class="label-text text-xs">{{ col.label }}</span>
+    </label>
+    {% if col.filter_type == "select" %}
+    <select name="filter[{{ col.key }}]"
+            class="select select-bordered select-sm w-full"
+            hx-get="{{ table.api_endpoint }}"
+            hx-target="{{ tbody_target }}"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-include="closest [x-data]"
+            hx-headers='{"Accept": "text/html"}'
+            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
+      <option value="">All</option>
+      {% for opt in col.filter_options %}
+      <option value="{{ opt.value }}"
+              {% if table.filter_values and table.filter_values.get(col.key) == opt.value %}selected{% endif %}>
+        {{ opt.label }}
+      </option>
+      {% endfor %}
+    </select>
+    {% else %}
+    <input type="text"
+           name="filter[{{ col.key }}]"
+           placeholder="Filter {{ col.label | lower }}..."
+           value="{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}"
+           class="input input-bordered input-sm w-full"
+           hx-get="{{ table.api_endpoint }}"
+           hx-target="{{ tbody_target }}"
+           hx-swap="innerHTML"
+           hx-trigger="keyup changed delay:300ms"
+           hx-include="closest [x-data]"
+           hx-headers='{"Accept": "text/html"}'
+           hx-indicator="#{{ table.table_id or 'dt-table' }}-loading" />
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>

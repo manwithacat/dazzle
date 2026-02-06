@@ -679,6 +679,17 @@ class DNRBackendApp:
             app = self._app
             spec = self.spec
             repositories = self._repositories
+            auth_middleware = self._auth_middleware
+
+            # Build nav items list and app name once for all workspace pages
+            ws_nav_items = [
+                {
+                    "label": ws.title or ws.name.replace("_", " ").title(),
+                    "route": f"/workspaces/{ws.name}",
+                }
+                for ws in workspaces
+            ]
+            ws_app_name = getattr(spec, "title", "") or spec.name.replace("_", " ").title()
 
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, spec)
@@ -686,18 +697,34 @@ class DNRBackendApp:
 
                 # Capture in closure
                 _ws_ctx = ws_ctx
+                _ws_route = f"/workspaces/{ws_name}"
 
                 @app.get(f"/workspaces/{ws_name}", tags=["Workspaces"])
                 async def workspace_page(
                     request: Request,
                     _ctx: Any = _ws_ctx,
+                    _route: str = _ws_route,
                 ) -> Any:
                     """Render workspace page."""
                     from fastapi.responses import HTMLResponse
 
+                    # Build auth context
+                    auth_ctx = None
+                    if auth_middleware:
+                        try:
+                            auth_ctx = auth_middleware.get_auth_context(request)
+                        except Exception:
+                            pass
+
                     html = render_fragment(
                         "workspace/workspace.html",
                         workspace=_ctx,
+                        nav_items=ws_nav_items,
+                        app_name=ws_app_name,
+                        current_route=_route,
+                        is_authenticated=bool(auth_ctx and auth_ctx.is_authenticated),
+                        user_email=(auth_ctx.user.email if auth_ctx and auth_ctx.user else ""),
+                        user_name=(auth_ctx.user.username if auth_ctx and auth_ctx.user else ""),
                     )
                     return HTMLResponse(content=html)
 
@@ -1714,10 +1741,16 @@ def create_app_factory(
         except Exception:
             pass
 
+        # Get auth context getter from builder if auth is enabled
+        _page_get_auth_context = None
+        if builder.auth_middleware:
+            _page_get_auth_context = builder.auth_middleware.get_auth_context
+
         page_router = create_page_routes(
             appspec,
             backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
             theme_css=theme_css,
+            get_auth_context=_page_get_auth_context,
         )
         app.include_router(page_router, prefix="/app")
         logger.info(f"  App pages: {len(appspec.workspaces)} workspaces mounted at /app")

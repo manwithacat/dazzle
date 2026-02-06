@@ -1,24 +1,37 @@
 {% extends "base.html" %}
 
 {% block body %}
-<div class="drawer lg:drawer-open">
+<div class="drawer"
+     x-data="{ sidebarOpen: localStorage.getItem('dz-sidebar') !== 'closed' }"
+     x-effect="localStorage.setItem('dz-sidebar', sidebarOpen ? 'open' : 'closed')"
+     :class="{ 'lg:drawer-open': sidebarOpen }">
   <input id="dz-drawer" type="checkbox" class="drawer-toggle" />
 
   {# Main content area #}
   <div class="drawer-content flex flex-col">
-    {# Top bar #}
-    <div class="navbar bg-base-100/85 backdrop-blur-md shadow-sm border-b border-base-300/50 lg:hidden sticky top-0 z-30">
+    {# Top bar (mobile + desktop when sidebar collapsed) #}
+    <div class="navbar bg-base-100/85 backdrop-blur-md shadow-sm border-b border-base-300/50 sticky top-0 z-30"
+         :class="{ 'lg:hidden': sidebarOpen }">
       <div class="flex-none">
-        <label for="dz-drawer" class="btn btn-square btn-ghost drawer-button">
+        {# Mobile: open drawer; Desktop collapsed: expand sidebar #}
+        <label for="dz-drawer" class="btn btn-square btn-ghost drawer-button lg:hidden">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
         </label>
+        <button class="btn btn-square btn-ghost hidden lg:flex" @click="sidebarOpen = true" x-show="!sidebarOpen">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
       </div>
       <div class="flex-1">
         <span class="text-lg font-semibold tracking-tight">{{ app_name | default("Dazzle") }}</span>
       </div>
-      <div class="flex-none">
+      <div class="flex-none flex items-center gap-2">
+        {% if is_authenticated %}
+        <span class="text-sm hidden sm:inline truncate max-w-[200px]">{{ user_name or user_email }}</span>
+        {% endif %}
         {# Dark mode toggle #}
         <button class="btn btn-ghost btn-sm btn-circle" @click="darkMode = !darkMode" aria-label="Toggle dark mode">
           <svg x-show="!darkMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
@@ -40,14 +53,19 @@
   {# Sidebar #}
   <div class="drawer-side z-40">
     <label for="dz-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-    <aside class="bg-base-100 w-64 min-h-full border-r border-base-300">
-      {# Brand #}
-      <div class="p-4 border-b border-base-300">
+    <aside class="bg-base-100 w-64 min-h-full border-r border-base-300 flex flex-col">
+      {# Brand + collapse toggle #}
+      <div class="p-4 border-b border-base-300 flex items-center justify-between">
         <h1 class="text-xl font-bold tracking-tight">{{ app_name | default("Dazzle") }}</h1>
+        <button class="btn btn-ghost btn-sm btn-square hidden lg:flex" @click="sidebarOpen = false" aria-label="Collapse sidebar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
       </div>
 
       {# Navigation #}
-      <ul class="menu p-4 gap-1">
+      <ul class="menu p-4 gap-1 flex-1">
         {% for nav_item in nav_items | default([]) %}
         <li>
           <a href="{{ nav_item.route }}"
@@ -60,17 +78,34 @@
         {% endfor %}
       </ul>
 
-      {# Dark mode toggle (sidebar, visible on desktop) #}
-      <div class="mt-auto p-4 border-t border-base-300 hidden lg:block">
-        <button class="btn btn-ghost btn-sm w-full justify-start gap-2" @click="darkMode = !darkMode">
-          <svg x-show="!darkMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-          </svg>
-          <svg x-show="darkMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-          </svg>
-          <span x-text="darkMode ? 'Light mode' : 'Dark mode'" class="text-sm"></span>
-        </button>
+      {# User section + dark mode toggle #}
+      <div class="mt-auto border-t border-base-300">
+        {% if is_authenticated %}
+        <div class="p-4 pb-2">
+          <div class="text-sm font-medium truncate" title="{{ user_email }}">{{ user_name or user_email }}</div>
+          <form action="/auth/logout" method="post" class="mt-2">
+            <button type="submit" class="btn btn-ghost btn-sm w-full justify-start gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+              </svg>
+              Logout
+            </button>
+          </form>
+        </div>
+        {% endif %}
+
+        {# Dark mode toggle (sidebar, visible on desktop) #}
+        <div class="p-4 pt-2 hidden lg:block">
+          <button class="btn btn-ghost btn-sm w-full justify-start gap-2" @click="darkMode = !darkMode">
+            <svg x-show="!darkMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+            </svg>
+            <svg x-show="darkMode" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+            </svg>
+            <span x-text="darkMode ? 'Light mode' : 'Dark mode'" class="text-sm"></span>
+          </button>
+        </div>
       </div>
     </aside>
   </div>

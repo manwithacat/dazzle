@@ -191,18 +191,39 @@ def _serialize_entity_detail(entity: Any) -> dict[str, Any]:
     return info
 
 
+def _serialize_ux_summary(ux: Any) -> dict[str, Any]:
+    """Compact UX spec summary for surface serialization."""
+    info: dict[str, Any] = {}
+    if ux.sort:
+        info["sort"] = [str(s) for s in ux.sort]
+    if ux.filter:
+        info["filter"] = list(ux.filter)
+    if ux.search:
+        info["search"] = list(ux.search)
+    if ux.empty_message:
+        info["empty_message"] = ux.empty_message
+    if ux.attention_signals:
+        info["attention_signals"] = len(ux.attention_signals)
+    if ux.persona_variants:
+        info["personas"] = [p.persona for p in ux.persona_variants]
+    return info
+
+
 def _serialize_surface_summary(surface: Any) -> dict[str, Any]:
     """Compact surface summary: name, title, entity, mode."""
-    return {
+    info: dict[str, Any] = {
         "name": surface.name,
         "title": surface.title,
         "entity": surface.entity_ref,
         "mode": surface.mode.value if surface.mode else None,
     }
+    if hasattr(surface, "ux") and surface.ux:
+        info["ux"] = _serialize_ux_summary(surface.ux)
+    return info
 
 
 def _serialize_surface_detail(surface: Any) -> dict[str, Any]:
-    """Full surface detail: includes sections and fields."""
+    """Full surface detail: includes sections, fields, and UX metadata."""
     info: dict[str, Any] = {
         "name": surface.name,
         "title": surface.title,
@@ -220,6 +241,8 @@ def _serialize_surface_detail(surface: Any) -> dict[str, Any]:
             }
             for sec in surface.sections
         ]
+    if hasattr(surface, "ux") and surface.ux:
+        info["ux"] = _serialize_ux_summary(surface.ux)
     return info
 
 

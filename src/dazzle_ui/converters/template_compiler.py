@@ -75,32 +75,86 @@ def _get_field_spec(entity: ir.EntitySpec | None, field_name: str) -> ir.FieldSp
     return None
 
 
+def _infer_filter_type(
+    field_spec: ir.FieldSpec | None,
+    entity: ir.EntitySpec | None,
+    field_name: str,
+) -> tuple[str, list[dict[str, str]]]:
+    """Infer filter UI type and options from a field spec.
+
+    Returns:
+        (filter_type, filter_options) — "select" with options for enums/bools/state machines,
+        "text" with empty options otherwise.
+    """
+    if field_spec and field_spec.type:
+        kind = field_spec.type.kind
+        if kind == FieldTypeKind.ENUM and field_spec.type.enum_values:
+            return "select", [
+                {"value": v, "label": v.replace("_", " ").title()}
+                for v in field_spec.type.enum_values
+            ]
+        if kind == FieldTypeKind.BOOL:
+            return "select", [
+                {"value": "true", "label": "Yes"},
+                {"value": "false", "label": "No"},
+            ]
+    # Check state machine field
+    if entity and entity.state_machine:
+        sm = entity.state_machine
+        if field_name == "status" or (
+            hasattr(sm, "field") and getattr(sm, "field", None) == field_name
+        ):
+            return "select", [{"value": s, "label": s.replace("_", " ").title()} for s in sm.states]
+    return "text", []
+
+
 def _build_columns(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
+    ux_spec: ir.UXSpec | None = None,
 ) -> list[ColumnContext]:
     """Build table column definitions from surface sections or entity fields."""
     columns: list[ColumnContext] = []
+    has_sort = bool(ux_spec and ux_spec.sort)
+    filter_fields = set(ux_spec.filter) if ux_spec and ux_spec.filter else set()
 
     if surface.sections:
         for section in surface.sections:
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
+                filterable = element.field_name in filter_fields
+                filter_type, filter_options = (
+                    _infer_filter_type(field_spec, entity, element.field_name)
+                    if filterable
+                    else ("text", [])
+                )
                 columns.append(
                     ColumnContext(
                         key=element.field_name,
                         label=element.label or element.field_name.replace("_", " ").title(),
                         type=_field_type_to_column_type(field_spec),
+                        sortable=has_sort,
+                        filterable=filterable,
+                        filter_type=filter_type,
+                        filter_options=filter_options,
                     )
                 )
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
+                filterable = field.name in filter_fields
+                filter_type, filter_options = (
+                    _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
+                )
                 columns.append(
                     ColumnContext(
                         key=field.name,
                         label=field.name.replace("_", " ").title(),
                         type=_field_type_to_column_type(field),
+                        sortable=has_sort,
+                        filterable=filterable,
+                        filter_type=filter_type,
+                        filter_options=filter_options,
                     )
                 )
 
@@ -229,7 +283,13 @@ def compile_surface_to_context(
     entity_slug = entity_name.lower().replace("_", "-")
 
     if surface.mode == SurfaceMode.LIST:
-        columns = _build_columns(surface, entity)
+        ux = surface.ux
+        columns = _build_columns(surface, entity, ux)
+        default_sort_field = ux.sort[0].field if ux and ux.sort else ""
+        default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
+        search_fields = list(ux.search) if ux and ux.search else []
+        empty_message = ux.empty_message if ux and ux.empty_message else "No items found."
+        table_id = f"dt-{surface.name}"
         return PageContext(
             page_title=surface.title or f"{entity_name} List",
             template="components/filterable_table.html",
@@ -240,6 +300,14 @@ def compile_surface_to_context(
                 api_endpoint=api_endpoint,
                 create_url=f"/{entity_slug}/create",
                 detail_url_template=f"/{entity_slug}/{{id}}",
+                search_enabled=bool(search_fields),
+                default_sort_field=default_sort_field,
+                default_sort_dir=default_sort_dir,
+                sort_field=default_sort_field,
+                sort_dir=default_sort_dir,
+                search_fields=search_fields,
+                empty_message=empty_message,
+                table_id=table_id,
             ),
         )
 
@@ -337,8 +405,8 @@ def compile_appspec_to_templates(
 
     # Build nav items from workspaces
     nav_items: list[NavItemContext] = []
-    for i, ws in enumerate(appspec.workspaces):
-        route = "/" if i == 0 else f"/{ws.name.replace('_', '-')}"
+    for ws in appspec.workspaces:
+        route = f"/workspaces/{ws.name}"
         nav_items.append(
             NavItemContext(
                 label=ws.title or ws.name.replace("_", " ").title(),

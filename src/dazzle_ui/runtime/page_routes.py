@@ -11,6 +11,7 @@ Each workspace+surface combination gets a GET route that:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ def create_page_routes(
     appspec: ir.AppSpec,
     backend_url: str = "http://127.0.0.1:8000",
     theme_css: str = "",
+    get_auth_context: Callable | None = None,
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -39,6 +41,7 @@ def create_page_routes(
         appspec: Complete application specification.
         backend_url: URL of the backend API for data fetching.
         theme_css: Pre-compiled theme CSS to inject.
+        get_auth_context: Optional callable(request) -> AuthContext for user info.
 
     Returns:
         FastAPI router with page routes.
@@ -64,6 +67,17 @@ def create_page_routes(
         async def page_handler(request: Request) -> HTMLResponse:
             # Set current route for nav highlighting
             ctx.current_route = route_path
+
+            # Inject auth context if available
+            if get_auth_context is not None:
+                try:
+                    auth_ctx = get_auth_context(request)
+                    ctx.is_authenticated = bool(auth_ctx and auth_ctx.is_authenticated)
+                    if auth_ctx and auth_ctx.user:
+                        ctx.user_email = auth_ctx.user.email or ""
+                        ctx.user_name = auth_ctx.user.username or ""
+                except Exception:
+                    pass
 
             # For detail/edit pages, extract {id} from path params
             path_id = request.path_params.get("id")
@@ -112,15 +126,22 @@ def create_page_routes(
             if ctx.table:
                 # Fetch list data from backend
                 import json
+                import urllib.parse
                 import urllib.request
 
-                fetch_url = f"{backend_url}{ctx.table.api_endpoint}"
-                search = request.query_params.get("search", "")
-                page_num = request.query_params.get("page", "1")
-                if search:
-                    fetch_url += f"?search={search}&page={page_num}"
-                elif page_num != "1":
-                    fetch_url += f"?page={page_num}"
+                # Forward all DataTable query params to backend API
+                api_params: dict[str, str] = {}
+                for key in ("page", "page_size", "sort", "dir", "search"):
+                    val = request.query_params.get(key)
+                    if val:
+                        api_params[key] = val
+                for key, val in request.query_params.items():
+                    if key.startswith("filter[") and val:
+                        api_params[key] = val
+                api_params.setdefault("page", "1")
+
+                query_string = urllib.parse.urlencode(api_params)
+                fetch_url = f"{backend_url}{ctx.table.api_endpoint}?{query_string}"
 
                 try:
                     req = urllib.request.Request(fetch_url)
@@ -134,6 +155,17 @@ def create_page_routes(
                 except Exception:
                     ctx.table.rows = []
                     ctx.table.total = 0
+
+                # Update table context with current sort/filter state from request
+                ctx.table.sort_field = request.query_params.get(
+                    "sort", ctx.table.default_sort_field
+                )
+                ctx.table.sort_dir = request.query_params.get("dir", ctx.table.default_sort_dir)
+                ctx.table.filter_values = {
+                    k[7:-1]: v
+                    for k, v in request.query_params.items()
+                    if k.startswith("filter[") and k.endswith("]") and v
+                }
 
             html = render_page(ctx)
             return HTMLResponse(content=html)

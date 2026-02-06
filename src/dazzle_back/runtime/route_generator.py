@@ -97,6 +97,9 @@ def create_list_handler(
         request: Request,
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+        sort: str | None = Query(None, description="Sort field"),
+        dir: str = Query("asc", description="Sort direction (asc/desc)"),
+        search: str | None = Query(None, description="Search query"),
     ) -> Any:
         # Get auth context if available
         auth_context = None
@@ -123,12 +126,28 @@ def create_list_handler(
         # Build visibility filters
         sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
 
-        # Execute list with filters
+        # Extract filter[field] params from query string
+        filters: dict[str, Any] = {}
+        for key, value in request.query_params.items():
+            if key.startswith("filter[") and key.endswith("]") and value:
+                filters[key[7:-1]] = value
+
+        # Merge visibility filters with user filters
+        merged_filters: dict[str, Any] | None = None
+        if sql_filters or filters:
+            merged_filters = {**(sql_filters or {}), **filters}
+
+        # Build sort list for repository
+        sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
+
+        # Execute list with filters, sort, and search
         result = await service.execute(
             operation="list",
             page=page,
             page_size=page_size,
-            filters=sql_filters if sql_filters else None,
+            filters=merged_filters,
+            sort=sort_list,
+            search=search,
         )
 
         # Apply post-filtering if needed (for OR conditions)
@@ -151,8 +170,7 @@ def create_list_handler(
                 # Convert Pydantic models to dicts
                 if items and hasattr(items[0], "model_dump"):
                     items = [item.model_dump() for item in items]
-                # Render table rows fragment
-                # Pass minimal table context for fragment rendering
+                # Render table rows fragment with sort/filter state
                 html = render_fragment(
                     "fragments/table_rows.html",
                     table={
@@ -163,6 +181,15 @@ def create_list_handler(
                         "detail_url_template": getattr(request.state, "htmx_detail_url", None),
                         "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
                         "api_endpoint": str(request.url.path),
+                        "sort_field": sort or "",
+                        "sort_dir": dir,
+                        "filter_values": filters,
+                        "page": page,
+                        "page_size": page_size,
+                        "total": result.get("total", 0) if isinstance(result, dict) else 0,
+                        "empty_message": getattr(
+                            request.state, "htmx_empty_message", "No items found."
+                        ),
                     },
                 )
                 return HTMLResponse(content=html)
@@ -176,6 +203,9 @@ def create_list_handler(
         "request": Request,
         "page": int,
         "page_size": int,
+        "sort": str | None,
+        "dir": str,
+        "search": str | None,
         "return": Any,
     }
 

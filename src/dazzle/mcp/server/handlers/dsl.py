@@ -122,16 +122,25 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
         if not surface:
             return json.dumps({"error": f"Surface '{surface_name}' not found"})
 
-        return json.dumps(
-            {
-                "name": surface.name,
-                "entity": surface.entity_ref,
-                "mode": str(surface.mode),
-                "description": surface.title,
-                "sections": len(surface.sections) if surface.sections else 0,
-            },
-            indent=2,
-        )
+        info: dict[str, Any] = {
+            "name": surface.name,
+            "entity": surface.entity_ref,
+            "mode": str(surface.mode),
+            "description": surface.title,
+            "sections": len(surface.sections) if surface.sections else 0,
+        }
+        if hasattr(surface, "ux") and surface.ux:
+            ux = surface.ux
+            info["ux"] = {
+                "purpose": ux.purpose,
+                "sort": [str(s) for s in ux.sort] if ux.sort else [],
+                "filter": list(ux.filter) if ux.filter else [],
+                "search": list(ux.search) if ux.search else [],
+                "empty_message": ux.empty_message,
+                "attention_signals": len(ux.attention_signals),
+                "persona_variants": [p.persona for p in ux.persona_variants],
+            }
+        return json.dumps(info, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 

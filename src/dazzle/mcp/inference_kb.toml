@@ -715,6 +715,40 @@ triggers = ["quick", "fast", "rapid", "simple form", "capture"]
 suggests = ["<entity>_create with minimal fields"]
 rationale = "Quick entry forms show only essential fields for fast data capture"
 
+[[surface_inference]]
+id = "filterable_list"
+name = "Filterable List Surface"
+triggers = ["filter", "search", "sort", "find", "browse", "look up", "sortable", "searchable"]
+suggests = [
+    "Add ux block with sort: for default ordering (e.g. created_at desc)",
+    "Add ux block with filter: for enum/status/bool fields (renders as dropdowns)",
+    "Add ux block with search: for text fields users search by (renders as debounced input)",
+    "Add ux block with empty: for user-friendly empty state message",
+]
+rationale = "List surfaces with sort/filter/search produce sortable column headers, filter dropdowns, and search inputs — much better UX than bare tables"
+
+[[surface_inference]]
+id = "ux_attention_signals"
+name = "Attention Signals"
+triggers = ["overdue", "urgent", "stale", "expired", "warning", "alert", "critical", "deadline", "sla"]
+suggests = [
+    "Add attention signals in ux block for time-sensitive conditions",
+    "Use critical for data loss risk, warning for approaching deadlines, notice for staleness",
+    "Signals can link to an action surface (e.g. action: <entity>_edit)",
+]
+rationale = "Spec language about urgency or deadlines maps directly to UX attention signals that highlight rows requiring action"
+
+[[surface_inference]]
+id = "persona_list"
+name = "Persona-Scoped List"
+triggers = ["my tasks", "assigned to me", "team view", "admin sees all", "personal", "own data"]
+suggests = [
+    "Add ux block with persona variants using scope: for data filtering",
+    "scope: all for admin roles, scope: <field> = current_user for personal data",
+    "Each persona can have its own purpose, show/hide fields, and primary action",
+]
+rationale = "Persona variants let a single surface serve multiple roles with different data visibility and capabilities"
+
 # =============================================================================
 # WORKSPACE INFERENCE
 # =============================================================================

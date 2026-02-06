@@ -1,7 +1,7 @@
 {# Reusable search input fragment with debounced HTMX search #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional) #}
 {% set placeholder = placeholder | default('Search...') %}
-{% set target = target | default('#search-results') %}
+{% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
 <div x-data="{ query: '' }" class="form-control">
   <div class="relative">
     <input type="text"
@@ -13,8 +13,9 @@
            hx-target="{{ target }}"
            hx-trigger="keyup changed delay:300ms"
            hx-swap="innerHTML"
+           hx-include="closest [x-data='dazzleTable']"
            hx-headers='{"Accept": "text/html"}'
-           hx-indicator="next .htmx-indicator" />
+           hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .htmx-indicator{% endif %}" />
     {# Clear button #}
     <button x-show="query.length > 0"
             @click="query = ''; $refs ? null : null; htmx.trigger($el.previousElementSibling, 'keyup')"
@@ -23,5 +24,7 @@
       &times;
     </button>
   </div>
+  {% if not table %}
   <span class="htmx-indicator loading loading-spinner loading-xs mt-1"></span>
+  {% endif %}
 </div>

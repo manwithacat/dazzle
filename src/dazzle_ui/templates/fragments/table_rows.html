@@ -9,7 +9,7 @@
     hx-swap="innerHTML"
     {% endif %}>
   {% for col in table.columns %}
-  <td>
+  <td x-show="isVisible('{{ col.key }}')">
     {% if col.type == "badge" %}
       <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
     {% elif col.type == "bool" %}
@@ -18,6 +18,8 @@
       {{ item[col.key] | dateformat }}
     {% elif col.type == "currency" %}
       {{ item[col.key] | currency }}
+    {% elif col.type == "percentage" %}
+      {{ item[col.key] | default("") }}%
     {% else %}
       {{ item[col.key] | default("") | truncate_text }}
     {% endif %}
@@ -51,7 +53,7 @@
 {% else %}
 <tr>
   <td colspan="{{ (table.columns | length) + 1 if table else 1 }}" class="text-center py-8 text-base-content/50">
-    No items found.
+    {{ table.empty_message | default("No items found.") if table else "No items found." }}
   </td>
 </tr>
 {% endif %}

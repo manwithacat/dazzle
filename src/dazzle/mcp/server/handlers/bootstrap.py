@@ -192,6 +192,7 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally: entities first, then surfaces, then workspaces",
+                "After generating list surfaces, add ux blocks with sort/filter/search/empty",
                 "Validate after each major section with dsl(operation='validate')",
                 "Do NOT copy from example projects - generate from first principles",
             ],
@@ -206,9 +207,15 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "3. Generate entity definitions based on analysis",
                 "4. Add state machines for entities with lifecycles",
                 "5. Generate surfaces (CRUD views) for each entity",
-                "6. Create workspaces for each persona",
-                "7. Validate with dsl(operation='validate')",
-                "8. Run dsl(operation='lint', extended=true) for quality check",
+                (
+                    "6. Add ux blocks to list surfaces: sort (default ordering), "
+                    "filter (enum/bool/status fields), search (text fields users "
+                    "would search by), empty messages. "
+                    "Use knowledge(operation='concept', term='ux_block') for syntax"
+                ),
+                "7. Create workspaces for each persona",
+                "8. Validate with dsl(operation='validate')",
+                "9. Run dsl(operation='lint', extended=true) for quality check",
             ],
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
