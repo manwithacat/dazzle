@@ -51,10 +51,15 @@ def _is_tracked(name: str) -> bool:
     return any(name.startswith(p) for p in _TRACKED_PREFIXES)
 
 
+def _is_mock(obj: object) -> bool:
+    """Return True if *obj* is a unittest.mock object (MagicMock, etc.)."""
+    return type(obj).__module__ == "unittest.mock"
+
+
 # Clean snapshot taken at session start.
 _clean: dict[str, Any] = {}
 
-# Per-module stashed diffs:  nodeid -> {module_name: mock_object}
+# Per-module stashed diffs:  nodeid -> {module_name: module_or_mock}
 _module_diffs: dict[str, dict[str, Any]] = {}
 
 
@@ -65,12 +70,35 @@ def pytest_configure(config: object) -> None:
             _clean[name] = sys.modules[name]
 
 
+def _clean_parent_attr(name: str) -> None:
+    """Remove stale mock attribute on a parent package.
+
+    After ``del sys.modules["a.b.c"]``, the ``a.b`` module object may still
+    hold ``c`` as an attribute pointing at the now-removed mock.  This
+    prevents Python's import machinery from re-importing ``a.b.c`` fresh.
+    """
+    parts = name.rsplit(".", 1)
+    if len(parts) != 2:
+        return
+    parent_name, child = parts
+    parent = sys.modules.get(parent_name)
+    if parent is None:
+        return
+    child_attr = getattr(parent, child, None)
+    if child_attr is not None and _is_mock(child_attr):
+        try:
+            delattr(parent, child)
+        except AttributeError:
+            pass
+
+
 def _restore_clean() -> None:
     """Restore sys.modules to the clean snapshot."""
     # Remove entries added since the snapshot
     for name in list(sys.modules):
         if _is_tracked(name) and name not in _clean:
             del sys.modules[name]
+            _clean_parent_attr(name)
     # Restore entries that were modified
     for name, val in _clean.items():
         if sys.modules.get(name) is not val:
@@ -78,7 +106,7 @@ def _restore_clean() -> None:
 
 
 def pytest_collectreport(report: Any) -> None:
-    """After each test module collection, stash its mocks and restore clean state."""
+    """After each test module collection, stash its diffs and restore clean state."""
     # Only care about Python test files
     nodeid = getattr(report, "nodeid", "")
     if not nodeid.endswith(".py"):
@@ -118,11 +146,18 @@ def _manage_sys_modules_mocks(request: pytest.FixtureRequest) -> Any:
         yield
         return
 
-    # Re-establish the mocks
+    # Re-establish the mocks and record what we displaced
+    displaced: dict[str, Any | None] = {}
     for k, v in mocks.items():
+        displaced[k] = sys.modules.get(k)
         sys.modules[k] = v
 
     yield
 
-    # Tear down: restore clean state
-    _restore_clean()
+    # Tear down: restore exactly what was there before
+    for k, prev in displaced.items():
+        if prev is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = prev
+        _clean_parent_attr(k)

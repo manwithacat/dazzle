@@ -53,7 +53,9 @@ def _import_api_packs():
         env_vars=[mock_env_var],
         operations=[mock_operation],
         foreign_models=[],
-        generate_service_dsl=lambda: 'service stripe "Stripe":\n    base_url: "https://api.stripe.com"',
+        generate_service_dsl=lambda: (
+            'service stripe "Stripe":\n    base_url: "https://api.stripe.com"'
+        ),
         generate_foreign_model_dsl=lambda m: "",
     )
 

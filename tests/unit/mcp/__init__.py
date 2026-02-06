@@ -1,1 +1,0 @@
-# MCP handler tests
