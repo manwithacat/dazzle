@@ -303,6 +303,7 @@ class TestKnowledgeGraphHandlers:
             "kg_stats",
             "kg_populate_appspec",
             "kg_populate_mcp_tools",
+            "kg_populate_test_coverage",
         }
         assert tool_names == expected_tools
 
@@ -433,3 +434,78 @@ class TestKnowledgeGraphHandlers:
         assert "delete" in operations
         assert "search" in operations
         assert "query" in operations
+
+    def test_handler_populate_test_coverage(self, tmp_path) -> None:
+        """Test populating graph with test coverage information."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        # Create a test file in the temp directory
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+
+        test_content = '''"""Tests for auth module."""
+
+class TestAuthStore:
+    """Test auth store operations."""
+
+    def test_create_user(self):
+        pass
+
+    def test_login(self):
+        pass
+
+
+class TestSessionManager:
+    """Test session management."""
+
+    def test_create_session(self):
+        pass
+'''
+        (tests_dir / "test_auth.py").write_text(test_content)
+
+        # Run the handler
+        result = handlers.handle_populate_test_coverage(str(tests_dir))
+
+        # Check stats
+        assert result["test_files_created"] == 1
+        assert result["test_classes_found"] == 2
+        assert result["coverage_relations_created"] >= 1
+
+        # Verify the test file entity was created
+        entities = graph.query("auth", entity_types=["test_file"])
+        assert len(entities) >= 1
+
+    def test_handler_populate_test_coverage_invalid_path(self) -> None:
+        """Test populate test coverage with invalid path."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        result = handlers.handle_populate_test_coverage("/nonexistent/path")
+        assert "error" in result
+
+    def test_camel_to_snake_conversion(self) -> None:
+        """Test CamelCase to snake_case conversion."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        assert handlers._camel_to_snake("AuthStore") == "auth_store"
+        assert handlers._camel_to_snake("HTTPClient") == "http_client"
+        assert handlers._camel_to_snake("MyClass") == "my_class"
+        assert handlers._camel_to_snake("A") == "a"
+
+    def test_infer_covered_modules(self) -> None:
+        """Test inferring covered modules from test names."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        # From test file name
+        modules = handlers._infer_covered_modules("test_auth", [])
+        assert "auth" in modules
+
+        # From test class names
+        modules = handlers._infer_covered_modules(
+            "test_something", ["TestAuthStore", "TestUserManager"]
+        )
+        assert "auth_store" in modules
+        assert "user_manager" in modules

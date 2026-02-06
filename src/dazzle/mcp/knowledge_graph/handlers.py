@@ -579,6 +579,152 @@ class KnowledgeGraphHandlers:
 
         return found_operations
 
+    def handle_populate_test_coverage(
+        self,
+        tests_path: str,
+        source_path: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Populate the knowledge graph with test coverage information.
+
+        Scans test files to understand what modules are tested and creates
+        coverage relations between test files and source modules.
+
+        Enables queries like:
+        - "which modules have tests?"
+        - "what tests cover auth.py?"
+        - "which modules lack test coverage?"
+
+        Args:
+            tests_path: Path to tests directory
+            source_path: Optional source directory to match against
+
+        Returns:
+            Stats about what was indexed
+        """
+        tests_root = Path(tests_path)
+        if not tests_root.exists():
+            return {"error": f"Tests path does not exist: {tests_path}"}
+
+        stats: dict[str, Any] = {
+            "test_files_created": 0,
+            "test_classes_found": 0,
+            "coverage_relations_created": 0,
+            "errors": [],
+        }
+
+        # Find all test files
+        test_patterns = ["**/test_*.py", "**/*_test.py"]
+        test_files: list[Path] = []
+        for pattern in test_patterns:
+            test_files.extend(tests_root.glob(pattern))
+
+        for test_file in test_files:
+            try:
+                self._index_test_file(test_file, tests_root, source_path, stats)
+            except Exception as e:
+                stats["errors"].append(f"{test_file}: {e}")
+                logger.warning(f"Error indexing test file {test_file}: {e}")
+
+        return stats
+
+    def _index_test_file(
+        self,
+        test_file: Path,
+        tests_root: Path,
+        source_path: str | None,
+        stats: dict[str, Any],
+    ) -> None:
+        """Index a single test file into the knowledge graph."""
+        rel_path = test_file.relative_to(tests_root)
+        test_id = f"test:{rel_path}"
+        test_name = test_file.stem
+
+        # Parse the test file to extract test classes
+        try:
+            source = test_file.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(test_file))
+        except (SyntaxError, UnicodeDecodeError) as e:
+            stats["errors"].append(f"{test_file}: Parse error - {e}")
+            return
+
+        # Find test classes and functions
+        test_classes: list[str] = []
+        test_functions: list[str] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+                test_classes.append(node.name)
+            elif isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
+                # Only count top-level test functions (not methods)
+                if isinstance(node, ast.FunctionDef):
+                    test_functions.append(node.name)
+
+        stats["test_classes_found"] += len(test_classes)
+
+        # Infer what module this test file covers
+        covered_modules = self._infer_covered_modules(test_name, test_classes)
+
+        # Create test file entity
+        self._graph.create_entity(
+            entity_id=test_id,
+            name=test_name,
+            entity_type="test_file",
+            metadata={
+                "path": str(rel_path),
+                "test_classes": test_classes,
+                "test_function_count": len(test_functions),
+                "covered_modules": covered_modules,
+            },
+        )
+        stats["test_files_created"] += 1
+
+        # Create coverage relations to inferred modules
+        for module_name in covered_modules:
+            # Try to find the module in the graph
+            module_id = f"file:{module_name}.py"
+            # Create relation even if module doesn't exist yet
+            self._graph.create_relation(
+                source_id=test_id,
+                target_id=module_id,
+                relation_type="tests",
+                create_missing_entities=True,
+            )
+            stats["coverage_relations_created"] += 1
+
+    def _infer_covered_modules(self, test_name: str, test_classes: list[str]) -> list[str]:
+        """Infer which modules a test file covers based on naming conventions."""
+        covered: set[str] = set()
+
+        # From test file name: test_auth.py -> auth
+        if test_name.startswith("test_"):
+            module_name = test_name[5:]  # Remove "test_" prefix
+            if module_name:
+                covered.add(module_name)
+        elif test_name.endswith("_test"):
+            module_name = test_name[:-5]  # Remove "_test" suffix
+            if module_name:
+                covered.add(module_name)
+
+        # From test class names: TestAuthStore -> auth_store or auth
+        for class_name in test_classes:
+            if class_name.startswith("Test"):
+                # Convert TestAuthStore -> auth_store
+                name = class_name[4:]  # Remove "Test"
+                # Convert CamelCase to snake_case
+                snake_name = self._camel_to_snake(name)
+                if snake_name:
+                    covered.add(snake_name)
+
+        return list(covered)
+
+    def _camel_to_snake(self, name: str) -> str:
+        """Convert CamelCase to snake_case."""
+        import re
+
+        # Insert underscore before uppercase letters and lowercase everything
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
     def _matches_exclude(self, path: Path, patterns: list[str], root: Path) -> bool:
         """Check if path matches any exclude pattern."""
         rel_path = path.relative_to(root)
@@ -988,6 +1134,24 @@ class KnowledgeGraphHandlers:
                 "description": "Index MCP tool definitions into the knowledge graph. Enables queries like 'which tool handles user management?' or 'what operations does dsl tool support?'",
                 "inputSchema": {"type": "object", "properties": {}},
             },
+            {
+                "name": "kg_populate_test_coverage",
+                "description": "Index test files to understand test coverage. Creates relations between test files and the modules they test. Enables queries like 'which modules have tests?' or 'what tests cover auth.py?'",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "tests_path": {
+                            "type": "string",
+                            "description": "Path to tests directory",
+                        },
+                        "source_path": {
+                            "type": "string",
+                            "description": "Optional source directory to match against",
+                        },
+                    },
+                    "required": ["tests_path"],
+                },
+            },
         ]
 
     def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1010,6 +1174,7 @@ class KnowledgeGraphHandlers:
             "kg_stats": self.handle_get_stats,
             "kg_populate_appspec": self.handle_populate_from_appspec,
             "kg_populate_mcp_tools": self.handle_populate_mcp_tools,
+            "kg_populate_test_coverage": self.handle_populate_test_coverage,
         }
 
         handler = handlers.get(tool_name)
