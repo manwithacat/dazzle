@@ -131,9 +131,8 @@ if _TEMPORAL_AVAILABLE:
         """
         event_type = event.get("event_type", "process.event.v1")
 
-        activity.logger.info(
-            f"Emitting HLESS event: {event_type}, payload keys: {list(event.get('payload', {}).keys())}"
-        )
+        payload_keys = list(event.get("payload", {}).keys())
+        activity.logger.info(f"Emitting HLESS event: {event_type}, payload keys: {payload_keys}")
 
         # TODO: Integrate with event bus / message queue
         # await event_bus.publish(event_type, event["payload"])

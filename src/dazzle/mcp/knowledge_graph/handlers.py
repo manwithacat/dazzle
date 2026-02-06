@@ -347,6 +347,238 @@ class KnowledgeGraphHandlers:
 
         return stats
 
+    def handle_populate_from_appspec(
+        self,
+        project_path: str,
+    ) -> dict[str, Any]:
+        """
+        Populate the knowledge graph from DSL entities and surfaces.
+
+        Parses the DAZZLE project at the given path and indexes:
+        - Entities (entity:{name} nodes with fields as metadata)
+        - Surfaces (surface:{name} nodes with entity reference)
+        - Entity relationships (foreign keys)
+        - Surface-to-entity "uses" relations
+
+        This enables queries like:
+        - "Which surfaces use Entity X?" via graph(operation="dependents", entity_id="entity:Task")
+        - "What fields does Entity Y have?" via graph(operation="query", text="Order")
+
+        Args:
+            project_path: Path to the DAZZLE project directory
+
+        Returns:
+            Stats about what was populated
+        """
+        root = Path(project_path)
+        if not root.exists():
+            return {"error": f"Path does not exist: {project_path}"}
+
+        manifest_path = root / "dazzle.toml"
+        if not manifest_path.exists():
+            return {"error": f"No dazzle.toml found in {project_path}"}
+
+        stats: dict[str, Any] = {
+            "entities_created": 0,
+            "surfaces_created": 0,
+            "entity_references_created": 0,
+            "surface_uses_created": 0,
+            "fields_indexed": 0,
+            "errors": [],
+        }
+
+        try:
+            # Load AppSpec using the standard DAZZLE toolchain
+            from dazzle.core.errors import ParseError
+            from dazzle.core.fileset import discover_dsl_files
+            from dazzle.core.linker import build_appspec
+            from dazzle.core.manifest import load_manifest
+            from dazzle.core.parser import parse_modules
+
+            manifest = load_manifest(manifest_path)
+            dsl_files = discover_dsl_files(root, manifest)
+
+            if not dsl_files:
+                return {"error": "No DSL files found", **stats}
+
+            modules = parse_modules(dsl_files)
+            appspec = build_appspec(modules, manifest.project_root)
+
+            # Index entities
+            for entity in appspec.domain.entities:
+                entity_id = f"entity:{entity.name}"
+                field_names = [f.name for f in entity.fields]
+                self._graph.create_entity(
+                    entity_id=entity_id,
+                    name=entity.name,
+                    entity_type="dsl_entity",
+                    metadata={
+                        "title": entity.title,
+                        "intent": entity.intent,
+                        "fields": field_names,
+                        "field_count": len(entity.fields),
+                    },
+                )
+                stats["entities_created"] += 1
+                stats["fields_indexed"] += len(entity.fields)
+
+                # Create relations for foreign key references
+                for field in entity.fields:
+                    # Check if field type is a reference type with ref_entity
+                    if field.type.ref_entity:
+                        # Foreign key reference to another entity
+                        target_id = f"entity:{field.type.ref_entity}"
+                        self._graph.create_relation(
+                            source_id=entity_id,
+                            target_id=target_id,
+                            relation_type="references",
+                            metadata={
+                                "via_field": field.name,
+                                "ref_kind": field.type.kind.value,
+                            },
+                        )
+                        stats["entity_references_created"] += 1
+
+            # Index surfaces
+            for surface in appspec.surfaces:
+                surface_id = f"surface:{surface.name}"
+                self._graph.create_entity(
+                    entity_id=surface_id,
+                    name=surface.name,
+                    entity_type="dsl_surface",
+                    metadata={
+                        "title": surface.title,
+                        "mode": surface.mode.value if surface.mode else None,
+                        "entity_ref": surface.entity_ref,
+                    },
+                )
+                stats["surfaces_created"] += 1
+
+                # Create relation from surface to entity
+                if surface.entity_ref:
+                    entity_id = f"entity:{surface.entity_ref}"
+                    self._graph.create_relation(
+                        source_id=surface_id,
+                        target_id=entity_id,
+                        relation_type="uses",
+                        metadata={"mode": surface.mode.value if surface.mode else None},
+                    )
+                    stats["surface_uses_created"] += 1
+
+        except ParseError as e:
+            errors_list: list[str] = stats["errors"]
+            errors_list.append(f"Parse error: {e}")
+            logger.warning(f"Parse error indexing {project_path}: {e}")
+        except Exception as e:
+            errors_list = stats["errors"]
+            errors_list.append(f"Error: {e}")
+            logger.warning(f"Error indexing {project_path}: {e}")
+
+        return stats
+
+    def handle_populate_mcp_tools(self) -> dict[str, Any]:
+        """
+        Populate the knowledge graph with MCP tool definitions.
+
+        Indexes all registered MCP tools to enable queries like:
+        - "which tool handles user creation?"
+        - "what operations does the story tool support?"
+
+        Creates nodes:
+        - tool:{name} for each MCP tool with description and schema
+        - Extracts operation keywords from descriptions
+
+        Returns:
+            Stats about what was indexed
+        """
+        stats: dict[str, Any] = {
+            "tools_created": 0,
+            "operations_indexed": 0,
+            "errors": [],
+        }
+
+        try:
+            # Import tools from the MCP server
+            from dazzle.mcp.server.tools import get_all_tools
+
+            tools = get_all_tools()
+
+            for tool in tools:
+                tool_id = f"tool:{tool.name}"
+                tool_name = tool.name
+
+                # Extract operation keywords from description
+                description = tool.description or ""
+                operations = self._extract_operations_from_description(description)
+
+                # Extract input parameters
+                input_schema = tool.inputSchema or {}
+                properties = input_schema.get("properties", {})
+                param_names = list(properties.keys())
+
+                self._graph.create_entity(
+                    entity_id=tool_id,
+                    name=tool_name,
+                    entity_type="mcp_tool",
+                    metadata={
+                        "description": description,
+                        "operations": operations,
+                        "parameters": param_names,
+                        "required": input_schema.get("required", []),
+                    },
+                )
+                stats["tools_created"] += 1
+                stats["operations_indexed"] += len(operations)
+
+        except ImportError as e:
+            error_msg = f"Could not import MCP tools: {e}"
+            errors_list: list[str] = stats["errors"]
+            errors_list.append(error_msg)
+            logger.warning(error_msg)
+        except Exception as e:
+            error_msg = f"Error indexing MCP tools: {e}"
+            errors_list = stats["errors"]
+            errors_list.append(error_msg)
+            logger.warning(error_msg)
+
+        return stats
+
+    def _extract_operations_from_description(self, description: str) -> list[str]:
+        """Extract operation keywords from a tool description."""
+        # Common operation keywords to look for
+        operation_keywords = [
+            "list",
+            "get",
+            "create",
+            "update",
+            "delete",
+            "search",
+            "query",
+            "validate",
+            "inspect",
+            "generate",
+            "run",
+            "execute",
+            "propose",
+            "save",
+            "fetch",
+            "analyze",
+            "coverage",
+            "scaffold",
+            "review",
+            "test",
+            "check",
+        ]
+
+        # Extract operations mentioned in description
+        description_lower = description.lower()
+        found_operations = []
+        for op in operation_keywords:
+            if op in description_lower:
+                found_operations.append(op)
+
+        return found_operations
+
     def _matches_exclude(self, path: Path, patterns: list[str], root: Path) -> bool:
         """Check if path matches any exclude pattern."""
         rel_path = path.relative_to(root)
@@ -737,6 +969,25 @@ class KnowledgeGraphHandlers:
                 "description": "Get knowledge graph statistics",
                 "inputSchema": {"type": "object", "properties": {}},
             },
+            {
+                "name": "kg_populate_appspec",
+                "description": "Populate graph from DAZZLE DSL (indexes entities, surfaces, relationships). Use this to answer questions like 'which surfaces use Entity X?'",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_path": {
+                            "type": "string",
+                            "description": "Path to DAZZLE project (must contain dazzle.toml)",
+                        },
+                    },
+                    "required": ["project_path"],
+                },
+            },
+            {
+                "name": "kg_populate_mcp_tools",
+                "description": "Index MCP tool definitions into the knowledge graph. Enables queries like 'which tool handles user management?' or 'what operations does dsl tool support?'",
+                "inputSchema": {"type": "object", "properties": {}},
+            },
         ]
 
     def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -757,6 +1008,8 @@ class KnowledgeGraphHandlers:
             "kg_query_sql": self.handle_query_sql,
             "kg_auto_populate": self.handle_auto_populate,
             "kg_stats": self.handle_get_stats,
+            "kg_populate_appspec": self.handle_populate_from_appspec,
+            "kg_populate_mcp_tools": self.handle_populate_mcp_tools,
         }
 
         handler = handlers.get(tool_name)

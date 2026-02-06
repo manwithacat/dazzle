@@ -2,7 +2,35 @@
 
 from __future__ import annotations
 
-from dazzle.mcp.knowledge_graph import KnowledgeGraph, KnowledgeGraphHandlers
+import importlib.util
+import sys
+from pathlib import Path
+
+
+def _import_knowledge_graph_module(module_name: str):
+    """Import knowledge graph modules directly to avoid MCP package init issues."""
+    module_path = (
+        Path(__file__).parent.parent.parent
+        / "src"
+        / "dazzle"
+        / "mcp"
+        / "knowledge_graph"
+        / f"{module_name}.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        f"dazzle.mcp.knowledge_graph.{module_name}",
+        module_path,
+    )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[f"dazzle.mcp.knowledge_graph.{module_name}"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_store_module = _import_knowledge_graph_module("store")
+_handlers_module = _import_knowledge_graph_module("handlers")
+KnowledgeGraph = _store_module.KnowledgeGraph
+KnowledgeGraphHandlers = _handlers_module.KnowledgeGraphHandlers
 
 
 class TestKnowledgeGraphStore:
@@ -273,6 +301,8 @@ class TestKnowledgeGraphHandlers:
             "kg_query_sql",
             "kg_auto_populate",
             "kg_stats",
+            "kg_populate_appspec",
+            "kg_populate_mcp_tools",
         }
         assert tool_names == expected_tools
 
@@ -299,3 +329,107 @@ class TestKnowledgeGraphHandlers:
         result = handlers.handle_get_stats()
         assert result["entity_count"] == 2
         assert result["relation_count"] == 1
+
+    def test_handler_populate_from_appspec(self) -> None:
+        """Test populating graph from DAZZLE DSL project."""
+
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        # Use the simple_task example project
+        project_path = Path(__file__).parent.parent.parent / "examples" / "simple_task"
+
+        if not (project_path / "dazzle.toml").exists():
+            # Skip if example project not available
+            return
+
+        result = handlers.handle_populate_from_appspec(str(project_path))
+
+        # Should have created entities and surfaces
+        assert "error" not in result or result.get("entities_created", 0) > 0
+        if "entities_created" in result:
+            assert result["entities_created"] > 0
+
+            # Query for the Task entity
+            entities = graph.query("Task", entity_types=["dsl_entity"])
+            assert len(entities) > 0
+
+    def test_handler_populate_from_appspec_invalid_path(self) -> None:
+        """Test populate from appspec with invalid path."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        result = handlers.handle_populate_from_appspec("/nonexistent/path")
+        assert "error" in result
+
+    def test_handler_populate_from_appspec_no_manifest(self, tmp_path) -> None:
+        """Test populate from appspec with no dazzle.toml."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        result = handlers.handle_populate_from_appspec(str(tmp_path))
+        assert "error" in result
+        assert "dazzle.toml" in result["error"]
+
+    def test_handler_populate_mcp_tools(self) -> None:
+        """Test populating graph with MCP tool definitions."""
+        from unittest.mock import MagicMock, patch
+
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        # Create mock tools with the structure expected from mcp.types.Tool
+        mock_tool_1 = MagicMock()
+        mock_tool_1.name = "user_management"
+        mock_tool_1.description = "List, create, update, and delete users"
+        mock_tool_1.inputSchema = {
+            "type": "object",
+            "properties": {
+                "operation": {"type": "string"},
+                "user_id": {"type": "string"},
+            },
+            "required": ["operation"],
+        }
+
+        mock_tool_2 = MagicMock()
+        mock_tool_2.name = "dsl"
+        mock_tool_2.description = "Validate and inspect DSL files"
+        mock_tool_2.inputSchema = {
+            "type": "object",
+            "properties": {
+                "operation": {"type": "string"},
+            },
+            "required": ["operation"],
+        }
+
+        # Mock the module that get_all_tools is imported from
+        mock_tools_module = MagicMock()
+        mock_tools_module.get_all_tools = MagicMock(return_value=[mock_tool_1, mock_tool_2])
+
+        with patch.dict(sys.modules, {"dazzle.mcp.server.tools": mock_tools_module}):
+            result = handlers.handle_populate_mcp_tools()
+
+        assert "error" not in result or result.get("tools_created", 0) > 0
+        if "tools_created" in result:
+            assert result["tools_created"] == 2
+
+            # Query for the user_management tool
+            entities = graph.query("user_management", entity_types=["mcp_tool"])
+            assert len(entities) > 0
+            assert entities[0].id == "tool:user_management"
+
+    def test_handler_populate_mcp_tools_extracts_operations(self) -> None:
+        """Test that operations are extracted from tool descriptions."""
+        graph = KnowledgeGraph(":memory:")
+        handlers = KnowledgeGraphHandlers(graph)
+
+        # Test the operation extraction helper directly
+        description = "List, create, update, and delete users. Also supports search and query."
+        operations = handlers._extract_operations_from_description(description)
+
+        assert "list" in operations
+        assert "create" in operations
+        assert "update" in operations
+        assert "delete" in operations
+        assert "search" in operations
+        assert "query" in operations
