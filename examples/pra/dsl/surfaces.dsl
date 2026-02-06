@@ -90,6 +90,13 @@ surface product_list "Product Catalog":
     field category "Category"
     field is_active "Active"
 
+  ux:
+    purpose: "Browse and manage the product catalog"
+    sort: name asc
+    filter: is_active
+    search: sku, name, description
+    empty: "No products in the catalog. Add your first product to get started."
+
 # =============================================================================
 # VIEW MODE SURFACE
 # =============================================================================
@@ -253,6 +260,13 @@ surface task_list "Task List":
   section main:
     field title
 
+  ux:
+    purpose: "Track and manage project tasks"
+    sort: created_at desc
+    filter: status, priority
+    search: title, description
+    empty: "No tasks yet. Create a task to start tracking work."
+
 # =============================================================================
 # UX BLOCK: BASIC
 # =============================================================================
@@ -295,6 +309,8 @@ surface invoice_list "Invoice Management":
     show: invoice_number, status, total, due_date
     sort: due_date asc
     filter: status
+    search: invoice_number, notes
+    empty: "No invoices yet. Create your first invoice to start billing."
 
     # Critical: immediate action required
     attention critical:
@@ -349,6 +365,9 @@ surface project_list "Projects":
     purpose: "View and manage projects"
     show: name, code, status, budget
     sort: name asc
+    filter: status
+    search: name, code, description
+    empty: "No projects found. Create a project to begin planning."
 
     # Persona variant for team members
     for member:
@@ -393,6 +412,8 @@ surface task_kanban "Task Board":
     show: title, status, priority, assignee, due_date
     sort: priority desc, due_date asc
     filter: status, priority, assignee
+    search: title, description
+    empty: "No tasks on the board. Create a task to get started."
 
     # Team member sees only their tasks
     for team_member:
@@ -483,6 +504,10 @@ surface analytics_dashboard "Analytics Dashboard":
 
   ux:
     purpose: "Analytics overview"
+    sort: due_date desc
+    filter: status
+    search: invoice_number
+    empty: "No data available for analytics yet."
 
     # Marketing focuses on different regions
     for marketing:
@@ -525,6 +550,13 @@ surface minimal_surface "Minimal":
   section items:
     field name
     field slug
+
+  ux:
+    purpose: "Browse categories"
+    sort: name asc
+    filter: is_active
+    search: name, slug, description
+    empty: "No categories defined yet."
 
 # =============================================================================
 # MULTIPLE SECTIONS

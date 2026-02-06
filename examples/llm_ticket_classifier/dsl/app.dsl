@@ -139,6 +139,11 @@ surface ticket_list "Tickets":
     field customer_email "Customer"
     field status "Status"
     field created_at "Created"
+  ux:
+    sort: created_at desc
+    filter: status
+    search: subject, customer_email
+    empty: "No tickets in the queue."
 
 surface ticket_detail "Ticket Detail":
   uses entity Ticket
@@ -161,6 +166,11 @@ surface classification_list "Classifications":
     field priority "Priority"
     field sentiment "Sentiment"
     field classified_at "Classified At"
+  ux:
+    sort: classified_at desc
+    filter: category, priority, sentiment
+    search: suggested_response, llm_job_id
+    empty: "No classifications yet. Submit tickets to generate AI classifications."
 
 
 # =============================================================================

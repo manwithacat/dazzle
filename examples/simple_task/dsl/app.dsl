@@ -294,6 +294,10 @@ surface user_list "Team Members":
 
   ux:
     purpose: "Manage team members"
+    sort: name asc
+    filter: role, department, is_active
+    search: name, email
+    empty: "No team members yet. Add your first team member to get started."
 
     for admin:
       scope: all

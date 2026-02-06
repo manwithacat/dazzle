@@ -126,6 +126,12 @@ surface system_list "Systems":
     field response_time_ms "Response Time (ms)"
     field error_rate "Error Rate"
 
+  ux:
+    sort: name asc
+    filter: service_type, status
+    search: name
+    empty: "No systems registered. Add a system to begin monitoring."
+
 surface system_detail "System Detail":
   uses entity System
   mode: view
@@ -150,6 +156,12 @@ surface alert_list "Alerts":
     field message "Message"
     field triggered_at "Triggered"
     field acknowledged "Acknowledged"
+
+  ux:
+    sort: triggered_at desc
+    filter: severity, acknowledged
+    search: message, acknowledged_by
+    empty: "No alerts. All systems operational."
 
 surface alert_ack "Acknowledge Alert":
   uses entity Alert

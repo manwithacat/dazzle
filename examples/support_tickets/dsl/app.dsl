@@ -118,6 +118,12 @@ surface user_list "User List":
   uses entity User
   mode: list
 
+  ux:
+    sort: name asc
+    filter: role, is_active
+    search: email, name
+    empty: "No users found. Invite team members to get started."
+
   section main "Users":
     field email "Email"
     field name "Name"
@@ -162,6 +168,12 @@ surface user_edit "Edit User":
 surface ticket_list "Ticket List":
   uses entity Ticket
   mode: list
+
+  ux:
+    sort: created_at desc
+    filter: status, priority, category
+    search: ticket_number, title
+    empty: "No support tickets. All clear!"
 
   section main "Support Tickets":
     field ticket_number "Ticket #"
@@ -221,6 +233,12 @@ surface ticket_edit "Edit Ticket":
 surface comment_list "Comment List":
   uses entity Comment
   mode: list
+
+  ux:
+    sort: created_at desc
+    filter: is_internal
+    search: content
+    empty: "No comments yet. Start the conversation."
 
   section main "Comments":
     field content "Comment"
