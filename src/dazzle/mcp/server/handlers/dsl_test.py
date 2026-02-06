@@ -75,10 +75,20 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
         regenerate = args.get("regenerate", False)
+        base_url = args.get("base_url")
+        category = args.get("category")
+        entity = args.get("entity")
+        test_id = args.get("test_id")
 
         # Create runner and run all tests
-        runner = UnifiedTestRunner(project_root)
-        result = runner.run_all(generate=True, force_generate=regenerate)
+        runner = UnifiedTestRunner(project_root, base_url=base_url)
+        result = runner.run_all(
+            generate=True,
+            force_generate=regenerate,
+            category=category,
+            entity=entity,
+            test_id=test_id,
+        )
 
         # Return summary
         summary = result.get_summary()

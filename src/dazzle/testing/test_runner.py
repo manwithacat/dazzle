@@ -404,10 +404,19 @@ class DazzleClient:
 class TestRunner:
     """Execute test designs against a DNR app."""
 
-    def __init__(self, project_path: Path, api_port: int = 8000, ui_port: int = 3000):
+    def __init__(
+        self,
+        project_path: Path,
+        api_port: int = 8000,
+        ui_port: int = 3000,
+        api_url: str | None = None,
+        ui_url: str | None = None,
+    ):
         self.project_path = project_path
         self.api_port = api_port
         self.ui_port = ui_port
+        self.api_url = api_url or f"http://localhost:{api_port}"
+        self.ui_url = ui_url or f"http://localhost:{ui_port}"
         self.designs_path = project_path / "dsl" / "tests" / "designs.json"
         self.client: DazzleClient | None = None
         self._server_process: subprocess.Popen | None = None
@@ -495,9 +504,7 @@ class TestRunner:
         print(f"  Found {len(designs)} test designs")
 
         # Initialize client
-        self.client = DazzleClient(
-            api_url=f"http://localhost:{self.api_port}", ui_url=f"http://localhost:{self.ui_port}"
-        )
+        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
 
         # Wait for server
         if not self.client.wait_for_ready(max_wait=20):
@@ -576,9 +583,7 @@ class TestRunner:
             return result
 
         # Initialize client
-        self.client = DazzleClient(
-            api_url=f"http://localhost:{self.api_port}", ui_url=f"http://localhost:{self.ui_port}"
-        )
+        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
 
         # Wait for server
         if not self.client.wait_for_ready(max_wait=20):

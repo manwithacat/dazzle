@@ -115,7 +115,12 @@ class UnifiedTestRunner:
     4. Automatic test regeneration on DSL changes
     """
 
-    def __init__(self, project_path: Path, server_timeout: int = 30):
+    def __init__(
+        self,
+        project_path: Path,
+        server_timeout: int = 30,
+        base_url: str | None = None,
+    ):
         self.project_path = project_path.resolve()
         self.designs_path = self.project_path / "dsl" / "tests" / "dsl_generated_tests.json"
         self.cache_path = self.project_path / ".dazzle" / "test_cache.json"
@@ -123,6 +128,25 @@ class UnifiedTestRunner:
         self.api_port = 8000
         self.ui_port = 3000
         self.server_timeout = server_timeout
+        self.base_url = base_url
+        self.api_url: str | None = None
+        self.ui_url: str | None = None
+        if base_url:
+            self.api_url, self.ui_url = self._parse_base_url(base_url)
+
+    def _parse_base_url(self, base_url: str) -> tuple[str, str]:
+        """Parse base_url into (api_url, ui_url).
+
+        Assumes API at base_url, UI at same host port 3000 (or same port if not 8000).
+        """
+        from urllib.parse import urlparse
+
+        url = base_url.rstrip("/")
+        parsed = urlparse(url)
+        api_url = url
+        ui_port = 3000 if parsed.port == 8000 else (parsed.port or 80)
+        ui_url = f"{parsed.scheme}://{parsed.hostname}:{ui_port}"
+        return api_url, ui_url
 
     def generate_tests(self, force: bool = False) -> GeneratedTestSuite:
         """
@@ -292,10 +316,22 @@ class UnifiedTestRunner:
                     return port
         return start
 
-    def run_crud_tests(self, suite: GeneratedTestSuite) -> TestRunResult:
+    def run_crud_tests(
+        self,
+        suite: GeneratedTestSuite,
+        category: str | None = None,
+        entity: str | None = None,
+        test_id: str | None = None,
+    ) -> TestRunResult:
         """Run CRUD and state machine tests."""
 
-        runner = TestRunner(self.project_path, self.api_port, self.ui_port)
+        runner = TestRunner(
+            self.project_path,
+            self.api_port,
+            self.ui_port,
+            api_url=self.api_url,
+            ui_url=self.ui_url,
+        )
 
         # Merge generated tests with existing tests
         all_designs = suite.designs.copy()
@@ -314,6 +350,14 @@ class UnifiedTestRunner:
                             all_designs.append(design)
             except Exception:
                 pass
+
+        # Apply filters
+        if test_id:
+            all_designs = [d for d in all_designs if d.get("test_id") == test_id]
+        if category:
+            all_designs = [d for d in all_designs if category in d.get("tags", [])]
+        if entity:
+            all_designs = [d for d in all_designs if entity in d.get("entities", [])]
 
         # Filter to accepted tests
         accepted = [d for d in all_designs if d.get("status") == "accepted"]
@@ -340,13 +384,21 @@ class UnifiedTestRunner:
 
         print(f"  Running {len(test_cases)} event flow tests...")
 
-        runner = EventTestRunner(f"http://localhost:{self.api_port}")
+        api_url = self.api_url or f"http://localhost:{self.api_port}"
+        runner = EventTestRunner(api_url)
         try:
             return runner.run_all(test_cases)
         finally:
             runner.close()
 
-    def run_all(self, generate: bool = True, force_generate: bool = False) -> UnifiedTestResult:
+    def run_all(
+        self,
+        generate: bool = True,
+        force_generate: bool = False,
+        category: str | None = None,
+        entity: str | None = None,
+        test_id: str | None = None,
+    ) -> UnifiedTestResult:
         """Run all tests."""
         result = UnifiedTestResult(
             project_name=self.project_path.name,
@@ -373,20 +425,25 @@ class UnifiedTestRunner:
                     )
                 )
 
-            # Start server
-            if not self.start_server():
-                print("  ERROR: Failed to start server")
-                result.completed_at = datetime.now()
-                return result
+            # Start server only if no external URL provided
+            if not self.base_url:
+                if not self.start_server():
+                    print("  ERROR: Failed to start server")
+                    result.completed_at = datetime.now()
+                    return result
 
             # Run CRUD tests
-            result.crud_result = self.run_crud_tests(suite)
+            result.crud_result = self.run_crud_tests(
+                suite, category=category, entity=entity, test_id=test_id
+            )
 
             # Run event tests
             result.event_result = self.run_event_tests()
 
         finally:
-            self.stop_server()
+            # Stop server only if we started it
+            if not self.base_url:
+                self.stop_server()
             result.completed_at = datetime.now()
 
         return result

@@ -988,7 +988,8 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 if not transfer.is_linked:
                     warnings.append(
                         f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"multi-leg transactions should use 'linked' flag on all but the last transfer "
+                        f"multi-leg transactions should use 'linked' flag on all "
+                        f"but the last transfer "
                         f"to ensure atomic execution"
                     )
 
