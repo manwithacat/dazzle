@@ -58,19 +58,13 @@ def convert_shell_config(
         ShellSpec with navigation, header, and footer config
     """
     # Auto-generate nav items from workspaces
-    # First workspace gets "/" route, others get "/workspace_name" route
+    # All workspaces live under /workspaces/{name} to match backend routes
     nav_items = []
-    for i, ws in enumerate(workspaces):
-        if i == 0:
-            # First workspace is the default - gets root route
-            root_route = "/"
-        else:
-            # Other workspaces get their own base route
-            root_route = f"/{ws.name.replace('_', '-')}"
+    for ws in workspaces:
         nav_items.append(
             NavItemSpec(
                 label=ws.label or ws.name.replace("_", " ").title(),
-                route=root_route,
+                route=f"/workspaces/{ws.name}",
                 workspace=ws.name,
             )
         )

@@ -140,43 +140,83 @@ category = "Core Construct (v0.2)"
 definition = """
 A composition of multiple data views into a cohesive dashboard or information hub.
 Workspaces aggregate related surfaces and data for specific user needs.
+
+Region types:
+  - Data region: has source + optional filter/sort/limit → renders entity rows
+  - Aggregate-only region: has only aggregate: block → renders KPI metric cards
+  - Detail region: display: detail with source → renders a single record view
+
+Key features:
+  - filter: applies a ConditionExpr so regions only show matching rows (e.g. status = open)
+  - sort: orders results (e.g. due_date desc for most urgent first)
+  - limit: caps result count (useful for "top 5" style regions)
+  - action: links rows to a surface for click-through navigation (e.g. action: task_edit)
+  - aggregate: computes metrics like count(Entity where condition) displayed as KPI cards
+  - stage: controls CSS grid layout (focus_metric, dual_pane_flow, scanner_table, monitor_wall, command_center)
 """
 
 syntax = """
 workspace <workspace_name> "<Display Name>":
   purpose: "<semantic intent>"
+  [stage: "<stage_name>"]
 
   <region_name>:
     source: <Entity|surface_name>
     [filter: <condition>]
     [sort: <field> [asc|desc], ...]
     [limit: <number>]
-    [display: <list|grid|timeline|map>]
+    [display: <list|grid|detail|summary|metrics>]
     [action: <surface_name>]
     [empty: "<message>"]
+    [group_by: <field>]
     [aggregate:]
       <metric_name>: <expression>
 
   [ux:]
     [for <persona>: ...]
+
+# Aggregate expressions:
+#   count(Entity)                        → total entity count
+#   count(Entity where status = open)    → filtered count
+#   sum(Entity.amount)                   → field sum (planned)
+#   avg(Entity.duration_days)            → field average (planned)
 """
 
 example = """
-workspace dashboard "Team Dashboard":
-  purpose: "Real-time team overview"
+workspace customer_dashboard "Customer Dashboard":
+  purpose: "Customer health overview for account managers"
+  stage: "command_center"
 
-  urgent_tasks:
-    source: Task
-    filter: priority = high
+  active_contracts:
+    source: Contract
+    filter: status = active
+    sort: renewal_date asc
+    limit: 10
+    action: contract_detail
+    display: list
+    empty: "No active contracts"
+
+  overdue_invoices:
+    source: Invoice
+    filter: status = overdue
     sort: due_date asc
     limit: 5
-    action: task_edit
-    empty: "No urgent tasks!"
+    action: invoice_edit
+    display: list
+    empty: "All invoices paid!"
 
-  team_metrics:
+  kpi_metrics:
     aggregate:
-      total: count(Task)
-      done: count(Task where status = done)
+      active_customers: count(Customer where status = active)
+      open_invoices: count(Invoice where status != paid and status != cancelled)
+      total_revenue: sum(Invoice.amount)
+    display: metrics
+
+  recent_activity:
+    source: AuditLog
+    sort: created_at desc
+    limit: 20
+    display: list
 """
 
 related = ["persona", "regions", "aggregates", "display_modes", "stage"]

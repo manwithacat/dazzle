@@ -706,10 +706,12 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
             else:
                 # Validate filter conditions
                 if region.filter:
+                    region_id = region.name or region.source
+                    ctx = f"Workspace '{workspace.name}' region '{region_id}' filter"
                     field_errors = _validate_condition_fields(
                         region.filter,
                         entity,
-                        f"Workspace '{workspace.name}' region '{region.name or region.source}' filter",
+                        ctx,
                     )
                     errors.extend(field_errors)
 

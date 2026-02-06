@@ -4,7 +4,9 @@
     {% if items %}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       {% for item in items %}
-      <div class="card card-compact bg-base-200">
+      <div class="card card-compact bg-base-200{% if action_url %} cursor-pointer hover:bg-base-300 transition-colors{% endif %}"
+           {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+           hx-push-url="true" hx-target="body"{% endif %}>
         <div class="card-body">
           <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
           {% for col in columns %}

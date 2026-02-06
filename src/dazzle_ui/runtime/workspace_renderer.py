@@ -37,6 +37,8 @@ class RegionContext(BaseModel):
     empty_message: str = "No data available."
     group_by: str = ""
     aggregates: dict[str, str] = Field(default_factory=dict)
+    action: str = ""  # Surface name for row-click navigation
+    action_url: str = ""  # Resolved URL pattern for the action surface
     # CSS
     grid_class: str = ""  # col-span/row-span classes
     template: str = "workspace/regions/list.html"  # Region display template
@@ -140,6 +142,24 @@ def build_workspace_context(
         source_name = getattr(region, "source", "") or ""
         endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}" if source_name else ""
 
+        # Serialize IR filter to JSON for the data endpoint
+        filter_expr = ""
+        region_filter = getattr(region, "filter", None)
+        if region_filter is not None:
+            filter_expr = _serialize_filter_to_params(region_filter)
+
+        # Resolve action surface → URL pattern
+        action_name = getattr(region, "action", None) or ""
+        action_url = ""
+        if action_name and app_spec:
+            surfaces = getattr(app_spec, "surfaces", [])
+            for s in surfaces:
+                if s.name == action_name:
+                    entity_ref = getattr(s, "entity_ref", "") or ""
+                    if entity_ref:
+                        action_url = f"/{entity_ref.lower()}/{{id}}"
+                    break
+
         regions.append(
             RegionContext(
                 name=region.name,
@@ -147,11 +167,14 @@ def build_workspace_context(
                 source=source_name,
                 display=display_mode,
                 endpoint=endpoint,
+                filter_expr=filter_expr,
                 sort=sort_specs,
                 limit=getattr(region, "limit", None),
                 empty_message=getattr(region, "empty_message", None) or "No data available.",
                 group_by=getattr(region, "group_by", "") or "",
                 aggregates=dict(getattr(region, "aggregates", {}) or {}),
+                action=action_name,
+                action_url=action_url,
                 grid_class=region_grid,
                 template=template,
             )
@@ -166,3 +189,14 @@ def build_workspace_context(
         regions=regions,
         endpoint=f"/api/workspaces/{workspace.name}",
     )
+
+
+def _serialize_filter_to_params(condition: Any) -> str:
+    """Serialize a ConditionExpr to a JSON string for the region data endpoint."""
+    import json
+
+    if hasattr(condition, "model_dump"):
+        return json.dumps(condition.model_dump(exclude_none=True))
+    if isinstance(condition, dict):
+        return json.dumps(condition)
+    return ""

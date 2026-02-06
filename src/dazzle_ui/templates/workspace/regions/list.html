@@ -13,7 +13,9 @@
         </thead>
         <tbody>
           {% for item in items %}
-          <tr>
+          <tr{% if action_url %} class="cursor-pointer hover"
+              hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+              hx-push-url="true" hx-target="body"{% endif %}>
             {% for col in columns %}
             <td>{{ item[col.key] | default("") }}</td>
             {% endfor %}

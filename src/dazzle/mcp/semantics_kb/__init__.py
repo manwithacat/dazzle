@@ -160,6 +160,16 @@ ALIASES = {
     "api_connection": "integration",
     "foreign_model": "foreign_model",
     "external_model": "foreign_model",
+    # Workspace region aliases
+    "region": "workspace",
+    "regions": "workspace",
+    "dashboard": "workspace",
+    "dashboard_layout": "stage",
+    "layout": "stage",
+    "stage_layout": "stage",
+    "grid_layout": "stage",
+    "overview": "workspace",
+    "hub": "workspace",
     # Workspace aggregates
     "aggregate": "aggregate",
     "aggregates": "aggregate",
@@ -167,6 +177,8 @@ ALIASES = {
     "sum": "aggregate",
     "avg": "aggregate",
     "metrics": "aggregate",
+    "kpi": "aggregate",
+    "metric": "aggregate",
     # Constraint aliases
     "unique": "unique_constraint",
     "unique_constraint": "unique_constraint",

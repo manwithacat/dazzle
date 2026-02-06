@@ -31,6 +31,36 @@ from dazzle_back.specs import BackendSpec
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+import re
+
+# Regex for aggregate expressions like count(Task) or count(Task where status = open)
+_AGGREGATE_RE = re.compile(r"(count|sum|avg|min|max)\((\w+)(?:\s+where\s+(.+))?\)")
+
+
+def _parse_simple_where(where_clause: str) -> dict[str, Any]:
+    """Parse simple WHERE clause to repository filter dict.
+
+    Supports: ``field = value``, ``field != value``, ``field > value``, etc.
+    Multiple conditions joined with ``and``.
+    """
+    filters: dict[str, Any] = {}
+    parts = [p.strip() for p in where_clause.split(" and ")]
+    for part in parts:
+        for op, suffix in [
+            ("!=", "__ne"),
+            (">=", "__gte"),
+            ("<=", "__lte"),
+            (">", "__gt"),
+            ("<", "__lt"),
+            ("=", ""),
+        ]:
+            if op in part:
+                field, value = [x.strip() for x in part.split(op, 1)]
+                key = f"{field}{suffix}" if suffix else field
+                filters[key] = value
+                break
+    return filters
+
 
 # =============================================================================
 # Server Configuration
@@ -728,24 +758,36 @@ class DNRBackendApp:
                     )
                     return HTMLResponse(content=html)
 
-                # Region data endpoints
-                for region in ws_ctx.regions:
-                    if not region.source:
+                # Region data endpoints — zip IR regions with context regions
+                # so we can access both ConditionExpr (IR) and RegionContext
+                for ir_region, ctx_region in zip(workspace.regions, ws_ctx.regions, strict=False):
+                    if not ctx_region.source:
                         continue
 
-                    _region = region
-                    _source = region.source
+                    _ir_region = ir_region  # WorkspaceRegion IR with ConditionExpr
+                    _ctx_region = ctx_region  # RegionContext for template
+                    _source = ctx_region.source
+
+                    # Resolve entity spec for column metadata
+                    _entity_spec = None
+                    if spec and hasattr(spec, "domain") and spec.domain:
+                        for _e in spec.domain.entities:
+                            if _e.name == _source:
+                                _entity_spec = _e
+                                break
 
                     @app.get(
-                        f"/api/workspaces/{ws_name}/regions/{region.name}",
+                        f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
                         tags=["Workspaces"],
                     )
                     async def workspace_region_data(
                         request: Request,
                         page: int = 1,
                         page_size: int = 20,
-                        _r: Any = _region,
+                        _r: Any = _ctx_region,
+                        _ir: Any = _ir_region,
                         _s: str = _source,
+                        _espec: Any = _entity_spec,
                     ) -> Any:
                         """Return rendered HTML for a workspace region."""
                         from fastapi.responses import HTMLResponse
@@ -758,8 +800,40 @@ class DNRBackendApp:
                         repo = repositories.get(_s) if repositories else None
                         if repo:
                             try:
+                                # Build filters from IR ConditionExpr
+                                filters: dict[str, Any] | None = None
+                                ir_filter = getattr(_ir, "filter", None)
+                                if ir_filter is not None:
+                                    try:
+                                        from dazzle_back.runtime.condition_evaluator import (
+                                            condition_to_sql_filter,
+                                        )
+
+                                        filters = condition_to_sql_filter(
+                                            ir_filter.model_dump(exclude_none=True),
+                                            context={},
+                                        )
+                                    except Exception:
+                                        pass
+
+                                # Build sort from IR SortSpec list
+                                sort_list: list[str] | None = None
+                                ir_sort = getattr(_ir, "sort", [])
+                                if ir_sort:
+                                    sort_list = [
+                                        f"-{s.field}"
+                                        if getattr(s, "direction", "asc") == "desc"
+                                        else s.field
+                                        for s in ir_sort
+                                    ]
+
                                 limit = _r.limit or page_size
-                                result = await repo.list(page=page, page_size=limit)
+                                result = await repo.list(
+                                    page=page,
+                                    page_size=limit,
+                                    filters=filters,
+                                    sort=sort_list,
+                                )
                                 if isinstance(result, dict):
                                     raw_items = result.get("items", [])
                                     total = result.get("total", 0)
@@ -767,21 +841,52 @@ class DNRBackendApp:
                                         i.model_dump() if hasattr(i, "model_dump") else dict(i)
                                         for i in raw_items
                                     ]
-                                # Build columns from first item keys
-                                if items:
-                                    columns = [
-                                        {"key": k, "label": k.replace("_", " ").title()}
-                                        for k in items[0].keys()
-                                        if k != "id"
-                                    ]
                             except Exception:
                                 pass
+
+                        # Build columns from entity metadata when available
+                        if _espec and hasattr(_espec, "fields"):
+                            columns = [
+                                {
+                                    "key": f.name,
+                                    "label": getattr(f, "label", None)
+                                    or f.name.replace("_", " ").title(),
+                                }
+                                for f in _espec.fields
+                                if f.name != "id" and not f.name.endswith("_id")
+                            ][:8]
+                        elif items:
+                            columns = [
+                                {"key": k, "label": k.replace("_", " ").title()}
+                                for k in items[0].keys()
+                                if k != "id"
+                            ]
 
                         # Build aggregate metrics if configured
                         metrics: list[dict[str, Any]] = []
                         for metric_name, expr in _r.aggregates.items():
                             value: Any = 0
-                            if expr == "count":
+                            agg_match = _AGGREGATE_RE.match(expr)
+                            if agg_match:
+                                func, entity_name, where_clause = agg_match.groups()
+                                agg_repo = repositories.get(entity_name) if repositories else None
+                                try:
+                                    if func == "count" and agg_repo:
+                                        agg_filters: dict[str, Any] | None = None
+                                        if where_clause:
+                                            agg_filters = _parse_simple_where(where_clause)
+                                        agg_result = await agg_repo.list(
+                                            page=1, page_size=1, filters=agg_filters
+                                        )
+                                        if isinstance(agg_result, dict):
+                                            value = agg_result.get("total", 0)
+                                    elif func == "sum" and agg_repo and where_clause:
+                                        # Sum with where — not yet supported, use 0
+                                        value = 0
+                                except Exception:
+                                    pass
+                            elif expr == "count":
+                                # Legacy bare "count" — use current query total
                                 value = total
                             elif expr.startswith("sum:") and items:
                                 field_name = expr.split(":", 1)[1]
@@ -803,6 +908,7 @@ class DNRBackendApp:
                             empty_message=_r.empty_message,
                             display_key=columns[0]["key"] if columns else "name",
                             item=items[0] if items else None,
+                            action_url=_r.action_url,
                         )
                         return HTMLResponse(content=html)
 

@@ -814,6 +814,81 @@ workspace overview "Overview":
       open: count(Issue where status = open)
 """
 
+[[workspace_inference]]
+id = "dashboard_metrics"
+name = "Dashboard with KPI Metrics"
+triggers = ["dashboard", "KPI", "key performance", "scorecard", "metrics panel"]
+suggests = "Use workspace with aggregate regions for KPI cards and filtered data regions"
+rationale = "Workspaces compose multiple data views; aggregates provide real-time counts/sums without separate surfaces"
+example = """
+workspace ops_dashboard "Operations Dashboard":
+  purpose: "Real-time ops health"
+  stage: "monitor_wall"
+
+  health_metrics:
+    aggregate:
+      active_services: count(Service where status = healthy)
+      open_incidents: count(Incident where status = open)
+      avg_response: avg(Incident.response_minutes)
+    display: metrics
+
+  critical_alerts:
+    source: Alert
+    filter: severity = critical and acknowledged = false
+    sort: created_at desc
+    limit: 10
+    action: alert_detail
+    display: list
+"""
+
+[[workspace_inference]]
+id = "filtered_region"
+name = "Filtered Data Region"
+triggers = ["recent", "urgent", "overdue", "assigned to me", "my tasks", "pending", "unresolved"]
+suggests = "Use workspace region with filter: condition and sort: field desc"
+rationale = "Region filters scope data without separate surfaces — ideal for 'my items' or 'urgent items' views"
+example = """
+workspace my_work "My Work":
+  purpose: "Personal task queue"
+
+  overdue_tasks:
+    source: Task
+    filter: status != done and due_date < today
+    sort: due_date asc
+    action: task_edit
+    empty: "Nothing overdue!"
+
+  recently_assigned:
+    source: Task
+    filter: status = open
+    sort: created_at desc
+    limit: 10
+    action: task_edit
+"""
+
+[[workspace_inference]]
+id = "stage_selection"
+name = "Stage Selection Guide"
+triggers = ["layout", "grid layout", "command center", "dual pane", "focus", "split view", "monitor wall"]
+suggests = "Set stage: on workspace for layout control"
+rationale = "Stages control CSS grid layout — focus_metric for single hero KPI, dual_pane_flow for list+detail, scanner_table for data-heavy views, monitor_wall for multi-metric dashboards, command_center for expert interfaces"
+example = """
+# Hero KPI with supporting data
+workspace revenue "Revenue":
+  stage: "focus_metric"
+  ...
+
+# List + detail side by side
+workspace contacts "Contacts":
+  stage: "dual_pane_flow"
+  ...
+
+# Dense expert interface
+workspace ops_center "Ops Center":
+  stage: "command_center"
+  ...
+"""
+
 # =============================================================================
 # DOMAIN-SPECIFIC ENTITY TEMPLATES
 # =============================================================================
