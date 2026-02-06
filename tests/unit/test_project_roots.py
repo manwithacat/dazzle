@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from dazzle.mcp.server.state import (
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
+
+from dazzle.mcp.server.state import (  # noqa: E402
     _roots_cache,
     resolve_project_path_from_roots,
 )

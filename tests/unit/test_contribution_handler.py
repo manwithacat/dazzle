@@ -28,11 +28,18 @@ def _import_modules():
         return
 
     # Mock the MCP server packages to prevent import errors
-    sys.modules["mcp"] = MagicMock(pytest_plugins=[])
-    sys.modules["mcp.server"] = MagicMock(pytest_plugins=[])
-    sys.modules["mcp.server.fastmcp"] = MagicMock(pytest_plugins=[])
-    sys.modules["mcp.server.stdio"] = MagicMock(pytest_plugins=[])
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    _mocked = [
+        "mcp",
+        "mcp.server",
+        "mcp.server.fastmcp",
+        "mcp.server.stdio",
+        "dazzle.mcp.server.handlers",
+        "dazzle.mcp.server.github_issues",
+        "dazzle.mcp",
+    ]
+    _orig = {k: sys.modules.get(k) for k in _mocked}
+    for k in _mocked:
+        sys.modules[k] = MagicMock(pytest_plugins=[])
 
     # Mock the github_issues module that contribution.py imports lazily
     github_issues_mock = MagicMock()
@@ -60,6 +67,19 @@ def _import_modules():
     _contribution_module = importlib.util.module_from_spec(spec)
     sys.modules["contribution_module"] = _contribution_module
     spec.loader.exec_module(_contribution_module)
+
+    # Restore sys.modules to prevent pollution of other tests.
+    # Keep github_issues and dazzle.mcp mocked — the handler does lazy
+    # imports (``from dazzle.mcp.server.github_issues import ...``) at
+    # call time and needs these mocks to persist during test execution.
+    _keep_mocked = {"dazzle.mcp.server.github_issues", "dazzle.mcp"}
+    for k, v in _orig.items():
+        if k in _keep_mocked:
+            continue
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
 
     # Create a mock consolidated module that dispatches to contribution handlers
     _handlers_consolidated_module = MagicMock()

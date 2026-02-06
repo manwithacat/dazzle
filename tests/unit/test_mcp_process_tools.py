@@ -11,19 +11,44 @@ Tests cover:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
 
-from dazzle.core.ir.process import (
+
+# mcp.types.Tool must preserve constructor kwargs (used by TestToolSchemas).
+class _MockTool:
+    def __init__(self, **kwargs):  # type: ignore[no-untyped-def]
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+_mock_types = MagicMock(pytest_plugins=[])
+_mock_types.Tool = _MockTool
+_mock_types.Resource = MagicMock
+_mock_types.TextContent = MagicMock
+sys.modules.setdefault("mcp.types", _mock_types)
+
+import pytest  # noqa: E402
+
+from dazzle.core.ir.process import (  # noqa: E402
     ProcessSpec,
     ProcessStepSpec,
     ProcessTriggerKind,
     ProcessTriggerSpec,
     StepKind,
 )
-from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+from dazzle.core.ir.stories import (  # noqa: E402
+    StoryCondition,
+    StorySpec,
+    StoryStatus,
+    StoryTrigger,
+)
 
 
 @pytest.fixture

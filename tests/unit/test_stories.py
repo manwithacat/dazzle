@@ -7,18 +7,25 @@ Tests the Story IR types, persistence layer, and stub generation.
 from __future__ import annotations
 
 import json
+import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.core.ir.stories import (
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
+
+from dazzle.core.ir.stories import (  # noqa: E402
     StoriesContainer,
     StorySpec,
     StoryStatus,
     StoryTrigger,
 )
-from dazzle.core.stories_persistence import (
+from dazzle.core.stories_persistence import (  # noqa: E402
     add_stories,
     get_next_story_id,
     get_stories_by_status,

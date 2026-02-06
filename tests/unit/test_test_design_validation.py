@@ -1,11 +1,18 @@
 """Unit tests for test design validation and persistence helpers."""
 
+import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.mcp.server.handlers.test_design import (
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
+
+from dazzle.mcp.server.handlers.test_design import (  # noqa: E402
     _parse_test_design_action,
     _parse_test_design_trigger,
 )

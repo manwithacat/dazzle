@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.pitch.ir import (
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
+
+from dazzle.pitch.ir import (  # noqa: E402
     CompanySpec,
     ExtraSlide,
     ExtraSlideLayout,
@@ -14,7 +21,7 @@ from dazzle.pitch.ir import (
     PitchSpec,
     ProblemSpec,
 )
-from dazzle.pitch.loader import (
+from dazzle.pitch.loader import (  # noqa: E402
     PitchSpecError,
     load_pitchspec,
     pitchspec_exists,

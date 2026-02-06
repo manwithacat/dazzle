@@ -28,10 +28,10 @@ def _import_module():
         return
 
     # Mock the MCP server packages to prevent import errors
-    sys.modules["mcp"] = MagicMock(pytest_plugins=[])
-    sys.modules["mcp.server"] = MagicMock(pytest_plugins=[])
-    sys.modules["mcp.server.fastmcp"] = MagicMock(pytest_plugins=[])
-    sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    _mocked = ["mcp", "mcp.server", "mcp.server.fastmcp", "dazzle.mcp.server.handlers"]
+    _orig = {k: sys.modules.get(k) for k in _mocked}
+    for k in _mocked:
+        sys.modules[k] = MagicMock(pytest_plugins=[])
 
     # Get path to process.py
     src_path = Path(__file__).parent.parent.parent / "src"
@@ -45,6 +45,13 @@ def _import_module():
     _process_module = importlib.util.module_from_spec(spec)
     sys.modules["process_module"] = _process_module
     spec.loader.exec_module(_process_module)
+
+    # Restore sys.modules to prevent pollution of other tests
+    for k, v in _orig.items():
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
 
 
 # Import the module

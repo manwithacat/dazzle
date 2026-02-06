@@ -5,10 +5,17 @@ Tests the MCP tool interface for DNR BackendSpec and UISpec manipulation.
 """
 
 import json
+import sys
+from unittest.mock import MagicMock
 
 import pytest
 
-from dazzle.mcp.runtime_tools import (
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
+
+from dazzle.mcp.runtime_tools import (  # noqa: E402
     LAYOUT_TYPES,
     PATTERN_COMPONENTS,
     PRIMITIVE_COMPONENTS,

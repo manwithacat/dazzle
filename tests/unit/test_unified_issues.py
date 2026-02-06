@@ -1,8 +1,15 @@
 """Unit tests for unified issues view."""
 
 import json
+import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock
+
+# Pre-mock the mcp SDK package so dazzle.mcp.server can be imported
+# without the mcp package being installed.
+for _mod in ("mcp", "mcp.server", "mcp.server.fastmcp", "mcp.server.stdio", "mcp.types"):
+    sys.modules.setdefault(_mod, MagicMock(pytest_plugins=[]))
 
 
 class TestUnifiedIssues:
