@@ -1,7 +1,7 @@
 """
-Unit tests for Dazzle Bar control plane endpoints.
+Unit tests for control plane endpoints.
 
-Tests the /dazzle/dev/* endpoints for the Dazzle Bar developer overlay.
+Tests the /dazzle/dev/* endpoints for developer-mode operations.
 """
 
 from __future__ import annotations
@@ -25,11 +25,6 @@ except ImportError:
 
 # These imports are safe - they only depend on Pydantic
 from dazzle_back.runtime.control_plane import (
-    DazzleBarState,
-    ExportRequest,
-    ExportResponse,
-    FeedbackRequest,
-    FeedbackResponse,
     PersonaContext,
     RegenerateRequest,
     ScenarioContext,
@@ -88,89 +83,6 @@ class TestSetScenarioRequest:
         assert request.scenario_id == "empty"
 
 
-class TestFeedbackRequest:
-    """Tests for FeedbackRequest model."""
-
-    def test_feedback_request_minimal(self) -> None:
-        """Test creating feedback request with minimal fields."""
-        request = FeedbackRequest(message="Test feedback")
-        assert request.message == "Test feedback"
-        assert request.category is None
-        assert request.persona_id is None
-        assert request.scenario_id is None
-
-    def test_feedback_request_full(self) -> None:
-        """Test creating feedback request with all fields."""
-        request = FeedbackRequest(
-            message="Test feedback",
-            category="bug",
-            persona_id="teacher",
-            scenario_id="busy_term",
-            route="/classes",
-            url="http://localhost:3000/classes",
-            extra_context={"component": "TaskList"},
-        )
-        assert request.message == "Test feedback"
-        assert request.category == "bug"
-        assert request.persona_id == "teacher"
-        assert request.extra_context == {"component": "TaskList"}
-
-
-class TestFeedbackResponse:
-    """Tests for FeedbackResponse model."""
-
-    def test_feedback_response(self) -> None:
-        """Test creating feedback response."""
-        response = FeedbackResponse(status="logged", feedback_id="abc12345")
-        assert response.status == "logged"
-        assert response.feedback_id == "abc12345"
-
-
-class TestExportRequest:
-    """Tests for ExportRequest model."""
-
-    def test_export_request_defaults(self) -> None:
-        """Test creating export request with defaults."""
-        request = ExportRequest()
-        assert request.include_spec is True
-        assert request.include_feedback is True
-        assert request.include_session_data is False
-        assert request.export_format == "github_issue"
-
-    def test_export_request_custom(self) -> None:
-        """Test creating export request with custom values."""
-        request = ExportRequest(
-            include_spec=False,
-            include_feedback=False,
-            include_session_data=True,
-            export_format="json",
-        )
-        assert request.include_spec is False
-        assert request.export_format == "json"
-
-
-class TestExportResponse:
-    """Tests for ExportResponse model."""
-
-    def test_export_response_with_url(self) -> None:
-        """Test creating export response with URL."""
-        response = ExportResponse(
-            status="generated",
-            export_url="https://github.com/owner/repo/issues/new?title=test",
-        )
-        assert response.status == "generated"
-        assert response.export_url is not None
-
-    def test_export_response_with_data(self) -> None:
-        """Test creating export response with data."""
-        response = ExportResponse(
-            status="exported",
-            export_data={"timestamp": "2024-01-01T00:00:00"},
-        )
-        assert response.status == "exported"
-        assert response.export_data is not None
-
-
 class TestRegenerateRequest:
     """Tests for RegenerateRequest model."""
 
@@ -188,31 +100,6 @@ class TestRegenerateRequest:
         )
         assert request.scenario_id == "demo"
         assert request.entity_counts == {"Task": 20, "User": 5}
-
-
-class TestDazzleBarState:
-    """Tests for DazzleBarState model."""
-
-    def test_dazzle_bar_state_defaults(self) -> None:
-        """Test creating dazzle bar state with defaults."""
-        state = DazzleBarState()
-        assert state.current_persona is None
-        assert state.current_scenario is None
-        assert state.available_personas == []
-        assert state.available_scenarios == []
-        assert state.dev_mode is True
-
-    def test_dazzle_bar_state_full(self) -> None:
-        """Test creating dazzle bar state with all fields."""
-        state = DazzleBarState(
-            current_persona="teacher",
-            current_scenario="busy_term",
-            available_personas=[{"id": "teacher", "label": "Teacher"}],
-            available_scenarios=[{"id": "busy_term", "name": "Busy Term"}],
-            dev_mode=True,
-        )
-        assert state.current_persona == "teacher"
-        assert len(state.available_personas) == 1
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -279,13 +166,11 @@ class TestControlPlaneIntegration:
         # Use tmp_path_factory for class-scoped fixtures
         tmp_path = tmp_path_factory.mktemp("control_plane")
         db_path = tmp_path / "test.db"
-        feedback_dir = tmp_path / "feedback"
 
         app = create_app(
             backend_spec,
             db_path=str(db_path),
             enable_dev_mode=True,
-            feedback_dir=str(feedback_dir),
             personas=[
                 {"id": "admin", "label": "Administrator"},
                 {"id": "viewer", "label": "Viewer"},
@@ -303,7 +188,7 @@ class TestControlPlaneIntegration:
         return shared_test_client
 
     def test_get_dazzle_state(self, test_client: TestClient) -> None:
-        """Test getting complete Dazzle Bar state."""
+        """Test getting complete control plane state."""
         response = test_client.get("/dazzle/dev/state")
         assert response.status_code == 200
         data = response.json()
@@ -311,7 +196,6 @@ class TestControlPlaneIntegration:
         assert "current_scenario" in data
         assert "available_personas" in data
         assert "available_scenarios" in data
-        assert data["dev_mode"] is True
         assert len(data["available_personas"]) == 2
         assert len(data["available_scenarios"]) == 2
 
@@ -383,61 +267,6 @@ class TestControlPlaneIntegration:
         assert "counts" in data
         assert data["counts"]["Task"] == 5
 
-    def test_submit_feedback(self, test_client: TestClient) -> None:
-        """Test submitting feedback."""
-        response = test_client.post(
-            "/dazzle/dev/feedback",
-            json={
-                "message": "Test feedback message",
-                "category": "bug",
-                "route": "/tasks",
-            },
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "logged"
-        assert "feedback_id" in data
-
-    def test_export_github_issue(self, test_client: TestClient) -> None:
-        """Test exporting session as GitHub issue URL."""
-        response = test_client.post(
-            "/dazzle/dev/export",
-            json={"export_format": "github_issue"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "generated"
-        assert "export_url" in data
-        assert "github.com" in data["export_url"]
-
-    def test_export_json(self, test_client: TestClient) -> None:
-        """Test exporting session as JSON."""
-        response = test_client.post(
-            "/dazzle/dev/export",
-            json={"export_format": "json"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "exported"
-        assert "export_data" in data
-
-    def test_inspect_entities(self, test_client: TestClient) -> None:
-        """Test inspecting entity schemas."""
-        response = test_client.get("/dazzle/dev/inspect/entities")
-        assert response.status_code == 200
-        data = response.json()
-        assert "entities" in data
-        assert len(data["entities"]) == 1
-        assert data["entities"][0]["name"] == "Task"
-        assert "fields" in data["entities"][0]
-
-    def test_inspect_routes(self, test_client: TestClient) -> None:
-        """Test inspecting registered routes."""
-        response = test_client.get("/dazzle/dev/inspect/routes")
-        assert response.status_code == 200
-        data = response.json()
-        assert "routes" in data
-
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestDevModeDisabled:
@@ -498,12 +327,4 @@ class TestDevModeDisabled:
     def test_persona_not_available(self, test_client: TestClient) -> None:
         """Test that persona endpoint is not available when dev mode disabled."""
         response = test_client.get("/dazzle/dev/current_persona")
-        assert response.status_code == 404
-
-    def test_feedback_not_available(self, test_client: TestClient) -> None:
-        """Test that feedback endpoint is not available when dev mode disabled."""
-        response = test_client.post(
-            "/dazzle/dev/feedback",
-            json={"message": "Test"},
-        )
         assert response.status_code == 404

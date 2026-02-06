@@ -2,7 +2,7 @@
 Environment configuration for Dazzle runtime.
 
 This module provides a standard way to determine the runtime environment
-and configure dev-only features like the Dazzle Bar and test endpoints.
+and configure dev-only features like test endpoints.
 
 The DAZZLE_ENV environment variable follows the pattern established by:
 - Rails: RAILS_ENV (development, test, production)
@@ -12,18 +12,13 @@ The DAZZLE_ENV environment variable follows the pattern established by:
 
 Environment values:
     - development (default): All dev features enabled
-    - test: Test endpoints enabled, Dazzle Bar disabled by default
+    - test: Test endpoints enabled
     - production: All dev features disabled for security
 
 Usage:
-    from dazzle.core.environment import get_dazzle_env, should_enable_dazzle_bar
+    from dazzle.core.environment import get_dazzle_env
 
     env = get_dazzle_env()  # Returns "development", "test", or "production"
-
-    # Check with manifest override
-    if should_enable_dazzle_bar(manifest.dev.dazzle_bar):
-        # Enable Dazzle Bar
-        pass
 """
 
 from __future__ import annotations
@@ -99,51 +94,6 @@ def is_test() -> bool:
     return get_dazzle_env() == DazzleEnv.TEST
 
 
-def should_enable_dazzle_bar(manifest_override: bool | None = None) -> bool:
-    """Determine if the Dazzle Bar should be enabled.
-
-    Resolution order:
-    1. If manifest_override is explicitly set (True/False), use it
-    2. Otherwise, use environment defaults:
-       - development: True
-       - test: False (Dazzle Bar interferes with E2E tests)
-       - production: False (security)
-
-    Args:
-        manifest_override: Explicit setting from dazzle.toml [dev] section.
-            None means "use environment default".
-
-    Returns:
-        bool: Whether to enable the Dazzle Bar.
-
-    Examples:
-        # In development (DAZZLE_ENV not set)
-        >>> should_enable_dazzle_bar(None)
-        True
-
-        # In production with no override
-        >>> import os; os.environ["DAZZLE_ENV"] = "production"
-        >>> should_enable_dazzle_bar(None)
-        False
-
-        # Force enable in production (not recommended!)
-        >>> should_enable_dazzle_bar(True)
-        True
-    """
-    # Explicit manifest setting takes precedence
-    if manifest_override is not None:
-        return manifest_override
-
-    # Environment defaults
-    env = get_dazzle_env()
-    if env == DazzleEnv.PRODUCTION:
-        return False
-    elif env == DazzleEnv.TEST:
-        return False  # Dazzle Bar interferes with E2E tests
-    else:  # DEVELOPMENT
-        return True
-
-
 def should_enable_test_endpoints(manifest_override: bool | None = None) -> bool:
     """Determine if test endpoints (/__test__/*) should be enabled.
 
@@ -191,12 +141,10 @@ def get_environment_info() -> dict[str, str | bool]:
     Returns:
         dict: Environment information including:
             - env: Current DAZZLE_ENV value
-            - dazzle_bar_default: Default Dazzle Bar setting
             - test_endpoints_default: Default test endpoints setting
     """
     env = get_dazzle_env()
     return {
         "env": env.value,
-        "dazzle_bar_default": should_enable_dazzle_bar(None),
         "test_endpoints_default": should_enable_test_endpoints(None),
     }

@@ -22,12 +22,6 @@ from .dsl import (
     list_modules,
     validate_dsl,
 )
-from .feedback import (
-    get_feedback_handler,
-    get_feedback_summary_handler,
-    list_feedback_handler,
-    update_feedback_handler,
-)
 from .knowledge import (
     find_examples_handler,
     get_cli_help_handler,
@@ -102,11 +96,6 @@ __all__ = [
     "get_e2e_test_coverage_handler",
     "list_e2e_flows_handler",
     "get_test_tier_guidance_handler",
-    # Feedback handlers
-    "list_feedback_handler",
-    "get_feedback_handler",
-    "update_feedback_handler",
-    "get_feedback_summary_handler",
     # Spec analyze handlers
     "handle_spec_analyze",
     # Bootstrap handler

@@ -456,66 +456,6 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # Feedback (replaces 2 tools)
-        # =====================================================================
-        Tool(
-            name="app_feedback",
-            description=(
-                "App-level feedback operations: add, list. "
-                "Record and review feedback about YOUR generated application's DSL, "
-                "surfaces, and behaviour. This is for in-project issues found during "
-                "development — NOT for reporting Dazzle platform bugs. "
-                "For Dazzle bugs or feature requests, use contribution(type='bug_fix') "
-                "or contribution(type='feature_request'), or open a GitHub issue."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["add", "list"],
-                        "description": "Operation to perform",
-                    },
-                    # For add
-                    "pain_point": {
-                        "type": "string",
-                        "description": "Pain point (for add)",
-                    },
-                    "expected": {
-                        "type": "string",
-                        "description": "Expected behavior (for add)",
-                    },
-                    "observed": {
-                        "type": "string",
-                        "description": "Observed behavior (for add)",
-                    },
-                    "severity": {
-                        "type": "string",
-                        "enum": ["critical", "high", "medium", "low"],
-                        "description": "Severity (for add, list filter)",
-                    },
-                    "scope": {
-                        "type": "string",
-                        "enum": ["global", "module", "entity", "field", "surface"],
-                        "description": "Scope (for add, list filter)",
-                    },
-                    "hypothesis": {
-                        "type": "string",
-                        "description": "Hypothesis (for add)",
-                    },
-                    "location": {
-                        "type": "string",
-                        "description": "Location in DSL (for add)",
-                    },
-                    "resolved": {
-                        "type": "boolean",
-                        "description": "Filter by resolved (for list)",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
         # Processes (replaces 7 tools)
         # =====================================================================
         Tool(
@@ -809,41 +749,6 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # Mailpit (for monitoring feedback during UX testing)
-        # =====================================================================
-        Tool(
-            name="mailpit",
-            description="Mailpit operations: list_messages, get_message, search, delete, stats. Monitor feedback and bug reports submitted via Dazzle Bar.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["list_messages", "get_message", "search", "delete", "stats"],
-                        "description": "Operation to perform",
-                    },
-                    "message_id": {
-                        "type": "string",
-                        "description": "Message ID (for get_message, delete)",
-                    },
-                    "query": {
-                        "type": "string",
-                        "description": "Search query (for search)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max messages to return (default 20)",
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["bug", "feature", "ux", "general"],
-                        "description": "Filter by feedback category (for list_messages)",
-                    },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
         # Pitch (investor pitch deck generation)
         # =====================================================================
         Tool(
@@ -925,51 +830,6 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Directory to write output files (for create)",
                     },
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # User Feedback (Dazzle Bar - replaces 4 tools)
-        # =====================================================================
-        Tool(
-            name="user_feedback",
-            description=(
-                "End-user feedback operations: list, get, update, summary. "
-                "Monitor feedback and bug reports submitted by end-users of your app "
-                "via the Dazzle Bar UI. This is feedback FROM your app's users TO you "
-                "as the developer — not for reporting Dazzle platform issues."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["list", "get", "update", "summary"],
-                        "description": "Operation to perform",
-                    },
-                    "feedback_id": {
-                        "type": "string",
-                        "description": "Feedback ID (for get, update)",
-                    },
-                    "status": {
-                        "type": "string",
-                        "description": "Filter by status (for list) or new status (for update)",
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": ["bug", "feature", "ux", "general"],
-                        "description": "Filter by category (for list)",
-                    },
-                    "notes": {
-                        "type": "string",
-                        "description": "Notes to add (for update)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max items to return (for list, default 20)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["operation"],
             },

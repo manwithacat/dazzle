@@ -67,7 +67,6 @@ class ServerConfig:
 
     # Dazzle Bar control plane (v0.8.5)
     enable_dev_mode: bool = False
-    feedback_dir: Path = field(default_factory=lambda: Path(".dazzle/feedback"))
     personas: list[dict[str, Any]] = field(default_factory=list)
     scenarios: list[dict[str, Any]] = field(default_factory=list)
 
@@ -141,7 +140,6 @@ class DNRBackendApp:
         services_dir: str | Path | None = None,
         # Dazzle Bar control plane (v0.8.5)
         enable_dev_mode: bool | None = None,
-        feedback_dir: str | Path | None = None,
         personas: list[dict[str, Any]] | None = None,
         scenarios: list[dict[str, Any]] | None = None,
         # SiteSpec (v0.16.0)
@@ -166,7 +164,6 @@ class DNRBackendApp:
             enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
             services_dir: Path to domain service stubs directory (default: services/)
             enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-            feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
             personas: List of persona configurations for Dazzle Bar
             scenarios: List of scenario configurations for Dazzle Bar
             sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
@@ -201,7 +198,6 @@ class DNRBackendApp:
         self._enable_dev_mode = (
             enable_dev_mode if enable_dev_mode is not None else config.enable_dev_mode
         )
-        self._feedback_dir = Path(feedback_dir) if feedback_dir else config.feedback_dir
         self._personas = personas if personas is not None else config.personas
         self._scenarios = scenarios if scenarios is not None else config.scenarios
         # SiteSpec (v0.16.0)
@@ -1083,7 +1079,6 @@ class DNRBackendApp:
                 entities=self.spec.entities,
                 personas=self._personas,
                 scenarios=self._scenarios,
-                feedback_dir=self._feedback_dir,
                 auth_store=self._auth_store,  # v0.23.0: Enable persona login
             )
             self._app.include_router(control_plane_router)
@@ -1341,7 +1336,6 @@ def create_app(
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
     enable_dev_mode: bool = False,
-    feedback_dir: str | Path | None = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
 ) -> FastAPI:
@@ -1362,7 +1356,6 @@ def create_app(
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
         enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-        feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
         personas: List of persona configurations for Dazzle Bar
         scenarios: List of scenario configurations for Dazzle Bar
 
@@ -1387,7 +1380,6 @@ def create_app(
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
         enable_dev_mode=enable_dev_mode,
-        feedback_dir=feedback_dir,
         personas=personas,
         scenarios=scenarios,
     )
@@ -1409,7 +1401,6 @@ def run_app(
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
     enable_dev_mode: bool = False,
-    feedback_dir: str | Path | None = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
 ) -> None:
@@ -1431,7 +1422,6 @@ def run_app(
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
         enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-        feedback_dir: Directory for feedback logs (default: .dazzle/feedback)
         personas: List of persona configurations for Dazzle Bar
         scenarios: List of scenario configurations for Dazzle Bar
 
@@ -1457,7 +1447,6 @@ def run_app(
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
         enable_dev_mode=enable_dev_mode,
-        feedback_dir=feedback_dir,
         personas=personas,
         scenarios=scenarios,
     )
@@ -1678,7 +1667,6 @@ def create_app_factory(
         enable_test_mode=enable_test_mode,
         services_dir=project_root / "services",
         enable_dev_mode=enable_dev_mode,
-        feedback_dir=project_root / ".dazzle" / "feedback",
         personas=personas,
         scenarios=[],
         sitespec_data=sitespec_data,

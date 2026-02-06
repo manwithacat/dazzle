@@ -325,29 +325,6 @@ def handle_semantics(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# Feedback Handler
-# =============================================================================
-
-
-def handle_feedback(arguments: dict[str, Any]) -> str:
-    """Handle consolidated feedback operations."""
-    from dazzle.mcp.event_first_tools import (
-        handle_add_feedback,
-        handle_list_feedback,
-    )
-
-    operation = arguments.get("operation")
-    project_root = get_project_root()
-
-    if operation == "add":
-        return handle_add_feedback(arguments, project_root)
-    elif operation == "list":
-        return handle_list_feedback(arguments, project_root)
-    else:
-        return json.dumps({"error": f"Unknown feedback operation: {operation}"})
-
-
-# =============================================================================
 # Process Handler
 # =============================================================================
 
@@ -541,61 +518,6 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
         return get_product_spec_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
-
-
-# =============================================================================
-# User Feedback Handler (Dazzle Bar)
-# =============================================================================
-
-
-async def handle_user_feedback(arguments: dict[str, Any]) -> str:
-    """Handle consolidated user feedback operations (async)."""
-    from .handlers.feedback import (
-        get_feedback_handler,
-        get_feedback_summary_handler,
-        list_feedback_handler,
-        update_feedback_handler,
-    )
-
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
-
-    if project_path is None:
-        return _project_error()
-
-    pp = str(project_path)
-
-    if operation == "list":
-        return json.dumps(
-            await list_feedback_handler(
-                status=arguments.get("status"),
-                category=arguments.get("category"),
-                limit=arguments.get("limit", 20),
-                project_path=pp,
-            )
-        )
-    elif operation == "get":
-        feedback_id = arguments.get("feedback_id")
-        if not feedback_id:
-            return json.dumps({"error": "feedback_id is required"})
-        return json.dumps(await get_feedback_handler(feedback_id=feedback_id, project_path=pp))
-    elif operation == "update":
-        feedback_id = arguments.get("feedback_id")
-        status = arguments.get("status")
-        if not feedback_id or not status:
-            return json.dumps({"error": "feedback_id and status are required"})
-        return json.dumps(
-            await update_feedback_handler(
-                feedback_id=feedback_id,
-                status=status,
-                notes=arguments.get("notes"),
-                project_path=pp,
-            )
-        )
-    elif operation == "summary":
-        return json.dumps(await get_feedback_summary_handler(project_path=pp))
-    else:
-        return json.dumps({"error": f"Unknown user feedback operation: {operation}"})
 
 
 # =============================================================================
@@ -1177,18 +1099,6 @@ def handle_pitch(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# Mailpit Handler (async)
-# =============================================================================
-
-
-async def handle_mailpit(arguments: dict[str, Any]) -> str:
-    """Handle consolidated Mailpit operations (async)."""
-    from .handlers.mailpit import handle_mailpit as _handle_mailpit
-
-    return await _handle_mailpit(arguments)
-
-
-# =============================================================================
 # Contribution Handler
 # =============================================================================
 
@@ -1330,16 +1240,13 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "test_design": handle_test_design,
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,
-    "app_feedback": handle_feedback,
     "process": handle_process,
     "dsl_test": handle_dsl_test,
     "e2e_test": handle_e2e_test,
     "status": handle_status,
     "knowledge": handle_knowledge,
     "pitch": handle_pitch,
-    "mailpit": handle_mailpit,
     "contribution": handle_contribution,
-    "user_feedback": handle_user_feedback,
     "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,

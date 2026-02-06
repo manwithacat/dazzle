@@ -878,7 +878,9 @@ All content and materials available on the Service are the property of {{company
 
 ## 6. Limitation of Liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, {{company_legal_name}} SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, {{company_legal_name}}
+SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, OR PUNITIVE DAMAGES.
 
 ## 7. Changes to Terms
 

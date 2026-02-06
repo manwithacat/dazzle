@@ -136,27 +136,6 @@ class DazzleSelector:
             return f'[data-dazzle-dialog="{name}"]'
         return "[data-dazzle-dialog]"
 
-    # Dazzle Bar controls
-    @staticmethod
-    def dazzle_bar() -> str:
-        """Select the Dazzle Bar component."""
-        return '[data-dazzle-component="dazzle-bar"]'
-
-    @staticmethod
-    def persona_select() -> str:
-        """Select the persona dropdown."""
-        return '[data-dazzle-control="persona-select"]'
-
-    @staticmethod
-    def scenario_select() -> str:
-        """Select the scenario dropdown."""
-        return '[data-dazzle-control="scenario-select"]'
-
-    @staticmethod
-    def reset_button() -> str:
-        """Select the reset data button."""
-        return '[data-dazzle-action="reset"]'
-
     # Auth elements
     @staticmethod
     def auth_user() -> str:

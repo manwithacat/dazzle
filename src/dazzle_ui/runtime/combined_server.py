@@ -85,7 +85,7 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
     backend_url: str = "http://127.0.0.1:8000"
     test_mode: bool = False  # Disable hot-reload in test mode for Playwright compatibility
     hot_reload_manager: HotReloadManager | None = None  # For hot reload support
-    dev_mode: bool = True  # Enable Dazzle Bar in dev mode (v0.8.5)
+    dev_mode: bool = True  # Enable dev mode features
     api_route_prefixes: set[str] = set()  # Entity route prefixes (e.g., "/tasks", "/users")
     theme_css: str | None = None  # Generated theme CSS (v0.16.0)
     sitespec_data: dict[str, Any] | None = None  # SiteSpec for public site pages (v0.16.0)
@@ -136,9 +136,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path.startswith("/dazzle/dev/"):
             # Proxy Dazzle Bar control plane requests (v0.8.5)
             self._proxy_request("GET")
-        elif path == "/dazzle-bar.js":
-            # Serve Dazzle Bar JavaScript (v0.8.5)
-            self._serve_dazzle_bar()
         elif path == "/styles/dazzle.css":
             # Serve bundled CSS (v0.8.11)
             self._serve_css()
@@ -200,11 +197,10 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(405, "Method Not Allowed")
 
     def do_HEAD(self) -> None:
-        """Handle HEAD requests (used by Dazzle Bar to check control plane availability)."""
+        """Handle HEAD requests."""
         if self.path.startswith("/dazzle/dev/"):
             self._proxy_request("HEAD")
         else:
-            # Default HEAD behavior for other paths
             super().do_HEAD()
 
     def _proxy_request(self, method: str) -> None:
@@ -346,10 +342,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         try:
             html = render_page(ctx)
-            # Inject Dazzle Bar in dev mode
-            if self.dev_mode:
-                dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
-                html = html.replace("</body>", dazzle_bar_script)
             # Inject hot reload script
             if not self.test_mode:
                 hot_reload_script = """
@@ -526,18 +518,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 </html>"""
         self._send_response(html, "text/html")
 
-    def _serve_dazzle_bar(self) -> None:
-        """Serve the Dazzle Bar JavaScript bundle (v0.8.5)."""
-        if not self.dev_mode:
-            self.send_error(404, "Dazzle Bar not available in production mode")
-            return
-
-        # Dazzle Bar is now server-rendered via HTMX (v0.20.0)
-        self._send_response(
-            "// Dazzle Bar: server-rendered via HTMX at /dazzle/dev/bar",
-            "application/javascript",
-        )
-
     def _serve_css(self) -> None:
         """Serve the bundled CSS (v0.8.11, v0.16.0 theme support)."""
         try:
@@ -569,12 +549,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = render_site_page_html(self.sitespec_data, path)
-
-        # Inject Dazzle Bar script in dev mode (v0.23.0 - site pages too)
-        if self.dev_mode:
-            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
-            html = html.replace("</body>", dazzle_bar_script)
-
         self._send_response(html, "text/html")
 
     def _serve_site_js(self) -> None:
@@ -935,12 +909,6 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         html = render_auth_page_html(self.sitespec_data, page_type)
-
-        # Inject Dazzle Bar script in dev mode (v0.23.0 - auth pages too)
-        if self.dev_mode:
-            dazzle_bar_script = '<script type="module" src="/dazzle-bar.js"></script>\n</body>'
-            html = html.replace("</body>", dazzle_bar_script)
-
         self._send_response(html, "text/html")
 
     def _serve_asset(self, path: str) -> None:

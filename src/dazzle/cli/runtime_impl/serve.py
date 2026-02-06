@@ -25,7 +25,6 @@ import typer
 
 from dazzle.core.environment import (
     get_dazzle_env,
-    should_enable_dazzle_bar,
     should_enable_test_endpoints,
 )
 from dazzle.core.errors import DazzleError, ParseError
@@ -146,14 +145,12 @@ def serve_command(
     project_root = manifest_path.parent
 
     # Load manifest to get auth config and project name
-    dev_config_override_bar: bool | None = None
     dev_config_override_test: bool | None = None
     try:
         mf = load_manifest(manifest_path)
         auth_enabled = mf.auth.enabled
         project_name = mf.name or project_root.name
         # Get manifest dev config overrides (v0.24.0)
-        dev_config_override_bar = mf.dev.dazzle_bar
         dev_config_override_test = mf.dev.test_endpoints
     except Exception:
         auth_enabled = False
@@ -167,8 +164,8 @@ def serve_command(
     env = get_dazzle_env()
 
     if dev_mode is None:
-        # CLI not set - use manifest or environment default
-        enable_dev_mode = should_enable_dazzle_bar(dev_config_override_bar)
+        # CLI not set - enable in development env
+        enable_dev_mode = env.value == "development"
     else:
         # CLI explicitly set - honor it
         enable_dev_mode = dev_mode

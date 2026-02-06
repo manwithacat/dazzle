@@ -969,70 +969,6 @@ def get_event_first_tools() -> list[Tool]:
                 "required": [],
             },
         ),
-        Tool(
-            name="add_feedback",
-            description="Record feedback about the DSL or generated code. Use the structured model: pain_point, expected, observed, severity, scope, hypothesis.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "pain_point": {
-                        "type": "string",
-                        "description": "What is the problem or friction point?",
-                    },
-                    "expected": {
-                        "type": "string",
-                        "description": "What was expected to happen?",
-                    },
-                    "observed": {
-                        "type": "string",
-                        "description": "What actually happened?",
-                    },
-                    "severity": {
-                        "type": "string",
-                        "enum": ["critical", "high", "medium", "low"],
-                        "description": "Severity of the issue",
-                    },
-                    "scope": {
-                        "type": "string",
-                        "enum": ["global", "module", "entity", "field", "surface"],
-                        "description": "Scope of the issue's impact",
-                    },
-                    "hypothesis": {
-                        "type": "string",
-                        "description": "Hypothesis about the root cause",
-                    },
-                    "location": {
-                        "type": "string",
-                        "description": "Location in DSL or code (e.g., 'entity:Order.status')",
-                    },
-                },
-                "required": ["pain_point", "expected", "observed", "severity", "scope"],
-            },
-        ),
-        Tool(
-            name="list_feedback",
-            description="List recorded feedback entries. Filter by severity, scope, or resolution status.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "severity": {
-                        "type": "string",
-                        "enum": ["critical", "high", "medium", "low"],
-                        "description": "Filter by severity",
-                    },
-                    "scope": {
-                        "type": "string",
-                        "enum": ["global", "module", "entity", "field", "surface"],
-                        "description": "Filter by scope",
-                    },
-                    "resolved": {
-                        "type": "boolean",
-                        "description": "Filter by resolution status",
-                    },
-                },
-                "required": [],
-            },
-        ),
     ]
 
 
@@ -1550,101 +1486,6 @@ Provide a test scenario description to get a recommendation.""",
     ]
 
 
-def get_feedback_tools() -> list[Tool]:
-    """Get tools for user feedback management (from Dazzle Bar)."""
-    return [
-        Tool(
-            name="list_user_feedback",
-            description=(
-                "List user feedback entries submitted via the Dazzle Bar. "
-                "Use this to see what users have reported - bugs, feature requests, and general feedback. "
-                "Feedback is captured when users click the Feedback button in the Dazzle Bar. "
-                "This is different from 'list_feedback' which shows DSL/code feedback."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "status": {
-                        "type": "string",
-                        "description": "Filter by status: 'new', 'acknowledged', 'addressed', 'wont_fix'",
-                        "enum": ["new", "acknowledged", "addressed", "wont_fix"],
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category (e.g., 'Bug Report', 'Feature Request', 'General Feedback')",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Maximum entries to return (default: 20)",
-                        "default": 20,
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": [],
-            },
-        ),
-        Tool(
-            name="get_user_feedback",
-            description=(
-                "Get a specific user feedback entry by ID. "
-                "Use this to see full details including extra context like viewport size, user agent, etc."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "feedback_id": {
-                        "type": "string",
-                        "description": "The 8-character feedback ID (e.g., 'a1b2c3d4')",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["feedback_id"],
-            },
-        ),
-        Tool(
-            name="update_user_feedback",
-            description=(
-                "Update the status of a user feedback entry. "
-                "Use this to track feedback as you address it. "
-                "Status flow: new -> acknowledged -> addressed (or wont_fix)"
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "feedback_id": {
-                        "type": "string",
-                        "description": "The 8-character feedback ID",
-                    },
-                    "status": {
-                        "type": "string",
-                        "description": "New status for the feedback",
-                        "enum": ["acknowledged", "addressed", "wont_fix"],
-                    },
-                    "notes": {
-                        "type": "string",
-                        "description": "Optional notes about how you addressed this feedback",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["feedback_id", "status"],
-            },
-        ),
-        Tool(
-            name="get_user_feedback_summary",
-            description=(
-                "Get a summary of all user feedback for quick context. "
-                "Use this at the start of a session to understand what user feedback needs attention. "
-                "Shows counts by status (new, acknowledged, addressed) and category."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {**PROJECT_PATH_SCHEMA},
-                "required": [],
-            },
-        ),
-    ]
-
-
 def get_user_management_tools() -> list[Tool]:
     """Get tools for user management (auth, sessions, roles)."""
     return [
@@ -1772,9 +1613,6 @@ def get_all_tools() -> list[Tool]:
 
     # Add E2E test execution tools (v0.19.0)
     tools.extend(get_e2e_test_tools())
-
-    # Add Feedback management tools (for LLM ingestion)
-    tools.extend(get_feedback_tools())
 
     # Add User management tools (v0.22.0)
     tools.extend(get_user_management_tools())

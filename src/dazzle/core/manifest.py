@@ -239,21 +239,17 @@ class StackConfig:
 class DevConfig:
     """Development mode configuration.
 
-    Controls dev-only features like the Dazzle Bar and test endpoints.
+    Controls dev-only features like test endpoints.
     These features are automatically disabled when DAZZLE_ENV=production.
 
     The DAZZLE_ENV environment variable controls the runtime environment:
-        - development (default): Dazzle Bar enabled, test endpoints enabled
-        - test: Test endpoints enabled, Dazzle Bar optional (for E2E tests)
-        - production: Both disabled for security
+        - development (default): Test endpoints enabled
+        - test: Test endpoints enabled (for E2E tests)
+        - production: Disabled for security
 
     Explicit settings in dazzle.toml override the environment defaults.
 
     Examples in dazzle.toml:
-
-        # Force-disable Dazzle Bar even in development
-        [dev]
-        dazzle_bar = false
 
         # Force-enable test endpoints in production (NOT RECOMMENDED)
         [dev]
@@ -261,12 +257,10 @@ class DevConfig:
 
         # Typical production config (usually just use DAZZLE_ENV=production)
         [dev]
-        dazzle_bar = false
         test_endpoints = false
     """
 
     # None means "use environment default"
-    dazzle_bar: bool | None = None
     test_endpoints: bool | None = None
 
 
@@ -445,7 +439,6 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Parse dev config (v0.24.0)
     dev_data = data.get("dev", {})
     dev_config = DevConfig(
-        dazzle_bar=dev_data.get("dazzle_bar"),  # None if not set
         test_endpoints=dev_data.get("test_endpoints"),  # None if not set
     )
 
