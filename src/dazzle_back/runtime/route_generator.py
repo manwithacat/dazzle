@@ -26,6 +26,8 @@ try:
     from fastapi import Depends, HTTPException, Query, Request
     from fastapi.responses import HTMLResponse
 
+    from dazzle_back.runtime.auth import AuthContext
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
@@ -35,6 +37,7 @@ except ImportError:
     Request = None  # type: ignore
     Depends = None  # type: ignore
     HTMLResponse = None  # type: ignore
+    AuthContext = None  # type: ignore
 
 
 def _is_htmx_request(request: Any) -> bool:
@@ -76,7 +79,7 @@ def create_list_handler(
     service: Any,
     _response_schema: type[BaseModel] | None = None,
     access_spec: dict[str, Any] | None = None,
-    get_auth_context: Callable[..., Any] | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
@@ -85,15 +88,57 @@ def create_list_handler(
         service: Service instance for data operations
         _response_schema: Response schema (unused, kept for compatibility)
         access_spec: Access control specification for this entity
-        get_auth_context: Callable to get auth context from request
+        optional_auth_dep: FastAPI dependency for optional auth (returns AuthContext)
         require_auth_by_default: If True, require authentication when no access_spec is defined
     """
-    from dazzle_back.runtime.condition_evaluator import (
-        build_visibility_filter,
-        filter_records_by_condition,
-    )
 
-    async def handler(
+    if optional_auth_dep is not None:
+
+        async def _auth_handler(
+            request: Request,
+            auth_context: AuthContext = Depends(optional_auth_dep),
+            page: int = Query(1, ge=1, description="Page number"),
+            page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+            sort: str | None = Query(None, description="Sort field"),
+            dir: str = Query("asc", description="Sort direction (asc/desc)"),
+            search: str | None = Query(None, description="Search query"),
+        ) -> Any:
+            is_authenticated = auth_context.is_authenticated
+            user_id = str(auth_context.user.id) if auth_context.user else None
+
+            # Deny-default: require authentication when enabled and no explicit access rules
+            if require_auth_by_default and not access_spec and not is_authenticated:
+                raise HTTPException(
+                    status_code=401,
+                    detail="Authentication required",
+                )
+
+            return await _list_handler_body(
+                service,
+                access_spec,
+                is_authenticated,
+                user_id,
+                request,
+                page,
+                page_size,
+                sort,
+                dir,
+                search,
+            )
+
+        _auth_handler.__annotations__ = {
+            "request": Request,
+            "auth_context": AuthContext,
+            "page": int,
+            "page_size": int,
+            "sort": str | None,
+            "dir": str,
+            "search": str | None,
+            "return": Any,
+        }
+        return _auth_handler
+
+    async def _noauth_handler(
         request: Request,
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -101,105 +146,20 @@ def create_list_handler(
         dir: str = Query("asc", description="Sort direction (asc/desc)"),
         search: str | None = Query(None, description="Search query"),
     ) -> Any:
-        # Get auth context if available
-        auth_context = None
-        user_id = None
-        is_authenticated = False
-
-        if get_auth_context:
-            try:
-                auth_context = await get_auth_context(request)
-                if auth_context and auth_context.is_authenticated:
-                    is_authenticated = True
-                    user_id = str(auth_context.user.id) if auth_context.user else None
-            except Exception:
-                # Auth not available or failed - treat as anonymous
-                pass
-
-        # Deny-default: require authentication when enabled and no explicit access rules
-        if require_auth_by_default and not access_spec and not is_authenticated:
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required",
-            )
-
-        # Build visibility filters
-        sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
-
-        # Extract filter[field] params from query string
-        filters: dict[str, Any] = {}
-        for key, value in request.query_params.items():
-            if key.startswith("filter[") and key.endswith("]") and value:
-                filters[key[7:-1]] = value
-
-        # Merge visibility filters with user filters
-        merged_filters: dict[str, Any] | None = None
-        if sql_filters or filters:
-            merged_filters = {**(sql_filters or {}), **filters}
-
-        # Build sort list for repository
-        sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
-
-        # Execute list with filters, sort, and search
-        result = await service.execute(
-            operation="list",
-            page=page,
-            page_size=page_size,
-            filters=merged_filters,
-            sort=sort_list,
-            search=search,
+        return await _list_handler_body(
+            service,
+            access_spec,
+            False,
+            None,
+            request,
+            page,
+            page_size,
+            sort,
+            dir,
+            search,
         )
 
-        # Apply post-filtering if needed (for OR conditions)
-        if post_filter and result and "items" in result:
-            context = {"current_user_id": user_id}
-            # Convert Pydantic models to dicts for filtering
-            items = result["items"]
-            if items and hasattr(items[0], "model_dump"):
-                items = [item.model_dump() for item in items]
-            filtered_items = filter_records_by_condition(items, post_filter, context)
-            result["items"] = filtered_items
-            result["total"] = len(filtered_items)
-
-        # HTMX content negotiation: return HTML fragment for HX-Request
-        if _is_htmx_request(request):
-            try:
-                from dazzle_ui.runtime.template_renderer import render_fragment
-
-                items = result.get("items", []) if isinstance(result, dict) else []
-                # Convert Pydantic models to dicts
-                if items and hasattr(items[0], "model_dump"):
-                    items = [item.model_dump() for item in items]
-                # Render table rows fragment with sort/filter state
-                html = render_fragment(
-                    "fragments/table_rows.html",
-                    table={
-                        "rows": items,
-                        "columns": request.state.htmx_columns
-                        if hasattr(request.state, "htmx_columns")
-                        else [],
-                        "detail_url_template": getattr(request.state, "htmx_detail_url", None),
-                        "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
-                        "api_endpoint": str(request.url.path),
-                        "sort_field": sort or "",
-                        "sort_dir": dir,
-                        "filter_values": filters,
-                        "page": page,
-                        "page_size": page_size,
-                        "total": result.get("total", 0) if isinstance(result, dict) else 0,
-                        "empty_message": getattr(
-                            request.state, "htmx_empty_message", "No items found."
-                        ),
-                    },
-                )
-                return HTMLResponse(content=html)
-            except ImportError:
-                pass  # Template renderer not available, fall through to JSON
-
-        return result
-
-    # Set proper annotations for FastAPI
-    handler.__annotations__ = {
+    _noauth_handler.__annotations__ = {
         "request": Request,
         "page": int,
         "page_size": int,
@@ -208,90 +168,205 @@ def create_list_handler(
         "search": str | None,
         "return": Any,
     }
+    return _noauth_handler
 
-    return handler
+
+async def _list_handler_body(
+    service: Any,
+    access_spec: dict[str, Any] | None,
+    is_authenticated: bool,
+    user_id: str | None,
+    request: Any,
+    page: int,
+    page_size: int,
+    sort: str | None,
+    dir: str,
+    search: str | None,
+) -> Any:
+    """Shared list handler logic for both auth and no-auth paths."""
+    from dazzle_back.runtime.condition_evaluator import (
+        build_visibility_filter,
+        filter_records_by_condition,
+    )
+
+    # Build visibility filters
+    sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+
+    # Extract filter[field] params from query string
+    filters: dict[str, Any] = {}
+    for key, value in request.query_params.items():
+        if key.startswith("filter[") and key.endswith("]") and value:
+            filters[key[7:-1]] = value
+
+    # Merge visibility filters with user filters
+    merged_filters: dict[str, Any] | None = None
+    if sql_filters or filters:
+        merged_filters = {**(sql_filters or {}), **filters}
+
+    # Build sort list for repository
+    sort_list = [f"-{sort}" if dir == "desc" else sort] if sort else None
+
+    # Execute list with filters, sort, and search
+    result = await service.execute(
+        operation="list",
+        page=page,
+        page_size=page_size,
+        filters=merged_filters,
+        sort=sort_list,
+        search=search,
+    )
+
+    # Apply post-filtering if needed (for OR conditions)
+    if post_filter and result and "items" in result:
+        context = {"current_user_id": user_id}
+        # Convert Pydantic models to dicts for filtering
+        items = result["items"]
+        if items and hasattr(items[0], "model_dump"):
+            items = [item.model_dump() for item in items]
+        filtered_items = filter_records_by_condition(items, post_filter, context)
+        result["items"] = filtered_items
+        result["total"] = len(filtered_items)
+
+    # HTMX content negotiation: return HTML fragment for HX-Request
+    if _is_htmx_request(request):
+        try:
+            from dazzle_ui.runtime.template_renderer import render_fragment
+
+            items = result.get("items", []) if isinstance(result, dict) else []
+            # Convert Pydantic models to dicts
+            if items and hasattr(items[0], "model_dump"):
+                items = [item.model_dump() for item in items]
+            # Render table rows fragment with sort/filter state
+            html = render_fragment(
+                "fragments/table_rows.html",
+                table={
+                    "rows": items,
+                    "columns": request.state.htmx_columns
+                    if hasattr(request.state, "htmx_columns")
+                    else [],
+                    "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                    "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
+                    "api_endpoint": str(request.url.path),
+                    "sort_field": sort or "",
+                    "sort_dir": dir,
+                    "filter_values": filters,
+                    "page": page,
+                    "page_size": page_size,
+                    "total": result.get("total", 0) if isinstance(result, dict) else 0,
+                    "empty_message": getattr(
+                        request.state, "htmx_empty_message", "No items found."
+                    ),
+                },
+            )
+            return HTMLResponse(content=html)
+        except ImportError:
+            pass  # Template renderer not available, fall through to JSON
+
+    return result
 
 
 def create_read_handler(
     service: Any,
     _response_schema: type[BaseModel] | None = None,
-    get_auth_context: Callable[..., Any] | None = None,
+    auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for read operations."""
 
-    async def handler(id: UUID, request: Request) -> Any:
-        # Deny-default: require authentication when enabled
-        if require_auth_by_default and get_auth_context:
-            try:
-                auth_context = await get_auth_context(request)
-                if not auth_context or not auth_context.is_authenticated:
-                    raise HTTPException(status_code=401, detail="Authentication required")
-            except HTTPException:
-                raise
-            except Exception:
-                raise HTTPException(status_code=401, detail="Authentication required")
+    if require_auth_by_default and auth_dep:
 
+        async def _read_auth(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
+        ) -> Any:
+            result = await service.execute(operation="read", id=id)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Not found")
+            return result
+
+        _read_auth.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _read_auth
+
+    async def _read_noauth(id: UUID, request: Request) -> Any:
         result = await service.execute(operation="read", id=id)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         return result
 
-    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-    return handler
+    _read_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    return _read_noauth
 
 
 def create_create_handler(
     service: Any,
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
-    get_auth_context: Callable[..., Any] | None = None,
+    auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
 
-    async def handler(request: Request) -> Any:
-        # Deny-default: require authentication when enabled
-        if require_auth_by_default and get_auth_context:
-            try:
-                auth_context = await get_auth_context(request)
-                if not auth_context or not auth_context.is_authenticated:
-                    raise HTTPException(status_code=401, detail="Authentication required")
-            except HTTPException:
-                raise
-            except Exception:
-                raise HTTPException(status_code=401, detail="Authentication required")
+    if require_auth_by_default and auth_dep:
 
+        async def _create_auth(
+            request: Request, auth_context: AuthContext = Depends(auth_dep)
+        ) -> Any:
+            body = await _parse_request_body(request)
+            data = input_schema.model_validate(body)
+            result = await service.execute(operation="create", data=data)
+            return result
+
+        _create_auth.__annotations__ = {
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _create_auth
+
+    async def _create_noauth(request: Request) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
         return result
 
-    handler.__annotations__ = {"request": Request, "return": Any}
-    return handler
+    _create_noauth.__annotations__ = {"request": Request, "return": Any}
+    return _create_noauth
 
 
 def create_update_handler(
     service: Any,
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
-    get_auth_context: Callable[..., Any] | None = None,
+    auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
 
-    async def handler(id: UUID, request: Request) -> Any:
-        # Deny-default: require authentication when enabled
-        if require_auth_by_default and get_auth_context:
-            try:
-                auth_context = await get_auth_context(request)
-                if not auth_context or not auth_context.is_authenticated:
-                    raise HTTPException(status_code=401, detail="Authentication required")
-            except HTTPException:
-                raise
-            except Exception:
-                raise HTTPException(status_code=401, detail="Authentication required")
+    if require_auth_by_default and auth_dep:
 
+        async def _update_auth(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
+        ) -> Any:
+            body = await _parse_request_body(request)
+            data = input_schema.model_validate(body)
+            result = await service.execute(operation="update", id=id, data=data)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Not found")
+            return result
+
+        _update_auth.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _update_auth
+
+    async def _update_noauth(id: UUID, request: Request) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="update", id=id, data=data)
@@ -299,36 +374,43 @@ def create_update_handler(
             raise HTTPException(status_code=404, detail="Not found")
         return result
 
-    handler.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-    return handler
+    _update_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    return _update_noauth
 
 
 def create_delete_handler(
     service: Any,
-    get_auth_context: Callable[..., Any] | None = None,
+    auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for delete operations."""
 
-    async def handler(id: UUID, request: Request) -> dict[str, bool]:
-        # Deny-default: require authentication when enabled
-        if require_auth_by_default and get_auth_context:
-            try:
-                auth_context = await get_auth_context(request)
-                if not auth_context or not auth_context.is_authenticated:
-                    raise HTTPException(status_code=401, detail="Authentication required")
-            except HTTPException:
-                raise
-            except Exception:
-                raise HTTPException(status_code=401, detail="Authentication required")
+    if require_auth_by_default and auth_dep:
 
+        async def _delete_auth(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
+        ) -> dict[str, bool]:
+            result = await service.execute(operation="delete", id=id)
+            if not result:
+                raise HTTPException(status_code=404, detail="Not found")
+            return {"deleted": True}
+
+        _delete_auth.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": dict[str, bool],
+        }
+        return _delete_auth
+
+    async def _delete_noauth(id: UUID, request: Request) -> dict[str, bool]:
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
         return {"deleted": True}
 
-    handler.__annotations__ = {"id": UUID, "request": Request, "return": dict[str, bool]}
-    return handler
+    _delete_noauth.__annotations__ = {"id": UUID, "request": Request, "return": dict[str, bool]}
+    return _delete_noauth
 
 
 def create_custom_handler(
@@ -375,7 +457,8 @@ class RouteGenerator:
         models: dict[str, type[BaseModel]],
         schemas: dict[str, dict[str, type[BaseModel]]] | None = None,
         entity_access_specs: dict[str, dict[str, Any]] | None = None,
-        get_auth_context: Callable[..., Any] | None = None,
+        auth_dep: Callable[..., Any] | None = None,
+        optional_auth_dep: Callable[..., Any] | None = None,
         require_auth_by_default: bool = False,
     ):
         """
@@ -386,7 +469,8 @@ class RouteGenerator:
             models: Dictionary mapping entity names to Pydantic models
             schemas: Optional dictionary with create/update schemas per entity
             entity_access_specs: Optional dictionary mapping entity names to access specs
-            get_auth_context: Optional callable to get auth context from request
+            auth_dep: FastAPI dependency that requires authentication (raises 401)
+            optional_auth_dep: FastAPI dependency for optional auth (returns empty AuthContext)
             require_auth_by_default: If True, require auth for all routes when no access spec
         """
         if not FASTAPI_AVAILABLE:
@@ -396,7 +480,8 @@ class RouteGenerator:
         self.models = models
         self.schemas = schemas or {}
         self.entity_access_specs = entity_access_specs or {}
-        self.get_auth_context = get_auth_context
+        self.auth_dep = auth_dep
+        self.optional_auth_dep = optional_auth_dep
         self.require_auth_by_default = require_auth_by_default
         self._router = _APIRouter()
 
@@ -445,7 +530,7 @@ class RouteGenerator:
                     service,
                     create_schema,
                     model,
-                    get_auth_context=self.get_auth_context,
+                    auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
                 )
                 self._add_route(endpoint, handler, response_model=model)
@@ -459,7 +544,7 @@ class RouteGenerator:
             handler = create_read_handler(
                 service,
                 model,
-                get_auth_context=self.get_auth_context,
+                auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
             )
             self._add_route(endpoint, handler, response_model=model)
@@ -474,7 +559,7 @@ class RouteGenerator:
                 service,
                 model,
                 access_spec=access_spec,
-                get_auth_context=self.get_auth_context,
+                optional_auth_dep=self.optional_auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
             )
             self._add_route(endpoint, handler, response_model=None)
@@ -490,7 +575,7 @@ class RouteGenerator:
                     service,
                     update_schema,
                     model,
-                    get_auth_context=self.get_auth_context,
+                    auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
                 )
                 self._add_route(endpoint, handler, response_model=model)
@@ -501,7 +586,7 @@ class RouteGenerator:
         elif endpoint.method == HttpMethod.DELETE or operation_kind == OperationKind.DELETE:
             handler = create_delete_handler(
                 service,
-                get_auth_context=self.get_auth_context,
+                auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
             )
             self._add_route(endpoint, handler, response_model=None)

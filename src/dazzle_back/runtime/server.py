@@ -1136,7 +1136,8 @@ class DNRBackendApp:
                         service.set_repository(repo)
 
         # Initialize auth if enabled (needed before route generation)
-        get_auth_context = None
+        auth_dep = None
+        optional_auth_dep = None
         if self._enable_auth:
             self._auth_store = AuthStore(
                 db_path=self._auth_db_path,
@@ -1145,8 +1146,14 @@ class DNRBackendApp:
             self._auth_middleware = AuthMiddleware(self._auth_store)
             auth_router = create_auth_routes(self._auth_store)
             self._app.include_router(auth_router)
-            # Create auth context getter for routes
-            get_auth_context = self._auth_middleware.get_auth_context
+            # Create FastAPI Depends()-compatible auth dependencies
+            from dazzle_back.runtime.auth import (
+                create_auth_dependency,
+                create_optional_auth_dependency,
+            )
+
+            auth_dep = create_auth_dependency(self._auth_store)
+            optional_auth_dep = create_optional_auth_dependency(self._auth_store)
 
             # Initialize social auth if OAuth providers configured
             self._init_social_auth()
@@ -1165,7 +1172,8 @@ class DNRBackendApp:
             models=self._models,
             schemas=self._schemas,
             entity_access_specs=entity_access_specs,
-            get_auth_context=get_auth_context,
+            auth_dep=auth_dep,
+            optional_auth_dep=optional_auth_dep,
             require_auth_by_default=self._enable_auth and not self._enable_test_mode,
         )
         router = route_generator.generate_all_routes(

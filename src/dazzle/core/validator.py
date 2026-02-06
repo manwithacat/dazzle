@@ -957,8 +957,10 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 if debit_ledger.ledger_id != credit_ledger.ledger_id:
                     errors.append(
                         f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"debit ledger '{transfer.debit_ledger}' (ledger_id={debit_ledger.ledger_id}) "
-                        f"and credit ledger '{transfer.credit_ledger}' (ledger_id={credit_ledger.ledger_id}) "
+                        f"debit ledger '{transfer.debit_ledger}' "
+                        f"(ledger_id={debit_ledger.ledger_id}) "
+                        f"and credit ledger '{transfer.credit_ledger}' "
+                        f"(ledger_id={credit_ledger.ledger_id}) "
                         f"must be in the same ledger_id"
                     )
 
@@ -966,8 +968,9 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 if debit_ledger.currency != credit_ledger.currency:
                     errors.append(
                         f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"currency mismatch between '{transfer.debit_ledger}' ({debit_ledger.currency}) "
-                        f"and '{transfer.credit_ledger}' ({credit_ledger.currency})"
+                        f"currency mismatch between '{transfer.debit_ledger}' "
+                        f"({debit_ledger.currency}) and '{transfer.credit_ledger}' "
+                        f"({credit_ledger.currency})"
                     )
 
             # Check transfer code uniqueness
