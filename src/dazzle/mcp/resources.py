@@ -40,6 +40,12 @@ def create_static_resources() -> list[dict[str, Any]]:
             "description": "HTMX template patterns, fragment contracts, and LLM cognition strategies for rich UI development",
             "mimeType": "text/markdown",
         },
+        {
+            "uri": "dazzle://docs/runtime-capabilities",
+            "name": "Runtime UI Capabilities",
+            "description": "What the runtime renders for each DSL construct: DataTable sort/filter/search, attention signals, persona variants, form widgets",
+            "mimeType": "text/markdown",
+        },
     ]
 
 

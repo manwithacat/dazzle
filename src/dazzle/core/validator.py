@@ -1142,6 +1142,61 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
                     f"Consider adding a persona for role-based access control."
                 )
 
+    # ---- List surfaces without UX directives ----
+    # Suggest sort/filter/search for list surfaces that lack a ux block
+    for surface in appspec.surfaces:
+        if surface.mode == ir.SurfaceMode.LIST:
+            if not surface.ux:
+                hints = []
+                # Suggest filterable fields from entity
+                surf_entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
+                if surf_entity:
+                    filterable = [
+                        f.name
+                        for f in surf_entity.fields
+                        if f.type
+                        and f.type.kind in (ir.FieldTypeKind.ENUM, ir.FieldTypeKind.BOOL)
+                        and not f.is_primary_key
+                    ]
+                    # Also check state machine field
+                    if surf_entity.state_machine:
+                        sm_field = surf_entity.state_machine.status_field
+                        if sm_field not in filterable:
+                            filterable.insert(0, sm_field)
+                    searchable = [
+                        f.name
+                        for f in surf_entity.fields
+                        if f.type
+                        and f.type.kind in (ir.FieldTypeKind.STR, ir.FieldTypeKind.TEXT)
+                        and not f.is_primary_key
+                    ]
+                    if filterable:
+                        hints.append(f"filter: {', '.join(filterable)}")
+                    if searchable:
+                        hints.append(f"search: {', '.join(searchable)}")
+                hints.insert(0, "sort: (e.g. created_at desc)")
+                hints.append('empty: "No items yet."')
+                warnings.append(
+                    f"Surface '{surface.name}' (mode: list) has no ux block. "
+                    f"Consider adding: {'; '.join(hints)}"
+                )
+            else:
+                ux = surface.ux
+                missing = []
+                if not ux.sort:
+                    missing.append("sort")
+                if not ux.filter:
+                    missing.append("filter")
+                if not ux.search:
+                    missing.append("search")
+                if not ux.empty_message:
+                    missing.append("empty")
+                if missing:
+                    warnings.append(
+                        f"Surface '{surface.name}' ux block is missing: "
+                        f"{', '.join(missing)}. These enhance DataTable UX."
+                    )
+
     # ---- Integration binding verification (Issue #81b) ----
     # Check if stories reference external integrations but no API packs are declared
     _INTEGRATION_KEYWORDS = {

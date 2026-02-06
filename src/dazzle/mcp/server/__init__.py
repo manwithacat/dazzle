@@ -246,6 +246,13 @@ async def read_resource(uri: str) -> str:
             return htmx_spec.read_text()
         return "HTMX template specification not found"
 
+    elif uri == "dazzle://docs/runtime-capabilities":
+        docs_dir = Path(__file__).parent.parent.parent.parent / "docs"
+        rt_caps = docs_dir / "reference" / "runtime-capabilities.md"
+        if rt_caps.exists():
+            return rt_caps.read_text()
+        return "Runtime capabilities specification not found"
+
     # Semantic resources
     elif uri == "dazzle://semantics/index":
         return json.dumps(get_semantic_index(), indent=2)
