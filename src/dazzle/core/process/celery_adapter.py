@@ -114,7 +114,8 @@ class CeleryProcessAdapter(ProcessAdapter):
                                 day_of_week=parts[4],
                             )
                             self._beat_schedule[f"schedule_{name}"] = {
-                                "task": "dazzle.core.process.celery_tasks.trigger_scheduled_process",
+                                "task": "dazzle.core.process.celery_tasks"
+                                ".trigger_scheduled_process",
                                 "schedule": cron_schedule,
                                 "args": [name],
                             }

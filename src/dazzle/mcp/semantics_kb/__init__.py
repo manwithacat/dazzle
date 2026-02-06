@@ -73,6 +73,16 @@ ALIASES = {
     "has_one": "relationships",
     "belongs_to": "relationships",
     "embeds": "relationships",
+    # Experience/wizard aliases
+    "wizard": "experience",
+    "wizards": "experience",
+    "multi_step": "experience",
+    "multi_step_flow": "experience",
+    "multi_step_form": "experience",
+    "onboarding": "experience",
+    "onboarding_flow": "experience",
+    "user_flow": "experience",
+    "step_flow": "experience",
     # Site/frontend aliases
     "sections": "section_types",
     "section": "section_types",

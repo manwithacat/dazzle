@@ -328,3 +328,71 @@ process daily_report:
 """
 
 related = ["entity", "service", "story", "state_machine", "compensation"]
+
+
+[concepts.experience]
+category = "Core Construct"
+definition = """
+A multi-step user flow or wizard that guides users through a sequence of steps.
+Experiences define step-by-step interactions with navigation, branching, and
+error recovery. Each step references a surface, process, or integration, and
+transitions between steps are driven by user events (continue, back, success,
+failure, etc.). Use experiences for onboarding wizards, checkout flows, approval
+workflows, and any multi-screen interaction that needs explicit flow control.
+"""
+
+syntax = """
+experience <experience_name> "<Display Name>":
+  start at step <step_name>
+
+  step <step_name>:
+    kind: <surface|process|integration>
+    surface <surface_name>           # when kind is surface
+    on <event> -> step <target_step>
+    [on <event> -> step <target_step>]
+    ...
+
+  step <step_name>:
+    kind: <surface|process|integration>
+    ...
+"""
+
+example = """
+experience user_onboarding "User Onboarding":
+  start at step welcome
+
+  step welcome:
+    kind: surface
+    surface onboarding_welcome
+    on continue -> step profile
+
+  step profile:
+    kind: surface
+    surface onboarding_profile
+    on continue -> step preferences
+    on back -> step welcome
+
+  step preferences:
+    kind: surface
+    surface onboarding_preferences
+    on continue -> step verify
+    on back -> step profile
+
+  step verify:
+    kind: surface
+    surface verification_pending
+    on success -> step complete
+    on failure -> step verify_error
+
+  step verify_error:
+    kind: surface
+    surface verification_error
+    on try_again -> step verify
+    on skip -> step complete
+
+  step complete:
+    kind: surface
+    surface onboarding_complete
+"""
+
+related = ["surface", "process", "integration", "state_machine"]

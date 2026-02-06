@@ -114,6 +114,40 @@ workspace dashboard "Team Dashboard":
       completion_rate: count(Task where status = done) * 100 / count(Task)
 ```
 
+### Experience
+A multi-step user flow or wizard that guides users through a sequence of steps. Experiences define navigation, branching, and error recovery across multiple screens.
+
+**Step kinds**: `surface` (UI screen), `process` (background operation), `integration` (external call)
+
+**Transitions**: Steps declare `on <event> -> step <target>` to define navigation between steps. Common events include `continue`, `back`, `success`, `failure`, `cancel`.
+
+**Example:**
+```dsl
+experience user_onboarding "User Onboarding":
+  start at step welcome
+
+  step welcome:
+    kind: surface
+    surface onboarding_welcome
+    on continue -> step profile
+
+  step profile:
+    kind: surface
+    surface onboarding_profile
+    on continue -> step preferences
+    on back -> step welcome
+
+  step preferences:
+    kind: surface
+    surface onboarding_preferences
+    on continue -> step complete
+    on back -> step profile
+
+  step complete:
+    kind: surface
+    surface onboarding_complete
+```
+
 ### Persona (NEW in v0.2)
 A role-based variant that adapts surfaces or workspaces for different user types (admin, manager, member, etc.). Personas control scope, visibility, and capabilities without code duplication.
 
