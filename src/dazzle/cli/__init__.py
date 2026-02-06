@@ -113,6 +113,7 @@ app.command(name="check")(check_command)
 # =============================================================================
 # Sub-apps
 # =============================================================================
+from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
@@ -125,6 +126,7 @@ from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
+app.add_typer(auth_app, name="auth")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")

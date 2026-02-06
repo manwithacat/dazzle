@@ -6,7 +6,7 @@ tools with enum-based operations. Each operation is explicitly listed in the
 schema, preserving discoverability for LLMs.
 
 Consolidation strategy:
-- 66 original tools → 17 consolidated tools
+- 66 original tools → 18 consolidated tools
 - Knowledge tools (5) → MCP Resources (no schema overhead)
 - CRUD patterns unified: list/get/inspect → single tool with operation enum
 
@@ -66,7 +66,7 @@ PROJECT_PATH_SCHEMA = {
 
 def get_consolidated_tools() -> list[Tool]:
     """
-    Get consolidated tools (13 tools replacing 62 original tools).
+    Get consolidated tools (18 tools replacing 66 original tools).
 
     Each tool uses an 'operation' enum to specify the action, preserving
     discoverability while reducing schema overhead.
@@ -835,7 +835,87 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # Spec Analyze (cognition pass for narrative specs)
+        # User Management (auth user/session CRUD)
+        # =====================================================================
+        Tool(
+            name="user_management",
+            description=(
+                "User management operations: list, create, get, update, "
+                "reset_password, deactivate, list_sessions, revoke_session, config. "
+                "Manage auth users and sessions in SQLite or PostgreSQL."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "list",
+                            "create",
+                            "get",
+                            "update",
+                            "reset_password",
+                            "deactivate",
+                            "list_sessions",
+                            "revoke_session",
+                            "config",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "User email (for create, get)",
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "description": "User UUID (for get, update, reset_password, deactivate, list_sessions)",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Display name (for create)",
+                    },
+                    "username": {
+                        "type": "string",
+                        "description": "New display name (for update)",
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Role names (for create, update)",
+                    },
+                    "role": {
+                        "type": "string",
+                        "description": "Filter by role (for list)",
+                    },
+                    "is_superuser": {
+                        "type": "boolean",
+                        "description": "Superuser flag (for create, update)",
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "description": "Active status (for update)",
+                    },
+                    "active_only": {
+                        "type": "boolean",
+                        "description": "Only active users/sessions (for list, list_sessions; default: true)",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session ID (for revoke_session)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (for list, list_sessions; default: 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Pagination offset (for list; default: 0)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
         # =====================================================================
         # Bootstrap (entry point for naive app requests)
         # =====================================================================

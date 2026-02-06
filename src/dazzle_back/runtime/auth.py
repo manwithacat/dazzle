@@ -415,6 +415,120 @@ class AuthStore:
         )
         return rowcount > 0
 
+    def list_users(
+        self,
+        active_only: bool = True,
+        role: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[UserRecord]:
+        """
+        List users with optional filters.
+
+        Args:
+            active_only: Only return active users
+            role: Filter by role (Python-side, checks JSON roles array)
+            limit: Maximum users to return
+            offset: Number of users to skip for pagination
+
+        Returns:
+            List of matching UserRecord objects
+        """
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if active_only:
+            conditions.append(f"is_active = {self._bool_to_db(True)}")
+
+        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        rows = self._execute(query, tuple(params))
+
+        users = []
+        for row in rows:
+            user = self._row_to_user(row)
+            if role and role not in user.roles:
+                continue
+            users.append(user)
+
+        return users
+
+    def update_user(
+        self,
+        user_id: UUID,
+        username: str | None = None,
+        roles: list[str] | None = None,
+        is_active: bool | None = None,
+        is_superuser: bool | None = None,
+    ) -> UserRecord | None:
+        """
+        Update a user's properties.
+
+        Args:
+            user_id: User UUID
+            username: New display name
+            roles: New roles list (replaces existing)
+            is_active: Set active status
+            is_superuser: Set superuser status
+
+        Returns:
+            Updated UserRecord, or None if user not found or no updates provided
+        """
+        import json
+
+        updates: list[str] = []
+        params: list[object] = []
+
+        if username is not None:
+            updates.append("username = ?")
+            params.append(username)
+
+        if roles is not None:
+            updates.append("roles = ?")
+            params.append(json.dumps(roles))
+
+        if is_active is not None:
+            updates.append("is_active = ?")
+            params.append(self._bool_to_db(is_active))
+
+        if is_superuser is not None:
+            updates.append("is_superuser = ?")
+            params.append(self._bool_to_db(is_superuser))
+
+        if not updates:
+            return None
+
+        updates.append("updated_at = ?")
+        params.append(datetime.now(UTC).isoformat())
+        params.append(str(user_id))
+
+        query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+        rowcount = self._execute_modify(query, tuple(params))
+
+        if rowcount == 0:
+            return None
+
+        return self.get_user_by_id(user_id)
+
+    def count_active_sessions(self, user_id: UUID) -> int:
+        """
+        Count active (non-expired) sessions for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of active sessions
+        """
+        now_expr = "NOW()" if self._use_postgres else "datetime('now')"
+        rows = self._execute(
+            f"SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND expires_at > {now_expr}",
+            (str(user_id),),
+        )
+        return rows[0]["count"] if rows else 0
+
     # =========================================================================
     # Session Operations
     # =========================================================================

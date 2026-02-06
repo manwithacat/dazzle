@@ -14,7 +14,6 @@ from __future__ import annotations
 import os
 import secrets
 import string
-from datetime import UTC
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -104,33 +103,11 @@ async def list_users_handler(
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
-    # Build query
-    conditions = []
-    params: list[Any] = []
-
-    if active_only:
-        if auth_store._use_postgres:
-            conditions.append("is_active = TRUE")
-        else:
-            conditions.append("is_active = 1")
-
-    where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-    query = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?"
-    params.extend([limit, offset])
-
-    rows = auth_store._execute(query, tuple(params))
-
-    # Filter by role in Python (JSON array in DB)
-    users = []
-    for row in rows:
-        user = auth_store._row_to_user(row)
-        if role and role not in user.roles:
-            continue
-        users.append(_user_to_dict(user))
+    users = auth_store.list_users(active_only=active_only, role=role, limit=limit, offset=offset)
 
     return {
         "count": len(users),
-        "users": users,
+        "users": [_user_to_dict(u) for u in users],
         "filters": {
             "role": role,
             "active_only": active_only,
@@ -230,11 +207,7 @@ async def get_user_handler(
         }
 
     # Count active sessions
-    sessions = auth_store._execute(
-        "SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND expires_at > datetime('now')",
-        (str(user.id),),
-    )
-    session_count = sessions[0]["count"] if sessions else 0
+    session_count = auth_store.count_active_sessions(user.id)
 
     return {
         "found": True,
@@ -275,49 +248,23 @@ async def update_user_handler(
             "error": f"User not found: {user_id}",
         }
 
-    # Build update query
-    updates = []
-    params: list[Any] = []
+    updated_user = auth_store.update_user(
+        user_id=UUID(user_id),
+        username=username,
+        roles=roles,
+        is_active=is_active,
+        is_superuser=is_superuser,
+    )
 
-    if username is not None:
-        updates.append("username = ?")
-        params.append(username)
-
-    if roles is not None:
-        import json
-
-        updates.append("roles = ?")
-        params.append(json.dumps(roles))
-
-    if is_active is not None:
-        updates.append("is_active = ?")
-        params.append(auth_store._bool_to_db(is_active))
-
-    if is_superuser is not None:
-        updates.append("is_superuser = ?")
-        params.append(auth_store._bool_to_db(is_superuser))
-
-    if not updates:
+    if not updated_user:
         return {
             "success": False,
             "error": "No updates provided",
         }
 
-    updates.append("updated_at = ?")
-    from datetime import datetime
-
-    params.append(datetime.now(UTC).isoformat())
-    params.append(user_id)
-
-    query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
-    auth_store._execute_modify(query, tuple(params))
-
-    # Fetch updated user
-    updated_user = auth_store.get_user_by_id(UUID(user_id))
-
     return {
         "success": True,
-        "user": _user_to_dict(updated_user) if updated_user else None,
+        "user": _user_to_dict(updated_user),
         "changes": {
             "username": username,
             "roles": roles,
@@ -406,16 +353,7 @@ async def deactivate_user_handler(
         }
 
     # Deactivate
-    from datetime import datetime
-
-    auth_store._execute_modify(
-        "UPDATE users SET is_active = ?, updated_at = ? WHERE id = ?",
-        (
-            auth_store._bool_to_db(False),
-            datetime.now(UTC).isoformat(),
-            user_id,
-        ),
-    )
+    auth_store.update_user(user_id=UUID(user_id), is_active=False)
 
     # Revoke all sessions
     revoked_count = auth_store.delete_user_sessions(UUID(user_id))
