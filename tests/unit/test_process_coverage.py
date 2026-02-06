@@ -1,14 +1,66 @@
-"""Tests for process coverage checker improvements."""
+"""Tests for process coverage checker improvements.
+
+Uses direct module import to avoid triggering mcp.server import from dazzle.mcp.__init__.
+"""
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
-from dazzle.mcp.server.handlers.process import (
-    MIN_MEANINGFUL_WORD_LENGTH,
-    _infer_structural_satisfaction,
-    _outcome_matches_pool,
-)
+from dazzle.core.ir.process import ProcessTriggerKind, StepKind
+
+# ============================================================================
+# Direct module import to avoid mcp.server dependency
+# ============================================================================
+
+_process_module = None
+
+
+def _import_module():
+    """Import process handlers module directly."""
+    global _process_module
+
+    if _process_module is not None:
+        return
+
+    # Mock the MCP server packages to prevent import errors
+    sys.modules["mcp"] = MagicMock()
+    sys.modules["mcp.server"] = MagicMock()
+    sys.modules["mcp.server.fastmcp"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+
+    # Get path to process.py
+    src_path = Path(__file__).parent.parent.parent / "src"
+    module_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process.py"
+
+    # Import module
+    spec = importlib.util.spec_from_file_location(
+        "process_module",
+        module_path,
+    )
+    _process_module = importlib.util.module_from_spec(spec)
+    sys.modules["process_module"] = _process_module
+    spec.loader.exec_module(_process_module)
+
+
+# Import the module
+_import_module()
+
+
+# Get constants and functions from the module
+MIN_MEANINGFUL_WORD_LENGTH = _process_module.MIN_MEANINGFUL_WORD_LENGTH
+
+
+def _outcome_matches_pool(outcome, pool, entities, impl_procs):
+    return _process_module._outcome_matches_pool(outcome, pool, entities, impl_procs)
+
+
+def _infer_structural_satisfaction(outcome, impl_procs):
+    return _process_module._infer_structural_satisfaction(outcome, impl_procs)
+
 
 # ---------------------------------------------------------------------------
 # Helpers to build lightweight ProcessSpec / step mocks
@@ -21,8 +73,6 @@ def _make_step(
     kind: str = "service",
     satisfies: list[dict[str, str]] | None = None,
 ) -> MagicMock:
-    from dazzle.core.ir.process import StepKind
-
     step = MagicMock()
     step.name = name
     step.service = service
@@ -181,8 +231,6 @@ class TestCRUDInferenceViaStepName:
 
 class TestStatusTransitionOutcomes:
     def test_status_transition_trigger_matches(self) -> None:
-        from dazzle.core.ir.process import ProcessTriggerKind
-
         trigger = MagicMock()
         trigger.kind = ProcessTriggerKind.ENTITY_STATUS_TRANSITION
         proc = _make_proc(steps=[], trigger=trigger)
@@ -191,8 +239,6 @@ class TestStatusTransitionOutcomes:
         assert _infer_structural_satisfaction("timestamp logged", [proc]) is True
 
     def test_non_status_trigger_no_match(self) -> None:
-        from dazzle.core.ir.process import ProcessTriggerKind
-
         trigger = MagicMock()
         trigger.kind = ProcessTriggerKind.ENTITY_EVENT
         proc = _make_proc(steps=[], trigger=trigger)

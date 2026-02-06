@@ -1,13 +1,63 @@
-"""Tests for MCP server setup and configuration."""
+"""Tests for MCP server setup and configuration.
 
+Uses direct module import to avoid triggering mcp.server import from dazzle.mcp.__init__.
+"""
+
+from __future__ import annotations
+
+import importlib.util
 import json
-from unittest.mock import patch
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from dazzle.mcp.setup import (
-    check_mcp_server,
-    get_claude_config_path,
-    register_mcp_server,
-)
+# ============================================================================
+# Direct module import to avoid mcp.server dependency
+# ============================================================================
+
+_setup_module = None
+
+
+def _import_module():
+    """Import setup module directly."""
+    global _setup_module
+
+    if _setup_module is not None:
+        return
+
+    # Mock the MCP server packages to prevent import errors
+    sys.modules["mcp"] = MagicMock()
+    sys.modules["mcp.server"] = MagicMock()
+    sys.modules["mcp.server.fastmcp"] = MagicMock()
+
+    # Get path to setup.py
+    src_path = Path(__file__).parent.parent.parent / "src"
+    module_path = src_path / "dazzle" / "mcp" / "setup.py"
+
+    # Import module
+    spec = importlib.util.spec_from_file_location(
+        "setup_module",
+        module_path,
+    )
+    _setup_module = importlib.util.module_from_spec(spec)
+    sys.modules["setup_module"] = _setup_module
+    spec.loader.exec_module(_setup_module)
+
+
+# Import the module
+_import_module()
+
+
+def get_claude_config_path():
+    return _setup_module.get_claude_config_path()
+
+
+def register_mcp_server(force=False):
+    return _setup_module.register_mcp_server(force=force)
+
+
+def check_mcp_server():
+    return _setup_module.check_mcp_server()
 
 
 class TestGetClaudeConfigPath:
@@ -19,8 +69,8 @@ class TestGetClaudeConfigPath:
         xdg_dir = tmp_path / ".config" / "claude-code"
         xdg_dir.mkdir(parents=True)
 
-        with patch("dazzle.mcp.setup.Path.home", return_value=tmp_path):
-            config_path = get_claude_config_path()
+        with patch.object(_setup_module.Path, "home", return_value=tmp_path):
+            config_path = _setup_module.get_claude_config_path()
 
         assert config_path == xdg_dir / "mcp_servers.json"
 
@@ -30,15 +80,15 @@ class TestGetClaudeConfigPath:
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir(parents=True)
 
-        with patch("dazzle.mcp.setup.Path.home", return_value=tmp_path):
-            config_path = get_claude_config_path()
+        with patch.object(_setup_module.Path, "home", return_value=tmp_path):
+            config_path = _setup_module.get_claude_config_path()
 
         assert config_path == claude_dir / "mcp_servers.json"
 
     def test_creates_default_directory(self, tmp_path):
         """Test that default directory is created if none exist."""
-        with patch("dazzle.mcp.setup.Path.home", return_value=tmp_path):
-            config_path = get_claude_config_path()
+        with patch.object(_setup_module.Path, "home", return_value=tmp_path):
+            config_path = _setup_module.get_claude_config_path()
 
         assert config_path == tmp_path / ".claude" / "mcp_servers.json"
         assert config_path.parent.exists()
@@ -51,8 +101,8 @@ class TestGetClaudeConfigPath:
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir(parents=True)
 
-        with patch("dazzle.mcp.setup.Path.home", return_value=tmp_path):
-            config_path = get_claude_config_path()
+        with patch.object(_setup_module.Path, "home", return_value=tmp_path):
+            config_path = _setup_module.get_claude_config_path()
 
         # XDG should be preferred
         assert config_path == xdg_dir / "mcp_servers.json"
@@ -66,8 +116,8 @@ class TestRegisterMcpServer:
         config_path = tmp_path / ".claude" / "mcp_servers.json"
         config_path.parent.mkdir(parents=True)
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            success = register_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            success = _setup_module.register_mcp_server()
 
         assert success
         assert config_path.exists()
@@ -88,8 +138,8 @@ class TestRegisterMcpServer:
         existing_config = {"mcpServers": {"other-server": {"command": "other", "args": []}}}
         config_path.write_text(json.dumps(existing_config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            success = register_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            success = _setup_module.register_mcp_server()
 
         assert success
 
@@ -115,8 +165,8 @@ class TestRegisterMcpServer:
         }
         config_path.write_text(json.dumps(existing_config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            success = register_mcp_server(force=False)
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            success = _setup_module.register_mcp_server(force=False)
 
         assert success
 
@@ -146,8 +196,8 @@ class TestRegisterMcpServer:
         }
         config_path.write_text(json.dumps(existing_config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            success = register_mcp_server(force=True)
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            success = _setup_module.register_mcp_server(force=True)
 
         assert success
 
@@ -165,8 +215,8 @@ class TestRegisterMcpServer:
         # Write invalid JSON
         config_path.write_text("{invalid json")
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            success = register_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            success = _setup_module.register_mcp_server()
 
         assert success
 
@@ -177,8 +227,8 @@ class TestRegisterMcpServer:
 
     def test_returns_false_when_no_config_path(self):
         """Test that False is returned when config path cannot be determined."""
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=None):
-            success = register_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=None):
+            success = _setup_module.register_mcp_server()
 
         assert not success
 
@@ -190,8 +240,8 @@ class TestCheckMcpServer:
         """Test status when no config file exists."""
         config_path = tmp_path / ".claude" / "mcp_servers.json"
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            status = check_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
 
         assert status["status"] == "not_registered"
         assert status["registered"] is False
@@ -206,8 +256,8 @@ class TestCheckMcpServer:
         config = {"mcpServers": {"other-server": {"command": "other", "args": []}}}
         config_path.write_text(json.dumps(config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            status = check_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
 
         assert status["status"] == "not_registered"
         assert status["registered"] is False
@@ -222,8 +272,8 @@ class TestCheckMcpServer:
         }
         config_path.write_text(json.dumps(config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            status = check_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
 
         assert status["status"] == "registered"
         assert status["registered"] is True
@@ -237,8 +287,8 @@ class TestCheckMcpServer:
 
         config_path.write_text("{invalid json")
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            status = check_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
 
         assert status["status"] == "error"
         assert "error" in status
@@ -251,8 +301,8 @@ class TestCheckMcpServer:
         config = {"mcpServers": {"dazzle": {"command": "python", "args": ["-m", "dazzle.mcp"]}}}
         config_path.write_text(json.dumps(config))
 
-        with patch("dazzle.mcp.setup.get_claude_config_path", return_value=config_path):
-            status = check_mcp_server()
+        with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
+            status = _setup_module.check_mcp_server()
 
         # Should have at least the core tools
         assert len(status["tools"]) > 0

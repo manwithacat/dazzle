@@ -2,9 +2,16 @@
 Unit tests for process diagram generation.
 
 Tests the Mermaid diagram generation for ProcessSpec.
+
+Uses direct module import to avoid triggering mcp.server import from dazzle.mcp.__init__.
 """
 
 from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+from unittest.mock import MagicMock
 
 from dazzle.core.ir.process import (
     CompensationSpec,
@@ -16,11 +23,57 @@ from dazzle.core.ir.process import (
     ProcessTriggerSpec,
     StepKind,
 )
-from dazzle.mcp.server.handlers.process import (
-    _generate_process_mermaid,
-    _get_step_label,
-    _get_trigger_label,
-)
+
+# ============================================================================
+# Direct module import to avoid mcp.server dependency
+# ============================================================================
+
+_process_module = None
+
+
+def _import_module():
+    """Import process handlers module directly."""
+    global _process_module
+
+    if _process_module is not None:
+        return
+
+    # Mock the MCP server packages to prevent import errors
+    sys.modules["mcp"] = MagicMock()
+    sys.modules["mcp.server"] = MagicMock()
+    sys.modules["mcp.server.fastmcp"] = MagicMock()
+    sys.modules["dazzle.mcp.server.handlers"] = MagicMock()
+
+    # Get path to process.py
+    src_path = Path(__file__).parent.parent.parent / "src"
+    module_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process.py"
+
+    # Import module
+    spec = importlib.util.spec_from_file_location(
+        "process_module",
+        module_path,
+    )
+    _process_module = importlib.util.module_from_spec(spec)
+    sys.modules["process_module"] = _process_module
+    spec.loader.exec_module(_process_module)
+
+
+# Import the module
+_import_module()
+
+
+def _generate_process_mermaid(proc, include_compensations=False, diagram_type="flowchart"):
+    return _process_module._generate_process_mermaid(
+        proc, include_compensations=include_compensations, diagram_type=diagram_type
+    )
+
+
+def _get_step_label(step):
+    return _process_module._get_step_label(step)
+
+
+def _get_trigger_label(proc):
+    return _process_module._get_trigger_label(proc)
 
 
 class TestGetTriggerLabel:

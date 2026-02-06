@@ -1,14 +1,64 @@
-"""Tests for guard extraction from stories (Issue #81a)."""
+"""Tests for guard extraction from stories (Issue #81a).
+
+Uses direct module import to avoid triggering mcp.server import from dazzle.mcp.__init__.
+"""
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
-from dazzle.mcp.event_first_tools import (
-    _build_guard_expression,
-    _match_transitions_to_constraint,
-    extract_guards,
-)
+# ============================================================================
+# Direct module import to avoid mcp.server dependency
+# ============================================================================
+
+_event_first_tools_module = None
+
+
+def _import_module():
+    """Import event_first_tools module directly."""
+    global _event_first_tools_module
+
+    if _event_first_tools_module is not None:
+        return
+
+    # Mock the MCP server packages to prevent import errors
+    sys.modules["mcp"] = MagicMock()
+    sys.modules["mcp.server"] = MagicMock()
+    sys.modules["mcp.server.fastmcp"] = MagicMock()
+
+    # Get path to event_first_tools.py
+    src_path = Path(__file__).parent.parent.parent / "src"
+    module_path = src_path / "dazzle" / "mcp" / "event_first_tools.py"
+
+    # Import module
+    spec = importlib.util.spec_from_file_location(
+        "event_first_tools_module",
+        module_path,
+    )
+    _event_first_tools_module = importlib.util.module_from_spec(spec)
+    sys.modules["event_first_tools_module"] = _event_first_tools_module
+    spec.loader.exec_module(_event_first_tools_module)
+
+
+# Import the module
+_import_module()
+
+
+def _build_guard_expression(guard_type, constraint_text, entity):
+    return _event_first_tools_module._build_guard_expression(guard_type, constraint_text, entity)
+
+
+def _match_transitions_to_constraint(constraint_text, state_machine):
+    return _event_first_tools_module._match_transitions_to_constraint(
+        constraint_text, state_machine
+    )
+
+
+def extract_guards(appspec):
+    return _event_first_tools_module.extract_guards(appspec)
 
 
 def _make_entity(name: str, fields: list[str], transitions: list[tuple[str, str]]):
