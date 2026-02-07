@@ -31,8 +31,10 @@ def _make_workspace(
     return SimpleNamespace(name=name, regions=regions or [], access=access)
 
 
-def _make_region(name: str, surfaces: list[str] | None = None) -> SimpleNamespace:
-    return SimpleNamespace(name=name, surfaces=surfaces or [])
+def _make_region(
+    name: str, source: str | None = None, surfaces: list[str] | None = None
+) -> SimpleNamespace:
+    return SimpleNamespace(name=name, source=source, surfaces=surfaces or [])
 
 
 def _make_surface(
@@ -496,13 +498,31 @@ class TestExperienceCompleteness:
 
 
 # =============================================================================
-# Tests: Dead-End Detection
+# Tests: Orphan Surface Detection
 # =============================================================================
 
 
-class TestDeadEndDetection:
-    def test_view_surface_no_outgoing_links(self) -> None:
-        from dazzle.agent.missions.persona_journey import _analyze_dead_ends
+class TestOrphanSurfaceDetection:
+    def test_surface_referenced_by_workspace_region(self) -> None:
+        """Surface whose entity matches region.source is NOT orphaned."""
+        from dazzle.agent.missions.persona_journey import _analyze_orphan_surfaces
+
+        persona = _make_persona("admin")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("task_view", mode="view", entity_ref="Task"),
+            ],
+            workspaces=[
+                _make_workspace("main", regions=[_make_region("sidebar", source="Task")]),
+            ],
+        )
+        accessible = {"task_view"}
+        gaps = _analyze_orphan_surfaces("admin", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_surface_not_referenced_anywhere(self) -> None:
+        """Surface with no workspace region, experience, or process reference is orphaned."""
+        from dazzle.agent.missions.persona_journey import _analyze_orphan_surfaces
 
         persona = _make_persona("admin")
         appspec = _make_appspec(
@@ -512,12 +532,14 @@ class TestDeadEndDetection:
             workspaces=[],
         )
         accessible = {"task_view"}
-        gaps = _analyze_dead_ends("admin", persona, appspec, accessible)
-        assert len(gaps) >= 1
-        assert gaps[0].gap_type == "dead_end_surface"
+        gaps = _analyze_orphan_surfaces("admin", persona, appspec, accessible)
+        assert len(gaps) == 1
+        assert gaps[0].gap_type == "orphan_surfaces"
+        assert "task_view" in gaps[0].description
 
-    def test_list_surface_acceptable_endpoint(self) -> None:
-        from dazzle.agent.missions.persona_journey import _analyze_dead_ends
+    def test_list_surface_not_flagged(self) -> None:
+        """List surfaces are self-standing index pages — not orphaned."""
+        from dazzle.agent.missions.persona_journey import _analyze_orphan_surfaces
 
         persona = _make_persona("admin")
         appspec = _make_appspec(
@@ -527,8 +549,48 @@ class TestDeadEndDetection:
             workspaces=[],
         )
         accessible = {"task_list"}
-        gaps = _analyze_dead_ends("admin", persona, appspec, accessible)
-        # list surfaces should NOT be flagged
+        gaps = _analyze_orphan_surfaces("admin", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_aggregated_into_single_gap(self) -> None:
+        """Multiple orphan surfaces produce exactly one aggregated gap."""
+        from dazzle.agent.missions.persona_journey import _analyze_orphan_surfaces
+
+        persona = _make_persona("admin")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("task_view", mode="view", entity_ref="Task"),
+                _make_surface("task_edit", mode="edit", entity_ref="Task"),
+                _make_surface("task_create", mode="create", entity_ref="Task"),
+            ],
+            workspaces=[],
+        )
+        accessible = {"task_view", "task_edit", "task_create"}
+        gaps = _analyze_orphan_surfaces("admin", persona, appspec, accessible)
+        assert len(gaps) == 1
+        assert gaps[0].gap_type == "orphan_surfaces"
+        assert "3/" in gaps[0].description
+        assert len(gaps[0].related_artefacts) == 3
+
+    def test_experience_referenced_surface_not_orphaned(self) -> None:
+        """Surface referenced by an experience step is not orphaned."""
+        from dazzle.agent.missions.persona_journey import _analyze_orphan_surfaces
+
+        persona = _make_persona("admin")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("task_view", mode="view", entity_ref="Task"),
+            ],
+            experiences=[
+                _make_experience(
+                    "onboarding",
+                    steps=[_make_exp_step("step1", surface="task_view")],
+                    start_step="step1",
+                ),
+            ],
+        )
+        accessible = {"task_view"}
+        gaps = _analyze_orphan_surfaces("admin", persona, appspec, accessible)
         assert len(gaps) == 0
 
 
@@ -550,7 +612,10 @@ class TestCrossEntityGaps:
             workspaces=[
                 _make_workspace(
                     "main",
-                    regions=[_make_region("sidebar", surfaces=["task_list", "user_list"])],
+                    regions=[
+                        _make_region("tasks", source="Task"),
+                        _make_region("users", source="User"),
+                    ],
                 ),
             ],
             stories=[
@@ -571,8 +636,8 @@ class TestCrossEntityGaps:
                 _make_surface("user_list", mode="list", entity_ref="User"),
             ],
             workspaces=[
-                _make_workspace("ws1", regions=[_make_region("r1", surfaces=["task_list"])]),
-                _make_workspace("ws2", regions=[_make_region("r2", surfaces=["user_list"])]),
+                _make_workspace("ws1", regions=[_make_region("r1", source="Task")]),
+                _make_workspace("ws2", regions=[_make_region("r2", source="User")]),
             ],
             stories=[
                 _make_story("S1", actor="admin", scope=["Task", "User"]),
@@ -582,6 +647,70 @@ class TestCrossEntityGaps:
         gaps = _analyze_cross_entity_gaps("admin", persona, appspec, accessible)
         assert len(gaps) >= 1
         assert gaps[0].gap_type == "cross_entity_gap"
+
+
+# =============================================================================
+# Tests: Persona Filtering
+# =============================================================================
+
+
+class TestPersonaFiltering:
+    def test_no_stories_no_workspace_skipped(self) -> None:
+        """Personas with no stories AND no default_workspace are skipped."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            personas=[
+                _make_persona("test_user"),  # no default_workspace, no stories
+                _make_persona("admin", default_workspace="main"),
+            ],
+            workspaces=[_make_workspace("main", regions=[_make_region("sidebar")])],
+        )
+        report = run_headless_discovery(appspec)
+        assert len(report.persona_reports) == 1
+        assert report.persona_reports[0].persona_id == "admin"
+        assert "test_user" in report.skipped_personas
+
+    def test_no_stories_but_has_workspace_not_skipped(self) -> None:
+        """Personas with a default_workspace but no stories are still analyzed."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            personas=[_make_persona("viewer", default_workspace="main")],
+            workspaces=[_make_workspace("main", regions=[_make_region("sidebar")])],
+        )
+        report = run_headless_discovery(appspec)
+        assert len(report.persona_reports) == 1
+        assert len(report.skipped_personas) == 0
+
+    def test_has_stories_but_no_workspace_not_skipped(self) -> None:
+        """Personas with stories but no default_workspace are still analyzed."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            personas=[_make_persona("admin")],
+            stories=[_make_story("S1", actor="admin", scope=["Task"])],
+        )
+        report = run_headless_discovery(appspec)
+        assert len(report.persona_reports) == 1
+        assert len(report.skipped_personas) == 0
+
+    def test_skipped_personas_in_summary(self) -> None:
+        """Skipped personas appear in the markdown summary."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            personas=[
+                _make_persona("test_user1"),
+                _make_persona("test_user2"),
+                _make_persona("admin", default_workspace="main"),
+            ],
+            workspaces=[_make_workspace("main", regions=[_make_region("sidebar")])],
+        )
+        report = run_headless_discovery(appspec)
+        summary = report.to_summary()
+        assert "Skipped 2 persona(s)" in summary
+        assert "test_user1" in summary
 
 
 # =============================================================================
@@ -654,6 +783,23 @@ class TestRunHeadlessDiscovery:
         assert report.entity_report is not None
         assert report.workflow_report is not None
 
+    def test_default_workspace_in_observations(self) -> None:
+        """Observations include default_workspace in metadata for emitter use."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            entities=[_make_entity("Task")],
+            personas=[_make_persona("admin", default_workspace="admin_dashboard")],
+            workspaces=[],  # missing workspace → will produce gap
+            stories=[_make_story("S1", actor="admin", title="Create task", scope=["Task"])],
+        )
+        report = run_headless_discovery(appspec)
+        observations = report.to_observations()
+        assert len(observations) > 0
+        # All observations from this persona should have default_workspace
+        for obs in observations:
+            assert obs.metadata.get("default_workspace") == "admin_dashboard"
+
     def test_json_serialization(self) -> None:
         from dazzle.agent.missions.persona_journey import run_headless_discovery
 
@@ -667,6 +813,7 @@ class TestRunHeadlessDiscovery:
         report = run_headless_discovery(appspec)
         result = report.to_json()
         assert "persona_reports" in result
+        assert "skipped_personas" in result
         assert len(result["persona_reports"]) == 1
         assert result["persona_reports"][0]["persona_id"] == "admin"
 

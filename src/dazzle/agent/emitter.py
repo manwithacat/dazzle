@@ -336,15 +336,27 @@ def _emit_navigation_gap(
     if not entity_name and not surfaces:
         return f"# TODO: Navigation gap — {proposal.title}"
 
-    safe_name = _sanitize_identifier(entity_name or surfaces[0] if surfaces else "main")
-    ws_name = _unique_name(safe_name, context.existing_workspaces)
+    # Try to get the actual workspace name from headless discovery metadata
+    ws_name: str | None = None
+    for obs in proposal.observations:
+        ws_name = (obs.metadata or {}).get("default_workspace")
+        if ws_name:
+            break
+    if not ws_name:
+        ws_name = proposal.metadata.get("default_workspace")
+    if not ws_name:
+        # Fall back to deriving from entity/surface name
+        safe_name = _sanitize_identifier(entity_name or surfaces[0] if surfaces else "main")
+        ws_name = _unique_name(safe_name, context.existing_workspaces)
+
+    ws_title = (entity_name or ws_name).replace("_", " ").title()
 
     lines = [
-        f'workspace {ws_name} "{(entity_name or safe_name).title()}":',
+        f'workspace {ws_name} "{ws_title}":',
         f'  purpose: "Navigate {entity_name or "application"} features"',
     ]
 
-    # Add signals for known surfaces
+    # Add regions for known surfaces
     for surface in surfaces[:4]:
         lines.append("")
         lines.append(f"  {surface}:")

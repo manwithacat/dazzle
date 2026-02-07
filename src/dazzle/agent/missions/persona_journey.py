@@ -13,8 +13,10 @@ Analysis passes (per persona):
 3. Story surface coverage — story-implied CRUD has matching accessible surfaces
 4. Process surface wiring — human_task steps reference existing, accessible surfaces
 5. Experience completeness — experience steps/transitions are valid and accessible
-6. Dead-end detection — surfaces with no outgoing navigation edges
+6. Orphan surface detection — surfaces unreachable from workspace regions, experiences, or processes
 7. Cross-entity gaps — multi-entity stories have connected navigation paths
+
+Personas with no stories and no default_workspace are skipped (they produce only noise).
 """
 
 from __future__ import annotations
@@ -56,6 +58,7 @@ class PersonaJourneyReport:
     """Results of persona journey analysis for a single persona."""
 
     persona_id: str
+    default_workspace: str | None = None
     gaps: list[PersonaJourneyGap] = field(default_factory=list)
     surface_coverage: dict[str, bool] = field(default_factory=dict)
     story_coverage: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -66,6 +69,7 @@ class HeadlessDiscoveryReport:
     """Complete headless discovery report across all personas."""
 
     persona_reports: list[PersonaJourneyReport] = field(default_factory=list)
+    skipped_personas: list[str] = field(default_factory=list)
     entity_report: Any | None = None  # EntityCompletenessReport
     workflow_report: Any | None = None  # WorkflowCoherenceReport
 
@@ -74,13 +78,17 @@ class HeadlessDiscoveryReport:
         observations: list[Observation] = []
         for pr in self.persona_reports:
             for gap in pr.gaps:
-                observations.append(_gap_to_observation(gap))
+                obs = _gap_to_observation(gap)
+                if pr.default_workspace:
+                    obs.metadata["default_workspace"] = pr.default_workspace
+                observations.append(obs)
         return observations
 
     def to_json(self) -> dict[str, Any]:
         """Serialize to JSON-compatible dict."""
         result: dict[str, Any] = {
             "persona_reports": [],
+            "skipped_personas": self.skipped_personas,
         }
         for pr in self.persona_reports:
             pr_dict: dict[str, Any] = {
@@ -121,6 +129,12 @@ class HeadlessDiscoveryReport:
             f"**{len(self.persona_reports)}** persona(s) analyzed, **{total_gaps}** gap(s) found.\n"
         )
 
+        if self.skipped_personas:
+            lines.append(
+                f"*Skipped {len(self.skipped_personas)} persona(s) with no stories "
+                f"and no default workspace: {', '.join(self.skipped_personas)}*\n"
+            )
+
         for pr in self.persona_reports:
             lines.append(f"## Persona: {pr.persona_id}\n")
             if not pr.gaps:
@@ -154,7 +168,8 @@ _GAP_TYPE_TO_CATEGORY: dict[str, str] = {
     "process_step_no_surface": "workflow_gap",
     "experience_broken_step": "workflow_gap",
     "experience_dangling_transition": "navigation_gap",
-    "dead_end_surface": "navigation_gap",
+    "orphan_surfaces": "navigation_gap",
+    "dead_end_surface": "navigation_gap",  # backward compat
     "cross_entity_gap": "navigation_gap",
 }
 
@@ -683,88 +698,91 @@ def _find_reachable_steps(start: str, steps: list[Any]) -> set[str]:
 
 
 # =============================================================================
-# Analysis Pass 6: Dead-End Detection
+# Analysis Pass 6: Orphan Surface Detection
 # =============================================================================
 
 
-def _analyze_dead_ends(
+def _analyze_orphan_surfaces(
     persona_id: str,
     persona: Any,
     appspec: Any,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
-    """Flag accessible surfaces with no outgoing navigation edges."""
-    gaps: list[PersonaJourneyGap] = []
+    """Find accessible surfaces not reachable from any workspace region, experience, or process.
+
+    Instead of checking outgoing navigation edges (which produced excessive noise),
+    this checks whether each surface is *referenced* by at least one workspace region
+    (via entity source), experience step, or process human_task.  Surfaces that appear
+    nowhere are genuinely orphaned.
+
+    Emits a single aggregated gap rather than per-surface gaps.
+    """
     surfaces = getattr(appspec, "surfaces", []) or []
     workspaces = getattr(appspec, "workspaces", []) or []
     experiences = getattr(appspec, "experiences", []) or []
+    processes = getattr(appspec, "processes", []) or []
 
-    # Build navigation graph: surface_name → set of reachable surface names
-    nav_graph: dict[str, set[str]] = {s.name: set() for s in surfaces}
+    # Build "referenced surfaces" set from three sources
+    referenced: set[str] = set()
 
-    # Workspace regions: surfaces in the same workspace region can reach each other
+    # 1. Workspace regions: region.source is an entity name → surfaces with that entity_ref
     for ws in workspaces:
         for region in getattr(ws, "regions", []) or []:
-            region_surfaces = getattr(region, "surfaces", []) or []
-            # Normalize: could be strings or objects
-            region_surface_names = []
-            for rs in region_surfaces:
-                if isinstance(rs, str):
-                    region_surface_names.append(rs)
-                else:
-                    region_surface_names.append(getattr(rs, "name", str(rs)))
+            source = getattr(region, "source", None)
+            if source:
+                for s in surfaces:
+                    if get_surface_entity(s) == source:
+                        referenced.add(s.name)
 
-            # All surfaces in a region can navigate to each other
-            for s1 in region_surface_names:
-                for s2 in region_surface_names:
-                    if s1 != s2 and s1 in nav_graph:
-                        nav_graph[s1].add(s2)
-
-    # Experience transitions add navigation edges
+    # 2. Experience steps with kind=surface
     for exp in experiences:
         for step in getattr(exp, "steps", []) or []:
             step_kind = str(getattr(step, "kind", ""))
             if step_kind in ("surface", "StepKind.SURFACE"):
-                source_surface = getattr(step, "surface", None)
-                if source_surface and source_surface in nav_graph:
-                    for t in getattr(step, "transitions", []) or []:
-                        ns = getattr(t, "next_step", None)
-                        # Find next step's surface
-                        if ns:
-                            for other_step in getattr(exp, "steps", []) or []:
-                                if getattr(other_step, "name", "") == ns:
-                                    target_surface = getattr(other_step, "surface", None)
-                                    if target_surface:
-                                        nav_graph[source_surface].add(target_surface)
+                surface_ref = getattr(step, "surface", None)
+                if surface_ref:
+                    referenced.add(surface_ref)
 
-    # Surface actions can also imply navigation
-    for surface in surfaces:
-        for action in getattr(surface, "actions", []) or []:
-            target = getattr(action, "navigate_to", None) or getattr(action, "target", None)
-            if target and target in nav_graph and surface.name in nav_graph:
-                nav_graph[surface.name].add(target)
+    # 3. Process human_task steps
+    for proc in processes:
+        for step in getattr(proc, "steps", []) or []:
+            if is_step_kind(step, "human_task"):
+                human_task = getattr(step, "human_task", None)
+                if human_task:
+                    surface_ref = getattr(human_task, "surface", None)
+                    if surface_ref:
+                        referenced.add(surface_ref)
 
-    # Flag accessible surfaces with no outgoing edges (except list surfaces)
+    # Find orphan surfaces: accessible but not referenced anywhere
+    orphan_names: list[str] = []
     for surface in surfaces:
         if surface.name not in accessible_surfaces:
             continue
+        if surface.name in referenced:
+            continue
+        # List surfaces are self-standing index pages — not orphaned
         mode = str(getattr(surface, "mode", ""))
-        # List surfaces are acceptable endpoints
         if mode == "list":
             continue
-        if surface.name in nav_graph and not nav_graph[surface.name]:
-            gaps.append(
-                PersonaJourneyGap(
-                    persona_id=persona_id,
-                    gap_type="dead_end_surface",
-                    severity="low",
-                    description=f"Surface '{surface.name}' (mode: {mode}) has no outgoing navigation",
-                    surface_name=surface.name,
-                    related_artefacts=[f"surface:{surface.name}"],
-                )
-            )
+        orphan_names.append(surface.name)
 
-    return gaps
+    if not orphan_names:
+        return []
+
+    # Emit ONE summary gap instead of per-surface gaps
+    return [
+        PersonaJourneyGap(
+            persona_id=persona_id,
+            gap_type="orphan_surfaces",
+            severity="low",
+            description=(
+                f"{len(orphan_names)}/{len(accessible_surfaces)} accessible surface(s) "
+                f"not referenced by any workspace region, experience, or process: "
+                f"{', '.join(sorted(orphan_names))}"
+            ),
+            related_artefacts=[f"surface:{n}" for n in sorted(orphan_names)],
+        )
+    ]
 
 
 # =============================================================================
@@ -783,21 +801,14 @@ def _analyze_cross_entity_gaps(
     gaps: list[PersonaJourneyGap] = []
     stories = _get_persona_stories(persona_id, appspec)
     workspaces = getattr(appspec, "workspaces", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
 
-    # Build entity → workspace map
+    # Build entity → workspace map using region.source (entity name)
     entity_workspaces: dict[str, set[str]] = {}
     for ws in workspaces:
         for region in getattr(ws, "regions", []) or []:
-            region_surfaces = getattr(region, "surfaces", []) or []
-            for rs in region_surfaces:
-                rs_name = rs if isinstance(rs, str) else getattr(rs, "name", str(rs))
-                # Find entity for this surface
-                for s in surfaces:
-                    if s.name == rs_name:
-                        ent = get_surface_entity(s)
-                        if ent:
-                            entity_workspaces.setdefault(ent, set()).add(ws.name)
+            source = getattr(region, "source", None)
+            if source:
+                entity_workspaces.setdefault(source, set()).add(ws.name)
 
     for story in stories:
         entity_names = _get_story_entities(story)
@@ -878,9 +889,18 @@ def run_headless_discovery(
 
     for persona in personas:
         pid = _persona_id(persona)
+        default_ws = getattr(persona, "default_workspace", None)
+        has_stories = bool(_get_persona_stories(pid, appspec))
+
+        # Skip personas with no stories AND no default_workspace — they produce only noise
+        if not has_stories and not default_ws:
+            report.skipped_personas.append(pid)
+            logger.debug("Skipping persona '%s': no stories and no default_workspace", pid)
+            continue
+
         accessible = _compute_accessible_surfaces(pid, appspec)
 
-        pr = PersonaJourneyReport(persona_id=pid)
+        pr = PersonaJourneyReport(persona_id=pid, default_workspace=default_ws)
 
         # Record surface coverage
         for surface in getattr(appspec, "surfaces", []) or []:
@@ -907,7 +927,7 @@ def run_headless_discovery(
         pr.gaps.extend(_analyze_story_surface_coverage(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_process_surface_wiring(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_experience_completeness(pid, persona, appspec, accessible))
-        pr.gaps.extend(_analyze_dead_ends(pid, persona, appspec, accessible))
+        pr.gaps.extend(_analyze_orphan_surfaces(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_cross_entity_gaps(pid, persona, appspec, accessible, kg_store))
 
         report.persona_reports.append(pr)
