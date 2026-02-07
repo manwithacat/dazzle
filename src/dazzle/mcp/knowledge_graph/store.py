@@ -95,6 +95,19 @@ class KnowledgeGraph:
         "references": "Generic reference relationship",
         "documents": "Documentation relationship",
         "decides": "Decision relates to component",
+        # DSL artefact relations
+        "uses": "Surface/workspace uses an entity",
+        "acts_as": "Story actor is a persona",
+        "scopes": "Story scopes to an entity",
+        "process_implements": "Process implements a story",
+        "invokes": "Process step invokes a service",
+        "has_subprocess": "Process step starts a subprocess",
+        "human_task_on": "Process step presents a surface",
+        "navigates_to": "Experience step navigates to a surface",
+        "allows_persona": "Workspace/surface allows a persona",
+        "denies_persona": "Workspace/surface denies a persona",
+        "default_workspace": "Persona's default workspace",
+        "region_source": "Workspace region sourced from entity",
     }
 
     # Entity type prefixes
@@ -107,6 +120,15 @@ class KnowledgeGraph:
         "decision:": "decision",
         "pattern:": "pattern",
         "component:": "component",
+        # DSL artefact prefixes
+        "entity:": "dsl_entity",
+        "surface:": "dsl_surface",
+        "story:": "dsl_story",
+        "process:": "dsl_process",
+        "persona:": "dsl_persona",
+        "workspace:": "dsl_workspace",
+        "experience:": "dsl_experience",
+        "service:": "dsl_service",
     }
 
     def __init__(self, db_path: str | Path = ":memory:"):
@@ -654,6 +676,64 @@ class KnowledgeGraph:
             frontier = next_frontier
 
         return [e for eid in visited if (e := self.get_entity(eid))]
+
+    # =========================================================================
+    # DSL Adjacency
+    # =========================================================================
+
+    def compute_adjacency(self, node_a: str, node_b: str, max_distance: int = 2) -> int:
+        """
+        Compute the shortest distance between two graph nodes.
+
+        Used by the discovery engine to enforce the "two-step adjacency"
+        rule: proposed features must be within 2 hops of existing artefacts.
+
+        Args:
+            node_a: First entity ID (e.g., "entity:Task")
+            node_b: Second entity ID (e.g., "surface:task_list")
+            max_distance: Maximum hops to search (default 2)
+
+        Returns:
+            Distance: 0=same, 1=direct, 2=two-step, -1=unreachable within max_distance
+        """
+        if node_a == node_b:
+            return 0
+
+        # Try forward direction
+        paths = self.find_paths(node_a, node_b, max_depth=max_distance)
+        if paths:
+            return paths[0].length
+
+        # Try reverse direction (graph is directed, adjacency is conceptually undirected)
+        paths = self.find_paths(node_b, node_a, max_depth=max_distance)
+        if paths:
+            return paths[0].length
+
+        return -1
+
+    def persona_capability_map(self, persona_id: str) -> dict[str, list[Entity]]:
+        """
+        Build a capability map for a persona: what can they access?
+
+        Queries the graph neighbourhood from the persona node to find
+        reachable workspaces, surfaces, and entities.
+
+        Args:
+            persona_id: Persona node ID (e.g., "persona:teacher")
+
+        Returns:
+            Dict with 'workspaces', 'surfaces', 'entities' keys,
+            each containing a list of reachable Entity nodes.
+        """
+        hood = self.get_neighbourhood(persona_id, depth=2)
+        entities = hood["entities"]
+
+        return {
+            "workspaces": [e for e in entities if e.entity_type == "dsl_workspace"],
+            "surfaces": [e for e in entities if e.entity_type == "dsl_surface"],
+            "entities": [e for e in entities if e.entity_type == "dsl_entity"],
+            "stories": [e for e in entities if e.entity_type == "dsl_story"],
+        }
 
     # =========================================================================
     # Query Interface

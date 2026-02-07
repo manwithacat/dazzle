@@ -381,8 +381,13 @@ class KnowledgeGraphHandlers:
         stats: dict[str, Any] = {
             "entities_created": 0,
             "surfaces_created": 0,
-            "entity_references_created": 0,
-            "surface_uses_created": 0,
+            "stories_created": 0,
+            "processes_created": 0,
+            "personas_created": 0,
+            "workspaces_created": 0,
+            "experiences_created": 0,
+            "services_created": 0,
+            "relations_created": 0,
             "fields_indexed": 0,
             "errors": [],
         }
@@ -404,66 +409,14 @@ class KnowledgeGraphHandlers:
             modules = parse_modules(dsl_files)
             appspec = build_appspec(modules, manifest.project_root)
 
-            # Index entities
-            for entity in appspec.domain.entities:
-                entity_id = f"entity:{entity.name}"
-                field_names = [f.name for f in entity.fields]
-                self._graph.create_entity(
-                    entity_id=entity_id,
-                    name=entity.name,
-                    entity_type="dsl_entity",
-                    metadata={
-                        "title": entity.title,
-                        "intent": entity.intent,
-                        "fields": field_names,
-                        "field_count": len(entity.fields),
-                    },
-                )
-                stats["entities_created"] += 1
-                stats["fields_indexed"] += len(entity.fields)
-
-                # Create relations for foreign key references
-                for field in entity.fields:
-                    # Check if field type is a reference type with ref_entity
-                    if field.type.ref_entity:
-                        # Foreign key reference to another entity
-                        target_id = f"entity:{field.type.ref_entity}"
-                        self._graph.create_relation(
-                            source_id=entity_id,
-                            target_id=target_id,
-                            relation_type="references",
-                            metadata={
-                                "via_field": field.name,
-                                "ref_kind": field.type.kind.value,
-                            },
-                        )
-                        stats["entity_references_created"] += 1
-
-            # Index surfaces
-            for surface in appspec.surfaces:
-                surface_id = f"surface:{surface.name}"
-                self._graph.create_entity(
-                    entity_id=surface_id,
-                    name=surface.name,
-                    entity_type="dsl_surface",
-                    metadata={
-                        "title": surface.title,
-                        "mode": surface.mode.value if surface.mode else None,
-                        "entity_ref": surface.entity_ref,
-                    },
-                )
-                stats["surfaces_created"] += 1
-
-                # Create relation from surface to entity
-                if surface.entity_ref:
-                    entity_id = f"entity:{surface.entity_ref}"
-                    self._graph.create_relation(
-                        source_id=surface_id,
-                        target_id=entity_id,
-                        relation_type="uses",
-                        metadata={"mode": surface.mode.value if surface.mode else None},
-                    )
-                    stats["surface_uses_created"] += 1
+            self._populate_entities(appspec, stats)
+            self._populate_surfaces(appspec, stats)
+            self._populate_stories(appspec, stats)
+            self._populate_processes(appspec, stats)
+            self._populate_personas(appspec, stats)
+            self._populate_workspaces(appspec, stats)
+            self._populate_experiences(appspec, stats)
+            self._populate_services(appspec, stats)
 
         except ParseError as e:
             errors_list: list[str] = stats["errors"]
@@ -475,6 +428,302 @@ class KnowledgeGraphHandlers:
             logger.warning(f"Error indexing {project_path}: {e}")
 
         return stats
+
+    def _create_relation_counted(
+        self,
+        stats: dict[str, Any],
+        source_id: str,
+        target_id: str,
+        relation_type: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Create a relation and increment the stats counter."""
+        self._graph.create_relation(
+            source_id=source_id,
+            target_id=target_id,
+            relation_type=relation_type,
+            metadata=metadata,
+        )
+        stats["relations_created"] += 1
+
+    def _populate_entities(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index entities and their FK relationships."""
+        for entity in appspec.domain.entities:
+            entity_id = f"entity:{entity.name}"
+            field_names = [f.name for f in entity.fields]
+            self._graph.create_entity(
+                entity_id=entity_id,
+                name=entity.name,
+                entity_type="dsl_entity",
+                metadata={
+                    "title": entity.title,
+                    "intent": entity.intent,
+                    "fields": field_names,
+                    "field_count": len(entity.fields),
+                },
+            )
+            stats["entities_created"] += 1
+            stats["fields_indexed"] += len(entity.fields)
+
+            # Foreign key references
+            for field in entity.fields:
+                if field.type.ref_entity:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=entity_id,
+                        target_id=f"entity:{field.type.ref_entity}",
+                        relation_type="references",
+                        metadata={
+                            "via_field": field.name,
+                            "ref_kind": field.type.kind.value,
+                        },
+                    )
+
+    def _populate_surfaces(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index surfaces and their relationships to entities and personas."""
+        for surface in appspec.surfaces:
+            surface_id = f"surface:{surface.name}"
+            self._graph.create_entity(
+                entity_id=surface_id,
+                name=surface.name,
+                entity_type="dsl_surface",
+                metadata={
+                    "title": surface.title,
+                    "mode": surface.mode.value if surface.mode else None,
+                    "entity_ref": surface.entity_ref,
+                },
+            )
+            stats["surfaces_created"] += 1
+
+            # Surface → Entity
+            if surface.entity_ref:
+                self._create_relation_counted(
+                    stats,
+                    source_id=surface_id,
+                    target_id=f"entity:{surface.entity_ref}",
+                    relation_type="uses",
+                    metadata={"mode": surface.mode.value if surface.mode else None},
+                )
+
+            # Surface → Persona (access control)
+            if surface.access:
+                for persona_name in surface.access.allow_personas:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=surface_id,
+                        target_id=f"persona:{persona_name}",
+                        relation_type="allows_persona",
+                    )
+                for persona_name in surface.access.deny_personas:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=surface_id,
+                        target_id=f"persona:{persona_name}",
+                        relation_type="denies_persona",
+                    )
+
+    def _populate_stories(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index stories with actor→persona and scope→entity edges."""
+        for story in appspec.stories:
+            story_id = f"story:{story.story_id}"
+            self._graph.create_entity(
+                entity_id=story_id,
+                name=story.story_id,
+                entity_type="dsl_story",
+                metadata={
+                    "title": story.title,
+                    "actor": story.actor,
+                    "scope": story.scope,
+                    "status": story.status.value
+                    if hasattr(story.status, "value")
+                    else str(story.status),
+                },
+            )
+            stats["stories_created"] += 1
+
+            # Story → Persona (actor)
+            if story.actor:
+                self._create_relation_counted(
+                    stats,
+                    source_id=story_id,
+                    target_id=f"persona:{story.actor}",
+                    relation_type="acts_as",
+                    metadata={"role": "actor"},
+                )
+
+            # Story → Entities (scope)
+            for entity_name in story.scope:
+                self._create_relation_counted(
+                    stats,
+                    source_id=story_id,
+                    target_id=f"entity:{entity_name}",
+                    relation_type="scopes",
+                )
+
+    def _populate_processes(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index processes with edges to stories, services, and surfaces."""
+        for process in appspec.processes:
+            process_id = f"process:{process.name}"
+            self._graph.create_entity(
+                entity_id=process_id,
+                name=process.name,
+                entity_type="dsl_process",
+                metadata={
+                    "title": process.title,
+                    "implements": process.implements,
+                    "step_count": len(process.steps),
+                },
+            )
+            stats["processes_created"] += 1
+
+            # Process → Stories (implements)
+            for story_ref in process.implements:
+                self._create_relation_counted(
+                    stats,
+                    source_id=process_id,
+                    target_id=f"story:{story_ref}",
+                    relation_type="process_implements",
+                )
+
+            # Process steps → services, subprocesses, surfaces
+            for step in process.steps:
+                if step.service:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=process_id,
+                        target_id=f"service:{step.service}",
+                        relation_type="invokes",
+                        metadata={"step": step.name},
+                    )
+                if step.subprocess:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=process_id,
+                        target_id=f"process:{step.subprocess}",
+                        relation_type="has_subprocess",
+                        metadata={"step": step.name},
+                    )
+                if step.human_task and step.human_task.surface:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=process_id,
+                        target_id=f"surface:{step.human_task.surface}",
+                        relation_type="human_task_on",
+                        metadata={"step": step.name},
+                    )
+
+    def _populate_personas(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index personas with default workspace edges."""
+        for persona in appspec.personas:
+            persona_id = f"persona:{persona.id}"
+            self._graph.create_entity(
+                entity_id=persona_id,
+                name=persona.id,
+                entity_type="dsl_persona",
+                metadata={
+                    "label": persona.label,
+                    "description": persona.description,
+                    "goals": persona.goals,
+                    "proficiency": persona.proficiency_level,
+                    "default_workspace": persona.default_workspace,
+                },
+            )
+            stats["personas_created"] += 1
+
+            # Persona → Workspace (default)
+            if persona.default_workspace:
+                self._create_relation_counted(
+                    stats,
+                    source_id=persona_id,
+                    target_id=f"workspace:{persona.default_workspace}",
+                    relation_type="default_workspace",
+                )
+
+    def _populate_workspaces(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index workspaces with region→entity and access→persona edges."""
+        for workspace in appspec.workspaces:
+            workspace_id = f"workspace:{workspace.name}"
+            self._graph.create_entity(
+                entity_id=workspace_id,
+                name=workspace.name,
+                entity_type="dsl_workspace",
+                metadata={
+                    "title": workspace.title,
+                    "region_count": len(workspace.regions),
+                },
+            )
+            stats["workspaces_created"] += 1
+
+            # Workspace → Entity (region sources)
+            for region in workspace.regions:
+                if region.source:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=workspace_id,
+                        target_id=f"entity:{region.source}",
+                        relation_type="region_source",
+                        metadata={"region": region.name},
+                    )
+
+            # Workspace → Persona (access control)
+            if workspace.access:
+                for persona_name in workspace.access.allow_personas:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=workspace_id,
+                        target_id=f"persona:{persona_name}",
+                        relation_type="allows_persona",
+                    )
+                for persona_name in workspace.access.deny_personas:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=workspace_id,
+                        target_id=f"persona:{persona_name}",
+                        relation_type="denies_persona",
+                    )
+
+    def _populate_experiences(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index experiences with step→surface edges."""
+        for experience in appspec.experiences:
+            experience_id = f"experience:{experience.name}"
+            self._graph.create_entity(
+                entity_id=experience_id,
+                name=experience.name,
+                entity_type="dsl_experience",
+                metadata={
+                    "title": experience.title,
+                    "step_count": len(experience.steps),
+                },
+            )
+            stats["experiences_created"] += 1
+
+            # Experience steps → surfaces
+            for step in experience.steps:
+                if step.surface:
+                    self._create_relation_counted(
+                        stats,
+                        source_id=experience_id,
+                        target_id=f"surface:{step.surface}",
+                        relation_type="navigates_to",
+                        metadata={"step": step.name},
+                    )
+
+    def _populate_services(self, appspec: Any, stats: dict[str, Any]) -> None:
+        """Index domain services (leaf nodes, no outgoing edges)."""
+        for service in appspec.domain_services:
+            service_id = f"service:{service.name}"
+            self._graph.create_entity(
+                entity_id=service_id,
+                name=service.name,
+                entity_type="dsl_service",
+                metadata={
+                    "title": service.title,
+                    "kind": service.kind.value
+                    if hasattr(service.kind, "value")
+                    else str(service.kind),
+                },
+            )
+            stats["services_created"] += 1
 
     def handle_populate_mcp_tools(self) -> dict[str, Any]:
         """
@@ -883,6 +1132,47 @@ class KnowledgeGraphHandlers:
         }
 
     # =========================================================================
+    # Adjacency & Capability Map Handlers
+    # =========================================================================
+
+    def handle_compute_adjacency(
+        self,
+        node_a: str,
+        node_b: str,
+        max_distance: int = 2,
+    ) -> dict[str, Any]:
+        """Compute shortest distance between two graph nodes."""
+        distance = self._graph.compute_adjacency(node_a, node_b, max_distance)
+        return {
+            "node_a": node_a,
+            "node_b": node_b,
+            "distance": distance,
+            "within_boundary": 0 <= distance <= max_distance,
+        }
+
+    def handle_persona_capability_map(
+        self,
+        persona_id: str,
+    ) -> dict[str, Any]:
+        """Get capability map for a persona (reachable workspaces, surfaces, entities)."""
+        # Ensure persona_id has prefix
+        if not persona_id.startswith("persona:"):
+            persona_id = f"persona:{persona_id}"
+
+        cap_map = self._graph.persona_capability_map(persona_id)
+        return {
+            "persona_id": persona_id,
+            "workspaces": [self._entity_to_dict(e) for e in cap_map["workspaces"]],
+            "surfaces": [self._entity_to_dict(e) for e in cap_map["surfaces"]],
+            "entities": [self._entity_to_dict(e) for e in cap_map["entities"]],
+            "stories": [self._entity_to_dict(e) for e in cap_map["stories"]],
+            "workspace_count": len(cap_map["workspaces"]),
+            "surface_count": len(cap_map["surfaces"]),
+            "entity_count": len(cap_map["entities"]),
+            "story_count": len(cap_map["stories"]),
+        }
+
+    # =========================================================================
     # Tool Registry (for MCP server integration)
     # =========================================================================
 
@@ -1152,6 +1442,43 @@ class KnowledgeGraphHandlers:
                     "required": ["tests_path"],
                 },
             },
+            {
+                "name": "kg_compute_adjacency",
+                "description": "Compute shortest distance between two DSL artefact nodes. Used for the two-step adjacency rule in capability discovery.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "node_a": {
+                            "type": "string",
+                            "description": "First node ID (e.g., 'entity:Task', 'surface:task_list')",
+                        },
+                        "node_b": {
+                            "type": "string",
+                            "description": "Second node ID",
+                        },
+                        "max_distance": {
+                            "type": "integer",
+                            "default": 2,
+                            "description": "Maximum hops to search",
+                        },
+                    },
+                    "required": ["node_a", "node_b"],
+                },
+            },
+            {
+                "name": "kg_persona_capability_map",
+                "description": "Get what a persona can access: reachable workspaces, surfaces, entities, and stories within 2 hops.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "persona_id": {
+                            "type": "string",
+                            "description": "Persona ID (e.g., 'teacher' or 'persona:teacher')",
+                        },
+                    },
+                    "required": ["persona_id"],
+                },
+            },
         ]
 
     def dispatch(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1175,6 +1502,8 @@ class KnowledgeGraphHandlers:
             "kg_populate_appspec": self.handle_populate_from_appspec,
             "kg_populate_mcp_tools": self.handle_populate_mcp_tools,
             "kg_populate_test_coverage": self.handle_populate_test_coverage,
+            "kg_compute_adjacency": self.handle_compute_adjacency,
+            "kg_persona_capability_map": self.handle_persona_capability_map,
         }
 
         handler = handlers.get(tool_name)

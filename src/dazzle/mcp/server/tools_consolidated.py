@@ -1070,6 +1070,50 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Discovery Operations (capability discovery agent)
+        # =====================================================================
+        Tool(
+            name="discovery",
+            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness). Explores a running Dazzle app as a persona and identifies gaps between DSL spec and implementation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["run", "report", "compile", "emit", "status"],
+                        "description": "Operation to perform",
+                    },
+                    "persona": {
+                        "type": "string",
+                        "description": "Persona to explore as (for run/compile/emit, default: admin)",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Base URL of the running app (for run, default: http://localhost:3000)",
+                    },
+                    "max_steps": {
+                        "type": "integer",
+                        "description": "Maximum exploration steps (for run, default: 50)",
+                    },
+                    "token_budget": {
+                        "type": "integer",
+                        "description": "Token budget for LLM (for run, default: 200000)",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Specific session ID (for report/compile/emit)",
+                    },
+                    "proposal_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Specific proposal IDs to emit (for emit, default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

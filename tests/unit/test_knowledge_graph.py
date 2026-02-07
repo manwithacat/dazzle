@@ -304,6 +304,8 @@ class TestKnowledgeGraphHandlers:
             "kg_populate_appspec",
             "kg_populate_mcp_tools",
             "kg_populate_test_coverage",
+            "kg_compute_adjacency",
+            "kg_persona_capability_map",
         }
         assert tool_names == expected_tools
 

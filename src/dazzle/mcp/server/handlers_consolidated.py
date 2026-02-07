@@ -1246,6 +1246,41 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Discovery Handler
+# =============================================================================
+
+
+def handle_discovery(arguments: dict[str, Any]) -> str:
+    """Handle capability discovery operations."""
+    from .handlers.discovery import (
+        compile_discovery_handler,
+        discovery_status_handler,
+        emit_discovery_handler,
+        get_discovery_report_handler,
+        run_discovery_handler,
+    )
+
+    operation = arguments.get("operation")
+
+    project_path = _resolve_project(arguments)
+    if project_path is None:
+        return _project_error()
+
+    if operation == "run":
+        return run_discovery_handler(project_path, arguments)
+    elif operation == "report":
+        return get_discovery_report_handler(project_path, arguments)
+    elif operation == "compile":
+        return compile_discovery_handler(project_path, arguments)
+    elif operation == "emit":
+        return emit_discovery_handler(project_path, arguments)
+    elif operation == "status":
+        return discovery_status_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown discovery operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1269,6 +1304,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
+    "discovery": handle_discovery,
 }
 
 
