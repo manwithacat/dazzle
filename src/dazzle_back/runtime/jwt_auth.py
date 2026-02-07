@@ -294,7 +294,7 @@ class JWTService:
 
         try:
             # Decode and verify with explicit algorithm (prevents algorithm confusion)
-            options: dict[str, Any] = {"require": ["sub", "email", "exp", "iat", "jti", "iss"]}
+            options: Any = {"require": ["sub", "email", "exp", "iat", "jti", "iss"]}
             if self.config.audience:
                 options["require"].append("aud")
 

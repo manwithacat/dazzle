@@ -20,7 +20,7 @@ try:
     STRAWBERRY_AVAILABLE = True
 except ImportError:
     STRAWBERRY_AVAILABLE = False
-    strawberry = None  # type: ignore
+    strawberry = None  # type: ignore[assignment, misc, unused-ignore]
 
 if TYPE_CHECKING:
     from dazzle_back.specs import BackendSpec
@@ -318,7 +318,7 @@ class ResolverGenerator:
 
         return resolve_delete
 
-    def create_query_type(self) -> type:
+    def create_query_type(self) -> Any:
         """Create a Strawberry Query type with all resolvers."""
         query_resolvers, _ = self.generate_resolvers()
 
@@ -332,7 +332,7 @@ class ResolverGenerator:
         query_class = type("Query", (), methods)
         return strawberry.type(query_class)
 
-    def create_mutation_type(self) -> type:
+    def create_mutation_type(self) -> Any:
         """Create a Strawberry Mutation type with all resolvers."""
         _, mutation_resolvers = self.generate_resolvers()
 

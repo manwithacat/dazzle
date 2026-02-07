@@ -21,8 +21,8 @@ try:
     STRAWBERRY_AVAILABLE = True
 except ImportError:
     STRAWBERRY_AVAILABLE = False
-    strawberry = None  # type: ignore
-    ID = str  # type: ignore
+    strawberry = None  # type: ignore[assignment, misc, unused-ignore]
+    ID = str  # type: ignore[assignment, misc, unused-ignore]
 
 if TYPE_CHECKING:
     from dazzle_back.specs import BackendSpec
@@ -118,7 +118,7 @@ class SchemaGenerator:
                         enum_name, field.type.enum_values
                     )
 
-    def _create_enum_type(self, name: str, values: list[str]) -> type:
+    def _create_enum_type(self, name: str, values: list[str]) -> Any:
         """Create a Strawberry enum type."""
         # Create Python enum
         enum_dict = {v.upper(): v for v in values}
@@ -175,7 +175,7 @@ class SchemaGenerator:
             entity, f"{entity.name}UpdateInput", for_create=False
         )
 
-    def _create_input_type(self, entity: EntitySpec, name: str, for_create: bool) -> type:
+    def _create_input_type(self, entity: EntitySpec, name: str, for_create: bool) -> Any:
         """Create an input type for mutations."""
         annotations: dict[str, Any] = {}
         defaults: dict[str, Any] = {}

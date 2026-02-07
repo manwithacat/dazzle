@@ -184,7 +184,8 @@ class ImageProcessor:
 
         try:
             img = Image.open(BytesIO(image_data))
-            return img.size
+            w, h = img.size
+            return (int(w), int(h))
         except Exception as e:
             raise ImageProcessingError(f"Failed to get dimensions: {e}")
 
@@ -206,7 +207,8 @@ class ImageProcessor:
 
         try:
             img = Image.open(BytesIO(image_data))
-            return img.format
+            fmt: str | None = img.format
+            return fmt
         except Exception:
             return None
 

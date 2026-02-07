@@ -22,8 +22,8 @@ try:
     STRAWBERRY_AVAILABLE = True
 except ImportError:
     STRAWBERRY_AVAILABLE = False
-    strawberry = None  # type: ignore
-    GraphQLRouter = None  # type: ignore
+    strawberry = None  # type: ignore[assignment, misc, unused-ignore]
+    GraphQLRouter = None  # type: ignore[assignment, misc, unused-ignore]
 
 try:
     from fastapi import FastAPI
@@ -196,7 +196,7 @@ def _create_query_type(
     spec: BackendSpec,
     resolver_gen: ResolverGenerator,
     schema_gen: SchemaGenerator,
-) -> type:
+) -> Any:
     """Create the Query type with all entity resolvers."""
     query_resolvers, _ = resolver_gen.generate_resolvers()
 
@@ -247,7 +247,7 @@ def _create_mutation_type(
     spec: BackendSpec,
     resolver_gen: ResolverGenerator,
     schema_gen: SchemaGenerator,
-) -> type:
+) -> Any:
     """Create the Mutation type with all entity resolvers."""
     class_dict: dict[str, Any] = {}
     annotations: dict[str, Any] = {}
