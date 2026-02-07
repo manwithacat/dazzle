@@ -210,9 +210,18 @@ class AuthStore:
                     user_agent TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    token TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used INTEGER DEFAULT 0
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
                 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
                 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+                CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id);
             """)
             conn.commit()
 
@@ -244,11 +253,23 @@ class AuthStore:
                     user_agent TEXT
                 )
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    token TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used BOOLEAN DEFAULT FALSE
+                )
+            """)
             # Create indexes (PostgreSQL syntax)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
             )
             conn.commit()
         finally:
@@ -412,6 +433,78 @@ class AuthStore:
             WHERE id = ?
             """,
             (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
+        )
+        return rowcount > 0
+
+    def create_password_reset_token(
+        self,
+        user_id: UUID,
+        expires_in: timedelta | None = None,
+    ) -> str:
+        """Create a password reset token for the given user.
+
+        Args:
+            user_id: User to create reset token for.
+            expires_in: Token lifetime (default 1 hour).
+
+        Returns:
+            The generated token string.
+        """
+        if expires_in is None:
+            expires_in = timedelta(hours=1)
+
+        token = secrets.token_urlsafe(32)
+        now = datetime.now(UTC)
+        expires_at = now + expires_in
+
+        # Invalidate any existing unused tokens for this user
+        self._execute_modify(
+            "UPDATE password_reset_tokens SET used = ? WHERE user_id = ? AND used = ?",
+            (self._bool_to_db(True), str(user_id), self._bool_to_db(False)),
+        )
+
+        self._execute_modify(
+            """
+            INSERT INTO password_reset_tokens (token, user_id, created_at, expires_at, used)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (token, str(user_id), now.isoformat(), expires_at.isoformat(), self._bool_to_db(False)),
+        )
+
+        return token
+
+    def validate_password_reset_token(self, token: str) -> UserRecord | None:
+        """Validate a password reset token and return the associated user.
+
+        Returns None if the token is invalid, expired, or already used.
+        """
+        rows = self._execute(
+            "SELECT * FROM password_reset_tokens WHERE token = ?",
+            (token,),
+        )
+
+        if not rows:
+            return None
+
+        row = rows[0]
+        if row.get("used") in (1, True, "1"):
+            return None
+
+        expires_at = datetime.fromisoformat(row["expires_at"])
+        if datetime.now(UTC) > expires_at:
+            return None
+
+        user_id = UUID(row["user_id"])
+        return self.get_user_by_id(user_id)
+
+    def consume_password_reset_token(self, token: str) -> bool:
+        """Mark a password reset token as used.
+
+        Returns True if the token was successfully consumed.
+        """
+        rowcount = self._execute_modify(
+            "UPDATE password_reset_tokens SET used = ? WHERE token = ? AND used = ?",
+            (self._bool_to_db(True), token, self._bool_to_db(False)),
         )
         return rowcount > 0
 
@@ -673,6 +766,8 @@ class AuthMiddleware:
             "/redoc",
             "/auth/login",
             "/auth/register",
+            "/auth/forgot-password",
+            "/auth/reset-password",
         ]
 
     def get_auth_context(self, request: FastAPIRequest) -> AuthContext:
@@ -797,13 +892,25 @@ def create_auth_routes(
     async def logout(request: FastAPIRequest) -> JSONResponse:
         """
         Logout and delete session.
+
+        HTML form submissions (no JSON accept header) are redirected to /login.
+        API callers receive a JSON response.
         """
+        from fastapi.responses import RedirectResponse
+
         session_id = request.cookies.get(cookie_name)
 
         if session_id:
             auth_store.delete_session(session_id)
 
-        response = JSONResponse(content={"message": "Logout successful"})
+        # Detect HTML form submission (browser) vs API call
+        accept = request.headers.get("accept", "")
+        is_browser = "text/html" in accept and "application/json" not in accept
+
+        if is_browser:
+            response = RedirectResponse(url="/login", status_code=303)
+        else:
+            response = JSONResponse(content={"message": "Logout successful"})
         response.delete_cookie(cookie_name)
 
         return response
@@ -948,7 +1055,103 @@ def create_auth_routes(
 
         return response
 
+    # =========================================================================
+    # Forgot Password (request reset)
+    # =========================================================================
+
+    @router.post("/forgot-password")
+    async def forgot_password(data: ForgotPasswordRequest) -> JSONResponse:
+        """
+        Request a password reset.
+
+        Always returns 200 to avoid user enumeration. If the email exists,
+        a reset token is created and logged (email delivery is integration-dependent).
+        """
+        import logging
+
+        logger = logging.getLogger("dazzle.auth")
+
+        user = auth_store.get_user_by_email(data.email)
+
+        if user and user.is_active:
+            token = auth_store.create_password_reset_token(user.id)
+            # Log the reset link — actual email delivery requires an integration
+            logger.info(
+                "Password reset requested for %s — token: %s "
+                "(deliver via /auth/reset-password?token=%s)",
+                data.email,
+                token,
+                token,
+            )
+
+        # Always return success to prevent user enumeration
+        return JSONResponse(
+            content={
+                "message": (
+                    "If an account with that email exists, a password reset link has been sent."
+                )
+            }
+        )
+
+    # =========================================================================
+    # Reset Password (consume token + set new password)
+    # =========================================================================
+
+    @router.post("/reset-password")
+    async def reset_password(data: ResetPasswordRequest, request: FastAPIRequest) -> JSONResponse:
+        """
+        Reset password using a valid reset token.
+
+        Validates the token, updates the password, invalidates existing sessions,
+        and auto-logs the user in.
+        """
+        user = auth_store.validate_password_reset_token(data.token)
+
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+        # Update password and consume token
+        auth_store.update_password(user.id, data.new_password)
+        auth_store.consume_password_reset_token(data.token)
+
+        # Invalidate all existing sessions
+        auth_store.delete_user_sessions(user.id)
+
+        # Auto-login with new session
+        session = auth_store.create_session(
+            user,
+            expires_in=timedelta(days=session_expires_days),
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+
+        response = JSONResponse(content={"message": "Password reset successful"})
+
+        response.set_cookie(
+            key=cookie_name,
+            value=session.id,
+            httponly=True,
+            secure=False,
+            samesite="lax",
+            max_age=session_expires_days * 24 * 60 * 60,
+        )
+
+        return response
+
     return router
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request body."""
+
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request body."""
+
+    token: str
+    new_password: str
 
 
 # =============================================================================

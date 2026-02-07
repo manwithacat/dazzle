@@ -48,16 +48,22 @@ def get_shared_head_html(title: str) -> str:
 def render_site_page_html(
     sitespec_data: dict[str, Any],
     path: str,
+    page_data: dict[str, Any] | None = None,
 ) -> str:
     """
-    Render the site page HTML shell.
+    Render a site page with server-side rendered content.
+
+    When *page_data* is provided, sections are rendered into the initial HTML
+    so that search engines and users with JS disabled see full content.  The
+    ``site.js`` script is still included for theme toggling and Lucide icons.
 
     Args:
-        sitespec_data: Site specification data
-        path: Current page route
+        sitespec_data: Site specification data.
+        path: Current page route.
+        page_data: Pre-resolved page data (sections, title, etc.) for SSR.
 
     Returns:
-        Complete HTML page string
+        Complete HTML page string.
     """
     brand = sitespec_data.get("brand", {})
     product_name = brand.get("product_name", "My App")
@@ -73,10 +79,31 @@ def render_site_page_html(
     footer_html = _build_footer(footer)
     copyright_text = _build_copyright(footer, brand)
 
+    # OG meta tags from page data
+    og_meta = ""
+    page_title = product_name
+    page_description = ""
+    if page_data:
+        page_title = page_data.get("title") or product_name
+        sections = page_data.get("sections", [])
+        # Extract description from hero section subhead
+        for sec in sections:
+            if sec.get("type") == "hero":
+                page_description = sec.get("subhead", "")
+                break
+        og_meta = _build_og_meta(product_name, page_title, page_description, path)
+
+    # Render sections server-side
+    if page_data and page_data.get("sections"):
+        sections_html = _render_sections_ssr(page_data["sections"])
+    else:
+        sections_html = '<div class="dz-loading">Loading...</div>'
+
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(product_name)}
+    {get_shared_head_html(page_title)}
+    {og_meta}
 </head>
 <body class="dz-site bg-base-100">
     <header class="dz-site-header">
@@ -89,8 +116,7 @@ def render_site_page_html(
     </header>
 
     <main id="dz-site-main" data-route="{path}">
-        <!-- Page sections will be rendered by site.js -->
-        <div class="dz-loading">Loading...</div>
+        {sections_html}
     </main>
 
     <footer class="dz-site-footer">
@@ -245,6 +271,307 @@ def _build_copyright(footer: dict[str, Any], brand: dict[str, Any]) -> str:
     return text
 
 
+def _build_og_meta(
+    product_name: str,
+    page_title: str,
+    description: str,
+    path: str,
+) -> str:
+    """Build Open Graph and basic SEO meta tags."""
+    from html import escape
+
+    desc = escape(description) if description else escape(product_name)
+    title = escape(page_title)
+    return f"""<meta name="description" content="{desc}">
+    <meta property="og:title" content="{title}">
+    <meta property="og:description" content="{desc}">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{title}">
+    <meta name="twitter:description" content="{desc}">"""
+
+
+def _render_sections_ssr(sections: list[dict[str, Any]]) -> str:
+    """Render page sections as server-side HTML.
+
+    Mirrors the JavaScript renderers in ``get_site_js()`` to produce
+    the same HTML structure, allowing search engines and no-JS users
+    to see the full page content.
+    """
+    html_parts: list[str] = []
+    for section in sections:
+        sec_type = section.get("type", "")
+        renderer = _SSR_RENDERERS.get(sec_type)
+        if renderer:
+            html_parts.append(renderer(section))
+        else:
+            # Fallback: render as generic section with headline/subhead
+            html_parts.append(_ssr_generic(section))
+    return "\n".join(html_parts)
+
+
+def _ssr_section_id(section: dict[str, Any]) -> str:
+    """Build an id attribute for a section element."""
+    sec_id = section.get("id")
+    if not sec_id:
+        headline = section.get("headline", "")
+        if headline:
+            sec_id = headline.lower().replace(" ", "-")
+            sec_id = "".join(c for c in sec_id if c.isalnum() or c == "-").strip("-")
+    return f' id="{sec_id}"' if sec_id else ""
+
+
+def _ssr_section_header(section: dict[str, Any]) -> str:
+    """Render section header (headline + subhead)."""
+    headline = section.get("headline", "")
+    subhead = section.get("subhead", "")
+    if not headline and not subhead:
+        return ""
+    parts = ['<div class="dz-section-header">']
+    if headline:
+        parts.append(f"<h2>{headline}</h2>")
+    if subhead:
+        parts.append(f'<p class="dz-subhead">{subhead}</p>')
+    parts.append("</div>")
+    return "\n".join(parts)
+
+
+def _ssr_hero(section: dict[str, Any]) -> str:
+    headline = section.get("headline", "")
+    subhead = section.get("subhead", "")
+    primary_cta = section.get("primary_cta")
+    secondary_cta = section.get("secondary_cta")
+    media = section.get("media")
+
+    cta_html = ""
+    if primary_cta:
+        href = primary_cta.get("href", "#")
+        label = primary_cta.get("label", "Get Started")
+        cta_html += f'<a href="{href}" class="btn btn-primary">{label}</a>'
+    if secondary_cta:
+        href = secondary_cta.get("href", "#")
+        label = secondary_cta.get("label", "Learn More")
+        cta_html += f'<a href="{href}" class="btn btn-secondary btn-outline">{label}</a>'
+
+    media_html = ""
+    has_media = ""
+    if media and media.get("kind") == "image" and media.get("src"):
+        alt = media.get("alt", "")
+        media_html = f'<div class="dz-hero-media"><img src="{media["src"]}" alt="{alt}" class="dz-hero-image"></div>'
+        has_media = " dz-hero-with-media"
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-hero{has_media}">
+    <div class="dz-section-content">
+        <h1 class="dz-hero-headline">{headline}</h1>
+        {'<p class="dz-subhead">' + subhead + "</p>" if subhead else ""}
+        {'<div class="dz-cta-group">' + cta_html + "</div>" if cta_html else ""}
+    </div>
+    {media_html}
+</section>"""
+
+
+def _ssr_features(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        icon = item.get("icon", "")
+        title = item.get("title", "")
+        desc = item.get("description", "")
+        icon_html = f'<i data-lucide="{icon}"></i>' if icon else ""
+        items_html += f"""<div class="dz-feature-card card bg-base-100 shadow-sm">
+    <div class="card-body">
+        {icon_html}
+        <h3 class="card-title">{title}</h3>
+        <p>{desc}</p>
+    </div>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-features">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-feature-grid">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_cta(section: dict[str, Any]) -> str:
+    headline = section.get("headline", "")
+    subhead = section.get("subhead", "")
+    primary_cta = section.get("primary_cta")
+    secondary_cta = section.get("secondary_cta")
+
+    cta_html = ""
+    if primary_cta:
+        href = primary_cta.get("href", "#")
+        label = primary_cta.get("label", "Get Started")
+        cta_html += f'<a href="{href}" class="btn btn-primary">{label}</a>'
+    if secondary_cta:
+        href = secondary_cta.get("href", "#")
+        label = secondary_cta.get("label", "Learn More")
+        cta_html += f'<a href="{href}" class="btn btn-secondary btn-outline">{label}</a>'
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-cta">
+    <div class="dz-section-content">
+        {"<h2>" + headline + "</h2>" if headline else ""}
+        {'<p class="dz-subhead">' + subhead + "</p>" if subhead else ""}
+        {'<div class="dz-cta-group">' + cta_html + "</div>" if cta_html else ""}
+    </div>
+</section>"""
+
+
+def _ssr_faq(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        q = item.get("question", "")
+        a = item.get("answer", "")
+        items_html += f"""<div class="collapse collapse-arrow bg-base-200">
+    <input type="radio" name="faq">
+    <div class="collapse-title font-medium">{q}</div>
+    <div class="collapse-content"><p>{a}</p></div>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-faq">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-faq-list">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_stats(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        value = item.get("value", "")
+        label = item.get("label", "")
+        items_html += f"""<div class="stat">
+    <div class="stat-value">{value}</div>
+    <div class="stat-title">{label}</div>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-stats">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="stats stats-vertical lg:stats-horizontal shadow">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_steps(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for i, item in enumerate(items, 1):
+        title = item.get("title", "")
+        desc = item.get("description", "")
+        items_html += f"""<li class="step step-primary">
+    <div class="dz-step-content">
+        <span class="dz-step-number">{i}</span>
+        <h3>{title}</h3>
+        <p>{desc}</p>
+    </div>
+</li>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-steps">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <ul class="steps steps-vertical lg:steps-horizontal">{items_html}</ul>
+    </div>
+</section>"""
+
+
+def _ssr_testimonials(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        quote = item.get("quote", "")
+        name = item.get("name", "")
+        role = item.get("role", "")
+        items_html += f"""<div class="card bg-base-200">
+    <div class="card-body">
+        <p class="italic">"{quote}"</p>
+        <p class="font-medium mt-2">{name}</p>
+        {'<p class="text-sm opacity-70">' + role + "</p>" if role else ""}
+    </div>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-testimonials">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-testimonials-grid">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_pricing(section: dict[str, Any]) -> str:
+    tiers = section.get("tiers", [])
+    tiers_html = ""
+    for tier in tiers:
+        name = tier.get("name", "")
+        price = tier.get("price", "")
+        period = tier.get("period", "/month")
+        features = tier.get("features", [])
+        cta = tier.get("cta")
+        highlighted = "border-primary" if tier.get("highlighted") else "border-base-300"
+
+        features_html = "".join(f"<li>{f}</li>" for f in features)
+        cta_html = ""
+        if cta:
+            href = cta.get("href", "#")
+            label = cta.get("label", "Choose Plan")
+            cta_html = f'<a href="{href}" class="btn btn-primary w-full">{label}</a>'
+
+        tiers_html += f"""<div class="card bg-base-100 border-2 {highlighted}">
+    <div class="card-body text-center">
+        <h3 class="card-title justify-center">{name}</h3>
+        <p class="text-3xl font-bold">{price}<span class="text-sm font-normal opacity-70">{period}</span></p>
+        <ul class="dz-pricing-features text-left">{features_html}</ul>
+        {cta_html}
+    </div>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-pricing">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-pricing-grid">{tiers_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_markdown(section: dict[str, Any]) -> str:
+    content = section.get("content", "")
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-markdown">
+    <div class="dz-section-content prose max-w-none">{content}</div>
+</section>"""
+
+
+def _ssr_generic(section: dict[str, Any]) -> str:
+    """Fallback renderer for unknown section types."""
+    content = section.get("content", "")
+    sec_type = section.get("type", "unknown")
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-{sec_type}">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        {f'<div class="prose max-w-none">{content}</div>' if content else ""}
+    </div>
+</section>"""
+
+
+_SSR_RENDERERS: dict[str, Any] = {
+    "hero": _ssr_hero,
+    "features": _ssr_features,
+    "feature_grid": _ssr_features,
+    "cta": _ssr_cta,
+    "faq": _ssr_faq,
+    "stats": _ssr_stats,
+    "steps": _ssr_steps,
+    "testimonials": _ssr_testimonials,
+    "pricing": _ssr_pricing,
+    "markdown": _ssr_markdown,
+}
+
+
 def render_auth_page_html(
     sitespec_data: dict[str, Any],
     page_type: str,
@@ -293,6 +620,8 @@ def render_auth_page_html(
                         {button_text}
                     </button>
                 </form>
+
+                {'<p class="text-right text-sm mt-2"><a href="/forgot-password" class="link link-secondary">Forgot password?</a></p>' if is_login else ""}
 
                 <p class="dz-auth-switch text-center text-sm mt-4">
                     <a href="{other_page}" class="link link-primary">{other_link_text}</a>
@@ -377,6 +706,223 @@ def _get_auth_form_script() -> str:
                 } else {
                     const error = await response.json();
                     errorDiv.textContent = error.detail || 'Authentication failed';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    })();"""
+
+
+def render_forgot_password_page_html(sitespec_data: dict[str, Any]) -> str:
+    """Render the forgot-password page.
+
+    Args:
+        sitespec_data: Site specification data.
+
+    Returns:
+        Complete HTML page string.
+    """
+    brand = sitespec_data.get("brand", {})
+    product_name = brand.get("product_name", "My App")
+
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    {get_shared_head_html(f"Reset Password - {product_name}")}
+</head>
+<body class="dz-site dz-auth-page bg-base-200">
+    <div class="dz-auth-container">
+        <div class="card bg-base-100 shadow-xl dz-auth-card">
+            <div class="card-body">
+                <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{product_name}</a>
+                <h1 class="card-title text-2xl justify-center">Reset Password</h1>
+                <p class="text-center text-sm opacity-70">
+                    Enter your email and we'll send you a link to reset your password.
+                </p>
+
+                <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+                <div id="dz-auth-success" class="alert alert-success hidden" role="alert"></div>
+
+                <form id="dz-auth-form" method="POST" action="/auth/forgot-password">
+                    <div class="form-control w-full">
+                        <label class="label" for="email">
+                            <span class="label-text">Email</span>
+                        </label>
+                        <input type="email" id="email" name="email" required
+                               autocomplete="email"
+                               class="input input-bordered w-full">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full mt-4">
+                        Send Reset Link
+                    </button>
+                </form>
+
+                <p class="dz-auth-switch text-center text-sm mt-4">
+                    <a href="/login" class="link link-primary">Back to sign in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    {_get_forgot_password_script()}
+    </script>
+</body>
+</html>"""
+
+
+def render_reset_password_page_html(sitespec_data: dict[str, Any]) -> str:
+    """Render the reset-password page (with token from query string).
+
+    Args:
+        sitespec_data: Site specification data.
+
+    Returns:
+        Complete HTML page string.
+    """
+    brand = sitespec_data.get("brand", {})
+    product_name = brand.get("product_name", "My App")
+
+    return f"""<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    {get_shared_head_html(f"Set New Password - {product_name}")}
+</head>
+<body class="dz-site dz-auth-page bg-base-200">
+    <div class="dz-auth-container">
+        <div class="card bg-base-100 shadow-xl dz-auth-card">
+            <div class="card-body">
+                <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{product_name}</a>
+                <h1 class="card-title text-2xl justify-center">Set New Password</h1>
+
+                <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+
+                <form id="dz-auth-form" method="POST" action="/auth/reset-password">
+                    <input type="hidden" id="token" name="token" value="">
+
+                    <div class="form-control w-full">
+                        <label class="label" for="new_password">
+                            <span class="label-text">New Password</span>
+                        </label>
+                        <input type="password" id="new_password" name="new_password"
+                               required minlength="8" autocomplete="new-password"
+                               class="input input-bordered w-full">
+                    </div>
+
+                    <div class="form-control w-full">
+                        <label class="label" for="confirm_password">
+                            <span class="label-text">Confirm Password</span>
+                        </label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               required minlength="8" autocomplete="new-password"
+                               class="input input-bordered w-full">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full mt-4">
+                        Reset Password
+                    </button>
+                </form>
+
+                <p class="dz-auth-switch text-center text-sm mt-4">
+                    <a href="/login" class="link link-primary">Back to sign in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    {_get_reset_password_script()}
+    </script>
+</body>
+</html>"""
+
+
+def _get_forgot_password_script() -> str:
+    """Return the forgot-password form submission script."""
+    return """(function() {
+        const form = document.getElementById('dz-auth-form');
+        const errorDiv = document.getElementById('dz-auth-error');
+        const successDiv = document.getElementById('dz-auth-success');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    successDiv.textContent = result.message || 'Check your email for a reset link.';
+                    successDiv.classList.remove('hidden');
+                    form.querySelector('button[type="submit"]').disabled = true;
+                } else {
+                    errorDiv.textContent = result.detail || 'Something went wrong.';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.classList.remove('hidden');
+            }
+        });
+    })();"""
+
+
+def _get_reset_password_script() -> str:
+    """Return the reset-password form submission script."""
+    return """(function() {
+        const form = document.getElementById('dz-auth-form');
+        const errorDiv = document.getElementById('dz-auth-error');
+        const tokenInput = document.getElementById('token');
+
+        // Extract token from query string
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+        if (!token) {
+            errorDiv.textContent = 'Missing reset token. Please use the link from your email.';
+            errorDiv.classList.remove('hidden');
+            form.querySelector('button[type="submit"]').disabled = true;
+            return;
+        }
+        tokenInput.value = token;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorDiv.classList.add('hidden');
+
+            const password = document.getElementById('new_password').value;
+            const confirm = document.getElementById('confirm_password').value;
+
+            if (password !== confirm) {
+                errorDiv.textContent = 'Passwords do not match.';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: tokenInput.value, new_password: password }),
+                });
+
+                if (response.ok) {
+                    window.location.href = '/app';
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.detail || 'Reset failed. The link may have expired.';
                     errorDiv.classList.remove('hidden');
                 }
             } catch (err) {
@@ -1056,8 +1602,19 @@ def get_site_js() -> str:
         }
     }
 
-    // Fetch and render page
+    // Fetch and render page (skip if SSR content is already present)
     async function init() {
+        // If the page was server-side rendered, content is already in the DOM.
+        // Just initialize Lucide icons and handle hash scrolling.
+        if (main && main.querySelector('.dz-section')) {
+            if (typeof lucide !== 'undefined') { lucide.createIcons(); }
+            if (window.location.hash) {
+                const target = document.getElementById(window.location.hash.slice(1));
+                if (target) { target.scrollIntoView({ behavior: 'smooth' }); }
+            }
+            return;
+        }
+
         try {
             const apiRoute = route === '/' ? '' : route;
             const response = await fetch(`/_site/page${apiRoute}`);

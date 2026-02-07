@@ -248,6 +248,127 @@ class TestStoriesCoverage:
         for story in data["stories"]:
             assert story["status"] == "uncovered"
 
+    def test_coverage_excludes_rejected_stories(self, tmp_path: Path) -> None:
+        """Test that rejected stories are excluded from coverage calculations."""
+        from dazzle.mcp.server.handlers.process import stories_coverage_handler
+
+        app_spec = MagicMock()
+        app_spec.stories = [
+            StorySpec(
+                story_id="ST-001",
+                title="User creates order",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=["Order"],
+                then=[StoryCondition(expression="Order is saved")],
+                status=StoryStatus.ACCEPTED,
+            ),
+            StorySpec(
+                story_id="ST-002",
+                title="User registers account",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=["User"],
+                then=[StoryCondition(expression="User account is created")],
+                status=StoryStatus.REJECTED,
+            ),
+            StorySpec(
+                story_id="ST-003",
+                title="User resets password",
+                actor="User",
+                trigger=StoryTrigger.FORM_SUBMITTED,
+                scope=["User"],
+                then=[StoryCondition(expression="Password reset email sent")],
+                status=StoryStatus.REJECTED,
+            ),
+        ]
+        app_spec.processes = [
+            ProcessSpec(
+                name="order_creation",
+                title="Order Creation",
+                implements=["ST-001"],
+                trigger=ProcessTriggerSpec(
+                    kind=ProcessTriggerKind.ENTITY_EVENT,
+                    entity_name="Order",
+                    event_type="created",
+                ),
+                steps=[
+                    ProcessStepSpec(
+                        name="save",
+                        kind=StepKind.SERVICE,
+                        service="order_service",
+                    ),
+                ],
+            ),
+        ]
+
+        with patch(
+            "dazzle.mcp.server.handlers.process._load_app_spec",
+            return_value=app_spec,
+        ):
+            result = stories_coverage_handler(tmp_path, {})
+            data = json.loads(result)
+
+        # Only ST-001 (accepted) should be counted
+        assert data["total_stories"] == 1
+        assert data["covered"] == 1
+        assert data["uncovered"] == 0
+        assert data["rejected_excluded"] == 2
+        assert data["coverage_percent"] == 100.0
+
+        # Only the accepted story should appear in results
+        assert len(data["stories"]) == 1
+        assert data["stories"][0]["story_id"] == "ST-001"
+
+    def test_coverage_excludes_rejected_from_story_index(self, tmp_path: Path) -> None:
+        """Test that rejected stories are excluded when using story index path."""
+        from dazzle.mcp.server.handlers.process import stories_coverage_handler
+
+        app_spec = MagicMock()
+        app_spec.stories = []  # Empty so it falls through to story index
+        app_spec.processes = []
+
+        story_index = [
+            {
+                "story_id": "ST-001",
+                "title": "Accepted story",
+                "status": "accepted",
+                "actor": "User",
+                "scope": ["Order"],
+                "then": [],
+                "unless": [],
+                "happy_path_outcome": [],
+            },
+            {
+                "story_id": "ST-002",
+                "title": "Rejected story",
+                "status": "rejected",
+                "actor": "User",
+                "scope": ["User"],
+                "then": [],
+                "unless": [],
+                "happy_path_outcome": [],
+            },
+        ]
+
+        with (
+            patch(
+                "dazzle.mcp.server.handlers.process._load_app_spec",
+                return_value=app_spec,
+            ),
+            patch(
+                "dazzle.core.stories_persistence.load_story_index",
+                return_value=story_index,
+            ),
+        ):
+            result = stories_coverage_handler(tmp_path, {})
+            data = json.loads(result)
+
+        assert data["total_stories"] == 1
+        assert data["rejected_excluded"] == 1
+        assert len(data["stories"]) == 1
+        assert data["stories"][0]["story_id"] == "ST-001"
+
 
 class TestProposeProcesses:
     """Tests for propose_processes_from_stories handler."""

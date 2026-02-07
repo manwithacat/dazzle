@@ -262,6 +262,18 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
             story_index if used_index else []  # noqa: F821
         )
         items: list[Any] = stories if stories else story_index_list
+
+        # Exclude rejected stories from coverage calculations
+        rejected_count = 0
+        filtered_items: list[Any] = []
+        for item in items:
+            item_status = item["status"] if used_index else getattr(item, "status", "draft")
+            if item_status == "rejected":
+                rejected_count += 1
+            else:
+                filtered_items.append(item)
+        items = filtered_items
+
         for item in items:
             if used_index:
                 sid = item["story_id"]
@@ -323,6 +335,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
             "covered": covered_count,
             "partial": partial_count,
             "uncovered": uncovered_count,
+            "rejected_excluded": rejected_count,
             "coverage_percent": round(coverage_percent, 1),
             "effective_coverage_percent": effective_coverage_percent,
             "has_process": has_process,

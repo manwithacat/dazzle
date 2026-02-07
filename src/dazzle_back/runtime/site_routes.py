@@ -298,6 +298,18 @@ def create_site_page_routes(
     pages = sitespec_data.get("pages", [])
     legal = sitespec_data.get("legal", {})
 
+    # Pre-resolve page data for SSR so each route can render server-side
+    page_data_cache: dict[str, dict[str, Any]] = {}
+    for page in pages:
+        route = page.get("route", "/")
+        page_data_cache[route] = _format_page_response(page, project_root)
+
+    for ltype in ("terms", "privacy"):
+        lpage = legal.get(ltype)
+        if lpage:
+            lroute = lpage.get("route", f"/{ltype}")
+            page_data_cache[lroute] = _format_legal_page_response(ltype, lpage, project_root)
+
     # Create route for each page
     for page in pages:
         route = page.get("route", "/")
@@ -310,8 +322,8 @@ def create_site_page_routes(
             r: str = page_route,
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
-            """Serve a site page as HTML using DaisyUI renderer."""
-            return render_site_page_html(sitespec, r)
+            """Serve a site page as HTML with SSR content."""
+            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
 
     # Create routes for legal pages
     if legal.get("terms"):
@@ -323,7 +335,7 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the terms of service page."""
-            return render_site_page_html(sitespec, r)
+            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
 
     if legal.get("privacy"):
         privacy_route = legal["privacy"].get("route", "/privacy")
@@ -334,7 +346,7 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the privacy policy page."""
-            return render_site_page_html(sitespec, r)
+            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
 
     return router
 
@@ -379,7 +391,9 @@ def create_auth_page_routes(
     sitespec_data: dict[str, Any],
 ) -> APIRouter:
     """
-    Create FastAPI routes for authentication pages (/login, /signup).
+    Create FastAPI routes for authentication pages.
+
+    Routes: /login, /signup, /forgot-password, /reset-password
 
     Args:
         sitespec_data: SiteSpec as dict
@@ -390,7 +404,11 @@ def create_auth_page_routes(
     from fastapi import APIRouter
     from fastapi.responses import HTMLResponse
 
-    from dazzle_ui.runtime.site_renderer import render_auth_page_html
+    from dazzle_ui.runtime.site_renderer import (
+        render_auth_page_html,
+        render_forgot_password_page_html,
+        render_reset_password_page_html,
+    )
 
     router = APIRouter()
 
@@ -403,5 +421,15 @@ def create_auth_page_routes(
     async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the signup page."""
         return render_auth_page_html(sitespec, "signup")
+
+    @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
+    async def forgot_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
+        """Serve the forgot-password page."""
+        return render_forgot_password_page_html(sitespec)
+
+    @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
+    async def reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
+        """Serve the reset-password page."""
+        return render_reset_password_page_html(sitespec)
 
     return router
