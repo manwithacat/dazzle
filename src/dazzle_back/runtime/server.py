@@ -700,6 +700,11 @@ class DNRBackendApp:
 
         workspaces = getattr(self.spec, "workspaces", [])
         if not workspaces:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(
+                "No workspaces in spec — skipping workspace routes"
+            )
             return
 
         try:

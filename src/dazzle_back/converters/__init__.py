@@ -45,6 +45,7 @@ def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:
         entities=entities,
         services=services,
         endpoints=endpoints,
+        workspaces=appspec.workspaces,
     )
 
 

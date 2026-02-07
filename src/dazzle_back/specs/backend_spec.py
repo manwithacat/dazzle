@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle_back.specs.auth import AuthRuleSpec, RoleSpec, TenancyRuleSpec
 from dazzle_back.specs.channel import ChannelSpec, MessageSpec
 from dazzle_back.specs.endpoint import EndpointSpec
@@ -76,6 +77,11 @@ class BackendSpec(BaseModel):
     # Multi-tenancy
     tenancy: TenancyRuleSpec = Field(
         default_factory=TenancyRuleSpec, description="Tenancy configuration"
+    )
+
+    # Workspaces (v0.20)
+    workspaces: list[WorkspaceSpec] = Field(
+        default_factory=list, description="Workspace specifications (dashboard layouts)"
     )
 
     # Additional metadata
