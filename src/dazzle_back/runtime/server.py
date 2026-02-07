@@ -917,6 +917,11 @@ class DNRBackendApp:
                         )
                         return HTMLResponse(content=html)
 
+            # Workspace-prefixed entity routes (v0.20.1)
+            # Register /{ws_name}/{entity_plural} → redirect to /{entity_plural}
+            # so frontend specs like /admin_dashboard/onboardingflows work.
+            self._init_workspace_entity_routes(workspaces, app)
+
             import logging
 
             logging.getLogger("dazzle.server").info(
@@ -934,6 +939,65 @@ class DNRBackendApp:
             logging.getLogger("dazzle.server").error(
                 f"Failed to init workspace routes: {e}\n{traceback.format_exc()}"
             )
+
+    def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
+        """Register workspace-prefixed entity routes (v0.20.1).
+
+        For each workspace region with a ``source`` entity, register redirect
+        routes so that ``/{ws_name}/{entity_plural}`` forwards to the
+        standalone ``/{entity_plural}`` CRUD routes.  Uses HTTP 307 to
+        preserve the request method and body.
+        """
+        from starlette.responses import RedirectResponse
+
+        from dazzle.core.strings import to_api_plural
+
+        seen: set[str] = set()  # avoid duplicate registrations
+
+        for workspace in workspaces:
+            ws_name = workspace.name
+            for region in workspace.regions:
+                source: str | None = region.source
+                if not source:
+                    continue
+
+                entity_plural = to_api_plural(source)
+                route_key = f"{ws_name}/{entity_plural}"
+                if route_key in seen:
+                    continue
+                seen.add(route_key)
+
+                # Capture in closure defaults
+                _entity_plural = entity_plural
+
+                @app.api_route(  # type: ignore[misc]
+                    f"/{ws_name}/{entity_plural}",
+                    methods=["GET", "POST"],
+                    tags=["Workspaces"],
+                    include_in_schema=False,
+                )
+                async def ws_entity_collection(
+                    request: Request,
+                    _ep: str = _entity_plural,
+                ) -> RedirectResponse:
+                    qs = str(request.query_params)
+                    target = f"/{_ep}?{qs}" if qs else f"/{_ep}"
+                    return RedirectResponse(url=target, status_code=307)
+
+                @app.api_route(  # type: ignore[misc]
+                    f"/{ws_name}/{entity_plural}/{{id}}",
+                    methods=["GET", "PUT", "PATCH", "DELETE"],
+                    tags=["Workspaces"],
+                    include_in_schema=False,
+                )
+                async def ws_entity_item(
+                    request: Request,
+                    id: str,
+                    _ep: str = _entity_plural,
+                ) -> RedirectResponse:
+                    qs = str(request.query_params)
+                    target = f"/{_ep}/{id}?{qs}" if qs else f"/{_ep}/{id}"
+                    return RedirectResponse(url=target, status_code=307)
 
     def _init_process_manager(self) -> None:
         """Initialize process manager for workflow execution (v0.24.0)."""
@@ -1215,6 +1279,7 @@ class DNRBackendApp:
                 db_manager=self._db_manager,
                 repositories=self._repositories,
                 entities=self.spec.entities,
+                auth_store=self._auth_store,
             )
             self._app.include_router(test_router)
 

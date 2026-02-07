@@ -205,14 +205,24 @@ class DazzleClient:
             return False
 
     def authenticate(self, persona: str) -> bool:
-        """Authenticate as a persona for testing."""
+        """Authenticate as a persona for testing.
+
+        Calls ``/__test__/authenticate`` which returns a real session token
+        when auth is enabled.  The token is stored both as a cookie (for
+        session-based auth) and as a Bearer token (for API auth).
+        """
         try:
             resp = self.client.post(
-                f"{self.api_url}/__test__/authenticate", json={"persona": persona}
+                f"{self.api_url}/__test__/authenticate",
+                json={"role": persona, "username": f"test_{persona}"},
             )
             if resp.status_code == 200:
                 data = resp.json()
-                self._auth_token = data.get("token")
+                token = data.get("token") or data.get("session_token")
+                self._auth_token = token
+                # Also store as session cookie for cookie-based auth
+                if token:
+                    self.client.cookies.set("dazzle_session", token)
                 return True
             return False
         except Exception:
@@ -643,12 +653,19 @@ class TestRunner:
             # Reset database before each test
             self.client.reset_database()
 
+            # Auto-authenticate for CRUD tests that lack an explicit login_as step.
+            # When the server has auth enabled, unauthenticated requests return 401.
+            steps = design.get("steps", [])
+            has_login_step = any(s.get("action") == "login_as" for s in steps)
+            tags = design.get("tags", [])
+            is_crud = any(t in tags for t in ("crud", "validation"))
+
+            if not has_login_step and is_crud:
+                self.client.authenticate("admin")
+
             # Seed data if this is a scenario test that needs it
             if scenario and scenario not in ("Empty State",):
                 self.client.seed_data(scenario)
-
-            # Run each step
-            steps = design.get("steps", [])
             for step in steps:
                 step_result = self.execute_step(step, design, context)
                 step_results.append(step_result)

@@ -76,6 +76,7 @@ class AuthenticateResponse(BaseModel):
     username: str
     role: str
     session_token: str
+    token: str = ""  # Alias for session_token (used by DazzleClient)
 
 
 # =============================================================================
@@ -87,6 +88,7 @@ def create_test_routes(
     db_manager: DatabaseManager,
     repositories: dict[str, SQLiteRepository[Any]],
     entities: list[EntitySpec],
+    auth_store: Any = None,
 ) -> APIRouter:
     """
     Create test routes for E2E testing.
@@ -95,6 +97,7 @@ def create_test_routes(
         db_manager: Database manager instance
         repositories: Dictionary of repositories by entity name
         entities: List of entity specifications
+        auth_store: Optional AuthStore for creating real test sessions
 
     Returns:
         APIRouter with test endpoints
@@ -208,25 +211,57 @@ def create_test_routes(
         return SnapshotResponse(entities=result)
 
     @router.post("/authenticate", response_model=AuthenticateResponse)
-    async def authenticate_test_user(request: AuthenticateRequest) -> AuthenticateResponse:
+    async def authenticate_test_user(request: AuthenticateRequest) -> Any:
         """
         Create a test authentication session.
 
-        Creates a mock user with the specified role for testing.
+        When auth_store is available, creates a real user and session so the
+        returned token works with the auth middleware.  Otherwise falls back
+        to returning a mock token.
         """
         import uuid
 
-        user_id = str(uuid.uuid4())
-        username = request.username or f"test_{request.role or 'user'}"
+        username = request.username or request.role or "test_user"
         role = request.role or "user"
-        session_token = str(uuid.uuid4())
 
-        return AuthenticateResponse(
-            user_id=user_id,
-            username=username,
-            role=role,
-            session_token=session_token,
+        if auth_store is not None:
+            # Create (or reuse) a real user + session in the auth store
+            email = f"{username}@test.local"
+            user = auth_store.get_user_by_email(email)
+            if not user:
+                user = auth_store.create_user(
+                    email=email,
+                    password="test_password",  # nosec B106 - test-only credential
+                    username=username,
+                    roles=[role],
+                )
+            session = auth_store.create_session(user)
+            session_token = session.id
+            user_id = str(user.id)
+        else:
+            user_id = str(uuid.uuid4())
+            session_token = str(uuid.uuid4())
+
+        from starlette.responses import JSONResponse
+
+        # Return as JSON with Set-Cookie so both cookie-based and
+        # token-based clients can authenticate.
+        resp = JSONResponse(
+            content={
+                "user_id": user_id,
+                "username": username,
+                "role": role,
+                "session_token": session_token,
+                "token": session_token,
+            }
         )
+        resp.set_cookie(
+            key="dazzle_session",
+            value=session_token,
+            httponly=True,
+            samesite="lax",
+        )
+        return resp
 
     @router.get("/entity/{entity_name}")
     async def get_entity_data(entity_name: str) -> list[dict[str, Any]]:
