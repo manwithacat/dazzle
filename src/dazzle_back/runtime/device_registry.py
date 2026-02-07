@@ -159,10 +159,10 @@ class DeviceRegistry:
                     """
                     UPDATE devices
                     SET platform = ?, device_name = ?, app_version = ?,
-                        os_version = ?, is_active = 1
+                        os_version = ?, is_active = ?
                     WHERE id = ?
                     """,
-                    (platform.value, device_name, app_version, os_version, existing["id"]),
+                    (platform.value, device_name, app_version, os_version, 1, existing["id"]),
                 )
                 device_id = existing["id"]
             else:
@@ -172,7 +172,7 @@ class DeviceRegistry:
                     INSERT INTO devices
                         (id, user_id, platform, push_token, device_name,
                          app_version, os_version, created_at, is_active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         device_id,
@@ -183,6 +183,7 @@ class DeviceRegistry:
                         app_version,
                         os_version,
                         now.isoformat(),
+                        1,
                     ),
                 )
             conn.commit()
@@ -218,14 +219,15 @@ class DeviceRegistry:
         """
         with self._get_connection() as conn:
             query = "SELECT * FROM devices WHERE user_id = ?"
-            params: list[str] = [str(user_id)]
+            params: list[Any] = [str(user_id)]
 
             if platform:
                 query += " AND platform = ?"
                 params.append(platform.value)
 
             if active_only:
-                query += " AND is_active = 1"
+                query += " AND is_active = ?"
+                params.append(1)
 
             query += " ORDER BY created_at DESC"
 
@@ -289,13 +291,13 @@ class DeviceRegistry:
         with self._get_connection() as conn:
             if user_id:
                 cursor = conn.execute(
-                    "UPDATE devices SET is_active = 0 WHERE id = ? AND user_id = ?",
-                    (device_id, str(user_id)),
+                    "UPDATE devices SET is_active = ? WHERE id = ? AND user_id = ?",
+                    (0, device_id, str(user_id)),
                 )
             else:
                 cursor = conn.execute(
-                    "UPDATE devices SET is_active = 0 WHERE id = ?",
-                    (device_id,),
+                    "UPDATE devices SET is_active = ? WHERE id = ?",
+                    (0, device_id),
                 )
             conn.commit()
             return cursor.rowcount > 0
@@ -324,8 +326,8 @@ class DeviceRegistry:
         """
         with self._get_connection() as conn:
             cursor = conn.execute(
-                "UPDATE devices SET is_active = 0 WHERE push_token = ?",
-                (push_token,),
+                "UPDATE devices SET is_active = ? WHERE push_token = ?",
+                (0, push_token),
             )
             conn.commit()
             return cursor.rowcount
@@ -348,9 +350,9 @@ class DeviceRegistry:
             cursor = conn.execute(
                 """
                 DELETE FROM devices
-                WHERE is_active = 0 AND created_at < ?
+                WHERE is_active = ? AND created_at < ?
                 """,
-                (cutoff.isoformat(),),
+                (0, cutoff.isoformat()),
             )
             conn.commit()
             return cursor.rowcount

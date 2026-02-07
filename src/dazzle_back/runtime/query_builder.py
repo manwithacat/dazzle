@@ -181,8 +181,9 @@ class FilterCondition:
         quoted_field = quote_identifier(self.field)
         field_ref = f"{table_alias}.{quoted_field}" if table_alias else quoted_field
 
-        # Convert value for SQL
-        converted_value = self._convert_value(self.value)
+        # Convert value for SQL (pass backend hint for bool handling)
+        is_postgres = placeholder_style == "%s"
+        converted_value = self._convert_value(self.value, is_postgres=is_postgres)
 
         # Handle special operators
         if self.operator == FilterOperator.ISNULL:
@@ -242,8 +243,8 @@ class FilterCondition:
             sql = tmpl.replace("?", ph)
             return sql, [converted_value]
 
-    def _convert_value(self, value: Any) -> Any:
-        """Convert Python value to SQLite-compatible value."""
+    def _convert_value(self, value: Any, *, is_postgres: bool = False) -> Any:
+        """Convert Python value to database-compatible value."""
         if value is None:
             return None
         elif isinstance(value, UUID):
@@ -255,9 +256,10 @@ class FilterCondition:
         elif isinstance(value, Decimal):
             return float(value)
         elif isinstance(value, bool):
-            return 1 if value else 0
+            # Postgres has native bool; SQLite stores as int
+            return value if is_postgres else (1 if value else 0)
         elif isinstance(value, list | tuple):
-            return [self._convert_value(v) for v in value]
+            return [self._convert_value(v, is_postgres=is_postgres) for v in value]
         else:
             return value
 
