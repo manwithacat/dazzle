@@ -316,7 +316,7 @@ class PageObserver:
                 return document.body.innerText.slice(0, 2000);
             }"""
             )
-            return text.strip()
+            return str(text).strip()
         except Exception as e:
             logger.warning(f"Error getting visible text: {e}")
             return ""
@@ -539,7 +539,7 @@ Example valid response:
             Tuple of (action, prompt_text, response_text) for coverage report.
         """
         # Build conversation messages
-        messages = []
+        messages: list[dict[str, str | list[dict[str, Any]]]] = []
 
         # Add history context
         history_text = ""
@@ -775,7 +775,7 @@ async def run_agent_tests(
         # Filter for Tier 3 (agent) tests - these require LLM-driven testing
         # Tier 3 tests are tagged with "tier3" or "agent"
         # Note: "tier2" or "playwright" tags are for scripted Playwright tests
-        def is_tier3_test(test: dict) -> bool:
+        def is_tier3_test(test: dict[str, Any]) -> bool:
             tags = set(test.get("tags", []))
             return bool(tags & {"tier3", "agent"})
 

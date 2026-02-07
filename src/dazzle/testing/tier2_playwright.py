@@ -157,6 +157,16 @@ class DazzleSelector:
         """Select element with specific persona."""
         return f'[data-dazzle-persona="{persona_id}"]'
 
+    @staticmethod
+    def scenario_select() -> str:
+        """Select the scenario dropdown in the Dazzle Bar."""
+        return '[data-dazzle-control="scenario-select"]'
+
+    @staticmethod
+    def persona_select() -> str:
+        """Select the persona dropdown in the Dazzle Bar."""
+        return '[data-dazzle-control="persona-select"]'
+
 
 # Convenience alias
 S = DazzleSelector
@@ -769,9 +779,9 @@ def generate_tier2_tests(
         if not entity_name or entity_name in seen_entities:
             continue
         if surface.mode == SurfaceMode.LIST:
-            entity = entities_by_name.get(entity_name)
-            if entity:
-                tests.append(generate_delete_flow(surface, entity, appspec, data_scenario))
+            entity_or_none = entities_by_name.get(entity_name)
+            if entity_or_none:
+                tests.append(generate_delete_flow(surface, entity_or_none, appspec, data_scenario))
                 seen_entities.add(entity_name)
 
     return tests

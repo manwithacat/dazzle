@@ -8,7 +8,7 @@ building on the generic InfraRequirements from infra_analyzer.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dazzle.core import ir
@@ -79,7 +79,7 @@ class IAMPolicySpec:
     """Specification for an IAM policy."""
 
     name: str
-    statements: list[dict] = field(default_factory=list)
+    statements: list[dict[str, Any]] = field(default_factory=list)
     description: str | None = None
 
 
@@ -348,7 +348,7 @@ def _analyze_process(process: ir.process.ProcessSpec, reqs: AWSRequirements) -> 
                 EventBridgeRuleSpec(
                     name=f"{process.name}-schedule",
                     bus_name="default",
-                    schedule_expression=f"cron({trigger.cron_expression})",
+                    schedule_expression=f"cron({trigger.cron})",
                     description=f"Scheduled trigger for {process.name}",
                 )
             )

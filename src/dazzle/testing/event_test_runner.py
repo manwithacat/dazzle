@@ -24,6 +24,7 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.domain import EntitySpec
 
 
@@ -43,11 +44,11 @@ class EventLogEntry:
     topic: str
     event_type: str
     key: str  # Partition key (usually entity_id)
-    payload: dict
+    payload: dict[str, Any]
     timestamp: datetime = field(default_factory=datetime.now)
     offset: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "topic": self.topic,
             "event_type": self.event_type,
@@ -217,7 +218,7 @@ class EventTestClient:
             print(f"Event simulation error: {e}")
             return False
 
-    def _create_entity(self, entity_name: str, data: dict) -> bool:
+    def _create_entity(self, entity_name: str, data: dict[str, Any]) -> bool:
         """Create an entity via seed endpoint."""
         fixture_id = f"evt-{entity_name.lower()}-{int(time.time() * 1000)}"
         resp = self.client.post(
@@ -226,7 +227,7 @@ class EventTestClient:
         )
         return resp.status_code == 200
 
-    def _update_entity(self, entity_name: str, entity_id: str, data: dict) -> bool:
+    def _update_entity(self, entity_name: str, entity_id: str, data: dict[str, Any]) -> bool:
         """Update an entity."""
         endpoint = f"/{entity_name.lower()}s/{entity_id}"
         resp = self.client.put(f"{self.api_url}{endpoint}", json=data)
@@ -248,7 +249,7 @@ class EventTestClient:
         except Exception:
             return 0
 
-    def get_entity(self, entity_name: str, entity_id: str) -> dict | None:
+    def get_entity(self, entity_name: str, entity_id: str) -> Any:
         """Get a specific entity by ID."""
         try:
             resp = self.client.get(f"{self.api_url}/{entity_name.lower()}s/{entity_id}")
@@ -258,7 +259,7 @@ class EventTestClient:
         except Exception:
             return None
 
-    def get_entities(self, entity_name: str) -> list[dict]:
+    def get_entities(self, entity_name: str) -> Any:
         """Get all entities of a type."""
         try:
             resp = self.client.get(f"{self.api_url}/__test__/entity/{entity_name}")
@@ -268,7 +269,7 @@ class EventTestClient:
         except Exception:
             return []
 
-    def get_emitted_events(self, since_offset: int = 0) -> list[dict]:
+    def get_emitted_events(self, since_offset: int = 0) -> Any:
         """Get events emitted by the system since offset."""
         try:
             resp = self.client.get(
@@ -280,7 +281,7 @@ class EventTestClient:
         except Exception:
             return []
 
-    def get_process_status(self, process_name: str, run_id: str | None = None) -> dict | None:
+    def get_process_status(self, process_name: str, run_id: str | None = None) -> Any:
         """Get status of a process/workflow."""
         try:
             url = f"{self.api_url}/__test__/processes/{process_name}"
@@ -327,7 +328,9 @@ class EventTestClient:
         except Exception as e:
             return False, f"Assertion error: {e}"
 
-    def _evaluate_condition(self, entities: list[dict], condition: str) -> list[dict]:
+    def _evaluate_condition(
+        self, entities: list[dict[str, Any]], condition: str
+    ) -> list[dict[str, Any]]:
         """Evaluate a simple condition against entities."""
         # Simple condition parsing: "field == value" or "field != value"
         import re
@@ -486,7 +489,7 @@ class EventTestRunner:
 # ============================================================================
 
 
-def generate_event_tests_from_appspec(appspec) -> list[EventTestCase]:
+def generate_event_tests_from_appspec(appspec: AppSpec) -> list[EventTestCase]:
     """
     Generate event flow tests from AppSpec.
 
@@ -591,7 +594,7 @@ def generate_event_tests_from_appspec(appspec) -> list[EventTestCase]:
                         events=[
                             EventLogEntry(
                                 topic=f"{appspec.name}_entity_events",
-                                event_type=f"{trigger.entity_name}{trigger.event_type.title()}",
+                                event_type=f"{trigger.entity_name}{trigger.event_type.title() if trigger.event_type else ''}",
                                 key=str(uuid.uuid4()),
                                 payload={"id": str(uuid.uuid4())},
                             )

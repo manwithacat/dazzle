@@ -128,7 +128,7 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
 
         # Extract integrations
         try:
-            ctx.integrations = [i.name for i in appspec.domain.integrations]
+            ctx.integrations = [i.name for i in appspec.integrations]
         except Exception:
             pass
 
@@ -140,7 +140,7 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
 
         # Count ledgers (TigerBeetle)
         try:
-            ctx.ledger_count = len(appspec.domain.ledgers)
+            ctx.ledger_count = len(appspec.ledgers)
         except Exception:
             pass
 

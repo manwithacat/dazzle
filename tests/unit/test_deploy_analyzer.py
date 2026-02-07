@@ -359,7 +359,7 @@ class TestAnalyzeAWSRequirements:
 
         trigger = MagicMock()
         trigger.kind = ProcessTriggerKind.SCHEDULE_CRON
-        trigger.cron_expression = "0 8 * * ?"
+        trigger.cron = "0 8 * * ?"
 
         process = MagicMock()
         process.name = "daily-report"

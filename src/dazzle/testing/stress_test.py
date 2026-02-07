@@ -29,7 +29,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
+    from dazzle.core.ir.e2e import E2ETestSpec
 
 logger = logging.getLogger("dazzle.testing.stress")
 
@@ -168,8 +172,8 @@ class StressTestRunner:
 
     def __init__(self, project_path: Path):
         self.project_path = project_path
-        self.appspec = None
-        self.testspec = None
+        self.appspec: AppSpec | None = None
+        self.testspec: E2ETestSpec | None = None
         self.report: StressTestReport | None = None
 
     def load_specs(self) -> None:
@@ -190,6 +194,8 @@ class StressTestRunner:
     def run_full_analysis(self) -> StressTestReport:
         """Run complete stress test analysis."""
         self.load_specs()
+        assert self.appspec is not None
+        assert self.testspec is not None
 
         self.report = StressTestReport(
             project_name=self.appspec.name,
@@ -208,6 +214,10 @@ class StressTestRunner:
 
     def _validate_cross_references(self) -> None:
         """Validate that TestSpec references match AppSpec."""
+        assert self.appspec is not None
+        assert self.testspec is not None
+        assert self.report is not None
+
         entity_fields: dict[str, set[str]] = {}
         entity_field_types: dict[str, dict[str, str]] = {}
 
@@ -239,6 +249,7 @@ class StressTestRunner:
         entity_field_types: dict[str, dict[str, str]],
     ) -> None:
         """Validate a field reference target."""
+        assert self.report is not None
         # Parse "field:Entity.field_name"
         field_ref = target.split(":", 1)[1]
         if "." not in field_ref:
@@ -280,6 +291,9 @@ class StressTestRunner:
 
     def _validate_field_types(self) -> None:
         """Validate field type consistency."""
+        assert self.testspec is not None
+        assert self.report is not None
+
         for flow in self.testspec.flows:
             for i, step in enumerate(flow.steps):
                 location = f"{flow.id}.step[{i}]"
@@ -302,6 +316,10 @@ class StressTestRunner:
 
     def _validate_surfaces(self) -> None:
         """Validate surface references."""
+        assert self.appspec is not None
+        assert self.testspec is not None
+        assert self.report is not None
+
         surface_names = {s.name for s in self.appspec.surfaces}
         self.report.surfaces_analyzed.update(surface_names)
 
@@ -328,6 +346,9 @@ class StressTestRunner:
 
     def _validate_navigation_targets(self) -> None:
         """Validate navigation targets."""
+        assert self.testspec is not None
+        assert self.report is not None
+
         for flow in self.testspec.flows:
             for i, step in enumerate(flow.steps):
                 location = f"{flow.id}.step[{i}]"
@@ -351,6 +372,10 @@ class StressTestRunner:
         corresponding surface (create/edit). If the testspec fills a field not
         in the surface, it will fail at runtime.
         """
+        assert self.appspec is not None
+        assert self.testspec is not None
+        assert self.report is not None
+
         from dazzle.core.ir import FieldModifier
 
         # Build index of surface fields by entity and mode
@@ -361,11 +386,11 @@ class StressTestRunner:
             if not surface.entity_ref or not surface.mode:
                 continue
 
-            entity_name = surface.entity_ref
-            mode = surface.mode.value
+            surf_entity = surface.entity_ref
+            surface_mode = surface.mode.value
 
-            if entity_name not in surface_fields:
-                surface_fields[entity_name] = {}
+            if surf_entity not in surface_fields:
+                surface_fields[surf_entity] = {}
 
             # Collect field names from surface sections
             field_names: set[str] = set()
@@ -377,7 +402,7 @@ class StressTestRunner:
                     else:
                         field_names.add(element.field_name)
 
-            surface_fields[entity_name][mode] = field_names
+            surface_fields[surf_entity][surface_mode] = field_names
 
         # Build index of field properties
         field_info: dict[str, dict[str, Any]] = {}
@@ -441,7 +466,6 @@ class StressTestRunner:
                 # Check if this entity/mode has surface definition
                 if step_entity == entity_name and surface_field_set:
                     if step_field not in surface_field_set:
-                        info = field_info.get(field_ref, {})
                         self.report.add_gap(
                             Gap(
                                 category=GapCategory.MISSING_FIELD,
@@ -461,13 +485,13 @@ class StressTestRunner:
                         )
 
                 # Also flag auto-generated fields
-                info = field_info.get(field_ref)
-                if info and info["is_auto"]:
+                auto_info: dict[str, Any] | None = field_info.get(field_ref)
+                if auto_info and auto_info["is_auto"]:
                     self.report.add_gap(
                         Gap(
                             category=GapCategory.SEMANTIC_MISMATCH,
                             location=location,
-                            description=f"Field '{info['name']}' is auto-generated but testspec tries to fill it",
+                            description=f"Field '{auto_info['name']}' is auto-generated but testspec tries to fill it",
                             severity="high",
                             suggestion="Remove FILL step for auto-generated fields",
                         )

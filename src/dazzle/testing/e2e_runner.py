@@ -364,7 +364,7 @@ class E2ERunner:
                     # Log but don't fail - test mode might not be enabled
                     print(f"Warning: Could not reset test data: {e}")
 
-            def seed_sync(self, fixtures: list) -> None:
+            def seed_sync(self, fixtures: list[Any]) -> None:
                 """Seed fixtures by calling /__test__/seed endpoint."""
                 import urllib.request
 
@@ -441,10 +441,10 @@ class E2ERunner:
                         # Paginated response: {"items": [...], "total": N, ...}
                         if isinstance(data, dict):
                             if "total" in data:
-                                return data["total"]
+                                return int(data["total"])
                             if "items" in data:
                                 return len(data["items"])
-                            return data.get("count", 0)
+                            return int(data.get("count", 0))
                         return 0
                 except Exception:
                     return 0

@@ -54,7 +54,7 @@ class TestCoverage:
     events_total: int = 0
     processes_total: int = 0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "entities": sorted(self.entities_covered),
             "entities_total": self.entities_total,
@@ -79,10 +79,10 @@ class GeneratedTestSuite:
     dsl_hash: str
     generated_at: str
     project_name: str
-    designs: list[dict]
+    designs: list[dict[str, Any]]
     coverage: TestCoverage
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "version": self.version,
             "dsl_hash": self.dsl_hash,
@@ -233,7 +233,7 @@ class DSLTestGenerator:
     # Entity Tests
     # =========================================================================
 
-    def _generate_entity_tests(self, entity: EntitySpec) -> list[dict]:
+    def _generate_entity_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
         """Generate CRUD and validation tests for an entity."""
         tests = []
 
@@ -378,9 +378,9 @@ class DSLTestGenerator:
     # State Machine Tests
     # =========================================================================
 
-    def _generate_state_machine_tests(self, entity: EntitySpec) -> list[dict]:
+    def _generate_state_machine_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
         """Generate state machine transition tests."""
-        tests = []
+        tests: list[dict[str, Any]] = []
         sm = entity.state_machine
         if not sm:
             return tests
@@ -466,7 +466,7 @@ class DSLTestGenerator:
     # Persona Tests
     # =========================================================================
 
-    def _generate_persona_tests(self, persona: PersonaSpec) -> list[dict]:
+    def _generate_persona_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
         """Generate access control tests for a persona."""
         tests = []
         persona_id = persona.id  # PersonaSpec uses 'id' not 'name'
@@ -528,7 +528,7 @@ class DSLTestGenerator:
     # Workspace Tests
     # =========================================================================
 
-    def _generate_workspace_tests(self, workspace: WorkspaceSpec) -> list[dict]:
+    def _generate_workspace_tests(self, workspace: WorkspaceSpec) -> list[dict[str, Any]]:
         """Generate navigation and access tests for a workspace.
 
         Workspace tests use Playwright for browser-based testing but are Tier 1
@@ -608,7 +608,7 @@ class DSLTestGenerator:
     # Event Tests
     # =========================================================================
 
-    def _generate_event_tests(self, event: EventSpec) -> list[dict]:
+    def _generate_event_tests(self, event: EventSpec) -> list[dict[str, Any]]:
         """Generate event emission and handling tests."""
         tests = []
 
@@ -668,7 +668,7 @@ class DSLTestGenerator:
     # Process Tests
     # =========================================================================
 
-    def _generate_process_tests(self, process: ProcessSpec) -> list[dict]:
+    def _generate_process_tests(self, process: ProcessSpec) -> list[dict[str, Any]]:
         """Generate workflow execution tests."""
         tests = []
 
@@ -763,11 +763,11 @@ class DSLTestGenerator:
         title: str,
         description: str,
         trigger: str,
-        steps: list[dict],
+        steps: list[dict[str, Any]],
         entities: list[str] | None = None,
         persona: str | None = None,
         tags: list[str] | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Create a test design dict."""
         return {
             "test_id": test_id,
@@ -786,7 +786,7 @@ class DSLTestGenerator:
             "created_at": datetime.now().isoformat(),
         }
 
-    def _generate_entity_data(self, entity: EntitySpec) -> dict:
+    def _generate_entity_data(self, entity: EntitySpec) -> dict[str, Any]:
         """Generate valid test data for an entity."""
         from dazzle.core.ir.fields import FieldTypeKind
 
@@ -807,7 +807,9 @@ class DSLTestGenerator:
 
         return data
 
-    def _generate_parent_setup_steps(self, required_refs: list[tuple[str, str, str]]) -> list[dict]:
+    def _generate_parent_setup_steps(
+        self, required_refs: list[tuple[str, str, str]]
+    ) -> list[dict[str, Any]]:
         """Generate setup steps that create parent entities for required refs.
 
         For each required ref, we:
@@ -842,7 +844,7 @@ class DSLTestGenerator:
 
     def _generate_entity_data_with_refs(
         self, entity: EntitySpec, required_refs: list[tuple[str, str, str]]
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Generate entity data including reference field placeholders.
 
         Args:
@@ -914,7 +916,7 @@ class DSLTestGenerator:
         else:
             return f"test_{field.name}{suffix}"
 
-    def _generate_event_payload(self, event: EventSpec) -> dict:
+    def _generate_event_payload(self, event: EventSpec) -> dict[str, Any]:
         """Generate test payload for an event."""
         payload = {}
 
@@ -923,13 +925,13 @@ class DSLTestGenerator:
 
         return payload
 
-    def _generate_event_field_value(self, field) -> Any:
+    def _generate_event_field_value(self, field: Any) -> Any:
         """Generate test value for an event field."""
         import uuid as uuid_module
 
         # EventFieldSpec uses 'field_type', FieldSpec uses 'type'
-        type_name = getattr(field, "field_type", None) or getattr(field, "type", "str")
-        if hasattr(type_name, "kind"):
+        type_name: Any = getattr(field, "field_type", None) or getattr(field, "type", "str")
+        if type_name is not None and hasattr(type_name, "kind"):
             type_name = type_name.kind.value
         type_name = str(type_name).lower()
 
@@ -954,8 +956,8 @@ class DSLTestGenerator:
 
         for inp in process.inputs or []:
             # Process inputs may use 'field_type' or 'type'
-            type_name = getattr(inp, "field_type", None) or getattr(inp, "type", "str")
-            if hasattr(type_name, "kind"):
+            type_name: Any = getattr(inp, "field_type", None) or getattr(inp, "type", "str")
+            if type_name is not None and hasattr(type_name, "kind"):
                 type_name = type_name.kind.value
             type_name = str(type_name).lower()
 

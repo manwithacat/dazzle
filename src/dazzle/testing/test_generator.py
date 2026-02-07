@@ -128,7 +128,7 @@ class TestGenerator:
         self.entities: dict[str, EntityDef] = {}
         self.personas: list[PersonaDef] = []
 
-    def close(self):
+    def close(self) -> None:
         self.client.close()
 
     def load_spec(self) -> bool:
@@ -155,7 +155,7 @@ class TestGenerator:
             print(f"Error loading spec: {e}")
             return False
 
-    def _parse_entity(self, data: dict) -> EntityDef:
+    def _parse_entity(self, data: dict[str, Any]) -> EntityDef:
         """Parse entity data into EntityDef."""
         fields = []
         state_field = None
@@ -187,7 +187,7 @@ class TestGenerator:
             state_values=state_values,
         )
 
-    def generate_crud_tests(self, entity_name: str) -> list[dict]:
+    def generate_crud_tests(self, entity_name: str) -> list[dict[str, Any]]:
         """Generate CRUD tests for an entity."""
         entity = self.entities.get(entity_name)
         if not entity:
@@ -255,7 +255,7 @@ class TestGenerator:
 
         return tests
 
-    def generate_state_machine_tests(self, entity_name: str) -> list[dict]:
+    def generate_state_machine_tests(self, entity_name: str) -> list[dict[str, Any]]:
         """Generate state machine transition tests."""
         entity = self.entities.get(entity_name)
         if not entity or not entity.state_field:
@@ -297,7 +297,7 @@ class TestGenerator:
 
         return tests
 
-    def generate_api_health_test(self) -> dict:
+    def generate_api_health_test(self) -> dict[str, Any]:
         """Generate a basic API health test."""
         return {
             "test_id": "API_HEALTH",
@@ -317,7 +317,7 @@ class TestGenerator:
             "status": "accepted",
         }
 
-    def generate_ui_load_test(self) -> dict:
+    def generate_ui_load_test(self) -> dict[str, Any]:
         """Generate a basic UI load test."""
         return {
             "test_id": "UI_LOAD",
@@ -338,7 +338,7 @@ class TestGenerator:
             "status": "accepted",
         }
 
-    def generate_all_tests(self) -> list[dict]:
+    def generate_all_tests(self) -> list[dict[str, Any]]:
         """Generate all tests for the app."""
         tests = []
 
@@ -354,7 +354,7 @@ class TestGenerator:
         return tests
 
 
-def generate_tests_for_project(project_path: Path, api_port: int = 8000) -> dict:
+def generate_tests_for_project(project_path: Path, api_port: int = 8000) -> dict[str, Any]:
     """Generate tests for a project from its running server."""
     generator = TestGenerator(f"http://localhost:{api_port}")
 
@@ -376,7 +376,7 @@ def generate_tests_for_project(project_path: Path, api_port: int = 8000) -> dict
         generator.close()
 
 
-def save_generated_tests(project_path: Path, tests: dict):
+def save_generated_tests(project_path: Path, tests: dict[str, Any]) -> Path:
     """Save generated tests to the project."""
     output_dir = project_path / "dsl" / "tests"
     output_dir.mkdir(parents=True, exist_ok=True)

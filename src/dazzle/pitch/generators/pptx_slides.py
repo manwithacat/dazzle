@@ -1252,9 +1252,9 @@ def _build_extra_slide(
         row_gap = 0.3
         for idx, item in enumerate(items):
             col = idx % col_count
-            row = idx // col_count
+            row_idx = idx // col_count
             x = margin + col * (card_w + gap)
-            cy = y + row * (card_h + row_gap)
+            cy = y + row_idx * (card_h + row_gap)
             if cy + card_h > CONTENT_BOTTOM:
                 remaining = len(items) - idx
                 logger.warning(f"Cards layout: truncated {remaining} cards due to overflow")
@@ -1288,10 +1288,10 @@ def _build_extra_slide(
             # Replace visual indicator shortcodes in cell text
             _indicator_map = {"[yes]": "\u2713", "[no]": "\u2717", "[partial]": "\u25d0"}
             for row in rows:
-                for ci, cell in enumerate(row):
+                for ci, cell_text in enumerate(row):
                     for code, symbol in _indicator_map.items():
-                        cell = cell.replace(code, symbol)
-                    row[ci] = cell
+                        cell_text = cell_text.replace(code, symbol)
+                    row[ci] = cell_text
             _add_table(
                 slide,
                 Inches(0.8),
