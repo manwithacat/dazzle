@@ -1359,6 +1359,18 @@ def handle_discovery(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# User Profile Handler
+# =============================================================================
+
+
+def handle_user_profile(arguments: dict[str, Any]) -> str:
+    """Handle user profile operations."""
+    from .handlers.user_profile import handle_user_profile as _handle
+
+    return _handle(arguments)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1383,6 +1395,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,
+    "user_profile": handle_user_profile,
 }
 
 

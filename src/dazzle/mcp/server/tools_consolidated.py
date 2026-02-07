@@ -929,6 +929,42 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # User Profile (adaptive persona inference)
+        # =====================================================================
+        Tool(
+            name="user_profile",
+            description=(
+                "User profile for adaptive persona inference. "
+                "Operations: observe (analyze recent tool invocations), "
+                "observe_message (analyze user message vocabulary), "
+                "get (return current profile context), "
+                "reset (delete and return fresh default)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["observe", "observe_message", "get", "reset"],
+                        "description": "Operation to perform",
+                    },
+                    "message_text": {
+                        "type": "string",
+                        "description": "User message text (for observe_message)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max invocations to analyze (for observe; default: 50)",
+                    },
+                    "since_minutes": {
+                        "type": "integer",
+                        "description": "Only analyze invocations from last N minutes (for observe; default: 30)",
+                    },
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Bootstrap (entry point for naive app requests)
         # =====================================================================
         Tool(

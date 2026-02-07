@@ -196,6 +196,15 @@ async def list_resources() -> list[Resource]:
         )
     )
 
+    resources.append(
+        Resource(
+            uri=AnyUrl("dazzle://user/profile"),
+            name="User Profile",
+            description="Adaptive user profile with scored dimensions (technical depth, domain clarity, UX focus) and LLM guidance for adjusting communication register",
+            mimeType="application/json",
+        )
+    )
+
     # Add project-specific resources if we have an active project
     project_path = get_active_project_path()
     if project_path and (project_path / "dazzle.toml").exists():
@@ -286,6 +295,12 @@ async def read_resource(uri: str) -> str:
         ]
         result = {name: get_workflow_guide(name) for name in workflows}
         return json.dumps(result, indent=2)
+
+    elif uri == "dazzle://user/profile":
+        from dazzle.mcp.user_profile import load_profile, profile_to_context
+
+        profile = load_profile()
+        return json.dumps(profile_to_context(profile), indent=2)
 
     # Project resources
     elif uri.startswith("dazzle://project/"):

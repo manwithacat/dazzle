@@ -46,6 +46,12 @@ def create_static_resources() -> list[dict[str, Any]]:
             "description": "What the runtime renders for each DSL construct: DataTable sort/filter/search, attention signals, persona variants, form widgets",
             "mimeType": "text/markdown",
         },
+        {
+            "uri": "dazzle://user/profile",
+            "name": "User Profile",
+            "description": "Adaptive user profile with scored dimensions (technical depth, domain clarity, UX focus) and LLM guidance for adjusting communication register",
+            "mimeType": "application/json",
+        },
     ]
 
 
