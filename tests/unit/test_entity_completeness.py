@@ -424,13 +424,17 @@ class TestBuildEntityCompletenessMission:
         )
 
     def test_completion_on_done(self) -> None:
+        from dazzle.agent.missions._shared import make_stagnation_completion
+
+        completion = make_stagnation_completion(6, "test")
         action = AgentAction(type=ActionType.DONE, success=True)
-        assert mission_completion_triggers_done(action)
+        assert completion(action, []) is True
 
     def test_stagnation_at_6_steps(self) -> None:
-        from dazzle.agent.missions.entity_completeness import _entity_completeness_completion
+        from dazzle.agent.missions._shared import make_stagnation_completion
         from dazzle.agent.models import ActionResult, PageState, Step
 
+        completion = make_stagnation_completion(6, "test")
         action = AgentAction(type=ActionType.NAVIGATE, target="/test")
         history = []
         for i in range(6):
@@ -442,12 +446,13 @@ class TestBuildEntityCompletenessMission:
                     step_number=i + 1,
                 )
             )
-        assert _entity_completeness_completion(action, history) is True
+        assert completion(action, history) is True
 
     def test_no_stagnation_with_tool_calls(self) -> None:
-        from dazzle.agent.missions.entity_completeness import _entity_completeness_completion
+        from dazzle.agent.missions._shared import make_stagnation_completion
         from dazzle.agent.models import ActionResult, PageState, Step
 
+        completion = make_stagnation_completion(6, "test")
         action = AgentAction(type=ActionType.NAVIGATE, target="/test")
         history = []
         for i in range(6):
@@ -460,10 +465,4 @@ class TestBuildEntityCompletenessMission:
                     step_number=i + 1,
                 )
             )
-        assert _entity_completeness_completion(action, history) is False
-
-
-def mission_completion_triggers_done(action: AgentAction) -> bool:
-    from dazzle.agent.missions.entity_completeness import _entity_completeness_completion
-
-    return _entity_completeness_completion(action, [])
+        assert completion(action, history) is False

@@ -9,9 +9,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from dazzle.agent.core import Mission
+from dazzle.agent.missions._shared import build_dsl_summary as _build_dsl_summary
 from dazzle.agent.missions.discovery import (
     _auto_prefix,
-    _build_dsl_summary,
     _build_persona_context,
     build_discovery_mission,
 )

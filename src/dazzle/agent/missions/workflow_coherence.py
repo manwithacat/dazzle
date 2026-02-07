@@ -19,7 +19,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..core import AgentTool, Mission
-from ..models import ActionType, AgentAction, Step
+from ._shared import (
+    build_dsl_summary,
+    is_step_kind,
+    is_trigger_kind,
+    make_observe_gap_tool,
+    make_query_dsl_tool,
+    make_stagnation_completion,
+)
 
 logger = logging.getLogger("dazzle.agent.missions.workflow_coherence")
 
@@ -95,11 +102,8 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
     # Check each process
     for proc in processes:
         for step in getattr(proc, "steps", []):
-            kind = getattr(step, "kind", None)
-            kind_str = str(kind) if kind is not None else ""
-
             # Check human_task steps reference existing surfaces
-            if kind_str == "human_task" or kind_str == "StepKind.HUMAN_TASK":
+            if is_step_kind(step, "human_task"):
                 human_task = getattr(step, "human_task", None)
                 if human_task:
                     surface_ref = getattr(human_task, "surface", None)
@@ -115,7 +119,7 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
                         )
 
             # Check subprocess steps reference existing processes
-            if kind_str == "subprocess" or kind_str == "StepKind.SUBPROCESS":
+            if is_step_kind(step, "subprocess"):
                 subprocess_ref = getattr(step, "subprocess", None)
                 if subprocess_ref and subprocess_ref not in process_names:
                     report.gaps.append(
@@ -129,36 +133,30 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
 
         # Check entity_status_transition triggers reference entities with state machines
         trigger = getattr(proc, "trigger", None)
-        if trigger:
-            trigger_kind = getattr(trigger, "kind", None)
-            trigger_kind_str = str(trigger_kind) if trigger_kind is not None else ""
-            if (
-                trigger_kind_str == "entity_status_transition"
-                or trigger_kind_str == "ProcessTriggerKind.ENTITY_STATUS_TRANSITION"
-            ):
-                entity_name = getattr(trigger, "entity_name", None)
-                if entity_name:
-                    entity = entity_map.get(entity_name)
-                    if not entity:
-                        report.gaps.append(
-                            WorkflowGap(
-                                gap_type="trigger_no_state_machine",
-                                severity="high",
-                                description=f"Process '{proc.name}' trigger references entity '{entity_name}' which does not exist",
-                                process_name=proc.name,
-                                entity_name=entity_name,
-                            )
+        if trigger and is_trigger_kind(trigger, "entity_status_transition"):
+            entity_name = getattr(trigger, "entity_name", None)
+            if entity_name:
+                entity = entity_map.get(entity_name)
+                if not entity:
+                    report.gaps.append(
+                        WorkflowGap(
+                            gap_type="trigger_no_state_machine",
+                            severity="high",
+                            description=f"Process '{proc.name}' trigger references entity '{entity_name}' which does not exist",
+                            process_name=proc.name,
+                            entity_name=entity_name,
                         )
-                    elif not getattr(entity, "state_machine", None):
-                        report.gaps.append(
-                            WorkflowGap(
-                                gap_type="trigger_no_state_machine",
-                                severity="high",
-                                description=f"Process '{proc.name}' trigger references entity '{entity_name}' which has no state machine",
-                                process_name=proc.name,
-                                entity_name=entity_name,
-                            )
+                    )
+                elif not getattr(entity, "state_machine", None):
+                    report.gaps.append(
+                        WorkflowGap(
+                            gap_type="trigger_no_state_machine",
+                            severity="high",
+                            description=f"Process '{proc.name}' trigger references entity '{entity_name}' which has no state machine",
+                            process_name=proc.name,
+                            entity_name=entity_name,
                         )
+                    )
 
     # Check stories have implementing processes
     for story in stories:
@@ -203,14 +201,13 @@ def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
 
         steps_coverage = []
         for step in getattr(proc, "steps", []):
-            kind = getattr(step, "kind", None)
-            kind_str = str(kind) if kind is not None else ""
+            kind_str = str(getattr(step, "kind", ""))
             step_info: dict[str, Any] = {
                 "name": step.name,
                 "kind": kind_str,
             }
 
-            if kind_str == "human_task" or kind_str == "StepKind.HUMAN_TASK":
+            if is_step_kind(step, "human_task"):
                 human_task = getattr(step, "human_task", None)
                 if human_task:
                     surface_ref = getattr(human_task, "surface", None)
@@ -219,7 +216,7 @@ def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
                         surface_ref in surface_names if surface_ref else False
                     )
 
-            if kind_str == "subprocess" or kind_str == "StepKind.SUBPROCESS":
+            if is_step_kind(step, "subprocess"):
                 subprocess_ref = getattr(step, "subprocess", None)
                 step_info["subprocess"] = subprocess_ref
                 step_info["subprocess_exists"] = (
@@ -306,26 +303,6 @@ def _make_list_workflow_gaps_tool(report: WorkflowCoherenceReport) -> AgentTool:
 
 
 # =============================================================================
-# Completion Criteria
-# =============================================================================
-
-
-def _workflow_coherence_completion(action: AgentAction, history: list[Step]) -> bool:
-    """Complete on DONE or 6-step stagnation (shorter than persona mode)."""
-    if action.type == ActionType.DONE:
-        return True
-
-    if len(history) >= 6:
-        recent = history[-6:]
-        tool_calls = sum(1 for s in recent if s.action.type == ActionType.TOOL)
-        if tool_calls == 0:
-            logger.info("Workflow coherence stagnation: no tool calls in last 6 steps")
-            return True
-
-    return False
-
-
-# =============================================================================
 # System Prompt
 # =============================================================================
 
@@ -391,13 +368,11 @@ def build_workflow_coherence_mission(
     Returns:
         Mission configured for workflow coherence verification
     """
-    from .discovery import _build_dsl_summary, _make_observe_gap_tool, _make_query_dsl_tool
-
     # Run static analysis
     report = _static_workflow_analysis(appspec)
 
     # Build system prompt
-    dsl_summary = _build_dsl_summary(appspec)
+    dsl_summary = build_dsl_summary(appspec)
     system_prompt = WORKFLOW_COHERENCE_PROMPT.format(
         gap_summary=report.to_summary(),
         dsl_summary=dsl_summary,
@@ -405,8 +380,8 @@ def build_workflow_coherence_mission(
 
     # Build tools
     tools = [
-        _make_observe_gap_tool(kg_store),
-        _make_query_dsl_tool(appspec),
+        make_observe_gap_tool(kg_store),
+        make_query_dsl_tool(appspec),
         _make_check_process_coverage_tool(appspec),
         _make_list_workflow_gaps_tool(report),
     ]
@@ -415,7 +390,7 @@ def build_workflow_coherence_mission(
         name="workflow_coherence",
         system_prompt=system_prompt,
         tools=tools,
-        completion_criteria=_workflow_coherence_completion,
+        completion_criteria=make_stagnation_completion(6, "Workflow coherence"),
         max_steps=max_steps,
         token_budget=token_budget,
         start_url=base_url,

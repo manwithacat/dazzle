@@ -20,78 +20,20 @@ import logging
 from typing import Any
 
 from ..core import AgentTool, Mission
-from ..models import ActionType, AgentAction, Step
+from ._shared import (
+    build_dsl_summary,
+    get_surface_entity,
+    make_observe_gap_tool,
+    make_query_dsl_tool,
+    make_stagnation_completion,
+)
 
 logger = logging.getLogger("dazzle.agent.missions.discovery")
 
 
 # =============================================================================
-# DSL Summary Builder
+# Persona Context
 # =============================================================================
-
-
-def _build_dsl_summary(appspec: Any) -> str:
-    """
-    Build a compact DSL summary for the system prompt.
-
-    Targets ~2-4k tokens. Gives the agent enough context to recognize
-    what should exist without overwhelming it.
-    """
-    lines: list[str] = []
-
-    # Entities with key fields
-    lines.append("### Entities")
-    entities = appspec.domain.entities if hasattr(appspec.domain, "entities") else []
-    for entity in entities:
-        field_names = [f.name for f in getattr(entity, "fields", [])][:8]
-        lines.append(f"- **{entity.name}** ({entity.title}): {', '.join(field_names)}")
-        # Note state machine if present
-        sm = getattr(entity, "state_machine", None)
-        if sm and getattr(sm, "states", None):
-            state_names = [s if isinstance(s, str) else s.name for s in sm.states][:6]
-            lines.append(f"  States: {' → '.join(state_names)}")
-
-    # Surfaces with mode and entity
-    lines.append("\n### Surfaces")
-    for surface in appspec.surfaces[:40]:
-        entity_ref = ""
-        if hasattr(surface, "entity") and surface.entity:
-            entity_ref = f" → {surface.entity}"
-        mode = getattr(surface, "mode", "unknown")
-        lines.append(f"- **{surface.name}** ({mode}{entity_ref}): {surface.title or surface.name}")
-
-    # Workspaces
-    if appspec.workspaces:
-        lines.append("\n### Workspaces")
-        for ws in appspec.workspaces[:15]:
-            regions = getattr(ws, "regions", [])
-            region_names = [r.name for r in regions][:5]
-            lines.append(f"- **{ws.name}**: regions=[{', '.join(region_names)}]")
-
-    # Personas
-    if appspec.personas:
-        lines.append("\n### Personas")
-        for p in appspec.personas[:10]:
-            p_name = getattr(p, "name", None) or getattr(p, "id", "unknown")
-            desc = getattr(p, "description", "")[:60]
-            lines.append(f"- **{p_name}**: {desc}")
-
-    # Processes (brief)
-    processes = getattr(appspec, "processes", [])
-    if processes:
-        lines.append("\n### Processes")
-        for proc in processes[:10]:
-            step_count = len(getattr(proc, "steps", []))
-            lines.append(f"- **{proc.name}**: {step_count} steps")
-
-    # Experiences (brief)
-    if appspec.experiences:
-        lines.append("\n### Experiences")
-        for exp in appspec.experiences[:10]:
-            step_count = len(getattr(exp, "steps", []))
-            lines.append(f"- **{exp.name}** ({exp.title or exp.name}): {step_count} steps")
-
-    return "\n".join(lines)
 
 
 def _build_persona_context(
@@ -134,204 +76,8 @@ def _auto_prefix(kg_store: Any, node_id: str, known_prefixes: tuple[str, ...]) -
 
 
 # =============================================================================
-# Discovery Tools
+# Discovery-Specific Tools
 # =============================================================================
-
-
-def _make_observe_gap_tool(
-    kg_store: Any | None,
-) -> AgentTool:
-    """
-    Tool: observe_gap — record a capability gap.
-
-    Returns an Observation dict that the agent core will add to the transcript.
-    """
-
-    def observe_gap(
-        category: str = "gap",
-        severity: str = "medium",
-        title: str = "",
-        description: str = "",
-        location: str = "",
-        related_entities: list[str] | None = None,
-    ) -> dict[str, Any]:
-        # Validate severity
-        valid_severities = {"critical", "high", "medium", "low", "info"}
-        if severity not in valid_severities:
-            severity = "medium"
-
-        # Validate category
-        valid_categories = {
-            "missing_crud",
-            "workflow_gap",
-            "navigation_gap",
-            "ux_issue",
-            "access_gap",
-            "data_gap",
-            "gap",
-        }
-        if category not in valid_categories:
-            category = "gap"
-
-        obs: dict[str, Any] = {
-            "category": category,
-            "severity": severity,
-            "title": title,
-            "description": description,
-            "location": location,
-            "related_artefacts": related_entities or [],
-        }
-
-        # If we have a KG, try adjacency check
-        if kg_store and related_entities:
-            adjacency_notes: list[str] = []
-            for entity_id in related_entities[:3]:
-                # Prefix if not already prefixed
-                if ":" not in entity_id:
-                    entity_id = f"entity:{entity_id}"
-                ent = kg_store.get_entity(entity_id)
-                if ent:
-                    adjacency_notes.append(f"{entity_id} exists in KG")
-                else:
-                    adjacency_notes.append(f"{entity_id} NOT in KG")
-            obs["metadata"] = {"adjacency": adjacency_notes}
-
-        return {"observation": obs, "recorded": True}
-
-    return AgentTool(
-        name="observe_gap",
-        description=(
-            "Record a capability gap or finding. Categories: missing_crud, workflow_gap, "
-            "navigation_gap, ux_issue, access_gap, data_gap, gap. "
-            "Severities: critical, high, medium, low, info."
-        ),
-        schema={
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string",
-                    "enum": [
-                        "missing_crud",
-                        "workflow_gap",
-                        "navigation_gap",
-                        "ux_issue",
-                        "access_gap",
-                        "data_gap",
-                        "gap",
-                    ],
-                },
-                "severity": {
-                    "type": "string",
-                    "enum": ["critical", "high", "medium", "low", "info"],
-                },
-                "title": {"type": "string", "description": "Short title for the gap"},
-                "description": {
-                    "type": "string",
-                    "description": "What's missing and why it matters",
-                },
-                "location": {
-                    "type": "string",
-                    "description": "URL or surface name where observed",
-                },
-                "related_entities": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "DSL entity/surface names related to this gap",
-                },
-            },
-            "required": ["title", "description"],
-        },
-        handler=observe_gap,
-    )
-
-
-def _make_query_dsl_tool(
-    appspec: Any,
-) -> AgentTool:
-    """
-    Tool: query_dsl — ask about DSL definitions on-demand.
-
-    Lazy context loading: the agent can pull in more DSL detail as needed
-    without it all being in the system prompt.
-    """
-
-    def query_dsl(
-        entity_name: str | None = None,
-        surface_name: str | None = None,
-        query_type: str = "fields",
-    ) -> dict[str, Any]:
-        if entity_name:
-            # Find entity
-            for entity in appspec.domain.entities:
-                if entity.name == entity_name:
-                    result: dict[str, Any] = {
-                        "name": entity.name,
-                        "title": entity.title,
-                        "fields": [],
-                    }
-                    for f in getattr(entity, "fields", []):
-                        field_info: dict[str, str] = {"name": f.name, "type": str(f.type)}
-                        if hasattr(f, "constraints"):
-                            field_info["constraints"] = str(f.constraints)
-                        result["fields"].append(field_info)
-                    sm = getattr(entity, "state_machine", None)
-                    if sm and getattr(sm, "states", None):
-                        result["states"] = [s if isinstance(s, str) else s.name for s in sm.states]
-                        result["transitions"] = [
-                            {"from": t.from_state, "to": t.to_state, "event": t.event}
-                            for t in getattr(sm, "transitions", [])
-                        ]
-                    return result
-            return {"error": f"Entity '{entity_name}' not found"}
-
-        if surface_name:
-            for surface in appspec.surfaces:
-                if surface.name == surface_name:
-                    result = {
-                        "name": surface.name,
-                        "title": surface.title,
-                        "mode": getattr(surface, "mode", "unknown"),
-                        "entity": getattr(surface, "entity", None),
-                    }
-                    sections = getattr(surface, "sections", [])
-                    if sections:
-                        result["sections"] = []
-                        for sec in sections:
-                            sec_info: dict[str, Any] = {"name": sec.name}
-                            fields = getattr(sec, "fields", [])
-                            sec_info["fields"] = [f.name for f in fields][:10]
-                            result["sections"].append(sec_info)
-                    return result
-            return {"error": f"Surface '{surface_name}' not found"}
-
-        return {"error": "Provide entity_name or surface_name"}
-
-    return AgentTool(
-        name="query_dsl",
-        description=(
-            "Look up DSL definition details for an entity or surface. "
-            "Use this to get field lists, state machines, surface sections, etc."
-        ),
-        schema={
-            "type": "object",
-            "properties": {
-                "entity_name": {
-                    "type": "string",
-                    "description": "Entity name to look up",
-                },
-                "surface_name": {
-                    "type": "string",
-                    "description": "Surface name to look up",
-                },
-                "query_type": {
-                    "type": "string",
-                    "enum": ["fields", "states", "sections"],
-                    "description": "What aspect to query",
-                },
-            },
-        },
-        handler=query_dsl,
-    )
 
 
 def _make_check_adjacency_tool(
@@ -412,7 +158,7 @@ def _make_list_surfaces_tool(
     ) -> dict[str, Any]:
         surfaces: list[dict[str, str]] = []
         for surface in appspec.surfaces:
-            entity_ref = getattr(surface, "entity", None)
+            entity_ref = get_surface_entity(surface)
             if entity_filter and entity_ref != entity_filter:
                 continue
             mode = getattr(surface, "mode", "unknown")
@@ -447,31 +193,6 @@ def _make_list_surfaces_tool(
         },
         handler=list_surfaces,
     )
-
-
-# =============================================================================
-# Completion Criteria
-# =============================================================================
-
-
-def _discovery_completion(action: AgentAction, history: list[Step]) -> bool:
-    """
-    Discovery is complete when:
-    1. Agent says DONE, or
-    2. No new observations in last 5 steps (stagnation detection)
-    """
-    if action.type == ActionType.DONE:
-        return True
-
-    # Stagnation: if we've had 8+ steps with no tool invocations recently
-    if len(history) >= 8:
-        recent = history[-8:]
-        tool_calls = sum(1 for s in recent if s.action.type == ActionType.TOOL)
-        if tool_calls == 0:
-            logger.info("Discovery stagnation detected: no tool calls in last 8 steps")
-            return True
-
-    return False
 
 
 # =============================================================================
@@ -550,7 +271,7 @@ def build_discovery_mission(
             logger.warning(f"Could not get capability map for {persona_name}: {e}")
 
     persona_context = _build_persona_context(persona_name, capability_map)
-    dsl_summary = _build_dsl_summary(appspec)
+    dsl_summary = build_dsl_summary(appspec)
 
     system_prompt = DISCOVERY_SYSTEM_PROMPT.format(
         persona_context=persona_context,
@@ -559,8 +280,8 @@ def build_discovery_mission(
 
     # Build mission tools
     tools = [
-        _make_observe_gap_tool(kg_store),
-        _make_query_dsl_tool(appspec),
+        make_observe_gap_tool(kg_store),
+        make_query_dsl_tool(appspec),
         _make_check_adjacency_tool(kg_store),
         _make_list_surfaces_tool(appspec),
     ]
@@ -569,7 +290,7 @@ def build_discovery_mission(
         name=f"discovery:{persona_name}",
         system_prompt=system_prompt,
         tools=tools,
-        completion_criteria=_discovery_completion,
+        completion_criteria=make_stagnation_completion(8, "Discovery"),
         max_steps=max_steps,
         token_budget=token_budget,
         start_url=base_url,

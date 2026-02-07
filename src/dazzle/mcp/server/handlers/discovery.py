@@ -17,7 +17,66 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.agent.transcript import Observation
+
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
+
+
+# =============================================================================
+# Shared Helpers
+# =============================================================================
+
+
+def _load_report_data(
+    project_path: Path,
+    session_id: str | None,
+) -> tuple[dict[str, Any], str] | str:
+    """
+    Find and load a discovery report.
+
+    Returns (data_dict, session_id) on success, or an error JSON string on failure.
+    """
+    report_dir = project_path / ".dazzle" / "discovery"
+
+    if session_id:
+        report_file = report_dir / f"{session_id}.json"
+    else:
+        if not report_dir.exists():
+            return json.dumps({"error": "No discovery reports found"})
+        reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not reports:
+            return json.dumps({"error": "No discovery reports found"})
+        report_file = reports[0]
+        session_id = report_file.stem
+
+    if not report_file.exists():
+        return json.dumps({"error": f"Report not found: {session_id}"})
+
+    try:
+        data = json.loads(report_file.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        return json.dumps({"error": f"Could not read report: {e}"})
+
+    return data, session_id
+
+
+def _deserialize_observations(raw_observations: list[dict[str, Any]]) -> list[Observation]:
+    """Reconstruct Observation objects from serialized dicts."""
+    observations: list[Observation] = []
+    for obs_dict in raw_observations:
+        observations.append(
+            Observation(
+                category=obs_dict.get("category", "gap"),
+                severity=obs_dict.get("severity", "medium"),
+                title=obs_dict.get("title", ""),
+                description=obs_dict.get("description", ""),
+                location=obs_dict.get("location", ""),
+                related_artefacts=obs_dict.get("related_artefacts", []),
+                metadata=obs_dict.get("metadata", {}),
+                step_number=obs_dict.get("step_number", 0),
+            )
+        )
+    return observations
 
 
 def _load_appspec(project_path: Path) -> Any:
@@ -273,33 +332,13 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     observations. Returns the compiled proposals as JSON.
     """
     from dazzle.agent.compiler import NarrativeCompiler
-    from dazzle.agent.transcript import Observation
 
-    session_id = args.get("session_id")
     persona = args.get("persona", "user")
 
-    report_dir = project_path / ".dazzle" / "discovery"
-
-    # Find the report file
-    if session_id:
-        report_file = report_dir / f"{session_id}.json"
-    else:
-        # Use most recent
-        if not report_dir.exists():
-            return json.dumps({"error": "No discovery reports found"})
-        reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not reports:
-            return json.dumps({"error": "No discovery reports found"})
-        report_file = reports[0]
-        session_id = report_file.stem
-
-    if not report_file.exists():
-        return json.dumps({"error": f"Report not found: {session_id}"})
-
-    try:
-        data = json.loads(report_file.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        return json.dumps({"error": f"Could not read report: {e}"})
+    loaded = _load_report_data(project_path, args.get("session_id"))
+    if isinstance(loaded, str):
+        return loaded
+    data, session_id = loaded
 
     raw_observations = data.get("observations", [])
     if not raw_observations:
@@ -311,21 +350,7 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             }
         )
 
-    # Reconstruct Observation objects
-    observations: list[Observation] = []
-    for obs_dict in raw_observations:
-        observations.append(
-            Observation(
-                category=obs_dict.get("category", "gap"),
-                severity=obs_dict.get("severity", "medium"),
-                title=obs_dict.get("title", ""),
-                description=obs_dict.get("description", ""),
-                location=obs_dict.get("location", ""),
-                related_artefacts=obs_dict.get("related_artefacts", []),
-                metadata=obs_dict.get("metadata", {}),
-                step_number=obs_dict.get("step_number", 0),
-            )
-        )
+    observations = _deserialize_observations(raw_observations)
 
     # Get KG store if available
     kg_store = None
@@ -363,33 +388,14 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.agent.compiler import NarrativeCompiler
     from dazzle.agent.emitter import DslEmitter, build_emit_context
-    from dazzle.agent.transcript import Observation
 
-    session_id = args.get("session_id")
     persona = args.get("persona", "user")
     proposal_ids = args.get("proposal_ids")
 
-    report_dir = project_path / ".dazzle" / "discovery"
-
-    # Find the report file
-    if session_id:
-        report_file = report_dir / f"{session_id}.json"
-    else:
-        if not report_dir.exists():
-            return json.dumps({"error": "No discovery reports found"})
-        reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
-        if not reports:
-            return json.dumps({"error": "No discovery reports found"})
-        report_file = reports[0]
-        session_id = report_file.stem
-
-    if not report_file.exists():
-        return json.dumps({"error": f"Report not found: {session_id}"})
-
-    try:
-        data = json.loads(report_file.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        return json.dumps({"error": f"Could not read report: {e}"})
+    loaded = _load_report_data(project_path, args.get("session_id"))
+    if isinstance(loaded, str):
+        return loaded
+    data, session_id = loaded
 
     raw_observations = data.get("observations", [])
     if not raw_observations:
@@ -397,21 +403,7 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             {"session_id": session_id, "results": [], "message": "No observations to emit from"}
         )
 
-    # Reconstruct observations and compile into proposals
-    observations: list[Observation] = []
-    for obs_dict in raw_observations:
-        observations.append(
-            Observation(
-                category=obs_dict.get("category", "gap"),
-                severity=obs_dict.get("severity", "medium"),
-                title=obs_dict.get("title", ""),
-                description=obs_dict.get("description", ""),
-                location=obs_dict.get("location", ""),
-                related_artefacts=obs_dict.get("related_artefacts", []),
-                metadata=obs_dict.get("metadata", {}),
-                step_number=obs_dict.get("step_number", 0),
-            )
-        )
+    observations = _deserialize_observations(raw_observations)
 
     compiler = NarrativeCompiler(persona=persona)
     proposals = compiler.compile(observations)

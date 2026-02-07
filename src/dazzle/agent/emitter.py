@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .compiler import CATEGORY_LABELS, Proposal
+from .compiler import CATEGORY_LABELS, Proposal, infer_crud_action
 
 logger = logging.getLogger("dazzle.agent.emitter")
 
@@ -395,18 +395,7 @@ def _primary_entity(proposal: Proposal) -> str | None:
 
 def _infer_missing_action(proposal: Proposal) -> str:
     """Infer which CRUD action is missing from proposal text."""
-    text = (proposal.title + " " + proposal.narrative).lower()
-    if "delete" in text or "remove" in text:
-        return "delete"
-    if "create" in text or "add" in text or "new" in text:
-        return "create"
-    if "edit" in text or "update" in text or "modify" in text:
-        return "edit"
-    if "list" in text or "browse" in text or "index" in text:
-        return "list"
-    if "view" in text or "detail" in text or "show" in text:
-        return "view"
-    return "CRUD"
+    return infer_crud_action(proposal.title + " " + proposal.narrative)
 
 
 def _unique_name(base: str, existing: list[str]) -> str:

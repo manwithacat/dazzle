@@ -473,15 +473,17 @@ class TestBuildWorkflowCoherenceMission:
         assert mission.context["static_analysis"]["gaps_found"] >= 1
 
     def test_completion_on_done(self) -> None:
-        from dazzle.agent.missions.workflow_coherence import _workflow_coherence_completion
+        from dazzle.agent.missions._shared import make_stagnation_completion
 
+        completion = make_stagnation_completion(6, "test")
         action = AgentAction(type=ActionType.DONE, success=True)
-        assert _workflow_coherence_completion(action, []) is True
+        assert completion(action, []) is True
 
     def test_stagnation_at_6_steps(self) -> None:
-        from dazzle.agent.missions.workflow_coherence import _workflow_coherence_completion
+        from dazzle.agent.missions._shared import make_stagnation_completion
         from dazzle.agent.models import ActionResult, PageState, Step
 
+        completion = make_stagnation_completion(6, "test")
         action = AgentAction(type=ActionType.NAVIGATE, target="/test")
         history = []
         for i in range(6):
@@ -493,7 +495,7 @@ class TestBuildWorkflowCoherenceMission:
                     step_number=i + 1,
                 )
             )
-        assert _workflow_coherence_completion(action, history) is True
+        assert completion(action, history) is True
 
 
 # =============================================================================

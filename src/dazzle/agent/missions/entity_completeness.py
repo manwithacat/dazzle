@@ -16,7 +16,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..core import AgentTool, Mission
-from ..models import ActionType, AgentAction, Step
+from ._shared import (
+    build_dsl_summary,
+    get_surface_entity,
+    is_step_kind,
+    make_observe_gap_tool,
+    make_query_dsl_tool,
+    make_stagnation_completion,
+)
 
 logger = logging.getLogger("dazzle.agent.missions.entity_completeness")
 
@@ -83,7 +90,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
         entity_surface_map[entity.name] = {}
 
     for surface in surfaces:
-        entity_ref = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
+        entity_ref = get_surface_entity(surface)
         if not entity_ref or entity_ref not in entity_surface_map:
             continue
         mode = str(getattr(surface, "mode", "unknown"))
@@ -93,16 +100,14 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
     process_referenced_entities: dict[str, list[str]] = {}  # entity -> [process_names]
     for proc in processes:
         for step in getattr(proc, "steps", []):
-            kind = getattr(step, "kind", None)
-            kind_str = str(kind) if kind is not None else ""
-            if kind_str == "human_task" or kind_str == "StepKind.HUMAN_TASK":
+            if is_step_kind(step, "human_task"):
                 human_task = getattr(step, "human_task", None)
                 if human_task:
                     surface_name = getattr(human_task, "surface", None)
                     # Find entity for this surface
                     for s in surfaces:
                         if s.name == surface_name:
-                            eref = getattr(s, "entity_ref", None) or getattr(s, "entity", None)
+                            eref = get_surface_entity(s)
                             if eref:
                                 process_referenced_entities.setdefault(eref, []).append(proc.name)
 
@@ -182,8 +187,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
             # Check if any surface for this entity has actions (transition UI)
             has_transition_ui = False
             for surface in surfaces:
-                eref = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
-                if eref == entity.name:
+                if get_surface_entity(surface) == entity.name:
                     actions = getattr(surface, "actions", [])
                     if actions:
                         has_transition_ui = True
@@ -230,8 +234,7 @@ def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
 
         coverage: dict[str, list[str]] = {}
         for surface in surfaces:
-            eref = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
-            if eref == entity_name:
+            if get_surface_entity(surface) == entity_name:
                 mode = str(getattr(surface, "mode", "unknown"))
                 coverage.setdefault(mode, []).append(surface.name)
 
@@ -289,8 +292,7 @@ def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
         # Check for surface actions
         entity_surface_actions: set[str] = set()
         for surface in surfaces:
-            eref = getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
-            if eref == entity_name:
+            if get_surface_entity(surface) == entity_name:
                 for action in getattr(surface, "actions", []):
                     action_name = getattr(action, "name", "")
                     if action_name:
@@ -336,26 +338,6 @@ def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
         },
         handler=check_state_transitions,
     )
-
-
-# =============================================================================
-# Completion Criteria
-# =============================================================================
-
-
-def _entity_completeness_completion(action: AgentAction, history: list[Step]) -> bool:
-    """Complete on DONE or 6-step stagnation (shorter than persona mode)."""
-    if action.type == ActionType.DONE:
-        return True
-
-    if len(history) >= 6:
-        recent = history[-6:]
-        tool_calls = sum(1 for s in recent if s.action.type == ActionType.TOOL)
-        if tool_calls == 0:
-            logger.info("Entity completeness stagnation: no tool calls in last 6 steps")
-            return True
-
-    return False
 
 
 # =============================================================================
@@ -418,13 +400,11 @@ def build_entity_completeness_mission(
     Returns:
         Mission configured for entity completeness verification
     """
-    from .discovery import _build_dsl_summary, _make_observe_gap_tool, _make_query_dsl_tool
-
     # Run static analysis
     report = _static_entity_analysis(appspec)
 
     # Build system prompt
-    dsl_summary = _build_dsl_summary(appspec)
+    dsl_summary = build_dsl_summary(appspec)
     system_prompt = ENTITY_COMPLETENESS_PROMPT.format(
         gap_summary=report.to_summary(),
         dsl_summary=dsl_summary,
@@ -432,8 +412,8 @@ def build_entity_completeness_mission(
 
     # Build tools
     tools = [
-        _make_observe_gap_tool(kg_store),
-        _make_query_dsl_tool(appspec),
+        make_observe_gap_tool(kg_store),
+        make_query_dsl_tool(appspec),
         _make_check_crud_coverage_tool(appspec),
         _make_check_state_transitions_tool(appspec),
     ]
@@ -442,7 +422,7 @@ def build_entity_completeness_mission(
         name="entity_completeness",
         system_prompt=system_prompt,
         tools=tools,
-        completion_criteria=_entity_completeness_completion,
+        completion_criteria=make_stagnation_completion(6, "Entity completeness"),
         max_steps=max_steps,
         token_budget=token_budget,
         start_url=base_url,
