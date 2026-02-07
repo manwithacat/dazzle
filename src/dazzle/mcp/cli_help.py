@@ -956,6 +956,64 @@ entity Task "Task":
                 "Add extra_slides for appendix material (case studies, technical architecture)",
             ],
         },
+        "run_discovery": {
+            "name": "Run Capability Discovery",
+            "description": "Find gaps between DSL spec and running app using agent-driven discovery",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Start app in test mode",
+                    "command": "dazzle serve --test-mode",
+                    "notes": "The app must be running for discovery to explore it",
+                },
+                {
+                    "step": 2,
+                    "action": "Check readiness",
+                    "mcp_tool": "discovery(operation='status')",
+                    "notes": "Verifies app is reachable and DSL is valid",
+                },
+                {
+                    "step": 3,
+                    "action": "Run entity completeness analysis",
+                    "mcp_tool": "discovery(operation='run', mode='entity_completeness')",
+                    "notes": "Statically checks CRUD coverage for each entity and state machine transition UI",
+                },
+                {
+                    "step": 4,
+                    "action": "Run workflow coherence analysis",
+                    "mcp_tool": "discovery(operation='run', mode='workflow_coherence')",
+                    "notes": "Checks process/story integrity: human_task surfaces, subprocess refs, trigger validity",
+                },
+                {
+                    "step": 5,
+                    "action": "Optionally run persona walkthrough",
+                    "mcp_tool": "discovery(operation='run', mode='persona')",
+                    "notes": "Open-ended exploration as a persona (requires LLM, costs tokens)",
+                },
+                {
+                    "step": 6,
+                    "action": "Compile findings into proposals",
+                    "mcp_tool": "discovery(operation='compile')",
+                    "notes": "Groups observations by root cause, generates narratives, prioritizes by severity",
+                },
+                {
+                    "step": 7,
+                    "action": "Generate DSL patches",
+                    "mcp_tool": "discovery(operation='emit')",
+                    "notes": "Produces validated DSL fragments to fix discovered gaps",
+                },
+            ],
+            "modes": {
+                "entity_completeness": "Static CRUD coverage + state machine UI analysis (fast, no browser needed)",
+                "workflow_coherence": "Static process/story integrity analysis (fast, no browser needed)",
+                "persona": "Open-ended persona exploration (requires running app + LLM)",
+            },
+            "next_steps": [
+                "Review compiled proposals for accuracy",
+                "Apply emitted DSL patches to your project",
+                "Re-run discovery to verify fixes",
+            ],
+        },
         "troubleshoot": {
             "name": "Troubleshooting Common Issues",
             "issues": [

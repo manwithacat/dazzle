@@ -110,6 +110,10 @@ When helping users, use these MCP tools:
 - `lookup_concept("<pattern>")` - Get specific pattern (crud, dashboard, etc.)
 - `get_cli_help("<command>")` - CLI command documentation
 - `validate_dsl` - Check project for errors
+- `discovery(operation="status")` - Check if capability discovery is available
+- `discovery(operation="run", mode="entity_completeness")` - Find missing CRUD surfaces and state machine UI gaps
+- `discovery(operation="run", mode="workflow_coherence")` - Validate process/story integrity
+- `discovery(operation="run", mode="persona")` - Open-ended persona walkthrough to find UX gaps
 
 ## Common User Requests → Tool to Use
 - "How do I start?" → get_workflow_guide("getting_started")
@@ -121,6 +125,11 @@ When helping users, use these MCP tools:
 - "Something is broken" → get_workflow_guide("troubleshoot")
 - "Create a pitch deck" → get_workflow_guide("pitch_deck") or pitch(operation='scaffold')
 - "Review my pitch" → pitch(operation='review')
+- "Find gaps in my app" → discovery(operation="run", mode="entity_completeness")
+- "Check CRUD coverage" → discovery(operation="run", mode="entity_completeness")
+- "Validate workflows" → discovery(operation="run", mode="workflow_coherence")
+- "Explore as a persona" → discovery(operation="run", mode="persona")
+- "Run discovery" → get_workflow_guide("run_discovery")
 """
 
 

@@ -243,6 +243,25 @@ def lookup_inference(
             all_suggestions.append(suggestion)
             matches += 1
 
+    # Search tool suggestions - MCP tool recommendations
+    matches = 0
+    for pattern in kb.get("tool_suggestions", []):
+        if matches >= max_per_category:
+            break
+        triggers = [t.lower() for t in pattern.get("triggers", [])]
+        if _matches_triggers(query_lower, query_words, triggers):
+            suggestion = {
+                "type": "tool_suggestion",
+                "tool": pattern.get("tool"),
+                "operation": pattern.get("operation"),
+                "suggestion": pattern.get("suggestion"),
+            }
+            mode = pattern.get("mode")
+            if mode:
+                suggestion["mode"] = mode
+            all_suggestions.append(suggestion)
+            matches += 1
+
     results["suggestions"] = all_suggestions
     results["count"] = len(all_suggestions)
 
@@ -318,6 +337,11 @@ def list_all_patterns() -> dict[str, Any]:
     for w in kb.get("workspace_inference", []):
         workspace_triggers.extend(w.get("triggers", []))
 
+    # Tool suggestion triggers
+    tool_suggestion_triggers: list[str] = []
+    for t in kb.get("tool_suggestions", []):
+        tool_suggestion_triggers.extend(t.get("triggers", []))
+
     # Domain summary
     domains: dict[str, list[str]] = {}
     for e in kb.get("domain_entities", []):
@@ -336,6 +360,7 @@ def list_all_patterns() -> dict[str, Any]:
         "surface_triggers": sorted(set(surface_triggers)),
         "workspace_triggers": sorted(set(workspace_triggers)),
         "sitespec_section_triggers": sorted(set(sitespec_section_triggers)),
+        "tool_suggestion_triggers": sorted(set(tool_suggestion_triggers)),
         "spec_phrases": [m.get("phrase") for m in kb.get("spec_language", [])],
         "domains": domains,
         "counts": {
@@ -348,6 +373,7 @@ def list_all_patterns() -> dict[str, Any]:
             "surface_inference": len(kb.get("surface_inference", [])),
             "workspace_inference": len(kb.get("workspace_inference", [])),
             "sitespec_section_inference": len(kb.get("sitespec_section_inference", [])),
+            "tool_suggestions": len(kb.get("tool_suggestions", [])),
         },
     }
 
@@ -366,6 +392,7 @@ def get_pattern_by_id(pattern_id: str) -> dict[str, Any] | None:
         "domain_entities",
         "workflow_templates",
         "sitespec_section_inference",
+        "tool_suggestions",
     ]:
         for pattern in kb.get(category, []):
             if pattern.get("id") == pattern_id:

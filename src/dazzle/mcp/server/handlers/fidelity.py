@@ -139,6 +139,13 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     if lint_warnings:
         result["lint_warnings"] = lint_warnings
 
+    if report.total_gaps > 0:
+        result["discovery_hint"] = (
+            f"{report.total_gaps} fidelity gaps found. "
+            "Use discovery(operation='run', mode='entity_completeness') "
+            "to analyze CRUD coverage gaps, or mode='persona' for deeper UX exploration."
+        )
+
     return json.dumps(result, indent=2)
 
 

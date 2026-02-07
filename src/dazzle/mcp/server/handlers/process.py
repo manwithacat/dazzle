@@ -342,6 +342,13 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
                 f"for the next page."
             )
 
+        if uncovered_count > 0:
+            result["discovery_hint"] = (
+                f"{uncovered_count} stories have no implementing process. "
+                "Use discovery(operation='run', mode='workflow_coherence') "
+                "to analyze process/story integrity and find workflow gaps."
+            )
+
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)

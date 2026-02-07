@@ -1920,3 +1920,43 @@ example = """
 # The markdown file (site/content/pages/about-story.md) can also
 # use :::type directive fences for inline typed sections.
 """
+
+# =============================================================================
+# TOOL SUGGESTIONS
+# =============================================================================
+# These patterns suggest MCP tools when the user's query matches discovery-related intent
+
+[[tool_suggestions]]
+id = "discovery_crud_gaps"
+name = "Find Missing CRUD Surfaces"
+triggers = ["find gaps", "missing crud", "missing surface", "check coverage", "entity completeness", "crud coverage", "incomplete entity"]
+tool = "discovery"
+operation = "run"
+mode = "entity_completeness"
+suggestion = "Use discovery(operation='run', mode='entity_completeness') to statically analyze CRUD surface coverage for each entity and find missing list, create, edit, or view surfaces."
+
+[[tool_suggestions]]
+id = "discovery_workflow_gaps"
+name = "Validate Workflow Integrity"
+triggers = ["workflow gaps", "workflow coherence", "process validation", "story coverage", "missing process", "broken workflow", "validate processes"]
+tool = "discovery"
+operation = "run"
+mode = "workflow_coherence"
+suggestion = "Use discovery(operation='run', mode='workflow_coherence') to check process/story integrity: human_task surface refs, subprocess refs, trigger validity, and story-process coverage."
+
+[[tool_suggestions]]
+id = "discovery_persona"
+name = "Explore App as Persona"
+triggers = ["explore app", "persona walkthrough", "ux gaps", "test as user", "find ux issues", "explore as admin", "navigation gaps"]
+tool = "discovery"
+operation = "run"
+mode = "persona"
+suggestion = "Use discovery(operation='run', mode='persona') for open-ended exploration of the running app as a specific role, identifying UX issues, navigation gaps, and missing functionality."
+
+[[tool_suggestions]]
+id = "discovery_general"
+name = "Run Capability Discovery"
+triggers = ["discovery", "capability discovery", "run discovery", "app gaps", "spec gaps", "dsl vs implementation"]
+tool = "discovery"
+operation = "status"
+suggestion = "Use discovery(operation='status') to check readiness, then discovery(operation='run') with mode='entity_completeness', 'workflow_coherence', or 'persona'. See get_workflow_guide('run_discovery') for the full workflow."

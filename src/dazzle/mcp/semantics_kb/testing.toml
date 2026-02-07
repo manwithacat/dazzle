@@ -3,7 +3,7 @@
 
 [meta]
 file = "testing"
-concept_count = 3
+concept_count = 6
 
 [concepts.e2e_testing]
 category = "Testing"
@@ -35,3 +35,18 @@ related = ["e2e_testing", "semantic_dom"]
 category = "Testing"
 definition = "Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements."
 related = ["e2e_testing", "flowspec"]
+
+[concepts.capability_discovery]
+category = "Testing"
+definition = "Agent-driven capability discovery system that explores a running Dazzle app and identifies gaps between the DSL specification and the actual implementation. Uses the generic agent framework with three modes: persona (open-ended exploration as a role), entity_completeness (static CRUD coverage analysis plus targeted verification), and workflow_coherence (static process/story integrity analysis plus targeted verification). Access via the 'discovery' MCP tool."
+related = ["e2e_testing", "entity_completeness", "workflow_coherence"]
+
+[concepts.entity_completeness]
+category = "Testing"
+definition = "Discovery mode that statically analyzes CRUD surface coverage for each entity and checks for state machine transition UI. Identifies missing list, create, edit, and view surfaces, then guides an agent to verify findings against the running app. Use: discovery(operation='run', mode='entity_completeness')."
+related = ["capability_discovery", "workflow_coherence"]
+
+[concepts.workflow_coherence]
+category = "Testing"
+definition = "Discovery mode that statically analyzes process and story integrity. Checks that process human_task steps reference existing surfaces, subprocess steps reference existing processes, triggers match entities with state machines, and stories have implementing processes. Use: discovery(operation='run', mode='workflow_coherence')."
+related = ["capability_discovery", "entity_completeness"]

@@ -156,37 +156,45 @@ def analyze_patterns(project_root: Path) -> str:
         crud_patterns = detect_crud_patterns(app_spec)
         integration_patterns = detect_integration_patterns(app_spec)
 
-        return json.dumps(
+        crud_list = [
             {
-                "crud_patterns": [
-                    {
-                        "entity": p.entity_name,
-                        "has_create": p.has_create,
-                        "has_list": p.has_list,
-                        "has_detail": p.has_detail,
-                        "has_edit": p.has_edit,
-                        "is_complete": p.is_complete,
-                        "missing_operations": p.missing_operations,
-                        "is_system_managed": p.is_system_managed,
-                    }
-                    for p in crud_patterns
-                ],
-                "integration_patterns": [
-                    {
-                        "name": p.integration_name,
-                        "service": p.service_name,
-                        "has_actions": p.has_actions,
-                        "has_syncs": p.has_syncs,
-                        "action_count": p.action_count,
-                        "sync_count": p.sync_count,
-                        "connected_entities": list(p.connected_entities or []),
-                        "connected_surfaces": list(p.connected_surfaces or []),
-                    }
-                    for p in integration_patterns
-                ],
-            },
-            indent=2,
-        )
+                "entity": p.entity_name,
+                "has_create": p.has_create,
+                "has_list": p.has_list,
+                "has_detail": p.has_detail,
+                "has_edit": p.has_edit,
+                "is_complete": p.is_complete,
+                "missing_operations": p.missing_operations,
+                "is_system_managed": p.is_system_managed,
+            }
+            for p in crud_patterns
+        ]
+        result: dict[str, Any] = {
+            "crud_patterns": crud_list,
+            "integration_patterns": [
+                {
+                    "name": p.integration_name,
+                    "service": p.service_name,
+                    "has_actions": p.has_actions,
+                    "has_syncs": p.has_syncs,
+                    "action_count": p.action_count,
+                    "sync_count": p.sync_count,
+                    "connected_entities": list(p.connected_entities or []),
+                    "connected_surfaces": list(p.connected_surfaces or []),
+                }
+                for p in integration_patterns
+            ],
+        }
+
+        has_incomplete = any(not c["is_complete"] for c in crud_list)
+        if has_incomplete:
+            result["discovery_hint"] = (
+                "Some entities have incomplete CRUD coverage. "
+                "Use discovery(operation='run', mode='entity_completeness') "
+                "for detailed gap analysis with targeted verification."
+            )
+
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
