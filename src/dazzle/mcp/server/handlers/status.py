@@ -109,6 +109,36 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+def get_telemetry_handler(args: dict[str, Any]) -> str:
+    """Get MCP tool call telemetry data."""
+    from ..state import get_knowledge_graph
+
+    graph = get_knowledge_graph()
+    if graph is None:
+        return json.dumps({"error": "Knowledge graph not initialized"})
+
+    stats_only = args.get("stats_only", False)
+    tool_name = args.get("tool_name")
+    since_minutes = args.get("since_minutes")
+
+    result: dict[str, Any] = {"stats": graph.get_tool_stats()}
+
+    if not stats_only:
+        since: float | None = None
+        if since_minutes is not None:
+            import time
+
+            since = time.time() - (since_minutes * 60)
+
+        result["recent"] = graph.get_tool_invocations(
+            limit=args.get("count", 50),
+            tool_name_filter=tool_name,
+            since=since,
+        )
+
+    return json.dumps(result, indent=2)
+
+
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
     from pathlib import Path

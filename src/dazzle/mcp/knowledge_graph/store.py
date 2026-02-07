@@ -215,6 +215,21 @@ class KnowledgeGraph:
                     key TEXT PRIMARY KEY,
                     value TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS tool_invocations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    tool_name TEXT NOT NULL,
+                    operation TEXT,
+                    argument_keys TEXT,
+                    project_path TEXT,
+                    success INTEGER NOT NULL DEFAULT 1,
+                    error_message TEXT,
+                    result_size INTEGER,
+                    duration_ms REAL NOT NULL,
+                    created_at REAL NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_tool_inv_name ON tool_invocations(tool_name);
+                CREATE INDEX IF NOT EXISTS idx_tool_inv_created ON tool_invocations(created_at);
             """
             )
             conn.commit()
@@ -1213,6 +1228,143 @@ class KnowledgeGraph:
             self._close_connection(conn)
 
         return stats
+
+    # =========================================================================
+    # Telemetry
+    # =========================================================================
+
+    def log_tool_invocation(
+        self,
+        *,
+        tool_name: str,
+        operation: str | None = None,
+        argument_keys: list[str] | None = None,
+        project_path: str | None = None,
+        success: bool = True,
+        error_message: str | None = None,
+        result_size: int | None = None,
+        duration_ms: float,
+    ) -> None:
+        """
+        Log a single MCP tool invocation.
+
+        Args:
+            tool_name: Consolidated tool name (e.g. "dsl", "story").
+            operation: Operation within the tool (e.g. "validate").
+            argument_keys: JSON-serializable list of argument key names (never values).
+            project_path: Active project path at call time.
+            success: Whether the call succeeded.
+            error_message: Truncated error message on failure.
+            result_size: Length of the result string in characters.
+            duration_ms: Wall-clock duration in milliseconds.
+        """
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                """
+                INSERT INTO tool_invocations
+                    (tool_name, operation, argument_keys, project_path,
+                     success, error_message, result_size, duration_ms, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    tool_name,
+                    operation,
+                    json.dumps(argument_keys) if argument_keys else None,
+                    project_path,
+                    1 if success else 0,
+                    error_message,
+                    result_size,
+                    duration_ms,
+                    time.time(),
+                ),
+            )
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+
+    def get_tool_invocations(
+        self,
+        limit: int = 50,
+        tool_name_filter: str | None = None,
+        since: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve recent tool invocations.
+
+        Args:
+            limit: Max rows to return.
+            tool_name_filter: Filter to a specific tool name.
+            since: Only return invocations after this Unix timestamp.
+
+        Returns:
+            List of invocation dicts ordered by created_at DESC.
+        """
+        conditions: list[str] = []
+        params: list[Any] = []
+
+        if tool_name_filter:
+            conditions.append("tool_name = ?")
+            params.append(tool_name_filter)
+        if since is not None:
+            conditions.append("created_at >= ?")
+            params.append(since)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
+
+        conn = self._get_connection()
+        try:
+            rows = conn.execute(
+                f"SELECT * FROM tool_invocations {where} ORDER BY created_at DESC LIMIT ?",
+                params,
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            self._close_connection(conn)
+
+    def get_tool_stats(self) -> dict[str, Any]:
+        """
+        Aggregate telemetry statistics.
+
+        Returns:
+            Dict with total_calls and by_tool breakdown including
+            call_count, error_count, avg_duration_ms, max_duration_ms,
+            first_call, and last_call per tool.
+        """
+        conn = self._get_connection()
+        try:
+            total = conn.execute("SELECT COUNT(*) FROM tool_invocations").fetchone()[0]
+            rows = conn.execute(
+                """
+                SELECT
+                    tool_name,
+                    COUNT(*) AS call_count,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS error_count,
+                    AVG(duration_ms) AS avg_duration_ms,
+                    MAX(duration_ms) AS max_duration_ms,
+                    MIN(created_at) AS first_call,
+                    MAX(created_at) AS last_call
+                FROM tool_invocations
+                GROUP BY tool_name
+                ORDER BY call_count DESC
+                """
+            ).fetchall()
+            by_tool = [
+                {
+                    "tool_name": row["tool_name"],
+                    "call_count": row["call_count"],
+                    "error_count": row["error_count"],
+                    "avg_duration_ms": round(row["avg_duration_ms"], 2),
+                    "max_duration_ms": round(row["max_duration_ms"], 2),
+                    "first_call": row["first_call"],
+                    "last_call": row["last_call"],
+                }
+                for row in rows
+            ]
+            return {"total_calls": total, "by_tool": by_tool}
+        finally:
+            self._close_connection(conn)
 
 
 def _get_dazzle_version() -> str:

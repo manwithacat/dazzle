@@ -8,6 +8,7 @@ Each handler routes the 'operation' parameter to existing handler functions.
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -467,6 +468,7 @@ def handle_status(arguments: dict[str, Any]) -> str:
     from .handlers.status import (
         get_dnr_logs_handler,
         get_mcp_status_handler,
+        get_telemetry_handler,
     )
 
     operation = arguments.get("operation")
@@ -478,6 +480,8 @@ def handle_status(arguments: dict[str, Any]) -> str:
     elif operation == "active_project":
         resolved = arguments.get("_resolved_project_path")
         return get_active_project_info(resolved_path=resolved)
+    elif operation == "telemetry":
+        return get_telemetry_handler(arguments)
     else:
         return json.dumps({"error": f"Unknown status operation: {operation}"})
 
@@ -1416,9 +1420,43 @@ async def dispatch_consolidated_tool(
             except Exception:
                 pass  # Fall through to sync resolution
 
-        if inspect.iscoroutinefunction(handler):
-            result = await handler(arguments)
-        else:
-            result = handler(arguments)
-        return str(result) if result is not None else None
+        t0 = time.monotonic()
+        call_ok = True
+        call_error: str | None = None
+        result: str | None = None
+        try:
+            if inspect.iscoroutinefunction(handler):
+                raw = await handler(arguments)
+            else:
+                raw = handler(arguments)
+            result = str(raw) if raw is not None else None
+        except Exception:
+            call_ok = False
+            import traceback
+
+            call_error = traceback.format_exc()[-500:]
+            raise
+        finally:
+            duration_ms = (time.monotonic() - t0) * 1000
+            try:
+                from .state import get_knowledge_graph
+
+                graph = get_knowledge_graph()
+                if graph is not None:
+                    arg_keys = [k for k in arguments if not k.startswith("_")]
+                    proj = arguments.get("_resolved_project_path")
+                    proj_str = str(proj) if proj is not None else None
+                    graph.log_tool_invocation(
+                        tool_name=name,
+                        operation=arguments.get("operation"),
+                        argument_keys=arg_keys or None,
+                        project_path=proj_str,
+                        success=call_ok,
+                        error_message=call_error,
+                        result_size=len(result) if result else None,
+                        duration_ms=duration_ms,
+                    )
+            except Exception:
+                pass  # Never fail the tool call due to telemetry
+        return result
     return None
