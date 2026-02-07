@@ -168,6 +168,14 @@ def select_project(args: dict[str, Any]) -> str:
     set_active_project(project_name)
     project_path = available_projects[project_name]
 
+    # Re-initialize knowledge graph for the new project (isolation fix)
+    try:
+        from ..state import reinit_knowledge_graph
+
+        reinit_knowledge_graph(project_path)
+    except Exception as e:
+        logger.warning(f"Failed to reinit knowledge graph for {project_name}: {e}")
+
     # Return info about the selected project
     result: dict[str, Any] = {
         "status": "selected",

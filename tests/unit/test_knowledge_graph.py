@@ -222,6 +222,135 @@ class TestKnowledgeGraphStore:
         assert stats["entity_types"]["class"] == 1
         assert stats["relation_types"]["contains"] == 1
 
+    def test_inference_type_prefix(self) -> None:
+        """Test that inference: prefix maps to inference type."""
+        graph = KnowledgeGraph(":memory:")
+        entity = graph.create_entity("inference:test_entry", "test_entry")
+        assert entity.entity_type == "inference"
+
+    def test_create_and_resolve_alias(self) -> None:
+        """Test alias creation and resolution."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity("concept:state_machine", "state_machine")
+        graph.create_alias("transitions", "concept:state_machine")
+
+        resolved = graph.resolve_alias("transitions")
+        assert resolved == "concept:state_machine"
+
+        # Non-existent alias
+        assert graph.resolve_alias("nonexistent") is None
+
+    def test_clear_aliases(self) -> None:
+        """Test clearing all aliases."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity("concept:a", "a")
+        graph.create_alias("alias1", "concept:a")
+        graph.create_alias("alias2", "concept:a")
+
+        count = graph.clear_aliases()
+        assert count == 2
+        assert graph.resolve_alias("alias1") is None
+
+    def test_seed_meta(self) -> None:
+        """Test seed metadata get/set."""
+        graph = KnowledgeGraph(":memory:")
+
+        assert graph.get_seed_meta("seed_version") is None
+
+        graph.set_seed_meta("seed_version", "0.21.0.1")
+        assert graph.get_seed_meta("seed_version") == "0.21.0.1"
+
+        # Overwrite
+        graph.set_seed_meta("seed_version", "0.22.0.1")
+        assert graph.get_seed_meta("seed_version") == "0.22.0.1"
+
+    def test_delete_by_metadata_key(self) -> None:
+        """Test bulk deletion by metadata key."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity("concept:a", "a", metadata={"source": "framework"})
+        graph.create_entity("concept:b", "b", metadata={"source": "framework"})
+        graph.create_entity("entity:Task", "Task", metadata={"source": "project"})
+
+        deleted = graph.delete_by_metadata_key("source", "framework")
+        assert deleted == 2
+        assert graph.get_entity("concept:a") is None
+        assert graph.get_entity("entity:Task") is not None
+
+    def test_lookup_concept_direct(self) -> None:
+        """Test concept lookup by direct name."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity(
+            "concept:entity",
+            "entity",
+            metadata={"source": "framework", "definition": "A domain model"},
+        )
+
+        result = graph.lookup_concept("entity")
+        assert result is not None
+        assert result.id == "concept:entity"
+
+    def test_lookup_concept_via_alias(self) -> None:
+        """Test concept lookup via alias."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity("concept:state_machine", "state_machine")
+        graph.create_alias("transitions", "concept:state_machine")
+
+        result = graph.lookup_concept("transitions")
+        assert result is not None
+        assert result.id == "concept:state_machine"
+
+    def test_lookup_concept_pattern(self) -> None:
+        """Test concept lookup falls back to patterns."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity("pattern:crud", "crud", metadata={"source": "framework"})
+
+        result = graph.lookup_concept("crud")
+        assert result is not None
+        assert result.id == "pattern:crud"
+
+    def test_lookup_concept_not_found(self) -> None:
+        """Test concept lookup returns None for unknown terms."""
+        graph = KnowledgeGraph(":memory:")
+        assert graph.lookup_concept("nonexistent") is None
+
+    def test_lookup_inference_matches(self) -> None:
+        """Test inference trigger matching."""
+        graph = KnowledgeGraph(":memory:")
+        graph.create_entity(
+            "inference:field_patterns.status_resolution",
+            "status_resolution",
+            entity_type="inference",
+            metadata={
+                "source": "framework",
+                "category": "field_patterns",
+                "triggers": ["fixed", "resolved", "closed"],
+            },
+        )
+        graph.create_entity(
+            "inference:field_patterns.person_email",
+            "person_email",
+            entity_type="inference",
+            metadata={
+                "source": "framework",
+                "category": "field_patterns",
+                "triggers": ["user", "customer", "person"],
+            },
+        )
+
+        # Should match "resolved"
+        matches = graph.lookup_inference_matches("the ticket is resolved")
+        assert len(matches) == 1
+        assert matches[0].name == "status_resolution"
+
+        # Should match "user"
+        matches = graph.lookup_inference_matches("create a user profile")
+        assert len(matches) == 1
+        assert matches[0].name == "person_email"
+
+        # Should match nothing
+        matches = graph.lookup_inference_matches("something unrelated")
+        assert len(matches) == 0
+
 
 class TestKnowledgeGraphHandlers:
     """Tests for the KnowledgeGraphHandlers MCP tool handlers."""

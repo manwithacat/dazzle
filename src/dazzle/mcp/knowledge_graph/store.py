@@ -14,6 +14,7 @@ import json
 import sqlite3
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -108,6 +109,10 @@ class KnowledgeGraph:
         "denies_persona": "Workspace/surface denies a persona",
         "default_workspace": "Persona's default workspace",
         "region_source": "Workspace region sourced from entity",
+        # Framework knowledge relations
+        "related_concept": "Concept relates to another concept",
+        "suggests_for": "Inference entry suggests for a concept",
+        "exemplifies": "Pattern exemplifies a concept",
     }
 
     # Entity type prefixes
@@ -120,6 +125,7 @@ class KnowledgeGraph:
         "decision:": "decision",
         "pattern:": "pattern",
         "component:": "component",
+        "inference:": "inference",
         # DSL artefact prefixes
         "entity:": "dsl_entity",
         "surface:": "dsl_surface",
@@ -197,6 +203,18 @@ class KnowledgeGraph:
                 CREATE INDEX IF NOT EXISTS idx_relations_source ON relations(source_id);
                 CREATE INDEX IF NOT EXISTS idx_relations_target ON relations(target_id);
                 CREATE INDEX IF NOT EXISTS idx_relations_type ON relations(relation_type);
+
+                CREATE TABLE IF NOT EXISTS aliases (
+                    alias TEXT PRIMARY KEY,
+                    canonical_id TEXT NOT NULL,
+                    FOREIGN KEY (canonical_id) REFERENCES entities(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_aliases_canonical ON aliases(canonical_id);
+
+                CREATE TABLE IF NOT EXISTS seed_meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
             """
             )
             conn.commit()
@@ -827,3 +845,381 @@ class KnowledgeGraph:
             }
         finally:
             self._close_connection(conn)
+
+    # =========================================================================
+    # Alias Management
+    # =========================================================================
+
+    def create_alias(self, alias: str, canonical_id: str) -> None:
+        """Create an alias mapping to a canonical entity ID."""
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO aliases (alias, canonical_id) VALUES (?, ?)",
+                (alias, canonical_id),
+            )
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+
+    def resolve_alias(self, alias: str) -> str | None:
+        """Resolve an alias to its canonical entity ID, or None if not found."""
+        conn = self._get_connection()
+        try:
+            row = conn.execute(
+                "SELECT canonical_id FROM aliases WHERE alias = ?", (alias,)
+            ).fetchone()
+            return row["canonical_id"] if row else None
+        finally:
+            self._close_connection(conn)
+
+    def clear_aliases(self) -> int:
+        """Delete all aliases. Returns number deleted."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute("DELETE FROM aliases")
+            conn.commit()
+            return cursor.rowcount
+        finally:
+            self._close_connection(conn)
+
+    # =========================================================================
+    # Seed Metadata
+    # =========================================================================
+
+    def set_seed_meta(self, key: str, value: str) -> None:
+        """Set a seed metadata key-value pair."""
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                "INSERT OR REPLACE INTO seed_meta (key, value) VALUES (?, ?)",
+                (key, value),
+            )
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+
+    def get_seed_meta(self, key: str) -> str | None:
+        """Get a seed metadata value by key."""
+        conn = self._get_connection()
+        try:
+            row = conn.execute("SELECT value FROM seed_meta WHERE key = ?", (key,)).fetchone()
+            return row["value"] if row else None
+        finally:
+            self._close_connection(conn)
+
+    # =========================================================================
+    # Bulk Operations
+    # =========================================================================
+
+    def delete_by_metadata_key(self, key: str, value: str) -> int:
+        """Delete all entities where metadata contains key=value. Returns count deleted."""
+        conn = self._get_connection()
+        try:
+            # Use JSON extraction to match metadata field
+            cursor = conn.execute(
+                "DELETE FROM entities WHERE json_extract(metadata, ?) = ?",
+                (f"$.{key}", value),
+            )
+            conn.commit()
+            return cursor.rowcount
+        finally:
+            self._close_connection(conn)
+
+    # =========================================================================
+    # Concept & Inference Lookup (for unified KG queries)
+    # =========================================================================
+
+    def lookup_concept(self, term: str) -> Entity | None:
+        """
+        Look up a concept or pattern by name, checking aliases first.
+
+        Args:
+            term: Concept name (e.g., "entity", "wizard", "crud")
+
+        Returns:
+            Entity if found (concept or pattern), None otherwise
+        """
+        normalized = term.lower().replace(" ", "_").replace("-", "_")
+
+        # Try alias resolution first
+        canonical_id = self.resolve_alias(normalized)
+        if canonical_id:
+            entity = self.get_entity(canonical_id)
+            if entity:
+                return entity
+
+        # Try direct concept lookup
+        entity = self.get_entity(f"concept:{normalized}")
+        if entity:
+            return entity
+
+        # Try pattern lookup
+        entity = self.get_entity(f"pattern:{normalized}")
+        if entity:
+            return entity
+
+        return None
+
+    def lookup_inference_matches(
+        self,
+        query: str,
+        limit: int = 20,
+    ) -> list[Entity]:
+        """
+        Find inference entries whose triggers match the query.
+
+        Searches inference entities by matching query words against
+        the triggers stored in metadata.
+
+        Args:
+            query: Search text
+            limit: Maximum results
+
+        Returns:
+            List of matching inference entities
+        """
+        query_lower = query.lower()
+        query_words = set(query_lower.split())
+
+        # Get all inference entities
+        inference_entities = self.list_entities(entity_type="inference", limit=500)
+
+        matches: list[Entity] = []
+        for entity in inference_entities:
+            triggers = entity.metadata.get("triggers", [])
+            if not triggers:
+                continue
+
+            # Check trigger matching (same logic as _matches_triggers)
+            matched = False
+            for trigger in triggers:
+                trigger_lower = trigger.lower()
+                if trigger_lower in query_lower:
+                    matched = True
+                    break
+                trigger_words = set(trigger_lower.split())
+                if query_words & trigger_words:
+                    matched = True
+                    break
+
+            if matched:
+                matches.append(entity)
+                if len(matches) >= limit:
+                    break
+
+        return matches
+
+    # =========================================================================
+    # Import / Export
+    # =========================================================================
+
+    EXPORT_VERSION = "1.0"
+
+    def export_project_data(self) -> dict[str, Any]:
+        """
+        Export all non-framework entities and their inter-relations as JSON-serializable dict.
+
+        Framework entities (metadata.source == "framework") are excluded because
+        they are always re-seeded on startup.
+
+        Returns:
+            Dict with version, metadata, entities, and relations lists.
+        """
+        conn = self._get_connection()
+        try:
+            # Collect all non-framework entity IDs
+            rows = conn.execute("SELECT * FROM entities ORDER BY id").fetchall()
+            project_entities: list[Entity] = []
+            project_ids: set[str] = set()
+            for row in rows:
+                entity = Entity.from_row(row)
+                if entity.metadata.get("source") == "framework":
+                    continue
+                project_entities.append(entity)
+                project_ids.add(entity.id)
+
+            # Collect relations where both endpoints are project entities
+            rel_rows = conn.execute(
+                "SELECT * FROM relations ORDER BY source_id, target_id, relation_type"
+            ).fetchall()
+            project_relations: list[Relation] = []
+            for row in rel_rows:
+                rel = Relation.from_row(row)
+                if rel.source_id in project_ids and rel.target_id in project_ids:
+                    project_relations.append(rel)
+
+            return {
+                "version": self.EXPORT_VERSION,
+                "exported_at": datetime.now(UTC).isoformat(),
+                "dazzle_version": _get_dazzle_version(),
+                "entities": [
+                    {
+                        "id": e.id,
+                        "entity_type": e.entity_type,
+                        "name": e.name,
+                        "metadata": e.metadata,
+                        "created_at": e.created_at,
+                        "updated_at": e.updated_at,
+                    }
+                    for e in project_entities
+                ],
+                "relations": [
+                    {
+                        "source_id": r.source_id,
+                        "target_id": r.target_id,
+                        "relation_type": r.relation_type,
+                        "metadata": r.metadata,
+                        "created_at": r.created_at,
+                    }
+                    for r in project_relations
+                ],
+            }
+        finally:
+            self._close_connection(conn)
+
+    def import_project_data(
+        self,
+        data: dict[str, Any],
+        mode: str = "merge",
+    ) -> dict[str, int]:
+        """
+        Import project data from an export dict.
+
+        Args:
+            data: Export dict (must have "version", "entities", "relations").
+            mode: "merge" (additive upsert) or "replace" (wipe project data first).
+
+        Returns:
+            Stats dict with entities_imported, relations_imported,
+            entities_skipped, relations_skipped counts.
+        """
+        version = data.get("version", "")
+        if version != self.EXPORT_VERSION:
+            raise ValueError(
+                f"Unsupported export version: {version!r} (expected {self.EXPORT_VERSION!r})"
+            )
+
+        if mode not in ("merge", "replace"):
+            raise ValueError(f"Invalid import mode: {mode!r} (expected 'merge' or 'replace')")
+
+        stats = {
+            "entities_imported": 0,
+            "relations_imported": 0,
+            "entities_skipped": 0,
+            "relations_skipped": 0,
+        }
+
+        conn = self._get_connection()
+        try:
+            if mode == "replace":
+                # Delete all non-framework entities (cascade deletes their relations)
+                conn.execute(
+                    "DELETE FROM entities WHERE json_extract(metadata, '$.source') != 'framework'"
+                    " OR metadata IS NULL"
+                    " OR json_extract(metadata, '$.source') IS NULL"
+                )
+                conn.commit()
+
+            now = time.time()
+
+            # Import entities
+            for ent_data in data.get("entities", []):
+                eid = ent_data["id"]
+                meta = ent_data.get("metadata", {})
+
+                if mode == "merge":
+                    # Check if entity exists
+                    existing = conn.execute(
+                        "SELECT id FROM entities WHERE id = ?", (eid,)
+                    ).fetchone()
+                    if existing:
+                        # Update existing
+                        conn.execute(
+                            "UPDATE entities SET name = ?, entity_type = ?, metadata = ?, "
+                            "updated_at = ? WHERE id = ?",
+                            (
+                                ent_data["name"],
+                                ent_data["entity_type"],
+                                json.dumps(meta) if meta else None,
+                                now,
+                                eid,
+                            ),
+                        )
+                    else:
+                        conn.execute(
+                            "INSERT INTO entities (id, entity_type, name, metadata, "
+                            "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                            (
+                                eid,
+                                ent_data["entity_type"],
+                                ent_data["name"],
+                                json.dumps(meta) if meta else None,
+                                now,
+                                now,
+                            ),
+                        )
+                else:
+                    # Replace mode — always insert
+                    conn.execute(
+                        "INSERT INTO entities (id, entity_type, name, metadata, "
+                        "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                        (
+                            eid,
+                            ent_data["entity_type"],
+                            ent_data["name"],
+                            json.dumps(meta) if meta else None,
+                            now,
+                            now,
+                        ),
+                    )
+                stats["entities_imported"] += 1
+
+            # Import relations
+            for rel_data in data.get("relations", []):
+                src = rel_data["source_id"]
+                tgt = rel_data["target_id"]
+                rtype = rel_data["relation_type"]
+                meta = rel_data.get("metadata", {})
+
+                if mode == "merge":
+                    existing = conn.execute(
+                        "SELECT 1 FROM relations WHERE source_id = ? AND target_id = ? "
+                        "AND relation_type = ?",
+                        (src, tgt, rtype),
+                    ).fetchone()
+                    if existing:
+                        stats["relations_skipped"] += 1
+                        continue
+
+                try:
+                    conn.execute(
+                        "INSERT INTO relations (source_id, target_id, relation_type, "
+                        "metadata, created_at) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            src,
+                            tgt,
+                            rtype,
+                            json.dumps(meta) if meta else None,
+                            now,
+                        ),
+                    )
+                    stats["relations_imported"] += 1
+                except sqlite3.IntegrityError:
+                    stats["relations_skipped"] += 1
+
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+
+        return stats
+
+
+def _get_dazzle_version() -> str:
+    """Get the current Dazzle version string."""
+    try:
+        from importlib.metadata import version
+
+        return version("dazzle")
+    except Exception:
+        return "unknown"

@@ -56,6 +56,150 @@ def get_inference_kb_version() -> str:
     return version
 
 
+def _lookup_inference_via_kg(
+    query: str,
+    detail: Literal["minimal", "full"] = "minimal",
+    max_per_category: int = MAX_MATCHES_PER_CATEGORY,
+) -> dict[str, Any] | None:
+    """Try to look up inference matches via the unified Knowledge Graph."""
+    try:
+        from dazzle.mcp.server.state import get_knowledge_graph
+
+        graph = get_knowledge_graph()
+        if graph is None:
+            return None
+
+        matches = graph.lookup_inference_matches(query, limit=50)
+        if not matches:
+            return None
+
+        # Group by category and convert to the same format as TOML-based lookup
+        all_suggestions: list[dict[str, Any]] = []
+        category_counts: dict[str, int] = {}
+
+        for entity in matches:
+            meta = entity.metadata
+            category = meta.get("category", "")
+            count = category_counts.get(category, 0)
+            if count >= max_per_category:
+                continue
+            category_counts[category] = count + 1
+
+            suggestion = _inference_entity_to_suggestion(meta, category, detail)
+            if suggestion:
+                all_suggestions.append(suggestion)
+
+        if not all_suggestions:
+            return None
+
+        return {
+            "query": query,
+            "suggestions": all_suggestions,
+            "count": len(all_suggestions),
+            "_guidance": (
+                "These are SUGGESTIONS based on common patterns. "
+                "Use your judgment - override when context warrants. "
+                "Adapt examples to the specific domain."
+            ),
+        }
+    except Exception:
+        return None
+
+
+def _inference_entity_to_suggestion(
+    meta: dict[str, Any],
+    category: str,
+    detail: Literal["minimal", "full"],
+) -> dict[str, Any] | None:
+    """Convert an inference entity's metadata to a suggestion dict."""
+    if category == "field_patterns":
+        s: dict[str, Any] = {
+            "type": "field",
+            "add": meta.get("suggests"),
+            "why": meta.get("rationale"),
+        }
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "entity_archetypes":
+        s = {
+            "type": "archetype",
+            "pattern": meta.get("name"),
+            "add_fields": meta.get("common_fields"),
+            "add_features": meta.get("common_features"),
+        }
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "relationship_patterns":
+        s = {"type": "relationship", "add": meta.get("suggests"), "why": meta.get("rationale")}
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "spec_language":
+        return {"type": "syntax", "phrase": meta.get("phrase"), "use": meta.get("maps_to")}
+    elif category == "domain_entities":
+        s = {
+            "type": "domain_entity",
+            "domain": meta.get("domain"),
+            "entity": meta.get("name"),
+            "description": meta.get("description"),
+            "fields": meta.get("fields"),
+            "features": meta.get("features"),
+        }
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "workflow_templates":
+        s = {
+            "type": "workflow",
+            "name": meta.get("name"),
+            "description": meta.get("description"),
+            "states": meta.get("states"),
+            "initial_state": meta.get("initial_state"),
+        }
+        if detail == "full":
+            s["transitions"] = meta.get("transitions")
+        return s
+    elif category == "sitespec_section_inference":
+        s = {"type": "sitespec_section", "add": meta.get("suggests"), "why": meta.get("rationale")}
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "surface_inference":
+        s = {
+            "type": "surface",
+            "pattern": meta.get("name"),
+            "add": meta.get("suggests"),
+            "why": meta.get("rationale"),
+        }
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "workspace_inference":
+        s = {
+            "type": "workspace",
+            "pattern": meta.get("name"),
+            "add": meta.get("suggests"),
+            "why": meta.get("rationale"),
+        }
+        if detail == "full":
+            s["example"] = meta.get("example")
+        return s
+    elif category == "tool_suggestions":
+        s = {
+            "type": "tool_suggestion",
+            "tool": meta.get("tool"),
+            "operation": meta.get("operation"),
+            "suggestion": meta.get("suggestion"),
+        }
+        mode = meta.get("mode")
+        if mode:
+            s["mode"] = mode
+        return s
+    return None
+
+
 def lookup_inference(
     query: str,
     detail: Literal["minimal", "full"] = "minimal",
@@ -63,6 +207,9 @@ def lookup_inference(
 ) -> dict[str, Any]:
     """
     Search the inference knowledge base for patterns matching the query.
+
+    Tries the unified Knowledge Graph first (if initialized), then
+    falls back to direct TOML lookup.
 
     Args:
         query: Natural language query or keywords to search for
@@ -72,6 +219,12 @@ def lookup_inference(
     Returns:
         Dictionary with matching patterns and suggestions
     """
+    # Try KG-first path
+    result = _lookup_inference_via_kg(query, detail, max_per_category)
+    if result is not None:
+        return result
+
+    # Fall back to TOML-based lookup
     kb = _load_inference_kb()
     query_lower = query.lower()
     query_words = set(query_lower.split())

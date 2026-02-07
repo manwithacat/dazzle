@@ -1241,6 +1241,80 @@ def handle_graph(arguments: dict[str, Any]) -> str:
     elif operation == "populate":
         root_path = arguments.get("root_path")
         return json.dumps(refresh_knowledge_graph(root_path), indent=2)
+    elif operation == "concept":
+        name = arguments.get("name", "")
+        entity = graph.lookup_concept(name)
+        if entity is None:
+            return json.dumps({"error": f"Concept not found: {name}"})
+        return json.dumps(
+            {
+                "id": entity.id,
+                "type": entity.entity_type,
+                "name": entity.name,
+                "metadata": entity.metadata,
+            },
+            indent=2,
+        )
+    elif operation == "inference":
+        query_text = arguments.get("text", "")
+        limit = arguments.get("limit", 20)
+        matches = graph.lookup_inference_matches(query_text, limit=limit)
+        return json.dumps(
+            {
+                "query": query_text,
+                "matches": [
+                    {
+                        "id": e.id,
+                        "name": e.name,
+                        "category": e.metadata.get("category", ""),
+                        "triggers": e.metadata.get("triggers", []),
+                    }
+                    for e in matches
+                ],
+                "count": len(matches),
+            },
+            indent=2,
+        )
+    elif operation == "related":
+        entity_id = arguments.get("entity_id", "")
+        relations = graph.get_relations(
+            entity_id=entity_id,
+            relation_type="related_concept",
+            direction="outgoing",
+        )
+        related_ids = [r.target_id for r in relations]
+        related_entities = [e for eid in related_ids if (e := graph.get_entity(eid)) is not None]
+        return json.dumps(
+            {
+                "entity_id": entity_id,
+                "related": [
+                    {"id": e.id, "name": e.name, "type": e.entity_type} for e in related_entities
+                ],
+                "count": len(related_entities),
+            },
+            indent=2,
+        )
+    elif operation == "export":
+        export_data = graph.export_project_data()
+        return json.dumps(export_data, indent=2)
+    elif operation == "import":
+        # Accept data inline or from a file path
+        import_data = arguments.get("data")
+        file_path = arguments.get("file_path")
+        if import_data is None and file_path:
+            try:
+                with open(file_path) as f:
+                    import_data = json.load(f)
+            except Exception as e:
+                return json.dumps({"error": f"Failed to read file: {e}"})
+        if import_data is None:
+            return json.dumps({"error": "Either 'data' or 'file_path' is required"})
+        mode = arguments.get("mode", "merge")
+        try:
+            stats = graph.import_project_data(import_data, mode=mode)
+            return json.dumps({"status": "success", "mode": mode, **stats}, indent=2)
+        except ValueError as e:
+            return json.dumps({"error": str(e)})
     else:
         return json.dumps({"error": f"Unknown graph operation: {operation}"})
 

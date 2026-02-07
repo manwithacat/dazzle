@@ -300,10 +300,24 @@ def init_knowledge_graph(root: Path) -> None:
     _knowledge_graph = KnowledgeGraph(_graph_db_path)
     logger.info(f"Knowledge graph initialized at: {_graph_db_path}")
 
-    # Check if graph needs population
+    # Seed framework knowledge (concepts, patterns, inference triggers)
+    from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+
+    seeded = ensure_seeded(_knowledge_graph)
+    if seeded:
+        logger.info("Framework knowledge seeded into knowledge graph")
+
+    # Check if graph needs population with project data
     stats = _knowledge_graph.get_stats()
-    if stats["entity_count"] == 0:
-        logger.info("Knowledge graph is empty, auto-populating...")
+    # Count only non-framework entities to decide if auto-populate is needed
+    framework_types = {"concept", "pattern", "inference"}
+    project_entity_count = sum(
+        count
+        for etype, count in stats.get("entity_types", {}).items()
+        if etype not in framework_types
+    )
+    if project_entity_count == 0:
+        logger.info("Knowledge graph has no project data, auto-populating...")
         _auto_populate_graph(root)
 
 
@@ -342,6 +356,39 @@ def get_knowledge_graph() -> KnowledgeGraph | None:
 def get_graph_db_path() -> Path | None:
     """Get the path to the knowledge graph database."""
     return _graph_db_path
+
+
+def reinit_knowledge_graph(project_root: Path) -> None:
+    """
+    Close the current KG and open a new per-project database.
+
+    Used when switching projects to ensure isolation — each project
+    gets its own knowledge_graph.db with framework + project data.
+    """
+    global _knowledge_graph, _graph_db_path
+
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
+    from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+
+    # Close existing DB (file-based connections are per-call, so just discard)
+    _knowledge_graph = None
+
+    # Open new per-project DB
+    _graph_db_path = project_root / ".dazzle" / "knowledge_graph.db"
+    _graph_db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    _knowledge_graph = KnowledgeGraph(_graph_db_path)
+    logger.info(f"Knowledge graph re-initialized at: {_graph_db_path}")
+
+    # Seed framework data (fast if already seeded — version check)
+    ensure_seeded(_knowledge_graph)
+
+    # Populate project DSL data
+    from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
+
+    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+    result = handlers.handle_populate_from_appspec(project_path=str(project_root))
+    logger.info(f"Populated KG from DSL for {project_root.name}: {result}")
 
 
 def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:

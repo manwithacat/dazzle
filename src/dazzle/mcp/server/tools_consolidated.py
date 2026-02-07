@@ -1006,7 +1006,12 @@ def get_consolidated_tools() -> list[Tool]:
                 "neighbourhood (entities within N hops), "
                 "paths (find paths between entities), "
                 "stats (graph statistics), "
-                "populate (refresh graph from source)"
+                "populate (refresh graph from source), "
+                "concept (look up a framework concept by name), "
+                "inference (find inference patterns matching a query), "
+                "related (get related concepts for an entity), "
+                "export (export project KG data to JSON), "
+                "import (import KG data from JSON)"
             ),
             inputSchema={
                 "type": "object",
@@ -1021,6 +1026,11 @@ def get_consolidated_tools() -> list[Tool]:
                             "paths",
                             "stats",
                             "populate",
+                            "concept",
+                            "inference",
+                            "related",
+                            "export",
+                            "import",
                         ],
                         "description": "Operation to perform",
                     },
@@ -1065,6 +1075,23 @@ def get_consolidated_tools() -> list[Tool]:
                     "root_path": {
                         "type": "string",
                         "description": "Path to populate from (for populate)",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Entity or concept name (for concept, related)",
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "JSON export data to import (for import)",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "Path to JSON file to import (for import, alternative to data)",
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["merge", "replace"],
+                        "description": "Import mode: merge (additive upsert) or replace (wipe and load). Default: merge",
                     },
                 },
                 "required": ["operation"],

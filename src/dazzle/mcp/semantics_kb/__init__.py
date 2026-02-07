@@ -270,9 +270,43 @@ def get_semantic_index() -> dict[str, Any]:
     return _load_semantic_data()
 
 
+def _lookup_concept_via_kg(term: str) -> dict[str, Any] | None:
+    """Try to look up a concept via the unified Knowledge Graph."""
+    try:
+        from dazzle.mcp.server.state import get_knowledge_graph
+
+        graph = get_knowledge_graph()
+        if graph is None:
+            return None
+
+        entity = graph.lookup_concept(term)
+        if entity is None:
+            return None
+
+        meta = entity.metadata
+        # Return in the same format as the TOML-based lookup
+        result: dict[str, Any] = {
+            "term": term,
+            "found": True,
+            "type": "concept" if entity.entity_type == "concept" else "pattern",
+        }
+
+        # Merge metadata fields into result (same keys as TOML data)
+        for key in ("category", "definition", "syntax", "example", "description"):
+            if key in meta and meta[key]:
+                result[key] = meta[key]
+
+        return result
+    except Exception:
+        return None
+
+
 def lookup_concept(term: str) -> dict[str, Any] | None:
     """
     Look up a DAZZLE concept by name.
+
+    Tries the unified Knowledge Graph first (if initialized), then
+    falls back to direct TOML lookup.
 
     Args:
         term: The concept name (e.g., 'persona', 'workspace', 'ux_block')
@@ -280,6 +314,12 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
     Returns:
         Concept definition or None if not found
     """
+    # Try KG-first path
+    result = _lookup_concept_via_kg(term)
+    if result is not None:
+        return result
+
+    # Fall back to TOML-based lookup
     index = get_semantic_index()
 
     # Normalize term

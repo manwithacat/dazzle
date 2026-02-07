@@ -1,4 +1,4 @@
-Commit all current changes, push to the remote, and monitor CI/CD until the worktree is clean and the pipeline passes. Follow these steps exactly:
+Commit all current changes and push to the remote. Follow these steps exactly:
 
 ## 1. Pre-flight checks
 
@@ -21,15 +21,7 @@ Commit all current changes, push to the remote, and monitor CI/CD until the work
 - Run `git push` to push the current branch to origin.
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 
-## 4. Monitor CI/CD
-
-- After pushing, poll for CI/CD status using `gh run list --branch $(git branch --show-current) --limit 1 --json status,conclusion,name,url` every 15 seconds, up to 20 attempts.
-- While the run status is `in_progress` or `queued`, keep polling and show a brief status update each time.
-- If the run concludes with `success`, report success and the run URL.
-- If the run concludes with `failure`, fetch the failed job logs with `gh run view <run-id> --log-failed | tail -80` and report the failure details so the user can decide what to do.
-- If no CI run appears after 3 polls, note that no workflow was triggered and stop.
-
-## 5. Final verification
+## 4. Final verification
 
 - Run `git status` one last time to confirm the worktree is clean.
-- Report the final state: commit SHA, branch, CI result, and worktree status.
+- Report the final state: commit SHA, branch, and worktree status.
