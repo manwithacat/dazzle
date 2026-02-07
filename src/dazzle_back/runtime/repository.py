@@ -347,10 +347,18 @@ class SQLiteRepository(Generic[T]):
                 rows_affected=rows,
             )
 
+    def _python_to_db(self, value: Any, field_type: FieldType | None = None) -> Any:
+        """Convert a Python value using the correct backend converter."""
+        if self.db.backend_type == "postgres":
+            from dazzle_back.runtime.pg_backend import _python_to_postgres
+
+            return _python_to_postgres(value, field_type)
+        return _python_to_sqlite(value, field_type)
+
     def _model_to_row(self, model: T) -> dict[str, Any]:
-        """Convert Pydantic model to row dict for SQLite."""
+        """Convert Pydantic model to row dict for the database."""
         data = model.model_dump()
-        return {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
+        return {k: self._python_to_db(v, self._field_types.get(k)) for k, v in data.items()}
 
     def _row_to_model(self, row: Any) -> T:
         """Convert database row to Pydantic model."""
@@ -368,13 +376,13 @@ class SQLiteRepository(Generic[T]):
         Returns:
             Created entity
         """
-        # Convert values for SQLite
-        sqlite_data = {k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in data.items()}
+        # Convert values for database backend
+        db_data = {k: self._python_to_db(v, self._field_types.get(k)) for k, v in data.items()}
 
-        columns = ", ".join(quote_identifier(k) for k in sqlite_data.keys())
+        columns = ", ".join(quote_identifier(k) for k in db_data.keys())
         ph = self.db.placeholder
-        placeholders = ", ".join(ph for _ in sqlite_data)
-        values = list(sqlite_data.values())
+        placeholders = ", ".join(ph for _ in db_data)
+        values = list(db_data.values())
 
         table = quote_identifier(self.table_name)
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
@@ -452,14 +460,14 @@ class SQLiteRepository(Generic[T]):
         if not update_data:
             return await self.read(id)
 
-        # Convert values for SQLite
-        sqlite_data = {
-            k: _python_to_sqlite(v, self._field_types.get(k)) for k, v in update_data.items()
+        # Convert values for database backend
+        db_data = {
+            k: self._python_to_db(v, self._field_types.get(k)) for k, v in update_data.items()
         }
 
         ph = self.db.placeholder
-        set_clause = ", ".join(f"{quote_identifier(k)} = {ph}" for k in sqlite_data.keys())
-        values = list(sqlite_data.values())
+        set_clause = ", ".join(f"{quote_identifier(k)} = {ph}" for k in db_data.keys())
+        values = list(db_data.values())
         values.append(str(id))
 
         table = quote_identifier(self.table_name)
