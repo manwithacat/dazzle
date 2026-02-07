@@ -30,6 +30,9 @@ from dazzle_back.specs.entity import (
     ScalarType,
 )
 
+# Alias to prevent mypy resolving `list` as SQLiteRepository.list inside the class
+_list = list
+
 if TYPE_CHECKING:
     from dazzle_back.metrics.system_collector import SystemMetricsCollector
     from dazzle_back.runtime.relation_loader import RelationLoader
@@ -432,7 +435,7 @@ class SQLiteRepository(Generic[T]):
 
         return self._row_to_model(row)
 
-    async def update(self, id: UUID, data: dict[str, Any]) -> T | None:
+    async def update(self, id: UUID, data: dict[str, Any]) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
 
@@ -578,6 +581,7 @@ class SQLiteRepository(Generic[T]):
             )
 
         # Convert to models (or return dicts if relations/computed fields included)
+        items: list[Any]
         if include or self._computed_fields:
             # Return dicts with nested data and/or computed fields
             items = [self._convert_row_dict(row) for row in row_dicts]
@@ -594,11 +598,11 @@ class SQLiteRepository(Generic[T]):
     def _convert_row_dict(
         self,
         row: dict[str, Any],
-        related_data: dict[str, list[dict[str, Any]]] | None = None,
+        related_data: dict[str, _list[dict[str, Any]]] | None = None,
     ) -> dict[str, Any]:
         """Convert a row dict with proper type conversions and computed fields."""
-        result = {}
-        collected_relations: dict[str, list[dict[str, Any]]] = {}
+        result: dict[str, Any] = {}
+        collected_relations: dict[str, _list[dict[str, Any]]] = {}
 
         for k, v in row.items():
             if isinstance(v, dict):
