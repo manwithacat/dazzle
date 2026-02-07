@@ -49,6 +49,11 @@ def create_page_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is not installed")
 
+    from dazzle_back.runtime.surface_access import (
+        SurfaceAccessConfig,
+        SurfaceAccessDenied,
+        check_surface_access,
+    )
     from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
     from dazzle_ui.runtime.template_renderer import render_page
 
@@ -57,11 +62,17 @@ def create_page_routes(
     # Compile all surfaces to template contexts
     page_contexts = compile_appspec_to_templates(appspec)
 
+    # Build route -> access config mapping from surface specs
+    access_configs: dict[str, SurfaceAccessConfig] = {}
+    for surface in appspec.surfaces:
+        if surface.access is not None:
+            access_configs[surface.name] = SurfaceAccessConfig.from_spec(surface.access)
+
     # Inject theme CSS into all contexts
     for ctx in page_contexts.values():
         ctx.theme_css = theme_css
 
-    def _make_page_handler(route_path: str, ctx: Any) -> Any:
+    def _make_page_handler(route_path: str, ctx: Any, view_name: str | None = None) -> Any:
         """Create a closure-based handler for a specific page route."""
 
         async def page_handler(request: Request) -> HTMLResponse:
@@ -69,6 +80,7 @@ def create_page_routes(
             ctx.current_route = route_path
 
             # Inject auth context if available
+            auth_ctx = None
             if get_auth_context is not None:
                 try:
                     auth_ctx = get_auth_context(request)
@@ -78,6 +90,27 @@ def create_page_routes(
                         ctx.user_name = auth_ctx.user.username or ""
                 except Exception:
                     pass
+
+            # Enforce surface access control
+            surface_name = view_name or getattr(ctx, "view_name", None)
+            if surface_name and surface_name in access_configs:
+                ac = access_configs[surface_name]
+                user = None
+                if auth_ctx and auth_ctx.is_authenticated and auth_ctx.user:
+                    user = {"id": getattr(auth_ctx.user, "id", None)}
+                try:
+                    check_surface_access(ac, user, is_api_request=False)
+                except SurfaceAccessDenied as e:
+                    if e.is_auth_required and e.redirect_url:
+                        from fastapi.responses import RedirectResponse
+
+                        return RedirectResponse(url=e.redirect_url, status_code=302)
+                    from fastapi.responses import JSONResponse
+
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": e.reason},
+                    )
 
             # For detail/edit pages, extract {id} from path params
             path_id = request.path_params.get("id")
@@ -177,7 +210,7 @@ def create_page_routes(
         # Convert {id} to FastAPI's :id format
         fastapi_path = route_path.replace("{id}", "{id:path}")
 
-        handler = _make_page_handler(route_path, ctx)
+        handler = _make_page_handler(route_path, ctx, view_name=getattr(ctx, "view_name", None))
         router.get(fastapi_path, response_class=HTMLResponse)(handler)
 
     return router

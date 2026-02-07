@@ -28,6 +28,7 @@ class SurfaceParserMixin:
         file: Any
         parse_ux_block: Any
         parse_persona_variant: Any  # From UXParserMixin
+        _parse_workspace_access: Any  # From WorkspaceParserMixin
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
@@ -48,6 +49,7 @@ class SurfaceParserMixin:
         sections = []
         actions = []
         ux_spec = None
+        access_spec = None
         persona_variants: list[ir.PersonaVariant] = []
 
         while not self.match(TokenType.DEDENT):
@@ -68,6 +70,13 @@ class SurfaceParserMixin:
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
                 mode = ir.SurfaceMode(mode_token.value)
+                self.skip_newlines()
+
+            # access: public | authenticated | persona(name1, name2)
+            elif self.match(TokenType.ACCESS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                access_spec = self._parse_surface_access()
                 self.skip_newlines()
 
             # section name ["title"]:
@@ -119,6 +128,46 @@ class SurfaceParserMixin:
             sections=sections,
             actions=actions,
             ux=ux_spec,
+            access=access_spec,
+        )
+
+    def _parse_surface_access(self) -> ir.SurfaceAccessSpec:
+        """
+        Parse surface access specification.
+
+        Syntax:
+            access: public
+            access: authenticated
+            access: persona(name1, name2, ...)
+        """
+        if self.match(TokenType.PUBLIC):
+            self.advance()
+            return ir.SurfaceAccessSpec(require_auth=False)
+
+        if self.match(TokenType.AUTHENTICATED):
+            self.advance()
+            return ir.SurfaceAccessSpec(require_auth=True)
+
+        if self.match(TokenType.PERSONA):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            personas: list[str] = []
+            personas.append(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.COMMA):
+                self.advance()
+                personas.append(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.RPAREN)
+            return ir.SurfaceAccessSpec(
+                require_auth=True,
+                allow_personas=personas,
+            )
+
+        token = self.current_token()
+        raise make_parse_error(
+            f"Expected 'public', 'authenticated', or 'persona(...)' but got '{token.value}'",
+            self.file,
+            token.line,
+            token.column,
         )
 
     def parse_surface_section(self) -> ir.SurfaceSection:

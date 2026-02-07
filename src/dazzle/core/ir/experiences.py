@@ -11,6 +11,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .surfaces import SurfaceAccessSpec
+
 
 class StepKind(StrEnum):
     """Types of steps in an experience."""
@@ -59,6 +61,7 @@ class ExperienceStep(BaseModel):
         integration: Integration name (if kind=integration)
         action: Action name (if kind=integration)
         transitions: List of transitions to other steps
+        access: Optional step-level access control (overrides experience default)
     """
 
     name: str
@@ -67,6 +70,7 @@ class ExperienceStep(BaseModel):
     integration: str | None = None
     action: str | None = None
     transitions: list[StepTransition] = Field(default_factory=list)
+    access: SurfaceAccessSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -82,12 +86,14 @@ class ExperienceSpec(BaseModel):
         title: Human-readable title
         start_step: Name of the starting step
         steps: List of steps in this experience
+        access: Optional experience-level default access control
     """
 
     name: str
     title: str | None = None
     start_step: str
     steps: list[ExperienceStep] = Field(default_factory=list)
+    access: SurfaceAccessSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

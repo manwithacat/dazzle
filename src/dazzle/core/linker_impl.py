@@ -813,6 +813,24 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                         f"references unknown step '{transition.next_step}'"
                     )
 
+            # Validate step access persona references
+            if step.access and step.access.allow_personas and symbols.personas:
+                for persona_name in step.access.allow_personas:
+                    if persona_name not in symbols.personas:
+                        errors.append(
+                            f"Experience '{experience_name}' step '{step.name}' access "
+                            f"references unknown persona '{persona_name}'"
+                        )
+
+        # Validate experience-level access persona references
+        if experience.access and experience.access.allow_personas and symbols.personas:
+            for persona_name in experience.access.allow_personas:
+                if persona_name not in symbols.personas:
+                    errors.append(
+                        f"Experience '{experience_name}' access references "
+                        f"unknown persona '{persona_name}'"
+                    )
+
     # Validate foreign model API references
     for fm_name, foreign_model in symbols.foreign_models.items():
         if foreign_model.api_ref not in symbols.apis:

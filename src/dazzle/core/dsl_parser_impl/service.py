@@ -28,6 +28,7 @@ class ServiceParserMixin:
         file: Any
         parse_type_spec: Any
         parse_field_modifiers: Any
+        _parse_surface_access: Any  # From SurfaceParserMixin
 
     def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
         """Parse service declaration (external API or domain service).
@@ -405,6 +406,15 @@ class ServiceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
+        access_spec = None
+
+        # access: public | authenticated | persona(name1, name2) (optional, before start)
+        if self.match(TokenType.ACCESS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            access_spec = self._parse_surface_access()
+            self.skip_newlines()
+
         # start at step StepName
         self.expect(TokenType.START)
         self.expect(TokenType.AT)
@@ -430,6 +440,7 @@ class ServiceParserMixin:
             title=title,
             start_step=start_step,
             steps=steps,
+            access=access_spec,
         )
 
     def parse_experience_step(self) -> ir.ExperienceStep:
@@ -452,6 +463,7 @@ class ServiceParserMixin:
         surface = None
         integration = None
         action = None
+        access_spec = None
 
         # Parse step target based on kind
         if kind == ir.StepKind.SURFACE:
@@ -464,6 +476,13 @@ class ServiceParserMixin:
             integration = self.expect(TokenType.IDENTIFIER).value
             self.expect(TokenType.ACTION)
             action = self.expect(TokenType.IDENTIFIER).value
+            self.skip_newlines()
+
+        # access: public | authenticated | persona(name1, name2) (optional)
+        if self.match(TokenType.ACCESS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            access_spec = self._parse_surface_access()
             self.skip_newlines()
 
         # Parse transitions
@@ -496,4 +515,5 @@ class ServiceParserMixin:
             integration=integration,
             action=action,
             transitions=transitions,
+            access=access_spec,
         )
