@@ -1148,6 +1148,23 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
                     f"Consider adding a persona for role-based access control."
                 )
 
+    # v0.21.1: Check for workspaces with no routable content (#120)
+    if appspec.workspaces:
+        surface_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
+        for workspace in appspec.workspaces:
+            region_sources = {r.source for r in workspace.regions if r.source}
+            if not region_sources:
+                warnings.append(
+                    f"Workspace '{workspace.name}' has no regions with entity sources. "
+                    f"It will not generate any routes or render content."
+                )
+            elif not region_sources & surface_entities:
+                warnings.append(
+                    f"Workspace '{workspace.name}' references entities "
+                    f"({', '.join(sorted(region_sources))}) that have no surfaces. "
+                    f"It will not generate any routes."
+                )
+
     # ---- List surfaces without UX directives ----
     # Suggest sort/filter/search for list surfaces that lack a ux block
     for surface in appspec.surfaces:

@@ -204,14 +204,15 @@ class DatabaseManager:
         sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
 
         with self.connection() as conn:
-            conn.execute(sql)
+            cursor = conn.cursor()
+            cursor.execute(sql)
 
             # Create indexes
             for field in entity.fields:
                 if field.indexed:
                     col = quote_identifier(field.name)
                     index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
-                    conn.execute(index_sql)
+                    cursor.execute(index_sql)
 
     def _build_columns(self, entity: EntitySpec) -> str:
         """Build column definitions for CREATE TABLE."""
@@ -375,7 +376,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            conn.execute(sql, values)
+            cursor = conn.cursor()
+            cursor.execute(sql, values)
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("insert", latency_ms, rows=1)
 

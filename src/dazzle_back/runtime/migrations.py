@@ -462,12 +462,8 @@ class MigrationExecutor:
 
                 if step.sql:
                     try:
-                        if hasattr(conn, "cursor"):
-                            # Works for both psycopg2 and sqlite3 connections
-                            cursor = conn.cursor()
-                            cursor.execute(step.sql)
-                        else:
-                            conn.execute(step.sql)
+                        cursor = conn.cursor()
+                        cursor.execute(step.sql)
                         executed.append(step)
                     except Exception as e:
                         raise MigrationError(
@@ -537,11 +533,8 @@ class MigrationHistory:
             )
             """
         with self.db.connection() as conn:
-            if self._is_postgres:
-                cursor = conn.cursor()
-                cursor.execute(sql)
-            else:
-                conn.execute(sql)
+            cursor = conn.cursor()
+            cursor.execute(sql)
 
     def record_migration(self, step: MigrationStep) -> None:
         """Record an executed migration step."""
@@ -562,22 +555,18 @@ class MigrationHistory:
             json.dumps(step.details) if step.details else None,
         )
         with self.db.connection() as conn:
-            if self._is_postgres:
-                cursor = conn.cursor()
-                cursor.execute(sql, params)
-            else:
-                conn.execute(sql, params)
+            cursor = conn.cursor()
+            cursor.execute(sql, params)
 
     def get_history(self) -> list[dict[str, Any]]:
         """Get migration history."""
         sql = f"SELECT * FROM {self.TABLE_NAME} ORDER BY id DESC"
         with self.db.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql)
             if self._is_postgres:
-                cursor = conn.cursor()
-                cursor.execute(sql)
                 return [dict(row) for row in cursor.fetchall()]
             else:
-                cursor = conn.execute(sql)
                 columns = [desc[0] for desc in cursor.description]
                 return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 

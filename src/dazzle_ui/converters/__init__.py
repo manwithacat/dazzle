@@ -57,10 +57,12 @@ def convert_shell_config(
     Returns:
         ShellSpec with navigation, header, and footer config
     """
-    # Auto-generate nav items from workspaces
-    # All workspaces live under /workspaces/{name} to match backend routes
+    # Auto-generate nav items from workspaces that have routable content
+    # Skip workspaces with no routes — they'd produce dead nav links (#120)
     nav_items = []
     for ws in workspaces:
+        if hasattr(ws, "routes") and not ws.routes:
+            continue
         nav_items.append(
             NavItemSpec(
                 label=ws.label or ws.name.replace("_", " ").title(),
