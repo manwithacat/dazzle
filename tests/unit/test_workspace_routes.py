@@ -141,7 +141,7 @@ class TestRegionContextWiring:
         ctx = build_workspace_context(ws, app_spec)
 
         assert ctx.regions[0].action == "task_edit"
-        assert ctx.regions[0].action_url == "/task/{id}"
+        assert ctx.regions[0].action_url == "/tasks/{id}"
 
     def test_action_url_empty_when_no_surface_match(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context

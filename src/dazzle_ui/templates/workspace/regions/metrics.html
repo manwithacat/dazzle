@@ -15,5 +15,42 @@
     {% if not metrics %}
     <p class="text-sm opacity-50">{{ empty_message | default("No metrics available.") }}</p>
     {% endif %}
+    {% if items and columns %}
+    <div class="divider my-1"></div>
+    <div class="overflow-x-auto">
+      <table class="table table-sm table-zebra">
+        <thead>
+          <tr>
+            {% for col in columns %}
+            <th>{{ col.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr{% if action_url %} class="cursor-pointer hover"
+              hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+              hx-push-url="true" hx-target="body"{% endif %}>
+            {% for col in columns %}
+            <td>
+              {% if col.type == "badge" %}
+                <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+              {% elif col.type == "bool" %}
+                {{ item[col.key] | bool_icon }}
+              {% elif col.type == "date" %}
+                {{ item[col.key] | dateformat }}
+              {% elif col.type == "currency" %}
+                {{ item[col.key] | currency }}
+              {% else %}
+                {{ item[col.key] | default("") | truncate_text }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
   </div>
 </div>

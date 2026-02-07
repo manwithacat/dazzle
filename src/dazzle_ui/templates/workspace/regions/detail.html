@@ -5,7 +5,19 @@
     <dl class="grid grid-cols-2 gap-2">
       {% for col in columns %}
       <dt class="text-xs font-semibold opacity-60">{{ col.label }}</dt>
-      <dd class="text-sm">{{ item[col.key] | default("—") }}</dd>
+      <dd class="text-sm">
+        {% if col.type == "badge" %}
+          <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("—") }}</span>
+        {% elif col.type == "bool" %}
+          {{ item[col.key] | bool_icon }}
+        {% elif col.type == "date" %}
+          {{ item[col.key] | dateformat }}
+        {% elif col.type == "currency" %}
+          {{ item[col.key] | currency }}
+        {% else %}
+          {{ item[col.key] | default("—") }}
+        {% endif %}
+      </dd>
       {% endfor %}
     </dl>
     {% else %}

@@ -11,7 +11,20 @@
           <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
           {% for col in columns %}
           {% if col.key != display_key %}
-          <p class="text-xs"><span class="opacity-60">{{ col.label }}:</span> {{ item[col.key] | default("") }}</p>
+          <p class="text-xs">
+            <span class="opacity-60">{{ col.label }}:</span>
+            {% if col.type == "badge" %}
+              <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+            {% elif col.type == "bool" %}
+              {{ item[col.key] | bool_icon }}
+            {% elif col.type == "date" %}
+              {{ item[col.key] | dateformat }}
+            {% elif col.type == "currency" %}
+              {{ item[col.key] | currency }}
+            {% else %}
+              {{ item[col.key] | default("") | truncate_text }}
+            {% endif %}
+          </p>
           {% endif %}
           {% endfor %}
         </div>

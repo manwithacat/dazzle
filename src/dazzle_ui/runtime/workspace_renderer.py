@@ -18,6 +18,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dazzle.core.strings import to_api_plural
+
 # =============================================================================
 # Context Models
 # =============================================================================
@@ -157,7 +159,7 @@ def build_workspace_context(
                 if s.name == action_name:
                     entity_ref = getattr(s, "entity_ref", "") or ""
                     if entity_ref:
-                        action_url = f"/{entity_ref.lower()}/{{id}}"
+                        action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
                     break
 
         regions.append(

@@ -37,6 +37,25 @@ import re
 _AGGREGATE_RE = re.compile(r"(count|sum|avg|min|max)\((\w+)(?:\s+where\s+(.+))?\)")
 
 
+def _field_kind_to_col_type(field: Any) -> str:
+    """Map an IR field to a column rendering type for workspace templates."""
+    ft = getattr(field, "field_type", None)
+    kind = getattr(ft, "kind", None)
+    kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
+    if kind_val == "enum":
+        return "badge"
+    if kind_val == "bool":
+        return "bool"
+    if kind_val in ("date", "datetime"):
+        return "date"
+    if kind_val == "money":
+        return "currency"
+    # State-machine managed fields render as badges
+    if getattr(field, "managed_by", None):
+        return "badge"
+    return "text"
+
+
 def _parse_simple_where(where_clause: str) -> dict[str, Any]:
     """Parse simple WHERE clause to repository filter dict.
 
@@ -789,6 +808,8 @@ class DNRBackendApp:
                         request: Request,
                         page: int = 1,
                         page_size: int = 20,
+                        sort: str | None = None,
+                        dir: str = "asc",
                         _r: Any = _ctx_region,
                         _ir: Any = _ir_region,
                         _s: str = _source,
@@ -800,7 +821,7 @@ class DNRBackendApp:
                         # Query the source entity
                         items: list[dict[str, Any]] = []
                         total = 0
-                        columns: list[dict[str, str]] = []
+                        columns: list[dict[str, Any]] = []
 
                         repo = repositories.get(_s) if repositories else None
                         if repo:
@@ -821,16 +842,27 @@ class DNRBackendApp:
                                     except Exception:
                                         pass
 
-                                # Build sort from IR SortSpec list
+                                # Build sort — user sort param overrides IR sort
                                 sort_list: list[str] | None = None
-                                ir_sort = getattr(_ir, "sort", [])
-                                if ir_sort:
-                                    sort_list = [
-                                        f"-{s.field}"
-                                        if getattr(s, "direction", "asc") == "desc"
-                                        else s.field
-                                        for s in ir_sort
-                                    ]
+                                if sort:
+                                    sort_list = [f"-{sort}" if dir == "desc" else sort]
+                                else:
+                                    ir_sort = getattr(_ir, "sort", [])
+                                    if ir_sort:
+                                        sort_list = [
+                                            f"-{s.field}"
+                                            if getattr(s, "direction", "asc") == "desc"
+                                            else s.field
+                                            for s in ir_sort
+                                        ]
+
+                                # Collect interactive filters from query params
+                                for param_key, param_val in request.query_params.items():
+                                    if param_key.startswith("filter_") and param_val:
+                                        field_name = param_key[7:]  # strip "filter_"
+                                        if filters is None:
+                                            filters = {}
+                                        filters[field_name] = param_val
 
                                 limit = _r.limit or page_size
                                 result = await repo.list(
@@ -851,18 +883,42 @@ class DNRBackendApp:
 
                         # Build columns from entity metadata when available
                         if _espec and hasattr(_espec, "fields"):
-                            columns = [
-                                {
+                            columns = []
+                            for f in _espec.fields:
+                                if f.name == "id" or f.name.endswith("_id"):
+                                    continue
+                                col: dict[str, Any] = {
                                     "key": f.name,
                                     "label": getattr(f, "label", None)
                                     or f.name.replace("_", " ").title(),
+                                    "type": _field_kind_to_col_type(f),
+                                    "sortable": True,
                                 }
-                                for f in _espec.fields
-                                if f.name != "id" and not f.name.endswith("_id")
-                            ][:8]
+                                ft = getattr(f, "field_type", None)
+                                kind = getattr(ft, "kind", None)
+                                kind_val: str = (
+                                    kind.value  # type: ignore[union-attr]
+                                    if hasattr(kind, "value")
+                                    else str(kind)
+                                    if kind
+                                    else ""
+                                )
+                                if kind_val == "enum":
+                                    ev = getattr(ft, "enum_values", None)
+                                    if ev:
+                                        col["filterable"] = True
+                                        col["filter_options"] = list(ev)
+                                columns.append(col)
+                                if len(columns) >= 8:
+                                    break
                         elif items:
                             columns = [
-                                {"key": k, "label": k.replace("_", " ").title()}
+                                {
+                                    "key": k,
+                                    "label": k.replace("_", " ").title(),
+                                    "type": "text",
+                                    "sortable": True,
+                                }
                                 for k in items[0].keys()
                                 if k != "id"
                             ]
@@ -903,6 +959,22 @@ class DNRBackendApp:
                                 }
                             )
 
+                        # Build filter column metadata for template
+                        filter_columns: list[dict[str, Any]] = [
+                            {
+                                "key": c["key"],
+                                "label": c["label"],
+                                "options": c.get("filter_options", []),
+                            }
+                            for c in columns
+                            if c.get("filterable")
+                        ]
+                        active_filters: dict[str, str] = {
+                            k[7:]: v
+                            for k, v in request.query_params.items()
+                            if k.startswith("filter_") and v
+                        }
+
                         html = render_fragment(
                             _r.template,
                             title=_r.title,
@@ -914,6 +986,12 @@ class DNRBackendApp:
                             display_key=columns[0]["key"] if columns else "name",
                             item=items[0] if items else None,
                             action_url=_r.action_url,
+                            sort_field=sort or "",
+                            sort_dir=dir,
+                            endpoint=_r.endpoint,
+                            region_name=_r.name,
+                            filter_columns=filter_columns,
+                            active_filters=active_filters,
                         )
                         return HTMLResponse(content=html)
 
