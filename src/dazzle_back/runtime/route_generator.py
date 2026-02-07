@@ -7,6 +7,7 @@ This module creates FastAPI routers and routes from backend specifications.
 from __future__ import annotations
 
 from collections.abc import Callable
+from enum import Enum
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -44,7 +45,7 @@ def _is_htmx_request(request: Any) -> bool:
     """Check if this is an HTMX request that wants HTML fragments."""
     if not hasattr(request, "headers"):
         return False
-    return (
+    return bool(
         request.headers.get("HX-Request") == "true" or request.headers.get("Accept") == "text/html"
     )
 
@@ -672,7 +673,7 @@ def generate_crud_routes(
     create_schema: type[BaseModel],
     update_schema: type[BaseModel],
     prefix: str | None = None,
-    tags: list[str] | None = None,
+    tags: list[str | Enum] | None = None,
 ) -> APIRouter:
     """
     Generate standard CRUD routes for an entity.

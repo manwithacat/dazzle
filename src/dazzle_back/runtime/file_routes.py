@@ -6,7 +6,7 @@ Provides REST endpoints for file upload, download, and management.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -54,7 +54,7 @@ def create_file_routes(
         entity: str | None = Query(None, description="Associated entity name"),
         entity_id: str | None = Query(None, description="Associated entity ID"),
         field: str | None = Query(None, description="Field name"),
-    ):
+    ) -> dict[str, Any]:
         """
         Upload a file.
 
@@ -117,7 +117,7 @@ def create_file_routes(
             raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
     @app.get(f"{prefix}/{{file_id}}")
-    async def get_file_info(file_id: str):
+    async def get_file_info(file_id: str) -> dict[str, Any]:
         """Get file metadata."""
         try:
             uuid_id = UUID(file_id)
@@ -142,7 +142,7 @@ def create_file_routes(
         }
 
     @app.get(f"{prefix}/{{file_id}}/download")
-    async def download_file(file_id: str):
+    async def download_file(file_id: str) -> Response:
         """Download file content."""
         try:
             uuid_id = UUID(file_id)
@@ -164,7 +164,7 @@ def create_file_routes(
         )
 
     @app.get(f"{prefix}/{{file_id}}/stream")
-    async def stream_file(file_id: str):
+    async def stream_file(file_id: str) -> StreamingResponse:
         """Stream file content."""
         try:
             uuid_id = UUID(file_id)
@@ -193,7 +193,7 @@ def create_file_routes(
         file_id: str,
         width: int = Query(200, ge=10, le=1000),
         height: int = Query(200, ge=10, le=1000),
-    ):
+    ) -> Response:
         """
         Get thumbnail for an image.
 
@@ -239,7 +239,7 @@ def create_file_routes(
         )
 
     @app.delete(f"{prefix}/{{file_id}}")
-    async def delete_file(file_id: str):
+    async def delete_file(file_id: str) -> dict[str, Any]:
         """Delete a file."""
         try:
             uuid_id = UUID(file_id)
@@ -258,7 +258,7 @@ def create_file_routes(
         entity: str,
         entity_id: str,
         field: str | None = Query(None),
-    ):
+    ) -> dict[str, Any]:
         """Get all files associated with an entity."""
         files = file_service.get_entity_files(entity, entity_id, field)
 

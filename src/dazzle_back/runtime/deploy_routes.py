@@ -154,13 +154,15 @@ def create_deploy_routes(
 
             proj = project_dir or Path(".")
             config = load_deployment_config(proj / "dazzle.toml")
+            if appspec is None:
+                return {"status": "error", "message": "No AppSpec loaded"}
             runner = DeploymentRunner(appspec, proj, config)
             result = runner.run(dry_run=True)
 
             return {
                 "status": "ok",
-                "stacks": result.get("stacks", []),
-                "output_dir": str(result.get("output_dir", "")),
+                "stacks": result.stacks_generated,
+                "output_dir": str(result.artifacts.get("estimated_files", "")),
             }
         except ImportError:
             return {"status": "error", "message": "Deploy module not available"}
@@ -180,6 +182,8 @@ def create_deploy_routes(
 
             proj = project_dir or Path(".")
             config = load_deployment_config(proj / "dazzle.toml")
+            if appspec is None:
+                return {"status": "error", "message": "No AppSpec loaded"}
             runner = DeploymentRunner(appspec, proj, config)
             result = runner.run(dry_run=False)
 
@@ -193,7 +197,7 @@ def create_deploy_routes(
                 deploy_history_store.update_status(
                     deploy.id,
                     DeployStatus.COMPLETED,
-                    stacks=result.get("stacks", []),
+                    stacks=result.stacks_generated,
                 )
 
             return {"status": "ok", "result": result}

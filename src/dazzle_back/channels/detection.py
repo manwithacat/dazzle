@@ -21,7 +21,7 @@ import socket
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
@@ -63,7 +63,7 @@ class DetectionResult:
     error: str | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "provider_name": self.provider_name,
@@ -173,7 +173,7 @@ async def check_port(host: str, port: int, timeout: float = 2.0) -> bool:
     return await loop.run_in_executor(None, _check)
 
 
-async def check_docker_container(image_pattern: str) -> dict | None:
+async def check_docker_container(image_pattern: str) -> dict[str, Any] | None:
     """Check if a Docker container matching the pattern is running.
 
     Args:

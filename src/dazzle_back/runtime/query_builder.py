@@ -6,6 +6,7 @@ Provides SQL generation for filter operators, sorting, and search.
 
 from __future__ import annotations
 
+import dataclasses
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -114,7 +115,7 @@ class FilterCondition:
     field: str
     operator: FilterOperator
     value: Any
-    relation_path: list[str] = field(default_factory=list)
+    relation_path: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
     def parse(cls, key: str, value: Any) -> FilterCondition:
@@ -267,7 +268,7 @@ class SortField:
 
     field: str
     descending: bool = False
-    relation_path: list[str] = field(default_factory=list)
+    relation_path: list[str] = dataclasses.field(default_factory=list)
 
     @classmethod
     def parse(cls, sort_str: str) -> SortField:

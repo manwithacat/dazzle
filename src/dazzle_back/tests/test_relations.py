@@ -4,9 +4,12 @@ Tests for relationship handling and nested data loading.
 Tests relation registry, relation loader, and foreign key handling.
 """
 
+from __future__ import annotations
+
 import sqlite3
 import tempfile
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -35,7 +38,7 @@ from dazzle_back.specs.entity import (
 
 
 @pytest.fixture
-def user_entity():
+def user_entity() -> Any:
     """Create a User entity spec."""
     return EntitySpec(
         name="User",
@@ -60,7 +63,7 @@ def user_entity():
 
 
 @pytest.fixture
-def task_entity():
+def task_entity() -> Any:
     """Create a Task entity spec with owner relation."""
     return EntitySpec(
         name="Task",
@@ -94,7 +97,7 @@ def task_entity():
 
 
 @pytest.fixture
-def comment_entity():
+def comment_entity() -> Any:
     """Create a Comment entity spec."""
     return EntitySpec(
         name="Comment",
@@ -119,13 +122,13 @@ def comment_entity():
 
 
 @pytest.fixture
-def all_entities(user_entity, task_entity, comment_entity):
+def all_entities(user_entity: Any, task_entity: Any, comment_entity: Any) -> Any:
     """Get all test entities."""
     return [user_entity, task_entity, comment_entity]
 
 
 @pytest.fixture
-def test_db():
+def test_db() -> Any:
     """Create a test database with tables."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = f.name
@@ -194,7 +197,7 @@ def test_db():
 class TestRelationInfo:
     """Tests for RelationInfo."""
 
-    def test_is_to_one_many_to_one(self):
+    def test_is_to_one_many_to_one(self) -> None:
         """Test is_to_one for many-to-one relation."""
         info = RelationInfo(
             name="owner",
@@ -207,7 +210,7 @@ class TestRelationInfo:
         assert info.is_to_one is True
         assert info.is_to_many is False
 
-    def test_is_to_one_one_to_one(self):
+    def test_is_to_one_one_to_one(self) -> None:
         """Test is_to_one for one-to-one relation."""
         info = RelationInfo(
             name="profile",
@@ -220,7 +223,7 @@ class TestRelationInfo:
         assert info.is_to_one is True
         assert info.is_to_many is False
 
-    def test_is_to_many_one_to_many(self):
+    def test_is_to_many_one_to_many(self) -> None:
         """Test is_to_many for one-to-many relation."""
         info = RelationInfo(
             name="tasks",
@@ -233,7 +236,7 @@ class TestRelationInfo:
         assert info.is_to_many is True
         assert info.is_to_one is False
 
-    def test_is_to_many_many_to_many(self):
+    def test_is_to_many_many_to_many(self) -> None:
         """Test is_to_many for many-to-many relation."""
         info = RelationInfo(
             name="tags",
@@ -255,7 +258,7 @@ class TestRelationInfo:
 class TestRelationRegistry:
     """Tests for RelationRegistry."""
 
-    def test_register_and_get(self):
+    def test_register_and_get(self) -> None:
         """Test registering and retrieving relations."""
         registry = RelationRegistry()
         info = RelationInfo(
@@ -270,7 +273,7 @@ class TestRelationRegistry:
         assert registry.has_relation("Task", "owner")
         assert registry.get_relation("Task", "owner") == info
 
-    def test_get_relations(self):
+    def test_get_relations(self) -> None:
         """Test getting all relations for an entity."""
         registry = RelationRegistry()
         info1 = RelationInfo(
@@ -293,19 +296,20 @@ class TestRelationRegistry:
         relations = registry.get_relations("Task")
         assert len(relations) == 2
 
-    def test_has_relation_false(self):
+    def test_has_relation_false(self) -> None:
         """Test has_relation returns False for non-existent relation."""
         registry = RelationRegistry()
 
         assert registry.has_relation("Task", "nonexistent") is False
 
-    def test_from_entities(self, all_entities):
+    def test_from_entities(self, all_entities: Any) -> None:
         """Test building registry from entity specs."""
         registry = RelationRegistry.from_entities(all_entities)
 
         # Task should have owner relation
         assert registry.has_relation("Task", "owner")
         owner_rel = registry.get_relation("Task", "owner")
+        assert owner_rel is not None
         assert owner_rel.to_entity == "User"
 
         # Comment should have implicit task relation from ref field
@@ -320,7 +324,7 @@ class TestRelationRegistry:
 class TestRelationLoader:
     """Tests for RelationLoader."""
 
-    def test_load_to_one_relation(self, all_entities, test_db):
+    def test_load_to_one_relation(self, all_entities: Any, test_db: Any) -> None:
         """Test loading a to-one relation."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -337,7 +341,7 @@ class TestRelationLoader:
         assert result[0]["owner"]["name"] == "John Doe"
         assert result[0]["owner"]["email"] == "john@example.com"
 
-    def test_load_to_one_null_relation(self, all_entities, test_db):
+    def test_load_to_one_null_relation(self, all_entities: Any, test_db: Any) -> None:
         """Test loading to-one relation with null FK."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -351,7 +355,7 @@ class TestRelationLoader:
         assert len(result) == 1
         assert result[0]["owner"] is None
 
-    def test_load_to_many_relation(self, all_entities, test_db):
+    def test_load_to_many_relation(self, all_entities: Any, test_db: Any) -> None:
         """Test loading a to-many relation."""
         conn, ids = test_db
         registry = RelationRegistry()
@@ -378,7 +382,7 @@ class TestRelationLoader:
         assert len(result[0]["comments"]) == 1
         assert result[0]["comments"][0]["text"] == "Test comment"
 
-    def test_load_to_many_empty(self, all_entities, test_db):
+    def test_load_to_many_empty(self, all_entities: Any, test_db: Any) -> None:
         """Test loading to-many relation with no related items."""
         conn, ids = test_db
         registry = RelationRegistry()
@@ -410,7 +414,7 @@ class TestRelationLoader:
 
         assert result[0]["comments"] == []
 
-    def test_load_multiple_relations(self, all_entities, test_db):
+    def test_load_multiple_relations(self, all_entities: Any, test_db: Any) -> None:
         """Test loading multiple relations at once."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -435,7 +439,7 @@ class TestRelationLoader:
         assert result[0]["owner"] is not None
         assert result[0]["comments"] is not None
 
-    def test_load_unknown_relation(self, all_entities, test_db):
+    def test_load_unknown_relation(self, all_entities: Any, test_db: Any) -> None:
         """Test loading unknown relation is ignored."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -447,7 +451,7 @@ class TestRelationLoader:
         # Should not modify rows
         assert "nonexistent" not in result[0]
 
-    def test_load_empty_rows(self, all_entities, test_db):
+    def test_load_empty_rows(self, all_entities: Any, test_db: Any) -> None:
         """Test loading relations on empty rows list."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -457,7 +461,7 @@ class TestRelationLoader:
 
         assert result == []
 
-    def test_batch_loading(self, all_entities, test_db):
+    def test_batch_loading(self, all_entities: Any, test_db: Any) -> None:
         """Test that multiple rows are batch-loaded efficiently."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
@@ -491,7 +495,7 @@ class TestRelationLoader:
 class TestForeignKeyConstraints:
     """Tests for FK constraint generation."""
 
-    def test_build_fk_constraint_cascade(self):
+    def test_build_fk_constraint_cascade(self) -> None:
         """Test FK constraint with CASCADE on delete."""
         info = RelationInfo(
             name="owner",
@@ -508,7 +512,7 @@ class TestForeignKeyConstraints:
         assert "REFERENCES User(id)" in sql
         assert "ON DELETE CASCADE" in sql
 
-    def test_build_fk_constraint_restrict(self):
+    def test_build_fk_constraint_restrict(self) -> None:
         """Test FK constraint with RESTRICT on delete."""
         info = RelationInfo(
             name="owner",
@@ -523,7 +527,7 @@ class TestForeignKeyConstraints:
 
         assert "ON DELETE RESTRICT" in sql
 
-    def test_build_fk_constraint_set_null(self):
+    def test_build_fk_constraint_set_null(self) -> None:
         """Test FK constraint with SET NULL on delete."""
         info = RelationInfo(
             name="owner",
@@ -538,7 +542,7 @@ class TestForeignKeyConstraints:
 
         assert "ON DELETE SET NULL" in sql
 
-    def test_get_fk_constraints(self, task_entity, all_entities):
+    def test_get_fk_constraints(self, task_entity: Any, all_entities: Any) -> None:
         """Test getting all FK constraints for an entity."""
         registry = RelationRegistry.from_entities(all_entities)
         constraints = get_foreign_key_constraints(task_entity, registry)
@@ -546,7 +550,7 @@ class TestForeignKeyConstraints:
         assert len(constraints) == 1
         assert "owner_id" in constraints[0]
 
-    def test_get_fk_indexes(self, task_entity, all_entities):
+    def test_get_fk_indexes(self, task_entity: Any, all_entities: Any) -> None:
         """Test getting FK index statements."""
         registry = RelationRegistry.from_entities(all_entities)
         indexes = get_foreign_key_indexes(task_entity, registry)
@@ -564,7 +568,7 @@ class TestForeignKeyConstraints:
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
-    def test_self_referential_relation(self):
+    def test_self_referential_relation(self) -> None:
         """Test self-referential relation (e.g., parent task)."""
         entity = EntitySpec(
             name="Task",
@@ -584,7 +588,7 @@ class TestEdgeCases:
 
         assert registry.has_relation("Task", "parent")
 
-    def test_multiple_refs_to_same_entity(self):
+    def test_multiple_refs_to_same_entity(self) -> None:
         """Test multiple refs to same entity."""
         entity = EntitySpec(
             name="Task",
@@ -610,7 +614,7 @@ class TestEdgeCases:
         relations = registry.get_relations("Task")
         assert len(relations) == 2
 
-    def test_relation_with_backref(self):
+    def test_relation_with_backref(self) -> None:
         """Test relation with backref name."""
         entity = EntitySpec(
             name="Task",
@@ -633,5 +637,5 @@ class TestEdgeCases:
 
         registry = RelationRegistry.from_entities([entity])
         rel = registry.get_relation("Task", "owner")
-
+        assert rel is not None
         assert rel.backref == "tasks"

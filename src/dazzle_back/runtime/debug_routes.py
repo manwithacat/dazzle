@@ -22,7 +22,7 @@ except ImportError:
 
 from pydantic import BaseModel
 
-from dazzle_back.runtime.query_builder import validate_sql_identifier
+from dazzle_back.runtime.query_builder import quote_identifier, validate_sql_identifier
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.repository import DatabaseManager
@@ -300,13 +300,23 @@ def create_debug_routes(
         tables: list[dict[str, Any]] = []
 
         with db_manager.connection() as conn:
-            # Get all tables
-            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            # Get all tables — use backend-appropriate catalog query
+            is_pg = getattr(db_manager, "backend_type", "sqlite") == "postgres"
+            if is_pg:
+                cursor = conn.execute(
+                    "SELECT tablename AS name FROM pg_tables "
+                    "WHERE schemaname = 'public' ORDER BY tablename"
+                )
+            else:
+                cursor = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+                )
             table_names = [row[0] for row in cursor.fetchall()]
 
             for table_name in table_names:
                 try:
-                    count_cursor = conn.execute(f"SELECT COUNT(*) FROM [{table_name}]")
+                    tbl = quote_identifier(table_name)
+                    count_cursor = conn.execute(f"SELECT COUNT(*) FROM {tbl}")
                     count = count_cursor.fetchone()[0]
                     tables.append({"name": table_name, "count": count})
                 except Exception:

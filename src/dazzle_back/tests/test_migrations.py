@@ -4,6 +4,8 @@ Tests for auto-migration system.
 Tests schema change detection and migration execution.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
@@ -114,7 +116,7 @@ def task_entity_v2() -> EntitySpec:
 class TestMigrationPlanner:
     """Test migration planning."""
 
-    def test_plan_new_table(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
+    def test_plan_new_table(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec) -> None:
         """Test planning migration for a new table."""
         planner = MigrationPlanner(db_manager)
         plan = planner.plan_migrations([task_entity_v1])
@@ -126,9 +128,9 @@ class TestMigrationPlanner:
         create_steps = [s for s in plan.steps if s.action == MigrationAction.CREATE_TABLE]
         assert len(create_steps) == 1
         assert create_steps[0].table == "Task"
-        assert "CREATE TABLE" in create_steps[0].sql
+        assert create_steps[0].sql is not None and "CREATE TABLE" in create_steps[0].sql
 
-    def test_plan_no_changes(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
+    def test_plan_no_changes(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec) -> None:
         """Test planning with no changes needed."""
         # First, create the table
         db_manager.create_table(task_entity_v1)
@@ -145,7 +147,7 @@ class TestMigrationPlanner:
         db_manager: DatabaseManager,
         task_entity_v1: EntitySpec,
         task_entity_v2: EntitySpec,
-    ):
+    ) -> None:
         """Test planning migration to add a column."""
         # Create v1 table
         db_manager.create_table(task_entity_v1)
@@ -162,7 +164,7 @@ class TestMigrationPlanner:
         assert "priority" in column_names
         assert "description" in column_names
 
-    def test_plan_detects_removed_column(self, db_manager: DatabaseManager):
+    def test_plan_detects_removed_column(self, db_manager: DatabaseManager) -> None:
         """Test that removed columns are detected but marked as destructive."""
         # Create entity with extra column
         entity_v1 = EntitySpec(
@@ -217,7 +219,7 @@ class TestMigrationPlanner:
         assert len(drop_steps) == 1
         assert drop_steps[0].column == "old_field"
 
-    def test_plan_add_index(self, db_manager: DatabaseManager):
+    def test_plan_add_index(self, db_manager: DatabaseManager) -> None:
         """Test planning migration to add an index."""
         # Create entity without index
         entity_v1 = EntitySpec(
@@ -273,7 +275,9 @@ class TestMigrationPlanner:
 class TestMigrationExecutor:
     """Test migration execution."""
 
-    def test_execute_create_table(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
+    def test_execute_create_table(
+        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
+    ) -> None:
         """Test executing CREATE TABLE migration."""
         planner = MigrationPlanner(db_manager)
         plan = planner.plan_migrations([task_entity_v1])
@@ -290,7 +294,7 @@ class TestMigrationExecutor:
         db_manager: DatabaseManager,
         task_entity_v1: EntitySpec,
         task_entity_v2: EntitySpec,
-    ):
+    ) -> None:
         """Test executing ADD COLUMN migration."""
         # Create v1 table
         db_manager.create_table(task_entity_v1)
@@ -307,7 +311,7 @@ class TestMigrationExecutor:
         assert "priority" in columns
         assert "description" in columns
 
-    def test_execute_safe_skips_destructive(self, db_manager: DatabaseManager):
+    def test_execute_safe_skips_destructive(self, db_manager: DatabaseManager) -> None:
         """Test that execute_safe skips destructive operations."""
         # Create entity with extra column
         entity_v1 = EntitySpec(
@@ -364,7 +368,7 @@ class TestMigrationHistory:
 
     def test_record_and_retrieve_history(
         self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
-    ):
+    ) -> None:
         """Test recording and retrieving migration history."""
         # Execute a migration
         planner = MigrationPlanner(db_manager)
@@ -398,7 +402,7 @@ class TestAutoMigrate:
 
     def test_auto_migrate_creates_tables(
         self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
-    ):
+    ) -> None:
         """Test auto_migrate creates new tables."""
         plan = auto_migrate(db_manager, [task_entity_v1])
 
@@ -410,7 +414,7 @@ class TestAutoMigrate:
         db_manager: DatabaseManager,
         task_entity_v1: EntitySpec,
         task_entity_v2: EntitySpec,
-    ):
+    ) -> None:
         """Test auto_migrate adds new columns."""
         # First migration - create table
         auto_migrate(db_manager, [task_entity_v1])
@@ -423,7 +427,9 @@ class TestAutoMigrate:
         assert "priority" in columns
         assert "description" in columns
 
-    def test_auto_migrate_idempotent(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
+    def test_auto_migrate_idempotent(
+        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
+    ) -> None:
         """Test auto_migrate is idempotent."""
         # First migration
         plan1 = auto_migrate(db_manager, [task_entity_v1])
@@ -433,7 +439,9 @@ class TestAutoMigrate:
         plan2 = auto_migrate(db_manager, [task_entity_v1])
         assert plan2.is_empty
 
-    def test_plan_migrations_preview(self, db_manager: DatabaseManager, task_entity_v1: EntitySpec):
+    def test_plan_migrations_preview(
+        self, db_manager: DatabaseManager, task_entity_v1: EntitySpec
+    ) -> None:
         """Test plan_migrations for preview without execution."""
         plan = plan_migrations(db_manager, [task_entity_v1])
 
@@ -452,7 +460,7 @@ class TestAutoMigrate:
 class TestMultipleEntities:
     """Test migrations with multiple entities."""
 
-    def test_migrate_multiple_entities(self, db_manager: DatabaseManager):
+    def test_migrate_multiple_entities(self, db_manager: DatabaseManager) -> None:
         """Test migrating multiple entities at once."""
         task_entity = EntitySpec(
             name="Task",
@@ -491,7 +499,7 @@ class TestMultipleEntities:
         assert db_manager.table_exists("Task")
         assert db_manager.table_exists("User")
 
-    def test_migrate_entities_independently(self, db_manager: DatabaseManager):
+    def test_migrate_entities_independently(self, db_manager: DatabaseManager) -> None:
         """Test that entity migrations are independent."""
         task_entity_v1 = EntitySpec(
             name="Task",

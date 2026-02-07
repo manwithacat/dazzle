@@ -12,7 +12,7 @@ import sqlite3
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -152,7 +152,7 @@ class AuthStore:
 
         self._init_db()
 
-    def _get_connection(self):
+    def _get_connection(self) -> sqlite3.Connection | Any:
         """Get a database connection (SQLite or PostgreSQL)."""
         if self._use_postgres:
             import psycopg2
@@ -174,7 +174,7 @@ class AuthStore:
         """Convert boolean to database value."""
         return value if self._use_postgres else (1 if value else 0)
 
-    def _db_to_bool(self, value) -> bool:
+    def _db_to_bool(self, value: object) -> bool:
         """Convert database value to boolean."""
         return bool(value)
 
@@ -254,7 +254,7 @@ class AuthStore:
         finally:
             conn.close()
 
-    def _execute(self, query: str, params: tuple = ()) -> list[dict]:
+    def _execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
         """Execute a query and return results as list of dicts."""
         # Convert ? placeholders to %s for PostgreSQL
         if self._use_postgres:
@@ -280,12 +280,12 @@ class AuthStore:
         finally:
             conn.close()
 
-    def _execute_one(self, query: str, params: tuple = ()) -> dict | None:
+    def _execute_one(self, query: str, params: tuple[object, ...] = ()) -> dict[str, Any] | None:
         """Execute a query and return single result."""
         results = self._execute(query, params)
         return results[0] if results else None
 
-    def _execute_modify(self, query: str, params: tuple = ()) -> int:
+    def _execute_modify(self, query: str, params: tuple[object, ...] = ()) -> int:
         """Execute a modification query and return rowcount."""
         # Convert ? placeholders to %s for PostgreSQL
         if self._use_postgres:
@@ -296,15 +296,15 @@ class AuthStore:
             if self._use_postgres:
                 cursor = conn.cursor()
                 cursor.execute(query, params)
-                rowcount = cursor.rowcount
+                rowcount: int = cursor.rowcount
                 conn.commit()
                 return rowcount
             else:
                 # SQLite
                 cursor = conn.execute(query, params)
-                rowcount = cursor.rowcount
+                rowcount_sqlite: int = cursor.rowcount
                 conn.commit()
-                return rowcount
+                return rowcount_sqlite
         finally:
             conn.close()
 
@@ -364,7 +364,7 @@ class AuthStore:
 
         return user
 
-    def _row_to_user(self, row: dict) -> UserRecord:
+    def _row_to_user(self, row: dict[str, Any]) -> UserRecord:
         """Convert a database row to UserRecord."""
         import json
 
@@ -746,7 +746,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/login")
-    async def login(credentials: LoginRequest, request: FastAPIRequest):
+    async def login(credentials: LoginRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Login with email and password.
 
@@ -794,7 +794,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/logout")
-    async def logout(request: FastAPIRequest):
+    async def logout(request: FastAPIRequest) -> JSONResponse:
         """
         Logout and delete session.
         """
@@ -813,7 +813,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/register", status_code=201)
-    async def register(data: RegisterRequest, request: FastAPIRequest):
+    async def register(data: RegisterRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Register a new user.
         """
@@ -868,7 +868,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.get("/me")
-    async def get_me(request: FastAPIRequest):
+    async def get_me(request: FastAPIRequest) -> dict[str, Any]:
         """
         Get current authenticated user.
         """
@@ -883,6 +883,8 @@ def create_auth_routes(
             raise HTTPException(status_code=401, detail="Session expired")
 
         user = auth_context.user
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
 
         return {
             "id": str(user.id),
@@ -897,7 +899,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/change-password")
-    async def change_password(data: ChangePasswordRequest, request: FastAPIRequest):
+    async def change_password(data: ChangePasswordRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Change current user's password.
         """
@@ -911,19 +913,23 @@ def create_auth_routes(
         if not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Session expired")
 
+        user = auth_context.user
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+
         # Verify current password
-        if not verify_password(data.current_password, auth_context.user.password_hash):
+        if not verify_password(data.current_password, user.password_hash):
             raise HTTPException(status_code=400, detail="Current password is incorrect")
 
         # Update password
-        auth_store.update_password(auth_context.user.id, data.new_password)
+        auth_store.update_password(user.id, data.new_password)
 
         # Invalidate all other sessions
-        auth_store.delete_user_sessions(auth_context.user.id)
+        auth_store.delete_user_sessions(user.id)
 
         # Create new session
         session = auth_store.create_session(
-            auth_context.user,
+            user,
             expires_in=timedelta(days=session_expires_days),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent"),
@@ -1001,10 +1007,10 @@ def create_jwt_auth_routes(
 
     @router.post("/token", response_model=TokenResponse)
     async def login_for_token(
-        form_data: OAuth2PasswordRequestForm = None,
+        form_data: OAuth2PasswordRequestForm | None = None,
         credentials: TokenRequest | None = None,
-        request: FastAPIRequest = None,
-    ):
+        request: FastAPIRequest | None = None,
+    ) -> TokenResponse:
         """
         OAuth2 compatible token endpoint.
 
@@ -1050,8 +1056,8 @@ def create_jwt_auth_routes(
     @router.post("/token/refresh", response_model=TokenResponse)
     async def refresh_access_token(
         data: RefreshTokenRequest,
-        request: FastAPIRequest = None,
-    ):
+        request: FastAPIRequest | None = None,
+    ) -> TokenResponse:
         """
         Exchange refresh token for new token pair.
 
@@ -1098,7 +1104,7 @@ def create_jwt_auth_routes(
     # =========================================================================
 
     @router.post("/token/revoke")
-    async def revoke_token(data: TokenRevokeRequest):
+    async def revoke_token(data: TokenRevokeRequest) -> dict[str, str]:
         """
         Revoke a refresh token (logout from device).
         """
@@ -1113,7 +1119,7 @@ def create_jwt_auth_routes(
     # =========================================================================
 
     @router.get("/me/jwt")
-    async def get_me_jwt(request: FastAPIRequest):
+    async def get_me_jwt(request: FastAPIRequest) -> dict[str, Any]:
         """
         Get current user from JWT token.
 
@@ -1130,6 +1136,9 @@ def create_jwt_auth_routes(
                 status_code=401,
                 detail=context.error or "Not authenticated",
             )
+
+        if context.claims is None:
+            raise HTTPException(status_code=401, detail="No claims found")
 
         # Get full user from store
         user = auth_store.get_user_by_id(context.claims.user_id)
@@ -1149,7 +1158,7 @@ def create_jwt_auth_routes(
     # =========================================================================
 
     @router.get("/sessions")
-    async def list_sessions(request: FastAPIRequest):
+    async def list_sessions(request: FastAPIRequest) -> dict[str, Any]:
         """
         List active refresh tokens/sessions for current user.
 
@@ -1162,6 +1171,9 @@ def create_jwt_auth_routes(
 
         if not context.is_authenticated:
             raise HTTPException(status_code=401, detail="Not authenticated")
+
+        if context.claims is None:
+            raise HTTPException(status_code=401, detail="No claims found")
 
         tokens = token_store.get_user_tokens(context.claims.user_id)
 
@@ -1180,7 +1192,7 @@ def create_jwt_auth_routes(
         }
 
     @router.delete("/sessions")
-    async def revoke_all_sessions(request: FastAPIRequest):
+    async def revoke_all_sessions(request: FastAPIRequest) -> dict[str, int]:
         """
         Revoke all refresh tokens except current (logout from all devices).
         """
@@ -1191,6 +1203,9 @@ def create_jwt_auth_routes(
 
         if not context.is_authenticated:
             raise HTTPException(status_code=401, detail="Not authenticated")
+
+        if context.claims is None:
+            raise HTTPException(status_code=401, detail="No claims found")
 
         # Get current refresh token from request body if provided
         # Otherwise revoke all

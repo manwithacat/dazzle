@@ -20,7 +20,7 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = None  # type: ignore[misc, assignment]
-    Query = None  # type: ignore[misc, assignment]
+    Query = None  # type: ignore[assignment]
 
 from pydantic import BaseModel, Field
 
@@ -205,9 +205,9 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
             )
 
         topics = await framework.bus.list_topics()
-        consumers = await framework.bus.list_consumer_groups()
+        consumers = await framework.bus.list_consumer_groups(topic="*")
         outbox_stats = await framework.get_outbox_stats()
-        dlq_count = await framework.bus.get_dlq_count()
+        dlq_count = await framework.bus.get_dlq_count()  # type: ignore[attr-defined]
 
         return EventSystemStatus(
             running=True,
@@ -274,7 +274,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         total = 0
         current = 0
 
-        async for event in framework.bus.replay(
+        async for event in framework.bus.replay(  # type: ignore[call-arg]
             topic,
             key_filter=key,
             event_type_filter=event_type,
@@ -315,7 +315,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return None
 
-        event = await framework.bus.get_event(event_id)
+        event = await framework.bus.get_event(event_id)  # type: ignore[attr-defined]
         if event is None:
             return None
 
@@ -343,10 +343,10 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
             return ConsumersResponse(consumers=[])
 
         consumers: list[ConsumerInfo] = []
-        groups = await framework.bus.list_consumer_groups()
+        groups: Any = await framework.bus.list_consumer_groups(topic="*")
 
         for group in groups:
-            info = await framework.bus.get_consumer_info(group["group_id"], group["topic"])
+            info = await framework.bus.get_consumer_info(group["group_id"], group["topic"])  # type: ignore[attr-defined]
             consumers.append(
                 ConsumerInfo(
                     group_id=group["group_id"],
@@ -423,7 +423,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return DLQResponse(entries=[], total=0)
 
-        dlq_events = await framework.bus.get_dlq_events(topic=topic, limit=limit)
+        dlq_events = await framework.bus.get_dlq_events(topic=topic, limit=limit)  # type: ignore[attr-defined]
 
         entries: list[DLQEntry] = []
         for event in dlq_events:
@@ -439,7 +439,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
                 )
             )
 
-        total = await framework.bus.get_dlq_count(topic=topic)
+        total = await framework.bus.get_dlq_count(topic=topic)  # type: ignore[attr-defined]
 
         return DLQResponse(entries=entries, total=total)
 
@@ -457,7 +457,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
             return {"success": False, "error": "Event system not running"}
 
         try:
-            success = await framework.bus.replay_dlq_event(event_id, group_id)
+            success = await framework.bus.replay_dlq_event(event_id, group_id)  # type: ignore[attr-defined]
             if success:
                 return {"success": True, "message": f"Event {event_id} replayed successfully"}
             else:

@@ -134,25 +134,25 @@ class EntityEventBus:
             return
 
         # Call sync handlers
-        for handler in self._sync_handlers:
+        for sync_handler in self._sync_handlers:
             try:
-                handler(event)
+                sync_handler(event)
             except Exception:
                 logger.exception(
                     "Sync event handler %s failed for event %s:%s",
-                    getattr(handler, "__name__", handler),
+                    getattr(sync_handler, "__name__", sync_handler),
                     event.entity_name,
                     event.event_type.value,
                 )
 
         # Call async handlers
-        for handler in self._handlers:
+        for async_handler in self._handlers:
             try:
-                await handler(event)
+                await async_handler(event)
             except Exception:
                 logger.exception(
                     "Async event handler %s failed for event %s:%s",
-                    getattr(handler, "__name__", handler),
+                    getattr(async_handler, "__name__", async_handler),
                     event.entity_name,
                     event.event_type.value,
                 )

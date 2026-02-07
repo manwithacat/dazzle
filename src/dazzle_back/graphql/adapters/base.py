@@ -330,7 +330,7 @@ class AdapterResult(Generic[T]):
         """Map over the success value."""
         if self.is_success:
             return AdapterResult.success(fn(self.data))
-        return self  # type: ignore
+        return self
 
 
 # =============================================================================

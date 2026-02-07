@@ -21,6 +21,32 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# Connection Wrapper
+# =============================================================================
+
+
+class PgConnectionWrapper:
+    """Wrapper that adds .execute() convenience method to psycopg2 connections.
+
+    psycopg2 connections don't have .execute() (unlike sqlite3), so this
+    wrapper proxies it through cursor().execute() and returns the cursor.
+    All other attribute access is forwarded to the underlying connection.
+    """
+
+    def __init__(self, conn: Any) -> None:
+        self._conn = conn
+
+    def execute(self, sql: str, params: Any = None) -> Any:
+        """Execute SQL via a new cursor and return it (sqlite3 compat)."""
+        cursor = self._conn.cursor()
+        cursor.execute(sql, params or ())
+        return cursor
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._conn, name)
+
+
+# =============================================================================
 # Postgres Type Mapping
 # =============================================================================
 
@@ -111,14 +137,17 @@ class PostgresBackend:
         """
         Get a database connection context manager.
 
-        Yields a psycopg2 connection with RealDictCursor.
+        Yields a wrapped psycopg2 connection with DictCursor.
+        DictCursor rows support both integer indexing (row[0]) and
+        string keys (row["col"]), unlike RealDictCursor (string only).
+        The wrapper adds .execute() for sqlite3 API compatibility.
         """
         import psycopg2
         import psycopg2.extras
 
-        conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.RealDictCursor)
+        conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
         try:
-            yield conn
+            yield PgConnectionWrapper(conn)
             conn.commit()
         except Exception:
             conn.rollback()
@@ -130,15 +159,14 @@ class PostgresBackend:
         """
         Get a persistent connection for the application lifecycle.
 
-        Returns a psycopg2 connection (reuses existing if available).
+        Returns a wrapped psycopg2 connection (reuses existing if available).
         """
         import psycopg2
         import psycopg2.extras
 
         if self._connection is None or self._connection.closed:
-            self._connection = psycopg2.connect(
-                self.database_url, cursor_factory=psycopg2.extras.RealDictCursor
-            )
+            raw = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
+            self._connection = PgConnectionWrapper(raw)
         return self._connection
 
     def close(self) -> None:

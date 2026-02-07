@@ -172,9 +172,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         """
         self._repository = repository
 
-    async def execute(self, operation: str, **kwargs: Any) -> Any:
+    async def execute(self, **kwargs: Any) -> Any:
         """Route to the appropriate operation."""
-        operations = {
+        operation: str = kwargs.pop("operation", "")
+        operations: dict[str, Callable[..., Any]] = {
             "create": self.create,
             "read": self.read,
             "update": self.update,
@@ -238,7 +239,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         return entity
 
-    async def read(self, id: UUID) -> T | None:
+    async def read(self, id: UUID) -> T | dict[str, Any] | None:
         """Read an entity by ID."""
         if self._repository:
             return await self._repository.read(id)
@@ -249,7 +250,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         id: UUID,
         data: UpdateT,
         user_roles: list[str] | None = None,
-    ) -> T | None:
+    ) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
 

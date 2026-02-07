@@ -292,7 +292,8 @@ class FileEmailAdapter(EmailAdapter):
 
         try:
             index = json.loads(index_path.read_text())
-            return index.get("messages", [])[:limit]
+            messages: list[dict[str, Any]] = index.get("messages", [])[:limit]
+            return messages
         except json.JSONDecodeError:
             return []
 
@@ -316,7 +317,8 @@ class FileEmailAdapter(EmailAdapter):
                 if entry["id"] == message_id:
                     filepath = self._mail_dir / "messages" / entry["filename"]
                     if filepath.exists():
-                        return filepath.read_text()
+                        content: str = filepath.read_text()
+                        return content
         except (json.JSONDecodeError, KeyError):
             pass
 

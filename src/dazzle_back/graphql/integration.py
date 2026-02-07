@@ -217,21 +217,23 @@ def _create_query_type(
 
         if get_resolver and entity_type:
             # Single entity resolver - returns Optional[EntityType]
+            optional_type = entity_type | None
             class_dict[entity_lower] = strawberry.field(
                 resolver=get_resolver,
                 description=f"Get {entity_name} by ID",
-                graphql_type=entity_type | None,
+                graphql_type=optional_type,
             )
-            annotations[entity_lower] = entity_type | None
+            annotations[entity_lower] = optional_type
 
         if list_resolver and entity_type:
             # List resolver - returns List[EntityType]
+            list_type = list[entity_type]  # type: ignore[valid-type]
             class_dict[f"{entity_lower}s"] = strawberry.field(
                 resolver=list_resolver,
                 description=f"List all {entity_name}s",
-                graphql_type=list[entity_type],
+                graphql_type=list_type,
             )
-            annotations[f"{entity_lower}s"] = list[entity_type]
+            annotations[f"{entity_lower}s"] = list_type
 
     # Add annotations to class dict
     class_dict["__annotations__"] = annotations
@@ -298,7 +300,7 @@ def _create_mutation_type(
     return strawberry.type(Mutation)
 
 
-def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
+def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Callable[..., Any]:
     """Create a typed resolver for creating entities."""
 
     async def resolve_create(info: strawberry.Info, input: Any) -> Any:
@@ -333,7 +335,7 @@ def _make_create_resolver(entity_name: str, repo: Any, input_type: type) -> Call
     return resolve_create
 
 
-def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Callable:
+def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Callable[..., Any]:
     """Create a typed resolver for updating entities."""
 
     async def resolve_update(info: strawberry.Info, id: str, input: Any) -> Any:
@@ -372,7 +374,7 @@ def _make_update_resolver(entity_name: str, repo: Any, input_type: type) -> Call
     return resolve_update
 
 
-def _make_delete_resolver(entity_name: str, repo: Any) -> Callable:
+def _make_delete_resolver(entity_name: str, repo: Any) -> Callable[..., Any]:
     """Create a typed resolver for deleting entities."""
 
     async def resolve_delete(info: strawberry.Info, id: str) -> bool:

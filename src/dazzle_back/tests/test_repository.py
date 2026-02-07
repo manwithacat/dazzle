@@ -4,7 +4,10 @@ Tests for SQLite repository module.
 Tests database creation, CRUD operations, and persistence.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -87,7 +90,7 @@ def db_manager(temp_db_path: Path) -> DatabaseManager:
 class TestTypeConversion:
     """Test Python to SQLite type conversions."""
 
-    def test_uuid_conversion(self):
+    def test_uuid_conversion(self) -> None:
         """Test UUID conversion."""
         test_uuid = uuid4()
         sqlite_val = _python_to_sqlite(test_uuid)
@@ -97,7 +100,7 @@ class TestTypeConversion:
         python_val = _sqlite_to_python(sqlite_val, field_type)
         assert python_val == test_uuid
 
-    def test_bool_conversion(self):
+    def test_bool_conversion(self) -> None:
         """Test boolean conversion."""
         field_type = FieldType(kind="scalar", scalar_type=ScalarType.BOOL)
 
@@ -107,12 +110,12 @@ class TestTypeConversion:
         assert _sqlite_to_python(1, field_type) is True
         assert _sqlite_to_python(0, field_type) is False
 
-    def test_none_conversion(self):
+    def test_none_conversion(self) -> None:
         """Test None handling."""
         assert _python_to_sqlite(None) is None
         assert _sqlite_to_python(None, None) is None
 
-    def test_dict_conversion(self):
+    def test_dict_conversion(self) -> None:
         """Test dict/JSON conversion."""
         test_dict = {"key": "value", "nested": {"a": 1}}
         sqlite_val = _python_to_sqlite(test_dict)
@@ -131,7 +134,7 @@ class TestTypeConversion:
 class TestDatabaseManager:
     """Test database manager functionality."""
 
-    def test_create_database(self, db_manager: DatabaseManager, temp_db_path: Path):
+    def test_create_database(self, db_manager: DatabaseManager, temp_db_path: Path) -> None:
         """Test database file creation."""
         # Initially the file shouldn't exist
         assert not temp_db_path.exists()
@@ -142,7 +145,7 @@ class TestDatabaseManager:
 
         assert temp_db_path.exists()
 
-    def test_create_table(self, db_manager: DatabaseManager, task_entity: EntitySpec):
+    def test_create_table(self, db_manager: DatabaseManager, task_entity: EntitySpec) -> None:
         """Test table creation from EntitySpec."""
         db_manager.create_table(task_entity)
 
@@ -157,7 +160,7 @@ class TestDatabaseManager:
         assert "priority" in columns
         assert "completed" in columns
 
-    def test_create_all_tables(self, db_manager: DatabaseManager, task_entity: EntitySpec):
+    def test_create_all_tables(self, db_manager: DatabaseManager, task_entity: EntitySpec) -> None:
         """Test creating multiple tables."""
         user_entity = EntitySpec(
             name="User",
@@ -190,7 +193,9 @@ class TestSQLiteRepository:
     """Test SQLite repository CRUD operations."""
 
     @pytest.fixture
-    def repository(self, db_manager: DatabaseManager, task_entity: EntitySpec) -> SQLiteRepository:
+    def repository(
+        self, db_manager: DatabaseManager, task_entity: EntitySpec
+    ) -> SQLiteRepository[Any]:
         """Create a Task repository."""
         db_manager.create_table(task_entity)
         model = generate_entity_model(task_entity)
@@ -201,7 +206,7 @@ class TestSQLiteRepository:
         )
 
     @pytest.mark.asyncio
-    async def test_create(self, repository: SQLiteRepository):
+    async def test_create(self, repository: SQLiteRepository[Any]) -> None:
         """Test creating an entity."""
         task_id = uuid4()
         data = {
@@ -219,7 +224,7 @@ class TestSQLiteRepository:
         assert result.priority == "high"
 
     @pytest.mark.asyncio
-    async def test_read(self, repository: SQLiteRepository):
+    async def test_read(self, repository: SQLiteRepository[Any]) -> None:
         """Test reading an entity by ID."""
         task_id = uuid4()
         data = {
@@ -232,17 +237,17 @@ class TestSQLiteRepository:
         result = await repository.read(task_id)
 
         assert result is not None
-        assert result.id == task_id
-        assert result.title == "Read Test"
+        assert result.id == task_id  # type: ignore[union-attr]
+        assert result.title == "Read Test"  # type: ignore[union-attr]
 
     @pytest.mark.asyncio
-    async def test_read_not_found(self, repository: SQLiteRepository):
+    async def test_read_not_found(self, repository: SQLiteRepository[Any]) -> None:
         """Test reading a non-existent entity."""
         result = await repository.read(uuid4())
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_update(self, repository: SQLiteRepository):
+    async def test_update(self, repository: SQLiteRepository[Any]) -> None:
         """Test updating an entity."""
         task_id = uuid4()
         await repository.create(
@@ -256,17 +261,17 @@ class TestSQLiteRepository:
         result = await repository.update(task_id, {"title": "Updated"})
 
         assert result is not None
-        assert result.title == "Updated"
-        assert result.priority == "low"  # Unchanged
+        assert result.title == "Updated"  # type: ignore[union-attr]
+        assert result.priority == "low"  # type: ignore[union-attr]  # Unchanged
 
     @pytest.mark.asyncio
-    async def test_update_not_found(self, repository: SQLiteRepository):
+    async def test_update_not_found(self, repository: SQLiteRepository[Any]) -> None:
         """Test updating a non-existent entity."""
         result = await repository.update(uuid4(), {"title": "New"})
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_delete(self, repository: SQLiteRepository):
+    async def test_delete(self, repository: SQLiteRepository[Any]) -> None:
         """Test deleting an entity."""
         task_id = uuid4()
         await repository.create(
@@ -284,13 +289,13 @@ class TestSQLiteRepository:
         assert await repository.read(task_id) is None
 
     @pytest.mark.asyncio
-    async def test_delete_not_found(self, repository: SQLiteRepository):
+    async def test_delete_not_found(self, repository: SQLiteRepository[Any]) -> None:
         """Test deleting a non-existent entity."""
         result = await repository.delete(uuid4())
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_list(self, repository: SQLiteRepository):
+    async def test_list(self, repository: SQLiteRepository[Any]) -> None:
         """Test listing entities with pagination."""
         # Create multiple tasks
         for i in range(5):
@@ -310,7 +315,7 @@ class TestSQLiteRepository:
         assert result["page_size"] == 3
 
     @pytest.mark.asyncio
-    async def test_list_with_filter(self, repository: SQLiteRepository):
+    async def test_list_with_filter(self, repository: SQLiteRepository[Any]) -> None:
         """Test listing entities with filters."""
         await repository.create(
             {
@@ -333,7 +338,7 @@ class TestSQLiteRepository:
         assert result["items"][0].priority == "high"
 
     @pytest.mark.asyncio
-    async def test_exists(self, repository: SQLiteRepository):
+    async def test_exists(self, repository: SQLiteRepository[Any]) -> None:
         """Test exists check."""
         task_id = uuid4()
         await repository.create(
@@ -356,7 +361,7 @@ class TestSQLiteRepository:
 class TestRepositoryFactory:
     """Test repository factory functionality."""
 
-    def test_create_repository(self, db_manager: DatabaseManager, task_entity: EntitySpec):
+    def test_create_repository(self, db_manager: DatabaseManager, task_entity: EntitySpec) -> None:
         """Test creating a repository via factory."""
         db_manager.create_table(task_entity)
         model = generate_entity_model(task_entity)
@@ -367,7 +372,9 @@ class TestRepositoryFactory:
         assert repo is not None
         assert repo.table_name == "Task"
 
-    def test_create_all_repositories(self, db_manager: DatabaseManager, task_entity: EntitySpec):
+    def test_create_all_repositories(
+        self, db_manager: DatabaseManager, task_entity: EntitySpec
+    ) -> None:
         """Test creating multiple repositories."""
         user_entity = EntitySpec(
             name="User",
@@ -407,7 +414,7 @@ class TestPersistence:
     """Test data persistence across database reconnections."""
 
     @pytest.mark.asyncio
-    async def test_data_persists(self, temp_db_path: Path, task_entity: EntitySpec):
+    async def test_data_persists(self, temp_db_path: Path, task_entity: EntitySpec) -> None:
         """Test that data persists after closing and reopening the database."""
         task_id = uuid4()
 
@@ -433,5 +440,5 @@ class TestPersistence:
         result = await repo2.read(task_id)
 
         assert result is not None
-        assert result.id == task_id
-        assert result.title == "Persistent Task"
+        assert result.id == task_id  # type: ignore[union-attr]
+        assert result.title == "Persistent Task"  # type: ignore[union-attr]

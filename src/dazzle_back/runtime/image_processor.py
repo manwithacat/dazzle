@@ -7,7 +7,10 @@ Provides thumbnail generation and image optimization.
 from __future__ import annotations
 
 from io import BytesIO
-from typing import Literal
+from typing import TYPE_CHECKING, Any, Literal
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 
 class ImageProcessingError(Exception):
@@ -64,7 +67,7 @@ class ImageProcessor:
             )
 
         try:
-            img = Image.open(BytesIO(image_data))
+            img: Image.Image = Image.open(BytesIO(image_data))
 
             # Handle EXIF orientation
             img = ImageProcessor._apply_exif_orientation(img)
@@ -83,7 +86,7 @@ class ImageProcessor:
             img.thumbnail((width, height), Image.Resampling.LANCZOS)
 
             output = BytesIO()
-            save_kwargs = {"format": format}
+            save_kwargs: dict[str, Any] = {"format": format}
             if format in ("JPEG", "WEBP"):
                 save_kwargs["quality"] = quality
             if format == "JPEG":
@@ -129,7 +132,7 @@ class ImageProcessor:
             )
 
         try:
-            img = Image.open(BytesIO(image_data))
+            img: Image.Image = Image.open(BytesIO(image_data))
 
             # Handle EXIF orientation
             img = ImageProcessor._apply_exif_orientation(img)
@@ -150,7 +153,7 @@ class ImageProcessor:
                 img = background
 
             output = BytesIO()
-            save_kwargs = {"format": format}
+            save_kwargs: dict[str, Any] = {"format": format}
             if format in ("JPEG", "WEBP"):
                 save_kwargs["quality"] = quality
                 save_kwargs["optimize"] = True
@@ -208,7 +211,7 @@ class ImageProcessor:
             return None
 
     @staticmethod
-    def _apply_exif_orientation(img):
+    def _apply_exif_orientation(img: Image.Image) -> Image.Image:
         """Apply EXIF orientation to image."""
         try:
             from PIL import ExifTags
@@ -261,7 +264,7 @@ class ImageProcessor:
             raise ImageProcessingError("Pillow is required for image processing")
 
         try:
-            img = Image.open(BytesIO(image_data))
+            img: Image.Image = Image.open(BytesIO(image_data))
 
             # Handle mode conversion
             if target_format == "JPEG" and img.mode in ("RGBA", "P", "LA"):
@@ -273,7 +276,7 @@ class ImageProcessor:
                 img = background
 
             output = BytesIO()
-            save_kwargs = {"format": target_format}
+            save_kwargs: dict[str, Any] = {"format": target_format}
             if target_format in ("JPEG", "WEBP"):
                 save_kwargs["quality"] = quality
 
@@ -312,7 +315,7 @@ class ImageProcessor:
             raise ImageProcessingError("Pillow is required for image processing")
 
         try:
-            img = Image.open(BytesIO(image_data))
+            img: Image.Image = Image.open(BytesIO(image_data))
 
             # Handle EXIF orientation
             img = ImageProcessor._apply_exif_orientation(img)
@@ -339,7 +342,7 @@ class ImageProcessor:
                 img = background
 
             output = BytesIO()
-            save_kwargs = {"format": format}
+            save_kwargs: dict[str, Any] = {"format": format}
             if format in ("JPEG", "WEBP"):
                 save_kwargs["quality"] = quality
 

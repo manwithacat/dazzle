@@ -163,7 +163,7 @@ class ResolverGenerator:
                     if ctx.tenant_id:
                         filters["tenant_id"] = ctx.tenant_id
 
-                    results = repo.list(
+                    results: list[Any] = repo.list(
                         limit=limit or 100,
                         offset=offset or 0,
                         filters=filters if filters else None,
@@ -175,13 +175,14 @@ class ResolverGenerator:
             # Fall back to service
             if service and hasattr(service, "list"):
                 try:
-                    return await _maybe_await(
+                    svc_result: list[Any] = await _maybe_await(
                         service.list(
                             limit=limit,
                             offset=offset,
                             tenant_id=ctx.tenant_id,
                         )
                     )
+                    return svc_result
                 except Exception:
                     return []
 

@@ -10,7 +10,7 @@ import sqlite3
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -218,7 +218,7 @@ class DeviceRegistry:
         """
         with self._get_connection() as conn:
             query = "SELECT * FROM devices WHERE user_id = ?"
-            params: list = [str(user_id)]
+            params: list[str] = [str(user_id)]
 
             if platform:
                 query += " AND platform = ?"
@@ -363,7 +363,7 @@ class DeviceRegistry:
 
 def create_device_routes(
     device_registry: DeviceRegistry,
-    get_current_user,  # Auth dependency
+    get_current_user: Any,  # Auth dependency
 ) -> APIRouter:
     """
     Create device registration routes.
@@ -394,8 +394,8 @@ def create_device_routes(
     @router.post("/register")
     async def register_device(
         data: RegisterDeviceRequest,
-        auth=Depends(get_current_user),
-    ):
+        auth: Any = Depends(get_current_user),
+    ) -> dict[str, Any]:
         """Register device for push notifications."""
         device = device_registry.register_device(
             user_id=auth.user_id,
@@ -414,8 +414,8 @@ def create_device_routes(
 
     @router.get("")
     async def list_devices(
-        auth=Depends(get_current_user),
-    ):
+        auth: Any = Depends(get_current_user),
+    ) -> dict[str, Any]:
         """List user's registered devices."""
         devices = device_registry.get_user_devices(auth.user_id)
         return {
@@ -437,8 +437,8 @@ def create_device_routes(
     @router.delete("/{device_id}")
     async def unregister_device(
         device_id: str,
-        auth=Depends(get_current_user),
-    ):
+        auth: Any = Depends(get_current_user),
+    ) -> dict[str, str]:
         """Unregister a device."""
         success = device_registry.unregister_device(device_id, auth.user_id)
         if not success:

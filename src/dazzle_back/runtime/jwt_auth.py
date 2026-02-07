@@ -401,7 +401,8 @@ class JWTService:
         except jwt.exceptions.DecodeError:
             raise JWTError("Malformed token header", code="invalid_token")
 
-        return jwt.decode(token, options={"verify_signature": False})
+        result: dict[str, Any] = jwt.decode(token, options={"verify_signature": False})
+        return result
 
 
 # =============================================================================

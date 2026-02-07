@@ -97,7 +97,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    async def stream(self, storage_key: str) -> AsyncIterator[bytes]:
+    def stream(self, storage_key: str) -> AsyncIterator[bytes]:
         """
         Stream file content in chunks.
 
@@ -107,7 +107,7 @@ class StorageBackend(ABC):
         Yields:
             File content in chunks
         """
-        pass
+        ...
 
     @abstractmethod
     async def delete(self, storage_key: str) -> bool:
@@ -284,7 +284,7 @@ class S3StorageBackend(StorageBackend):
     def name(self) -> str:
         return "s3"
 
-    def _get_client_config(self) -> dict:
+    def _get_client_config(self) -> dict[str, str]:
         """Get boto3 client configuration."""
         config = {
             "region_name": self.region,
@@ -357,7 +357,8 @@ class S3StorageBackend(StorageBackend):
         async with session.client("s3", **self._get_client_config()) as s3:
             response = await s3.get_object(Bucket=self.bucket, Key=storage_key)
             async with response["Body"] as stream:
-                return await stream.read()
+                data: bytes = await stream.read()
+                return data
 
     async def stream(self, storage_key: str) -> AsyncIterator[bytes]:
         """Stream file from S3."""
@@ -419,7 +420,7 @@ class S3StorageBackend(StorageBackend):
 
         session = aioboto3.Session()
         async with session.client("s3", **self._get_client_config()) as s3:
-            url = await s3.generate_presigned_url(
+            url: str = await s3.generate_presigned_url(
                 method,
                 Params={"Bucket": self.bucket, "Key": storage_key},
                 ExpiresIn=expiry,
@@ -894,7 +895,8 @@ class FileValidator:
 
             content = file.read(2048)
             file.seek(0)
-            return magic.from_buffer(content, mime=True)
+            result: str = magic.from_buffer(content, mime=True)
+            return result
         except ImportError:
             # Fallback: simple detection based on magic bytes
             return self._simple_mime_detection(file)

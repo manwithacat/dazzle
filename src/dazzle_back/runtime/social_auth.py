@@ -536,6 +536,10 @@ class SocialAuthService:
                     provider=provider,
                     code="not_configured",
                 )
+            # Narrowed by the all() check above
+            assert self.config.apple_team_id is not None
+            assert self.config.apple_key_id is not None
+            assert self.config.apple_bundle_id is not None
             return await verify_apple_token(
                 request.id_token,
                 team_id=self.config.apple_team_id,
@@ -556,6 +560,9 @@ class SocialAuthService:
                         provider=provider,
                         code="not_configured",
                     )
+                # Narrowed by the all() check above
+                assert self.config.github_client_id is not None
+                assert self.config.github_client_secret is not None
                 return await exchange_github_code(
                     request.code,
                     self.config.github_client_id,
@@ -627,7 +634,7 @@ def create_social_auth_routes(
         provider: str,
         request_data: SocialTokenRequest,
         request: Request,
-    ):
+    ) -> dict[str, Any]:
         """
         Authenticate with social provider.
 

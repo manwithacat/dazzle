@@ -4,7 +4,10 @@ Tests for presence tracker.
 Tests presence join/leave, heartbeat, and cleanup.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -24,7 +27,7 @@ from dazzle_back.runtime.presence_tracker import (
 
 
 @pytest.fixture(autouse=True)
-def reset_global_tracker():
+def reset_global_tracker() -> Any:
     """Reset global presence tracker before each test."""
     reset_presence_tracker()
     yield
@@ -32,13 +35,13 @@ def reset_global_tracker():
 
 
 @pytest.fixture
-def tracker():
+def tracker() -> Any:
     """Create a presence tracker for testing."""
     return create_presence_tracker(timeout_seconds=30)
 
 
 @pytest.fixture
-def mock_ws_manager():
+def mock_ws_manager() -> Any:
     """Create a mock WebSocket manager."""
     manager = AsyncMock()
     manager.broadcast = AsyncMock(return_value=2)
@@ -54,7 +57,7 @@ def mock_ws_manager():
 class TestPresenceEntry:
     """Tests for PresenceEntry class."""
 
-    def test_create_entry(self):
+    def test_create_entry(self) -> None:
         """Test creating a presence entry."""
         entry = PresenceEntry(
             user_id="user_123",
@@ -70,7 +73,7 @@ class TestPresenceEntry:
         assert isinstance(entry.joined_at, datetime)
         assert isinstance(entry.last_seen, datetime)
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         """Test converting entry to dict."""
         entry = PresenceEntry(
             user_id="user_123",
@@ -89,7 +92,7 @@ class TestPresenceEntry:
         assert "lastSeen" in d
         assert d["metadata"]["color"] == "blue"
 
-    def test_update_heartbeat(self):
+    def test_update_heartbeat(self) -> None:
         """Test updating heartbeat."""
         entry = PresenceEntry(
             user_id="user_123",
@@ -113,7 +116,7 @@ class TestPresenceJoinLeave:
     """Tests for join/leave operations."""
 
     @pytest.mark.asyncio
-    async def test_join(self, tracker):
+    async def test_join(self, tracker: Any) -> None:
         """Test joining a resource."""
         entry = await tracker.join(
             resource="workspace/tasks",
@@ -127,7 +130,7 @@ class TestPresenceJoinLeave:
         assert tracker.is_present("workspace/tasks", "user_123")
 
     @pytest.mark.asyncio
-    async def test_leave(self, tracker):
+    async def test_leave(self, tracker: Any) -> None:
         """Test leaving a resource."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
 
@@ -137,14 +140,14 @@ class TestPresenceJoinLeave:
         assert not tracker.is_present("workspace/tasks", "user_123")
 
     @pytest.mark.asyncio
-    async def test_leave_not_present(self, tracker):
+    async def test_leave_not_present(self, tracker: Any) -> None:
         """Test leaving when not present."""
         result = await tracker.leave("workspace/tasks", "user_123")
 
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_multiple_users_same_resource(self, tracker):
+    async def test_multiple_users_same_resource(self, tracker: Any) -> None:
         """Test multiple users on same resource."""
         await tracker.join("workspace/tasks", "user_1", "conn_1")
         await tracker.join("workspace/tasks", "user_2", "conn_2")
@@ -156,7 +159,7 @@ class TestPresenceJoinLeave:
         assert {u.user_id for u in users} == {"user_1", "user_2", "user_3"}
 
     @pytest.mark.asyncio
-    async def test_same_user_multiple_resources(self, tracker):
+    async def test_same_user_multiple_resources(self, tracker: Any) -> None:
         """Test same user on multiple resources."""
         await tracker.join("workspace/tasks", "user_123", "conn_1")
         await tracker.join("workspace/projects", "user_123", "conn_1")
@@ -176,7 +179,7 @@ class TestPresenceQueries:
     """Tests for presence queries."""
 
     @pytest.mark.asyncio
-    async def test_get_present(self, tracker):
+    async def test_get_present(self, tracker: Any) -> None:
         """Test getting all present users."""
         await tracker.join("workspace/tasks", "user_1", "conn_1", "Alice")
         await tracker.join("workspace/tasks", "user_2", "conn_2", "Bob")
@@ -186,14 +189,14 @@ class TestPresenceQueries:
         assert len(users) == 2
 
     @pytest.mark.asyncio
-    async def test_get_present_empty(self, tracker):
+    async def test_get_present_empty(self, tracker: Any) -> None:
         """Test getting present users from empty resource."""
         users = tracker.get_present("workspace/tasks")
 
         assert users == []
 
     @pytest.mark.asyncio
-    async def test_get_present_user_ids(self, tracker):
+    async def test_get_present_user_ids(self, tracker: Any) -> None:
         """Test getting just user IDs."""
         await tracker.join("workspace/tasks", "user_1", "conn_1")
         await tracker.join("workspace/tasks", "user_2", "conn_2")
@@ -203,7 +206,7 @@ class TestPresenceQueries:
         assert set(user_ids) == {"user_1", "user_2"}
 
     @pytest.mark.asyncio
-    async def test_is_present(self, tracker):
+    async def test_is_present(self, tracker: Any) -> None:
         """Test checking if user is present."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
 
@@ -212,7 +215,7 @@ class TestPresenceQueries:
         assert tracker.is_present("workspace/other", "user_123") is False
 
     @pytest.mark.asyncio
-    async def test_get_entry(self, tracker):
+    async def test_get_entry(self, tracker: Any) -> None:
         """Test getting specific entry."""
         await tracker.join("workspace/tasks", "user_123", "conn_456", "Alice")
 
@@ -222,7 +225,7 @@ class TestPresenceQueries:
         assert entry.user_name == "Alice"
 
     @pytest.mark.asyncio
-    async def test_get_entry_not_found(self, tracker):
+    async def test_get_entry_not_found(self, tracker: Any) -> None:
         """Test getting non-existent entry."""
         entry = tracker.get_entry("workspace/tasks", "user_123")
 
@@ -238,7 +241,7 @@ class TestHeartbeat:
     """Tests for heartbeat functionality."""
 
     @pytest.mark.asyncio
-    async def test_heartbeat(self, tracker):
+    async def test_heartbeat(self, tracker: Any) -> None:
         """Test updating heartbeat."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
         entry = tracker.get_entry("workspace/tasks", "user_123")
@@ -251,14 +254,14 @@ class TestHeartbeat:
         assert entry.last_seen >= old_last_seen
 
     @pytest.mark.asyncio
-    async def test_heartbeat_not_present(self, tracker):
+    async def test_heartbeat_not_present(self, tracker: Any) -> None:
         """Test heartbeat when not present."""
         result = tracker.heartbeat("workspace/tasks", "user_123")
 
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_heartbeat_all_for_connection(self, tracker):
+    async def test_heartbeat_all_for_connection(self, tracker: Any) -> None:
         """Test heartbeat for all presence of a connection."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
         await tracker.join("workspace/projects", "user_123", "conn_456")
@@ -277,7 +280,7 @@ class TestConnectionCleanup:
     """Tests for connection cleanup."""
 
     @pytest.mark.asyncio
-    async def test_leave_all_for_connection(self, tracker):
+    async def test_leave_all_for_connection(self, tracker: Any) -> None:
         """Test leaving all resources for a connection."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
         await tracker.join("workspace/projects", "user_123", "conn_456")
@@ -289,7 +292,7 @@ class TestConnectionCleanup:
         assert not tracker.is_present("workspace/projects", "user_123")
 
     @pytest.mark.asyncio
-    async def test_leave_all_only_removes_own_entries(self, tracker):
+    async def test_leave_all_only_removes_own_entries(self, tracker: Any) -> None:
         """Test that leave_all only removes the connection's entries."""
         await tracker.join("workspace/tasks", "user_1", "conn_1")
         await tracker.join("workspace/tasks", "user_2", "conn_2")
@@ -310,7 +313,7 @@ class TestStaleCleanup:
     """Tests for stale entry cleanup."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_stale(self, tracker):
+    async def test_cleanup_stale(self, tracker: Any) -> None:
         """Test cleaning up stale entries."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
 
@@ -325,7 +328,7 @@ class TestStaleCleanup:
         assert not tracker.is_present("workspace/tasks", "user_123")
 
     @pytest.mark.asyncio
-    async def test_cleanup_keeps_active(self, tracker):
+    async def test_cleanup_keeps_active(self, tracker: Any) -> None:
         """Test that active entries are not cleaned up."""
         await tracker.join("workspace/tasks", "user_123", "conn_456")
 
@@ -344,7 +347,7 @@ class TestWebSocketBroadcasting:
     """Tests for WebSocket broadcasting integration."""
 
     @pytest.mark.asyncio
-    async def test_broadcast_on_join(self, tracker, mock_ws_manager):
+    async def test_broadcast_on_join(self, tracker: Any, mock_ws_manager: Any) -> None:
         """Test that join broadcasts to presence channel."""
         tracker.set_websocket_manager(mock_ws_manager)
 
@@ -355,7 +358,7 @@ class TestWebSocketBroadcasting:
         assert call_args[0] == "presence:workspace/tasks"
 
     @pytest.mark.asyncio
-    async def test_broadcast_on_leave(self, tracker, mock_ws_manager):
+    async def test_broadcast_on_leave(self, tracker: Any, mock_ws_manager: Any) -> None:
         """Test that leave broadcasts to presence channel."""
         tracker.set_websocket_manager(mock_ws_manager)
         await tracker.join("workspace/tasks", "user_123", "conn_456")
@@ -366,7 +369,7 @@ class TestWebSocketBroadcasting:
         mock_ws_manager.broadcast.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_send_sync(self, tracker, mock_ws_manager):
+    async def test_send_sync(self, tracker: Any, mock_ws_manager: Any) -> None:
         """Test sending presence sync to a connection."""
         tracker.set_websocket_manager(mock_ws_manager)
         await tracker.join("workspace/tasks", "user_1", "conn_1", "Alice")
@@ -388,7 +391,7 @@ class TestStatistics:
     """Tests for tracker statistics."""
 
     @pytest.mark.asyncio
-    async def test_get_stats(self, tracker):
+    async def test_get_stats(self, tracker: Any) -> None:
         """Test getting statistics."""
         await tracker.join("workspace/tasks", "user_1", "conn_1")
         await tracker.join("workspace/tasks", "user_2", "conn_2")
@@ -409,28 +412,28 @@ class TestStatistics:
 class TestGlobalPresenceTracker:
     """Tests for global presence tracker functions."""
 
-    def test_get_presence_tracker_creates_default(self):
+    def test_get_presence_tracker_creates_default(self) -> None:
         """Test that get_presence_tracker creates a default tracker."""
         tracker = get_presence_tracker()
 
         assert tracker is not None
         assert isinstance(tracker, PresenceTracker)
 
-    def test_get_presence_tracker_returns_same(self):
+    def test_get_presence_tracker_returns_same(self) -> None:
         """Test that get_presence_tracker returns the same instance."""
         tracker1 = get_presence_tracker()
         tracker2 = get_presence_tracker()
 
         assert tracker1 is tracker2
 
-    def test_set_presence_tracker(self):
+    def test_set_presence_tracker(self) -> None:
         """Test setting a custom tracker."""
         custom_tracker = create_presence_tracker(timeout_seconds=60)
         set_presence_tracker(custom_tracker)
 
         assert get_presence_tracker() is custom_tracker
 
-    def test_reset_presence_tracker(self):
+    def test_reset_presence_tracker(self) -> None:
         """Test resetting the global tracker."""
         tracker1 = get_presence_tracker()
         reset_presence_tracker()

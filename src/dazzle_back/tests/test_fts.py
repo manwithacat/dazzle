@@ -4,9 +4,12 @@ Tests for full-text search functionality.
 Tests FTS5 table creation, indexing, and search queries.
 """
 
+from __future__ import annotations
+
 import sqlite3
 import tempfile
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -30,7 +33,7 @@ from dazzle_back.specs.entity import (
 
 
 @pytest.fixture
-def task_entity():
+def task_entity() -> Any:
     """Create a Task entity with searchable fields."""
     return EntitySpec(
         name="Task",
@@ -58,7 +61,7 @@ def task_entity():
 
 
 @pytest.fixture
-def test_db(task_entity):
+def test_db(task_entity: Any) -> Any:
     """Create a test database with Task table."""
     with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = f.name
@@ -86,7 +89,7 @@ def test_db(task_entity):
 
 
 @pytest.fixture
-def populated_db(test_db):
+def populated_db(test_db: Any) -> Any:
     """Database with test data."""
     test_data = [
         ("Fix urgent bug in login page", "Users cannot login after update"),
@@ -115,7 +118,7 @@ def populated_db(test_db):
 class TestFTSConfig:
     """Tests for FTSConfig."""
 
-    def test_default_table_name(self):
+    def test_default_table_name(self) -> None:
         """Test default FTS table name generation."""
         config = FTSConfig(
             entity_name="Task",
@@ -124,7 +127,7 @@ class TestFTSConfig:
 
         assert config.fts_table_name == "Task_fts"
 
-    def test_custom_table_name(self):
+    def test_custom_table_name(self) -> None:
         """Test custom FTS table name."""
         config = FTSConfig(
             entity_name="Task",
@@ -134,7 +137,7 @@ class TestFTSConfig:
 
         assert config.fts_table_name == "custom_fts"
 
-    def test_default_tokenizer(self):
+    def test_default_tokenizer(self) -> None:
         """Test default tokenizer."""
         config = FTSConfig(
             entity_name="Task",
@@ -152,26 +155,30 @@ class TestFTSConfig:
 class TestFTSManagerRegistration:
     """Tests for FTSManager entity registration."""
 
-    def test_register_entity_explicit_fields(self, task_entity):
+    def test_register_entity_explicit_fields(self, task_entity: Any) -> None:
         """Test registering entity with explicit searchable fields."""
         manager = FTSManager()
         config = manager.register_entity(task_entity, searchable_fields=["title"])
 
         assert config is not None
+        assert config is not None
         assert config.searchable_fields == ["title"]
 
-    def test_register_entity_auto_detect(self, task_entity):
+    def test_register_entity_auto_detect(self, task_entity: Any) -> None:
         """Test auto-detection of searchable fields."""
         manager = FTSManager()
         config = manager.register_entity(task_entity)
 
         assert config is not None
+        assert config is not None
         assert "title" in config.searchable_fields
+        assert config is not None
         assert "description" in config.searchable_fields
         # priority is INT, should not be included
+        assert config is not None
         assert "priority" not in config.searchable_fields
 
-    def test_register_entity_no_text_fields(self):
+    def test_register_entity_no_text_fields(self) -> None:
         """Test entity with no text fields returns None."""
         entity = EntitySpec(
             name="Counter",
@@ -192,7 +199,7 @@ class TestFTSManagerRegistration:
 
         assert config is None
 
-    def test_is_enabled(self, task_entity):
+    def test_is_enabled(self, task_entity: Any) -> None:
         """Test is_enabled check."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -200,7 +207,7 @@ class TestFTSManagerRegistration:
         assert manager.is_enabled("Task") is True
         assert manager.is_enabled("Unknown") is False
 
-    def test_get_config(self, task_entity):
+    def test_get_config(self, task_entity: Any) -> None:
         """Test getting config for registered entity."""
         manager = FTSManager()
         manager.register_entity(task_entity, searchable_fields=["title"])
@@ -218,7 +225,7 @@ class TestFTSManagerRegistration:
 class TestFTSTableCreation:
     """Tests for FTS table creation."""
 
-    def test_create_fts_table(self, task_entity, test_db):
+    def test_create_fts_table(self, task_entity: Any, test_db: Any) -> None:
         """Test FTS table creation."""
         manager = FTSManager()
         manager.register_entity(task_entity, searchable_fields=["title", "description"])
@@ -231,7 +238,7 @@ class TestFTSTableCreation:
         )
         assert cursor.fetchone() is not None
 
-    def test_create_fts_table_idempotent(self, task_entity, test_db):
+    def test_create_fts_table_idempotent(self, task_entity: Any, test_db: Any) -> None:
         """Test that creating FTS table twice is safe."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -242,7 +249,7 @@ class TestFTSTableCreation:
 
         # Should not raise error
 
-    def test_create_triggers(self, task_entity, test_db):
+    def test_create_triggers(self, task_entity: Any, test_db: Any) -> None:
         """Test that sync triggers are created."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -267,7 +274,7 @@ class TestFTSTableCreation:
 class TestFTSSync:
     """Tests for FTS synchronization with triggers."""
 
-    def test_insert_syncs_to_fts(self, task_entity, test_db):
+    def test_insert_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
         """Test that inserts sync to FTS."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -290,7 +297,7 @@ class TestFTSSync:
         assert result is not None
         assert result[0] == task_id
 
-    def test_update_syncs_to_fts(self, task_entity, test_db):
+    def test_update_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
         """Test that updates sync to FTS."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -325,7 +332,7 @@ class TestFTSSync:
         )
         assert cursor.fetchone() is None
 
-    def test_delete_syncs_to_fts(self, task_entity, test_db):
+    def test_delete_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
         """Test that deletes sync to FTS."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -359,7 +366,7 @@ class TestFTSSync:
 class TestFTSSearch:
     """Tests for FTS search functionality."""
 
-    def test_search_single_word(self, task_entity, populated_db):
+    def test_search_single_word(self, task_entity: Any, populated_db: Any) -> None:
         """Test searching for a single word."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -373,7 +380,7 @@ class TestFTSSearch:
         assert total == 2  # "urgent bug" and "Bug fix"
         assert len(ids) == 2
 
-    def test_search_multiple_words(self, task_entity, populated_db):
+    def test_search_multiple_words(self, task_entity: Any, populated_db: Any) -> None:
         """Test searching for multiple words (OR)."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -384,7 +391,7 @@ class TestFTSSearch:
 
         assert total >= 1
 
-    def test_search_with_limit(self, task_entity, populated_db):
+    def test_search_with_limit(self, task_entity: Any, populated_db: Any) -> None:
         """Test search with limit."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -398,7 +405,7 @@ class TestFTSSearch:
         # But only 1 returned
         assert len(ids) == 1
 
-    def test_search_with_offset(self, task_entity, populated_db):
+    def test_search_with_offset(self, task_entity: Any, populated_db: Any) -> None:
         """Test search with offset."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -414,7 +421,7 @@ class TestFTSSearch:
         if total > 1:
             assert len(offset_ids) == total - 1
 
-    def test_search_no_results(self, task_entity, populated_db):
+    def test_search_no_results(self, task_entity: Any, populated_db: Any) -> None:
         """Test search with no matches."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -426,7 +433,7 @@ class TestFTSSearch:
         assert total == 0
         assert ids == []
 
-    def test_search_unregistered_entity(self, populated_db):
+    def test_search_unregistered_entity(self, populated_db: Any) -> None:
         """Test searching unregistered entity returns empty."""
         manager = FTSManager()
 
@@ -444,7 +451,7 @@ class TestFTSSearch:
 class TestFTSRebuild:
     """Tests for FTS index rebuilding."""
 
-    def test_rebuild_index(self, task_entity, populated_db):
+    def test_rebuild_index(self, task_entity: Any, populated_db: Any) -> None:
         """Test rebuilding index from main table."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -454,7 +461,7 @@ class TestFTSRebuild:
 
         assert count == 5  # 5 test records
 
-    def test_rebuild_unregistered_entity(self, populated_db):
+    def test_rebuild_unregistered_entity(self, populated_db: Any) -> None:
         """Test rebuilding unregistered entity returns 0."""
         manager = FTSManager()
 
@@ -471,7 +478,7 @@ class TestFTSRebuild:
 class TestFTSSnippets:
     """Tests for search with highlighted snippets."""
 
-    def test_search_with_snippets(self, task_entity, populated_db):
+    def test_search_with_snippets(self, task_entity: Any, populated_db: Any) -> None:
         """Test search returning snippets."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -495,13 +502,13 @@ class TestFTSSnippets:
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
 
-    def test_create_fts_manager(self, task_entity):
+    def test_create_fts_manager(self, task_entity: Any) -> None:
         """Test create_fts_manager function."""
         manager = create_fts_manager([task_entity])
 
         assert manager.is_enabled("Task")
 
-    def test_create_fts_manager_with_explicit_fields(self, task_entity):
+    def test_create_fts_manager_with_explicit_fields(self, task_entity: Any) -> None:
         """Test create_fts_manager with explicit fields."""
         manager = create_fts_manager(
             [task_entity],
@@ -509,9 +516,10 @@ class TestConvenienceFunctions:
         )
 
         config = manager.get_config("Task")
+        assert config is not None
         assert config.searchable_fields == ["title"]
 
-    def test_init_fts_tables(self, task_entity, test_db):
+    def test_init_fts_tables(self, task_entity: Any, test_db: Any) -> None:
         """Test init_fts_tables function."""
         manager = create_fts_manager([task_entity])
 
@@ -532,7 +540,7 @@ class TestConvenienceFunctions:
 class TestQueryEscaping:
     """Tests for query escaping."""
 
-    def test_escape_special_characters(self, task_entity, populated_db):
+    def test_escape_special_characters(self, task_entity: Any, populated_db: Any) -> None:
         """Test that special characters are escaped."""
         manager = FTSManager()
         manager.register_entity(task_entity)
@@ -544,7 +552,7 @@ class TestQueryEscaping:
 
         # May or may not have results, but should not error
 
-    def test_escape_operators(self, task_entity, populated_db):
+    def test_escape_operators(self, task_entity: Any, populated_db: Any) -> None:
         """Test that FTS operators are escaped."""
         manager = FTSManager()
         manager.register_entity(task_entity)

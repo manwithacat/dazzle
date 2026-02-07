@@ -25,7 +25,7 @@ class FTSConfig:
     fts_table_name: str = ""
     tokenizer: str = "porter"  # porter, unicode61, ascii
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not self.fts_table_name:
             self.fts_table_name = f"{self.entity_name}_fts"
 
@@ -219,7 +219,7 @@ class FTSManager:
 
         # Get count
         cursor = conn.execute(f"SELECT COUNT(*) FROM {fts_table}")
-        return cursor.fetchone()[0]
+        return int(cursor.fetchone()[0])
 
     def search(
         self,
@@ -329,7 +329,7 @@ class FTSManager:
             LIMIT ?
         """
         cursor = conn.execute(sql, (escaped_query, limit))
-        cursor.row_factory = sqlite3.Row
+        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
 
         results = []
         for row in cursor.fetchall():

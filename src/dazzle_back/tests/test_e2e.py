@@ -6,7 +6,7 @@ Tests the complete flow from spec to running API.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -72,8 +72,6 @@ def task_spec() -> BackendSpec:
         services=[
             ServiceSpec(
                 name="task_service",
-                is_crud=True,
-                target_entity="Task",
                 domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
             ),
         ],
@@ -122,19 +120,19 @@ class TestE2EEndpoints:
     """End-to-end endpoint tests."""
 
     @pytest.fixture
-    def client(self, task_spec: BackendSpec, tmp_path) -> TestClient:
+    def client(self, task_spec: BackendSpec, tmp_path: Any) -> TestClient:
         """Create a test client."""
         db_path = tmp_path / "test.db"
         app = create_app(task_spec, db_path=db_path, use_database=True)
         return _TestClient(app)
 
-    def test_health_endpoint(self, client: TestClient):
+    def test_health_endpoint(self, client: TestClient) -> None:
         """Test health endpoint."""
         response = client.get("/health")
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
 
-    def test_list_empty(self, client: TestClient):
+    def test_list_empty(self, client: TestClient) -> None:
         """Test listing tasks when empty."""
         response = client.get("/tasks")
         assert response.status_code == 200
@@ -142,7 +140,7 @@ class TestE2EEndpoints:
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_create_task(self, client: TestClient):
+    def test_create_task(self, client: TestClient) -> None:
         """Test creating a task."""
         response = client.post(
             "/tasks",
@@ -154,7 +152,7 @@ class TestE2EEndpoints:
         assert data["status"] == "pending"
         assert "id" in data
 
-    def test_read_task(self, client: TestClient):
+    def test_read_task(self, client: TestClient) -> None:
         """Test reading a task."""
         # Create first
         create_response = client.post(
@@ -169,7 +167,7 @@ class TestE2EEndpoints:
         data = response.json()
         assert data["title"] == "Read Test"
 
-    def test_update_task(self, client: TestClient):
+    def test_update_task(self, client: TestClient) -> None:
         """Test updating a task."""
         # Create first
         create_response = client.post(
@@ -188,7 +186,7 @@ class TestE2EEndpoints:
         assert data["title"] == "Updated"
         assert data["status"] == "done"
 
-    def test_delete_task(self, client: TestClient):
+    def test_delete_task(self, client: TestClient) -> None:
         """Test deleting a task."""
         # Create first
         create_response = client.post(
@@ -205,7 +203,7 @@ class TestE2EEndpoints:
         get_response = client.get(f"/tasks/{task_id}")
         assert get_response.status_code == 404
 
-    def test_crud_flow(self, client: TestClient):
+    def test_crud_flow(self, client: TestClient) -> None:
         """Test complete CRUD flow."""
         # 1. Create
         create_response = client.post(
@@ -239,7 +237,7 @@ class TestE2EEndpoints:
         final_list = client.get("/tasks")
         assert final_list.json()["total"] == 0
 
-    def test_db_info(self, client: TestClient):
+    def test_db_info(self, client: TestClient) -> None:
         """Test database info endpoint."""
         response = client.get("/db-info")
         assert response.status_code == 200

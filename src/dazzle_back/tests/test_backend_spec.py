@@ -4,6 +4,8 @@ Tests for BackendSpec types.
 Basic validation and construction tests to ensure specs work correctly.
 """
 
+from __future__ import annotations
+
 import pytest
 
 from dazzle_back.specs import (
@@ -21,7 +23,7 @@ from dazzle_back.specs import (
 )
 
 
-def test_field_spec_creation():
+def test_field_spec_creation() -> None:
     """Test creating a FieldSpec."""
     field = FieldSpec(
         name="email",
@@ -33,7 +35,7 @@ def test_field_spec_creation():
     assert field.required is True
 
 
-def test_entity_spec_creation():
+def test_entity_spec_creation() -> None:
     """Test creating an EntitySpec."""
     entity = EntitySpec(
         name="Client",
@@ -57,7 +59,7 @@ def test_entity_spec_creation():
     assert entity.get_field("nonexistent") is None
 
 
-def test_service_spec_creation():
+def test_service_spec_creation() -> None:
     """Test creating a ServiceSpec."""
     service = ServiceSpec(
         name="create_client",
@@ -73,7 +75,7 @@ def test_service_spec_creation():
     assert service.target_entity == "Client"
 
 
-def test_endpoint_spec_creation():
+def test_endpoint_spec_creation() -> None:
     """Test creating an EndpointSpec."""
     endpoint = EndpointSpec(
         name="create_client_endpoint",
@@ -86,7 +88,7 @@ def test_endpoint_spec_creation():
     assert endpoint.full_path == "POST /clients"
 
 
-def test_backend_spec_creation():
+def test_backend_spec_creation() -> None:
     """Test creating a complete BackendSpec."""
     spec = BackendSpec(
         name="test_backend",
@@ -141,7 +143,7 @@ def test_backend_spec_creation():
     assert stats["crud_services"] == 1
 
 
-def test_backend_spec_validation():
+def test_backend_spec_validation() -> None:
     """Test BackendSpec reference validation."""
     # Valid spec
     spec = BackendSpec(
@@ -187,7 +189,7 @@ def test_backend_spec_validation():
     assert "nonexistent_service" in errors[0]
 
 
-def test_immutability():
+def test_immutability() -> None:
     """Test that specs are immutable (frozen)."""
     from pydantic import ValidationError
 

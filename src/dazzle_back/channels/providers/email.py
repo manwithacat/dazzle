@@ -74,9 +74,13 @@ class MailpitDetector(ProviderDetector):
 
     async def _detect_explicit(self) -> DetectionResult:
         """Detect Mailpit via explicit configuration."""
-        smtp_port = int(get_env_var("MAILPIT_SMTP_PORT", str(self.DEFAULT_SMTP_PORT)))
-        api_port = int(get_env_var("MAILPIT_API_PORT", str(self.DEFAULT_API_PORT)))
-        host = get_env_var("MAILPIT_HOST", "localhost")
+        smtp_port = int(
+            get_env_var("MAILPIT_SMTP_PORT", str(self.DEFAULT_SMTP_PORT)) or self.DEFAULT_SMTP_PORT
+        )
+        api_port = int(
+            get_env_var("MAILPIT_API_PORT", str(self.DEFAULT_API_PORT)) or self.DEFAULT_API_PORT
+        )
+        host = get_env_var("MAILPIT_HOST", "localhost") or "localhost"
 
         result = DetectionResult(
             provider_name="mailpit",
@@ -85,7 +89,7 @@ class MailpitDetector(ProviderDetector):
             api_url=f"http://{host}:{api_port}/api",
             management_url=f"http://{host}:{api_port}",
             detection_method="explicit",
-            metadata={"host": host, "smtp_port": str(smtp_port), "api_port": str(api_port)},
+            metadata={"host": str(host), "smtp_port": str(smtp_port), "api_port": str(api_port)},
         )
 
         # Verify it's actually reachable
@@ -134,8 +138,12 @@ class MailpitDetector(ProviderDetector):
 
     async def _detect_ports(self) -> DetectionResult | None:
         """Check if Mailpit is running on default ports."""
-        api_port = int(get_env_var("MAILPIT_API_PORT", str(self.DEFAULT_API_PORT)))
-        smtp_port = int(get_env_var("MAILPIT_SMTP_PORT", str(self.DEFAULT_SMTP_PORT)))
+        api_port = int(
+            get_env_var("MAILPIT_API_PORT", str(self.DEFAULT_API_PORT)) or self.DEFAULT_API_PORT
+        )
+        smtp_port = int(
+            get_env_var("MAILPIT_SMTP_PORT", str(self.DEFAULT_SMTP_PORT)) or self.DEFAULT_SMTP_PORT
+        )
 
         # Check API port first (more reliable than SMTP)
         if not await check_port("localhost", api_port):
@@ -190,7 +198,7 @@ class MailpitDetector(ProviderDetector):
                     f"{result.api_url}/v1/info",
                     timeout=aiohttp.ClientTimeout(total=5),
                 ) as resp:
-                    return resp.status == 200
+                    return bool(resp.status == 200)
         except ImportError:
             # aiohttp not available, try with urllib
             return await self._health_check_urllib(result)
@@ -205,7 +213,7 @@ class MailpitDetector(ProviderDetector):
             try:
                 req = urllib.request.Request(f"{result.api_url}/v1/info")
                 with urllib.request.urlopen(req, timeout=5) as resp:
-                    return resp.status == 200
+                    return bool(resp.status == 200)
             except Exception:
                 return False
 
@@ -265,7 +273,7 @@ class SendGridDetector(ProviderDetector):
                     headers={"Authorization": f"Bearer {api_key}"},
                     timeout=aiohttp.ClientTimeout(total=10),
                 ) as resp:
-                    return resp.status == 200
+                    return bool(resp.status == 200)
         except Exception as e:
             logger.debug(f"SendGrid health check failed: {e}")
             return False

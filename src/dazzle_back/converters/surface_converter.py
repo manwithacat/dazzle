@@ -271,17 +271,14 @@ def convert_surfaces_to_services(
         # Create delete service
         delete_service = ServiceSpec(
             name=f"delete_{entity_lower}",
-            input_schema=SchemaSpec(
-                fields=[SchemaFieldSpec(name="id", type="uuid", required=True)]
-            ),
-            output_schema=SchemaSpec(
+            inputs=SchemaSpec(fields=[SchemaFieldSpec(name="id", type="uuid", required=True)]),
+            outputs=SchemaSpec(
                 fields=[SchemaFieldSpec(name="deleted", type="bool", required=True)]
             ),
             domain_operation=DomainOperation(
                 entity=entity_name,
                 kind=OperationKind.DELETE,
             ),
-            is_crud=True,
         )
         services.append(delete_service)
 

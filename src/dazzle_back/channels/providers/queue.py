@@ -126,7 +126,7 @@ class RabbitMQDetector(ProviderDetector):
                         auth=aiohttp.BasicAuth("guest", "guest"),
                         timeout=aiohttp.ClientTimeout(total=5),
                     ) as resp:
-                        return resp.status == 200
+                        return bool(resp.status == 200)
             except Exception:
                 pass
 

@@ -527,7 +527,7 @@ class DevBrokerSQLite(EventBus):
             cursor = await conn.execute("SELECT DISTINCT topic FROM _dazzle_events ORDER BY topic")
             return [row["topic"] async for row in cursor]
 
-    async def list_consumer_groups(
+    async def list_consumer_groups(  # type: ignore[override]
         self,
         topic: str | None = None,
     ) -> list[str] | list[dict[str, str]]:

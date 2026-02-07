@@ -8,7 +8,7 @@ Evaluates ConditionExpr from IR AccessSpec at runtime for:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 # =============================================================================
@@ -182,13 +182,13 @@ def _compare(record_value: Any, operator: str, resolved_value: Any) -> bool:
             return record_value != resolved_value
         return str(record_value) != str(resolved_value)
     if operator in ("gt", ">"):
-        return record_value > resolved_value
+        return cast(bool, record_value > resolved_value)
     if operator in ("ge", ">="):
-        return record_value >= resolved_value
+        return cast(bool, record_value >= resolved_value)
     if operator in ("lt", "<"):
-        return record_value < resolved_value
+        return cast(bool, record_value < resolved_value)
     if operator in ("le", "<="):
-        return record_value <= resolved_value
+        return cast(bool, record_value <= resolved_value)
     if operator == "in":
         if isinstance(resolved_value, list | tuple):
             return record_value in resolved_value

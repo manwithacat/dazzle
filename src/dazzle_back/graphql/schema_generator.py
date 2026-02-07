@@ -122,7 +122,7 @@ class SchemaGenerator:
         """Create a Strawberry enum type."""
         # Create Python enum
         enum_dict = {v.upper(): v for v in values}
-        python_enum = Enum(name, enum_dict)
+        python_enum = Enum(name, enum_dict)  # type: ignore[misc]
 
         # Create Strawberry enum
         return strawberry.enum(python_enum)
@@ -210,7 +210,7 @@ class SchemaGenerator:
         entity: EntitySpec,
         field: FieldSpec,
         for_input: bool = False,
-    ) -> type:
+    ) -> Any:
         """Convert a FieldType to a Python type annotation."""
         field_type = field.type
 
@@ -232,12 +232,12 @@ class SchemaGenerator:
 
         return str  # Fallback
 
-    def _scalar_to_python(self, field_type: FieldType) -> type:
+    def _scalar_to_python(self, field_type: FieldType) -> Any:
         """Convert a scalar FieldType to Python type."""
         if not field_type.scalar_type:
             return str
 
-        mapping: dict[ScalarType, type] = {
+        mapping: dict[ScalarType, Any] = {
             ScalarType.STR: str,
             ScalarType.TEXT: str,
             ScalarType.INT: int,

@@ -170,26 +170,27 @@ async def get_user_personas_from_membership(
     try:
         # Query membership table
         # The membership table stores: user_id, tenant_id (optional), personas (JSON array)
-        conn = db_manager.connection
+        ph = getattr(db_manager, "placeholder", "?")
 
-        if tenant_id:
-            cursor = conn.execute(
-                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = ? AND "tenant_id" = ?',
-                (user_id, tenant_id),
-            )
-        else:
-            cursor = conn.execute(
-                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = ?',
-                (user_id,),
-            )
+        with db_manager.connection() as conn:
+            if tenant_id:
+                cursor = conn.execute(
+                    f'SELECT "personas" FROM "UserMembership" WHERE "user_id" = {ph} AND "tenant_id" = {ph}',
+                    (user_id, tenant_id),
+                )
+            else:
+                cursor = conn.execute(
+                    f'SELECT "personas" FROM "UserMembership" WHERE "user_id" = {ph}',
+                    (user_id,),
+                )
 
-        row = cursor.fetchone()
-        if row and row[0]:
-            import json
+            row = cursor.fetchone()
+            if row and row[0]:
+                import json
 
-            # Personas stored as JSON array
-            personas = json.loads(row[0]) if isinstance(row[0], str) else row[0]
-            return personas if isinstance(personas, list) else []
+                # Personas stored as JSON array
+                personas = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+                return personas if isinstance(personas, list) else []
 
         return []
     except Exception:

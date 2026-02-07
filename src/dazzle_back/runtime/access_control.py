@@ -302,7 +302,7 @@ class PolicyRegistry:
     Stores and retrieves policies by entity name.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._policies: dict[str, AccessPolicy] = {}
         self._default_policy: AccessPolicy | None = None
 

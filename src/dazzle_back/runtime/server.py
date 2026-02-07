@@ -924,8 +924,11 @@ class DNRBackendApp:
             logging.getLogger("dazzle.server").debug(f"Workspace renderer not available: {e}")
         except Exception as e:
             import logging
+            import traceback
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init workspace routes: {e}")
+            logging.getLogger("dazzle.server").error(
+                f"Failed to init workspace routes: {e}\n{traceback.format_exc()}"
+            )
 
     def _init_process_manager(self) -> None:
         """Initialize process manager for workflow execution (v0.24.0)."""
@@ -1093,7 +1096,7 @@ class DNRBackendApp:
             if self._database_url:
                 from dazzle_back.runtime.pg_backend import PostgresBackend
 
-                self._db_manager = PostgresBackend(self._database_url)
+                self._db_manager = PostgresBackend(self._database_url)  # type: ignore[assignment]
             else:
                 self._db_manager = DatabaseManager(self._db_path)
 
@@ -1104,7 +1107,7 @@ class DNRBackendApp:
                 record_history=True,
             )
 
-            repo_factory = RepositoryFactory(self._db_manager, self._models)
+            repo_factory = RepositoryFactory(self._db_manager, self._models)  # type: ignore[arg-type]
             self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
         # Extract state machines from entities

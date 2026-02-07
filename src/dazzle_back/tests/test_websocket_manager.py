@@ -4,7 +4,10 @@ Tests for WebSocket manager.
 Tests connection management, channel subscriptions, and message routing.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -22,7 +25,7 @@ from dazzle_back.runtime.websocket_manager import (
 
 
 @pytest.fixture
-def ws_manager():
+def ws_manager() -> Any:
     """Create a WebSocket manager for testing."""
     return create_websocket_manager(
         max_subscriptions=10,
@@ -31,7 +34,7 @@ def ws_manager():
 
 
 @pytest.fixture
-def mock_websocket():
+def mock_websocket() -> Any:
     """Create a mock WebSocket."""
     ws = AsyncMock()
     ws.accept = AsyncMock()
@@ -49,7 +52,7 @@ def mock_websocket():
 class TestConnection:
     """Tests for Connection class."""
 
-    def test_create_connection(self, mock_websocket):
+    def test_create_connection(self, mock_websocket: Any) -> None:
         """Test creating a connection."""
         conn = Connection(
             id="conn_123",
@@ -65,7 +68,7 @@ class TestConnection:
         assert isinstance(conn.connected_at, datetime)
         assert isinstance(conn.last_heartbeat, datetime)
 
-    def test_update_heartbeat(self, mock_websocket):
+    def test_update_heartbeat(self, mock_websocket: Any) -> None:
         """Test updating heartbeat."""
         conn = Connection(id="conn_123", websocket=mock_websocket)
         old_heartbeat = conn.last_heartbeat
@@ -84,7 +87,7 @@ class TestConnection:
 class TestRealtimeMessage:
     """Tests for RealtimeMessage class."""
 
-    def test_create_message(self):
+    def test_create_message(self) -> None:
         """Test creating a message."""
         msg = RealtimeMessage(
             type=MessageType.ENTITY_CREATED,
@@ -94,10 +97,10 @@ class TestRealtimeMessage:
 
         assert msg.type == MessageType.ENTITY_CREATED
         assert msg.channel == "entity:Task"
-        assert msg.payload["title"] == "Test"
+        assert msg.payload is not None and msg.payload["title"] == "Test"
         assert msg.timestamp > 0
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         """Test converting message to dict."""
         msg = RealtimeMessage(
             type=MessageType.SUBSCRIBE,
@@ -112,7 +115,7 @@ class TestRealtimeMessage:
         assert d["requestId"] == "req_123"
         assert "timestamp" in d
 
-    def test_from_dict(self):
+    def test_from_dict(self) -> None:
         """Test creating message from dict."""
         d = {
             "type": "entity:updated",
@@ -126,7 +129,7 @@ class TestRealtimeMessage:
 
         assert msg.type == "entity:updated"
         assert msg.channel == "entity:Task"
-        assert msg.payload["id"] == "123"
+        assert msg.payload is not None and msg.payload["id"] == "123"
         assert msg.request_id == "req_456"
         assert msg.timestamp == 1234567890000
 
@@ -140,7 +143,7 @@ class TestWebSocketManager:
     """Tests for WebSocketManager class."""
 
     @pytest.mark.asyncio
-    async def test_connect(self, ws_manager, mock_websocket):
+    async def test_connect(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test accepting a connection."""
         connection_id = await ws_manager.connect(
             mock_websocket,
@@ -161,7 +164,7 @@ class TestWebSocketManager:
         assert call_args["payload"]["userId"] == "user_123"
 
     @pytest.mark.asyncio
-    async def test_disconnect(self, ws_manager, mock_websocket):
+    async def test_disconnect(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test disconnecting."""
         connection_id = await ws_manager.connect(mock_websocket, user_id="user_123")
         assert ws_manager.connection_count == 1
@@ -172,7 +175,7 @@ class TestWebSocketManager:
         assert ws_manager.get_connection(connection_id) is None
 
     @pytest.mark.asyncio
-    async def test_get_connection(self, ws_manager, mock_websocket):
+    async def test_get_connection(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test getting a connection."""
         connection_id = await ws_manager.connect(mock_websocket, user_id="user_123")
 
@@ -183,7 +186,7 @@ class TestWebSocketManager:
         assert conn.user_id == "user_123"
 
     @pytest.mark.asyncio
-    async def test_get_user_connections(self, ws_manager, mock_websocket):
+    async def test_get_user_connections(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test getting all connections for a user."""
         # Connect same user twice
         conn1 = await ws_manager.connect(mock_websocket, user_id="user_123")
@@ -207,7 +210,7 @@ class TestChannelSubscriptions:
     """Tests for channel subscriptions."""
 
     @pytest.mark.asyncio
-    async def test_subscribe(self, ws_manager, mock_websocket):
+    async def test_subscribe(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test subscribing to a channel."""
         connection_id = await ws_manager.connect(mock_websocket)
 
@@ -224,7 +227,7 @@ class TestChannelSubscriptions:
         assert last_call["channel"] == "entity:Task"
 
     @pytest.mark.asyncio
-    async def test_unsubscribe(self, ws_manager, mock_websocket):
+    async def test_unsubscribe(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test unsubscribing from a channel."""
         connection_id = await ws_manager.connect(mock_websocket)
         await ws_manager.subscribe(connection_id, "entity:Task")
@@ -236,7 +239,7 @@ class TestChannelSubscriptions:
         assert ws_manager.channel_count == 0
 
     @pytest.mark.asyncio
-    async def test_subscription_limit(self, ws_manager, mock_websocket):
+    async def test_subscription_limit(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test subscription limit is enforced."""
         connection_id = await ws_manager.connect(mock_websocket)
 
@@ -251,7 +254,7 @@ class TestChannelSubscriptions:
         assert not ws_manager.is_subscribed(connection_id, "channel:extra")
 
     @pytest.mark.asyncio
-    async def test_get_channel_subscribers(self, ws_manager, mock_websocket):
+    async def test_get_channel_subscribers(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test getting channel subscribers."""
         conn1 = await ws_manager.connect(mock_websocket)
         mock_websocket2 = AsyncMock()
@@ -268,7 +271,9 @@ class TestChannelSubscriptions:
         assert set(subscribers) == {conn1, conn2}
 
     @pytest.mark.asyncio
-    async def test_disconnect_removes_subscriptions(self, ws_manager, mock_websocket):
+    async def test_disconnect_removes_subscriptions(
+        self, ws_manager: Any, mock_websocket: Any
+    ) -> None:
         """Test that disconnect removes all subscriptions."""
         connection_id = await ws_manager.connect(mock_websocket)
         await ws_manager.subscribe(connection_id, "entity:Task")
@@ -288,7 +293,7 @@ class TestMessageHandling:
     """Tests for message handling."""
 
     @pytest.mark.asyncio
-    async def test_handle_ping(self, ws_manager, mock_websocket):
+    async def test_handle_ping(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test handling ping message."""
         connection_id = await ws_manager.connect(mock_websocket)
         mock_websocket.send_json.reset_mock()
@@ -300,7 +305,7 @@ class TestMessageHandling:
         assert call_args["type"] == "pong"
 
     @pytest.mark.asyncio
-    async def test_handle_subscribe(self, ws_manager, mock_websocket):
+    async def test_handle_subscribe(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test handling subscribe message."""
         connection_id = await ws_manager.connect(mock_websocket)
 
@@ -316,7 +321,7 @@ class TestMessageHandling:
         assert ws_manager.is_subscribed(connection_id, "entity:Task")
 
     @pytest.mark.asyncio
-    async def test_handle_unsubscribe(self, ws_manager, mock_websocket):
+    async def test_handle_unsubscribe(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test handling unsubscribe message."""
         connection_id = await ws_manager.connect(mock_websocket)
         await ws_manager.subscribe(connection_id, "entity:Task")
@@ -332,7 +337,7 @@ class TestMessageHandling:
         assert not ws_manager.is_subscribed(connection_id, "entity:Task")
 
     @pytest.mark.asyncio
-    async def test_handle_unknown_message(self, ws_manager, mock_websocket):
+    async def test_handle_unknown_message(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test handling unknown message type."""
         connection_id = await ws_manager.connect(mock_websocket)
         mock_websocket.send_json.reset_mock()
@@ -352,11 +357,11 @@ class TestMessageHandling:
         assert "UNKNOWN_MESSAGE_TYPE" in call_args["payload"]["code"]
 
     @pytest.mark.asyncio
-    async def test_custom_handler(self, ws_manager, mock_websocket):
+    async def test_custom_handler(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test registering and using custom handler."""
         handler_called = []
 
-        async def custom_handler(conn_id, message):
+        async def custom_handler(conn_id: Any, message: Any) -> None:
             handler_called.append((conn_id, message.type))
 
         ws_manager.register_handler("custom:event", custom_handler)
@@ -384,7 +389,7 @@ class TestBroadcasting:
     """Tests for message broadcasting."""
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_channel(self, ws_manager, mock_websocket):
+    async def test_broadcast_to_channel(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test broadcasting to channel subscribers."""
         conn1 = await ws_manager.connect(mock_websocket)
         mock_websocket2 = AsyncMock()
@@ -409,7 +414,7 @@ class TestBroadcasting:
         assert mock_websocket2.send_json.called
 
     @pytest.mark.asyncio
-    async def test_broadcast_exclude_sender(self, ws_manager, mock_websocket):
+    async def test_broadcast_exclude_sender(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test broadcasting with sender excluded."""
         conn1 = await ws_manager.connect(mock_websocket)
         mock_websocket2 = AsyncMock()
@@ -431,7 +436,7 @@ class TestBroadcasting:
         assert mock_websocket2.send_json.called
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_all(self, ws_manager, mock_websocket):
+    async def test_broadcast_to_all(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test broadcasting to all connections."""
         await ws_manager.connect(mock_websocket)
         mock_websocket2 = AsyncMock()
@@ -448,7 +453,7 @@ class TestBroadcasting:
         assert sent_count == 2
 
     @pytest.mark.asyncio
-    async def test_send_to_user(self, ws_manager, mock_websocket):
+    async def test_send_to_user(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test sending to specific user."""
         await ws_manager.connect(mock_websocket, user_id="user_123")
         mock_websocket2 = AsyncMock()
@@ -476,7 +481,7 @@ class TestStaleCleanup:
     """Tests for stale connection cleanup."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_stale_connections(self, ws_manager, mock_websocket):
+    async def test_cleanup_stale_connections(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test cleaning up stale connections."""
         connection_id = await ws_manager.connect(mock_websocket)
 
@@ -491,7 +496,9 @@ class TestStaleCleanup:
         assert ws_manager.connection_count == 0
 
     @pytest.mark.asyncio
-    async def test_cleanup_keeps_active_connections(self, ws_manager, mock_websocket):
+    async def test_cleanup_keeps_active_connections(
+        self, ws_manager: Any, mock_websocket: Any
+    ) -> None:
         """Test that active connections are not cleaned up."""
         await ws_manager.connect(mock_websocket)
 
@@ -511,7 +518,7 @@ class TestStatistics:
     """Tests for manager statistics."""
 
     @pytest.mark.asyncio
-    async def test_get_stats(self, ws_manager, mock_websocket):
+    async def test_get_stats(self, ws_manager: Any, mock_websocket: Any) -> None:
         """Test getting statistics."""
         conn1 = await ws_manager.connect(mock_websocket, user_id="user_123")
         mock_websocket2 = AsyncMock()

@@ -376,6 +376,7 @@ def evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
                 left_value = resolve_path(context, left.split("."))
 
                 # Resolve right side (literal or variable)
+                right_value: Any
                 if right.startswith('"') and right.endswith('"'):
                     right_value = right[1:-1]
                 elif right.startswith("'") and right.endswith("'"):
@@ -390,9 +391,9 @@ def evaluate_condition(condition: str, context: dict[str, Any]) -> bool:
                     right_value = resolve_path(context, right.split("."))
 
                 if op == "==":
-                    return left_value == right_value
+                    return bool(left_value == right_value)
                 else:
-                    return left_value != right_value
+                    return bool(left_value != right_value)
 
     # Simple truthiness check
     if condition == "true":

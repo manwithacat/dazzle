@@ -55,7 +55,7 @@ class MarkdownProcessor:
     def is_available() -> bool:
         """Check if markdown processing is available."""
         try:
-            import markdown  # noqa: F401
+            import markdown  # type: ignore[import-untyped]  # noqa: F401
 
             return True
         except ImportError:
@@ -92,7 +92,7 @@ class MarkdownProcessor:
             ]
 
             # Render markdown to HTML
-            html = md.markdown(markdown_text, extensions=extensions)
+            html: str = md.markdown(markdown_text, extensions=extensions)
 
             # Sanitize if enabled
             if self.sanitize:
@@ -114,7 +114,7 @@ class MarkdownProcessor:
             Sanitized HTML
         """
         try:
-            import bleach
+            import bleach  # type: ignore[import-untyped]
         except ImportError:
             # Fallback: basic tag stripping
             return self._basic_sanitize(html)
@@ -172,7 +172,7 @@ class MarkdownProcessor:
         if not self.allow_images:
             allowed_tags.remove("img")
 
-        sanitized = bleach.clean(
+        sanitized: str = bleach.clean(
             html,
             tags=allowed_tags,
             attributes=allowed_attrs,
@@ -252,7 +252,7 @@ class MarkdownProcessor:
         # ![alt](data:image/png;base64,...)
         pattern = r"!\[([^\]]*)\]\(data:([^;]+);base64,([^)]+)\)"
 
-        async def replace_match(match) -> str:
+        async def replace_match(match: re.Match[str]) -> str:
             alt = match.group(1)
             content_type = match.group(2)
             base64_data = match.group(3)
@@ -272,6 +272,7 @@ class MarkdownProcessor:
                 if entity_name:
                     path_prefix = f"richtext/{entity_name}"
 
+                assert self.storage is not None  # checked at method entry
                 metadata = await self.storage.store(
                     file, filename, content_type, path_prefix=path_prefix
                 )

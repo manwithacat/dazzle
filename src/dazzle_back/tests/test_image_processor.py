@@ -4,7 +4,10 @@ Tests for image processor.
 Tests thumbnail generation, optimization, and format conversion.
 """
 
+from __future__ import annotations
+
 from io import BytesIO
+from typing import Any
 
 import pytest
 
@@ -28,7 +31,7 @@ from dazzle_back.runtime.image_processor import (
 
 
 @pytest.fixture
-def sample_image():
+def sample_image() -> Any:
     """Create a sample image."""
     if not PILLOW_AVAILABLE:
         pytest.skip("Pillow not installed")
@@ -41,7 +44,7 @@ def sample_image():
 
 
 @pytest.fixture
-def rgba_image():
+def rgba_image() -> Any:
     """Create an RGBA image with transparency."""
     if not PILLOW_AVAILABLE:
         pytest.skip("Pillow not installed")
@@ -54,7 +57,7 @@ def rgba_image():
 
 
 @pytest.fixture
-def large_image():
+def large_image() -> Any:
     """Create a large image for optimization testing."""
     if not PILLOW_AVAILABLE:
         pytest.skip("Pillow not installed")
@@ -75,11 +78,11 @@ def large_image():
 class TestImageProcessor:
     """Tests for ImageProcessor."""
 
-    def test_is_available(self):
+    def test_is_available(self) -> None:
         """Test availability check."""
         assert ImageProcessor.is_available() is True
 
-    def test_generate_thumbnail(self, sample_image):
+    def test_generate_thumbnail(self, sample_image: Any) -> None:
         """Test thumbnail generation."""
         thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
 
@@ -88,7 +91,7 @@ class TestImageProcessor:
         assert img.size[0] <= 200
         assert img.size[1] <= 200
 
-    def test_thumbnail_preserves_aspect_ratio(self, sample_image):
+    def test_thumbnail_preserves_aspect_ratio(self, sample_image: Any) -> None:
         """Test thumbnail preserves aspect ratio."""
         thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=200, height=200)
 
@@ -100,7 +103,7 @@ class TestImageProcessor:
         ratio = img.size[0] / img.size[1]
         assert 1.2 < ratio < 1.5  # Should be ~1.33 (4:3)
 
-    def test_thumbnail_with_rgba(self, rgba_image):
+    def test_thumbnail_with_rgba(self, rgba_image: Any) -> None:
         """Test thumbnail with transparent image."""
         thumbnail = ImageProcessor.generate_thumbnail(
             rgba_image, width=100, height=100, format="JPEG"
@@ -110,7 +113,7 @@ class TestImageProcessor:
         # JPEG should be RGB, not RGBA
         assert img.mode == "RGB"
 
-    def test_thumbnail_png_format(self, sample_image):
+    def test_thumbnail_png_format(self, sample_image: Any) -> None:
         """Test thumbnail in PNG format."""
         thumbnail = ImageProcessor.generate_thumbnail(
             sample_image, width=100, height=100, format="PNG"
@@ -119,7 +122,7 @@ class TestImageProcessor:
         img = Image.open(BytesIO(thumbnail))
         assert img.format == "PNG"
 
-    def test_thumbnail_webp_format(self, sample_image):
+    def test_thumbnail_webp_format(self, sample_image: Any) -> None:
         """Test thumbnail in WebP format."""
         thumbnail = ImageProcessor.generate_thumbnail(
             sample_image, width=100, height=100, format="WEBP"
@@ -128,7 +131,7 @@ class TestImageProcessor:
         img = Image.open(BytesIO(thumbnail))
         assert img.format == "WEBP"
 
-    def test_optimize_image(self, large_image):
+    def test_optimize_image(self, large_image: Any) -> None:
         """Test image optimization."""
         optimized = ImageProcessor.optimize_image(large_image, max_dimension=1024)
 
@@ -136,7 +139,7 @@ class TestImageProcessor:
         assert max(img.size) <= 1024
         assert len(optimized) < len(large_image)
 
-    def test_optimize_preserves_aspect_ratio(self, large_image):
+    def test_optimize_preserves_aspect_ratio(self, large_image: Any) -> None:
         """Test optimization preserves aspect ratio."""
         optimized = ImageProcessor.optimize_image(large_image, max_dimension=1000)
 
@@ -145,7 +148,7 @@ class TestImageProcessor:
         ratio = img.size[0] / img.size[1]
         assert 1.3 < ratio < 1.4  # Should be ~1.33
 
-    def test_optimize_small_image_unchanged(self, sample_image):
+    def test_optimize_small_image_unchanged(self, sample_image: Any) -> None:
         """Test small image not resized during optimization."""
         optimized = ImageProcessor.optimize_image(sample_image, max_dimension=2048)
 
@@ -154,27 +157,27 @@ class TestImageProcessor:
         assert img.size[0] <= 800
         assert img.size[1] <= 600
 
-    def test_get_dimensions(self, sample_image):
+    def test_get_dimensions(self, sample_image: Any) -> None:
         """Test getting image dimensions."""
         width, height = ImageProcessor.get_dimensions(sample_image)
 
         assert width == 800
         assert height == 600
 
-    def test_get_format(self, sample_image):
+    def test_get_format(self, sample_image: Any) -> None:
         """Test format detection."""
         format_name = ImageProcessor.get_format(sample_image)
 
         assert format_name == "PNG"
 
-    def test_convert_format_png_to_jpeg(self, sample_image):
+    def test_convert_format_png_to_jpeg(self, sample_image: Any) -> None:
         """Test converting PNG to JPEG."""
         converted = ImageProcessor.convert_format(sample_image, "JPEG")
 
         img = Image.open(BytesIO(converted))
         assert img.format == "JPEG"
 
-    def test_convert_format_with_transparency(self, rgba_image):
+    def test_convert_format_with_transparency(self, rgba_image: Any) -> None:
         """Test converting transparent image to JPEG."""
         converted = ImageProcessor.convert_format(rgba_image, "JPEG")
 
@@ -182,14 +185,14 @@ class TestImageProcessor:
         assert img.format == "JPEG"
         assert img.mode == "RGB"  # No alpha
 
-    def test_crop_to_square(self, sample_image):
+    def test_crop_to_square(self, sample_image: Any) -> None:
         """Test square crop."""
         cropped = ImageProcessor.crop_to_square(sample_image, size=150)
 
         img = Image.open(BytesIO(cropped))
         assert img.size == (150, 150)
 
-    def test_crop_to_square_from_portrait(self):
+    def test_crop_to_square_from_portrait(self) -> None:
         """Test square crop from portrait image."""
         if not PILLOW_AVAILABLE:
             pytest.skip("Pillow not installed")
@@ -205,7 +208,7 @@ class TestImageProcessor:
         result = Image.open(BytesIO(cropped))
         assert result.size == (100, 100)
 
-    def test_invalid_image_data(self):
+    def test_invalid_image_data(self) -> None:
         """Test handling invalid image data."""
         with pytest.raises(ImageProcessingError):
             ImageProcessor.generate_thumbnail(b"not an image", 100, 100)
@@ -220,7 +223,7 @@ class TestImageProcessor:
 class TestThumbnailService:
     """Tests for ThumbnailService."""
 
-    def test_default_settings(self):
+    def test_default_settings(self) -> None:
         """Test default thumbnail settings."""
         service = ThumbnailService()
 
@@ -229,7 +232,7 @@ class TestThumbnailService:
         assert service.format == "JPEG"
         assert service.quality == 85
 
-    def test_custom_settings(self):
+    def test_custom_settings(self) -> None:
         """Test custom thumbnail settings."""
         service = ThumbnailService(width=300, height=300, format="PNG", quality=90)
 
@@ -238,7 +241,7 @@ class TestThumbnailService:
         assert service.format == "PNG"
         assert service.quality == 90
 
-    def test_generate(self, sample_image):
+    def test_generate(self, sample_image: Any) -> None:
         """Test thumbnail generation via service."""
         service = ThumbnailService(width=100, height=100)
         thumbnail = service.generate(sample_image)
@@ -247,7 +250,7 @@ class TestThumbnailService:
         assert img.size[0] <= 100
         assert img.size[1] <= 100
 
-    def test_generate_custom_size(self, sample_image):
+    def test_generate_custom_size(self, sample_image: Any) -> None:
         """Test generation with custom size override."""
         service = ThumbnailService(width=200, height=200)
         thumbnail = service.generate(sample_image, width=50, height=50)
@@ -256,7 +259,7 @@ class TestThumbnailService:
         assert img.size[0] <= 50
         assert img.size[1] <= 50
 
-    def test_should_generate_image_types(self):
+    def test_should_generate_image_types(self) -> None:
         """Test supported image types."""
         service = ThumbnailService()
 
@@ -266,7 +269,7 @@ class TestThumbnailService:
         assert service.should_generate("image/webp") is True
         assert service.should_generate("IMAGE/JPEG") is True  # Case insensitive
 
-    def test_should_not_generate_non_images(self):
+    def test_should_not_generate_non_images(self) -> None:
         """Test non-image types are rejected."""
         service = ThumbnailService()
 
@@ -284,7 +287,7 @@ class TestThumbnailService:
 class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
-    def test_very_small_thumbnail(self, sample_image):
+    def test_very_small_thumbnail(self, sample_image: Any) -> None:
         """Test generating very small thumbnail."""
         thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=10, height=10)
 
@@ -292,7 +295,7 @@ class TestEdgeCases:
         assert img.size[0] <= 10
         assert img.size[1] <= 10
 
-    def test_very_large_dimensions(self, sample_image):
+    def test_very_large_dimensions(self, sample_image: Any) -> None:
         """Test with dimensions larger than image."""
         thumbnail = ImageProcessor.generate_thumbnail(sample_image, width=2000, height=2000)
 
@@ -301,7 +304,7 @@ class TestEdgeCases:
         assert img.size[0] <= 800
         assert img.size[1] <= 600
 
-    def test_single_pixel_image(self):
+    def test_single_pixel_image(self) -> None:
         """Test with minimal image."""
         if not PILLOW_AVAILABLE:
             pytest.skip("Pillow not installed")
@@ -316,7 +319,7 @@ class TestEdgeCases:
         result = Image.open(BytesIO(thumbnail))
         assert result.size == (1, 1)  # Can't upscale
 
-    def test_palette_mode_image(self):
+    def test_palette_mode_image(self) -> None:
         """Test with palette mode image."""
         if not PILLOW_AVAILABLE:
             pytest.skip("Pillow not installed")

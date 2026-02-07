@@ -4,6 +4,9 @@ Tests for entity event bus.
 Tests event emission, handler registration, and WebSocket broadcasting.
 """
 
+from __future__ import annotations
+
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -25,7 +28,7 @@ from dazzle_back.runtime.event_bus import (
 
 
 @pytest.fixture(autouse=True)
-def reset_global_bus():
+def reset_global_bus() -> Any:
     """Reset global event bus before each test."""
     reset_event_bus()
     yield
@@ -33,13 +36,13 @@ def reset_global_bus():
 
 
 @pytest.fixture
-def event_bus():
+def event_bus() -> Any:
     """Create an event bus for testing."""
     return create_event_bus()
 
 
 @pytest.fixture
-def mock_ws_manager():
+def mock_ws_manager() -> Any:
     """Create a mock WebSocket manager."""
     manager = AsyncMock()
     manager.broadcast = AsyncMock(return_value=2)
@@ -54,7 +57,7 @@ def mock_ws_manager():
 class TestEntityEvent:
     """Tests for EntityEvent class."""
 
-    def test_create_event(self):
+    def test_create_event(self) -> None:
         """Test creating an event."""
         event = EntityEvent(
             event_type=EntityEventType.CREATED,
@@ -67,11 +70,11 @@ class TestEntityEvent:
         assert event.event_type == EntityEventType.CREATED
         assert event.entity_name == "Task"
         assert event.entity_id == "123"
-        assert event.data["title"] == "Test"
+        assert event.data is not None and event.data["title"] == "Test"
         assert event.user_id == "user_456"
         assert event.timestamp > 0
 
-    def test_channel_property(self):
+    def test_channel_property(self) -> None:
         """Test channel name generation."""
         event = EntityEvent(
             event_type=EntityEventType.UPDATED,
@@ -81,7 +84,7 @@ class TestEntityEvent:
 
         assert event.channel == "entity:Task"
 
-    def test_record_channel_property(self):
+    def test_record_channel_property(self) -> None:
         """Test record channel name generation."""
         event = EntityEvent(
             event_type=EntityEventType.UPDATED,
@@ -101,11 +104,11 @@ class TestEntityEventBus:
     """Tests for EntityEventBus class."""
 
     @pytest.mark.asyncio
-    async def test_emit_created(self, event_bus):
+    async def test_emit_created(self, event_bus: Any) -> None:
         """Test emitting created event."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(handler)
@@ -123,11 +126,11 @@ class TestEntityEventBus:
         assert events[0].entity_id == "123"
 
     @pytest.mark.asyncio
-    async def test_emit_updated(self, event_bus):
+    async def test_emit_updated(self, event_bus: Any) -> None:
         """Test emitting updated event."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(handler)
@@ -142,11 +145,11 @@ class TestEntityEventBus:
         assert events[0].event_type == EntityEventType.UPDATED
 
     @pytest.mark.asyncio
-    async def test_emit_deleted(self, event_bus):
+    async def test_emit_deleted(self, event_bus: Any) -> None:
         """Test emitting deleted event."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(handler)
@@ -161,15 +164,15 @@ class TestEntityEventBus:
         assert events[0].data is None
 
     @pytest.mark.asyncio
-    async def test_multiple_handlers(self, event_bus):
+    async def test_multiple_handlers(self, event_bus: Any) -> None:
         """Test multiple handlers are called."""
         handler1_calls = []
         handler2_calls = []
 
-        async def handler1(event):
+        async def handler1(event: Any) -> None:
             handler1_calls.append(event)
 
-        async def handler2(event):
+        async def handler2(event: Any) -> None:
             handler2_calls.append(event)
 
         event_bus.add_handler(handler1)
@@ -181,11 +184,11 @@ class TestEntityEventBus:
         assert len(handler2_calls) == 1
 
     @pytest.mark.asyncio
-    async def test_remove_handler(self, event_bus):
+    async def test_remove_handler(self, event_bus: Any) -> None:
         """Test removing a handler."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(handler)
@@ -196,11 +199,11 @@ class TestEntityEventBus:
         await event_bus.emit_created("Task", "456", {})
         assert len(events) == 1  # No new event
 
-    def test_sync_handler(self, event_bus):
+    def test_sync_handler(self, event_bus: Any) -> None:
         """Test synchronous handler."""
         events = []
 
-        def sync_handler(event):
+        def sync_handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_sync_handler(sync_handler)
@@ -209,11 +212,11 @@ class TestEntityEventBus:
 
         assert len(events) == 1
 
-    def test_enable_disable(self, event_bus):
+    def test_enable_disable(self, event_bus: Any) -> None:
         """Test enabling/disabling event emission."""
         events = []
 
-        def handler(event):
+        def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_sync_handler(handler)
@@ -239,7 +242,7 @@ class TestWebSocketBroadcasting:
     """Tests for WebSocket broadcasting integration."""
 
     @pytest.mark.asyncio
-    async def test_broadcast_on_emit(self, event_bus, mock_ws_manager):
+    async def test_broadcast_on_emit(self, event_bus: Any, mock_ws_manager: Any) -> None:
         """Test that emit broadcasts to WebSocket."""
         event_bus.set_websocket_manager(mock_ws_manager)
 
@@ -251,7 +254,9 @@ class TestWebSocketBroadcasting:
         assert call_args[0] == "entity:Task"
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_record_channel_on_update(self, event_bus, mock_ws_manager):
+    async def test_broadcast_to_record_channel_on_update(
+        self, event_bus: Any, mock_ws_manager: Any
+    ) -> None:
         """Test that update broadcasts to record channel too."""
         event_bus.set_websocket_manager(mock_ws_manager)
 
@@ -261,11 +266,11 @@ class TestWebSocketBroadcasting:
         assert mock_ws_manager.broadcast.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_no_broadcast_without_manager(self, event_bus):
+    async def test_no_broadcast_without_manager(self, event_bus: Any) -> None:
         """Test that emit works without WebSocket manager."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(handler)
@@ -284,28 +289,28 @@ class TestWebSocketBroadcasting:
 class TestGlobalEventBus:
     """Tests for global event bus functions."""
 
-    def test_get_event_bus_creates_default(self):
+    def test_get_event_bus_creates_default(self) -> None:
         """Test that get_event_bus creates a default bus."""
         bus = get_event_bus()
 
         assert bus is not None
         assert isinstance(bus, EntityEventBus)
 
-    def test_get_event_bus_returns_same(self):
+    def test_get_event_bus_returns_same(self) -> None:
         """Test that get_event_bus returns the same instance."""
         bus1 = get_event_bus()
         bus2 = get_event_bus()
 
         assert bus1 is bus2
 
-    def test_set_event_bus(self):
+    def test_set_event_bus(self) -> None:
         """Test setting a custom event bus."""
         custom_bus = create_event_bus()
         set_event_bus(custom_bus)
 
         assert get_event_bus() is custom_bus
 
-    def test_reset_event_bus(self):
+    def test_reset_event_bus(self) -> None:
         """Test resetting the global event bus."""
         bus1 = get_event_bus()
         reset_event_bus()
@@ -323,11 +328,11 @@ class TestRealtimeRepositoryMixin:
     """Tests for RealtimeRepositoryMixin."""
 
     @pytest.mark.asyncio
-    async def test_emit_created_method(self):
+    async def test_emit_created_method(self) -> None:
         """Test the _emit_created method."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         bus = create_event_bus()
@@ -346,11 +351,11 @@ class TestRealtimeRepositoryMixin:
         assert events[0].user_id == "user_456"
 
     @pytest.mark.asyncio
-    async def test_custom_event_bus(self):
+    async def test_custom_event_bus(self) -> None:
         """Test using a custom event bus on the mixin."""
         events = []
 
-        async def handler(event):
+        async def handler(event: Any) -> None:
             events.append(event)
 
         custom_bus = create_event_bus()
@@ -377,14 +382,14 @@ class TestHandlerErrors:
     """Tests for handler error handling."""
 
     @pytest.mark.asyncio
-    async def test_handler_error_does_not_stop_others(self, event_bus):
+    async def test_handler_error_does_not_stop_others(self, event_bus: Any) -> None:
         """Test that a handler error doesn't stop other handlers."""
         events = []
 
-        async def failing_handler(event):
+        async def failing_handler(event: Any) -> None:
             raise ValueError("Handler failed")
 
-        async def working_handler(event):
+        async def working_handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_handler(failing_handler)
@@ -396,14 +401,14 @@ class TestHandlerErrors:
         # Working handler should still be called
         assert len(events) == 1
 
-    def test_sync_handler_error_does_not_stop_others(self, event_bus):
+    def test_sync_handler_error_does_not_stop_others(self, event_bus: Any) -> None:
         """Test that a sync handler error doesn't stop others."""
         events = []
 
-        def failing_handler(event):
+        def failing_handler(event: Any) -> None:
             raise ValueError("Handler failed")
 
-        def working_handler(event):
+        def working_handler(event: Any) -> None:
             events.append(event)
 
         event_bus.add_sync_handler(failing_handler)

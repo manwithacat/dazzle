@@ -229,7 +229,7 @@ class RelationLoader:
         sql = f"SELECT * FROM {relation.to_entity} WHERE id IN ({placeholders})"
 
         cursor = conn.execute(sql, list(fk_values))
-        cursor.row_factory = sqlite3.Row
+        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
         related_rows = cursor.fetchall()
 
         # Build lookup by ID
@@ -270,7 +270,7 @@ class RelationLoader:
         sql = f"SELECT * FROM {relation.to_entity} WHERE {fk_field} IN ({placeholders})"
 
         cursor = conn.execute(sql, list(ids))
-        cursor.row_factory = sqlite3.Row
+        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
         related_rows = cursor.fetchall()
 
         # Group by FK

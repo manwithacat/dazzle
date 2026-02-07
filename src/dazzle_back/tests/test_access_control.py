@@ -4,6 +4,9 @@ Tests for access control and row-level security.
 Tests owner-based, tenant-based, and role-based access control.
 """
 
+from __future__ import annotations
+
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -29,7 +32,7 @@ from dazzle_back.runtime.access_control import (
 class TestAccessContext:
     """Tests for AccessContext."""
 
-    def test_unauthenticated_context(self):
+    def test_unauthenticated_context(self) -> None:
         """Test unauthenticated context."""
         context = AccessContext()
 
@@ -37,7 +40,7 @@ class TestAccessContext:
         assert context.is_tenant_scoped is False
         assert context.user_id is None
 
-    def test_authenticated_context(self):
+    def test_authenticated_context(self) -> None:
         """Test authenticated context."""
         user_id = uuid4()
         context = AccessContext(user_id=user_id)
@@ -45,7 +48,7 @@ class TestAccessContext:
         assert context.is_authenticated is True
         assert context.user_id == user_id
 
-    def test_tenant_scoped_context(self):
+    def test_tenant_scoped_context(self) -> None:
         """Test tenant-scoped context."""
         tenant_id = uuid4()
         context = AccessContext(tenant_id=tenant_id)
@@ -53,7 +56,7 @@ class TestAccessContext:
         assert context.is_tenant_scoped is True
         assert context.tenant_id == tenant_id
 
-    def test_has_role(self):
+    def test_has_role(self) -> None:
         """Test role checking."""
         context = AccessContext(roles=["admin", "editor"])
 
@@ -61,7 +64,7 @@ class TestAccessContext:
         assert context.has_role("editor") is True
         assert context.has_role("viewer") is False
 
-    def test_superuser_has_all_roles(self):
+    def test_superuser_has_all_roles(self) -> None:
         """Test superuser has all roles."""
         context = AccessContext(is_superuser=True)
 
@@ -77,28 +80,28 @@ class TestAccessContext:
 class TestAccessRule:
     """Tests for AccessRule evaluation."""
 
-    def test_public_rule(self):
+    def test_public_rule(self) -> None:
         """Test public access rule."""
         rule = AccessRule(operation=AccessOperation.READ, rule="public")
         context = AccessContext()  # Unauthenticated
 
         assert rule.evaluate(context) is True
 
-    def test_authenticated_rule_with_user(self):
+    def test_authenticated_rule_with_user(self) -> None:
         """Test authenticated rule with logged-in user."""
         rule = AccessRule(operation=AccessOperation.READ, rule="authenticated")
         context = AccessContext(user_id=uuid4())
 
         assert rule.evaluate(context) is True
 
-    def test_authenticated_rule_without_user(self):
+    def test_authenticated_rule_without_user(self) -> None:
         """Test authenticated rule without user."""
         rule = AccessRule(operation=AccessOperation.READ, rule="authenticated")
         context = AccessContext()
 
         assert rule.evaluate(context) is False
 
-    def test_owner_rule_matching(self):
+    def test_owner_rule_matching(self) -> None:
         """Test owner rule with matching owner."""
         user_id = uuid4()
         rule = AccessRule(
@@ -111,7 +114,7 @@ class TestAccessRule:
 
         assert rule.evaluate(context, record) is True
 
-    def test_owner_rule_not_matching(self):
+    def test_owner_rule_not_matching(self) -> None:
         """Test owner rule with different owner."""
         rule = AccessRule(
             operation=AccessOperation.READ,
@@ -123,7 +126,7 @@ class TestAccessRule:
 
         assert rule.evaluate(context, record) is False
 
-    def test_owner_rule_create_without_record(self):
+    def test_owner_rule_create_without_record(self) -> None:
         """Test owner rule for create (no record yet)."""
         rule = AccessRule(
             operation=AccessOperation.CREATE,
@@ -135,7 +138,7 @@ class TestAccessRule:
         # Create should allow if authenticated
         assert rule.evaluate(context, None) is True
 
-    def test_tenant_rule_matching(self):
+    def test_tenant_rule_matching(self) -> None:
         """Test tenant rule with matching tenant."""
         tenant_id = uuid4()
         rule = AccessRule(
@@ -148,7 +151,7 @@ class TestAccessRule:
 
         assert rule.evaluate(context, record) is True
 
-    def test_tenant_rule_not_matching(self):
+    def test_tenant_rule_not_matching(self) -> None:
         """Test tenant rule with different tenant."""
         rule = AccessRule(
             operation=AccessOperation.READ,
@@ -160,21 +163,21 @@ class TestAccessRule:
 
         assert rule.evaluate(context, record) is False
 
-    def test_role_rule_with_role(self):
+    def test_role_rule_with_role(self) -> None:
         """Test role rule with matching role."""
         rule = AccessRule(operation=AccessOperation.DELETE, rule="role:admin")
         context = AccessContext(user_id=uuid4(), roles=["admin"])
 
         assert rule.evaluate(context) is True
 
-    def test_role_rule_without_role(self):
+    def test_role_rule_without_role(self) -> None:
         """Test role rule without matching role."""
         rule = AccessRule(operation=AccessOperation.DELETE, rule="role:admin")
         context = AccessContext(user_id=uuid4(), roles=["editor"])
 
         assert rule.evaluate(context) is False
 
-    def test_superuser_bypasses_all(self):
+    def test_superuser_bypasses_all(self) -> None:
         """Test superuser bypasses all rules."""
         rule = AccessRule(
             operation=AccessOperation.DELETE,
@@ -195,7 +198,7 @@ class TestAccessRule:
 class TestAccessPolicy:
     """Tests for AccessPolicy."""
 
-    def test_create_public_policy(self):
+    def test_create_public_policy(self) -> None:
         """Test creating public policy."""
         policy = AccessPolicy.create_public("Task")
 
@@ -203,7 +206,7 @@ class TestAccessPolicy:
         assert policy.can_access(AccessOperation.READ, AccessContext()) is True
         assert policy.can_access(AccessOperation.CREATE, AccessContext()) is True
 
-    def test_create_authenticated_policy(self):
+    def test_create_authenticated_policy(self) -> None:
         """Test creating authenticated policy."""
         policy = AccessPolicy.create_authenticated("Task")
         context_anon = AccessContext()
@@ -212,7 +215,7 @@ class TestAccessPolicy:
         assert policy.can_access(AccessOperation.READ, context_anon) is False
         assert policy.can_access(AccessOperation.READ, context_auth) is True
 
-    def test_create_owner_based_policy(self):
+    def test_create_owner_based_policy(self) -> None:
         """Test creating owner-based policy."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         user_id = uuid4()
@@ -229,7 +232,7 @@ class TestAccessPolicy:
         other_record = {"id": uuid4(), "owner_id": uuid4()}
         assert policy.can_access(AccessOperation.READ, context, other_record) is False
 
-    def test_create_tenant_based_policy(self):
+    def test_create_tenant_based_policy(self) -> None:
         """Test creating tenant-based policy."""
         policy = AccessPolicy.create_tenant_based("Task", "tenant_id")
         tenant_id = uuid4()
@@ -243,7 +246,7 @@ class TestAccessPolicy:
         diff_tenant = {"id": uuid4(), "tenant_id": uuid4()}
         assert policy.can_access(AccessOperation.READ, context, diff_tenant) is False
 
-    def test_get_list_filters_owner(self):
+    def test_get_list_filters_owner(self) -> None:
         """Test getting list filters for owner-based policy."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         user_id = uuid4()
@@ -253,7 +256,7 @@ class TestAccessPolicy:
 
         assert filters == {"owner_id": user_id}
 
-    def test_get_list_filters_tenant(self):
+    def test_get_list_filters_tenant(self) -> None:
         """Test getting list filters for tenant-based policy."""
         policy = AccessPolicy.create_tenant_based("Task", "tenant_id")
         tenant_id = uuid4()
@@ -272,7 +275,7 @@ class TestAccessPolicy:
 class TestPolicyRegistry:
     """Tests for PolicyRegistry."""
 
-    def test_register_and_get(self):
+    def test_register_and_get(self) -> None:
         """Test registering and getting policy."""
         registry = PolicyRegistry()
         policy = AccessPolicy.create_public("Task")
@@ -281,13 +284,13 @@ class TestPolicyRegistry:
 
         assert registry.get("Task") == policy
 
-    def test_get_missing_returns_none(self):
+    def test_get_missing_returns_none(self) -> None:
         """Test getting missing policy."""
         registry = PolicyRegistry()
 
         assert registry.get("NonExistent") is None
 
-    def test_default_policy(self):
+    def test_default_policy(self) -> None:
         """Test default policy fallback."""
         registry = PolicyRegistry()
         default = AccessPolicy.create_authenticated("Default")
@@ -296,7 +299,7 @@ class TestPolicyRegistry:
         # Missing entity returns default
         assert registry.get("NonExistent") == default
 
-    def test_has_policy(self):
+    def test_has_policy(self) -> None:
         """Test checking if policy exists."""
         registry = PolicyRegistry()
         policy = AccessPolicy.create_public("Task")
@@ -315,11 +318,11 @@ class TestAccessEnforcer:
     """Tests for AccessEnforcer."""
 
     @pytest.fixture
-    def user_context(self):
+    def user_context(self) -> Any:
         """Create a user context."""
         return AccessContext(user_id=uuid4())
 
-    def test_check_create_injects_owner(self, user_context):
+    def test_check_create_injects_owner(self, user_context: Any) -> None:
         """Test create check injects owner_id."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -330,7 +333,7 @@ class TestAccessEnforcer:
         assert result["owner_id"] == user_context.user_id
         assert result["title"] == "Test Task"
 
-    def test_check_create_denies_unauthenticated(self):
+    def test_check_create_denies_unauthenticated(self) -> None:
         """Test create check denies unauthenticated."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: AccessContext())
@@ -340,7 +343,7 @@ class TestAccessEnforcer:
 
         assert exc_info.value.operation == AccessOperation.CREATE
 
-    def test_check_read_allows_owner(self, user_context):
+    def test_check_read_allows_owner(self, user_context: Any) -> None:
         """Test read check allows owner."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -350,7 +353,7 @@ class TestAccessEnforcer:
         # Should not raise
         enforcer.check_read(record)
 
-    def test_check_read_denies_non_owner(self, user_context):
+    def test_check_read_denies_non_owner(self, user_context: Any) -> None:
         """Test read check denies non-owner."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -362,7 +365,7 @@ class TestAccessEnforcer:
 
         assert exc_info.value.operation == AccessOperation.READ
 
-    def test_check_update_denies_non_owner(self, user_context):
+    def test_check_update_denies_non_owner(self, user_context: Any) -> None:
         """Test update check denies non-owner."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -372,7 +375,7 @@ class TestAccessEnforcer:
         with pytest.raises(AccessDenied):
             enforcer.check_update(record)
 
-    def test_check_delete_denies_non_owner(self, user_context):
+    def test_check_delete_denies_non_owner(self, user_context: Any) -> None:
         """Test delete check denies non-owner."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -382,7 +385,7 @@ class TestAccessEnforcer:
         with pytest.raises(AccessDenied):
             enforcer.check_delete(record)
 
-    def test_get_list_filters(self, user_context):
+    def test_get_list_filters(self, user_context: Any) -> None:
         """Test getting list filters."""
         policy = AccessPolicy.create_owner_based("Task", "owner_id")
         enforcer = AccessEnforcer(policy, lambda: user_context)
@@ -400,7 +403,7 @@ class TestAccessEnforcer:
 class TestFieldDetection:
     """Tests for field detection functions."""
 
-    def test_detect_owner_field_by_name(self):
+    def test_detect_owner_field_by_name(self) -> None:
         """Test detecting owner field by common names."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -410,7 +413,7 @@ class TestFieldDetection:
 
         assert detect_owner_field(fields) == "owner_id"
 
-    def test_detect_owner_field_by_ref(self):
+    def test_detect_owner_field_by_ref(self) -> None:
         """Test detecting owner field by User reference."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -420,7 +423,7 @@ class TestFieldDetection:
 
         assert detect_owner_field(fields) == "author"
 
-    def test_detect_owner_field_not_found(self):
+    def test_detect_owner_field_not_found(self) -> None:
         """Test no owner field detected."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -429,7 +432,7 @@ class TestFieldDetection:
 
         assert detect_owner_field(fields) is None
 
-    def test_detect_tenant_field(self):
+    def test_detect_tenant_field(self) -> None:
         """Test detecting tenant field."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -439,7 +442,7 @@ class TestFieldDetection:
 
         assert detect_tenant_field(fields) == "tenant_id"
 
-    def test_detect_tenant_field_org(self):
+    def test_detect_tenant_field_org(self) -> None:
         """Test detecting organization_id as tenant field."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -457,7 +460,7 @@ class TestFieldDetection:
 class TestCreatePolicyFromEntity:
     """Tests for create_policy_from_entity."""
 
-    def test_creates_owner_policy_if_owner_field(self):
+    def test_creates_owner_policy_if_owner_field(self) -> None:
         """Test creates owner policy when owner field detected."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -470,7 +473,7 @@ class TestCreatePolicyFromEntity:
         assert policy.entity_name == "Task"
         assert policy.owner_field == "owner_id"
 
-    def test_creates_tenant_policy_if_tenant_field(self):
+    def test_creates_tenant_policy_if_tenant_field(self) -> None:
         """Test creates tenant policy when tenant field detected."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -483,7 +486,7 @@ class TestCreatePolicyFromEntity:
         assert policy.entity_name == "Project"
         assert policy.tenant_field == "tenant_id"
 
-    def test_creates_public_policy_by_default(self):
+    def test_creates_public_policy_by_default(self) -> None:
         """Test creates public policy when no special fields."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},
@@ -495,7 +498,7 @@ class TestCreatePolicyFromEntity:
         # Should allow public access
         assert policy.can_access(AccessOperation.READ, AccessContext()) is True
 
-    def test_creates_authenticated_policy_when_specified(self):
+    def test_creates_authenticated_policy_when_specified(self) -> None:
         """Test creates authenticated policy when requested."""
         fields = [
             {"name": "id", "type": {"kind": "scalar"}},

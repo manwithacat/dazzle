@@ -4,10 +4,12 @@ Model generator - generates Pydantic models from EntitySpec.
 This module creates dynamic Pydantic models at runtime from BackendSpec entity definitions.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel, Field, create_model
@@ -21,7 +23,7 @@ from dazzle_back.specs.entity import (
 
 # Try to import relativedelta for months/years arithmetic
 try:
-    from dateutil.relativedelta import relativedelta
+    from dateutil.relativedelta import relativedelta  # type: ignore[import-untyped]
 
     HAS_DATEUTIL = True
 except ImportError:
@@ -184,7 +186,7 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
     elif field.required:
         return (python_type, ...)
     else:
-        return (python_type | None, None)
+        return (python_type | None, None)  # type: ignore[return-value]
 
 
 # =============================================================================
@@ -235,7 +237,7 @@ def generate_entity_model(
         **field_definitions,
     )
 
-    return model
+    return cast(type[BaseModel], model)
 
 
 def generate_all_entity_models(
@@ -303,7 +305,7 @@ def generate_create_schema(
         **field_definitions,
     )
 
-    return model
+    return cast(type[BaseModel], model)
 
 
 def generate_update_schema(
@@ -343,7 +345,7 @@ def generate_update_schema(
         **field_definitions,
     )
 
-    return model
+    return cast(type[BaseModel], model)
 
 
 def generate_list_response_schema(
@@ -373,4 +375,4 @@ def generate_list_response_schema(
         **field_definitions,
     )
 
-    return model
+    return cast(type[BaseModel], model)

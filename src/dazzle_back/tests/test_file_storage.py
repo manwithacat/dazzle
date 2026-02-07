@@ -4,8 +4,11 @@ Tests for file storage system.
 Tests local storage, metadata store, validation, and file service.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from io import BytesIO
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -26,7 +29,7 @@ from dazzle_back.runtime.file_storage import (
 
 
 @pytest.fixture
-def temp_storage_path(tmp_path):
+def temp_storage_path(tmp_path: Any) -> Any:
     """Create a temporary storage path."""
     storage_path = tmp_path / "uploads"
     storage_path.mkdir()
@@ -34,13 +37,13 @@ def temp_storage_path(tmp_path):
 
 
 @pytest.fixture
-def temp_db_path(tmp_path):
+def temp_db_path(tmp_path: Any) -> Any:
     """Create a temporary database path."""
     return tmp_path / "files.db"
 
 
 @pytest.fixture
-def local_storage(temp_storage_path):
+def local_storage(temp_storage_path: Any) -> Any:
     """Create a local storage backend."""
     return LocalStorageBackend(
         base_path=temp_storage_path,
@@ -49,13 +52,13 @@ def local_storage(temp_storage_path):
 
 
 @pytest.fixture
-def metadata_store(temp_db_path):
+def metadata_store(temp_db_path: Any) -> Any:
     """Create a file metadata store."""
     return FileMetadataStore(temp_db_path)
 
 
 @pytest.fixture
-def file_service(temp_storage_path, temp_db_path):
+def file_service(temp_storage_path: Any, temp_db_path: Any) -> Any:
     """Create a file service."""
     return create_local_file_service(
         base_path=temp_storage_path,
@@ -64,14 +67,14 @@ def file_service(temp_storage_path, temp_db_path):
 
 
 @pytest.fixture
-def sample_file():
+def sample_file() -> Any:
     """Create a sample file-like object."""
     content = b"Hello, World! This is a test file."
     return BytesIO(content)
 
 
 @pytest.fixture
-def sample_image():
+def sample_image() -> Any:
     """Create a minimal valid PNG image."""
     # Minimal 1x1 red PNG
     png_data = (
@@ -83,7 +86,7 @@ def sample_image():
 
 
 @pytest.fixture
-def sample_pdf():
+def sample_pdf() -> Any:
     """Create a minimal valid PDF."""
     pdf_data = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"
     return BytesIO(pdf_data)
@@ -97,31 +100,31 @@ def sample_pdf():
 class TestSecureFilename:
     """Tests for secure_filename function."""
 
-    def test_basic_filename(self):
+    def test_basic_filename(self) -> None:
         """Test basic filename passes through."""
         assert secure_filename("document.pdf") == "document.pdf"
 
-    def test_removes_path(self):
+    def test_removes_path(self) -> None:
         """Test path components are removed."""
         assert secure_filename("/path/to/document.pdf") == "document.pdf"
         # Path.name returns only the final component
         assert secure_filename("../../../etc/passwd") == "passwd"
 
-    def test_replaces_special_chars(self):
+    def test_replaces_special_chars(self) -> None:
         """Test special characters are replaced."""
         assert secure_filename("my file (1).pdf") == "my_file__1_.pdf"
 
-    def test_removes_leading_dot(self):
+    def test_removes_leading_dot(self) -> None:
         """Test leading dots are removed."""
         assert secure_filename(".htaccess") == "htaccess"
 
-    def test_limits_length(self):
+    def test_limits_length(self) -> None:
         """Test filename length is limited."""
         long_name = "a" * 200 + ".pdf"
         result = secure_filename(long_name)
         assert len(result) <= 114  # 100 + "." + 10 (extension limit)
 
-    def test_empty_becomes_unnamed(self):
+    def test_empty_becomes_unnamed(self) -> None:
         """Test empty filename becomes unnamed."""
         assert secure_filename("") == "unnamed_file"
         assert secure_filename("...") == "unnamed_file"
@@ -135,7 +138,7 @@ class TestSecureFilename:
 class TestFileValidator:
     """Tests for FileValidator."""
 
-    def test_validate_valid_file(self, sample_file):
+    def test_validate_valid_file(self, sample_file: Any) -> None:
         """Test validation passes for valid file."""
         validator = FileValidator(max_size=1024 * 1024)
         is_valid, error, content_type = validator.validate(sample_file, "test.txt")
@@ -143,7 +146,7 @@ class TestFileValidator:
         assert is_valid is True
         assert error is None
 
-    def test_validate_file_too_large(self):
+    def test_validate_file_too_large(self) -> None:
         """Test validation fails for oversized file."""
         validator = FileValidator(max_size=10)
         large_file = BytesIO(b"x" * 100)
@@ -151,9 +154,9 @@ class TestFileValidator:
         is_valid, error, _ = validator.validate(large_file, "large.txt")
 
         assert is_valid is False
-        assert "exceeds maximum size" in error
+        assert error is not None and "exceeds maximum size" in error
 
-    def test_validate_empty_file(self):
+    def test_validate_empty_file(self) -> None:
         """Test validation fails for empty file."""
         validator = FileValidator()
         empty_file = BytesIO(b"")
@@ -161,9 +164,9 @@ class TestFileValidator:
         is_valid, error, _ = validator.validate(empty_file, "empty.txt")
 
         assert is_valid is False
-        assert "empty" in error.lower()
+        assert error is not None and "empty" in error.lower()
 
-    def test_validate_allowed_types(self, sample_image):
+    def test_validate_allowed_types(self, sample_image: Any) -> None:
         """Test validation with allowed types."""
         validator = FileValidator(allowed_types=["image/*"])
 
@@ -172,14 +175,14 @@ class TestFileValidator:
         assert is_valid is True
         assert "image" in content_type
 
-    def test_validate_disallowed_type(self, sample_file):
+    def test_validate_disallowed_type(self, sample_file: Any) -> None:
         """Test validation fails for disallowed type."""
         validator = FileValidator(allowed_types=["image/*"])
 
         is_valid, error, _ = validator.validate(sample_file, "test.txt")
 
         assert is_valid is False
-        assert "not allowed" in error
+        assert error is not None and "not allowed" in error
 
 
 # =============================================================================
@@ -191,7 +194,7 @@ class TestLocalStorageBackend:
     """Tests for LocalStorageBackend."""
 
     @pytest.mark.asyncio
-    async def test_store_file(self, local_storage, sample_file):
+    async def test_store_file(self, local_storage: Any, sample_file: Any) -> None:
         """Test storing a file."""
         metadata = await local_storage.store(
             sample_file,
@@ -206,7 +209,7 @@ class TestLocalStorageBackend:
         assert isinstance(metadata.id, UUID)
 
     @pytest.mark.asyncio
-    async def test_store_with_prefix(self, local_storage, sample_file):
+    async def test_store_with_prefix(self, local_storage: Any, sample_file: Any) -> None:
         """Test storing with path prefix."""
         metadata = await local_storage.store(
             sample_file,
@@ -218,7 +221,7 @@ class TestLocalStorageBackend:
         assert "documents" in metadata.url
 
     @pytest.mark.asyncio
-    async def test_retrieve_file(self, local_storage, sample_file):
+    async def test_retrieve_file(self, local_storage: Any, sample_file: Any) -> None:
         """Test retrieving a stored file."""
         # Store first
         metadata = await local_storage.store(
@@ -233,13 +236,15 @@ class TestLocalStorageBackend:
         assert content == b"Hello, World! This is a test file."
 
     @pytest.mark.asyncio
-    async def test_retrieve_not_found(self, local_storage):
+    async def test_retrieve_not_found(self, local_storage: Any) -> None:
         """Test retrieving non-existent file."""
         with pytest.raises(FileNotFoundError):
             await local_storage.retrieve("nonexistent/file.txt")
 
     @pytest.mark.asyncio
-    async def test_delete_file(self, local_storage, sample_file, temp_storage_path):
+    async def test_delete_file(
+        self, local_storage: Any, sample_file: Any, temp_storage_path: Any
+    ) -> None:
         """Test deleting a file."""
         # Store first
         metadata = await local_storage.store(
@@ -259,13 +264,13 @@ class TestLocalStorageBackend:
         assert not full_path.exists()
 
     @pytest.mark.asyncio
-    async def test_delete_not_found(self, local_storage):
+    async def test_delete_not_found(self, local_storage: Any) -> None:
         """Test deleting non-existent file."""
         deleted = await local_storage.delete("nonexistent/file.txt")
         assert deleted is False
 
     @pytest.mark.asyncio
-    async def test_stream_file(self, local_storage, sample_file):
+    async def test_stream_file(self, local_storage: Any, sample_file: Any) -> None:
         """Test streaming a file."""
         # Store first
         metadata = await local_storage.store(
@@ -282,7 +287,7 @@ class TestLocalStorageBackend:
         content = b"".join(chunks)
         assert content == b"Hello, World! This is a test file."
 
-    def test_get_url(self, local_storage):
+    def test_get_url(self, local_storage: Any) -> None:
         """Test URL generation."""
         url = local_storage.get_url("2025/11/28/abc_test.txt")
         assert url == "/files/2025/11/28/abc_test.txt"
@@ -296,7 +301,7 @@ class TestLocalStorageBackend:
 class TestFileMetadataStore:
     """Tests for FileMetadataStore."""
 
-    def test_save_and_get(self, metadata_store):
+    def test_save_and_get(self, metadata_store: Any) -> None:
         """Test saving and retrieving metadata."""
 
         metadata = FileMetadata(
@@ -317,12 +322,12 @@ class TestFileMetadataStore:
         assert retrieved.id == metadata.id
         assert retrieved.filename == "test.txt"
 
-    def test_get_not_found(self, metadata_store):
+    def test_get_not_found(self, metadata_store: Any) -> None:
         """Test getting non-existent metadata."""
         result = metadata_store.get(uuid4())
         assert result is None
 
-    def test_delete(self, metadata_store):
+    def test_delete(self, metadata_store: Any) -> None:
         """Test deleting metadata."""
 
         metadata = FileMetadata(
@@ -342,7 +347,7 @@ class TestFileMetadataStore:
         assert deleted is True
         assert metadata_store.get(metadata.id) is None
 
-    def test_get_by_entity(self, metadata_store):
+    def test_get_by_entity(self, metadata_store: Any) -> None:
         """Test getting files by entity."""
 
         # Save multiple files for same entity
@@ -385,7 +390,7 @@ class TestFileMetadataStore:
         files = metadata_store.get_by_entity("Task", "task-123", "attachment")
         assert len(files) == 3
 
-    def test_update_entity_association(self, metadata_store):
+    def test_update_entity_association(self, metadata_store: Any) -> None:
         """Test updating entity association."""
 
         metadata = FileMetadata(
@@ -423,7 +428,7 @@ class TestFileService:
     """Tests for FileService."""
 
     @pytest.mark.asyncio
-    async def test_upload(self, file_service, sample_file):
+    async def test_upload(self, file_service: Any, sample_file: Any) -> None:
         """Test uploading a file."""
         metadata = await file_service.upload(
             sample_file,
@@ -436,7 +441,7 @@ class TestFileService:
         assert metadata.size > 0
 
     @pytest.mark.asyncio
-    async def test_upload_with_entity(self, file_service, sample_file):
+    async def test_upload_with_entity(self, file_service: Any, sample_file: Any) -> None:
         """Test uploading with entity association."""
         metadata = await file_service.upload(
             sample_file,
@@ -452,7 +457,7 @@ class TestFileService:
         assert metadata.field_name == "attachment"
 
     @pytest.mark.asyncio
-    async def test_upload_validation_fails(self, file_service):
+    async def test_upload_validation_fails(self, file_service: Any) -> None:
         """Test upload validation failure."""
         # Create oversized file
         file_service.validator.max_size = 10
@@ -462,7 +467,7 @@ class TestFileService:
             await file_service.upload(large_file, "large.txt")
 
     @pytest.mark.asyncio
-    async def test_download(self, file_service, sample_file):
+    async def test_download(self, file_service: Any, sample_file: Any) -> None:
         """Test downloading a file."""
         # Upload first
         metadata = await file_service.upload(
@@ -478,13 +483,13 @@ class TestFileService:
         assert retrieved_metadata.id == metadata.id
 
     @pytest.mark.asyncio
-    async def test_download_not_found(self, file_service):
+    async def test_download_not_found(self, file_service: Any) -> None:
         """Test downloading non-existent file."""
         with pytest.raises(FileNotFoundError):
             await file_service.download(uuid4())
 
     @pytest.mark.asyncio
-    async def test_delete(self, file_service, sample_file):
+    async def test_delete(self, file_service: Any, sample_file: Any) -> None:
         """Test deleting a file."""
         # Upload first
         metadata = await file_service.upload(
@@ -499,14 +504,14 @@ class TestFileService:
         assert deleted is True
         assert file_service.get_metadata(metadata.id) is None
 
-    def test_get_metadata(self, file_service):
+    def test_get_metadata(self, file_service: Any) -> None:
         """Test getting metadata without download."""
         # Metadata doesn't exist yet
         result = file_service.get_metadata(uuid4())
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_entity_files(self, file_service):
+    async def test_get_entity_files(self, file_service: Any) -> None:
         """Test getting files for an entity."""
         # Upload files for entity
         for i in range(3):
@@ -524,7 +529,7 @@ class TestFileService:
         assert len(files) == 3
 
     @pytest.mark.asyncio
-    async def test_associate_with_entity(self, file_service, sample_file):
+    async def test_associate_with_entity(self, file_service: Any, sample_file: Any) -> None:
         """Test associating uploaded file with entity."""
         # Upload without entity
         metadata = await file_service.upload(
@@ -554,7 +559,7 @@ class TestFileService:
 class TestFactoryFunctions:
     """Tests for factory functions."""
 
-    def test_create_local_file_service(self, tmp_path):
+    def test_create_local_file_service(self, tmp_path: Any) -> None:
         """Test creating local file service."""
         service = create_local_file_service(
             base_path=tmp_path / "uploads",

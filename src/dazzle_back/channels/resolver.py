@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .detection import (
     DetectionResult,
@@ -58,7 +58,7 @@ class ChannelResolution:
     provider: DetectionResult
     adapter_class_name: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
             "channel_name": self.channel_name,
@@ -306,7 +306,7 @@ class ChannelResolver:
         """Clear the resolution cache."""
         self._cache.clear()
 
-    def get_status_summary(self) -> list[dict]:
+    def get_status_summary(self) -> list[dict[str, Any]]:
         """Get summary of all resolved channels.
 
         Returns:

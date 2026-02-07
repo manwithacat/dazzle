@@ -2,6 +2,9 @@
 Tests for DNR-Back runtime module.
 """
 
+from __future__ import annotations
+
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -157,9 +160,9 @@ class TestModelGenerator:
         task_id = uuid4()
         task = TaskModel(id=task_id, title="Test Task", status="pending")
 
-        assert task.title == "Test Task"
-        assert task.status == "pending"
-        assert task.description is None
+        assert task.title == "Test Task"  # type: ignore
+        assert task.status == "pending"  # type: ignore
+        assert task.description is None  # type: ignore
 
     def test_model_with_defaults(self, task_entity: EntitySpec) -> None:
         """Test that default values are applied."""
@@ -168,7 +171,7 @@ class TestModelGenerator:
         # Create instance - priority should get default value when not provided
         task_id = uuid4()
         task = TaskModel(id=task_id, title="Test2", status="done")
-        assert task.priority == 1
+        assert task.priority == 1  # type: ignore
 
     def test_generate_all_entity_models(
         self, task_entity: EntitySpec, user_entity: EntitySpec
@@ -201,7 +204,7 @@ class TestModelGenerator:
 
         # Should be able to create with partial data
         update = UpdateSchema(title="New Title")
-        assert update.title == "New Title"
+        assert update.title == "New Title"  # type: ignore
 
 
 # =============================================================================
@@ -229,9 +232,9 @@ class TestServiceGenerator:
         create_data = CreateSchema(title="New Task", status="pending")
         task = await service.create(create_data)
 
-        assert task.title == "New Task"
-        assert task.status == "pending"
-        assert task.id is not None
+        assert task.title == "New Task"  # type: ignore
+        assert task.status == "pending"  # type: ignore
+        assert task.id is not None  # type: ignore
 
     @pytest.mark.asyncio
     async def test_crud_service_read(self, task_entity: EntitySpec) -> None:
@@ -250,10 +253,10 @@ class TestServiceGenerator:
         create_data = CreateSchema(title="Test Task", status="pending")
         created = await service.create(create_data)
 
-        task = await service.read(created.id)
+        task = await service.read(created.id)  # type: ignore
 
         assert task is not None
-        assert task.title == "Test Task"
+        assert task.title == "Test Task"  # type: ignore
 
     @pytest.mark.asyncio
     async def test_crud_service_update(self, task_entity: EntitySpec) -> None:
@@ -275,11 +278,11 @@ class TestServiceGenerator:
 
         # Update it
         update_data = UpdateSchema(title="Updated")
-        updated = await service.update(created.id, update_data)
+        updated = await service.update(created.id, update_data)  # type: ignore
 
         assert updated is not None
-        assert updated.title == "Updated"
-        assert updated.status == "pending"  # Unchanged
+        assert updated.title == "Updated"  # type: ignore
+        assert updated.status == "pending"  # type: ignore  # Unchanged
 
     @pytest.mark.asyncio
     async def test_crud_service_delete(self, task_entity: EntitySpec) -> None:
@@ -298,11 +301,11 @@ class TestServiceGenerator:
         create_data = CreateSchema(title="To Delete", status="pending")
         created = await service.create(create_data)
 
-        result = await service.delete(created.id)
+        result = await service.delete(created.id)  # type: ignore
         assert result is True
 
         # Verify deleted
-        task = await service.read(created.id)
+        task = await service.read(created.id)  # type: ignore
         assert task is None
 
     @pytest.mark.asyncio
@@ -333,7 +336,7 @@ class TestServiceGenerator:
     @pytest.mark.asyncio
     async def test_custom_service(self) -> None:
         """Test custom service execution."""
-        service = CustomService(service_name="calculate_total")
+        service: Any = CustomService(service_name="calculate_total")
 
         result = await service.execute()
 
@@ -343,7 +346,7 @@ class TestServiceGenerator:
     @pytest.mark.asyncio
     async def test_custom_service_with_handler(self) -> None:
         """Test custom service with a handler."""
-        service = CustomService(service_name="add_numbers")
+        service: Any = CustomService(service_name="add_numbers")
 
         async def add_handler(a: int, b: int) -> dict[str, int]:
             return {"sum": a + b}
@@ -468,8 +471,6 @@ class TestServerWithSQLite:
             services=[
                 ServiceSpec(
                     name="task_service",
-                    is_crud=True,
-                    target_entity="Task",
                     domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
                 ),
             ],
@@ -483,7 +484,7 @@ class TestServerWithSQLite:
             ],
         )
 
-    def test_server_creates_database(self, simple_backend_spec: BackendSpec, tmp_path):
+    def test_server_creates_database(self, simple_backend_spec: BackendSpec, tmp_path: Any) -> None:
         """Test that server creates SQLite database."""
         from dazzle_back.runtime.server import DNRBackendApp
 
@@ -501,7 +502,7 @@ class TestServerWithSQLite:
         # Check for database manager
         assert app_builder._db_manager is not None
 
-    def test_server_without_database(self, simple_backend_spec: BackendSpec, tmp_path):
+    def test_server_without_database(self, simple_backend_spec: BackendSpec, tmp_path: Any) -> None:
         """Test that server works without database (in-memory mode)."""
         from dazzle_back.runtime.server import DNRBackendApp
 
@@ -519,7 +520,9 @@ class TestServerWithSQLite:
         # Database manager should not be set
         assert app_builder._db_manager is None
 
-    def test_crud_service_with_repository(self, simple_backend_spec: BackendSpec, tmp_path):
+    def test_crud_service_with_repository(
+        self, simple_backend_spec: BackendSpec, tmp_path: Any
+    ) -> None:
         """Test that CRUD service is wired up to repository."""
         from dazzle_back.runtime.server import DNRBackendApp
 
@@ -541,8 +544,8 @@ class TestServerWithSQLite:
 
     @pytest.mark.asyncio
     async def test_crud_operations_persist_to_sqlite(
-        self, simple_backend_spec: BackendSpec, tmp_path
-    ):
+        self, simple_backend_spec: BackendSpec, tmp_path: Any
+    ) -> None:
         """Test that CRUD operations persist data to SQLite."""
         from dazzle_back.runtime.server import DNRBackendApp
 
@@ -569,7 +572,7 @@ class TestServerWithSQLite:
         # Read it back
         read_task = await task_service.read(task_id)
         assert read_task is not None
-        assert read_task.title == "Test Task"
+        assert read_task.title == "Test Task"  # type: ignore[union-attr]
 
         # Create a new app instance to verify persistence
         app_builder2 = DNRBackendApp(
@@ -580,6 +583,7 @@ class TestServerWithSQLite:
         app_builder2.build()
 
         task_service2 = app_builder2.get_service("task_service")
+        assert task_service2 is not None
 
         # Should still be able to read the task
         persisted_task = await task_service2.read(task_id)

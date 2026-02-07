@@ -282,7 +282,7 @@ class PushNotificationService:
                 error_code="send_error",
             )
 
-    def _build_fcm_message(self, push_token: str, notification: PushNotification):
+    def _build_fcm_message(self, push_token: str, notification: PushNotification) -> Any:
         """Build FCM Message object from PushNotification."""
         from firebase_admin import messaging
 

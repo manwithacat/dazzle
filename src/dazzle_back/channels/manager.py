@@ -120,7 +120,7 @@ class ChannelManager:
         self._adapters: dict[str, BaseChannelAdapter] = {}
         self._statuses: dict[str, ChannelStatus] = {}
         self._initialized = False
-        self._processor_task: asyncio.Task | None = None
+        self._processor_task: asyncio.Task[None] | None = None
 
     async def initialize(self) -> None:
         """
@@ -350,7 +350,7 @@ class ChannelManager:
         if self._processor_task:
             return
 
-        async def processor_loop():
+        async def processor_loop() -> None:
             while True:
                 try:
                     processed = await self.process_outbox()
