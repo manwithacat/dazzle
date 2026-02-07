@@ -73,13 +73,13 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
             # Re-seed the Knowledge Graph from TOML (single operation replaces
             # the old reload_cache + reload_inference_kb pair).
             try:
-                from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+                from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
 
                 from ..state import get_knowledge_graph
 
                 graph = get_knowledge_graph()
                 if graph is not None:
-                    ensure_seeded(graph)
+                    seed_framework_knowledge(graph)
 
                 # Reload modules that cache data from TOML/config files
                 import importlib

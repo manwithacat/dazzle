@@ -27,6 +27,7 @@ from typing import Any
 
 # MCP Semantic Index version - reads from pyproject.toml
 from dazzle._version import get_version as _get_version
+from dazzle.mcp._graph_access import get_kg as _get_kg
 
 logger = logging.getLogger(__name__)
 
@@ -272,16 +273,6 @@ def _load_semantic_data() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _get_kg() -> Any:
-    """Return the knowledge graph or None."""
-    try:
-        from dazzle.mcp.server.state import get_knowledge_graph
-
-        return get_knowledge_graph()
-    except Exception:
-        return None
-
-
 def _get_semantic_index_from_kg() -> dict[str, Any] | None:
     """Build the semantic index dict from KG data."""
     graph = _get_kg()
@@ -429,9 +420,9 @@ def reload_cache() -> None:
 
     graph = _get_kg()
     if graph is not None:
-        from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+        from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
 
-        ensure_seeded(graph)
+        seed_framework_knowledge(graph)
 
 
 __all__ = [

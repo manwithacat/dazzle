@@ -681,11 +681,11 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         else:
             # Re-seed the Knowledge Graph from TOML
             try:
-                from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+                from dazzle.mcp.knowledge_graph.seed import seed_framework_knowledge
 
                 graph = get_knowledge_graph()
                 if graph is not None:
-                    ensure_seeded(graph)
+                    seed_framework_knowledge(graph)
 
                 # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version
