@@ -265,7 +265,8 @@ class DatabaseManager:
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""
         with self.connection() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor()
+            cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
             )
             return cursor.fetchone() is not None
@@ -283,7 +284,8 @@ class DatabaseManager:
     def get_table_columns(self, table_name: str) -> list[str]:
         """Get column names for a table."""
         with self.connection() as conn:
-            cursor = conn.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
+            cursor = conn.cursor()
+            cursor.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
             return [row[1] for row in cursor.fetchall()]
 
 
@@ -404,7 +406,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(sql, (str(id),))
+            cursor = conn.cursor()
+            cursor.execute(sql, (str(id),))
             row = cursor.fetchone()
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("select", latency_ms, rows=1 if row else 0)
@@ -461,7 +464,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(sql, values)
+            cursor = conn.cursor()
+            cursor.execute(sql, values)
             rowcount = cursor.rowcount
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("update", latency_ms, rows=rowcount)
@@ -487,7 +491,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(sql, (str(id),))
+            cursor = conn.cursor()
+            cursor.execute(sql, (str(id),))
             rowcount = cursor.rowcount
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("delete", latency_ms, rows=rowcount)
@@ -543,7 +548,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(count_sql, count_params)
+            cursor = conn.cursor()
+            cursor.execute(count_sql, count_params)
             total = cursor.fetchone()[0]
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("count", latency_ms)
@@ -553,7 +559,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(items_sql, items_params)
+            cursor = conn.cursor()
+            cursor.execute(items_sql, items_params)
             rows = cursor.fetchall()
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("select", latency_ms, rows=len(rows))
@@ -629,7 +636,8 @@ class SQLiteRepository(Generic[T]):
 
         start = time.perf_counter()
         with self.db.connection() as conn:
-            cursor = conn.execute(sql, (str(id),))
+            cursor = conn.cursor()
+            cursor.execute(sql, (str(id),))
             result = cursor.fetchone()
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("select", latency_ms, rows=1 if result else 0)
