@@ -7,10 +7,12 @@ available tools, completion criteria, and token budget.
 
 from .discovery import build_discovery_mission
 from .entity_completeness import build_entity_completeness_mission
+from .persona_journey import run_headless_discovery
 from .workflow_coherence import build_workflow_coherence_mission
 
 __all__ = [
     "build_discovery_mission",
     "build_entity_completeness_mission",
     "build_workflow_coherence_mission",
+    "run_headless_discovery",
 ]

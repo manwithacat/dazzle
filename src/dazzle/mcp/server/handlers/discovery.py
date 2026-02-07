@@ -184,7 +184,7 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     max_steps = args.get("max_steps", 50)
     token_budget = args.get("token_budget", 200_000)
 
-    valid_modes = {"persona", "entity_completeness", "workflow_coherence"}
+    valid_modes = {"persona", "entity_completeness", "workflow_coherence", "headless"}
     if mode not in valid_modes:
         return json.dumps(
             {
@@ -192,6 +192,9 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             },
             indent=2,
         )
+
+    if mode == "headless":
+        return run_headless_discovery_handler(project_path, args)
 
     try:
         appspec = _load_appspec(project_path)
@@ -247,6 +250,87 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         "  agent = DazzleAgent(observer, executor)\n"
         "  transcript = await agent.run(mission)"
     )
+
+    return json.dumps(result, indent=2)
+
+
+def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Run headless persona journey analysis.
+
+    Pure static analysis — no running app needed. Analyzes whether each persona
+    can accomplish their stories through the surfaces and workspaces in the DSL.
+
+    Returns a complete result immediately (no mission spec to run externally).
+    The saved report enables compile and emit operations via the same session_id workflow.
+    """
+    from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+    persona_ids = args.get("persona_ids")
+    if isinstance(persona_ids, str):
+        persona_ids = [persona_ids]
+    # Also accept single "persona" arg as filter
+    persona_arg = args.get("persona")
+    if persona_arg and not persona_ids:
+        persona_ids = [persona_arg]
+
+    try:
+        appspec = _load_appspec(project_path)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
+
+    kg_store = _populate_kg_for_discovery(project_path)
+
+    report = run_headless_discovery(
+        appspec=appspec,
+        persona_ids=persona_ids,
+        kg_store=kg_store,
+    )
+
+    # Convert to observations for pipeline compatibility
+    observations = report.to_observations()
+
+    # Save as standard discovery report for compile/emit reuse
+    transcript_json: dict[str, Any] = {
+        "mission_name": "headless_discovery",
+        "outcome": "completed",
+        "step_count": 0,
+        "observations": [
+            {
+                "category": obs.category,
+                "severity": obs.severity,
+                "title": obs.title,
+                "description": obs.description,
+                "location": obs.location,
+                "related_artefacts": obs.related_artefacts,
+                "metadata": obs.metadata,
+                "step_number": obs.step_number,
+            }
+            for obs in observations
+        ],
+        "started_at": "",
+        "mode": "headless",
+        "headless_report": report.to_json(),
+    }
+
+    report_file = save_discovery_report(project_path, transcript_json)
+    session_id = report_file.stem
+
+    result: dict[str, Any] = {
+        "status": "completed",
+        "mode": "headless",
+        "session_id": session_id,
+        "personas_analyzed": len(report.persona_reports),
+        "total_gaps": sum(len(pr.gaps) for pr in report.persona_reports),
+        "observation_count": len(observations),
+        "report": report.to_json(),
+        "summary": report.to_summary(),
+        "instructions": (
+            f"Headless analysis complete. Use session_id '{session_id}' with:\n"
+            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
+            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
+        ),
+    }
 
     return json.dumps(result, indent=2)
 

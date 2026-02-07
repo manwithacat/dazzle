@@ -657,13 +657,13 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="status",
-            description="Status operations: mcp, logs, active_project",
+            description="Status operations: mcp, logs, active_project, telemetry",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["mcp", "logs", "active_project"],
+                        "enum": ["mcp", "logs", "active_project", "telemetry"],
                         "description": "Operation to perform",
                     },
                     "reload": {
@@ -672,7 +672,7 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "count": {
                         "type": "integer",
-                        "description": "Number of entries (for logs)",
+                        "description": "Number of entries (for logs, telemetry)",
                     },
                     "level": {
                         "type": "string",
@@ -682,6 +682,18 @@ def get_consolidated_tools() -> list[Tool]:
                     "errors_only": {
                         "type": "boolean",
                         "description": "Show only errors (for logs)",
+                    },
+                    "tool_name": {
+                        "type": "string",
+                        "description": "Filter by tool name (for telemetry)",
+                    },
+                    "since_minutes": {
+                        "type": "integer",
+                        "description": "Only show invocations from the last N minutes (for telemetry)",
+                    },
+                    "stats_only": {
+                        "type": "boolean",
+                        "description": "Only return aggregate stats, no individual invocations (for telemetry)",
                     },
                 },
                 "required": ["operation"],
@@ -1102,7 +1114,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness). Explores a running Dazzle app as a persona and identifies gaps between DSL spec and implementation.",
+            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1113,8 +1125,13 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "mode": {
                         "type": "string",
-                        "enum": ["persona", "entity_completeness", "workflow_coherence"],
-                        "description": "Discovery mode (default: persona)",
+                        "enum": [
+                            "persona",
+                            "entity_completeness",
+                            "workflow_coherence",
+                            "headless",
+                        ],
+                        "description": "Discovery mode. 'headless' analyzes persona journeys without a running app (default: persona)",
                     },
                     "persona": {
                         "type": "string",
