@@ -2,7 +2,11 @@
 DAZZLE DSL Semantic Knowledge Base.
 
 This package provides structured definitions, syntax examples, and relationships
-for all DAZZLE DSL concepts. Data is stored in TOML files for maintainability.
+for all DAZZLE DSL concepts.
+
+Data is authored in TOML files (source of truth) and seeded into the unified
+Knowledge Graph at startup.  All runtime queries go through the KG — TOML is
+never read at query time.
 
 Usage:
     from dazzle.mcp.semantics_kb import get_semantic_index, lookup_concept
@@ -16,6 +20,7 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -23,13 +28,15 @@ from typing import Any
 # MCP Semantic Index version - reads from pyproject.toml
 from dazzle._version import get_version as _get_version
 
+logger = logging.getLogger(__name__)
+
 MCP_SEMANTICS_VERSION = _get_version()
 MCP_SEMANTICS_BUILD = 0
 
-# Cache for loaded data
+# Cache for loaded data (TOML fallback only used when KG is not initialized)
 _semantic_cache: dict[str, Any] | None = None
 
-# TOML files to load (order doesn't matter)
+# TOML files to load (order doesn't matter) — used by seed.py
 TOML_FILES = [
     "core.toml",
     "ux.toml",
@@ -47,7 +54,7 @@ TOML_FILES = [
     "frontend.toml",
 ]
 
-# Alias mapping for common term variations
+# Alias mapping for common term variations — used by seed.py
 ALIASES = {
     "transitions": "state_machine",
     "transition": "state_machine",
@@ -220,13 +227,13 @@ def get_mcp_version() -> dict[str, Any]:
 
 
 def _load_toml_file(path: Path) -> dict[str, Any]:
-    """Load a single TOML file."""
+    """Load a single TOML file. Used by seed.py."""
     with open(path, "rb") as f:
         return tomllib.load(f)
 
 
 def _load_semantic_data() -> dict[str, Any]:
-    """Load and merge all TOML files into unified index."""
+    """Load and merge all TOML files into unified index (fallback for when KG is not initialized)."""
     global _semantic_cache
 
     if _semantic_cache is not None:
@@ -260,53 +267,66 @@ def _load_semantic_data() -> dict[str, Any]:
     return _semantic_cache
 
 
+# ---------------------------------------------------------------------------
+# KG helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_kg() -> Any:
+    """Return the knowledge graph or None."""
+    try:
+        from dazzle.mcp.server.state import get_knowledge_graph
+
+        return get_knowledge_graph()
+    except Exception:
+        return None
+
+
+def _get_semantic_index_from_kg() -> dict[str, Any] | None:
+    """Build the semantic index dict from KG data."""
+    graph = _get_kg()
+    if graph is None:
+        return None
+
+    concepts: dict[str, Any] = {}
+    for entity in graph.list_entities(entity_type="concept", limit=500):
+        meta = entity.metadata
+        concepts[entity.name] = {k: v for k, v in meta.items() if k != "source" and v}
+
+    patterns: dict[str, Any] = {}
+    for entity in graph.list_entities(entity_type="pattern", limit=500):
+        meta = entity.metadata
+        patterns[entity.name] = {k: v for k, v in meta.items() if k != "source" and v}
+
+    return {
+        "version": MCP_SEMANTICS_VERSION,
+        "concepts": concepts,
+        "patterns": patterns,
+    }
+
+
 def get_semantic_index() -> dict[str, Any]:
     """
     Get the complete semantic index for DAZZLE DSL.
 
     Returns a structured dictionary mapping concepts to their definitions,
     syntax, examples, and related concepts.
+
+    Queries the Knowledge Graph. Falls back to TOML if the KG is not
+    yet initialized (e.g. during MCP resource serving at startup).
     """
-    return _load_semantic_data()
-
-
-def _lookup_concept_via_kg(term: str) -> dict[str, Any] | None:
-    """Try to look up a concept via the unified Knowledge Graph."""
-    try:
-        from dazzle.mcp.server.state import get_knowledge_graph
-
-        graph = get_knowledge_graph()
-        if graph is None:
-            return None
-
-        entity = graph.lookup_concept(term)
-        if entity is None:
-            return None
-
-        meta = entity.metadata
-        # Return in the same format as the TOML-based lookup
-        result: dict[str, Any] = {
-            "term": term,
-            "found": True,
-            "type": "concept" if entity.entity_type == "concept" else "pattern",
-        }
-
-        # Merge metadata fields into result (same keys as TOML data)
-        for key in ("category", "definition", "syntax", "example", "description"):
-            if key in meta and meta[key]:
-                result[key] = meta[key]
-
+    result = _get_semantic_index_from_kg()
+    if result is not None:
         return result
-    except Exception:
-        return None
+    # Fallback: KG not initialized yet (startup / resource serving)
+    return _load_semantic_data()
 
 
 def lookup_concept(term: str) -> dict[str, Any] | None:
     """
     Look up a DAZZLE concept by name.
 
-    Tries the unified Knowledge Graph first (if initialized), then
-    falls back to direct TOML lookup.
+    Queries the unified Knowledge Graph.
 
     Args:
         term: The concept name (e.g., 'persona', 'workspace', 'ux_block')
@@ -314,43 +334,32 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
     Returns:
         Concept definition or None if not found
     """
-    # Try KG-first path
-    result = _lookup_concept_via_kg(term)
-    if result is not None:
+    graph = _get_kg()
+    if graph is None:
+        return {"term": term, "found": False, "error": "Knowledge graph not initialized"}
+
+    # Direct concept/alias/pattern lookup via KG
+    entity = graph.lookup_concept(term)
+    if entity is not None:
+        meta = entity.metadata
+        result: dict[str, Any] = {
+            "term": term,
+            "found": True,
+            "type": "concept" if entity.entity_type == "concept" else "pattern",
+        }
+        for key in ("category", "definition", "syntax", "example", "description"):
+            if key in meta and meta[key]:
+                result[key] = meta[key]
         return result
 
-    # Fall back to TOML-based lookup
-    index = get_semantic_index()
-
-    # Normalize term
+    # Normalize for special-case and fuzzy search
     term_normalized = term.lower().replace(" ", "_").replace("-", "_")
 
-    # Apply aliases
-    term_normalized = ALIASES.get(term_normalized, term_normalized)
-
-    # Direct lookup in concepts
-    if term_normalized in index["concepts"]:
-        return {
-            "term": term,
-            "found": True,
-            "type": "concept",
-            **index["concepts"][term_normalized],
-        }
-
-    # Check patterns
-    if term_normalized in index["patterns"]:
-        return {
-            "term": term,
-            "found": True,
-            "type": "pattern",
-            **index["patterns"][term_normalized],
-        }
-
-    # Check if asking for "pattern" or "patterns" - return all patterns
+    # Special case: "pattern" / "patterns" — list all patterns
     if term_normalized in ("pattern", "patterns"):
+        pattern_entities = graph.list_entities(entity_type="pattern", limit=500)
         pattern_list = [
-            {"name": name, "description": data.get("description")}
-            for name, data in index["patterns"].items()
+            {"name": e.name, "description": e.metadata.get("description")} for e in pattern_entities
         ]
         return {
             "term": term,
@@ -360,32 +369,32 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
             "hint": "Use lookup_concept with a specific pattern name (e.g., 'crud', 'dashboard') to get full example code",
         }
 
-    # Search in all concepts for partial matches
-    matches = []
-    for concept_name, concept_data in index["concepts"].items():
+    # Fuzzy search: partial matches in concepts and patterns
+    matches: list[dict[str, Any]] = []
+
+    for entity in graph.list_entities(entity_type="concept", limit=500):
         if (
-            term_normalized in concept_name
-            or term_normalized in concept_data.get("definition", "").lower()
+            term_normalized in entity.name
+            or term_normalized in entity.metadata.get("definition", "").lower()
         ):
             matches.append(
                 {
-                    "name": concept_name,
-                    "category": concept_data.get("category"),
-                    "definition": concept_data.get("definition"),
+                    "name": entity.name,
+                    "category": entity.metadata.get("category"),
+                    "definition": entity.metadata.get("definition"),
                 }
             )
 
-    # Also search patterns
-    for pattern_name, pattern_data in index["patterns"].items():
+    for entity in graph.list_entities(entity_type="pattern", limit=500):
         if (
-            term_normalized in pattern_name
-            or term_normalized in pattern_data.get("description", "").lower()
+            term_normalized in entity.name
+            or term_normalized in entity.metadata.get("description", "").lower()
         ):
             matches.append(
                 {
-                    "name": pattern_name,
+                    "name": entity.name,
                     "type": "pattern",
-                    "description": pattern_data.get("description"),
+                    "description": entity.metadata.get("description"),
                 }
             )
 
@@ -410,9 +419,19 @@ def get_dsl_patterns() -> dict[str, Any]:
 
 
 def reload_cache() -> None:
-    """Clear the semantic cache to force reload from TOML files."""
+    """Re-seed the Knowledge Graph from TOML files.
+
+    Also clears the TOML cache so that if the KG is not initialized the
+    next ``get_semantic_index()`` call will re-read from disk.
+    """
     global _semantic_cache
     _semantic_cache = None
+
+    graph = _get_kg()
+    if graph is not None:
+        from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+
+        ensure_seeded(graph)
 
 
 __all__ = [

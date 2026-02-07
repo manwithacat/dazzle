@@ -18,15 +18,22 @@ Token-efficient design:
 - Minimal responses by default (just suggestions)
 - Full examples only when detail="full"
 - Limited to top 3 matches per category
+
+Data is authored in ``inference_kb.toml`` (source of truth) and seeded into
+the unified Knowledge Graph at startup.  All runtime queries go through the
+KG — TOML is never read at query time (except by ``seed.py``).
 """
 
 from __future__ import annotations
 
+import logging
 import tomllib
 from pathlib import Path
 from typing import Any, Literal
 
-# Cache for loaded knowledge base
+logger = logging.getLogger(__name__)
+
+# Cache for loaded knowledge base — kept only for seed.py
 _inference_kb: dict[str, Any] | None = None
 
 # Maximum matches per category to keep responses small
@@ -34,7 +41,11 @@ MAX_MATCHES_PER_CATEGORY = 3
 
 
 def _load_inference_kb() -> dict[str, Any]:
-    """Load the inference knowledge base from TOML file."""
+    """Load the inference knowledge base from TOML file.
+
+    This is used by ``seed.py`` to read the authoritative TOML data.
+    Runtime queries should NOT call this — they go through the KG.
+    """
     global _inference_kb
     if _inference_kb is not None:
         return _inference_kb
@@ -49,61 +60,32 @@ def _load_inference_kb() -> dict[str, Any]:
     return _inference_kb
 
 
-def get_inference_kb_version() -> str:
-    """Get the version of the inference knowledge base."""
-    kb = _load_inference_kb()
-    version: str = kb.get("meta", {}).get("version", "unknown")
-    return version
+# ---------------------------------------------------------------------------
+# KG helpers
+# ---------------------------------------------------------------------------
 
 
-def _lookup_inference_via_kg(
-    query: str,
-    detail: Literal["minimal", "full"] = "minimal",
-    max_per_category: int = MAX_MATCHES_PER_CATEGORY,
-) -> dict[str, Any] | None:
-    """Try to look up inference matches via the unified Knowledge Graph."""
+def _get_kg() -> Any:
+    """Return the knowledge graph or None."""
     try:
         from dazzle.mcp.server.state import get_knowledge_graph
 
-        graph = get_knowledge_graph()
-        if graph is None:
-            return None
-
-        matches = graph.lookup_inference_matches(query, limit=50)
-        if not matches:
-            return None
-
-        # Group by category and convert to the same format as TOML-based lookup
-        all_suggestions: list[dict[str, Any]] = []
-        category_counts: dict[str, int] = {}
-
-        for entity in matches:
-            meta = entity.metadata
-            category = meta.get("category", "")
-            count = category_counts.get(category, 0)
-            if count >= max_per_category:
-                continue
-            category_counts[category] = count + 1
-
-            suggestion = _inference_entity_to_suggestion(meta, category, detail)
-            if suggestion:
-                all_suggestions.append(suggestion)
-
-        if not all_suggestions:
-            return None
-
-        return {
-            "query": query,
-            "suggestions": all_suggestions,
-            "count": len(all_suggestions),
-            "_guidance": (
-                "These are SUGGESTIONS based on common patterns. "
-                "Use your judgment - override when context warrants. "
-                "Adapt examples to the specific domain."
-            ),
-        }
+        return get_knowledge_graph()
     except Exception:
         return None
+
+
+def get_inference_kb_version() -> str:
+    """Get the version of the inference knowledge base."""
+    graph = _get_kg()
+    if graph is not None:
+        version: str | None = graph.get_seed_meta("seed_version")
+        if version:
+            return version
+    # Fallback
+    kb = _load_inference_kb()
+    version_str: str = kb.get("meta", {}).get("version", "unknown")
+    return version_str
 
 
 def _inference_entity_to_suggestion(
@@ -208,8 +190,7 @@ def lookup_inference(
     """
     Search the inference knowledge base for patterns matching the query.
 
-    Tries the unified Knowledge Graph first (if initialized), then
-    falls back to direct TOML lookup.
+    Queries the unified Knowledge Graph.
 
     Args:
         query: Natural language query or keywords to search for
@@ -219,220 +200,60 @@ def lookup_inference(
     Returns:
         Dictionary with matching patterns and suggestions
     """
-    # Try KG-first path
-    result = _lookup_inference_via_kg(query, detail, max_per_category)
-    if result is not None:
-        return result
+    graph = _get_kg()
+    if graph is not None:
+        matches = graph.lookup_inference_matches(query, limit=50)
+        if matches:
+            all_suggestions: list[dict[str, Any]] = []
+            category_counts: dict[str, int] = {}
 
-    # Fall back to TOML-based lookup
-    kb = _load_inference_kb()
-    query_lower = query.lower()
-    query_words = set(query_lower.split())
+            for entity in matches:
+                meta = entity.metadata
+                category = meta.get("category", "")
+                count = category_counts.get(category, 0)
+                if count >= max_per_category:
+                    continue
+                category_counts[category] = count + 1
 
-    results: dict[str, Any] = {
-        "query": query,
-        "suggestions": [],  # Flat list of actionable suggestions
-    }
+                suggestion = _inference_entity_to_suggestion(meta, category, detail)
+                if suggestion:
+                    all_suggestions.append(suggestion)
 
-    all_suggestions: list[dict[str, Any]] = []
-
-    # Search field patterns - these are the most actionable
-    matches = 0
-    for pattern in kb.get("field_patterns", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion: dict[str, Any] = {
-                "type": "field",
-                "add": pattern.get("suggests"),
-                "why": pattern.get("rationale"),
-            }
-            if detail == "full":
-                suggestion["example"] = pattern.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search entity archetypes
-    matches = 0
-    for archetype in kb.get("entity_archetypes", []):
-        if matches >= max_per_category:
-            break
-        indicators = [i.lower() for i in archetype.get("indicators", [])]
-        if _matches_triggers(query_lower, query_words, indicators):
-            suggestion = {
-                "type": "archetype",
-                "pattern": archetype.get("name"),
-                "add_fields": archetype.get("common_fields"),
-                "add_features": archetype.get("common_features"),
-            }
-            if detail == "full":
-                suggestion["example"] = archetype.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search relationship patterns
-    matches = 0
-    for pattern in kb.get("relationship_patterns", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "relationship",
-                "add": pattern.get("suggests"),
-                "why": pattern.get("rationale"),
-            }
-            if detail == "full":
-                suggestion["example"] = pattern.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search spec language mappings - very compact
-    matches = 0
-    for mapping in kb.get("spec_language", []):
-        if matches >= max_per_category:
-            break
-        phrase = mapping.get("phrase", "").lower()
-        if phrase in query_lower or any(w in phrase for w in query_words):
-            all_suggestions.append(
-                {
-                    "type": "syntax",
-                    "phrase": mapping.get("phrase"),
-                    "use": mapping.get("maps_to"),
+            if all_suggestions:
+                return {
+                    "query": query,
+                    "suggestions": all_suggestions,
+                    "count": len(all_suggestions),
+                    "_guidance": (
+                        "These are SUGGESTIONS based on common patterns. "
+                        "Use your judgment - override when context warrants. "
+                        "Adapt examples to the specific domain."
+                    ),
                 }
-            )
-            matches += 1
 
-    # Search domain entities - pre-built entity templates
-    matches = 0
-    for entity in kb.get("domain_entities", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in entity.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "domain_entity",
-                "domain": entity.get("domain"),
-                "entity": entity.get("name"),
-                "description": entity.get("description"),
-                "fields": entity.get("fields"),
-                "features": entity.get("features"),
-            }
-            if detail == "full":
-                suggestion["example"] = entity.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
+        # No matches from KG
+        return {
+            "query": query,
+            "suggestions": [],
+            "count": 0,
+            "_guidance": (
+                "These are SUGGESTIONS based on common patterns. "
+                "Use your judgment - override when context warrants. "
+                "Adapt examples to the specific domain."
+            ),
+            "hint": (
+                "No patterns matched. Try keywords like: upload, person, status, assigned, "
+                "created by, sort, filter, search, datatable, dashboard, overview"
+            ),
+        }
 
-    # Search workflow templates - pre-built state machines
-    matches = 0
-    for workflow in kb.get("workflow_templates", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in workflow.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "workflow",
-                "name": workflow.get("name"),
-                "description": workflow.get("description"),
-                "states": workflow.get("states"),
-                "initial_state": workflow.get("initial_state"),
-            }
-            if detail == "full":
-                suggestion["transitions"] = workflow.get("transitions")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search sitespec section inference - section type suggestions
-    matches = 0
-    for pattern in kb.get("sitespec_section_inference", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "sitespec_section",
-                "add": pattern.get("suggests"),
-                "why": pattern.get("rationale"),
-            }
-            if detail == "full":
-                suggestion["example"] = pattern.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search surface inference - UX block and DataTable suggestions
-    matches = 0
-    for pattern in kb.get("surface_inference", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "surface",
-                "pattern": pattern.get("name"),
-                "add": pattern.get("suggests"),
-                "why": pattern.get("rationale"),
-            }
-            if detail == "full":
-                suggestion["example"] = pattern.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search workspace inference - dashboard and layout suggestions
-    matches = 0
-    for pattern in kb.get("workspace_inference", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "workspace",
-                "pattern": pattern.get("name"),
-                "add": pattern.get("suggests"),
-                "why": pattern.get("rationale"),
-            }
-            if detail == "full":
-                suggestion["example"] = pattern.get("example")
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    # Search tool suggestions - MCP tool recommendations
-    matches = 0
-    for pattern in kb.get("tool_suggestions", []):
-        if matches >= max_per_category:
-            break
-        triggers = [t.lower() for t in pattern.get("triggers", [])]
-        if _matches_triggers(query_lower, query_words, triggers):
-            suggestion = {
-                "type": "tool_suggestion",
-                "tool": pattern.get("tool"),
-                "operation": pattern.get("operation"),
-                "suggestion": pattern.get("suggestion"),
-            }
-            mode = pattern.get("mode")
-            if mode:
-                suggestion["mode"] = mode
-            all_suggestions.append(suggestion)
-            matches += 1
-
-    results["suggestions"] = all_suggestions
-    results["count"] = len(all_suggestions)
-
-    # Add guidance that these are suggestions, not mandates
-    results["_guidance"] = (
-        "These are SUGGESTIONS based on common patterns. "
-        "Use your judgment - override when context warrants. "
-        "Adapt examples to the specific domain."
-    )
-
-    # Add hint if no matches
-    if not all_suggestions:
-        results["hint"] = (
-            "No patterns matched. Try keywords like: upload, person, status, assigned, "
-            "created by, sort, filter, search, datatable, dashboard, overview"
-        )
-
-    return results
+    # KG not initialized — return empty with hint
+    return {
+        "query": query,
+        "suggestions": [],
+        "count": 0,
+        "hint": "Knowledge graph not initialized — inference patterns unavailable",
+    }
 
 
 def _matches_triggers(query: str, query_words: set[str], triggers: list[str]) -> bool:
@@ -454,115 +275,115 @@ def list_all_patterns() -> dict[str, Any]:
 
     Returns a compact summary for LLM reference.
     """
-    kb = _load_inference_kb()
+    graph = _get_kg()
+    if graph is None:
+        return {
+            "kb_version": "unknown",
+            "usage": "Knowledge graph not initialized",
+            "counts": {},
+        }
 
-    # Build compact trigger index
-    field_triggers: list[str] = []
-    for p in kb.get("field_patterns", []):
-        field_triggers.extend(p.get("triggers", []))
+    inference_entities = graph.list_entities(entity_type="inference", limit=500)
 
-    archetype_indicators: list[str] = []
-    for a in kb.get("entity_archetypes", []):
-        archetype_indicators.extend(a.get("indicators", []))
-
-    # Domain entity triggers
-    domain_triggers: list[str] = []
-    for e in kb.get("domain_entities", []):
-        domain_triggers.extend(e.get("triggers", []))
-
-    # Workflow triggers
-    workflow_triggers: list[str] = []
-    for w in kb.get("workflow_templates", []):
-        workflow_triggers.extend(w.get("triggers", []))
-
-    # Sitespec section triggers
-    sitespec_section_triggers: list[str] = []
-    for s in kb.get("sitespec_section_inference", []):
-        sitespec_section_triggers.extend(s.get("triggers", []))
-
-    # Surface inference triggers
-    surface_triggers: list[str] = []
-    for s in kb.get("surface_inference", []):
-        surface_triggers.extend(s.get("triggers", []))
-
-    # Workspace inference triggers
-    workspace_triggers: list[str] = []
-    for w in kb.get("workspace_inference", []):
-        workspace_triggers.extend(w.get("triggers", []))
-
-    # Tool suggestion triggers
-    tool_suggestion_triggers: list[str] = []
-    for t in kb.get("tool_suggestions", []):
-        tool_suggestion_triggers.extend(t.get("triggers", []))
-
-    # Domain summary
+    # Group by category and collect triggers
+    category_triggers: dict[str, list[str]] = {}
+    category_counts: dict[str, int] = {}
     domains: dict[str, list[str]] = {}
-    for e in kb.get("domain_entities", []):
-        domain = e.get("domain", "other")
-        if domain not in domains:
-            domains[domain] = []
-        domains[domain].append(e.get("name", ""))
+    spec_phrases: list[str] = []
 
-    return {
-        "kb_version": kb.get("meta", {}).get("version", "unknown"),
+    for entity in inference_entities:
+        meta = entity.metadata
+        category = meta.get("category", "unknown")
+        triggers = meta.get("triggers", [])
+
+        category_counts[category] = category_counts.get(category, 0) + 1
+
+        if category not in category_triggers:
+            category_triggers[category] = []
+        category_triggers[category].extend(triggers)
+
+        # Build domain summary for domain_entities
+        if category == "domain_entities":
+            domain = meta.get("domain", "other")
+            if domain not in domains:
+                domains[domain] = []
+            domains[domain].append(meta.get("name", ""))
+
+        # Collect spec_language phrases
+        if category == "spec_language":
+            phrase = meta.get("phrase")
+            if phrase:
+                spec_phrases.append(phrase)
+
+    version = graph.get_seed_meta("seed_version") or "unknown"
+
+    result: dict[str, Any] = {
+        "kb_version": version,
         "usage": "Call lookup_inference(query) with keywords from your SPEC",
-        "field_triggers": sorted(set(field_triggers)),
-        "archetype_indicators": sorted(set(archetype_indicators)),
-        "domain_triggers": sorted(set(domain_triggers)),
-        "workflow_triggers": sorted(set(workflow_triggers)),
-        "surface_triggers": sorted(set(surface_triggers)),
-        "workspace_triggers": sorted(set(workspace_triggers)),
-        "sitespec_section_triggers": sorted(set(sitespec_section_triggers)),
-        "tool_suggestion_triggers": sorted(set(tool_suggestion_triggers)),
-        "spec_phrases": [m.get("phrase") for m in kb.get("spec_language", [])],
-        "domains": domains,
-        "counts": {
-            "field_patterns": len(kb.get("field_patterns", [])),
-            "entity_archetypes": len(kb.get("entity_archetypes", [])),
-            "domain_entities": len(kb.get("domain_entities", [])),
-            "workflow_templates": len(kb.get("workflow_templates", [])),
-            "relationship_patterns": len(kb.get("relationship_patterns", [])),
-            "spec_language": len(kb.get("spec_language", [])),
-            "surface_inference": len(kb.get("surface_inference", [])),
-            "workspace_inference": len(kb.get("workspace_inference", [])),
-            "sitespec_section_inference": len(kb.get("sitespec_section_inference", [])),
-            "tool_suggestions": len(kb.get("tool_suggestions", [])),
-        },
+        "counts": category_counts,
     }
+
+    # Add trigger lists keyed by well-known category names
+    trigger_key_map = {
+        "field_patterns": "field_triggers",
+        "entity_archetypes": "archetype_indicators",
+        "domain_entities": "domain_triggers",
+        "workflow_templates": "workflow_triggers",
+        "surface_inference": "surface_triggers",
+        "workspace_inference": "workspace_triggers",
+        "sitespec_section_inference": "sitespec_section_triggers",
+        "tool_suggestions": "tool_suggestion_triggers",
+    }
+    for category, key in trigger_key_map.items():
+        if category in category_triggers:
+            result[key] = sorted(set(category_triggers[category]))
+
+    if spec_phrases:
+        result["spec_phrases"] = spec_phrases
+    if domains:
+        result["domains"] = domains
+
+    return result
 
 
 def get_pattern_by_id(pattern_id: str) -> dict[str, Any] | None:
     """Get a specific pattern by its ID (full detail)."""
-    kb = _load_inference_kb()
+    graph = _get_kg()
+    if graph is None:
+        return None
 
-    # Search all pattern categories
-    for category in [
-        "field_patterns",
-        "entity_archetypes",
-        "relationship_patterns",
-        "surface_inference",
-        "workspace_inference",
-        "domain_entities",
-        "workflow_templates",
-        "sitespec_section_inference",
-        "tool_suggestions",
-    ]:
-        for pattern in kb.get(category, []):
-            if pattern.get("id") == pattern_id:
-                return {
-                    "category": category,
-                    **pattern,
-                }
+    # Search inference entities for matching ID in metadata
+    inference_entities = graph.list_entities(entity_type="inference", limit=500)
+    for entity in inference_entities:
+        meta = entity.metadata
+        # Entity id in the graph is like "inference:field_patterns.file_upload"
+        # The original TOML "id" is stored in metadata
+        entry_id = meta.get("id")
+        if entry_id == pattern_id:
+            return {
+                "category": meta.get("category", "unknown"),
+                **{k: v for k, v in meta.items() if k != "source"},
+            }
 
     return None
 
 
 def reload_inference_kb() -> dict[str, Any]:
-    """Reload the inference knowledge base from disk."""
+    """Re-seed the inference knowledge from TOML into the KG.
+
+    Also clears the in-memory TOML cache.
+    """
     global _inference_kb
     _inference_kb = None
-    kb = _load_inference_kb()
+
+    graph = _get_kg()
+    if graph is not None:
+        from dazzle.mcp.knowledge_graph.seed import ensure_seeded
+
+        ensure_seeded(graph)
+
+    version = get_inference_kb_version()
     return {
         "status": "reloaded",
-        "version": kb.get("meta", {}).get("version", "unknown"),
+        "version": version,
     }

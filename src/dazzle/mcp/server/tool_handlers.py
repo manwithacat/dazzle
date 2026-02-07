@@ -28,6 +28,7 @@ from .state import (
     get_active_project,
     get_active_project_path,
     get_available_projects,
+    get_knowledge_graph,
     get_project_root,
     is_dev_mode,
     set_active_project,
@@ -678,11 +679,13 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         if not is_dev_mode():
             result["reload"] = "skipped - only available in dev mode"
         else:
-            # Reload the semantics data from TOML files
+            # Re-seed the Knowledge Graph from TOML
             try:
-                from dazzle.mcp.semantics_kb import reload_cache
+                from dazzle.mcp.knowledge_graph.seed import ensure_seeded
 
-                reload_cache()
+                graph = get_knowledge_graph()
+                if graph is not None:
+                    ensure_seeded(graph)
 
                 # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version

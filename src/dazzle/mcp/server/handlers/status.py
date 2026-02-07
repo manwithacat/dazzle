@@ -70,35 +70,28 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         if not is_dev_mode():
             result["reload"] = "skipped - only available in dev mode"
         else:
-            # Reload the semantics data from TOML files
+            # Re-seed the Knowledge Graph from TOML (single operation replaces
+            # the old reload_cache + reload_inference_kb pair).
             try:
-                from dazzle.mcp.inference import reload_inference_kb
-                from dazzle.mcp.semantics_kb import reload_cache
+                from dazzle.mcp.knowledge_graph.seed import ensure_seeded
 
-                reload_cache()
-                reload_inference_kb()
+                from ..state import get_knowledge_graph
+
+                graph = get_knowledge_graph()
+                if graph is not None:
+                    ensure_seeded(graph)
 
                 # Reload modules that cache data from TOML/config files
                 import importlib
                 import sys as _sys
 
                 for mod_name in [
-                    "dazzle.mcp.inference",
                     "dazzle.core.ir.fidelity",
                     "dazzle.core.fidelity_scorer",
                     "dazzle.mcp.server.handlers.fidelity",
                 ]:
                     if mod_name in _sys.modules:
                         importlib.reload(_sys.modules[mod_name])
-
-                # Also force-clear the inference KB cache directly
-                # in case the module reload above didn't take effect yet
-                try:
-                    from dazzle.mcp.inference import reload_inference_kb
-
-                    reload_inference_kb()
-                except Exception:
-                    pass
 
                 # Get the new version after reload
                 from dazzle.mcp.semantics import get_mcp_version as new_get_version
