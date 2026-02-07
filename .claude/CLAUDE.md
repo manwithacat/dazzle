@@ -37,11 +37,8 @@ This is an LLM-first codebase. Optimize for clarity and predictability over clev
 
 ### JavaScript (Dazzle UI)
 - **Vanilla JS with JSDoc and `@ts-check`** - TypeScript checker without build step
-- **Shared types in `types.js`** - all `@typedef` definitions go here
 - **All exported functions must have JSDoc** param/return types
-- File structure: `signals.js`, `components.js`, `state.js`, `types.js`
-- ES modules bundled to IIFE at runtime
-- Run `npx tsc --noEmit -p src/dazzle_ui/runtime/static/js/` for type checking
+- UI runtime is server-rendered via Python templates in `src/dazzle_ui/runtime/`
 
 ### General
 - Prefer explicit over magic
@@ -88,7 +85,7 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`
 
 ### TigerBeetle Ledgers (v0.24)
 
@@ -120,9 +117,9 @@ transaction RecordPayment "Record Payment":
 ## Extending
 
 ### Adding DSL Constructs
-1. Update grammar in `docs/DAZZLE_DSL_GRAMMAR_0_1.ebnf`
+1. Update grammar in `docs/reference/grammar.md`
 2. Add IR types in `src/dazzle/core/ir/`
-3. Implement parser in `src/dazzle/core/dsl_parser.py`
+3. Implement parser mixin in `src/dazzle/core/dsl_parser_impl/`
 4. Add tests in `tests/unit/test_parser.py`
 
 ### API Specifications
@@ -136,13 +133,15 @@ dazzle specs asyncapi
 
 ## Examples
 
-All in `examples/`: `simple_task`, `contact_manager`, `uptime_monitor`, `email_client`, `inventory_scanner`, `ops_dashboard`
+All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `fieldtest_hub`, `llm_ticket_classifier`, `support_tickets`
 
 ## MCP Server
 
 The DAZZLE MCP server (`dazzle mcp`) provides context-aware tools:
-- `list_modules`, `lookup_concept`, `find_examples`
-- `list_components`, `validate_dsl`, `analyze_patterns`
+- `dsl` (validate, inspect_entity, inspect_surface, lint, analyze)
+- `knowledge` (concept, examples, workflow, inference)
+- `story`, `process`, `demo_data`, `test_design`
+- `sitespec`, `semantics`, `graph`, `bootstrap`, `spec_analyze`
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 
