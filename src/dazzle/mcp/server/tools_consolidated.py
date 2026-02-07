@@ -1084,6 +1084,11 @@ def get_consolidated_tools() -> list[Tool]:
                         "enum": ["run", "report", "compile", "emit", "status"],
                         "description": "Operation to perform",
                     },
+                    "mode": {
+                        "type": "string",
+                        "enum": ["persona", "entity_completeness", "workflow_coherence"],
+                        "description": "Discovery mode (default: persona)",
+                    },
                     "persona": {
                         "type": "string",
                         "description": "Persona to explore as (for run/compile/emit, default: admin)",

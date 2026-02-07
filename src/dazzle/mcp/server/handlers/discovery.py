@@ -52,43 +52,10 @@ def _populate_kg_for_discovery(
         return None
 
 
-def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """
-    Build and describe a discovery mission (non-executing).
-
-    Since the discovery agent requires a live application and an LLM API key,
-    this handler builds the mission configuration and returns it as a structured
-    report. The actual agent execution happens via `dazzle discover` CLI or
-    programmatic API.
-
-    Returns the mission spec including system prompt, tools, and DSL summary
-    so the caller can inspect or run it.
-    """
-    from dazzle.agent.missions.discovery import build_discovery_mission
-
-    persona = args.get("persona", "admin")
-    base_url = args.get("base_url", "http://localhost:3000")
-    max_steps = args.get("max_steps", 50)
-    token_budget = args.get("token_budget", 200_000)
-
-    try:
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
-
-    # Optionally populate KG for adjacency features
-    kg_store = _populate_kg_for_discovery(project_path)
-
-    mission = build_discovery_mission(
-        appspec=appspec,
-        persona_name=persona,
-        base_url=base_url,
-        kg_store=kg_store,
-        max_steps=max_steps,
-        token_budget=token_budget,
-    )
-
-    # Build a summary of the mission (don't include full system prompt — too large)
+def _build_mission_summary(
+    mission: Any, mode: str, appspec: Any, kg_store: Any, base_url: str, persona: str | None = None
+) -> dict[str, Any]:
+    """Build a structured summary of a mission for the response."""
     tool_summaries = []
     for tool in mission.tools:
         tool_summaries.append(
@@ -99,7 +66,6 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             }
         )
 
-    # Count DSL artefacts for the summary
     entity_count = len(appspec.domain.entities) if hasattr(appspec.domain, "entities") else 0
     surface_count = len(appspec.surfaces)
     persona_count = len(appspec.personas)
@@ -107,9 +73,9 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     result: dict[str, Any] = {
         "status": "ready",
+        "mode": mode,
         "mission": {
             "name": mission.name,
-            "persona": persona,
             "base_url": base_url,
             "max_steps": mission.max_steps,
             "token_budget": mission.token_budget,
@@ -123,17 +89,105 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         },
         "kg_available": kg_store is not None,
         "system_prompt_length": len(mission.system_prompt),
-        "instructions": (
-            "Mission is ready. To execute, run the discovery agent against a live app:\n"
-            f"  dazzle discover --persona {persona} --url {base_url}\n"
-            "Or programmatically:\n"
-            "  from dazzle.agent import DazzleAgent\n"
-            "  from dazzle.agent.observer import HttpObserver\n"
-            "  from dazzle.agent.executor import HttpExecutor\n"
-            "  agent = DazzleAgent(observer, executor)\n"
-            "  transcript = await agent.run(mission)"
-        ),
     }
+
+    if persona:
+        result["mission"]["persona"] = persona
+
+    # Add static analysis info if present
+    static_analysis = mission.context.get("static_analysis")
+    if static_analysis:
+        result["static_analysis"] = static_analysis
+
+    return result
+
+
+def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Build and describe a discovery mission (non-executing).
+
+    Since the discovery agent requires a live application and an LLM API key,
+    this handler builds the mission configuration and returns it as a structured
+    report. The actual agent execution happens via `dazzle discover` CLI or
+    programmatic API.
+
+    Supports three modes:
+    - persona (default): Open-ended persona walkthrough
+    - entity_completeness: Static CRUD coverage + targeted verification
+    - workflow_coherence: Static process/story integrity + targeted verification
+
+    Returns the mission spec including system prompt, tools, and DSL summary
+    so the caller can inspect or run it.
+    """
+    mode = args.get("mode", "persona")
+    persona = args.get("persona", "admin")
+    base_url = args.get("base_url", "http://localhost:3000")
+    max_steps = args.get("max_steps", 50)
+    token_budget = args.get("token_budget", 200_000)
+
+    valid_modes = {"persona", "entity_completeness", "workflow_coherence"}
+    if mode not in valid_modes:
+        return json.dumps(
+            {
+                "error": f"Unknown discovery mode: {mode}. Valid modes: {', '.join(sorted(valid_modes))}"
+            },
+            indent=2,
+        )
+
+    try:
+        appspec = _load_appspec(project_path)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
+
+    # Optionally populate KG for adjacency features
+    kg_store = _populate_kg_for_discovery(project_path)
+
+    if mode == "persona":
+        from dazzle.agent.missions.discovery import build_discovery_mission
+
+        mission = build_discovery_mission(
+            appspec=appspec,
+            persona_name=persona,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+    elif mode == "entity_completeness":
+        from dazzle.agent.missions.entity_completeness import build_entity_completeness_mission
+
+        mission = build_entity_completeness_mission(
+            appspec=appspec,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+    elif mode == "workflow_coherence":
+        from dazzle.agent.missions.workflow_coherence import build_workflow_coherence_mission
+
+        mission = build_workflow_coherence_mission(
+            appspec=appspec,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+
+    result = _build_mission_summary(
+        mission, mode, appspec, kg_store, base_url, persona=persona if mode == "persona" else None
+    )
+
+    result["instructions"] = (
+        "Mission is ready. To execute, run the discovery agent against a live app:\n"
+        f"  dazzle discover --mode {mode} --url {base_url}\n"
+        "Or programmatically:\n"
+        "  from dazzle.agent import DazzleAgent\n"
+        "  from dazzle.agent.observer import HttpObserver\n"
+        "  from dazzle.agent.executor import HttpExecutor\n"
+        "  agent = DazzleAgent(observer, executor)\n"
+        "  transcript = await agent.run(mission)"
+    )
 
     return json.dumps(result, indent=2)
 
