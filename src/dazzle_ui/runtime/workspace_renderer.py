@@ -159,7 +159,17 @@ def build_workspace_context(
                 if s.name == action_name:
                     entity_ref = getattr(s, "entity_ref", "") or ""
                     if entity_ref:
-                        action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
+                        if entity_ref == source_name:
+                            # Same entity — use row id
+                            action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
+                        else:
+                            # Cross-entity — find FK field in source entity
+                            fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
+                            if fk_field:
+                                action_url = f"/{to_api_plural(entity_ref)}/{{{fk_field}}}"
+                            else:
+                                # Fallback: use row id
+                                action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
                     break
 
         regions.append(
@@ -191,6 +201,34 @@ def build_workspace_context(
         regions=regions,
         endpoint=f"/api/workspaces/{workspace.name}",
     )
+
+
+def _resolve_fk_field(
+    source_entity: str,
+    target_entity: str,
+    app_spec: Any,
+) -> str | None:
+    """Find the FK field in *source_entity* that references *target_entity*.
+
+    Searches the source entity's fields for a ``ref`` type pointing at the
+    target entity.  Returns the field name (e.g. ``"customer_id"``) or None.
+    """
+    domain = getattr(app_spec, "domain", None)
+    if not domain:
+        return None
+    entities = getattr(domain, "entities", [])
+    for ent in entities:
+        if ent.name != source_entity:
+            continue
+        for f in getattr(ent, "fields", []):
+            ft = getattr(f, "type", None)
+            kind = getattr(ft, "kind", None)
+            kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
+            if kind_val == "ref":
+                ref_target = getattr(ft, "entity_ref", None) or getattr(ft, "ref_entity", None)
+                if ref_target == target_entity:
+                    return f.name
+    return None
 
 
 def _serialize_filter_to_params(condition: Any) -> str:

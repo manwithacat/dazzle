@@ -37,9 +37,15 @@ import re
 _AGGREGATE_RE = re.compile(r"(count|sum|avg|min|max)\((\w+)(?:\s+where\s+(.+))?\)")
 
 
-def _field_kind_to_col_type(field: Any) -> str:
-    """Map an IR field to a column rendering type for workspace templates."""
-    ft = getattr(field, "field_type", None)
+def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
+    """Map an IR field to a column rendering type for workspace templates.
+
+    Args:
+        field: FieldSpec IR object.
+        entity: Optional EntitySpec — when provided, checks if this field
+                is the state-machine status field and returns ``"badge"``.
+    """
+    ft = getattr(field, "type", None)
     kind = getattr(ft, "kind", None)
     kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
     if kind_val == "enum":
@@ -50,9 +56,11 @@ def _field_kind_to_col_type(field: Any) -> str:
         return "date"
     if kind_val == "money":
         return "currency"
-    # State-machine managed fields render as badges
-    if getattr(field, "managed_by", None):
-        return "badge"
+    # State-machine status field renders as badge
+    if entity is not None:
+        sm = getattr(entity, "state_machine", None)
+        if sm and getattr(sm, "status_field", None) == getattr(field, "name", None):
+            return "badge"
     return "text"
 
 
@@ -800,6 +808,16 @@ class DNRBackendApp:
                                 _entity_spec = _e
                                 break
 
+                    # Resolve attention signals from surfaces that reference this entity
+                    _attention_signals: list[Any] = []
+                    if spec and hasattr(spec, "surfaces"):
+                        for _surf in spec.surfaces:
+                            if getattr(_surf, "entity_ref", None) == _source:
+                                ux = getattr(_surf, "ux", None)
+                                if ux and getattr(ux, "attention_signals", None):
+                                    _attention_signals = list(ux.attention_signals)
+                                    break
+
                     @app.get(
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
                         tags=["Workspaces"],
@@ -814,6 +832,7 @@ class DNRBackendApp:
                         _ir: Any = _ir_region,
                         _s: str = _source,
                         _espec: Any = _entity_spec,
+                        _attn: list[Any] = _attention_signals,  # noqa: B006
                     ) -> Any:
                         """Return rendered HTML for a workspace region."""
                         from fastapi.responses import HTMLResponse
@@ -885,16 +904,9 @@ class DNRBackendApp:
                         if _espec and hasattr(_espec, "fields"):
                             columns = []
                             for f in _espec.fields:
-                                if f.name == "id" or f.name.endswith("_id"):
+                                if f.name == "id":
                                     continue
-                                col: dict[str, Any] = {
-                                    "key": f.name,
-                                    "label": getattr(f, "label", None)
-                                    or f.name.replace("_", " ").title(),
-                                    "type": _field_kind_to_col_type(f),
-                                    "sortable": True,
-                                }
-                                ft = getattr(f, "field_type", None)
+                                ft = getattr(f, "type", None)
                                 kind = getattr(ft, "kind", None)
                                 kind_val: str = (
                                     kind.value  # type: ignore[union-attr]
@@ -903,11 +915,46 @@ class DNRBackendApp:
                                     if kind
                                     else ""
                                 )
-                                if kind_val == "enum":
-                                    ev = getattr(ft, "enum_values", None)
-                                    if ev:
-                                        col["filterable"] = True
-                                        col["filter_options"] = list(ev)
+                                # Hide relationship/FK/UUID columns
+                                if kind_val in (
+                                    "ref",
+                                    "uuid",
+                                    "has_many",
+                                    "has_one",
+                                    "embeds",
+                                    "belongs_to",
+                                ):
+                                    continue
+                                # Hide _id suffix columns (foreign keys)
+                                if f.name.endswith("_id"):
+                                    continue
+                                col_type = _field_kind_to_col_type(f, _espec)
+                                col: dict[str, Any] = {
+                                    "key": f.name,
+                                    "label": getattr(f, "label", None)
+                                    or f.name.replace("_", " ").title(),
+                                    "type": col_type,
+                                    "sortable": True,
+                                }
+                                # Filterable: enum / state-machine badge fields
+                                if col_type == "badge":
+                                    if kind_val == "enum":
+                                        ev = getattr(ft, "enum_values", None)
+                                        if ev:
+                                            col["filterable"] = True
+                                            col["filter_options"] = list(ev)
+                                    else:
+                                        # State-machine status field
+                                        sm = getattr(_espec, "state_machine", None)
+                                        if sm:
+                                            states = getattr(sm, "states", [])
+                                            if states:
+                                                col["filterable"] = True
+                                                col["filter_options"] = list(states)
+                                # Filterable: bool fields
+                                if col_type == "bool":
+                                    col["filterable"] = True
+                                    col["filter_options"] = ["true", "false"]
                                 columns.append(col)
                                 if len(columns) >= 8:
                                     break
@@ -974,6 +1021,42 @@ class DNRBackendApp:
                             for k, v in request.query_params.items()
                             if k.startswith("filter_") and v
                         }
+
+                        # Evaluate attention signals for row highlighting
+                        if _attn and items:
+                            from dazzle_back.runtime.condition_evaluator import (
+                                evaluate_condition as _eval_cond,
+                            )
+
+                            _severity_order = {
+                                "critical": 0,
+                                "warning": 1,
+                                "notice": 2,
+                                "info": 3,
+                            }
+                            for item in items:
+                                best: dict[str, str] | None = None
+                                best_sev = 999
+                                for sig in _attn:
+                                    try:
+                                        cond_dict = sig.condition.model_dump(exclude_none=True)
+                                        if _eval_cond(cond_dict, item, {}):
+                                            lvl = (
+                                                sig.level.value
+                                                if hasattr(sig.level, "value")
+                                                else str(sig.level)
+                                            )
+                                            sev = _severity_order.get(lvl, 99)
+                                            if sev < best_sev:
+                                                best_sev = sev
+                                                best = {
+                                                    "level": lvl,
+                                                    "message": sig.message,
+                                                }
+                                    except Exception:
+                                        pass
+                                if best:
+                                    item["_attention"] = best
 
                         html = render_fragment(
                             _r.template,

@@ -83,6 +83,45 @@ def _bool_icon_filter(value: Any) -> Markup:
     return Markup('<span class="text-base-content/30">&#10005;</span>')
 
 
+def _timeago_filter(value: Any) -> str:
+    """Format a datetime as relative time (e.g. '2 hours ago')."""
+    if value is None:
+        return ""
+    now = datetime.now()
+    dt: datetime | None = None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, date):
+        dt = datetime(value.year, value.month, value.day)
+    elif isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            return str(value)
+    if dt is None:
+        return str(value)
+    diff = now - dt
+    seconds = int(diff.total_seconds())
+    if seconds < 0:
+        return "just now"
+    if seconds < 60:
+        return f"{seconds} seconds ago" if seconds != 1 else "1 second ago"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} minutes ago" if minutes != 1 else "1 minute ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hours ago" if hours != 1 else "1 hour ago"
+    days = hours // 24
+    if days < 30:
+        return f"{days} days ago" if days != 1 else "1 day ago"
+    months = days // 30
+    if months < 12:
+        return f"{months} months ago" if months != 1 else "1 month ago"
+    years = days // 365
+    return f"{years} years ago" if years != 1 else "1 year ago"
+
+
 def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
@@ -108,6 +147,7 @@ def create_jinja_env() -> Environment:
     env.filters["badge_class"] = _badge_filter
     env.filters["bool_icon"] = _bool_icon_filter
     env.filters["truncate_text"] = _truncate_filter
+    env.filters["timeago"] = _timeago_filter
 
     return env
 
