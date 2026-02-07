@@ -970,7 +970,7 @@ class DNRBackendApp:
                 # Capture in closure defaults
                 _entity_plural = entity_plural
 
-                @app.api_route(  # type: ignore[misc]
+                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
                     f"/{ws_name}/{entity_plural}",
                     methods=["GET", "POST"],
                     tags=["Workspaces"],
@@ -984,7 +984,7 @@ class DNRBackendApp:
                     target = f"/{_ep}?{qs}" if qs else f"/{_ep}"
                     return RedirectResponse(url=target, status_code=307)
 
-                @app.api_route(  # type: ignore[misc]
+                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
                     f"/{ws_name}/{entity_plural}/{{id}}",
                     methods=["GET", "PUT", "PATCH", "DELETE"],
                     tags=["Workspaces"],
