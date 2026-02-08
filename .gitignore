@@ -70,6 +70,10 @@ node_modules/
 dev_docs/
 tmp/
 
+# Vendored/reference repos
+alpine/
+htmx/
+
 # MkDocs build output
 site/
 
