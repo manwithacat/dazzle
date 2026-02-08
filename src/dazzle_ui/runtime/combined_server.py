@@ -139,6 +139,9 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
         elif path == "/styles/dazzle.css":
             # Serve bundled CSS (v0.8.11)
             self._serve_css()
+        elif path.startswith("/static/"):
+            # Serve static files (dz.js, dz.css, etc.) (v0.21.3)
+            self._serve_static(path)
         elif path.startswith("/assets/"):
             # Serve static assets (favicon, etc.) (v0.14.2)
             self._serve_asset(path)
@@ -910,6 +913,51 @@ class DNRCombinedHandler(http.server.SimpleHTTPRequestHandler):
 
         html = render_auth_page_html(self.sitespec_data, page_type)
         self._send_response(html, "text/html")
+
+    def _serve_static(self, path: str) -> None:
+        """Serve static files from static/ directory (dz.js, dz.css, etc.)."""
+        try:
+            relative = path.removeprefix("/static/")
+            if not relative or ".." in relative or relative.startswith("/"):
+                self.send_error(404, "Static file not found")
+                return
+
+            static_dir = Path(__file__).parent / "static"
+            file_path = (static_dir / relative).resolve()
+
+            # Ensure resolved path stays within static_dir
+            if not str(file_path).startswith(str(static_dir.resolve())):
+                self.send_error(403, "Forbidden")
+                return
+
+            if not file_path.exists() or not file_path.is_file():
+                self.send_error(404, f"Static file not found: {relative}")
+                return
+
+            content_types = {
+                ".js": "application/javascript",
+                ".css": "text/css",
+                ".svg": "image/svg+xml",
+                ".png": "image/png",
+                ".ico": "image/x-icon",
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".woff2": "font/woff2",
+                ".woff": "font/woff",
+            }
+            ext = file_path.suffix.lower()
+            content_type = content_types.get(ext, "application/octet-stream")
+
+            data = file_path.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "public, max-age=86400")
+            self.end_headers()
+            self.wfile.write(data)
+
+        except Exception as e:
+            self.send_error(500, f"Failed to load static file: {e}")
 
     def _serve_asset(self, path: str) -> None:
         """Serve static assets from static/assets/ directory (v0.14.2)."""
