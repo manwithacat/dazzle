@@ -71,9 +71,20 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ValidationError)
     async def validation_error_handler(request: Request, exc: ValidationError) -> JSONResponse:
         """Convert validation errors to 422 Unprocessable Entity with field details."""
+        # Pydantic errors() can contain non-serializable objects in ctx
+        # (e.g. raw ValueError instances from AfterValidator). Sanitize them.
+        errors: list[dict[str, Any]] = []
+        for err in exc.errors():
+            clean: dict[str, Any] = {}
+            for k, v in err.items():
+                if k == "ctx" and isinstance(v, dict):
+                    clean[k] = {ck: str(cv) for ck, cv in v.items()}
+                else:
+                    clean[k] = v
+            errors.append(clean)
         return JSONResponse(
             status_code=422,
-            content={"detail": exc.errors(), "type": "validation_error"},
+            content={"detail": errors, "type": "validation_error"},
         )
 
 
