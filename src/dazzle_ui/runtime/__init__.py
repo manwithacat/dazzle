@@ -8,14 +8,14 @@ This module provides:
 - Template context models (PageContext, TableContext, etc.)
 - Page routes for server-rendered pages
 - Static preview generator
-- Development server with hot reload
+- Unified server (single-port FastAPI with API + UI)
 - HTMX fragment endpoints for dynamic interactions
 
 Example usage:
-    >>> from dazzle_ui.runtime import run_combined_server
+    >>> from dazzle_ui.runtime import run_unified_server
     >>>
-    >>> # Run combined server (backend + template-rendered frontend)
-    >>> run_combined_server(backend_spec, ui_spec, appspec=appspec)
+    >>> # Run unified server (backend + page routes on one port)
+    >>> run_unified_server(backend_spec, appspec=appspec)
     >>>
     >>> # Generate static preview files
     >>> from dazzle_ui.runtime.static_preview import generate_preview_files
@@ -23,11 +23,8 @@ Example usage:
 """
 
 from dazzle_ui.runtime.combined_server import (
-    DNRCombinedHandler,
-    DNRCombinedServer,
     run_backend_only,
-    run_combined_server,
-    run_frontend_only,
+    run_unified_server,
 )
 from dazzle_ui.runtime.dev_server import (
     DNRDevServer,
@@ -79,11 +76,8 @@ __all__ = [
     "run_dev_server",
     "run_dev_server_from_dict",
     "run_dev_server_from_json",
-    # Combined server (backend + frontend)
-    "DNRCombinedServer",
-    "DNRCombinedHandler",
-    "run_combined_server",
-    "run_frontend_only",
+    # Unified server (single-port FastAPI)
+    "run_unified_server",
     "run_backend_only",
     # Docker runner (docker-first infrastructure)
     "DockerRunner",

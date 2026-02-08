@@ -262,7 +262,7 @@ def serve_command(
         from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.runtime import FASTAPI_AVAILABLE
         from dazzle_ui.converters import compute_persona_default_routes, convert_appspec_to_ui
-        from dazzle_ui.runtime import run_combined_server
+        from dazzle_ui.runtime import run_unified_server
     except ImportError as e:
         typer.echo(f"Dazzle runtime not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-app-back dazzle-app-ui", err=True)
@@ -454,11 +454,10 @@ def serve_command(
     if mf.theme.custom:
         theme_overrides["custom"] = mf.theme.custom
 
-    run_combined_server(
+    run_unified_server(
         backend_spec=backend_spec,
         ui_spec=ui_spec,
-        backend_port=api_port,
-        frontend_port=port,
+        port=port,
         db_path=db_file,
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,

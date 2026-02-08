@@ -110,7 +110,7 @@ class TestSitePageToggleButton:
         """Test that site.js includes theme initialization."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check for theme initialization in site.js
@@ -121,7 +121,7 @@ class TestSitePageToggleButton:
         """Test that site.js uses the same storage key."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check for storage key in site.js
@@ -131,7 +131,7 @@ class TestSitePageToggleButton:
         """Test that site.js listens for system preference changes."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/combined_server.py")
+        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
         py_content = py_path.read_text()
 
         # Check for system preference listener
