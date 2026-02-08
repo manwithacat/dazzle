@@ -141,10 +141,12 @@ class TestLiteProcessAdapterPgInitialize:
         mock_pg_conn.execute = AsyncMock()
         mock_pg_conn.close = AsyncMock()
 
-        mock_asyncpg = MagicMock()
-        mock_asyncpg.connect = AsyncMock(return_value=mock_pg_conn)
-        saved = sys.modules.get("asyncpg")
-        sys.modules["asyncpg"] = mock_asyncpg
+        mock_psycopg = MagicMock()
+        mock_async_conn_cls = MagicMock()
+        mock_async_conn_cls.connect = AsyncMock(return_value=mock_pg_conn)
+        mock_psycopg.AsyncConnection = mock_async_conn_cls
+        saved = sys.modules.get("psycopg")
+        sys.modules["psycopg"] = mock_psycopg
 
         try:
             await adapter.initialize()
@@ -153,15 +155,20 @@ class TestLiteProcessAdapterPgInitialize:
             mock_pg_conn.execute.assert_called_once()
             mock_pg_conn.close.assert_called_once()
 
+            # Should have connected with autocommit=True
+            mock_psycopg.AsyncConnection.connect.assert_called_once_with(
+                "postgresql://localhost/test", autocommit=True
+            )
+
             # Should still have an aiosqlite _db for runtime operations
             assert adapter._db is not None
 
             await adapter.shutdown()
         finally:
             if saved is None:
-                sys.modules.pop("asyncpg", None)
+                sys.modules.pop("psycopg", None)
             else:
-                sys.modules["asyncpg"] = saved
+                sys.modules["psycopg"] = saved
 
     @pytest.mark.asyncio
     async def test_initialize_postgres_normalizes_url(self) -> None:
@@ -172,17 +179,21 @@ class TestLiteProcessAdapterPgInitialize:
         mock_pg_conn.execute = AsyncMock()
         mock_pg_conn.close = AsyncMock()
 
-        mock_asyncpg = MagicMock()
-        mock_asyncpg.connect = AsyncMock(return_value=mock_pg_conn)
-        saved = sys.modules.get("asyncpg")
-        sys.modules["asyncpg"] = mock_asyncpg
+        mock_psycopg = MagicMock()
+        mock_async_conn_cls = MagicMock()
+        mock_async_conn_cls.connect = AsyncMock(return_value=mock_pg_conn)
+        mock_psycopg.AsyncConnection = mock_async_conn_cls
+        saved = sys.modules.get("psycopg")
+        sys.modules["psycopg"] = mock_psycopg
 
         try:
             await adapter.initialize()
-            mock_asyncpg.connect.assert_called_once_with("postgresql://localhost/test")
+            mock_psycopg.AsyncConnection.connect.assert_called_once_with(
+                "postgresql://localhost/test", autocommit=True
+            )
             await adapter.shutdown()
         finally:
             if saved is None:
-                sys.modules.pop("asyncpg", None)
+                sys.modules.pop("psycopg", None)
             else:
-                sys.modules["asyncpg"] = saved
+                sys.modules["psycopg"] = saved

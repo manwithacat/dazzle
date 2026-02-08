@@ -116,12 +116,14 @@ class VersionManager:
     async def _connect(self) -> Any:
         """Get a database connection for the configured backend."""
         if self._use_postgres:
-            import asyncpg
+            import psycopg
+            from psycopg.rows import dict_row
 
             pg_url = self._database_url
-            if pg_url and pg_url.startswith("postgres://"):
+            assert pg_url is not None
+            if pg_url.startswith("postgres://"):
                 pg_url = pg_url.replace("postgres://", "postgresql://", 1)
-            return await asyncpg.connect(pg_url)
+            return await psycopg.AsyncConnection.connect(pg_url, row_factory=dict_row)
         else:
             return await aiosqlite.connect(self._db_path)
 
@@ -187,6 +189,7 @@ class VersionManager:
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS idx_migrations_status ON version_migrations(status)"
                 )
+                await conn.commit()
             else:
                 await conn.executescript(
                     """
@@ -252,7 +255,7 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                row = await conn.fetchrow(
+                cur = await conn.execute(
                     """
                     SELECT version_id FROM dsl_versions
                     WHERE status = 'active'
@@ -260,6 +263,7 @@ class VersionManager:
                     LIMIT 1
                     """
                 )
+                row = await cur.fetchone()
                 return row["version_id"] if row else None
             else:
                 conn.row_factory = aiosqlite.Row
@@ -283,10 +287,11 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                row = await conn.fetchrow(
-                    "SELECT * FROM dsl_versions WHERE version_id = $1",
-                    version_id,
+                cur = await conn.execute(
+                    "SELECT * FROM dsl_versions WHERE version_id = %s",
+                    (version_id,),
                 )
+                row = await cur.fetchone()
             else:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(
@@ -324,25 +329,25 @@ class VersionManager:
         try:
             if self._use_postgres:
                 if status:
-                    rows = await conn.fetch(
+                    cur = await conn.execute(
                         """
                         SELECT * FROM dsl_versions
-                        WHERE status = $1
+                        WHERE status = %s
                         ORDER BY deployed_at DESC
-                        LIMIT $2
+                        LIMIT %s
                         """,
-                        status,
-                        limit,
+                        (status, limit),
                     )
                 else:
-                    rows = await conn.fetch(
+                    cur = await conn.execute(
                         """
                         SELECT * FROM dsl_versions
                         ORDER BY deployed_at DESC
-                        LIMIT $1
+                        LIMIT %s
                         """,
-                        limit,
+                        (limit,),
                     )
+                rows = await cur.fetchall()
             else:
                 conn.row_factory = aiosqlite.Row
 
@@ -420,22 +425,22 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                row = await conn.fetchrow(
-                    "SELECT 1 FROM dsl_versions WHERE version_id = $1",
-                    version_id,
+                cur = await conn.execute(
+                    "SELECT 1 FROM dsl_versions WHERE version_id = %s",
+                    (version_id,),
                 )
+                row = await cur.fetchone()
                 if row:
                     raise ValueError(f"Version {version_id} already exists")
 
                 await conn.execute(
                     """
                     INSERT INTO dsl_versions (version_id, dsl_hash, manifest_json, status)
-                    VALUES ($1, $2, $3, 'active')
+                    VALUES (%s, %s, %s, 'active')
                     """,
-                    version_id,
-                    dsl_hash,
-                    json.dumps(manifest),
+                    (version_id, dsl_hash, json.dumps(manifest)),
                 )
+                await conn.commit()
             else:
                 async with conn.execute(
                     "SELECT 1 FROM dsl_versions WHERE version_id = ?",
@@ -478,30 +483,30 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                row = await conn.fetchrow(
+                cur = await conn.execute(
                     """
                     SELECT COUNT(*) as count FROM process_runs
-                    WHERE dsl_version = $1 AND status IN ('pending', 'running', 'suspended', 'waiting')
+                    WHERE dsl_version = %s AND status IN ('pending', 'running', 'suspended', 'waiting')
                     """,
-                    from_version,
+                    (from_version,),
                 )
+                row = await cur.fetchone()
                 runs_remaining = row["count"] if row else 0
 
                 await conn.execute(
-                    "UPDATE dsl_versions SET status = 'draining' WHERE version_id = $1",
-                    from_version,
+                    "UPDATE dsl_versions SET status = 'draining' WHERE version_id = %s",
+                    (from_version,),
                 )
 
                 await conn.execute(
                     """
                     INSERT INTO version_migrations
                     (from_version, to_version, runs_remaining, status)
-                    VALUES ($1, $2, $3, 'in_progress')
+                    VALUES (%s, %s, %s, 'in_progress')
                     """,
-                    from_version,
-                    to_version,
-                    runs_remaining,
+                    (from_version, to_version, runs_remaining),
                 )
+                await conn.commit()
             else:
                 conn.row_factory = aiosqlite.Row
 
@@ -545,13 +550,14 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                rows = await conn.fetch(
+                cur = await conn.execute(
                     """
                     SELECT * FROM version_migrations
                     WHERE status = 'in_progress'
                     ORDER BY started_at DESC
                     """
                 )
+                rows = await cur.fetchall()
             else:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(
@@ -603,10 +609,11 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                migration = await conn.fetchrow(
-                    "SELECT * FROM version_migrations WHERE id = $1",
-                    migration_id,
+                cur = await conn.execute(
+                    "SELECT * FROM version_migrations WHERE id = %s",
+                    (migration_id,),
                 )
+                migration = await cur.fetchone()
             else:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(
@@ -622,14 +629,15 @@ class VersionManager:
             runs_remaining = migration["runs_remaining"]
             if migration["status"] == "in_progress" and migration["from_version"]:
                 if self._use_postgres:
-                    row = await conn.fetchrow(
+                    cur2 = await conn.execute(
                         """
                         SELECT COUNT(*) as count FROM process_runs
-                        WHERE dsl_version = $1
+                        WHERE dsl_version = %s
                             AND status IN ('pending', 'running', 'suspended', 'waiting')
                         """,
-                        migration["from_version"],
+                        (migration["from_version"],),
                     )
+                    row = await cur2.fetchone()
                     runs_remaining = row["count"] if row else 0
                 else:
                     async with conn.execute(
@@ -674,10 +682,11 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                migration = await conn.fetchrow(
-                    "SELECT from_version, to_version FROM version_migrations WHERE id = $1",
-                    migration_id,
+                cur = await conn.execute(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = %s",
+                    (migration_id,),
                 )
+                migration = await cur.fetchone()
             else:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(
@@ -693,17 +702,18 @@ class VersionManager:
             if self._use_postgres:
                 if migration["from_version"]:
                     await conn.execute(
-                        "UPDATE dsl_versions SET status = 'archived' WHERE version_id = $1",
-                        migration["from_version"],
+                        "UPDATE dsl_versions SET status = 'archived' WHERE version_id = %s",
+                        (migration["from_version"],),
                     )
                 await conn.execute(
                     """
                     UPDATE version_migrations
                     SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                    WHERE id = $1
+                    WHERE id = %s
                     """,
-                    migration_id,
+                    (migration_id,),
                 )
+                await conn.commit()
             else:
                 if migration["from_version"]:
                     await conn.execute(
@@ -736,10 +746,11 @@ class VersionManager:
         conn = await self._connect()
         try:
             if self._use_postgres:
-                migration = await conn.fetchrow(
-                    "SELECT from_version, to_version FROM version_migrations WHERE id = $1",
-                    migration_id,
+                cur = await conn.execute(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = %s",
+                    (migration_id,),
                 )
+                migration = await cur.fetchone()
             else:
                 conn.row_factory = aiosqlite.Row
                 async with conn.execute(
@@ -755,21 +766,22 @@ class VersionManager:
             if self._use_postgres:
                 if migration["from_version"]:
                     await conn.execute(
-                        "UPDATE dsl_versions SET status = 'active' WHERE version_id = $1",
-                        migration["from_version"],
+                        "UPDATE dsl_versions SET status = 'active' WHERE version_id = %s",
+                        (migration["from_version"],),
                     )
                 await conn.execute(
-                    "UPDATE dsl_versions SET status = 'archived' WHERE version_id = $1",
-                    migration["to_version"],
+                    "UPDATE dsl_versions SET status = 'archived' WHERE version_id = %s",
+                    (migration["to_version"],),
                 )
                 await conn.execute(
                     """
                     UPDATE version_migrations
                     SET status = 'rolled_back', completed_at = CURRENT_TIMESTAMP
-                    WHERE id = $1
+                    WHERE id = %s
                     """,
-                    migration_id,
+                    (migration_id,),
                 )
+                await conn.commit()
             else:
                 if migration["from_version"]:
                     await conn.execute(

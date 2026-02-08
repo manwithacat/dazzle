@@ -17,12 +17,13 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
-class MockRealDictRow(dict):
+class MockDictRow(dict):
     """
-    Mock psycopg2.extras.RealDictRow.
+    Mock psycopg dict_row result.
 
-    RealDictRow is dict-like but iterating yields keys (not values).
-    The bug we fixed was assuming dict(row) worked correctly for these.
+    With psycopg v3 and row_factory=dict_row, rows are returned as plain dicts.
+    The bug we fixed was assuming dict(row) worked correctly for RealDictRow
+    objects in psycopg2; psycopg v3 dict_row avoids this issue.
     """
 
     def __init__(self, data: dict):
@@ -77,16 +78,16 @@ class TestAuthStorePostgresExecute:
             store = AuthStore(database_url="postgresql://localhost/test")
             return store
 
-    def test_execute_with_realdictcursor_rows(self, mock_postgres_store):
-        """Verify _execute handles RealDictRow objects correctly.
+    def test_execute_with_dict_rows(self, mock_postgres_store):
+        """Verify _execute handles dict_row results correctly.
 
-        RealDictRow is dict-like but requires explicit dict() conversion
-        to work correctly with JSON serialization and Pydantic models.
+        With psycopg v3 and row_factory=dict_row, rows are returned as
+        plain dicts. This test verifies the conversion still works.
         """
-        # Create mock rows that behave like RealDictRow
+        # Create mock rows that behave like dict_row results
         mock_rows = [
-            MockRealDictRow({"id": "123", "email": "test@example.com", "username": "test"}),
-            MockRealDictRow({"id": "456", "email": "other@example.com", "username": "other"}),
+            MockDictRow({"id": "123", "email": "test@example.com", "username": "test"}),
+            MockDictRow({"id": "456", "email": "other@example.com", "username": "other"}),
         ]
 
         mock_cursor = MagicMock()
@@ -99,12 +100,12 @@ class TestAuthStorePostgresExecute:
         with patch.object(mock_postgres_store, "_get_connection", return_value=mock_conn):
             results = mock_postgres_store._execute("SELECT * FROM users")
 
-        # Verify results are proper dicts (not RealDictRow)
+        # Verify results are proper dicts (not MockDictRow)
         assert len(results) == 2
         assert results[0] == {"id": "123", "email": "test@example.com", "username": "test"}
         assert results[1] == {"id": "456", "email": "other@example.com", "username": "other"}
 
-        # Verify they're actual dicts, not MockRealDictRow
+        # Verify they're actual dicts, not MockDictRow
         assert type(results[0]) is dict
         assert type(results[1]) is dict
 
@@ -112,7 +113,7 @@ class TestAuthStorePostgresExecute:
         """Ensure rows are returned as dicts that can be JSON serialized."""
         import json
 
-        mock_row = MockRealDictRow(
+        mock_row = MockDictRow(
             {
                 "id": "uuid-123",
                 "email": "user@test.com",
@@ -230,44 +231,44 @@ class TestBooleanConversion:
 class TestPostgresTableInit:
     """Tests for PostgreSQL table initialization.
 
-    These tests require mocking psycopg2 since it may not be installed.
+    These tests require mocking psycopg since it may not be installed.
     """
 
     @pytest.fixture
-    def mock_psycopg2(self):
-        """Mock psycopg2 module for tests."""
+    def mock_psycopg(self):
+        """Mock psycopg module for tests."""
         import sys
 
-        mock_psycopg2 = MagicMock()
-        mock_extras = MagicMock()
-        mock_psycopg2.extras = mock_extras
+        mock_psycopg = MagicMock()
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
 
         # Store old modules if they exist
-        old_psycopg2 = sys.modules.get("psycopg2")
-        old_extras = sys.modules.get("psycopg2.extras")
+        old_psycopg = sys.modules.get("psycopg")
+        old_rows = sys.modules.get("psycopg.rows")
 
-        sys.modules["psycopg2"] = mock_psycopg2
-        sys.modules["psycopg2.extras"] = mock_extras
+        sys.modules["psycopg"] = mock_psycopg
+        sys.modules["psycopg.rows"] = mock_rows
 
-        yield mock_psycopg2
+        yield mock_psycopg
 
         # Restore old modules
-        if old_psycopg2:
-            sys.modules["psycopg2"] = old_psycopg2
+        if old_psycopg:
+            sys.modules["psycopg"] = old_psycopg
         else:
-            del sys.modules["psycopg2"]
+            del sys.modules["psycopg"]
 
-        if old_extras:
-            sys.modules["psycopg2.extras"] = old_extras
+        if old_rows:
+            sys.modules["psycopg.rows"] = old_rows
         else:
-            del sys.modules["psycopg2.extras"]
+            del sys.modules["psycopg.rows"]
 
-    def test_init_postgres_db_creates_users_table(self, mock_psycopg2):
+    def test_init_postgres_db_creates_users_table(self, mock_psycopg):
         """Verify _init_postgres_db creates users table."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
             from dazzle_back.runtime.auth import AuthStore
@@ -281,12 +282,12 @@ class TestPostgresTableInit:
         create_users = any("CREATE TABLE IF NOT EXISTS users" in str(call) for call in calls)
         assert create_users, "users table should be created"
 
-    def test_init_postgres_db_creates_sessions_table(self, mock_psycopg2):
+    def test_init_postgres_db_creates_sessions_table(self, mock_psycopg):
         """Verify _init_postgres_db creates sessions table."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
             from dazzle_back.runtime.auth import AuthStore
@@ -298,12 +299,12 @@ class TestPostgresTableInit:
         create_sessions = any("CREATE TABLE IF NOT EXISTS sessions" in str(call) for call in calls)
         assert create_sessions, "sessions table should be created"
 
-    def test_init_postgres_db_creates_indexes(self, mock_psycopg2):
+    def test_init_postgres_db_creates_indexes(self, mock_psycopg):
         """Verify _init_postgres_db creates required indexes."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
             from dazzle_back.runtime.auth import AuthStore
@@ -328,35 +329,35 @@ class TestPostgresGetConnection:
     """Tests for PostgreSQL connection handling."""
 
     @pytest.fixture
-    def mock_psycopg2(self):
-        """Mock psycopg2 module for tests."""
+    def mock_psycopg(self):
+        """Mock psycopg module for tests."""
         import sys
 
-        mock_psycopg2 = MagicMock()
-        mock_extras = MagicMock()
-        mock_psycopg2.extras = mock_extras
+        mock_psycopg = MagicMock()
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
 
-        old_psycopg2 = sys.modules.get("psycopg2")
-        old_extras = sys.modules.get("psycopg2.extras")
+        old_psycopg = sys.modules.get("psycopg")
+        old_rows = sys.modules.get("psycopg.rows")
 
-        sys.modules["psycopg2"] = mock_psycopg2
-        sys.modules["psycopg2.extras"] = mock_extras
+        sys.modules["psycopg"] = mock_psycopg
+        sys.modules["psycopg.rows"] = mock_rows
 
-        yield mock_psycopg2, mock_extras
+        yield mock_psycopg, mock_rows
 
-        if old_psycopg2:
-            sys.modules["psycopg2"] = old_psycopg2
+        if old_psycopg:
+            sys.modules["psycopg"] = old_psycopg
         else:
-            del sys.modules["psycopg2"]
+            del sys.modules["psycopg"]
 
-        if old_extras:
-            sys.modules["psycopg2.extras"] = old_extras
+        if old_rows:
+            sys.modules["psycopg.rows"] = old_rows
         else:
-            del sys.modules["psycopg2.extras"]
+            del sys.modules["psycopg.rows"]
 
-    def test_get_connection_sets_realdictcursor(self, mock_psycopg2):
-        """Verify _get_connection sets RealDictCursor factory."""
-        mock_pg, mock_extras = mock_psycopg2
+    def test_get_connection_passes_row_factory(self, mock_psycopg):
+        """Verify _get_connection passes row_factory=dict_row to connect()."""
+        mock_pg, mock_rows = mock_psycopg
         mock_conn = MagicMock()
         mock_pg.connect.return_value = mock_conn
 
@@ -364,10 +365,12 @@ class TestPostgresGetConnection:
             from dazzle_back.runtime.auth import AuthStore
 
             store = AuthStore(database_url="postgresql://localhost/test")
-            conn = store._get_connection()
+            store._get_connection()
 
-        # Verify cursor_factory was set
-        assert conn.cursor_factory == mock_extras.RealDictCursor
+        # Verify connect was called with row_factory=dict_row
+        mock_pg.connect.assert_called_once_with(
+            "postgresql://localhost/test", row_factory=mock_rows.dict_row
+        )
 
 
 class TestPostgresPlaceholderMethod:

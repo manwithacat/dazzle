@@ -215,7 +215,7 @@ def _create_postgres_bus(config: TierConfig) -> PostgresBus:
 
     if not ASYNCPG_AVAILABLE:
         raise ImportError(
-            "asyncpg is required for PostgreSQL event bus. "
+            "psycopg is required for PostgreSQL event bus. "
             "Install with: pip install dazzle[postgres]"
         )
 

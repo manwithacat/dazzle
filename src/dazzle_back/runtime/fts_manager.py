@@ -114,7 +114,7 @@ class FTSManager:
         depending on the configured backend.
 
         Args:
-            conn: Database connection (sqlite3 or psycopg2)
+            conn: Database connection (sqlite3 or psycopg)
             entity_name: Entity name
         """
         config = self._configs.get(entity_name)
@@ -205,7 +205,7 @@ class FTSManager:
         Rebuild FTS index from main table.
 
         Args:
-            conn: Database connection (sqlite3 or psycopg2)
+            conn: Database connection (sqlite3 or psycopg)
             entity_name: Entity name
 
         Returns:
@@ -255,7 +255,7 @@ class FTSManager:
         Search for entities matching a query.
 
         Args:
-            conn: Database connection (sqlite3 or psycopg2)
+            conn: Database connection (sqlite3 or psycopg)
             entity_name: Entity name
             query: Search query
             fields: Optional specific fields to search
@@ -325,7 +325,7 @@ class FTSManager:
         Search with highlighted snippets.
 
         Args:
-            conn: Database connection (sqlite3 or psycopg2)
+            conn: Database connection (sqlite3 or psycopg)
             entity_name: Entity name
             query: Search query
             limit: Maximum results
@@ -440,7 +440,7 @@ def init_fts_tables(
     Initialize FTS tables for all registered entities.
 
     Args:
-        conn: Database connection (sqlite3 or psycopg2)
+        conn: Database connection (sqlite3 or psycopg)
         manager: FTS manager
         entities: List of entity specs
     """

@@ -25,8 +25,8 @@ import aiosqlite
 
 from dazzle_back.events.envelope import EventEnvelope
 
-# Type alias for connection types (aiosqlite or asyncpg)
-# Using Any to avoid import issues with asyncpg which is optional
+# Type alias for connection types (aiosqlite or psycopg async)
+# Using Any to avoid import issues with psycopg which is optional
 OutboxConnection = aiosqlite.Connection | Any
 
 
@@ -150,7 +150,7 @@ class EventOutbox:
     async def create_table(self, conn: OutboxConnection) -> None:
         """Create the outbox table if it doesn't exist."""
         if self._use_postgres:
-            # PostgreSQL (asyncpg)
+            # PostgreSQL (psycopg async)
             await conn.execute(CREATE_OUTBOX_TABLE_POSTGRES)
             for index_sql in CREATE_OUTBOX_INDEXES_POSTGRES:
                 await conn.execute(index_sql)
@@ -196,9 +196,9 @@ class EventOutbox:
                 f"""
                 INSERT INTO {self._table} (
                     id, topic, event_type, key, envelope_json, status, created_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                 """,
-                *params,
+                params,
             )
         else:
             await conn.execute(
@@ -330,39 +330,39 @@ class EventOutbox:
             await conn.execute(
                 f"""
                 UPDATE {self._table}
-                SET lock_token = $1,
+                SET lock_token = %s,
                     lock_expires_at = (now() + interval '{lock_duration_seconds} seconds')::text
                 WHERE id IN (
                     SELECT id FROM {self._table}
                     WHERE status = 'pending'
-                    AND (lock_token IS NULL OR lock_expires_at < $2)
+                    AND (lock_token IS NULL OR lock_expires_at < %s)
                     ORDER BY created_at ASC
-                    LIMIT $3
+                    LIMIT %s
                 )
                 """,
-                lock_token,
-                lock_expires,
-                limit,
+                (lock_token, lock_expires, limit),
             )
 
-            rows = await conn.fetch(
+            cur = await conn.execute(
                 f"""
                 SELECT * FROM {self._table}
-                WHERE lock_token = $1 AND status = 'pending'
+                WHERE lock_token = %s AND status = 'pending'
                 ORDER BY created_at ASC
                 """,
-                lock_token,
+                (lock_token,),
             )
+            rows = await cur.fetchall()
         else:
-            rows = await conn.fetch(
+            cur = await conn.execute(
                 f"""
                 SELECT * FROM {self._table}
                 WHERE status = 'pending'
                 ORDER BY created_at ASC
-                LIMIT $1
+                LIMIT %s
                 """,
-                limit,
+                (limit,),
             )
+            rows = await cur.fetchall()
 
         return [self._row_to_entry(dict(row)) for row in rows]
 
@@ -379,9 +379,9 @@ class EventOutbox:
                 SET status = 'published',
                     published_at = now()::text,
                     lock_token = NULL
-                WHERE id = $1
+                WHERE id = %s
                 """,
-                str(entry_id),
+                (str(entry_id),),
             )
         else:
             await conn.execute(
@@ -420,10 +420,11 @@ class EventOutbox:
 
         # Get current attempts
         if is_postgres:
-            row = await conn.fetchrow(  # type: ignore[union-attr]
-                f"SELECT attempts FROM {self._table} WHERE id = $1",
-                str(entry_id),
+            cur = await conn.execute(
+                f"SELECT attempts FROM {self._table} WHERE id = %s",
+                (str(entry_id),),
             )
+            row = await cur.fetchone()
             attempts = (row["attempts"] if row else 0) + 1
         else:
             cursor = await conn.execute(
@@ -440,14 +441,12 @@ class EventOutbox:
                     f"""
                     UPDATE {self._table}
                     SET status = 'failed',
-                        attempts = $1,
-                        last_error = $2,
+                        attempts = %s,
+                        last_error = %s,
                         lock_token = NULL
-                    WHERE id = $3
+                    WHERE id = %s
                     """,
-                    attempts,
-                    error,
-                    str(entry_id),
+                    (attempts, error, str(entry_id)),
                 )
             else:
                 await conn.execute(
@@ -469,14 +468,12 @@ class EventOutbox:
                 await conn.execute(
                     f"""
                     UPDATE {self._table}
-                    SET attempts = $1,
-                        last_error = $2,
+                    SET attempts = %s,
+                        last_error = %s,
                         lock_token = NULL
-                    WHERE id = $3
+                    WHERE id = %s
                     """,
-                    attempts,
-                    error,
-                    str(entry_id),
+                    (attempts, error, str(entry_id)),
                 )
             else:
                 await conn.execute(
@@ -518,7 +515,8 @@ class EventOutbox:
         }
 
         if is_postgres:
-            rows = await conn.fetch(query)  # type: ignore[union-attr]
+            cur = await conn.execute(query)
+            rows = await cur.fetchall()
             for row in rows:
                 status = row["status"]
                 stats[status] = row["count"]
@@ -554,15 +552,14 @@ class EventOutbox:
         is_postgres = self._use_postgres
 
         if is_postgres:
-            result = await conn.execute(
+            cur = await conn.execute(
                 f"""
                 DELETE FROM {self._table}
                 WHERE status = 'published'
                 AND published_at < (now() - interval '{older_than_hours} hours')::text
                 """
             )
-            # asyncpg returns a string like "DELETE 5"
-            return int(result.split()[-1]) if result else 0  # type: ignore[union-attr]
+            return cur.rowcount
         else:
             cursor = await conn.execute(
                 f"""
@@ -584,15 +581,16 @@ class EventOutbox:
         is_postgres = self._use_postgres
 
         if is_postgres:
-            rows = await conn.fetch(  # type: ignore[union-attr]
+            cur = await conn.execute(
                 f"""
                 SELECT * FROM {self._table}
                 WHERE status = 'failed'
                 ORDER BY created_at DESC
-                LIMIT $1
+                LIMIT %s
                 """,
-                limit,
+                (limit,),
             )
+            rows = await cur.fetchall()
             return [self._row_to_entry(dict(row)) for row in rows]
         else:
             conn.row_factory = aiosqlite.Row
@@ -617,14 +615,15 @@ class EventOutbox:
         is_postgres = self._use_postgres
 
         if is_postgres:
-            rows = await conn.fetch(  # type: ignore[union-attr]
+            cur = await conn.execute(
                 f"""
                 SELECT * FROM {self._table}
                 ORDER BY created_at DESC
-                LIMIT $1
+                LIMIT %s
                 """,
-                limit,
+                (limit,),
             )
+            rows = await cur.fetchall()
             return [self._row_to_entry(dict(row)) for row in rows]
         else:
             conn.row_factory = aiosqlite.Row
@@ -652,16 +651,15 @@ class EventOutbox:
         is_postgres = self._use_postgres
 
         if is_postgres:
-            result = await conn.execute(
+            cur = await conn.execute(
                 f"""
                 UPDATE {self._table}
                 SET status = 'pending', attempts = 0
-                WHERE id = $1 AND status = 'failed'
+                WHERE id = %s AND status = 'failed'
                 """,
-                str(entry_id),
+                (str(entry_id),),
             )
-            # asyncpg returns a string like "UPDATE 1"
-            return result.endswith("1") if result else False  # type: ignore[union-attr]
+            return cur.rowcount > 0
         else:
             cursor = await conn.execute(
                 f"""

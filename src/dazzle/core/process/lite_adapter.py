@@ -142,13 +142,14 @@ class LiteProcessAdapter(ProcessAdapter):
     async def initialize(self) -> None:
         """Initialize database and start background tasks."""
         if self._use_postgres:
-            import asyncpg
+            import psycopg
 
             pg_url = self._database_url
-            if pg_url and pg_url.startswith("postgres://"):
+            assert pg_url is not None
+            if pg_url.startswith("postgres://"):
                 pg_url = pg_url.replace("postgres://", "postgresql://", 1)
 
-            pg_conn = await asyncpg.connect(pg_url)
+            pg_conn = await psycopg.AsyncConnection.connect(pg_url, autocommit=True)
             try:
                 # Load and execute PostgreSQL schema
                 schema_path = Path(__file__).parent / "schema_postgres.sql"

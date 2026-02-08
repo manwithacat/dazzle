@@ -68,7 +68,7 @@ class TestOutboxAppendPostgres:
     """Test append uses correct placeholder style."""
 
     @pytest.mark.asyncio
-    async def test_postgres_uses_dollar_placeholders(self) -> None:
+    async def test_postgres_uses_percent_s_placeholders(self) -> None:
         outbox = EventOutbox(use_postgres=True)
         conn = AsyncMock()
 
@@ -84,7 +84,7 @@ class TestOutboxAppendPostgres:
 
         call_args = conn.execute.call_args
         sql = call_args[0][0]
-        assert "$1" in sql
+        assert "%s" in sql
         assert "?" not in sql
 
     @pytest.mark.asyncio

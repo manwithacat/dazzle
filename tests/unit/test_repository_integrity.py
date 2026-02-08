@@ -14,13 +14,13 @@ class TestIntegrityErrors:
     def test_is_tuple(self) -> None:
         assert isinstance(_INTEGRITY_ERRORS, tuple)
 
-    def test_psycopg2_included_if_available(self) -> None:
+    def test_psycopg_included_if_available(self) -> None:
         try:
-            import psycopg2
+            from psycopg import errors as _psycopg_errors
 
-            assert psycopg2.IntegrityError in _INTEGRITY_ERRORS
+            assert _psycopg_errors.IntegrityError in _INTEGRITY_ERRORS
         except ImportError:
-            # psycopg2 not installed — only sqlite3 should be present
+            # psycopg not installed — only sqlite3 should be present
             assert len(_INTEGRITY_ERRORS) == 1
 
     def test_catches_sqlite_integrity_error(self) -> None:

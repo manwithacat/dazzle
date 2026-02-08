@@ -56,26 +56,26 @@ class TestCreateDatabaseCheck:
         assert result.status == HealthStatus.UNHEALTHY
 
     @pytest.mark.asyncio()
-    async def test_database_url_uses_psycopg2(self) -> None:
-        """When database_url is provided, psycopg2 is used instead of sqlite3."""
+    async def test_database_url_uses_psycopg(self) -> None:
+        """When database_url is provided, psycopg is used instead of sqlite3."""
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
         mock_cursor.fetchone.return_value = (1,)
 
-        mock_psycopg2 = MagicMock()
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg = MagicMock()
+        mock_psycopg.connect.return_value = mock_conn
 
         import sys
 
-        with patch.dict(sys.modules, {"psycopg2": mock_psycopg2}):
+        with patch.dict(sys.modules, {"psycopg": mock_psycopg}):
             check_fn = create_database_check(
                 db_path="unused",
                 database_url="postgresql://localhost/test",
             )
             result = await check_fn()
 
-            mock_psycopg2.connect.assert_called_once_with("postgresql://localhost/test")
+            mock_psycopg.connect.assert_called_once_with("postgresql://localhost/test")
             mock_cursor.execute.assert_called_once_with("SELECT 1")
             mock_conn.close.assert_called_once()
             assert result.status == HealthStatus.HEALTHY
@@ -83,13 +83,13 @@ class TestCreateDatabaseCheck:
 
     @pytest.mark.asyncio()
     async def test_database_url_unhealthy_on_error(self) -> None:
-        """When psycopg2.connect fails, returns unhealthy."""
-        mock_psycopg2 = MagicMock()
-        mock_psycopg2.connect.side_effect = Exception("Connection refused")
+        """When psycopg.connect fails, returns unhealthy."""
+        mock_psycopg = MagicMock()
+        mock_psycopg.connect.side_effect = Exception("Connection refused")
 
         import sys
 
-        with patch.dict(sys.modules, {"psycopg2": mock_psycopg2}):
+        with patch.dict(sys.modules, {"psycopg": mock_psycopg}):
             check_fn = create_database_check(
                 db_path="unused",
                 database_url="postgresql://localhost/test",

@@ -149,38 +149,38 @@ class TestDeviceRegistryPostgresInit:
     """Tests for PostgreSQL table initialization."""
 
     @pytest.fixture
-    def mock_psycopg2(self):
-        """Mock psycopg2 module for tests."""
+    def mock_psycopg(self):
+        """Mock psycopg module for tests."""
         import sys
 
         mock_pg = MagicMock()
-        mock_extras = MagicMock()
-        mock_pg.extras = mock_extras
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
 
-        old_pg = sys.modules.get("psycopg2")
-        old_extras = sys.modules.get("psycopg2.extras")
+        old_pg = sys.modules.get("psycopg")
+        old_rows = sys.modules.get("psycopg.rows")
 
-        sys.modules["psycopg2"] = mock_pg
-        sys.modules["psycopg2.extras"] = mock_extras
+        sys.modules["psycopg"] = mock_pg
+        sys.modules["psycopg.rows"] = mock_rows
 
         yield mock_pg
 
         if old_pg:
-            sys.modules["psycopg2"] = old_pg
+            sys.modules["psycopg"] = old_pg
         else:
-            sys.modules.pop("psycopg2", None)
+            sys.modules.pop("psycopg", None)
 
-        if old_extras:
-            sys.modules["psycopg2.extras"] = old_extras
+        if old_rows:
+            sys.modules["psycopg.rows"] = old_rows
         else:
-            sys.modules.pop("psycopg2.extras", None)
+            sys.modules.pop("psycopg.rows", None)
 
-    def test_init_postgres_db_creates_table(self, mock_psycopg2):
+    def test_init_postgres_db_creates_table(self, mock_psycopg):
         """Verify _init_postgres_db creates devices table."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.device_registry.DeviceRegistry._init_db"):
             from dazzle_back.runtime.device_registry import DeviceRegistry
@@ -192,12 +192,12 @@ class TestDeviceRegistryPostgresInit:
         create_table = any("CREATE TABLE IF NOT EXISTS devices" in str(c) for c in calls)
         assert create_table, "devices table should be created"
 
-    def test_init_postgres_db_uses_boolean_type(self, mock_psycopg2):
+    def test_init_postgres_db_uses_boolean_type(self, mock_psycopg):
         """Verify _init_postgres_db uses BOOLEAN DEFAULT TRUE for is_active."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.device_registry.DeviceRegistry._init_db"):
             from dazzle_back.runtime.device_registry import DeviceRegistry
@@ -211,12 +211,12 @@ class TestDeviceRegistryPostgresInit:
             "Postgres should use BOOLEAN DEFAULT TRUE"
         )
 
-    def test_init_postgres_db_creates_indexes(self, mock_psycopg2):
+    def test_init_postgres_db_creates_indexes(self, mock_psycopg):
         """Verify _init_postgres_db creates required indexes."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.device_registry.DeviceRegistry._init_db"):
             from dazzle_back.runtime.device_registry import DeviceRegistry
@@ -229,12 +229,12 @@ class TestDeviceRegistryPostgresInit:
         assert any("idx_devices_platform" in s for s in call_strs)
         assert any("idx_devices_active" in s for s in call_strs)
 
-    def test_init_postgres_db_commits_and_closes(self, mock_psycopg2):
+    def test_init_postgres_db_commits_and_closes(self, mock_psycopg):
         """Verify _init_postgres_db commits and closes connection."""
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_psycopg2.connect.return_value = mock_conn
+        mock_psycopg.connect.return_value = mock_conn
 
         with patch("dazzle_back.runtime.device_registry.DeviceRegistry._init_db"):
             from dazzle_back.runtime.device_registry import DeviceRegistry

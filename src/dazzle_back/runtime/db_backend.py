@@ -61,12 +61,10 @@ class DualBackendMixin:
     def _get_sync_connection(self) -> sqlite3.Connection | Any:
         """Get a database connection (SQLite or PostgreSQL)."""
         if self._use_postgres:
-            import psycopg2
-            import psycopg2.extras
+            import psycopg
+            from psycopg.rows import dict_row
 
-            conn = psycopg2.connect(self._pg_url)
-            conn.cursor_factory = psycopg2.extras.RealDictCursor
-            return conn
+            return psycopg.connect(self._pg_url, row_factory=dict_row)
         else:
             conn = sqlite3.connect(str(self._db_path))
             conn.row_factory = sqlite3.Row
@@ -149,7 +147,7 @@ class DualBackendMixin:
 
 class AsyncDualBackendMixin:
     """
-    Async mixin for subsystems supporting both aiosqlite and asyncpg.
+    Async mixin for subsystems supporting both aiosqlite and psycopg async.
 
     Usage:
         class MyAdapter(AsyncDualBackendMixin):
@@ -186,11 +184,12 @@ class AsyncDualBackendMixin:
             self._async_db_path = str(db_path) if db_path else ":memory:"
 
     async def _get_async_connection(self) -> Any:
-        """Get an async database connection (aiosqlite or asyncpg)."""
+        """Get an async database connection (aiosqlite or psycopg async)."""
         if self._use_postgres:
-            import asyncpg
+            import psycopg
+            from psycopg.rows import dict_row
 
-            return await asyncpg.connect(self._pg_url)
+            return await psycopg.AsyncConnection.connect(self._pg_url, row_factory=dict_row)
         else:
             import aiosqlite
 
@@ -202,9 +201,9 @@ class AsyncDualBackendMixin:
         """
         Get async parameter placeholder.
 
-        asyncpg uses $1, $2, $3, etc. aiosqlite uses ?.
+        psycopg uses %s for all backends. aiosqlite uses ?.
         """
-        return f"${index}" if self._use_postgres else "?"
+        return "%s" if self._use_postgres else "?"
 
     @property
     def _async_backend_type(self) -> str:

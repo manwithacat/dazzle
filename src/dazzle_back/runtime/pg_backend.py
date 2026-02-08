@@ -4,7 +4,7 @@ PostgreSQL database backend for DNR Backend.
 Provides a PostgreSQL implementation of the database backend interface,
 enabling Heroku Postgres and other PostgreSQL deployments alongside SQLite.
 
-Requires: psycopg2-binary>=2.9
+Requires: psycopg[binary]>=3.2
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 
 class PgConnectionWrapper:
-    """Wrapper that adds .execute() convenience method to psycopg2 connections.
+    """Wrapper that adds .execute() convenience method to psycopg connections.
 
-    psycopg2 connections don't have .execute() (unlike sqlite3), so this
-    wrapper proxies it through cursor().execute() and returns the cursor.
+    Translates ``?`` placeholders to ``%s`` for PostgreSQL compatibility
+    and proxies execute through cursor().execute(), returning the cursor.
     All other attribute access is forwarded to the underlying connection.
     """
 
@@ -141,15 +141,14 @@ class PostgresBackend:
         """
         Get a database connection context manager.
 
-        Yields a wrapped psycopg2 connection with DictCursor.
-        DictCursor rows support both integer indexing (row[0]) and
-        string keys (row["col"]), unlike RealDictCursor (string only).
+        Yields a wrapped psycopg connection with dict_row factory.
+        Rows support string key access (row["col"]).
         The wrapper adds .execute() for sqlite3 API compatibility.
         """
-        import psycopg2
-        import psycopg2.extras
+        import psycopg
+        from psycopg.rows import dict_row
 
-        conn = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
+        conn = psycopg.connect(self.database_url, row_factory=dict_row)
         try:
             yield PgConnectionWrapper(conn)
             conn.commit()
@@ -163,13 +162,13 @@ class PostgresBackend:
         """
         Get a persistent connection for the application lifecycle.
 
-        Returns a wrapped psycopg2 connection (reuses existing if available).
+        Returns a wrapped psycopg connection (reuses existing if available).
         """
-        import psycopg2
-        import psycopg2.extras
+        import psycopg
+        from psycopg.rows import dict_row
 
         if self._connection is None or self._connection.closed:
-            raw = psycopg2.connect(self.database_url, cursor_factory=psycopg2.extras.DictCursor)
+            raw = psycopg.connect(self.database_url, row_factory=dict_row)
             self._connection = PgConnectionWrapper(raw)
         return self._connection
 

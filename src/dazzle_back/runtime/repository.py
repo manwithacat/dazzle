@@ -34,9 +34,9 @@ from dazzle_back.specs.entity import (
 # Build a tuple of IntegrityError types for both SQLite and PostgreSQL backends.
 _INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sqlite3.IntegrityError,)
 try:
-    import psycopg2
+    from psycopg import errors as _psycopg_errors
 
-    _INTEGRITY_ERRORS += (psycopg2.IntegrityError,)
+    _INTEGRITY_ERRORS += (_psycopg_errors.IntegrityError,)
 except ImportError:
     pass
 
@@ -62,7 +62,7 @@ class ConstraintViolationError(Exception):
 def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str, str | None]:
     """Parse a constraint error message to extract type and field.
 
-    Accepts either a string or an exception object. For psycopg2 exceptions,
+    Accepts either a string or an exception object. For psycopg exceptions,
     uses ``pgerror`` and ``diag.detail`` to extract field-level information
     that may not appear in ``str(exc)``.
 

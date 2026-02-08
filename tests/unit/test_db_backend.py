@@ -201,9 +201,9 @@ class TestAsyncDualBackendMixin:
 
     def test_async_ph_postgres(self) -> None:
         store = AsyncStore(database_url="postgresql://localhost/db")
-        assert store._async_ph(1) == "$1"
-        assert store._async_ph(2) == "$2"
-        assert store._async_ph(10) == "$10"
+        assert store._async_ph(1) == "%s"
+        assert store._async_ph(2) == "%s"
+        assert store._async_ph(10) == "%s"
 
     def test_async_backend_type_sqlite(self) -> None:
         store = AsyncStore(db_path=":memory:")

@@ -61,18 +61,24 @@ class TestEventFrameworkPgMode:
         assert not framework._use_postgres
 
     @pytest.mark.asyncio
-    async def test_start_postgres_imports_asyncpg(self) -> None:
-        """Test that start in postgres mode imports asyncpg and PostgresBus."""
+    async def test_start_postgres_imports_psycopg(self) -> None:
+        """Test that start in postgres mode imports psycopg and PostgresBus."""
         config = EventFrameworkConfig(database_url="postgresql://localhost/test")
         framework = EventFramework(config)
 
         mock_conn = AsyncMock()
 
-        # Pre-inject asyncpg mock into sys.modules so import succeeds
-        mock_asyncpg = MagicMock()
-        mock_asyncpg.connect = AsyncMock(return_value=mock_conn)
-        saved = sys.modules.get("asyncpg")
-        sys.modules["asyncpg"] = mock_asyncpg
+        # Pre-inject psycopg mock into sys.modules so import succeeds
+        mock_psycopg = MagicMock()
+        mock_async_conn_cls = MagicMock()
+        mock_async_conn_cls.connect = AsyncMock(return_value=mock_conn)
+        mock_psycopg.AsyncConnection = mock_async_conn_cls
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
+        saved_psycopg = sys.modules.get("psycopg")
+        saved_rows = sys.modules.get("psycopg.rows")
+        sys.modules["psycopg"] = mock_psycopg
+        sys.modules["psycopg.rows"] = mock_rows
 
         mock_pg_bus = AsyncMock()
         mock_pg_config = MagicMock()
@@ -90,18 +96,22 @@ class TestEventFrameworkPgMode:
             ):
                 await framework.start()
 
-                # Should have connected via asyncpg
-                mock_asyncpg.connect.assert_called_once()
+                # Should have connected via psycopg
+                mock_psycopg.AsyncConnection.connect.assert_called_once()
 
                 # Bus should exist
                 assert framework._bus is not None
 
                 await framework.stop()
         finally:
-            if saved is None:
-                sys.modules.pop("asyncpg", None)
+            if saved_psycopg is None:
+                sys.modules.pop("psycopg", None)
             else:
-                sys.modules["asyncpg"] = saved
+                sys.modules["psycopg"] = saved_psycopg
+            if saved_rows is None:
+                sys.modules.pop("psycopg.rows", None)
+            else:
+                sys.modules["psycopg.rows"] = saved_rows
 
     @pytest.mark.asyncio
     async def test_start_sqlite_uses_dev_broker(self) -> None:
@@ -131,25 +141,35 @@ class TestEventFrameworkPgMode:
 
     @pytest.mark.asyncio
     async def test_get_connection_postgres_mode(self) -> None:
-        """Test get_connection returns asyncpg connection in pg mode."""
+        """Test get_connection returns psycopg connection in pg mode."""
         config = EventFrameworkConfig(database_url="postgresql://localhost/test")
         framework = EventFramework(config)
 
         mock_conn = AsyncMock()
-        mock_asyncpg = MagicMock()
-        mock_asyncpg.connect = AsyncMock(return_value=mock_conn)
-        saved = sys.modules.get("asyncpg")
-        sys.modules["asyncpg"] = mock_asyncpg
+        mock_psycopg = MagicMock()
+        mock_async_conn_cls = MagicMock()
+        mock_async_conn_cls.connect = AsyncMock(return_value=mock_conn)
+        mock_psycopg.AsyncConnection = mock_async_conn_cls
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
+        saved_psycopg = sys.modules.get("psycopg")
+        saved_rows = sys.modules.get("psycopg.rows")
+        sys.modules["psycopg"] = mock_psycopg
+        sys.modules["psycopg.rows"] = mock_rows
 
         try:
             conn = await framework.get_connection()
             assert conn is mock_conn
-            mock_asyncpg.connect.assert_called_once()
+            mock_psycopg.AsyncConnection.connect.assert_called_once()
         finally:
-            if saved is None:
-                sys.modules.pop("asyncpg", None)
+            if saved_psycopg is None:
+                sys.modules.pop("psycopg", None)
             else:
-                sys.modules["asyncpg"] = saved
+                sys.modules["psycopg"] = saved_psycopg
+            if saved_rows is None:
+                sys.modules.pop("psycopg.rows", None)
+            else:
+                sys.modules["psycopg.rows"] = saved_rows
 
     @pytest.mark.asyncio
     async def test_outbox_created_with_use_postgres(self) -> None:
@@ -158,10 +178,16 @@ class TestEventFrameworkPgMode:
         framework = EventFramework(config)
 
         mock_conn = AsyncMock()
-        mock_asyncpg = MagicMock()
-        mock_asyncpg.connect = AsyncMock(return_value=mock_conn)
-        saved = sys.modules.get("asyncpg")
-        sys.modules["asyncpg"] = mock_asyncpg
+        mock_psycopg = MagicMock()
+        mock_async_conn_cls = MagicMock()
+        mock_async_conn_cls.connect = AsyncMock(return_value=mock_conn)
+        mock_psycopg.AsyncConnection = mock_async_conn_cls
+        mock_rows = MagicMock()
+        mock_rows.dict_row = MagicMock()
+        saved_psycopg = sys.modules.get("psycopg")
+        saved_rows = sys.modules.get("psycopg.rows")
+        sys.modules["psycopg"] = mock_psycopg
+        sys.modules["psycopg.rows"] = mock_rows
 
         mock_pg_bus = AsyncMock()
 
@@ -186,7 +212,11 @@ class TestEventFrameworkPgMode:
 
                 await framework.stop()
         finally:
-            if saved is None:
-                sys.modules.pop("asyncpg", None)
+            if saved_psycopg is None:
+                sys.modules.pop("psycopg", None)
             else:
-                sys.modules["asyncpg"] = saved
+                sys.modules["psycopg"] = saved_psycopg
+            if saved_rows is None:
+                sys.modules.pop("psycopg.rows", None)
+            else:
+                sys.modules["psycopg.rows"] = saved_rows

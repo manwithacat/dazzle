@@ -10,7 +10,7 @@ Dazzle selects the database backend based on the `DATABASE_URL` environment vari
 |----------------|---------|-------|
 | Not set | SQLite | File stored in project directory (`data/app.db`) |
 | `sqlite:///path/to/db` | SQLite | Explicit SQLite path |
-| `postgresql://...` | PostgreSQL | Requires `psycopg2` or `asyncpg` |
+| `postgresql://...` | PostgreSQL | Requires `psycopg` (v3) |
 | `postgres://...` | PostgreSQL | Heroku-style URL, auto-converted to `postgresql://` |
 
 ## Configuration
@@ -72,7 +72,7 @@ Install the `postgres` extra:
 pip install dazzle[postgres]
 ```
 
-This installs `psycopg2-binary` and `asyncpg`.
+This installs `psycopg[binary]` (v3) and `psycopg-pool`.
 
 ## Auth Database
 

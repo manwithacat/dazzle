@@ -179,7 +179,8 @@ class EventFramework:
 
         if self._use_postgres:
             # PostgreSQL mode
-            import asyncpg
+            import psycopg
+            from psycopg.rows import dict_row
 
             from dazzle_back.events.postgres_bus import PostgresBus, PostgresConfig
 
@@ -191,7 +192,7 @@ class EventFramework:
                 database_url = database_url.replace("postgres://", "postgresql://", 1)
 
             # Connect to database
-            self._conn = await asyncpg.connect(database_url)
+            self._conn = await psycopg.AsyncConnection.connect(database_url, row_factory=dict_row)
 
             # Create tables
             await self._outbox.create_table(self._conn)
@@ -359,12 +360,13 @@ class EventFramework:
         Returns a new connection that should be used within a transaction.
         """
         if self._use_postgres:
-            import asyncpg
+            import psycopg
+            from psycopg.rows import dict_row
 
             database_url = self._config.database_url
             if database_url and database_url.startswith("postgres://"):
                 database_url = database_url.replace("postgres://", "postgresql://", 1)
-            return await asyncpg.connect(database_url)
+            return await psycopg.AsyncConnection.connect(database_url, row_factory=dict_row)
         return await aiosqlite.connect(self._config.db_path)
 
     async def _start_consumers(self) -> None:

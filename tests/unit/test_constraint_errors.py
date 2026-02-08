@@ -64,12 +64,12 @@ class TestParseConstraintError:
 
 
 # ---------------------------------------------------------------------------
-# _parse_constraint_error — exception objects (psycopg2-style)
+# _parse_constraint_error — exception objects (psycopg-style)
 # ---------------------------------------------------------------------------
 
 
-class TestParseConstraintErrorPsycopg2:
-    """Test FK/unique parsing from psycopg2 exception objects with pgerror/diag."""
+class TestParseConstraintErrorPsycopg:
+    """Test FK/unique parsing from psycopg exception objects with pgerror/diag."""
 
     @staticmethod
     def _make_pg_exc(
@@ -77,7 +77,7 @@ class TestParseConstraintErrorPsycopg2:
         detail: str | None = None,
         str_repr: str = "",
     ) -> Exception:
-        """Build a mock psycopg2-style exception."""
+        """Build a mock psycopg-style exception."""
         exc = Exception(str_repr)
         if pgerror is not None:
             exc.pgerror = pgerror  # type: ignore[attr-defined]
@@ -348,22 +348,22 @@ async def test_fk_valid_reference_succeeds(fk_db_and_repos):
 
 
 # ---------------------------------------------------------------------------
-# psycopg2 subclass detection via MRO (#151)
+# psycopg subclass detection via MRO (#151)
 # ---------------------------------------------------------------------------
 
 
-class TestPsycopg2SubclassDetection:
-    """Verify that psycopg2 IntegrityError subclasses are caught via MRO check.
+class TestPsycopgSubclassDetection:
+    """Verify that psycopg IntegrityError subclasses are caught via MRO check.
 
-    psycopg2 raises ForeignKeyViolation and UniqueViolation which inherit from
+    psycopg raises ForeignKeyViolation and UniqueViolation which inherit from
     IntegrityError but whose __name__ does NOT contain 'IntegrityError'.
     The MRO-based check must walk the inheritance chain.
     """
 
     @staticmethod
     def _make_subclass(name: str, base_name: str = "IntegrityError") -> type:
-        """Create a fake exception class hierarchy mimicking psycopg2."""
-        # psycopg2.IntegrityError → psycopg2.DatabaseError → psycopg2.Error → Exception
+        """Create a fake exception class hierarchy mimicking psycopg."""
+        # psycopg.errors.IntegrityError → DatabaseError → Error → Exception
         pg_error = type("Error", (Exception,), {})
         db_error = type("DatabaseError", (pg_error,), {})
         integrity = type(base_name, (db_error,), {})
@@ -396,7 +396,7 @@ class TestPsycopg2SubclassDetection:
         assert not any("IntegrityError" in cls.__name__ for cls in type(exc).__mro__)
 
     def test_parse_constraint_error_with_subclass(self):
-        """_parse_constraint_error works with psycopg2-style subclass exceptions."""
+        """_parse_constraint_error works with psycopg-style subclass exceptions."""
         FKV = self._make_subclass("ForeignKeyViolation")
         exc = FKV("FOREIGN KEY constraint failed")
         ctype, field = _parse_constraint_error(exc, "Task")

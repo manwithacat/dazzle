@@ -23,7 +23,7 @@ import logging
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from dazzle_back.events.bus import (
@@ -37,15 +37,15 @@ from dazzle_back.events.bus import (
 )
 from dazzle_back.events.envelope import EventEnvelope
 
-# Conditional import for asyncpg
+# Conditional import for psycopg (async)
 try:
-    import asyncpg
+    import psycopg
+    import psycopg_pool
+    from psycopg.rows import dict_row
 
-    ASYNCPG_AVAILABLE = True
+    ASYNCPG_AVAILABLE = True  # Keep name for backward compat
 except ImportError:
     ASYNCPG_AVAILABLE = False
-    if TYPE_CHECKING:
-        import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class PostgresBus(EventBus):
     """
     PostgreSQL-backed EventBus implementation.
 
-    Uses asyncpg for async database access with:
+    Uses psycopg (v3) for async database access with:
     - Connection pooling for efficiency
     - LISTEN/NOTIFY for low-latency event notification
     - FOR UPDATE SKIP LOCKED for competing consumers
@@ -179,26 +179,29 @@ class PostgresBus(EventBus):
         """
         if not ASYNCPG_AVAILABLE:
             raise ImportError(
-                "asyncpg is required for PostgresBus. Install with: pip install asyncpg"
+                "psycopg is required for PostgresBus. Install with: pip install dazzle[postgres]"
             )
 
         self._config = config
         self._prefix = config.table_prefix
-        self._pool: asyncpg.Pool | None = None
+        self._pool: psycopg_pool.AsyncConnectionPool | None = None
         self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
         self._lock = asyncio.Lock()
         self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
         self._running = False
-        self._listen_conn: asyncpg.Connection | None = None
+        self._listen_conn: psycopg.AsyncConnection | None = None
+        self._listen_task: asyncio.Task[None] | None = None
         self._notify_event = asyncio.Event()
 
     async def connect(self) -> None:
         """Connect to the database and create tables if needed."""
-        self._pool = await asyncpg.create_pool(
-            self._config.dsn,
+        self._pool = psycopg_pool.AsyncConnectionPool(
+            conninfo=self._config.dsn,
             min_size=self._config.pool_min_size,
             max_size=self._config.pool_max_size,
+            kwargs={"row_factory": dict_row, "autocommit": True},
         )
+        await self._pool.wait()
         await self._create_tables()
         await self._setup_listen()
 
@@ -215,6 +218,15 @@ class PostgresBus(EventBus):
                 pass
 
         self._consumer_tasks.clear()
+
+        # Cancel listen task
+        if self._listen_task:
+            self._listen_task.cancel()
+            try:
+                await self._listen_task
+            except asyncio.CancelledError:
+                pass
+            self._listen_task = None
 
         # Close listen connection
         if self._listen_conn:
@@ -233,7 +245,7 @@ class PostgresBus(EventBus):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
-    def _get_pool(self) -> asyncpg.Pool:
+    def _get_pool(self) -> psycopg_pool.AsyncConnectionPool:
         """Get database pool with error handling."""
         if self._pool is None:
             raise RuntimeError("PostgresBus not connected. Call connect() first.")
@@ -244,7 +256,7 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             await conn.execute(CREATE_EVENTS_TABLE.format(prefix=prefix))
             await conn.execute(CREATE_EVENTS_INDEXES.format(prefix=prefix))
             await conn.execute(CREATE_OFFSETS_TABLE.format(prefix=prefix))
@@ -253,23 +265,22 @@ class PostgresBus(EventBus):
 
     async def _setup_listen(self) -> None:
         """Set up LISTEN connection for event notifications."""
-        pool = self._get_pool()
-        self._listen_conn = await pool.acquire()
+        self._listen_conn = await psycopg.AsyncConnection.connect(self._config.dsn, autocommit=True)
+        await self._listen_conn.execute(f"LISTEN {self._prefix}events_channel")
+        self._listen_task = asyncio.create_task(self._listen_loop())
 
-        def notification_handler(
-            conn: asyncpg.Connection,
-            pid: int,
-            channel: str,
-            payload: str,
-        ) -> None:
-            self._notify_event.set()
-
-        await self._listen_conn.add_listener(f"{self._prefix}events_channel", notification_handler)
+    async def _listen_loop(self) -> None:
+        """Background task that receives NOTIFY events."""
+        try:
+            async for _notify in self._listen_conn.notifies():  # type: ignore[union-attr]
+                self._notify_event.set()
+        except Exception:
+            pass  # Connection closed during shutdown
 
     async def _notify(self) -> None:
         """Send NOTIFY to wake up consumers."""
         pool = self._get_pool()
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             await conn.execute(f"NOTIFY {self._prefix}events_channel")
 
     async def publish(
@@ -288,25 +299,27 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             await conn.execute(
                 f"""
                 INSERT INTO {prefix}events (
                     id, topic, event_type, event_version, key, payload,
                     headers, correlation_id, causation_id, timestamp, producer
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
-                envelope.event_id,
-                topic,
-                envelope.event_type,
-                envelope.event_version,
-                envelope.key,
-                json.dumps(envelope.payload),
-                json.dumps(envelope.headers),
-                envelope.correlation_id,
-                envelope.causation_id,
-                envelope.timestamp,
-                envelope.producer,
+                (
+                    str(envelope.event_id),
+                    topic,
+                    envelope.event_type,
+                    envelope.event_version,
+                    envelope.key,
+                    json.dumps(envelope.payload),
+                    json.dumps(envelope.headers),
+                    str(envelope.correlation_id) if envelope.correlation_id else None,
+                    str(envelope.causation_id) if envelope.causation_id else None,
+                    envelope.timestamp.isoformat() if envelope.timestamp else None,
+                    envelope.producer,
+                ),
             )
 
         # Notify consumers
@@ -314,7 +327,7 @@ class PostgresBus(EventBus):
 
     async def publish_with_connection(
         self,
-        conn: asyncpg.Connection,
+        conn: psycopg.AsyncConnection,
         topic: str,
         envelope: EventEnvelope,
     ) -> None:
@@ -324,7 +337,7 @@ class PostgresBus(EventBus):
         Use this when publishing must be atomic with other database operations.
 
         Example:
-            async with pool.acquire() as conn:
+            async with pool.connection() as conn:
                 async with conn.transaction():
                     await conn.execute("INSERT INTO orders ...")
                     await bus.publish_with_connection(conn, "app.Order", envelope)
@@ -336,19 +349,21 @@ class PostgresBus(EventBus):
             INSERT INTO {prefix}events (
                 id, topic, event_type, event_version, key, payload,
                 headers, correlation_id, causation_id, timestamp, producer
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            envelope.event_id,
-            topic,
-            envelope.event_type,
-            envelope.event_version,
-            envelope.key,
-            json.dumps(envelope.payload),
-            json.dumps(envelope.headers),
-            envelope.correlation_id,
-            envelope.causation_id,
-            envelope.timestamp,
-            envelope.producer,
+            (
+                str(envelope.event_id),
+                topic,
+                envelope.event_type,
+                envelope.event_version,
+                envelope.key,
+                json.dumps(envelope.payload),
+                json.dumps(envelope.headers),
+                str(envelope.correlation_id) if envelope.correlation_id else None,
+                str(envelope.causation_id) if envelope.causation_id else None,
+                envelope.timestamp.isoformat() if envelope.timestamp else None,
+                envelope.producer,
+            ),
         )
 
     async def subscribe(
@@ -373,15 +388,14 @@ class PostgresBus(EventBus):
             pool = self._get_pool()
             prefix = self._prefix
 
-            async with pool.acquire() as conn:
+            async with pool.connection() as conn:
                 await conn.execute(
                     f"""
                     INSERT INTO {prefix}consumer_offsets (topic, group_id, last_sequence)
-                    VALUES ($1, $2, 0)
+                    VALUES (%s, %s, 0)
                     ON CONFLICT (topic, group_id) DO NOTHING
                     """,
-                    topic,
-                    group_id,
+                    (topic, group_id),
                 )
 
             return SubscriptionInfo(
@@ -422,13 +436,13 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             # Get event's sequence number
-            row = await conn.fetchrow(
-                f"SELECT sequence_num FROM {prefix}events WHERE id = $1 AND topic = $2",
-                event_id,
-                topic,
+            cur = await conn.execute(
+                f"SELECT sequence_num FROM {prefix}events WHERE id = %s AND topic = %s",
+                (str(event_id), topic),
             )
+            row = await cur.fetchone()
             if not row:
                 raise EventNotFoundError(event_id)
 
@@ -438,13 +452,11 @@ class PostgresBus(EventBus):
             await conn.execute(
                 f"""
                 UPDATE {prefix}consumer_offsets
-                SET last_sequence = GREATEST(last_sequence, $1),
+                SET last_sequence = GREATEST(last_sequence, %s),
                     last_processed_at = NOW()
-                WHERE topic = $2 AND group_id = $3
+                WHERE topic = %s AND group_id = %s
                 """,
-                sequence_num,
-                topic,
-                group_id,
+                (sequence_num, topic, group_id),
             )
 
     async def nack(
@@ -458,17 +470,18 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             # Get event
-            row = await conn.fetchrow(
+            cur = await conn.execute(
                 f"""
                 SELECT id, topic, event_type, event_version, key, payload,
                        headers, correlation_id, causation_id, timestamp, producer,
                        sequence_num
-                FROM {prefix}events WHERE id = $1
+                FROM {prefix}events WHERE id = %s
                 """,
-                event_id,
+                (str(event_id),),
             )
+            row = await cur.fetchone()
             if not row:
                 raise EventNotFoundError(event_id)
 
@@ -481,31 +494,31 @@ class PostgresBus(EventBus):
                     INSERT INTO {prefix}dlq (
                         event_id, topic, group_id, envelope,
                         reason_code, reason_message, reason_metadata
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (event_id, group_id) DO UPDATE SET
                         attempts = {prefix}dlq.attempts + 1,
                         reason_code = EXCLUDED.reason_code,
                         reason_message = EXCLUDED.reason_message
                     """,
-                    event_id,
-                    topic,
-                    group_id,
-                    json.dumps(envelope.to_dict()),
-                    reason.code,
-                    reason.message,
-                    json.dumps(reason.metadata),
+                    (
+                        str(event_id),
+                        topic,
+                        group_id,
+                        json.dumps(envelope.to_dict()),
+                        reason.code,
+                        reason.message,
+                        json.dumps(reason.metadata),
+                    ),
                 )
 
                 # Advance offset past this event (skip it)
                 await conn.execute(
                     f"""
                     UPDATE {prefix}consumer_offsets
-                    SET last_sequence = GREATEST(last_sequence, $1)
-                    WHERE topic = $2 AND group_id = $3
+                    SET last_sequence = GREATEST(last_sequence, %s)
+                    WHERE topic = %s AND group_id = %s
                     """,
-                    row["sequence_num"],
-                    topic,
-                    group_id,
+                    (row["sequence_num"], topic, group_id),
                 )
             # If retryable, don't advance offset - event will be redelivered
 
@@ -523,32 +536,27 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        conditions = ["topic = $1"]
+        conditions = ["topic = %s"]
         params: list[Any] = [topic]
-        param_num = 2
 
         if from_timestamp is not None:
-            conditions.append(f"timestamp >= ${param_num}")
+            conditions.append("timestamp >= %s")
             params.append(from_timestamp)
-            param_num += 1
 
         if to_timestamp is not None:
-            conditions.append(f"timestamp < ${param_num}")
+            conditions.append("timestamp < %s")
             params.append(to_timestamp)
-            param_num += 1
 
         if from_offset is not None:
-            conditions.append(f"sequence_num >= ${param_num}")
+            conditions.append("sequence_num >= %s")
             params.append(from_offset)
-            param_num += 1
 
         if to_offset is not None:
-            conditions.append(f"sequence_num < ${param_num}")
+            conditions.append("sequence_num < %s")
             params.append(to_offset)
-            param_num += 1
 
         if key_filter is not None:
-            conditions.append(f"key = ${param_num}")
+            conditions.append("key = %s")
             params.append(key_filter)
 
         query = f"""
@@ -559,8 +567,9 @@ class PostgresBus(EventBus):
             ORDER BY sequence_num ASC
         """
 
-        async with pool.acquire() as conn:
-            async for row in conn.cursor(query, *params):
+        async with pool.connection() as conn:
+            cur = await conn.execute(query, tuple(params))
+            async for row in cur:
                 yield self._row_to_envelope(row)
 
     async def get_consumer_status(
@@ -572,29 +581,29 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
+        async with pool.connection() as conn:
+            cur = await conn.execute(
                 f"""
                 SELECT last_sequence, last_processed_at
                 FROM {prefix}consumer_offsets
-                WHERE topic = $1 AND group_id = $2
+                WHERE topic = %s AND group_id = %s
                 """,
-                topic,
-                group_id,
+                (topic, group_id),
             )
+            row = await cur.fetchone()
             if not row:
                 raise ConsumerNotFoundError(topic, group_id)
 
             # Count pending events
-            pending_row = await conn.fetchrow(
+            cur2 = await conn.execute(
                 f"""
                 SELECT COUNT(*) as pending
                 FROM {prefix}events
-                WHERE topic = $1 AND sequence_num > $2
+                WHERE topic = %s AND sequence_num > %s
                 """,
-                topic,
-                row["last_sequence"],
+                (topic, row["last_sequence"]),
             )
+            pending_row = await cur2.fetchone()
 
             return ConsumerStatus(
                 topic=topic,
@@ -609,8 +618,9 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(f"SELECT DISTINCT topic FROM {prefix}events ORDER BY topic")
+        async with pool.connection() as conn:
+            cur = await conn.execute(f"SELECT DISTINCT topic FROM {prefix}events ORDER BY topic")
+            rows = await cur.fetchall()
             return [row["topic"] for row in rows]
 
     async def list_consumer_groups(self, topic: str) -> list[str]:
@@ -618,14 +628,15 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
+        async with pool.connection() as conn:
+            cur = await conn.execute(
                 f"""
                 SELECT group_id FROM {prefix}consumer_offsets
-                WHERE topic = $1 ORDER BY group_id
+                WHERE topic = %s ORDER BY group_id
                 """,
-                topic,
+                (topic,),
             )
+            rows = await cur.fetchall()
             return [row["group_id"] for row in rows]
 
     async def get_topic_info(self, topic: str) -> dict[str, Any]:
@@ -633,9 +644,9 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             # Event stats
-            stats = await conn.fetchrow(
+            cur = await conn.execute(
                 f"""
                 SELECT
                     COUNT(*) as event_count,
@@ -643,22 +654,25 @@ class PostgresBus(EventBus):
                     MAX(timestamp) as newest_event,
                     MAX(sequence_num) as current_sequence
                 FROM {prefix}events
-                WHERE topic = $1
+                WHERE topic = %s
                 """,
-                topic,
+                (topic,),
             )
+            stats = await cur.fetchone()
 
             # Consumer groups
-            groups = await conn.fetch(
-                f"SELECT group_id FROM {prefix}consumer_offsets WHERE topic = $1",
-                topic,
+            cur2 = await conn.execute(
+                f"SELECT group_id FROM {prefix}consumer_offsets WHERE topic = %s",
+                (topic,),
             )
+            groups = await cur2.fetchall()
 
             # DLQ count
-            dlq = await conn.fetchrow(
-                f"SELECT COUNT(*) as dlq_count FROM {prefix}dlq WHERE topic = $1",
-                topic,
+            cur3 = await conn.execute(
+                f"SELECT COUNT(*) as dlq_count FROM {prefix}dlq WHERE topic = %s",
+                (topic,),
             )
+            dlq = await cur3.fetchone()
 
             return {
                 "topic": topic,
@@ -674,12 +688,12 @@ class PostgresBus(EventBus):
                 "dlq_count": dlq["dlq_count"] if dlq else 0,
             }
 
-    def _row_to_envelope(self, row: asyncpg.Record) -> EventEnvelope:
+    def _row_to_envelope(self, row: dict[str, Any]) -> EventEnvelope:
         """Convert a database row to an EventEnvelope."""
         payload = row["payload"]
         headers = row["headers"]
 
-        # Handle JSONB which asyncpg auto-deserializes
+        # Handle JSONB which may be auto-deserialized
         if isinstance(payload, str):
             payload = json.loads(payload)
         if isinstance(headers, str):
@@ -783,34 +797,33 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             # Get current offset
-            offset_row = await conn.fetchrow(
+            cur = await conn.execute(
                 f"""
                 SELECT last_sequence FROM {prefix}consumer_offsets
-                WHERE topic = $1 AND group_id = $2
+                WHERE topic = %s AND group_id = %s
                 """,
-                topic,
-                group_id,
+                (topic, group_id),
             )
+            offset_row = await cur.fetchone()
             last_sequence = offset_row["last_sequence"] if offset_row else 0
 
             # Fetch and lock pending events using SKIP LOCKED
             # This allows competing consumers to process different events
-            rows = await conn.fetch(
+            cur2 = await conn.execute(
                 f"""
                 SELECT id, topic, event_type, event_version, key, payload,
                        headers, correlation_id, causation_id, timestamp, producer
                 FROM {prefix}events
-                WHERE topic = $1 AND sequence_num > $2
+                WHERE topic = %s AND sequence_num > %s
                 ORDER BY sequence_num ASC
-                LIMIT $3
+                LIMIT %s
                 FOR UPDATE SKIP LOCKED
                 """,
-                topic,
-                last_sequence,
-                max_events,
+                (topic, last_sequence, max_events),
             )
+            rows = await cur2.fetchall()
 
             processed = 0
             for row in rows:
@@ -844,33 +857,31 @@ class PostgresBus(EventBus):
 
         conditions = []
         params: list[Any] = []
-        param_num = 1
 
         if topic:
-            conditions.append(f"topic = ${param_num}")
+            conditions.append("topic = %s")
             params.append(topic)
-            param_num += 1
 
         if group_id:
-            conditions.append(f"group_id = ${param_num}")
+            conditions.append("group_id = %s")
             params.append(group_id)
-            param_num += 1
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params.append(limit)
 
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
+        async with pool.connection() as conn:
+            cur = await conn.execute(
                 f"""
                 SELECT event_id, topic, group_id, envelope,
                        reason_code, reason_message, attempts, created_at
                 FROM {prefix}dlq
                 {where_clause}
                 ORDER BY created_at DESC
-                LIMIT ${param_num}
+                LIMIT %s
                 """,
-                *params,
-                limit,
+                tuple(params),
             )
+            rows = await cur.fetchall()
 
             results = []
             for row in rows:
@@ -898,14 +909,15 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             if topic:
-                row = await conn.fetchrow(
-                    f"SELECT COUNT(*) as count FROM {prefix}dlq WHERE topic = $1",
-                    topic,
+                cur = await conn.execute(
+                    f"SELECT COUNT(*) as count FROM {prefix}dlq WHERE topic = %s",
+                    (topic,),
                 )
             else:
-                row = await conn.fetchrow(f"SELECT COUNT(*) as count FROM {prefix}dlq")
+                cur = await conn.execute(f"SELECT COUNT(*) as count FROM {prefix}dlq")
+            row = await cur.fetchone()
             return row["count"] if row else 0
 
     async def replay_dlq_event(
@@ -924,15 +936,15 @@ class PostgresBus(EventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        async with pool.acquire() as conn:
-            row = await conn.fetchrow(
+        async with pool.connection() as conn:
+            cur = await conn.execute(
                 f"""
                 SELECT topic, envelope FROM {prefix}dlq
-                WHERE event_id = $1 AND group_id = $2
+                WHERE event_id = %s AND group_id = %s
                 """,
-                UUID(event_id),
-                group_id,
+                (str(UUID(event_id)), group_id),
             )
+            row = await cur.fetchone()
             if not row:
                 return False
 
@@ -954,9 +966,8 @@ class PostgresBus(EventBus):
                 await handler(envelope)
                 # Remove from DLQ on success
                 await conn.execute(
-                    f"DELETE FROM {prefix}dlq WHERE event_id = $1 AND group_id = $2",
-                    UUID(event_id),
-                    group_id,
+                    f"DELETE FROM {prefix}dlq WHERE event_id = %s AND group_id = %s",
+                    (str(UUID(event_id)), group_id),
                 )
                 return True
             except Exception:
@@ -964,10 +975,9 @@ class PostgresBus(EventBus):
                 await conn.execute(
                     f"""
                     UPDATE {prefix}dlq SET attempts = attempts + 1
-                    WHERE event_id = $1 AND group_id = $2
+                    WHERE event_id = %s AND group_id = %s
                     """,
-                    UUID(event_id),
-                    group_id,
+                    (str(UUID(event_id)), group_id),
                 )
                 raise
 
@@ -987,31 +997,31 @@ class PostgresBus(EventBus):
 
         conditions = []
         params: list[Any] = []
-        param_num = 1
 
         if topic:
-            conditions.append(f"topic = ${param_num}")
+            conditions.append("topic = %s")
             params.append(topic)
-            param_num += 1
 
         if group_id:
-            conditions.append(f"group_id = ${param_num}")
+            conditions.append("group_id = %s")
             params.append(group_id)
 
         where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        params_tuple = tuple(params) if params else ()
 
-        async with pool.acquire() as conn:
+        async with pool.connection() as conn:
             # Get count first
-            count_row = await conn.fetchrow(
+            cur = await conn.execute(
                 f"SELECT COUNT(*) as count FROM {prefix}dlq {where_clause}",
-                *params,
+                params_tuple,
             )
+            count_row = await cur.fetchone()
             count = count_row["count"] if count_row else 0
 
             # Delete
             await conn.execute(
                 f"DELETE FROM {prefix}dlq {where_clause}",
-                *params,
+                params_tuple,
             )
 
             return count

@@ -471,12 +471,10 @@ class FileMetadataStore:
     def _get_connection(self) -> Any:
         """Get a database connection (SQLite or PostgreSQL)."""
         if self._use_postgres:
-            import psycopg2
-            import psycopg2.extras
+            import psycopg
+            from psycopg.rows import dict_row
 
-            conn = psycopg2.connect(self._pg_url)
-            conn.cursor_factory = psycopg2.extras.RealDictCursor
-            return conn
+            return psycopg.connect(self._pg_url, row_factory=dict_row)
         else:
             conn = sqlite3.connect(str(self.db_path))
             conn.row_factory = sqlite3.Row

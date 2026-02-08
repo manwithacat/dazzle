@@ -335,9 +335,9 @@ def create_database_check(
         start = time.monotonic()
         try:
             if database_url:
-                import psycopg2
+                import psycopg
 
-                conn = psycopg2.connect(database_url)
+                conn = psycopg.connect(database_url)
             else:
                 import sqlite3
 
