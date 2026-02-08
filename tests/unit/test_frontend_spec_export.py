@@ -16,7 +16,6 @@ from dazzle.core.frontend_spec_export import (
     _build_test_criteria,
     _build_typescript_interfaces,
     _build_workspace_layouts,
-    _pluralize,
     export_frontend_spec,
 )
 from dazzle.core.ir.appspec import AppSpec
@@ -45,6 +44,7 @@ from dazzle.core.ir.workspaces import (
     WorkspaceRegion,
     WorkspaceSpec,
 )
+from dazzle.core.strings import to_api_plural
 
 
 @pytest.fixture()
@@ -183,16 +183,16 @@ class TestFieldTypeMap:
 
 class TestPluralize:
     def test_simple(self) -> None:
-        assert _pluralize("task") == "tasks"
+        assert to_api_plural("task") == "tasks"
 
     def test_ending_s(self) -> None:
-        assert _pluralize("status") == "statuses"
+        assert to_api_plural("status") == "statuses"
 
     def test_ending_y(self) -> None:
-        assert _pluralize("category") == "categories"
+        assert to_api_plural("category") == "categories"
 
     def test_ending_ay(self) -> None:
-        assert _pluralize("day") == "days"
+        assert to_api_plural("day") == "days"
 
 
 class TestTypescriptInterfaces:

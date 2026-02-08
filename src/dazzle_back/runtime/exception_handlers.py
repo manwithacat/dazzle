@@ -33,7 +33,22 @@ def register_exception_handlers(app: FastAPI) -> None:
     from pydantic import ValidationError
 
     from dazzle_back.runtime.invariant_evaluator import InvariantViolationError
+    from dazzle_back.runtime.repository import ConstraintViolationError
     from dazzle_back.runtime.state_machine import TransitionError
+
+    @app.exception_handler(ConstraintViolationError)
+    async def constraint_violation_handler(
+        request: Request, exc: ConstraintViolationError
+    ) -> JSONResponse:
+        """Convert database constraint violations to 422 Unprocessable Entity."""
+        detail: dict[str, Any] = {
+            "detail": str(exc),
+            "type": "constraint_violation",
+            "constraint_type": exc.constraint_type,
+        }
+        if exc.field:
+            detail["field"] = exc.field
+        return JSONResponse(status_code=422, content=detail)
 
     @app.exception_handler(TransitionError)
     async def transition_error_handler(request: Request, exc: TransitionError) -> JSONResponse:

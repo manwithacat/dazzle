@@ -8,6 +8,7 @@ Services handle business logic and can be customized by users.
 import builtins
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID, uuid4
 
@@ -202,11 +203,21 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             check_invariants_for_create,
         )
 
+        # Sanitize string/text input fields (v0.25 - #135)
+        self._sanitize_fields(data)
+
         # Generate ID
         entity_id = uuid4()
 
         # Build entity data
         entity_data = {"id": entity_id, **data.model_dump()}
+
+        # Inject auto_add timestamps (v0.25 - #132)
+        if self.entity_spec:
+            now = datetime.now(UTC)
+            for field in self.entity_spec.fields:
+                if field.auto_add:
+                    entity_data[field.name] = now
 
         # Apply default values for fields not provided (v0.14.2)
         if self.entity_spec:
@@ -280,8 +291,18 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             validate_status_update,
         )
 
+        # Sanitize string/text input fields (v0.25 - #135)
+        self._sanitize_fields(data)
+
         # Get update data, excluding None values
         update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+
+        # Inject auto_update timestamps (v0.25 - #132)
+        if self.entity_spec:
+            now = datetime.now(UTC)
+            for field in self.entity_spec.fields:
+                if field.auto_update:
+                    update_data[field.name] = now
 
         # Read current entity for state machine validation
         current = await self.read(id)
@@ -420,6 +441,45 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             if match:
                 filtered.append(item)
         return filtered
+
+    def _sanitize_fields(self, data: BaseModel) -> None:
+        """Sanitize string and text fields to prevent XSS via the API.
+
+        Mutates the model in-place: str fields get all tags stripped,
+        text fields get only dangerous tags/attributes stripped.
+        """
+        if not self.entity_spec:
+            return
+
+        from dazzle_back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
+        from dazzle_back.specs.entity import ScalarType
+
+        field_type_map = {f.name: f.type for f in self.entity_spec.fields}
+
+        for field_name, field_type in field_type_map.items():
+            value = getattr(data, field_name, None)
+            if not isinstance(value, str):
+                continue
+
+            if field_type.kind == "scalar" and field_type.scalar_type == ScalarType.TEXT:
+                # Text fields: strip dangerous tags only
+                sanitized = strip_dangerous_tags(value)
+            elif field_type.kind == "scalar" and field_type.scalar_type in (
+                ScalarType.STR,
+                ScalarType.EMAIL,
+                ScalarType.URL,
+            ):
+                # Plain string fields: strip all HTML tags
+                sanitized = strip_html_tags(value)
+            elif field_type.kind == "enum":
+                # Enum values should not contain HTML
+                sanitized = strip_html_tags(value)
+            else:
+                continue
+
+            if sanitized != value:
+                # Pydantic models may be frozen — use model internals to set
+                object.__setattr__(data, field_name, sanitized)
 
     async def _validate_references(self, data: dict[str, Any]) -> None:
         """

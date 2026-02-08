@@ -9,10 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Any, cast
+from typing import Annotated, Any, cast
 from uuid import UUID
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import AfterValidator, BaseModel, Field, create_model
 
 from dazzle_back.specs.entity import (
     EntitySpec,
@@ -52,13 +52,29 @@ def _scalar_type_to_python(scalar_type: ScalarType) -> type:
     return mapping.get(scalar_type, str)
 
 
-def _field_type_to_python(field_type: FieldType, entity_models: dict[str, type]) -> type:
+def _make_enum_validator(allowed: list[str], field_name: str) -> Callable[[str], str]:
+    """Create a validator function that checks enum values."""
+
+    def _validate(v: str) -> str:
+        if v not in allowed:
+            raise ValueError(
+                f"Invalid value '{v}' for '{field_name}'. Allowed: {', '.join(allowed)}"
+            )
+        return v
+
+    return _validate
+
+
+def _field_type_to_python(
+    field_type: FieldType, entity_models: dict[str, type], field_name: str = ""
+) -> type:
     """
     Convert FieldType to Python type.
 
     Args:
         field_type: The field type specification
         entity_models: Dictionary of already-generated entity models (for refs)
+        field_name: Field name for error messages (used by enum validation)
 
     Returns:
         Python type for Pydantic model
@@ -66,8 +82,9 @@ def _field_type_to_python(field_type: FieldType, entity_models: dict[str, type])
     if field_type.kind == "scalar" and field_type.scalar_type:
         return _scalar_type_to_python(field_type.scalar_type)
     elif field_type.kind == "enum" and field_type.enum_values:
-        # Return str for enums - could create Enum class if needed
-        return str
+        return Annotated[
+            str, AfterValidator(_make_enum_validator(field_type.enum_values, field_name))
+        ]  # type: ignore[return-value]
     elif field_type.kind == "ref" and field_type.ref_entity:
         # References are stored as UUIDs (foreign keys)
         return UUID
@@ -156,7 +173,7 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
     v0.10.2: Supports date expression defaults with default_factory.
     """
     # Get Python type
-    python_type = _field_type_to_python(field.type, {})
+    python_type = _field_type_to_python(field.type, {}, field.name)
 
     # Build Field kwargs
     field_kwargs: dict[str, Any] = {}
@@ -287,8 +304,11 @@ def generate_create_schema(
     Returns:
         Pydantic model for create operations
     """
-    # Fields to exclude from create schema
-    auto_fields = {"id", "created_at", "updated_at"}
+    # Fields to exclude from create schema: id + any auto_add/auto_update fields
+    auto_fields = {"id"}
+    for field in entity.fields:
+        if field.auto_add or field.auto_update:
+            auto_fields.add(field.name)
 
     # Build field definitions
     field_definitions: dict[str, Any] = {}
@@ -324,8 +344,11 @@ def generate_update_schema(
     Returns:
         Pydantic model for update operations
     """
-    # Fields to exclude from update schema
-    auto_fields = {"id", "created_at", "updated_at"}
+    # Fields to exclude from update schema: id + any auto_add/auto_update fields
+    auto_fields = {"id"}
+    for field in entity.fields:
+        if field.auto_add or field.auto_update:
+            auto_fields.add(field.name)
 
     # Build field definitions - all optional for updates
     field_definitions: dict[str, Any] = {}
@@ -334,7 +357,7 @@ def generate_update_schema(
         if field.name in auto_fields:
             continue
 
-        python_type = _field_type_to_python(field.type, {})
+        python_type = _field_type_to_python(field.type, {}, field.name)
         # Make all fields optional for partial updates
         field_definitions[field.name] = (python_type | None, None)
 

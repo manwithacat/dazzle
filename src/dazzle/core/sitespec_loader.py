@@ -57,6 +57,7 @@ from .ir.sitespec import (
     TrustBarItem,
     create_default_sitespec,
 )
+from .strings import to_api_plural
 
 logger = logging.getLogger(__name__)
 
@@ -767,7 +768,7 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
 
     for surface in appspec.surfaces:
         entity_name = surface.entity_ref or "general"
-        slug = _pluralize_slug(entity_name.lower())
+        slug = to_api_plural(entity_name)
 
         # Find workspace containing this entity
         workspace_slug: str | None = None
@@ -792,15 +793,6 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
             routes.append(f"{base}/:id/edit")
 
     return routes
-
-
-def _pluralize_slug(name: str) -> str:
-    """Naive pluralization for URL slugs."""
-    if name.endswith("s"):
-        return name + "es"
-    if name.endswith("y") and name[-2:] not in ("ay", "ey", "oy", "uy"):
-        return name[:-1] + "ies"
-    return name + "s"
 
 
 def _validate_cta(cta: CTASpec, context: str, result: SiteSpecValidationResult) -> None:

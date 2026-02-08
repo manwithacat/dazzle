@@ -17,6 +17,7 @@ from .ir.fields import FieldModifier, FieldTypeKind
 from .ir.sitespec import SiteSpec
 from .ir.stories import StorySpec
 from .ir.test_design import TestDesignSpec
+from .strings import to_api_plural
 
 # FieldTypeKind → TypeScript type string
 FIELD_TYPE_MAP: dict[str, str] = {
@@ -177,7 +178,7 @@ def _build_route_map(appspec: AppSpec, sitespec: SiteSpec | None) -> list[dict[s
         entity_surfaces.setdefault(entity_name, []).append(surface)
 
     for entity_name, surfaces in entity_surfaces.items():
-        slug = _pluralize(entity_name.lower())
+        slug = to_api_plural(entity_name)
         # Find workspace that contains this entity
         workspace_slug = _find_workspace_for_entity(appspec, entity_name)
         base = f"/{workspace_slug}/{slug}" if workspace_slug else f"/{slug}"
@@ -270,15 +271,6 @@ def _extract_surface_access(surface: Any) -> dict[str, Any]:
             "allow_personas": surface.access.allow_personas,
         }
     return {"require_auth": False, "allow_personas": []}
-
-
-def _pluralize(name: str) -> str:
-    """Naive pluralization for URL slugs."""
-    if name.endswith("s"):
-        return name + "es"
-    if name.endswith("y") and name[-2:] not in ("ay", "ey", "oy", "uy"):
-        return name[:-1] + "ies"
-    return name + "s"
 
 
 def _build_component_inventory(
@@ -394,7 +386,7 @@ def _build_api_contract(
     """Infer CRUD API endpoints from entities."""
     result = []
     for entity in _filter_entities(appspec, entities_filter):
-        slug = _pluralize(entity.name.lower())
+        slug = to_api_plural(entity.name)
         base = f"/api/{slug}"
         endpoints = [
             {

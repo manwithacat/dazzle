@@ -208,6 +208,8 @@ class FieldSpec(BaseModel):
     validators: list[ValidatorSpec] = Field(default_factory=list, description="Validation rules")
     indexed: bool = Field(default=False, description="Create database index?")
     unique: bool = Field(default=False, description="Values must be unique?")
+    auto_add: bool = Field(default=False, description="Auto-set on create (e.g. created_at)")
+    auto_update: bool = Field(default=False, description="Auto-set on update (e.g. updated_at)")
 
     model_config = ConfigDict(frozen=True)
 

@@ -173,6 +173,8 @@ def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
         validators=_extract_validators(dazzle_field),
         indexed=dazzle_field.is_primary_key,
         unique=dazzle_field.is_unique or dazzle_field.is_primary_key,
+        auto_add=ir.FieldModifier.AUTO_ADD in dazzle_field.modifiers,
+        auto_update=ir.FieldModifier.AUTO_UPDATE in dazzle_field.modifiers,
     )
 
 

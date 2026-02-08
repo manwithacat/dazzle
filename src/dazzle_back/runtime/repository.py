@@ -9,6 +9,7 @@ Supports advanced filtering, sorting, pagination, and relation loading.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import time
 from collections.abc import Iterator
@@ -29,6 +30,58 @@ from dazzle_back.specs.entity import (
     FieldType,
     ScalarType,
 )
+
+# =============================================================================
+# Constraint Violation Error
+# =============================================================================
+
+
+class ConstraintViolationError(Exception):
+    """Raised when a database constraint (unique, FK) is violated."""
+
+    def __init__(
+        self,
+        message: str,
+        field: str | None = None,
+        constraint_type: str = "integrity",
+    ):
+        self.field = field
+        self.constraint_type = constraint_type  # "unique" | "foreign_key"
+        super().__init__(message)
+
+
+def _parse_constraint_error(error_str: str, table_name: str) -> tuple[str, str | None]:
+    """Parse a constraint error message to extract type and field.
+
+    Returns:
+        (constraint_type, field_name_or_none)
+    """
+    err = str(error_str)
+
+    # SQLite: "UNIQUE constraint failed: Task.slug"
+    if "UNIQUE constraint failed:" in err:
+        parts = err.split("UNIQUE constraint failed:")[-1].strip()
+        # "Task.slug" → "slug", or just "slug"
+        field_name = parts.split(".")[-1].strip() if parts else None
+        return "unique", field_name or None
+
+    # SQLite: "FOREIGN KEY constraint failed"
+    if "FOREIGN KEY constraint failed" in err:
+        return "foreign_key", None
+
+    # PostgreSQL: "duplicate key value violates unique constraint"
+    if "duplicate key" in err and "unique constraint" in err:
+        # Try to extract column from detail: Key (slug)=(value)
+        detail_match = re.search(r"Key \((\w+)\)", err)
+        pg_field: str | None = detail_match.group(1) if detail_match else None
+        return "unique", pg_field
+
+    # PostgreSQL: "violates foreign key constraint"
+    if "foreign key constraint" in err:
+        return "foreign_key", None
+
+    return "integrity", None
+
 
 # Alias to prevent mypy resolving `list` as SQLiteRepository.list inside the class
 _list = list
@@ -388,9 +441,25 @@ class SQLiteRepository(Generic[T]):
         sql = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
 
         start = time.perf_counter()
-        with self.db.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, values)
+        try:
+            with self.db.connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(sql, values)
+        except (sqlite3.IntegrityError, Exception) as exc:
+            if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
+                ctype, field = _parse_constraint_error(str(exc), self.table_name)
+                if ctype == "unique":
+                    msg = (
+                        f"A {self.table_name} with this {field} already exists"
+                        if field
+                        else f"Duplicate value violates unique constraint on {self.table_name}"
+                    )
+                elif ctype == "foreign_key":
+                    msg = f"Referenced record does not exist for {self.table_name}"
+                else:
+                    msg = f"Integrity constraint violated on {self.table_name}: {exc}"
+                raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+            raise
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("insert", latency_ms, rows=1)
 
@@ -474,10 +543,26 @@ class SQLiteRepository(Generic[T]):
         sql = f'UPDATE {table} SET {set_clause} WHERE "id" = {ph}'
 
         start = time.perf_counter()
-        with self.db.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, values)
-            rowcount = cursor.rowcount
+        try:
+            with self.db.connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(sql, values)
+                rowcount = cursor.rowcount
+        except (sqlite3.IntegrityError, Exception) as exc:
+            if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
+                ctype, field = _parse_constraint_error(str(exc), self.table_name)
+                if ctype == "unique":
+                    msg = (
+                        f"A {self.table_name} with this {field} already exists"
+                        if field
+                        else f"Duplicate value violates unique constraint on {self.table_name}"
+                    )
+                elif ctype == "foreign_key":
+                    msg = f"Referenced record does not exist for {self.table_name}"
+                else:
+                    msg = f"Integrity constraint violated on {self.table_name}: {exc}"
+                raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
+            raise
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("update", latency_ms, rows=rowcount)
 
