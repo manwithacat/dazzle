@@ -188,7 +188,8 @@ class EventFramework:
             self._inbox = EventInbox(backend_type="postgres", placeholder="%s")
 
             database_url = self._config.database_url
-            if database_url and database_url.startswith("postgres://"):
+            assert database_url is not None
+            if database_url.startswith("postgres://"):
                 database_url = database_url.replace("postgres://", "postgresql://", 1)
 
             # Connect to database
@@ -364,7 +365,8 @@ class EventFramework:
             from psycopg.rows import dict_row
 
             database_url = self._config.database_url
-            if database_url and database_url.startswith("postgres://"):
+            assert database_url is not None
+            if database_url.startswith("postgres://"):
                 database_url = database_url.replace("postgres://", "postgresql://", 1)
             return await psycopg.AsyncConnection.connect(database_url, row_factory=dict_row)
         return await aiosqlite.connect(self._config.db_path)

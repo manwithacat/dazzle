@@ -184,7 +184,9 @@ class PostgresBus(EventBus):
 
         self._config = config
         self._prefix = config.table_prefix
-        self._pool: psycopg_pool.AsyncConnectionPool | None = None
+        # typed Any because row_factory=dict_row is passed via kwargs at runtime
+        # but psycopg_pool generics don't propagate that to mypy
+        self._pool: Any = None
         self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
         self._lock = asyncio.Lock()
         self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
@@ -245,7 +247,7 @@ class PostgresBus(EventBus):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         await self.close()
 
-    def _get_pool(self) -> psycopg_pool.AsyncConnectionPool:
+    def _get_pool(self) -> Any:
         """Get database pool with error handling."""
         if self._pool is None:
             raise RuntimeError("PostgresBus not connected. Call connect() first.")

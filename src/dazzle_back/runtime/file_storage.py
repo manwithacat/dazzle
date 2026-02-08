@@ -474,6 +474,7 @@ class FileMetadataStore:
             import psycopg
             from psycopg.rows import dict_row
 
+            assert self._pg_url is not None
             return psycopg.connect(self._pg_url, row_factory=dict_row)
         else:
             conn = sqlite3.connect(str(self.db_path))

@@ -337,7 +337,7 @@ def create_database_check(
             if database_url:
                 import psycopg
 
-                conn = psycopg.connect(database_url)
+                conn: Any = psycopg.connect(database_url)
             else:
                 import sqlite3
 
