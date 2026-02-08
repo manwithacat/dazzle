@@ -57,7 +57,7 @@ def _generate_field_value(field: ir.FieldSpec, index: int) -> Any:
         return _DESCRIPTIONS[index % len(_DESCRIPTIONS)]
     elif kind == FieldTypeKind.INT:
         return random.randint(1, 100)  # noqa: S311
-    elif kind == FieldTypeKind.DECIMAL or kind == FieldTypeKind.MONEY:
+    elif kind == FieldTypeKind.DECIMAL:
         return round(random.uniform(10.0, 1000.0), 2)  # noqa: S311
     elif kind == FieldTypeKind.BOOL:
         return index % 3 != 0
@@ -97,6 +97,10 @@ def generate_mock_records(entity: ir.EntitySpec, count: int = 5) -> list[dict[st
         for field in entity.fields:
             if field.is_primary_key:
                 record[field.name] = str(uuid.uuid4())
+            elif field.type and field.type.kind == FieldTypeKind.MONEY:
+                # Money fields expand to _minor (int) + _currency (str)
+                record[f"{field.name}_minor"] = random.randint(1000, 100000)  # noqa: S311
+                record[f"{field.name}_currency"] = field.type.currency_code or "GBP"
             else:
                 record[field.name] = _generate_field_value(field, i)
 

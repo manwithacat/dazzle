@@ -21,14 +21,24 @@ if TYPE_CHECKING:
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
 
 
-def _currency_filter(value: Any, currency: str = "GBP") -> str:
-    """Format a number as currency."""
+def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> str:
+    """Format a number as currency.
+
+    Args:
+        value: The numeric value.
+        currency: ISO 4217 currency code (default GBP).
+        minor: If True, value is in minor units (pence/cents) and will be
+            divided by 100 before display.  Defaults to True to match the
+            ``_minor`` column convention.
+    """
     if value is None:
         return ""
     try:
         amount = float(value)
     except (TypeError, ValueError):
         return str(value)
+    if minor:
+        amount = amount / 100.0
     symbols = {"GBP": "\u00a3", "USD": "$", "EUR": "\u20ac"}
     symbol = symbols.get(currency, currency + " ")
     return f"{symbol}{amount:,.2f}"

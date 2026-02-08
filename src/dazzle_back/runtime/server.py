@@ -929,13 +929,22 @@ class DNRBackendApp:
                                 if f.name.endswith("_id"):
                                     continue
                                 col_type = _field_kind_to_col_type(f, _espec)
+                                # Money fields: use expanded _minor column key
+                                col_key = f.name
+                                if kind_val == "money":
+                                    col_key = f"{f.name}_minor"
                                 col: dict[str, Any] = {
-                                    "key": f.name,
+                                    "key": col_key,
                                     "label": getattr(f, "label", None)
                                     or f.name.replace("_", " ").title(),
                                     "type": col_type,
                                     "sortable": True,
                                 }
+                                if kind_val == "money":
+                                    ft_obj = getattr(f, "type", None)
+                                    col["currency_code"] = (
+                                        getattr(ft_obj, "currency_code", None) or "GBP"
+                                    )
                                 # Filterable: enum / state-machine badge fields
                                 if col_type == "badge":
                                     if kind_val == "enum":

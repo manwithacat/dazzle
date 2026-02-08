@@ -262,7 +262,9 @@ class TestCompileSurfaceToContext:
         assert field_map["completed"] == "checkbox"
         assert field_map["due_date"] == "date"
         assert field_map["priority"] == "select"
-        assert field_map["amount"] == "number"
+        # Money fields expand into _minor (number) + _currency (text)
+        assert field_map["amount_minor"] == "number"
+        assert field_map["amount_currency"] == "text"
 
     def test_enum_field_has_options(self) -> None:
         surface = SurfaceSpec(
@@ -434,11 +436,13 @@ class TestJinjaFilters:
 
     def test_currency_filter_gbp(self, env) -> None:
         tmpl = env.from_string("{{ val|currency }}")
-        assert tmpl.render(val=42.5) == "£42.50"
+        # Values are now in minor units (pence), so 4250 pence = £42.50
+        assert tmpl.render(val=4250) == "£42.50"
 
     def test_currency_filter_usd(self, env) -> None:
         tmpl = env.from_string("{{ val|currency('USD') }}")
-        assert tmpl.render(val=100) == "$100.00"
+        # 10000 cents = $100.00
+        assert tmpl.render(val=10000) == "$100.00"
 
     def test_currency_filter_none(self, env) -> None:
         tmpl = env.from_string("{{ val|currency }}")
@@ -558,7 +562,12 @@ class TestMockData:
         records = generate_mock_records(_task_entity(), count=1)
         record = records[0]
         for field in _task_entity().fields:
-            assert field.name in record, f"Missing field: {field.name}"
+            if field.type and field.type.kind == FieldTypeKind.MONEY:
+                # Money fields expand to _minor + _currency
+                assert f"{field.name}_minor" in record, f"Missing field: {field.name}_minor"
+                assert f"{field.name}_currency" in record, f"Missing field: {field.name}_currency"
+            else:
+                assert field.name in record, f"Missing field: {field.name}"
 
     def test_uuid_pk_is_string(self) -> None:
         records = generate_mock_records(_task_entity(), count=1)
@@ -581,9 +590,10 @@ class TestMockData:
         # Should parse as a date
         date.fromisoformat(due)
 
-    def test_money_field_is_numeric(self) -> None:
+    def test_money_field_expanded(self) -> None:
         records = generate_mock_records(_task_entity(), count=1)
-        assert isinstance(records[0]["amount"], float)
+        assert isinstance(records[0]["amount_minor"], int)
+        assert records[0]["amount_currency"] == "GBP"
 
 
 # ===================================================================

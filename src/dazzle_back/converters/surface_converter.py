@@ -89,6 +89,23 @@ def _generate_input_schema(surface: ir.SurfaceSpec, entity: ir.EntitySpec | None
                 if entity:
                     entity_field = entity.get_field(element.field_name)
                     if entity_field:
+                        # Money fields expand into _minor (int) + _currency (str) pair
+                        if entity_field.type.kind == ir.FieldTypeKind.MONEY:
+                            fields.append(
+                                SchemaFieldSpec(
+                                    name=f"{element.field_name}_minor",
+                                    type="int",
+                                    required=entity_field.is_required,
+                                )
+                            )
+                            fields.append(
+                                SchemaFieldSpec(
+                                    name=f"{element.field_name}_currency",
+                                    type="str",
+                                    required=False,
+                                )
+                            )
+                            continue
                         field_type = _map_field_type_name(entity_field.type)
                         required = entity_field.is_required
 
@@ -153,6 +170,7 @@ def _map_field_type_name(field_type: ir.FieldType) -> str:
         ir.FieldTypeKind.EMAIL: "email",
         ir.FieldTypeKind.ENUM: "str",  # Enums as strings
         ir.FieldTypeKind.REF: "uuid",  # References as UUIDs
+        ir.FieldTypeKind.MONEY: "int",  # Money stored as minor units (pence/cents)
     }
     return type_map.get(field_type.kind, "str")
 

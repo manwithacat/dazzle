@@ -151,6 +151,48 @@ def _serialize_date_expr(default: object) -> object:
         return default
 
 
+def _expand_money_field(dazzle_field: ir.FieldSpec) -> list[FieldSpec]:
+    """Expand a money field into _minor (INT) and _currency (STR) column pair.
+
+    Args:
+        dazzle_field: Dazzle IR field with kind=MONEY.
+
+    Returns:
+        Two FieldSpecs: {name}_minor as INT, {name}_currency as STR(3).
+    """
+    currency_code = dazzle_field.type.currency_code or "GBP"
+    base_name = dazzle_field.name
+    is_required = dazzle_field.is_required
+
+    minor_field = FieldSpec(
+        name=f"{base_name}_minor",
+        label=f"{base_name.replace('_', ' ').title()} (Minor Units)",
+        type=FieldType(kind="scalar", scalar_type=ScalarType.INT),
+        required=is_required,
+        default=None,
+        validators=[],
+        indexed=dazzle_field.is_primary_key,
+        unique=dazzle_field.is_unique,
+        auto_add=ir.FieldModifier.AUTO_ADD in dazzle_field.modifiers,
+        auto_update=ir.FieldModifier.AUTO_UPDATE in dazzle_field.modifiers,
+    )
+
+    currency_field = FieldSpec(
+        name=f"{base_name}_currency",
+        label=f"{base_name.replace('_', ' ').title()} Currency",
+        type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=3),
+        required=False,
+        default=currency_code,
+        validators=[ValidatorSpec(kind=ValidatorKind.MAX_LENGTH, value=3)],
+        indexed=False,
+        unique=False,
+        auto_add=False,
+        auto_update=False,
+    )
+
+    return [minor_field, currency_field]
+
+
 def convert_field(dazzle_field: ir.FieldSpec) -> FieldSpec:
     """
     Convert a Dazzle IR FieldSpec to DNR BackendSpec FieldSpec.
@@ -504,8 +546,13 @@ def convert_entity(dazzle_entity: ir.EntitySpec) -> EntitySpec:
     Returns:
         DNR BackendSpec entity specification
     """
-    # Convert fields
-    fields = [convert_field(f) for f in dazzle_entity.fields]
+    # Convert fields, expanding money fields into _minor/_currency pairs
+    fields: list[FieldSpec] = []
+    for f in dazzle_entity.fields:
+        if f.type.kind == ir.FieldTypeKind.MONEY:
+            fields.extend(_expand_money_field(f))
+        else:
+            fields.append(convert_field(f))
 
     # Note: Relations are inferred from ref fields
     # In a real implementation, we'd need more sophisticated relation detection

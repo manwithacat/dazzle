@@ -128,9 +128,13 @@ def _build_columns(
                     if filterable
                     else ("text", [])
                 )
+                # Money fields: use expanded _minor column key
+                col_key = element.field_name
+                if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
+                    col_key = f"{element.field_name}_minor"
                 columns.append(
                     ColumnContext(
-                        key=element.field_name,
+                        key=col_key,
                         label=element.label or element.field_name.replace("_", " ").title(),
                         type=_field_type_to_column_type(field_spec),
                         sortable=has_sort,
@@ -146,9 +150,13 @@ def _build_columns(
                 filter_type, filter_options = (
                     _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
                 )
+                # Money fields: use expanded _minor column key
+                col_key = field.name
+                if field.type and field.type.kind == FieldTypeKind.MONEY:
+                    col_key = f"{field.name}_minor"
                 columns.append(
                     ColumnContext(
-                        key=field.name,
+                        key=col_key,
                         label=field.name.replace("_", " ").title(),
                         type=_field_type_to_column_type(field),
                         sortable=has_sort,
@@ -183,6 +191,32 @@ def _build_form_fields(
                 fields_to_process.append((field.name, None, field, {}))
 
     for field_name, label, field_spec, element_options in fields_to_process:
+        # Money fields expand into _minor (number) + _currency (text) pair
+        if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
+            currency_code = field_spec.type.currency_code or "GBP"
+            display_label = label or field_name.replace("_", " ").title()
+            fields.append(
+                FieldContext(
+                    name=f"{field_name}_minor",
+                    label=f"{display_label} (Minor Units)",
+                    type="number",
+                    required=bool(field_spec.is_required),
+                    placeholder="Amount in minor units (e.g. pence)",
+                    options=[],
+                )
+            )
+            fields.append(
+                FieldContext(
+                    name=f"{field_name}_currency",
+                    label=f"{display_label} Currency",
+                    type="text",
+                    required=False,
+                    placeholder=currency_code,
+                    options=[],
+                )
+            )
+            continue
+
         display_label = label or field_name.replace("_", " ").title()
         form_type = _field_type_to_form_type(field_spec)
 
