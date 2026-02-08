@@ -241,18 +241,6 @@ def run_unified_server(
         except ImportError as e:
             print(f"[Dazzle] Warning: Page routes not available: {e}")
 
-    # ---- Mount /assets/ for favicon compat (maps to static/assets/) ----
-    try:
-        from fastapi.staticfiles import StaticFiles
-
-        import dazzle_ui
-
-        assets_dir = Path(dazzle_ui.__file__).parent / "runtime" / "static" / "assets"
-        if assets_dir.is_dir():
-            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
-    except (ImportError, Exception):
-        pass
-
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"
     docs_url = f"{base_url}/docs"

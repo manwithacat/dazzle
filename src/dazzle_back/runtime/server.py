@@ -1632,17 +1632,20 @@ class DNRBackendApp:
                 "files_database_path": files_db_path,
             }
 
-        # Mount static files (dz.js, dz.css, etc.) from dazzle_ui package
+        # Mount static files from project dir (images etc.) + framework dir (dz.js, dz.css)
         try:
             from pathlib import Path
 
-            from fastapi.staticfiles import StaticFiles
-
             import dazzle_ui
+            from dazzle_back.runtime.static_files import CombinedStaticFiles
 
-            static_dir = Path(dazzle_ui.__file__).parent / "runtime" / "static"
-            if static_dir.is_dir():
-                self._app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+            framework_static = Path(dazzle_ui.__file__).parent / "runtime" / "static"
+            if framework_static.is_dir():
+                dirs: list[Path] = []
+                if self._project_root:
+                    dirs.append(self._project_root / "static")
+                dirs.append(framework_static)
+                self._app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
         except (ImportError, Exception):
             pass  # dazzle_ui not installed — static files served externally
 

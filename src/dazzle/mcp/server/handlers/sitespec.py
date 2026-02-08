@@ -187,12 +187,25 @@ def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
             for f in content_files:
                 created_files.append(str(f))
 
+        # Create static/images/ directory convention for project assets
+        static_images_dir = project_root / "static" / "images"
+        if not static_images_dir.exists():
+            static_images_dir.mkdir(parents=True, exist_ok=True)
+            gitkeep = static_images_dir / ".gitkeep"
+            gitkeep.touch()
+            created_files.append(str(gitkeep))
+
         return json.dumps(
             {
                 "success": True,
                 "product_name": product_name,
                 "created_files": created_files,
                 "message": f"Created {len(created_files)} files for site shell",
+                "static_assets": {
+                    "convention": "Place project images in static/images/",
+                    "usage": "Reference as /static/images/filename.ext in sitespec media.src",
+                    "path": str(static_images_dir),
+                },
             },
             indent=2,
         )

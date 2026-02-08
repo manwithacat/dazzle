@@ -3,7 +3,7 @@
 
 [meta]
 file = "frontend"
-concept_count = 9
+concept_count = 10
 
 [concepts.htmx]
 category = "Frontend"
@@ -689,4 +689,60 @@ cognition_tips = [
     "At runtime, markdown sources are loaded and rendered to HTML",
     "SectionSpec.source field is ContentSourceSpec(path, format)",
     "IR: SectionKind.MARKDOWN = 'markdown' in dazzle.core.ir.sitespec"
+]
+
+[concepts.static_assets]
+category = "Frontend"
+definition = """Static asset serving convention for Dazzle projects. Project-level images and assets \
+are placed in {project_root}/static/ and served at /static/*. Framework assets (dz.js, dz.css, \
+favicon) are served automatically from the framework directory. Project files take priority over \
+framework files when paths overlap (shadow/override)."""
+syntax = '''
+# Project directory layout:
+my-project/
+├── static/
+│   └── images/
+│       ├── hero-office.webp      # → /static/images/hero-office.webp
+│       ├── logo.png              # → /static/images/logo.png
+│       └── team-photo.jpg        # → /static/images/team-photo.jpg
+├── dsl/
+├── site/
+└── dazzle.toml
+
+# Framework assets (served automatically):
+/static/js/dz.js                   # Dazzle micro-runtime
+/static/css/dazzle.css             # Dazzle base styles
+/static/assets/dazzle-favicon.svg  # Favicon
+'''
+example = '''
+# In sitespec.yaml — reference project images:
+pages:
+  - route: "/"
+    type: landing
+    sections:
+      - type: hero
+        headline: "Welcome"
+        media:
+          kind: image
+          src: "/static/images/hero-office.webp"
+          alt: "Office"
+      - type: split_content
+        headline: "Our team"
+        media:
+          kind: image
+          src: "/static/images/team-photo.jpg"
+          alt: "Team photo"
+        alignment: right
+
+# The scaffold command creates static/images/ automatically:
+# sitespec(operation="scaffold")
+'''
+related = ["sitespec", "section_types"]
+cognition_tips = [
+    "Project images go in {project_root}/static/images/",
+    "Framework assets (js, css, favicon) are served automatically — don't copy them",
+    "SiteSpec media.src values should use /static/images/filename.ext",
+    "Project files shadow framework files — you can override dz.css if needed",
+    "The scaffold operation creates static/images/ with a .gitkeep",
+    "CombinedStaticFiles checks project dir first, then framework dir"
 ]
