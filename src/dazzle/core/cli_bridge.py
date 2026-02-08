@@ -615,6 +615,51 @@ def run_tests_json(
         raise RuntimeError(f"Tests failed: {e}") from e
 
 
+def run_viewport_tests_json(
+    path: str | None = None,
+    headless: bool = True,
+    viewports: list[str] | None = None,
+    persona_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Run viewport assertions against a running app.
+
+    Args:
+        path: Project path
+        headless: Run in headless mode
+        viewports: Viewport names to test (default: all)
+        persona_id: Optional persona for authenticated testing
+
+    Returns:
+        Dict with viewport assertion results
+    """
+    import json
+
+    from dazzle.core.loader import load_and_link
+    from dazzle.testing.viewport import derive_patterns_from_appspec
+    from dazzle.testing.viewport_runner import ViewportRunner, ViewportRunOptions
+
+    project_path = Path(path) if path else Path.cwd()
+
+    try:
+        appspec = load_and_link(project_path)
+    except Exception as e:
+        return {"error": f"Failed to load project: {e}"}
+
+    patterns = derive_patterns_from_appspec(appspec)
+    if not patterns:
+        return {"status": "skipped", "message": "No viewport patterns derived"}
+
+    runner = ViewportRunner(project_path)
+    options = ViewportRunOptions(
+        headless=headless,
+        viewports=viewports,
+        persona_id=persona_id,
+    )
+    result = runner.run(patterns, options)
+    return dict(json.loads(result.to_json()))
+
+
 def list_api_packs_json() -> dict[str, Any]:
     """
     List available API packs for integration selection.

@@ -299,6 +299,27 @@ jobs:
         python -m dazzle test run --no-auto-server --priority ${{ matrix.priority }} --verbose
       timeout-minutes: 5
 
+    - name: Run viewport assertions
+      run: |
+        cd examples/${{ matrix.example }}
+        python -c "
+        from pathlib import Path
+        from dazzle.core.loader import load_and_link
+        from dazzle.testing.viewport import derive_patterns_from_appspec
+        from dazzle.testing.viewport_runner import ViewportRunner, ViewportRunOptions
+        import sys
+        appspec = load_and_link(Path('.'))
+        patterns = derive_patterns_from_appspec(appspec)
+        if not patterns:
+            sys.exit(0)
+        result = ViewportRunner(Path('.')).run(patterns, ViewportRunOptions(base_url='http://localhost:3000'))
+        print(result.to_markdown())
+        if result.total_failed > 0:
+            print(f'::warning::Viewport: {result.total_failed} failures')
+        "
+      timeout-minutes: 2
+      continue-on-error: true
+
     - name: Upload test artifacts on failure
       if: failure()
       uses: actions/upload-artifact@v6

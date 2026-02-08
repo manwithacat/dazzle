@@ -37,6 +37,12 @@ class ViewportRunOptions:
     viewports: list[str] | None = None  # Keys from VIEWPORT_MATRIX; None → all
     base_url: str = "http://localhost:3000"
     timeout: int = 10_000
+    include_suggestions: bool = True
+    persona_id: str | None = None
+    api_base_url: str = "http://localhost:8000"
+    capture_screenshots: bool = False
+    update_baselines: bool = False
+    screenshot_threshold: float = 0.01
 
 
 @dataclass
@@ -51,44 +57,59 @@ class ViewportRunResult:
     total_passed: int = 0
     total_failed: int = 0
     error: str | None = None
+    visual_results: list[Any] = field(default_factory=list)  # list[ScreenshotResult]
 
     def to_json(self) -> str:
         """Serialise the run result to JSON."""
-        return json.dumps(
-            {
-                "project_name": self.project_name,
-                "started_at": self.started_at.isoformat(),
-                "completed_at": self.completed_at.isoformat() if self.completed_at else None,
-                "total_assertions": self.total_assertions,
-                "total_passed": self.total_passed,
-                "total_failed": self.total_failed,
-                "error": self.error,
-                "reports": [
-                    {
-                        "surface_or_page": r.surface_or_page,
-                        "viewport": r.viewport,
-                        "viewport_size": r.viewport_size,
-                        "passed": r.passed,
-                        "failed": r.failed,
-                        "duration_ms": r.duration_ms,
-                        "results": [
-                            {
-                                "selector": res.assertion.selector,
-                                "property": res.assertion.property,
-                                "expected": res.assertion.expected,
-                                "actual": res.actual,
-                                "passed": res.passed,
-                                "description": res.assertion.description,
-                                "error": res.error,
-                            }
-                            for res in r.results
-                        ],
-                    }
-                    for r in self.reports
-                ],
-            },
-            indent=2,
-        )
+        data: dict[str, Any] = {
+            "project_name": self.project_name,
+            "started_at": self.started_at.isoformat(),
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "total_assertions": self.total_assertions,
+            "total_passed": self.total_passed,
+            "total_failed": self.total_failed,
+            "error": self.error,
+            "reports": [
+                {
+                    "surface_or_page": r.surface_or_page,
+                    "viewport": r.viewport,
+                    "viewport_size": r.viewport_size,
+                    "passed": r.passed,
+                    "failed": r.failed,
+                    "duration_ms": r.duration_ms,
+                    "persona_id": r.persona_id,
+                    "results": [
+                        {
+                            "selector": res.assertion.selector,
+                            "property": res.assertion.property,
+                            "expected": res.assertion.expected,
+                            "actual": res.actual,
+                            "passed": res.passed,
+                            "description": res.assertion.description,
+                            "error": res.error,
+                            "suggestion": res.suggestion,
+                        }
+                        for res in r.results
+                    ],
+                }
+                for r in self.reports
+            ],
+        }
+        if self.visual_results:
+            data["visual_results"] = [
+                {
+                    "page_path": vr.page_path,
+                    "viewport": vr.viewport,
+                    "screenshot_path": str(vr.screenshot_path) if vr.screenshot_path else None,
+                    "baseline_path": str(vr.baseline_path) if vr.baseline_path else None,
+                    "diff_path": str(vr.diff_path) if vr.diff_path else None,
+                    "is_new_baseline": vr.is_new_baseline,
+                    "pixel_diff_pct": vr.pixel_diff_pct,
+                    "passed": vr.passed,
+                }
+                for vr in self.visual_results
+            ]
+        return json.dumps(data, indent=2)
 
     def to_markdown(self) -> str:
         """Render a human-friendly markdown summary."""
@@ -114,6 +135,8 @@ class ViewportRunResult:
                     lines.append(f"         expected={res.assertion.expected}  actual={res.actual}")
                     if res.error:
                         lines.append(f"         error: {res.error}")
+                    if res.suggestion:
+                        lines.append(f"         suggestion: add class '{res.suggestion}'")
             lines.append("")
 
         return "\n".join(lines)
@@ -214,6 +237,19 @@ class ViewportRunner:
             context = browser.new_context(
                 viewport={"width": vp_size["width"], "height": vp_size["height"]}
             )
+
+            # Inject persona cookies if configured
+            if options.persona_id:
+                from dazzle.testing.viewport_auth import load_persona_cookies
+
+                cookies = load_persona_cookies(
+                    self.project_path,
+                    options.persona_id,
+                    options.base_url,
+                )
+                if cookies:
+                    context.add_cookies(cookies)
+
             page = context.new_page()
             page.set_default_timeout(options.timeout)
 
@@ -261,6 +297,36 @@ class ViewportRunner:
                             )
                         )
 
+                    # Attach suggestions to failed assertions
+                    if options.include_suggestions:
+                        from dazzle.testing.viewport_suggestions import suggest_fix
+
+                        for res in assertion_results:
+                            if not res.passed:
+                                suggestion = suggest_fix(
+                                    selector=res.assertion.selector,
+                                    property=res.assertion.property,
+                                    expected=res.assertion.expected,
+                                    actual=res.actual,
+                                    viewport=vp_name,
+                                )
+                                if suggestion is not None:
+                                    res.suggestion = suggestion.suggested_class
+
+                    # Capture screenshots if configured
+                    if options.capture_screenshots:
+                        from dazzle.testing.viewport_screenshot import run_visual_regression
+
+                        vr = run_visual_regression(
+                            page,
+                            page_path,
+                            vp_name,
+                            self.project_path,
+                            update_baselines=options.update_baselines,
+                            threshold=options.screenshot_threshold,
+                        )
+                        result.visual_results.append(vr)
+
                     passed_count = sum(1 for r in assertion_results if r.passed)
                     failed_count = len(assertion_results) - passed_count
 
@@ -271,6 +337,7 @@ class ViewportRunner:
                         results=assertion_results,
                         passed=passed_count,
                         failed=failed_count,
+                        persona_id=options.persona_id,
                         duration_ms=duration_ms,
                     )
                     result.reports.append(report)

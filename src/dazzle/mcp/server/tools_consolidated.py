@@ -631,7 +631,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="e2e_test",
-            description="E2E test operations: check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport",
+            description="E2E test operations: check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport, list_viewport_specs, save_viewport_specs",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -645,6 +645,8 @@ def get_consolidated_tools() -> list[Tool]:
                             "list_flows",
                             "tier_guidance",
                             "run_viewport",
+                            "list_viewport_specs",
+                            "save_viewport_specs",
                         ],
                         "description": "Operation to perform",
                     },
@@ -681,6 +683,31 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Viewport names to test (for run_viewport, e.g. ['mobile', 'desktop'])",
+                    },
+                    "viewport_specs": {
+                        "type": "array",
+                        "description": "Custom viewport specs to save (for save_viewport_specs)",
+                    },
+                    "to_dsl": {
+                        "type": "boolean",
+                        "description": "Save to dsl/ directory (for save_viewport_specs, default: true)",
+                    },
+                    "persona_id": {
+                        "type": "string",
+                        "description": "Persona ID for authenticated viewport testing (for run_viewport)",
+                    },
+                    "persona_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Multiple persona IDs to test (for run_viewport, runs matrix per persona)",
+                    },
+                    "capture_screenshots": {
+                        "type": "boolean",
+                        "description": "Capture screenshots for visual regression (for run_viewport)",
+                    },
+                    "update_baselines": {
+                        "type": "boolean",
+                        "description": "Update baseline screenshots (for run_viewport)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

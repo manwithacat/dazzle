@@ -65,6 +65,7 @@ class ViewportAssertionResult:
     actual: str | None
     passed: bool
     error: str | None = None
+    suggestion: str | None = None
 
 
 @dataclass
@@ -78,6 +79,7 @@ class ViewportReport:
     passed: int
     failed: int
     duration_ms: float
+    persona_id: str | None = None
 
 
 # ---------------------------------------------------------------------------

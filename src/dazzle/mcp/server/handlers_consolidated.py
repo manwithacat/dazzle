@@ -466,6 +466,18 @@ def handle_e2e_test(arguments: dict[str, Any]) -> str:
             project_path=str(project_path),
             headless=arguments.get("headless", True),
             viewports=arguments.get("viewports"),
+            persona_id=arguments.get("persona_id"),
+            capture_screenshots=arguments.get("capture_screenshots", False),
+            update_baselines=arguments.get("update_baselines", False),
+        )
+    elif operation in ("list_viewport_specs", "save_viewport_specs"):
+        from .handlers.viewport_testing import manage_viewport_specs_handler
+
+        return manage_viewport_specs_handler(
+            project_path=str(project_path),
+            operation=operation,
+            specs=arguments.get("viewport_specs"),
+            to_dsl=arguments.get("to_dsl", True),
         )
     else:
         return json.dumps({"error": f"Unknown E2E test operation: {operation}"})
