@@ -1,7 +1,7 @@
 """
 Full-text search manager for DNR.
 
-Provides SQLite FTS5 integration for text search capabilities.
+Routes between SQLite FTS5 and PostgreSQL tsvector/GIN backends.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle_back.runtime.fts_postgres import PostgresFTSBackend
 from dazzle_back.runtime.query_builder import quote_identifier
 
 if TYPE_CHECKING:
@@ -35,11 +36,22 @@ class FTSManager:
     """
     Manages full-text search tables and queries.
 
-    Uses SQLite FTS5 for efficient text searching.
+    Routes between SQLite FTS5 and PostgreSQL tsvector/GIN backends
+    based on the presence of a database_url.
     """
 
+    database_url: str | None = None
     _configs: dict[str, FTSConfig] = field(default_factory=dict)
     _initialized: set[str] = field(default_factory=set)
+    _pg_backend: PostgresFTSBackend | None = field(default=None, init=False)
+
+    def __post_init__(self) -> None:
+        if self.database_url and self.database_url.startswith("postgres"):
+            self._pg_backend = PostgresFTSBackend()
+
+    @property
+    def _use_postgres(self) -> bool:
+        return self._pg_backend is not None
 
     def register_entity(
         self,
@@ -92,17 +104,17 @@ class FTSManager:
 
     def create_fts_table(
         self,
-        conn: sqlite3.Connection,
+        conn: Any,
         entity_name: str,
     ) -> None:
         """
-        Create FTS5 virtual table for an entity.
+        Create FTS index/table for an entity.
 
-        Uses standalone FTS table (not content= external) for simplicity
-        and compatibility with manual rebuilds.
+        Uses PostgreSQL GIN indexes or SQLite FTS5 virtual tables
+        depending on the configured backend.
 
         Args:
-            conn: SQLite connection
+            conn: Database connection (sqlite3 or psycopg2)
             entity_name: Entity name
         """
         config = self._configs.get(entity_name)
@@ -112,29 +124,33 @@ class FTSManager:
         if entity_name in self._initialized:
             return
 
-        # Create standalone FTS5 virtual table (stores its own content)
-        # Note: FTS5 column names don't need quoting as they're in the USING clause
-        fields_str = ", ".join(quote_identifier(f) for f in config.searchable_fields)
-        fts_table = quote_identifier(config.fts_table_name)
-        sql = f"""
-            CREATE VIRTUAL TABLE IF NOT EXISTS {fts_table}
-            USING fts5(
-                "id",
-                {fields_str},
-                tokenize='{config.tokenizer}'
-            )
-        """
-        conn.execute(sql)
+        if self._use_postgres:
+            assert self._pg_backend is not None
+            self._pg_backend.create_fts_index(conn, entity_name, config.searchable_fields)
+        else:
+            # SQLite FTS5 virtual table
+            fields_str = ", ".join(quote_identifier(f) for f in config.searchable_fields)
+            fts_table = quote_identifier(config.fts_table_name)
+            sql = f"""
+                CREATE VIRTUAL TABLE IF NOT EXISTS {fts_table}
+                USING fts5(
+                    "id",
+                    {fields_str},
+                    tokenize='{config.tokenizer}'
+                )
+            """
+            conn.execute(sql)
 
-        # Create triggers to keep FTS in sync
-        self._create_sync_triggers(conn, config)
+            # Create triggers to keep FTS in sync
+            self._create_sync_triggers(conn, config)
 
-        conn.commit()
+            conn.commit()
+
         self._initialized.add(entity_name)
 
     def _create_sync_triggers(
         self,
-        conn: sqlite3.Connection,
+        conn: Any,
         config: FTSConfig,
     ) -> None:
         """Create triggers to sync FTS table with main table."""
@@ -182,14 +198,14 @@ class FTSManager:
 
     def rebuild_index(
         self,
-        conn: sqlite3.Connection,
+        conn: Any,
         entity_name: str,
     ) -> int:
         """
         Rebuild FTS index from main table.
 
         Args:
-            conn: SQLite connection
+            conn: Database connection (sqlite3 or psycopg2)
             entity_name: Entity name
 
         Returns:
@@ -199,6 +215,11 @@ class FTSManager:
         if not config:
             return 0
 
+        if self._use_postgres:
+            assert self._pg_backend is not None
+            return self._pg_backend.rebuild_index(conn, entity_name, config.searchable_fields)
+
+        # SQLite FTS5 rebuild
         fts_table = quote_identifier(config.fts_table_name)
         entity_quoted = quote_identifier(entity_name)
 
@@ -223,7 +244,7 @@ class FTSManager:
 
     def search(
         self,
-        conn: sqlite3.Connection,
+        conn: Any,
         entity_name: str,
         query: str,
         fields: list[str] | None = None,
@@ -234,7 +255,7 @@ class FTSManager:
         Search for entities matching a query.
 
         Args:
-            conn: SQLite connection
+            conn: Database connection (sqlite3 or psycopg2)
             entity_name: Entity name
             query: Search query
             fields: Optional specific fields to search
@@ -248,21 +269,29 @@ class FTSManager:
         if not config:
             return [], 0
 
-        # Escape query for FTS
+        if self._use_postgres:
+            assert self._pg_backend is not None
+            return self._pg_backend.search(
+                conn,
+                entity_name,
+                query,
+                config.searchable_fields,
+                fields=fields,
+                limit=limit,
+                offset=offset,
+            )
+
+        # SQLite FTS5 search
         escaped_query = self._escape_query(query)
 
         # Build field filter if specified
         if fields:
-            # Filter to only search specified fields
             valid_fields = [f for f in fields if f in config.searchable_fields]
             if valid_fields:
                 field_prefix = " OR ".join(f"{f}:{escaped_query}" for f in valid_fields)
                 escaped_query = field_prefix
-            else:
-                escaped_query = escaped_query
 
         fts_table = quote_identifier(config.fts_table_name)
-        # Note: FTS5 MATCH requires unquoted table name
         fts_name = config.fts_table_name
 
         # Count total matches
@@ -287,7 +316,7 @@ class FTSManager:
 
     def search_with_snippets(
         self,
-        conn: sqlite3.Connection,
+        conn: Any,
         entity_name: str,
         query: str,
         limit: int = 100,
@@ -296,7 +325,7 @@ class FTSManager:
         Search with highlighted snippets.
 
         Args:
-            conn: SQLite connection
+            conn: Database connection (sqlite3 or psycopg2)
             entity_name: Entity name
             query: Search query
             limit: Maximum results
@@ -308,16 +337,28 @@ class FTSManager:
         if not config:
             return []
 
+        if self._use_postgres:
+            assert self._pg_backend is not None
+            return self._pg_backend.search_with_snippets(
+                conn,
+                entity_name,
+                query,
+                config.searchable_fields,
+                limit=limit,
+            )
+
+        # SQLite FTS5 snippets
         escaped_query = self._escape_query(query)
 
         fts_table = quote_identifier(config.fts_table_name)
-        fts_name = config.fts_table_name  # Unquoted for MATCH and snippet()
+        fts_name = config.fts_table_name
 
-        # Build snippet columns - column indexes: 0=id, 1=first field, 2=second field, etc.
+        # Build snippet columns - column indexes: 0=id, 1=first field, etc.
         snippet_cols = []
         for i, field_name in enumerate(config.searchable_fields):
             snippet_cols.append(
-                f"snippet({fts_name}, {i + 1}, '<mark>', '</mark>', '...', 32) AS {quote_identifier(field_name + '_snippet')}"
+                f"snippet({fts_name}, {i + 1}, '<mark>', '</mark>', '...', 32) "
+                f"AS {quote_identifier(field_name + '_snippet')}"
             )
         snippet_str = ", ".join(snippet_cols)
 
@@ -367,6 +408,7 @@ class FTSManager:
 def create_fts_manager(
     entities: list[EntitySpec],
     searchable_entities: dict[str, list[str]] | None = None,
+    database_url: str | None = None,
 ) -> FTSManager:
     """
     Create and configure an FTS manager.
@@ -375,11 +417,12 @@ def create_fts_manager(
         entities: List of entity specs
         searchable_entities: Optional mapping of entity names to searchable fields
                            If None, auto-detects text fields
+        database_url: Optional database URL; if postgres://, uses PG backend
 
     Returns:
         Configured FTSManager
     """
-    manager = FTSManager()
+    manager = FTSManager(database_url=database_url)
 
     for entity in entities:
         fields = searchable_entities.get(entity.name) if searchable_entities else None
@@ -389,7 +432,7 @@ def create_fts_manager(
 
 
 def init_fts_tables(
-    conn: sqlite3.Connection,
+    conn: Any,
     manager: FTSManager,
     entities: list[EntitySpec],
 ) -> None:
@@ -397,7 +440,7 @@ def init_fts_tables(
     Initialize FTS tables for all registered entities.
 
     Args:
-        conn: SQLite connection
+        conn: Database connection (sqlite3 or psycopg2)
         manager: FTS manager
         entities: List of entity specs
     """

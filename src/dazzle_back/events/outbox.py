@@ -147,14 +147,9 @@ class EventOutbox:
         self._table = table_name
         self._use_postgres = use_postgres
 
-    def _is_postgres_conn(self, conn: OutboxConnection) -> bool:
-        """Check if connection is PostgreSQL (asyncpg)."""
-        # Check by module name to avoid import
-        return type(conn).__module__.startswith("asyncpg")
-
     async def create_table(self, conn: OutboxConnection) -> None:
         """Create the outbox table if it doesn't exist."""
-        if self._use_postgres or self._is_postgres_conn(conn):
+        if self._use_postgres:
             # PostgreSQL (asyncpg)
             await conn.execute(CREATE_OUTBOX_TABLE_POSTGRES)
             for index_sql in CREATE_OUTBOX_INDEXES_POSTGRES:
@@ -196,7 +191,7 @@ class EventOutbox:
             datetime.now(UTC).isoformat(),
         )
 
-        if self._use_postgres or self._is_postgres_conn(conn):
+        if self._use_postgres:
             await conn.execute(
                 f"""
                 INSERT INTO {self._table} (
@@ -247,7 +242,7 @@ class EventOutbox:
         Returns:
             List of pending OutboxEntry
         """
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         if is_postgres:
             return await self._fetch_pending_postgres(
@@ -377,7 +372,7 @@ class EventOutbox:
         entry_id: UUID,
     ) -> None:
         """Mark an entry as successfully published."""
-        if self._use_postgres or self._is_postgres_conn(conn):
+        if self._use_postgres:
             await conn.execute(
                 f"""
                 UPDATE {self._table}
@@ -421,7 +416,7 @@ class EventOutbox:
         Returns:
             True if entry should be retried, False if max attempts reached
         """
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         # Get current attempts
         if is_postgres:
@@ -502,7 +497,7 @@ class EventOutbox:
         conn: OutboxConnection,
     ) -> dict[str, Any]:
         """Get outbox statistics."""
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         query = f"""
             SELECT
@@ -556,7 +551,7 @@ class EventOutbox:
         Returns:
             Number of entries deleted
         """
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         if is_postgres:
             result = await conn.execute(
@@ -586,7 +581,7 @@ class EventOutbox:
         limit: int = 100,
     ) -> list[OutboxEntry]:
         """Get failed entries for inspection or manual retry."""
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         if is_postgres:
             rows = await conn.fetch(  # type: ignore[union-attr]
@@ -619,7 +614,7 @@ class EventOutbox:
         limit: int = 10,
     ) -> list[OutboxEntry]:
         """Get recent entries regardless of status (for event explorer)."""
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         if is_postgres:
             rows = await conn.fetch(  # type: ignore[union-attr]
@@ -654,7 +649,7 @@ class EventOutbox:
         Returns:
             True if entry was found and reset
         """
-        is_postgres = self._use_postgres or self._is_postgres_conn(conn)
+        is_postgres = self._use_postgres
 
         if is_postgres:
             result = await conn.execute(

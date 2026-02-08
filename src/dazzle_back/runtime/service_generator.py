@@ -5,7 +5,9 @@ This module creates service classes that implement domain operations.
 Services handle business logic and can be customized by users.
 """
 
+import asyncio
 import builtins
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -22,6 +24,7 @@ from dazzle_back.specs.service import (
 if TYPE_CHECKING:
     from dazzle_back.runtime.repository import SQLiteRepository
 
+logger = logging.getLogger("dazzle.service")
 
 # =============================================================================
 # Type Variables
@@ -111,58 +114,42 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         """Register a callback to be called after entity deletion."""
         self._on_deleted_callbacks.append(callback)
 
-    async def _notify_created(self, entity_id: str, entity_data: dict[str, Any]) -> None:
-        """Notify all on_created callbacks."""
-        import asyncio
-
-        for callback in self._on_created_callbacks:
-            try:
-                result = callback(self.entity_name, entity_id, entity_data, None)
-                if asyncio.iscoroutine(result):
-                    await result
-            except Exception as e:
-                # Log but don't fail the operation
-                import logging
-
-                logging.getLogger("dazzle.service").warning(
-                    f"Entity created callback failed for {self.entity_name}: {e}"
-                )
-
-    async def _notify_updated(
-        self, entity_id: str, entity_data: dict[str, Any], old_data: dict[str, Any]
+    async def _notify_callbacks(
+        self,
+        callbacks: list[EntityEventCallback],
+        entity_id: str,
+        entity_data: dict[str, Any],
+        old_data: dict[str, Any] | None,
+        event_label: str,
     ) -> None:
-        """Notify all on_updated callbacks."""
-        import asyncio
-
-        for callback in self._on_updated_callbacks:
+        """Invoke lifecycle callbacks, logging but not raising on failure."""
+        for callback in callbacks:
             try:
                 result = callback(self.entity_name, entity_id, entity_data, old_data)
                 if asyncio.iscoroutine(result):
                     await result
             except Exception as e:
-                # Log but don't fail the operation
-                import logging
+                logger.warning(f"Entity {event_label} callback failed for {self.entity_name}: {e}")
 
-                logging.getLogger("dazzle.service").warning(
-                    f"Entity updated callback failed for {self.entity_name}: {e}"
-                )
+    async def _notify_created(self, entity_id: str, entity_data: dict[str, Any]) -> None:
+        """Notify all on_created callbacks."""
+        await self._notify_callbacks(
+            self._on_created_callbacks, entity_id, entity_data, None, "created"
+        )
+
+    async def _notify_updated(
+        self, entity_id: str, entity_data: dict[str, Any], old_data: dict[str, Any]
+    ) -> None:
+        """Notify all on_updated callbacks."""
+        await self._notify_callbacks(
+            self._on_updated_callbacks, entity_id, entity_data, old_data, "updated"
+        )
 
     async def _notify_deleted(self, entity_id: str, entity_data: dict[str, Any]) -> None:
         """Notify all on_deleted callbacks."""
-        import asyncio
-
-        for callback in self._on_deleted_callbacks:
-            try:
-                result = callback(self.entity_name, entity_id, entity_data, None)
-                if asyncio.iscoroutine(result):
-                    await result
-            except Exception as e:
-                # Log but don't fail the operation
-                import logging
-
-                logging.getLogger("dazzle.service").warning(
-                    f"Entity deleted callback failed for {self.entity_name}: {e}"
-                )
+        await self._notify_callbacks(
+            self._on_deleted_callbacks, entity_id, entity_data, None, "deleted"
+        )
 
     def set_repository(self, repository: "SQLiteRepository[T]") -> None:
         """

@@ -148,6 +148,7 @@ class RelationLoader:
     registry: RelationRegistry
     entity_map: dict[str, EntitySpec]
     _conn_factory: Any = None  # Function that returns a connection
+    # Default "?" is for SQLite; Postgres callers should pass "%s"
     _placeholder: str = "?"
 
     def __init__(

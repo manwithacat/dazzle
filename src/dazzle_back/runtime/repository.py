@@ -31,6 +31,15 @@ from dazzle_back.specs.entity import (
     ScalarType,
 )
 
+# Build a tuple of IntegrityError types for both SQLite and PostgreSQL backends.
+_INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sqlite3.IntegrityError,)
+try:
+    import psycopg2
+
+    _INTEGRITY_ERRORS += (psycopg2.IntegrityError,)
+except ImportError:
+    pass
+
 # =============================================================================
 # Constraint Violation Error
 # =============================================================================
@@ -481,27 +490,23 @@ class SQLiteRepository(Generic[T]):
             with self.db.connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(sql, values)
-        except (sqlite3.IntegrityError, Exception) as exc:
-            if isinstance(exc, sqlite3.IntegrityError) or any(
-                "IntegrityError" in cls.__name__ for cls in type(exc).__mro__
-            ):
-                ctype, field = _parse_constraint_error(exc, self.table_name)
-                if ctype == "unique":
-                    msg = (
-                        f"A {self.table_name} with this {field} already exists"
-                        if field
-                        else f"Duplicate value violates unique constraint on {self.table_name}"
-                    )
-                elif ctype == "foreign_key":
-                    msg = (
-                        f"Referenced record not found for field '{field}' on {self.table_name}"
-                        if field
-                        else f"Referenced record does not exist for {self.table_name}"
-                    )
-                else:
-                    msg = f"Integrity constraint violated on {self.table_name}: {exc}"
-                raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
-            raise
+        except _INTEGRITY_ERRORS as exc:
+            ctype, field = _parse_constraint_error(exc, self.table_name)
+            if ctype == "unique":
+                msg = (
+                    f"A {self.table_name} with this {field} already exists"
+                    if field
+                    else f"Duplicate value violates unique constraint on {self.table_name}"
+                )
+            elif ctype == "foreign_key":
+                msg = (
+                    f"Referenced record not found for field '{field}' on {self.table_name}"
+                    if field
+                    else f"Referenced record does not exist for {self.table_name}"
+                )
+            else:
+                msg = f"Integrity constraint violated on {self.table_name}: {exc}"
+            raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("insert", latency_ms, rows=1)
 
@@ -590,27 +595,23 @@ class SQLiteRepository(Generic[T]):
                 cursor = conn.cursor()
                 cursor.execute(sql, values)
                 rowcount = cursor.rowcount
-        except (sqlite3.IntegrityError, Exception) as exc:
-            if isinstance(exc, sqlite3.IntegrityError) or any(
-                "IntegrityError" in cls.__name__ for cls in type(exc).__mro__
-            ):
-                ctype, field = _parse_constraint_error(exc, self.table_name)
-                if ctype == "unique":
-                    msg = (
-                        f"A {self.table_name} with this {field} already exists"
-                        if field
-                        else f"Duplicate value violates unique constraint on {self.table_name}"
-                    )
-                elif ctype == "foreign_key":
-                    msg = (
-                        f"Referenced record not found for field '{field}' on {self.table_name}"
-                        if field
-                        else f"Referenced record does not exist for {self.table_name}"
-                    )
-                else:
-                    msg = f"Integrity constraint violated on {self.table_name}: {exc}"
-                raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
-            raise
+        except _INTEGRITY_ERRORS as exc:
+            ctype, field = _parse_constraint_error(exc, self.table_name)
+            if ctype == "unique":
+                msg = (
+                    f"A {self.table_name} with this {field} already exists"
+                    if field
+                    else f"Duplicate value violates unique constraint on {self.table_name}"
+                )
+            elif ctype == "foreign_key":
+                msg = (
+                    f"Referenced record not found for field '{field}' on {self.table_name}"
+                    if field
+                    else f"Referenced record does not exist for {self.table_name}"
+                )
+            else:
+                msg = f"Integrity constraint violated on {self.table_name}: {exc}"
+            raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("update", latency_ms, rows=rowcount)
 

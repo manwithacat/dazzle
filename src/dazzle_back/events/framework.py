@@ -50,6 +50,9 @@ class EventFrameworkConfig:
     # Database path for SQLite event storage
     db_path: str = "app.db"
 
+    # PostgreSQL connection URL (takes precedence over db_path when set)
+    database_url: str | None = None
+
     # Whether to auto-start the publisher loop
     auto_start_publisher: bool = True
 
@@ -117,14 +120,16 @@ class EventFramework:
         if db_path:
             self._config.db_path = db_path
 
+        self._use_postgres = bool(self._config.database_url)
+
         # Components (initialized on start)
-        self._bus: DevBrokerSQLite | None = None
+        self._bus: DevBrokerSQLite | EventBus | None = None
         self._outbox: EventOutbox | None = None
         self._inbox: EventInbox | None = None
         self._publisher: OutboxPublisher | None = None
 
         # Connection for outbox operations
-        self._conn: aiosqlite.Connection | None = None
+        self._conn: aiosqlite.Connection | Any = None
 
         # Registered handlers
         self._handlers: dict[str, list[tuple[str, EventHandler]]] = {}
@@ -172,20 +177,45 @@ class EventFramework:
 
         logger.info("Starting event framework", extra={"db_path": self._config.db_path})
 
-        # Initialize components
-        self._outbox = EventOutbox()
-        self._inbox = EventInbox()
+        if self._use_postgres:
+            # PostgreSQL mode
+            import asyncpg
 
-        # Connect to database
-        self._conn = await aiosqlite.connect(self._config.db_path)
+            from dazzle_back.events.postgres_bus import PostgresBus, PostgresConfig
 
-        # Create tables
-        await self._outbox.create_table(self._conn)
-        await self._inbox.create_table(self._conn)
+            self._outbox = EventOutbox(use_postgres=True)
+            self._inbox = EventInbox(backend_type="postgres", placeholder="%s")
 
-        # Initialize event bus
-        self._bus = DevBrokerSQLite(self._config.db_path)
-        await self._bus.connect()
+            database_url = self._config.database_url
+            if database_url and database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+            # Connect to database
+            self._conn = await asyncpg.connect(database_url)
+
+            # Create tables
+            await self._outbox.create_table(self._conn)
+            await self._inbox.create_table(self._conn)
+
+            # Initialize PostgreSQL event bus
+            pg_config = PostgresConfig(dsn=database_url or "")
+            self._bus = PostgresBus(pg_config)
+            await self._bus.connect()
+        else:
+            # SQLite mode (default)
+            self._outbox = EventOutbox()
+            self._inbox = EventInbox()
+
+            # Connect to database
+            self._conn = await aiosqlite.connect(self._config.db_path)
+
+            # Create tables
+            await self._outbox.create_table(self._conn)
+            await self._inbox.create_table(self._conn)
+
+            # Initialize event bus
+            self._bus = DevBrokerSQLite(self._config.db_path)
+            await self._bus.connect()
 
         # Start publisher
         if self._config.auto_start_publisher:
@@ -301,7 +331,7 @@ class EventFramework:
 
     async def emit_event(
         self,
-        conn: aiosqlite.Connection,
+        conn: aiosqlite.Connection | Any,
         envelope: EventEnvelope,
         topic: str | None = None,
     ) -> None:
@@ -322,12 +352,19 @@ class EventFramework:
         await self._outbox.append(conn, envelope, topic)
         self._stats.events_published += 1
 
-    async def get_connection(self) -> aiosqlite.Connection:
+    async def get_connection(self) -> aiosqlite.Connection | Any:
         """
         Get a database connection for transactional operations.
 
         Returns a new connection that should be used within a transaction.
         """
+        if self._use_postgres:
+            import asyncpg
+
+            database_url = self._config.database_url
+            if database_url and database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql://", 1)
+            return await asyncpg.connect(database_url)
         return await aiosqlite.connect(self._config.db_path)
 
     async def _start_consumers(self) -> None:

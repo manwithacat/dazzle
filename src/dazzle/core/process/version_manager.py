@@ -96,6 +96,7 @@ class VersionManager:
         self,
         db_path: str | Path,
         adapter: ProcessAdapter | None = None,
+        database_url: str | None = None,
     ):
         """
         Initialize version manager.
@@ -103,70 +104,143 @@ class VersionManager:
         Args:
             db_path: Path to SQLite database
             adapter: Optional ProcessAdapter for process queries
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
         self._db_path = Path(db_path)
         self._adapter = adapter
+        self._database_url = database_url
+        self._use_postgres = bool(database_url)
         self._current_version: str | None = None
         self._initialized = False
+
+    async def _connect(self) -> Any:
+        """Get a database connection for the configured backend."""
+        if self._use_postgres:
+            import asyncpg
+
+            pg_url = self._database_url
+            if pg_url and pg_url.startswith("postgres://"):
+                pg_url = pg_url.replace("postgres://", "postgresql://", 1)
+            return await asyncpg.connect(pg_url)
+        else:
+            return await aiosqlite.connect(self._db_path)
 
     async def initialize(self) -> None:
         """Initialize database tables if needed."""
         if self._initialized:
             return
 
-        async with aiosqlite.connect(self._db_path) as db:
-            # Create version tables if they don't exist
-            await db.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS dsl_versions (
-                    version_id TEXT PRIMARY KEY,
-                    deployed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    dsl_hash TEXT NOT NULL,
-                    manifest_json JSON NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active'
-                );
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                await conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS dsl_versions (
+                        version_id TEXT PRIMARY KEY,
+                        deployed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        dsl_hash TEXT NOT NULL,
+                        manifest_json TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active'
+                    )
+                    """
+                )
+                await conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS version_migrations (
+                        id SERIAL PRIMARY KEY,
+                        from_version TEXT REFERENCES dsl_versions(version_id),
+                        to_version TEXT NOT NULL,
+                        started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        status TEXT NOT NULL DEFAULT 'in_progress',
+                        runs_drained INTEGER DEFAULT 0,
+                        runs_remaining INTEGER DEFAULT 0
+                    )
+                    """
+                )
+                await conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS process_runs (
+                        run_id TEXT PRIMARY KEY,
+                        process_name TEXT NOT NULL,
+                        process_version TEXT NOT NULL DEFAULT 'v1',
+                        dsl_version TEXT NOT NULL DEFAULT '0.1',
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        current_step TEXT,
+                        inputs TEXT NOT NULL DEFAULT '{}',
+                        context TEXT NOT NULL DEFAULT '{}',
+                        outputs TEXT,
+                        error TEXT,
+                        idempotency_key TEXT UNIQUE,
+                        started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP
+                    )
+                    """
+                )
+                await conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_versions_status ON dsl_versions(status)"
+                )
+                await conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_versions_deployed ON dsl_versions(deployed_at DESC)"
+                )
+                await conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_migrations_status ON version_migrations(status)"
+                )
+            else:
+                await conn.executescript(
+                    """
+                    CREATE TABLE IF NOT EXISTS dsl_versions (
+                        version_id TEXT PRIMARY KEY,
+                        deployed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        dsl_hash TEXT NOT NULL,
+                        manifest_json JSON NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'active'
+                    );
 
-                CREATE TABLE IF NOT EXISTS version_migrations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    from_version TEXT REFERENCES dsl_versions(version_id),
-                    to_version TEXT NOT NULL,
-                    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    completed_at TIMESTAMP,
-                    status TEXT NOT NULL DEFAULT 'in_progress',
-                    runs_drained INTEGER DEFAULT 0,
-                    runs_remaining INTEGER DEFAULT 0
-                );
+                    CREATE TABLE IF NOT EXISTS version_migrations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        from_version TEXT REFERENCES dsl_versions(version_id),
+                        to_version TEXT NOT NULL,
+                        started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP,
+                        status TEXT NOT NULL DEFAULT 'in_progress',
+                        runs_drained INTEGER DEFAULT 0,
+                        runs_remaining INTEGER DEFAULT 0
+                    );
 
-                -- Process runs table for migration queries
-                -- (May already exist from LiteProcessAdapter)
-                CREATE TABLE IF NOT EXISTS process_runs (
-                    run_id TEXT PRIMARY KEY,
-                    process_name TEXT NOT NULL,
-                    process_version TEXT NOT NULL DEFAULT 'v1',
-                    dsl_version TEXT NOT NULL DEFAULT '0.1',
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    current_step TEXT,
-                    inputs JSON NOT NULL DEFAULT '{}',
-                    context JSON NOT NULL DEFAULT '{}',
-                    outputs JSON,
-                    error TEXT,
-                    idempotency_key TEXT UNIQUE,
-                    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    completed_at TIMESTAMP
-                );
+                    -- Process runs table for migration queries
+                    -- (May already exist from LiteProcessAdapter)
+                    CREATE TABLE IF NOT EXISTS process_runs (
+                        run_id TEXT PRIMARY KEY,
+                        process_name TEXT NOT NULL,
+                        process_version TEXT NOT NULL DEFAULT 'v1',
+                        dsl_version TEXT NOT NULL DEFAULT '0.1',
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        current_step TEXT,
+                        inputs JSON NOT NULL DEFAULT '{}',
+                        context JSON NOT NULL DEFAULT '{}',
+                        outputs JSON,
+                        error TEXT,
+                        idempotency_key TEXT UNIQUE,
+                        started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        completed_at TIMESTAMP
+                    );
 
-                CREATE INDEX IF NOT EXISTS idx_versions_status
-                    ON dsl_versions(status);
-                CREATE INDEX IF NOT EXISTS idx_versions_deployed
-                    ON dsl_versions(deployed_at DESC);
-                CREATE INDEX IF NOT EXISTS idx_migrations_status
-                    ON version_migrations(status);
-                CREATE INDEX IF NOT EXISTS idx_runs_dsl_version
-                    ON process_runs(dsl_version) WHERE dsl_version IS NOT NULL;
-                """
-            )
-            await db.commit()
+                    CREATE INDEX IF NOT EXISTS idx_versions_status
+                        ON dsl_versions(status);
+                    CREATE INDEX IF NOT EXISTS idx_versions_deployed
+                        ON dsl_versions(deployed_at DESC);
+                    CREATE INDEX IF NOT EXISTS idx_migrations_status
+                        ON version_migrations(status);
+                    CREATE INDEX IF NOT EXISTS idx_runs_dsl_version
+                        ON process_runs(dsl_version) WHERE dsl_version IS NOT NULL;
+                    """
+                )
+                await conn.commit()
+        finally:
+            await conn.close()
 
         self._initialized = True
         logger.debug("VersionManager initialized")
@@ -175,40 +249,68 @@ class VersionManager:
         """Get the currently active DSL version."""
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            async with db.execute(
-                """
-                SELECT version_id FROM dsl_versions
-                WHERE status = 'active'
-                ORDER BY deployed_at DESC
-                LIMIT 1
-                """
-            ) as cursor:
-                row = await cursor.fetchone()
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                row = await conn.fetchrow(
+                    """
+                    SELECT version_id FROM dsl_versions
+                    WHERE status = 'active'
+                    ORDER BY deployed_at DESC
+                    LIMIT 1
+                    """
+                )
                 return row["version_id"] if row else None
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    """
+                    SELECT version_id FROM dsl_versions
+                    WHERE status = 'active'
+                    ORDER BY deployed_at DESC
+                    LIMIT 1
+                    """
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    return row["version_id"] if row else None
+        finally:
+            await conn.close()
 
     async def get_version(self, version_id: str) -> VersionInfo | None:
         """Get information about a specific version."""
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            async with db.execute(
-                "SELECT * FROM dsl_versions WHERE version_id = ?",
-                (version_id,),
-            ) as cursor:
-                row = await cursor.fetchone()
-                if not row:
-                    return None
-
-                return VersionInfo(
-                    version_id=row["version_id"],
-                    deployed_at=datetime.fromisoformat(row["deployed_at"]),
-                    dsl_hash=row["dsl_hash"],
-                    manifest=json.loads(row["manifest_json"]),
-                    status=row["status"],
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                row = await conn.fetchrow(
+                    "SELECT * FROM dsl_versions WHERE version_id = $1",
+                    version_id,
                 )
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT * FROM dsl_versions WHERE version_id = ?",
+                    (version_id,),
+                ) as cursor:
+                    row = await cursor.fetchone()
+
+            if not row:
+                return None
+
+            deployed_at = row["deployed_at"]
+            if isinstance(deployed_at, str):
+                deployed_at = datetime.fromisoformat(deployed_at)
+
+            return VersionInfo(
+                version_id=row["version_id"],
+                deployed_at=deployed_at,
+                dsl_hash=row["dsl_hash"],
+                manifest=json.loads(row["manifest_json"]),
+                status=row["status"],
+            )
+        finally:
+            await conn.close()
 
     async def list_versions(
         self,
@@ -218,38 +320,68 @@ class VersionManager:
         """List deployed versions with optional status filter."""
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-
-            if status:
-                query = """
-                    SELECT * FROM dsl_versions
-                    WHERE status = ?
-                    ORDER BY deployed_at DESC
-                    LIMIT ?
-                """
-                params: tuple[str | int, ...] = (status, limit)
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                if status:
+                    rows = await conn.fetch(
+                        """
+                        SELECT * FROM dsl_versions
+                        WHERE status = $1
+                        ORDER BY deployed_at DESC
+                        LIMIT $2
+                        """,
+                        status,
+                        limit,
+                    )
+                else:
+                    rows = await conn.fetch(
+                        """
+                        SELECT * FROM dsl_versions
+                        ORDER BY deployed_at DESC
+                        LIMIT $1
+                        """,
+                        limit,
+                    )
             else:
-                query = """
-                    SELECT * FROM dsl_versions
-                    ORDER BY deployed_at DESC
-                    LIMIT ?
-                """
-                params = (limit,)
+                conn.row_factory = aiosqlite.Row
 
-            async with db.execute(query, params) as cursor:
-                rows = await cursor.fetchall()
+                if status:
+                    query = """
+                        SELECT * FROM dsl_versions
+                        WHERE status = ?
+                        ORDER BY deployed_at DESC
+                        LIMIT ?
+                    """
+                    params: tuple[str | int, ...] = (status, limit)
+                else:
+                    query = """
+                        SELECT * FROM dsl_versions
+                        ORDER BY deployed_at DESC
+                        LIMIT ?
+                    """
+                    params = (limit,)
 
-            return [
-                VersionInfo(
-                    version_id=row["version_id"],
-                    deployed_at=datetime.fromisoformat(row["deployed_at"]),
-                    dsl_hash=row["dsl_hash"],
-                    manifest=json.loads(row["manifest_json"]),
-                    status=row["status"],
+                async with conn.execute(query, params) as cursor:
+                    rows = await cursor.fetchall()
+
+            results = []
+            for row in rows:
+                deployed_at = row["deployed_at"]
+                if isinstance(deployed_at, str):
+                    deployed_at = datetime.fromisoformat(deployed_at)
+                results.append(
+                    VersionInfo(
+                        version_id=row["version_id"],
+                        deployed_at=deployed_at,
+                        dsl_hash=row["dsl_hash"],
+                        manifest=json.loads(row["manifest_json"]),
+                        status=row["status"],
+                    )
                 )
-                for row in rows
-            ]
+            return results
+        finally:
+            await conn.close()
 
     @staticmethod
     def compute_version_hash(dsl_files: list[Path]) -> str:
@@ -285,24 +417,43 @@ class VersionManager:
         """
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            # Check if version already exists
-            async with db.execute(
-                "SELECT 1 FROM dsl_versions WHERE version_id = ?",
-                (version_id,),
-            ) as cursor:
-                if await cursor.fetchone():
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                row = await conn.fetchrow(
+                    "SELECT 1 FROM dsl_versions WHERE version_id = $1",
+                    version_id,
+                )
+                if row:
                     raise ValueError(f"Version {version_id} already exists")
 
-            # Insert new version as active
-            await db.execute(
-                """
-                INSERT INTO dsl_versions (version_id, dsl_hash, manifest_json, status)
-                VALUES (?, ?, ?, 'active')
-                """,
-                (version_id, dsl_hash, json.dumps(manifest)),
-            )
-            await db.commit()
+                await conn.execute(
+                    """
+                    INSERT INTO dsl_versions (version_id, dsl_hash, manifest_json, status)
+                    VALUES ($1, $2, $3, 'active')
+                    """,
+                    version_id,
+                    dsl_hash,
+                    json.dumps(manifest),
+                )
+            else:
+                async with conn.execute(
+                    "SELECT 1 FROM dsl_versions WHERE version_id = ?",
+                    (version_id,),
+                ) as cursor:
+                    if await cursor.fetchone():
+                        raise ValueError(f"Version {version_id} already exists")
+
+                await conn.execute(
+                    """
+                    INSERT INTO dsl_versions (version_id, dsl_hash, manifest_json, status)
+                    VALUES (?, ?, ?, 'active')
+                    """,
+                    (version_id, dsl_hash, json.dumps(manifest)),
+                )
+                await conn.commit()
+        finally:
+            await conn.close()
 
         self._current_version = version_id
         logger.info(f"Deployed version: {version_id}")
@@ -324,36 +475,62 @@ class VersionManager:
         """
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-
-            # Count running processes on old version
-            async with db.execute(
-                """
-                SELECT COUNT(*) as count FROM process_runs
-                WHERE dsl_version = ? AND status IN ('pending', 'running', 'suspended', 'waiting')
-                """,
-                (from_version,),
-            ) as cursor:
-                row = await cursor.fetchone()
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                row = await conn.fetchrow(
+                    """
+                    SELECT COUNT(*) as count FROM process_runs
+                    WHERE dsl_version = $1 AND status IN ('pending', 'running', 'suspended', 'waiting')
+                    """,
+                    from_version,
+                )
                 runs_remaining = row["count"] if row else 0
 
-            # Mark old version as draining
-            await db.execute(
-                "UPDATE dsl_versions SET status = 'draining' WHERE version_id = ?",
-                (from_version,),
-            )
+                await conn.execute(
+                    "UPDATE dsl_versions SET status = 'draining' WHERE version_id = $1",
+                    from_version,
+                )
 
-            # Create migration record
-            await db.execute(
-                """
-                INSERT INTO version_migrations
-                (from_version, to_version, runs_remaining, status)
-                VALUES (?, ?, ?, 'in_progress')
-                """,
-                (from_version, to_version, runs_remaining),
-            )
-            await db.commit()
+                await conn.execute(
+                    """
+                    INSERT INTO version_migrations
+                    (from_version, to_version, runs_remaining, status)
+                    VALUES ($1, $2, $3, 'in_progress')
+                    """,
+                    from_version,
+                    to_version,
+                    runs_remaining,
+                )
+            else:
+                conn.row_factory = aiosqlite.Row
+
+                async with conn.execute(
+                    """
+                    SELECT COUNT(*) as count FROM process_runs
+                    WHERE dsl_version = ? AND status IN ('pending', 'running', 'suspended', 'waiting')
+                    """,
+                    (from_version,),
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    runs_remaining = row["count"] if row else 0
+
+                await conn.execute(
+                    "UPDATE dsl_versions SET status = 'draining' WHERE version_id = ?",
+                    (from_version,),
+                )
+
+                await conn.execute(
+                    """
+                    INSERT INTO version_migrations
+                    (from_version, to_version, runs_remaining, status)
+                    VALUES (?, ?, ?, 'in_progress')
+                    """,
+                    (from_version, to_version, runs_remaining),
+                )
+                await conn.commit()
+        finally:
+            await conn.close()
 
         logger.info(
             f"Started migration: {from_version} -> {to_version}, "
@@ -365,32 +542,51 @@ class VersionManager:
         """Get all in-progress migrations."""
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-            async with db.execute(
-                """
-                SELECT * FROM version_migrations
-                WHERE status = 'in_progress'
-                ORDER BY started_at DESC
-                """
-            ) as cursor:
-                rows = await cursor.fetchall()
-
-            return [
-                MigrationInfo(
-                    id=row["id"],
-                    from_version=row["from_version"],
-                    to_version=row["to_version"],
-                    started_at=datetime.fromisoformat(row["started_at"]),
-                    completed_at=(
-                        datetime.fromisoformat(row["completed_at"]) if row["completed_at"] else None
-                    ),
-                    status=row["status"],
-                    runs_drained=row["runs_drained"],
-                    runs_remaining=row["runs_remaining"],
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                rows = await conn.fetch(
+                    """
+                    SELECT * FROM version_migrations
+                    WHERE status = 'in_progress'
+                    ORDER BY started_at DESC
+                    """
                 )
-                for row in rows
-            ]
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    """
+                    SELECT * FROM version_migrations
+                    WHERE status = 'in_progress'
+                    ORDER BY started_at DESC
+                    """
+                ) as cursor:
+                    rows = await cursor.fetchall()
+
+            results = []
+            for row in rows:
+                started_at = row["started_at"]
+                if isinstance(started_at, str):
+                    started_at = datetime.fromisoformat(started_at)
+                completed_at = row["completed_at"]
+                if isinstance(completed_at, str):
+                    completed_at = datetime.fromisoformat(completed_at)
+
+                results.append(
+                    MigrationInfo(
+                        id=row["id"],
+                        from_version=row["from_version"],
+                        to_version=row["to_version"],
+                        started_at=started_at,
+                        completed_at=completed_at,
+                        status=row["status"],
+                        runs_drained=row["runs_drained"],
+                        runs_remaining=row["runs_remaining"],
+                    )
+                )
+            return results
+        finally:
+            await conn.close()
 
     async def check_migration_status(self, migration_id: int) -> MigrationStatus:
         """
@@ -404,15 +600,20 @@ class VersionManager:
         """
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-
-            # Get migration record
-            async with db.execute(
-                "SELECT * FROM version_migrations WHERE id = ?",
-                (migration_id,),
-            ) as cursor:
-                migration = await cursor.fetchone()
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                migration = await conn.fetchrow(
+                    "SELECT * FROM version_migrations WHERE id = $1",
+                    migration_id,
+                )
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT * FROM version_migrations WHERE id = ?",
+                    (migration_id,),
+                ) as cursor:
+                    migration = await cursor.fetchone()
 
             if not migration:
                 return MigrationStatus(status="not_found")
@@ -420,16 +621,34 @@ class VersionManager:
             # Count remaining runs if migration is in progress
             runs_remaining = migration["runs_remaining"]
             if migration["status"] == "in_progress" and migration["from_version"]:
-                async with db.execute(
-                    """
-                    SELECT COUNT(*) as count FROM process_runs
-                    WHERE dsl_version = ?
-                        AND status IN ('pending', 'running', 'suspended', 'waiting')
-                    """,
-                    (migration["from_version"],),
-                ) as cursor:
-                    row = await cursor.fetchone()
+                if self._use_postgres:
+                    row = await conn.fetchrow(
+                        """
+                        SELECT COUNT(*) as count FROM process_runs
+                        WHERE dsl_version = $1
+                            AND status IN ('pending', 'running', 'suspended', 'waiting')
+                        """,
+                        migration["from_version"],
+                    )
                     runs_remaining = row["count"] if row else 0
+                else:
+                    async with conn.execute(
+                        """
+                        SELECT COUNT(*) as count FROM process_runs
+                        WHERE dsl_version = ?
+                            AND status IN ('pending', 'running', 'suspended', 'waiting')
+                        """,
+                        (migration["from_version"],),
+                    ) as cursor:
+                        row = await cursor.fetchone()
+                        runs_remaining = row["count"] if row else 0
+
+            started_at = migration["started_at"]
+            if isinstance(started_at, str):
+                started_at = datetime.fromisoformat(started_at)
+            completed_at = migration["completed_at"]
+            if isinstance(completed_at, str):
+                completed_at = datetime.fromisoformat(completed_at)
 
             return MigrationStatus(
                 status=migration["status"],
@@ -437,13 +656,11 @@ class VersionManager:
                 to_version=migration["to_version"],
                 runs_remaining=runs_remaining,
                 runs_drained=migration["runs_drained"],
-                started_at=datetime.fromisoformat(migration["started_at"]),
-                completed_at=(
-                    datetime.fromisoformat(migration["completed_at"])
-                    if migration["completed_at"]
-                    else None
-                ),
+                started_at=started_at,
+                completed_at=completed_at,
             )
+        finally:
+            await conn.close()
 
     async def complete_migration(self, migration_id: int) -> None:
         """
@@ -454,37 +671,56 @@ class VersionManager:
         """
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-
-            # Get migration details
-            async with db.execute(
-                "SELECT from_version, to_version FROM version_migrations WHERE id = ?",
-                (migration_id,),
-            ) as cursor:
-                migration = await cursor.fetchone()
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                migration = await conn.fetchrow(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = $1",
+                    migration_id,
+                )
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = ?",
+                    (migration_id,),
+                ) as cursor:
+                    migration = await cursor.fetchone()
 
             if not migration:
                 logger.warning(f"Migration {migration_id} not found")
                 return
 
-            # Archive old version
-            if migration["from_version"]:
-                await db.execute(
-                    "UPDATE dsl_versions SET status = 'archived' WHERE version_id = ?",
-                    (migration["from_version"],),
+            if self._use_postgres:
+                if migration["from_version"]:
+                    await conn.execute(
+                        "UPDATE dsl_versions SET status = 'archived' WHERE version_id = $1",
+                        migration["from_version"],
+                    )
+                await conn.execute(
+                    """
+                    UPDATE version_migrations
+                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+                    WHERE id = $1
+                    """,
+                    migration_id,
                 )
-
-            # Update migration record
-            await db.execute(
-                """
-                UPDATE version_migrations
-                SET status = 'completed', completed_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (migration_id,),
-            )
-            await db.commit()
+            else:
+                if migration["from_version"]:
+                    await conn.execute(
+                        "UPDATE dsl_versions SET status = 'archived' WHERE version_id = ?",
+                        (migration["from_version"],),
+                    )
+                await conn.execute(
+                    """
+                    UPDATE version_migrations
+                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (migration_id,),
+                )
+                await conn.commit()
+        finally:
+            await conn.close()
 
         logger.info(f"Completed migration {migration_id}")
 
@@ -497,43 +733,64 @@ class VersionManager:
         """
         await self.initialize()
 
-        async with aiosqlite.connect(self._db_path) as db:
-            db.row_factory = aiosqlite.Row
-
-            # Get migration details
-            async with db.execute(
-                "SELECT from_version, to_version FROM version_migrations WHERE id = ?",
-                (migration_id,),
-            ) as cursor:
-                migration = await cursor.fetchone()
+        conn = await self._connect()
+        try:
+            if self._use_postgres:
+                migration = await conn.fetchrow(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = $1",
+                    migration_id,
+                )
+            else:
+                conn.row_factory = aiosqlite.Row
+                async with conn.execute(
+                    "SELECT from_version, to_version FROM version_migrations WHERE id = ?",
+                    (migration_id,),
+                ) as cursor:
+                    migration = await cursor.fetchone()
 
             if not migration:
                 logger.warning(f"Migration {migration_id} not found")
                 return
 
-            # Reactivate old version
-            if migration["from_version"]:
-                await db.execute(
-                    "UPDATE dsl_versions SET status = 'active' WHERE version_id = ?",
-                    (migration["from_version"],),
+            if self._use_postgres:
+                if migration["from_version"]:
+                    await conn.execute(
+                        "UPDATE dsl_versions SET status = 'active' WHERE version_id = $1",
+                        migration["from_version"],
+                    )
+                await conn.execute(
+                    "UPDATE dsl_versions SET status = 'archived' WHERE version_id = $1",
+                    migration["to_version"],
                 )
-
-            # Deactivate new version
-            await db.execute(
-                "UPDATE dsl_versions SET status = 'archived' WHERE version_id = ?",
-                (migration["to_version"],),
-            )
-
-            # Mark migration as rolled back
-            await db.execute(
-                """
-                UPDATE version_migrations
-                SET status = 'rolled_back', completed_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (migration_id,),
-            )
-            await db.commit()
+                await conn.execute(
+                    """
+                    UPDATE version_migrations
+                    SET status = 'rolled_back', completed_at = CURRENT_TIMESTAMP
+                    WHERE id = $1
+                    """,
+                    migration_id,
+                )
+            else:
+                if migration["from_version"]:
+                    await conn.execute(
+                        "UPDATE dsl_versions SET status = 'active' WHERE version_id = ?",
+                        (migration["from_version"],),
+                    )
+                await conn.execute(
+                    "UPDATE dsl_versions SET status = 'archived' WHERE version_id = ?",
+                    (migration["to_version"],),
+                )
+                await conn.execute(
+                    """
+                    UPDATE version_migrations
+                    SET status = 'rolled_back', completed_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (migration_id,),
+                )
+                await conn.commit()
+        finally:
+            await conn.close()
 
         logger.info(
             f"Rolled back migration {migration_id}: "

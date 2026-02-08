@@ -89,6 +89,7 @@ class LiteProcessAdapter(ProcessAdapter):
         db_path: Path | str = ":memory:",
         poll_interval: float = 5.0,
         scheduler_interval: float = 60.0,
+        database_url: str | None = None,
     ):
         """
         Initialize the adapter.
@@ -97,8 +98,11 @@ class LiteProcessAdapter(ProcessAdapter):
             db_path: Path to SQLite database, or ":memory:" for in-memory
             poll_interval: Seconds between human task polls
             scheduler_interval: Seconds between schedule checks
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
         self._db_path = str(db_path)
+        self._database_url = database_url
+        self._use_postgres = bool(database_url)
         self._poll_interval = poll_interval
         self._scheduler_interval = scheduler_interval
 
@@ -137,15 +141,51 @@ class LiteProcessAdapter(ProcessAdapter):
     # Lifecycle
     async def initialize(self) -> None:
         """Initialize database and start background tasks."""
-        self._db = await aiosqlite.connect(self._db_path)
-        self._db.row_factory = aiosqlite.Row
+        if self._use_postgres:
+            import asyncpg
 
-        # Load and execute schema
-        schema_path = Path(__file__).parent / "schema.sql"
-        if schema_path.exists():
-            schema = schema_path.read_text()
-            await self._db.executescript(schema)
-            await self._db.commit()
+            pg_url = self._database_url
+            if pg_url and pg_url.startswith("postgres://"):
+                pg_url = pg_url.replace("postgres://", "postgresql://", 1)
+
+            pg_conn = await asyncpg.connect(pg_url)
+            try:
+                # Load and execute PostgreSQL schema
+                schema_path = Path(__file__).parent / "schema_postgres.sql"
+                if schema_path.exists():
+                    schema = schema_path.read_text()
+                    await pg_conn.execute(schema)
+            finally:
+                await pg_conn.close()
+
+            logger.warning(
+                "LiteProcessAdapter: PostgreSQL schema initialized. "
+                "Full async Postgres support for process operations is work-in-progress; "
+                "runtime operations still use aiosqlite interface."
+            )
+
+            # Fall through to SQLite initialization for runtime operations.
+            # The Postgres schema is set up for persistence, but the in-memory
+            # process execution still uses aiosqlite.
+            self._db = await aiosqlite.connect(":memory:")
+            self._db.row_factory = aiosqlite.Row
+
+            # Load SQLite schema into memory for runtime use
+            schema_path_sqlite = Path(__file__).parent / "schema.sql"
+            if schema_path_sqlite.exists():
+                schema = schema_path_sqlite.read_text()
+                await self._db.executescript(schema)
+                await self._db.commit()
+        else:
+            self._db = await aiosqlite.connect(self._db_path)
+            self._db.row_factory = aiosqlite.Row
+
+            # Load and execute schema
+            schema_path = Path(__file__).parent / "schema.sql"
+            if schema_path.exists():
+                schema = schema_path.read_text()
+                await self._db.executescript(schema)
+                await self._db.commit()
 
         # Start scheduler
         self._scheduler_task = asyncio.create_task(self._run_scheduler())

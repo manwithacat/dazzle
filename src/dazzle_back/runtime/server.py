@@ -475,6 +475,7 @@ class DNRBackendApp:
         self._token_store = TokenStore(
             db_path=token_db_path,
             token_lifetime_days=refresh_days,
+            database_url=self._auth_database_url,
         )
 
         # Build social auth config from manifest + environment
@@ -574,6 +575,7 @@ class DNRBackendApp:
                 db_path=str(self._db_path),
                 auto_start_publisher=True,
                 auto_start_consumers=True,
+                database_url=self._database_url,
             )
             self._event_framework = EventFramework(config)
 
@@ -613,7 +615,10 @@ class DNRBackendApp:
             from dazzle_back.runtime.spec_versioning import SpecVersionStore
 
             # Create ops database for console (reuse path convention)
-            ops_db = OpsDatabase(db_path=self._db_path.parent / "ops.db")
+            ops_db = OpsDatabase(
+                db_path=self._db_path.parent / "ops.db",
+                database_url=self._database_url,
+            )
             spec_version_store = SpecVersionStore(ops_db)
             deploy_history_store = DeployHistoryStore(ops_db)
 

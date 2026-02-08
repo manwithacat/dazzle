@@ -2,11 +2,11 @@
 Device registry for push notifications.
 
 Manages device tokens for mobile push notifications.
+Supports both SQLite (dev) and PostgreSQL (production) backends.
 """
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import UTC, datetime
 from enum import StrEnum
 from pathlib import Path
@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from dazzle_back.runtime.db_backend import DualBackendMixin
 
 if TYPE_CHECKING:
     from fastapi import APIRouter
@@ -58,32 +60,42 @@ class DeviceRecord(BaseModel):
 # =============================================================================
 
 
-class DeviceRegistry:
+class DeviceRegistry(DualBackendMixin):
     """
     Device registry for push notifications.
 
     Manages device registrations and push tokens.
+    Supports both SQLite (dev) and PostgreSQL (production) backends.
     """
 
-    def __init__(self, db_path: str | Path | None = None):
+    def __init__(
+        self,
+        db_path: str | Path | None = None,
+        database_url: str | None = None,
+    ):
         """
         Initialize device registry.
 
         Args:
             db_path: Path to SQLite database (default: .dazzle/devices.db)
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
-        self.db_path = Path(db_path) if db_path else Path(".dazzle/devices.db")
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_backend(db_path, database_url, default_path=".dazzle/devices.db")
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    def _get_connection(self) -> Any:
         """Get a database connection."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
+        return self._get_sync_connection()
 
     def _init_db(self) -> None:
         """Initialize database tables."""
+        if self._use_postgres:
+            self._init_postgres_db()
+        else:
+            self._init_sqlite_db()
+
+    def _init_sqlite_db(self) -> None:
+        """Initialize SQLite database tables."""
         with self._get_connection() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS devices (
@@ -108,6 +120,52 @@ class DeviceRegistry:
                     ON devices(user_id, is_active);
             """)
             conn.commit()
+
+    def _init_postgres_db(self) -> None:
+        """Initialize PostgreSQL database tables."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS devices (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    platform TEXT NOT NULL,
+                    push_token TEXT NOT NULL,
+                    device_name TEXT,
+                    app_version TEXT,
+                    os_version TEXT,
+                    created_at TEXT NOT NULL,
+                    last_used_at TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    UNIQUE(user_id, push_token)
+                )
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_devices_user_id
+                    ON devices(user_id)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_devices_platform
+                    ON devices(platform)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_devices_active
+                    ON devices(user_id, is_active)
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _exec(self, conn: Any, query: str, params: tuple[object, ...] = ()) -> Any:
+        """Execute a query on a connection, handling backend differences."""
+        if self._use_postgres:
+            query = query.replace("?", "%s")
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor
+        else:
+            return conn.execute(query, params)
 
     # =========================================================================
     # Device Operations
@@ -145,7 +203,8 @@ class DeviceRegistry:
 
         with self._get_connection() as conn:
             # Check if token already exists for this user
-            existing = conn.execute(
+            existing = self._exec(
+                conn,
                 """
                 SELECT id FROM devices
                 WHERE user_id = ? AND push_token = ?
@@ -155,19 +214,28 @@ class DeviceRegistry:
 
             if existing:
                 # Update existing record
-                conn.execute(
+                self._exec(
+                    conn,
                     """
                     UPDATE devices
                     SET platform = ?, device_name = ?, app_version = ?,
                         os_version = ?, is_active = ?
                     WHERE id = ?
                     """,
-                    (platform.value, device_name, app_version, os_version, 1, existing["id"]),
+                    (
+                        platform.value,
+                        device_name,
+                        app_version,
+                        os_version,
+                        self._bool_to_db(True),
+                        existing["id"],
+                    ),
                 )
                 device_id = existing["id"]
             else:
                 # Insert new record
-                conn.execute(
+                self._exec(
+                    conn,
                     """
                     INSERT INTO devices
                         (id, user_id, platform, push_token, device_name,
@@ -183,7 +251,7 @@ class DeviceRegistry:
                         app_version,
                         os_version,
                         now.isoformat(),
-                        1,
+                        self._bool_to_db(True),
                     ),
                 )
             conn.commit()
@@ -227,11 +295,11 @@ class DeviceRegistry:
 
             if active_only:
                 query += " AND is_active = ?"
-                params.append(1)
+                params.append(self._bool_to_db(True))
 
             query += " ORDER BY created_at DESC"
 
-            rows = conn.execute(query, params).fetchall()
+            rows = self._exec(conn, query, tuple(params)).fetchall()
 
             return [
                 DeviceRecord(
@@ -246,7 +314,7 @@ class DeviceRegistry:
                     last_used_at=(
                         datetime.fromisoformat(row["last_used_at"]) if row["last_used_at"] else None
                     ),
-                    is_active=bool(row["is_active"]),
+                    is_active=self._db_to_bool(row["is_active"]),
                 )
                 for row in rows
             ]
@@ -254,7 +322,8 @@ class DeviceRegistry:
     def get_device(self, device_id: str) -> DeviceRecord | None:
         """Get device by ID."""
         with self._get_connection() as conn:
-            row = conn.execute(
+            row = self._exec(
+                conn,
                 "SELECT * FROM devices WHERE id = ?",
                 (device_id,),
             ).fetchone()
@@ -274,7 +343,7 @@ class DeviceRegistry:
                 last_used_at=(
                     datetime.fromisoformat(row["last_used_at"]) if row["last_used_at"] else None
                 ),
-                is_active=bool(row["is_active"]),
+                is_active=self._db_to_bool(row["is_active"]),
             )
 
     def unregister_device(self, device_id: str, user_id: UUID | None = None) -> bool:
@@ -290,14 +359,16 @@ class DeviceRegistry:
         """
         with self._get_connection() as conn:
             if user_id:
-                cursor = conn.execute(
+                cursor = self._exec(
+                    conn,
                     "UPDATE devices SET is_active = ? WHERE id = ? AND user_id = ?",
-                    (0, device_id, str(user_id)),
+                    (self._bool_to_db(False), device_id, str(user_id)),
                 )
             else:
-                cursor = conn.execute(
+                cursor = self._exec(
+                    conn,
                     "UPDATE devices SET is_active = ? WHERE id = ?",
-                    (0, device_id),
+                    (self._bool_to_db(False), device_id),
                 )
             conn.commit()
             return cursor.rowcount > 0
@@ -305,7 +376,8 @@ class DeviceRegistry:
     def mark_device_used(self, device_id: str) -> bool:
         """Update last_used_at timestamp."""
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 "UPDATE devices SET last_used_at = ? WHERE id = ?",
                 (datetime.now(UTC).isoformat(), device_id),
             )
@@ -325,9 +397,10 @@ class DeviceRegistry:
             Number of devices affected
         """
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 "UPDATE devices SET is_active = ? WHERE push_token = ?",
-                (0, push_token),
+                (self._bool_to_db(False), push_token),
             )
             conn.commit()
             return cursor.rowcount
@@ -347,12 +420,13 @@ class DeviceRegistry:
         cutoff = datetime.now(UTC) - timedelta(days=older_than_days)
 
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 """
                 DELETE FROM devices
                 WHERE is_active = ? AND created_at < ?
                 """,
-                (0, cutoff.isoformat()),
+                (self._bool_to_db(False), cutoff.isoformat()),
             )
             conn.commit()
             return cursor.rowcount

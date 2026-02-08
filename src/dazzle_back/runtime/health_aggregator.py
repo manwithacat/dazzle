@@ -327,16 +327,23 @@ class HealthAggregator:
 def create_database_check(
     db_path: str,
     name: str = "database",
+    database_url: str | None = None,
 ) -> HealthCheckFn:
     """Create a database connectivity health check."""
 
     async def check() -> ComponentHealth:
-        import sqlite3
-
         start = time.monotonic()
         try:
-            conn = sqlite3.connect(db_path)
-            cursor = conn.execute("SELECT 1")
+            if database_url:
+                import psycopg2
+
+                conn = psycopg2.connect(database_url)
+            else:
+                import sqlite3
+
+                conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
             cursor.fetchone()
             conn.close()
             latency = (time.monotonic() - start) * 1000

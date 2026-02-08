@@ -17,7 +17,6 @@ This database is isolated from the application database for:
 from __future__ import annotations
 
 import json
-import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -26,6 +25,8 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
+
+from dazzle_back.runtime.db_backend import DualBackendMixin
 
 
 def _utcnow() -> datetime:
@@ -146,14 +147,16 @@ class OpsCredentials:
         return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
 
 
-class OpsDatabase:
+class OpsDatabase(DualBackendMixin):
     """
     Operations database manager.
 
-    Manages a separate SQLite database for operational data with:
+    Manages a separate database for operational data with:
     - Automatic schema creation
     - Data retention enforcement
     - Credential management
+
+    Supports both SQLite (default) and PostgreSQL backends.
     """
 
     SCHEMA_VERSION = 1
@@ -162,6 +165,7 @@ class OpsDatabase:
         self,
         db_path: Path | None = None,
         retention: RetentionConfig | None = None,
+        database_url: str | None = None,
     ):
         """
         Initialize ops database.
@@ -169,21 +173,16 @@ class OpsDatabase:
         Args:
             db_path: Path to database file. Defaults to .dazzle/ops.db
             retention: Data retention configuration
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
-        self.db_path = db_path or Path(".dazzle/ops.db")
+        self._init_backend(db_path, database_url, default_path=".dazzle/ops.db")
         self.retention = retention or RetentionConfig()
-        self._ensure_directory()
         self._init_schema()
 
-    def _ensure_directory(self) -> None:
-        """Ensure database directory exists."""
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
     @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        """Get database connection with row factory."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
+    def connection(self) -> Iterator[Any]:
+        """Get database connection."""
+        conn = self._get_sync_connection()
         try:
             yield conn
             conn.commit()
@@ -196,26 +195,35 @@ class OpsDatabase:
     def _init_schema(self) -> None:
         """Initialize database schema."""
         with self.connection() as conn:
-            # Schema version tracking
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS _ops_schema (
-                    version INTEGER PRIMARY KEY,
-                    applied_at TEXT NOT NULL
-                )
-            """)
-
-            # Check current version
-            cursor = conn.execute("SELECT MAX(version) FROM _ops_schema")
-            current_version = cursor.fetchone()[0] or 0
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS _ops_schema (
+                        version INTEGER PRIMARY KEY,
+                        applied_at TEXT NOT NULL
+                    )
+                """)
+                cursor.execute("SELECT MAX(version) FROM _ops_schema")
+                row = cursor.fetchone()
+                current_version = row["max"] or 0 if row else 0
+            else:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS _ops_schema (
+                        version INTEGER PRIMARY KEY,
+                        applied_at TEXT NOT NULL
+                    )
+                """)
+                cursor = conn.execute("SELECT MAX(version) FROM _ops_schema")
+                row = cursor.fetchone()
+                current_version = row[0] or 0 if row else 0
 
             if current_version < self.SCHEMA_VERSION:
                 self._apply_migrations(conn, current_version)
 
-    def _apply_migrations(self, conn: sqlite3.Connection, from_version: int) -> None:
+    def _apply_migrations(self, conn: Any, from_version: int) -> None:
         """Apply schema migrations."""
         if from_version < 1:
-            # Initial schema
-            conn.executescript("""
+            migration_sql = """
                 -- Ops credentials (separate auth)
                 CREATE TABLE IF NOT EXISTS ops_credentials (
                     id TEXT PRIMARY KEY,
@@ -304,13 +312,23 @@ class OpsDatabase:
                     value_days INTEGER NOT NULL,
                     updated_at TEXT NOT NULL
                 );
-            """)
+            """
+
+            self._execute_script(conn, migration_sql)
 
             # Record migration
-            conn.execute(
-                "INSERT INTO _ops_schema (version, applied_at) VALUES (?, ?)",
-                (1, datetime.now(UTC).isoformat()),
-            )
+            ph = self._ph
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"INSERT INTO _ops_schema (version, applied_at) VALUES ({ph}, {ph})",
+                    (1, datetime.now(UTC).isoformat()),
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO _ops_schema (version, applied_at) VALUES (?, ?)",
+                    (1, datetime.now(UTC).isoformat()),
+                )
 
     # =========================================================================
     # Credential Management
@@ -319,30 +337,60 @@ class OpsDatabase:
     def create_credentials(self, username: str, password: str) -> OpsCredentials:
         """Create ops admin credentials."""
         creds = OpsCredentials.create(username, password)
+        ph = self._ph
         with self.connection() as conn:
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO ops_credentials
-                (id, username, password_hash, created_at, last_login)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    str(uuid4()),
-                    creds.username,
-                    creds.password_hash,
-                    creds.created_at.isoformat(),
-                    None,
-                ),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    INSERT INTO ops_credentials
+                    (id, username, password_hash, created_at, last_login)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
+                    ON CONFLICT (username) DO UPDATE SET
+                        password_hash = EXCLUDED.password_hash,
+                        created_at = EXCLUDED.created_at,
+                        last_login = EXCLUDED.last_login
+                    """,
+                    (
+                        str(uuid4()),
+                        creds.username,
+                        creds.password_hash,
+                        creds.created_at.isoformat(),
+                        None,
+                    ),
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO ops_credentials
+                    (id, username, password_hash, created_at, last_login)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        str(uuid4()),
+                        creds.username,
+                        creds.password_hash,
+                        creds.created_at.isoformat(),
+                        None,
+                    ),
+                )
         return creds
 
     def verify_credentials(self, username: str, password: str) -> bool:
         """Verify ops credentials."""
+        ph = self._ph
         with self.connection() as conn:
-            cursor = conn.execute(
-                "SELECT password_hash FROM ops_credentials WHERE username = ?",
-                (username,),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"SELECT password_hash FROM ops_credentials WHERE username = {ph}",
+                    (username,),
+                )
+            else:
+                cursor = conn.execute(
+                    "SELECT password_hash FROM ops_credentials WHERE username = ?",
+                    (username,),
+                )
             row = cursor.fetchone()
             if not row:
                 return False
@@ -352,19 +400,32 @@ class OpsDatabase:
             expected = hashlib.sha256(password.encode()).hexdigest()
             if row["password_hash"] == expected:
                 # Update last login
-                conn.execute(
-                    "UPDATE ops_credentials SET last_login = ? WHERE username = ?",
-                    (datetime.now(UTC).isoformat(), username),
-                )
+                if self._use_postgres:
+                    cur = conn.cursor()
+                    cur.execute(
+                        f"UPDATE ops_credentials SET last_login = {ph} WHERE username = {ph}",
+                        (datetime.now(UTC).isoformat(), username),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE ops_credentials SET last_login = ? WHERE username = ?",
+                        (datetime.now(UTC).isoformat(), username),
+                    )
                 return True
             return False
 
     def has_credentials(self) -> bool:
         """Check if any ops credentials exist."""
         with self.connection() as conn:
-            cursor = conn.execute("SELECT COUNT(*) FROM ops_credentials")
-            row = cursor.fetchone()
-            return bool(row[0] > 0) if row else False
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) as cnt FROM ops_credentials")
+                row = cursor.fetchone()
+                return bool(row["cnt"] > 0) if row else False
+            else:
+                cursor = conn.execute("SELECT COUNT(*) FROM ops_credentials")
+                row = cursor.fetchone()
+                return bool(row[0] > 0) if row else False
 
     # =========================================================================
     # Health Checks
@@ -372,50 +433,86 @@ class OpsDatabase:
 
     def record_health_check(self, record: HealthCheckRecord) -> None:
         """Record a health check result."""
+        ph = self._ph
+        params = (
+            record.id,
+            record.component,
+            record.component_type.value,
+            record.status.value,
+            record.latency_ms,
+            record.message,
+            json.dumps(record.metadata) if record.metadata else None,
+            record.checked_at.isoformat(),
+            record.tenant_id,
+        )
         with self.connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO health_checks
-                (id, component, component_type, status, latency_ms, message, metadata, checked_at, tenant_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    record.id,
-                    record.component,
-                    record.component_type.value,
-                    record.status.value,
-                    record.latency_ms,
-                    record.message,
-                    json.dumps(record.metadata) if record.metadata else None,
-                    record.checked_at.isoformat(),
-                    record.tenant_id,
-                ),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    INSERT INTO health_checks
+                    (id, component, component_type, status, latency_ms, message, metadata, checked_at, tenant_id)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                    """,
+                    params,
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO health_checks
+                    (id, component, component_type, status, latency_ms, message, metadata, checked_at, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    params,
+                )
 
     def get_latest_health(self, component: str | None = None) -> list[HealthCheckRecord]:
         """Get latest health check for each component."""
+        ph = self._ph
         with self.connection() as conn:
-            if component:
-                cursor = conn.execute(
-                    """
-                    SELECT * FROM health_checks
-                    WHERE component = ?
-                    ORDER BY checked_at DESC
-                    LIMIT 1
-                    """,
-                    (component,),
-                )
+            if self._use_postgres:
+                cur = conn.cursor()
+                if component:
+                    cur.execute(
+                        f"""
+                        SELECT * FROM health_checks
+                        WHERE component = {ph}
+                        ORDER BY checked_at DESC
+                        LIMIT 1
+                        """,
+                        (component,),
+                    )
+                else:
+                    cur.execute("""
+                        SELECT h1.* FROM health_checks h1
+                        INNER JOIN (
+                            SELECT component, MAX(checked_at) as max_checked
+                            FROM health_checks
+                            GROUP BY component
+                        ) h2 ON h1.component = h2.component AND h1.checked_at = h2.max_checked
+                    """)
+                return [self._row_to_health_check(row) for row in cur.fetchall()]
             else:
-                cursor = conn.execute("""
-                    SELECT h1.* FROM health_checks h1
-                    INNER JOIN (
-                        SELECT component, MAX(checked_at) as max_checked
-                        FROM health_checks
-                        GROUP BY component
-                    ) h2 ON h1.component = h2.component AND h1.checked_at = h2.max_checked
-                """)
-
-            return [self._row_to_health_check(row) for row in cursor.fetchall()]
+                if component:
+                    cursor = conn.execute(
+                        """
+                        SELECT * FROM health_checks
+                        WHERE component = ?
+                        ORDER BY checked_at DESC
+                        LIMIT 1
+                        """,
+                        (component,),
+                    )
+                else:
+                    cursor = conn.execute("""
+                        SELECT h1.* FROM health_checks h1
+                        INNER JOIN (
+                            SELECT component, MAX(checked_at) as max_checked
+                            FROM health_checks
+                            GROUP BY component
+                        ) h2 ON h1.component = h2.component AND h1.checked_at = h2.max_checked
+                    """)
+                return [self._row_to_health_check(row) for row in cursor.fetchall()]
 
     def get_health_history(
         self,
@@ -424,18 +521,30 @@ class OpsDatabase:
     ) -> list[HealthCheckRecord]:
         """Get health check history for a component."""
         cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+        ph = self._ph
         with self.connection() as conn:
-            cursor = conn.execute(
-                """
-                SELECT * FROM health_checks
-                WHERE component = ? AND checked_at >= ?
-                ORDER BY checked_at DESC
-                """,
-                (component, cutoff),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    SELECT * FROM health_checks
+                    WHERE component = {ph} AND checked_at >= {ph}
+                    ORDER BY checked_at DESC
+                    """,
+                    (component, cutoff),
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    SELECT * FROM health_checks
+                    WHERE component = ? AND checked_at >= ?
+                    ORDER BY checked_at DESC
+                    """,
+                    (component, cutoff),
+                )
             return [self._row_to_health_check(row) for row in cursor.fetchall()]
 
-    def _row_to_health_check(self, row: sqlite3.Row) -> HealthCheckRecord:
+    def _row_to_health_check(self, row: Any) -> HealthCheckRecord:
         """Convert database row to HealthCheckRecord."""
         return HealthCheckRecord(
             id=row["id"],
@@ -455,31 +564,46 @@ class OpsDatabase:
 
     def record_api_call(self, record: ApiCallRecord) -> None:
         """Record an external API call."""
+        ph = self._ph
+        params = (
+            record.id,
+            record.service_name,
+            record.endpoint,
+            record.method,
+            record.status_code,
+            record.latency_ms,
+            record.request_size_bytes,
+            record.response_size_bytes,
+            record.error_message,
+            record.cost_cents,
+            json.dumps(record.metadata) if record.metadata else None,
+            record.called_at.isoformat(),
+            record.tenant_id,
+        )
         with self.connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO api_calls
-                (id, service_name, endpoint, method, status_code, latency_ms,
-                 request_size_bytes, response_size_bytes, error_message, cost_cents,
-                 metadata, called_at, tenant_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    record.id,
-                    record.service_name,
-                    record.endpoint,
-                    record.method,
-                    record.status_code,
-                    record.latency_ms,
-                    record.request_size_bytes,
-                    record.response_size_bytes,
-                    record.error_message,
-                    record.cost_cents,
-                    json.dumps(record.metadata) if record.metadata else None,
-                    record.called_at.isoformat(),
-                    record.tenant_id,
-                ),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    INSERT INTO api_calls
+                    (id, service_name, endpoint, method, status_code, latency_ms,
+                     request_size_bytes, response_size_bytes, error_message, cost_cents,
+                     metadata, called_at, tenant_id)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                    """,
+                    params,
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO api_calls
+                    (id, service_name, endpoint, method, status_code, latency_ms,
+                     request_size_bytes, response_size_bytes, error_message, cost_cents,
+                     metadata, called_at, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    params,
+                )
 
     def get_api_call_stats(
         self,
@@ -489,25 +613,24 @@ class OpsDatabase:
     ) -> dict[str, Any]:
         """Get API call statistics."""
         cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+        ph = self._ph
 
         with self.connection() as conn:
             # Build query based on filters
-            where_clauses = ["called_at >= ?"]
+            where_clauses = [f"called_at >= {ph}"]
             params: list[Any] = [cutoff]
 
             if service_name:
-                where_clauses.append("service_name = ?")
+                where_clauses.append(f"service_name = {ph}")
                 params.append(service_name)
 
             if tenant_id:
-                where_clauses.append("tenant_id = ?")
+                where_clauses.append(f"tenant_id = {ph}")
                 params.append(tenant_id)
 
             where_sql = " AND ".join(where_clauses)
 
-            # Get aggregate stats
-            cursor = conn.execute(
-                f"""
+            query = f"""
                 SELECT
                     service_name,
                     COUNT(*) as total_calls,
@@ -518,15 +641,23 @@ class OpsDatabase:
                 FROM api_calls
                 WHERE {where_sql}
                 GROUP BY service_name
-                """,
-                params,
-            )
+            """
+
+            if self._use_postgres:
+                cur = conn.cursor()
+                cur.execute(query, params)
+                rows = cur.fetchall()
+            else:
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
 
             stats = {}
-            for row in cursor.fetchall():
+            for row in rows:
                 stats[row["service_name"]] = {
                     "total_calls": row["total_calls"],
-                    "avg_latency_ms": round(row["avg_latency"], 2) if row["avg_latency"] else 0,
+                    "avg_latency_ms": round(float(row["avg_latency"]), 2)
+                    if row["avg_latency"]
+                    else 0,
                     "max_latency_ms": row["max_latency"],
                     "error_count": row["error_count"],
                     "error_rate": round(row["error_count"] / row["total_calls"] * 100, 2),
@@ -541,24 +672,37 @@ class OpsDatabase:
 
     def record_analytics_event(self, event: AnalyticsEvent) -> None:
         """Record a tenant-scoped analytics event."""
+        ph = self._ph
+        params = (
+            event.id,
+            event.tenant_id,
+            event.event_type,
+            event.event_name,
+            event.user_id,
+            event.session_id,
+            json.dumps(event.properties) if event.properties else None,
+            event.recorded_at.isoformat(),
+        )
         with self.connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO analytics_events
-                (id, tenant_id, event_type, event_name, user_id, session_id, properties, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    event.id,
-                    event.tenant_id,
-                    event.event_type,
-                    event.event_name,
-                    event.user_id,
-                    event.session_id,
-                    json.dumps(event.properties) if event.properties else None,
-                    event.recorded_at.isoformat(),
-                ),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    INSERT INTO analytics_events
+                    (id, tenant_id, event_type, event_name, user_id, session_id, properties, recorded_at)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                    """,
+                    params,
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO analytics_events
+                    (id, tenant_id, event_type, event_name, user_id, session_id, properties, recorded_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    params,
+                )
 
     def get_analytics_summary(
         self,
@@ -568,43 +712,53 @@ class OpsDatabase:
     ) -> dict[str, Any]:
         """Get analytics summary for a tenant."""
         cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+        ph = self._ph
 
         with self.connection() as conn:
             # Event counts by type
-            type_filter = "AND event_type = ?" if event_type else ""
+            type_filter = f"AND event_type = {ph}" if event_type else ""
             params: list[Any] = [tenant_id, cutoff]
             if event_type:
                 params.append(event_type)
 
-            cursor = conn.execute(
-                f"""
+            query1 = f"""
                 SELECT event_type, event_name, COUNT(*) as count
                 FROM analytics_events
-                WHERE tenant_id = ? AND recorded_at >= ? {type_filter}
+                WHERE tenant_id = {ph} AND recorded_at >= {ph} {type_filter}
                 GROUP BY event_type, event_name
                 ORDER BY count DESC
-                """,
-                params,
-            )
+            """
+
+            query2 = f"""
+                SELECT COUNT(DISTINCT user_id) as unique_users,
+                       COUNT(DISTINCT session_id) as unique_sessions
+                FROM analytics_events
+                WHERE tenant_id = {ph} AND recorded_at >= {ph} {type_filter}
+            """
+
+            if self._use_postgres:
+                cur = conn.cursor()
+                cur.execute(query1, params)
+                rows = cur.fetchall()
+            else:
+                cursor = conn.execute(query1, params)
+                rows = cursor.fetchall()
 
             events_by_type: dict[str, dict[str, int]] = {}
-            for row in cursor.fetchall():
+            for row in rows:
                 event_type_key = row["event_type"]
                 if event_type_key not in events_by_type:
                     events_by_type[event_type_key] = {}
                 events_by_type[event_type_key][row["event_name"]] = row["count"]
 
             # Unique users
-            cursor = conn.execute(
-                f"""
-                SELECT COUNT(DISTINCT user_id) as unique_users,
-                       COUNT(DISTINCT session_id) as unique_sessions
-                FROM analytics_events
-                WHERE tenant_id = ? AND recorded_at >= ? {type_filter}
-                """,
-                params,
-            )
-            row = cursor.fetchone()
+            if self._use_postgres:
+                cur = conn.cursor()
+                cur.execute(query2, params)
+                row = cur.fetchone()
+            else:
+                cursor = conn.execute(query2, params)
+                row = cursor.fetchone()
 
             return {
                 "tenant_id": tenant_id,
@@ -631,27 +785,41 @@ class OpsDatabase:
     ) -> str:
         """Record an event to the log."""
         event_id = str(uuid4())
+        ph = self._ph
+        params = (
+            event_id,
+            event_type,
+            entity_name,
+            entity_id,
+            json.dumps(payload) if payload else None,
+            correlation_id,
+            causation_id,
+            user_id,
+            tenant_id,
+            datetime.now(UTC).isoformat(),
+        )
         with self.connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO event_log
-                (id, event_type, entity_name, entity_id, payload,
-                 correlation_id, causation_id, user_id, tenant_id, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    event_id,
-                    event_type,
-                    entity_name,
-                    entity_id,
-                    json.dumps(payload) if payload else None,
-                    correlation_id,
-                    causation_id,
-                    user_id,
-                    tenant_id,
-                    datetime.now(UTC).isoformat(),
-                ),
-            )
+            if self._use_postgres:
+                cursor = conn.cursor()
+                cursor.execute(
+                    f"""
+                    INSERT INTO event_log
+                    (id, event_type, entity_name, entity_id, payload,
+                     correlation_id, causation_id, user_id, tenant_id, recorded_at)
+                    VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                    """,
+                    params,
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO event_log
+                    (id, event_type, entity_name, entity_id, payload,
+                     correlation_id, causation_id, user_id, tenant_id, recorded_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    params,
+                )
         return event_id
 
     def get_events(
@@ -665,37 +833,43 @@ class OpsDatabase:
         offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Query events from the log."""
-        where_clauses = []
+        ph = self._ph
+        where_clauses: list[str] = []
         params: list[Any] = []
 
         if entity_name:
-            where_clauses.append("entity_name = ?")
+            where_clauses.append(f"entity_name = {ph}")
             params.append(entity_name)
         if entity_id:
-            where_clauses.append("entity_id = ?")
+            where_clauses.append(f"entity_id = {ph}")
             params.append(entity_id)
         if event_type:
-            where_clauses.append("event_type = ?")
+            where_clauses.append(f"event_type = {ph}")
             params.append(event_type)
         if correlation_id:
-            where_clauses.append("correlation_id = ?")
+            where_clauses.append(f"correlation_id = {ph}")
             params.append(correlation_id)
         if tenant_id:
-            where_clauses.append("tenant_id = ?")
+            where_clauses.append(f"tenant_id = {ph}")
             params.append(tenant_id)
 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
+        query = f"""
+            SELECT * FROM event_log
+            WHERE {where_sql}
+            ORDER BY recorded_at DESC
+            LIMIT {ph} OFFSET {ph}
+        """
+
         with self.connection() as conn:
-            cursor = conn.execute(
-                f"""
-                SELECT * FROM event_log
-                WHERE {where_sql}
-                ORDER BY recorded_at DESC
-                LIMIT ? OFFSET ?
-                """,
-                params + [limit, offset],
-            )
+            if self._use_postgres:
+                cur = conn.cursor()
+                cur.execute(query, params + [limit, offset])
+                rows = cur.fetchall()
+            else:
+                cursor = conn.execute(query, params + [limit, offset])
+                rows = cursor.fetchall()
 
             return [
                 {
@@ -710,7 +884,7 @@ class OpsDatabase:
                     "tenant_id": row["tenant_id"],
                     "recorded_at": row["recorded_at"],
                 }
-                for row in cursor.fetchall()
+                for row in rows
             ]
 
     # =========================================================================
@@ -720,29 +894,26 @@ class OpsDatabase:
     def enforce_retention(self) -> dict[str, int]:
         """Delete data older than retention period. Returns counts of deleted rows."""
         deleted = {}
+        ph = self._ph
+
+        deletions = [
+            ("health_checks", "checked_at", self.retention.health_checks_days),
+            ("api_calls", "called_at", self.retention.api_calls_days),
+            ("analytics_events", "recorded_at", self.retention.analytics_days),
+            ("event_log", "recorded_at", self.retention.events_days),
+        ]
 
         with self.connection() as conn:
-            # Health checks
-            cutoff = (
-                datetime.now(UTC) - timedelta(days=self.retention.health_checks_days)
-            ).isoformat()
-            cursor = conn.execute("DELETE FROM health_checks WHERE checked_at < ?", (cutoff,))
-            deleted["health_checks"] = cursor.rowcount
-
-            # API calls
-            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.api_calls_days)).isoformat()
-            cursor = conn.execute("DELETE FROM api_calls WHERE called_at < ?", (cutoff,))
-            deleted["api_calls"] = cursor.rowcount
-
-            # Analytics
-            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.analytics_days)).isoformat()
-            cursor = conn.execute("DELETE FROM analytics_events WHERE recorded_at < ?", (cutoff,))
-            deleted["analytics_events"] = cursor.rowcount
-
-            # Events
-            cutoff = (datetime.now(UTC) - timedelta(days=self.retention.events_days)).isoformat()
-            cursor = conn.execute("DELETE FROM event_log WHERE recorded_at < ?", (cutoff,))
-            deleted["event_log"] = cursor.rowcount
+            for table, col, days in deletions:
+                cutoff = (datetime.now(UTC) - timedelta(days=days)).isoformat()
+                query = f"DELETE FROM {table} WHERE {col} < {ph}"
+                if self._use_postgres:
+                    cur = conn.cursor()
+                    cur.execute(query, (cutoff,))
+                    deleted[table] = cur.rowcount
+                else:
+                    cursor = conn.execute(query, (cutoff,))
+                    deleted[table] = cursor.rowcount
 
         return deleted
 
@@ -753,6 +924,7 @@ class OpsDatabase:
     def set_retention_config(self, config: RetentionConfig) -> None:
         """Update retention configuration."""
         self.retention = config
+        ph = self._ph
         with self.connection() as conn:
             now = datetime.now(UTC).isoformat()
             for key, value in [
@@ -761,10 +933,23 @@ class OpsDatabase:
                 ("analytics_days", config.analytics_days),
                 ("events_days", config.events_days),
             ]:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO retention_config (key, value_days, updated_at)
-                    VALUES (?, ?, ?)
-                    """,
-                    (key, value, now),
-                )
+                if self._use_postgres:
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        f"""
+                        INSERT INTO retention_config (key, value_days, updated_at)
+                        VALUES ({ph}, {ph}, {ph})
+                        ON CONFLICT (key) DO UPDATE SET
+                            value_days = EXCLUDED.value_days,
+                            updated_at = EXCLUDED.updated_at
+                        """,
+                        (key, value, now),
+                    )
+                else:
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO retention_config (key, value_days, updated_at)
+                        VALUES (?, ?, ?)
+                        """,
+                        (key, value, now),
+                    )

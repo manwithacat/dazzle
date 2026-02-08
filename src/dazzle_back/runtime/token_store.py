@@ -2,18 +2,20 @@
 Refresh token storage and management.
 
 Provides secure storage for refresh tokens with revocation support.
+Supports both SQLite (dev) and PostgreSQL (production) backends.
 """
 
 from __future__ import annotations
 
 import secrets
-import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from dazzle_back.runtime.db_backend import DualBackendMixin
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.auth import UserRecord
@@ -57,11 +59,11 @@ class RefreshTokenRecord(BaseModel):
 # =============================================================================
 
 
-class TokenStore:
+class TokenStore(DualBackendMixin):
     """
     Secure refresh token storage.
 
-    Uses SQLite for persistence with:
+    Supports SQLite (dev) and PostgreSQL (production) with:
     - Token hashing (tokens are never stored in plain text)
     - Automatic cleanup of expired tokens
     - Support for token revocation
@@ -72,6 +74,7 @@ class TokenStore:
         self,
         db_path: str | Path | None = None,
         token_lifetime_days: int = 7,
+        database_url: str | None = None,
     ):
         """
         Initialize the token store.
@@ -79,20 +82,25 @@ class TokenStore:
         Args:
             db_path: Path to SQLite database (default: .dazzle/tokens.db)
             token_lifetime_days: Refresh token lifetime in days
+            database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
-        self.db_path = Path(db_path) if db_path else Path(".dazzle/tokens.db")
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_backend(db_path, database_url, default_path=".dazzle/tokens.db")
         self.token_lifetime_days = token_lifetime_days
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    def _get_connection(self) -> Any:
         """Get a database connection."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
+        return self._get_sync_connection()
 
     def _init_db(self) -> None:
         """Initialize database tables."""
+        if self._use_postgres:
+            self._init_postgres_db()
+        else:
+            self._init_sqlite_db()
+
+    def _init_sqlite_db(self) -> None:
+        """Initialize SQLite database tables."""
         with self._get_connection() as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -116,11 +124,55 @@ class TokenStore:
             """)
             conn.commit()
 
+    def _init_postgres_db(self) -> None:
+        """Initialize PostgreSQL database tables."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS refresh_tokens (
+                    token_hash TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    device_id TEXT,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    last_used_at TEXT,
+                    revoked_at TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT
+                )
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id
+                    ON refresh_tokens(user_id)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires
+                    ON refresh_tokens(expires_at)
+            """)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_device
+                    ON refresh_tokens(user_id, device_id)
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+
     def _hash_token(self, token: str) -> str:
         """Hash a token for storage."""
         import hashlib
 
         return hashlib.sha256(token.encode()).hexdigest()
+
+    def _exec(self, conn: Any, query: str, params: tuple[object, ...] = ()) -> Any:
+        """Execute a query on a connection, handling backend differences."""
+        if self._use_postgres:
+            query = query.replace("?", "%s")
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor
+        else:
+            return conn.execute(query, params)
 
     # =========================================================================
     # Token Operations
@@ -153,7 +205,8 @@ class TokenStore:
         expires_at = now + timedelta(days=self.token_lifetime_days)
 
         with self._get_connection() as conn:
-            conn.execute(
+            self._exec(
+                conn,
                 """
                 INSERT INTO refresh_tokens
                     (token_hash, user_id, device_id, created_at, expires_at,
@@ -187,7 +240,8 @@ class TokenStore:
         token_hash = self._hash_token(token)
 
         with self._get_connection() as conn:
-            row = conn.execute(
+            row = self._exec(
+                conn,
                 "SELECT * FROM refresh_tokens WHERE token_hash = ?",
                 (token_hash,),
             ).fetchone()
@@ -233,7 +287,8 @@ class TokenStore:
         now = datetime.now(UTC)
 
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 """
                 UPDATE refresh_tokens
                 SET last_used_at = ?
@@ -298,7 +353,8 @@ class TokenStore:
         now = datetime.now(UTC)
 
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 """
                 UPDATE refresh_tokens
                 SET revoked_at = ?
@@ -325,7 +381,8 @@ class TokenStore:
 
         with self._get_connection() as conn:
             if except_hash:
-                cursor = conn.execute(
+                cursor = self._exec(
+                    conn,
                     """
                     UPDATE refresh_tokens
                     SET revoked_at = ?
@@ -334,7 +391,8 @@ class TokenStore:
                     (now.isoformat(), str(user_id), except_hash),
                 )
             else:
-                cursor = conn.execute(
+                cursor = self._exec(
+                    conn,
                     """
                     UPDATE refresh_tokens
                     SET revoked_at = ?
@@ -359,7 +417,8 @@ class TokenStore:
         now = datetime.now(UTC)
 
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 """
                 UPDATE refresh_tokens
                 SET revoked_at = ?
@@ -381,7 +440,8 @@ class TokenStore:
             List of active token records
         """
         with self._get_connection() as conn:
-            rows = conn.execute(
+            rows = self._exec(
+                conn,
                 """
                 SELECT * FROM refresh_tokens
                 WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
@@ -417,7 +477,8 @@ class TokenStore:
         cutoff = datetime.now(UTC) - timedelta(days=1)  # Keep revoked for 1 day for audit
 
         with self._get_connection() as conn:
-            cursor = conn.execute(
+            cursor = self._exec(
+                conn,
                 """
                 DELETE FROM refresh_tokens
                 WHERE expires_at < ? OR (revoked_at IS NOT NULL AND revoked_at < ?)

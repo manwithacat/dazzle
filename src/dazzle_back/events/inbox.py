@@ -54,6 +54,23 @@ CREATE INDEX IF NOT EXISTS idx_inbox_consumer ON _dazzle_event_inbox(consumer_na
 CREATE INDEX IF NOT EXISTS idx_inbox_processed ON _dazzle_event_inbox(processed_at);
 """
 
+# SQL statements for inbox table (PostgreSQL)
+CREATE_INBOX_TABLE_POSTGRES = """
+CREATE TABLE IF NOT EXISTS _dazzle_event_inbox (
+    event_id TEXT NOT NULL,
+    consumer_name TEXT NOT NULL,
+    processed_at TEXT NOT NULL DEFAULT (now()::text),
+    result TEXT NOT NULL DEFAULT 'success',
+    result_data TEXT,
+    PRIMARY KEY (event_id, consumer_name)
+);
+"""
+
+CREATE_INBOX_INDEXES_POSTGRES = [
+    "CREATE INDEX IF NOT EXISTS idx_inbox_consumer ON _dazzle_event_inbox(consumer_name)",
+    "CREATE INDEX IF NOT EXISTS idx_inbox_processed ON _dazzle_event_inbox(processed_at)",
+]
+
 
 class EventInbox:
     """
@@ -101,8 +118,13 @@ class EventInbox:
 
     async def create_table(self, conn: Any) -> None:
         """Create the inbox table if it doesn't exist."""
-        await conn.executescript(CREATE_INBOX_TABLE + CREATE_INBOX_INDEXES)
-        await conn.commit()
+        if self._backend_type == "postgres":
+            await conn.execute(CREATE_INBOX_TABLE_POSTGRES)
+            for idx_sql in CREATE_INBOX_INDEXES_POSTGRES:
+                await conn.execute(idx_sql)
+        else:
+            await conn.executescript(CREATE_INBOX_TABLE + CREATE_INBOX_INDEXES)
+            await conn.commit()
 
     async def is_processed(
         self,
