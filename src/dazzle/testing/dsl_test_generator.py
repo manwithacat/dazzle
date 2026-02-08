@@ -910,7 +910,9 @@ class DSLTestGenerator:
         elif type_kind == FieldTypeKind.FILE:
             return f"test_file{suffix}.txt"
         elif type_kind == FieldTypeKind.MONEY:
-            return 100.00
+            # Money fields expand to _minor + _currency per #131
+            currency = field.type.currency_code or "USD"
+            return {"_minor": 10000, "_currency": currency}
         elif type_kind == FieldTypeKind.JSON:
             return {"key": f"value{suffix}"}
         else:

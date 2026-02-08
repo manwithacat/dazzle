@@ -37,6 +37,9 @@ Usage:
     python -m dazzle.testing.event_test_runner ./my-project
 """
 
+# Curl/bash smoke test generation
+from dazzle.testing.curl_test_generator import CurlTestGenerator
+
 # DSL test generation
 from dazzle.testing.dsl_test_generator import (
     DSLTestGenerator,
@@ -94,6 +97,8 @@ from dazzle.testing.unified_runner import (
 )
 
 __all__ = [
+    # Curl test generator
+    "CurlTestGenerator",
     # Playwright codegen
     "generate_test_module",
     "generate_test_file",

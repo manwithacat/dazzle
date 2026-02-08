@@ -16,6 +16,12 @@ logger = logging.getLogger("dazzle.mcp")
 def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate tests from DSL/AppSpec definitions."""
     try:
+        fmt = args.get("format", "json")
+
+        # Bash/curl smoke test generation
+        if fmt == "bash":
+            return _generate_bash_tests(project_root, args)
+
         from dazzle.testing.dsl_test_generator import (
             generate_tests_from_dsl,
             save_generated_tests,
@@ -67,6 +73,35 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     except Exception as e:
         logger.exception("Error generating DSL tests")
         return json.dumps({"error": f"Failed to generate tests: {e}"}, indent=2)
+
+
+def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate bash/curl smoke test script."""
+    from dazzle.core.project import load_project
+    from dazzle.testing.curl_test_generator import CurlTestGenerator
+
+    appspec = load_project(project_root)
+    base_url = args.get("base_url", "http://localhost:8000")
+    generator = CurlTestGenerator(appspec, base_url=base_url, project_root=project_root)
+    script = generator.generate()
+
+    save = args.get("save", False)
+    if save:
+        output_dir = project_root / "dsl" / "tests"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / "smoke_test.sh"
+        output_file.write_text(script)
+        output_file.chmod(0o755)
+        return json.dumps(
+            {
+                "format": "bash",
+                "saved_to": str(output_file),
+                "script_lines": len(script.splitlines()),
+            },
+            indent=2,
+        )
+
+    return script
 
 
 def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:

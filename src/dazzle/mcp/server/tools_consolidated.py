@@ -565,7 +565,7 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "format": {
                         "type": "string",
-                        "enum": ["json", "yaml"],
+                        "enum": ["json", "yaml", "bash"],
                         "description": "Output format (for generate)",
                     },
                     "base_url": {
