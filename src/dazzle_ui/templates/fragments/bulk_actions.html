@@ -1,6 +1,7 @@
 {# Bulk actions toolbar — no Alpine, uses data-dz-bulk-* attributes #}
-{# Parameters: entity_name, actions_endpoint #}
+{# Parameters: entity_name, actions_endpoint, table (for dynamic target ID) #}
 {# State managed by dz.js initTable() — selected IDs injected via htmx:configRequest #}
+{% set tbody_id = (table.table_id or 'dt-table') + '-body' if table is defined and table else 'dt-table-body' %}
 <div data-dz-bulk-bar
      class="flex items-center gap-3 p-2 bg-base-200 rounded-lg mb-2"
      style="display:none;">
@@ -14,16 +15,16 @@
     <button class="btn btn-sm btn-ghost"
             data-dz-bulk-action
             hx-post="{{ actions_endpoint }}/bulk-update"
-            hx-target="#table-body"
-            hx-swap="innerHTML"
+            hx-target="#{{ tbody_id }}"
+            hx-swap="morph:innerHTML"
             hx-headers='{"Accept": "text/html"}'>
       Update
     </button>
     <button class="btn btn-sm btn-error btn-ghost"
             data-dz-bulk-action
             hx-delete="{{ actions_endpoint }}/bulk-delete"
-            hx-target="#table-body"
-            hx-swap="innerHTML"
+            hx-target="#{{ tbody_id }}"
+            hx-swap="morph:innerHTML"
             hx-headers='{"Accept": "text/html"}'
             hx-confirm="Delete selected {{ entity_name | lower }}s?">
       Delete

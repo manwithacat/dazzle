@@ -608,7 +608,7 @@ const dz = (() => {
       if (searchInput?.value) p.set("search", searchInput.value);
       htmx.ajax("GET", `${endpoint}?${p}`, {
         target,
-        swap: "innerHTML",
+        swap: "morph:innerHTML",
         headers: { Accept: "text/html" },
       });
     }

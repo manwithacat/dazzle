@@ -7,7 +7,7 @@
     <button class="join-item btn btn-sm {% if p == table.page %}btn-active{% endif %}"
             hx-get="{{ table.api_endpoint }}?page={{ p }}&page_size={{ table.page_size }}{% if table.sort_field %}&sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}{% if table.filter_values %}{% for k, v in table.filter_values.items() %}&filter[{{ k }}]={{ v }}{% endfor %}{% endif %}"
             hx-target="#{{ table.table_id or 'dt-table' }}-body"
-            hx-swap="innerHTML"
+            hx-swap="morph:innerHTML"
             hx-headers='{"Accept": "text/html"}'
             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
       {{ p }}

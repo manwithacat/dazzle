@@ -1,7 +1,7 @@
 {# Table rows fragment — no Alpine, column visibility via data-dz-col #}
 {% if table and table.rows %}
 {% for item in table.rows %}
-<tr class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}" data-dz-row-id="{{ item.id }}"
+<tr id="row-{{ item.id }}" class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}" data-dz-row-id="{{ item.id }}"
     {% if table.detail_url_template %}
     hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
     hx-push-url="true"

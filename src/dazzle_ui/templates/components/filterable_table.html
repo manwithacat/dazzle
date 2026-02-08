@@ -96,6 +96,7 @@
       <tbody id="{{ table.table_id or 'dt-table' }}-body"
              hx-get="{{ table.api_endpoint }}{% if table.sort_field %}?sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}"
              hx-trigger="load"
+             hx-swap="morph:innerHTML"
              hx-headers='{"Accept": "text/html"}'
              hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
         {% include 'fragments/table_rows.html' %}
