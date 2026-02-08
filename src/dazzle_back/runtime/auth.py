@@ -833,6 +833,7 @@ def create_auth_routes(
 
     from fastapi import APIRouter, HTTPException
     from fastapi.responses import JSONResponse
+    from starlette.responses import Response
 
     router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -889,7 +890,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/logout")
-    async def logout(request: FastAPIRequest) -> JSONResponse:
+    async def logout(request: FastAPIRequest) -> Response:
         """
         Logout and delete session.
 
@@ -907,6 +908,7 @@ def create_auth_routes(
         accept = request.headers.get("accept", "")
         is_browser = "text/html" in accept and "application/json" not in accept
 
+        response: Response
         if is_browser:
             response = RedirectResponse(url="/login", status_code=303)
         else:
