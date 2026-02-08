@@ -65,6 +65,40 @@
   transition: opacity 200ms ease-out, transform 200ms ease-out;
 }
 
+/* ── Desktop sidebar (replaces lg:drawer-open, unavailable in DaisyUI CDN) ── */
+
+@media (min-width: 1024px) {
+  /* Two-column grid when sidebar is open */
+  .drawer[data-dz-sidebar="open"] {
+    grid-template-columns: auto 1fr;
+  }
+
+  /* Show sidebar in-place (not overlay) */
+  .drawer[data-dz-sidebar="open"] > .drawer-side {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* No overlay needed on desktop */
+  .drawer[data-dz-sidebar="open"] > .drawer-side > .drawer-overlay {
+    visibility: hidden;
+  }
+
+  /* Slide content into view */
+  .drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
+    transform: translateX(0);
+  }
+
+  /* Hide top navbar when sidebar provides navigation */
+  .drawer[data-dz-sidebar="open"] > .drawer-content > [data-dz-sidebar-navbar] {
+    display: none;
+  }
+}
+
 /* ── Native dialog backdrop ─────────────────────────────────────────── */
 
 dialog::backdrop {

@@ -90,11 +90,10 @@ const dz = (() => {
   function applySidebar(open) {
     const drawer = document.querySelector("[data-dz-sidebar]");
     if (!drawer) return;
-    drawer.classList.toggle("lg:drawer-open", open);
-    // Show/hide the top navbar on desktop when sidebar is open
-    document.querySelectorAll("[data-dz-sidebar-navbar]").forEach((el) => {
-      el.classList.toggle("lg:hidden", open);
-    });
+    // Use data attribute value — CSS in dz.css handles responsive behavior.
+    // DaisyUI CDN does not include lg:drawer-open variant styles, so we
+    // replicate them with [data-dz-sidebar="open"] selectors in dz.css.
+    drawer.setAttribute("data-dz-sidebar", open ? "open" : "");
     // Show/hide expand button
     document.querySelectorAll("[data-dz-sidebar-expand]").forEach((el) => {
       /** @type {HTMLElement} */ (el).style.display = open ? "none" : "";
