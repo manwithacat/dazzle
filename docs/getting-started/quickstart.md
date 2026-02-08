@@ -146,6 +146,29 @@ my-app/
 }
 ```
 
+## Using PostgreSQL
+
+By default, Dazzle uses SQLite for zero-configuration development. To use PostgreSQL instead:
+
+```bash
+# Start a local PostgreSQL instance
+docker run -d --name dazzle-postgres \
+  -e POSTGRES_USER=dazzle \
+  -e POSTGRES_PASSWORD=dazzle \
+  -e POSTGRES_DB=dazzle \
+  -p 5432:5432 \
+  postgres:16
+
+# Install PostgreSQL drivers
+pip install dazzle[postgres]
+
+# Run with PostgreSQL
+export DATABASE_URL=postgresql://dazzle:dazzle@localhost:5432/dazzle
+dazzle serve --local
+```
+
+Tables are created automatically on startup. See [Database Configuration](../reference/databases.md) for full details.
+
 ## Next Steps
 
 - [CLI Reference](../reference/cli.md) - All command options
