@@ -550,13 +550,20 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl_test",
-            description="DSL test operations: generate, run, coverage, list",
+            description="DSL test operations: generate, run, coverage, list, create_sessions, diff_personas",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["generate", "run", "coverage", "list"],
+                        "enum": [
+                            "generate",
+                            "run",
+                            "coverage",
+                            "list",
+                            "create_sessions",
+                            "diff_personas",
+                        ],
                         "description": "Operation to perform",
                     },
                     "save": {
@@ -570,7 +577,7 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "base_url": {
                         "type": "string",
-                        "description": "Server URL (for run)",
+                        "description": "Server URL (for run, create_sessions, diff_personas)",
                     },
                     "entity": {
                         "type": "string",
@@ -591,6 +598,28 @@ def get_consolidated_tools() -> list[Tool]:
                     "detailed": {
                         "type": "boolean",
                         "description": "Detailed output (for coverage)",
+                    },
+                    "persona": {
+                        "type": "string",
+                        "description": "Run tests as specific persona (for run)",
+                    },
+                    "force": {
+                        "type": "boolean",
+                        "description": "Force recreate sessions (for create_sessions)",
+                    },
+                    "route": {
+                        "type": "string",
+                        "description": "Route to diff (for diff_personas)",
+                    },
+                    "routes": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Routes to diff (for diff_personas)",
+                    },
+                    "persona_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Persona IDs to compare (for diff_personas, default: all)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

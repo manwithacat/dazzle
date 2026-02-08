@@ -320,12 +320,29 @@ class UnifiedTestRunner:
                     return port
         return start
 
+    def _authenticate_persona(self, persona: str) -> None:
+        """Pre-authenticate as a persona using the session manager."""
+        from .session_manager import SessionManager
+
+        base_url = self.base_url or f"http://localhost:{self.api_port}"
+        manager = SessionManager(self.project_path, base_url=base_url)
+        session = manager.load_session(persona)
+        if session:
+            print(f"  Using stored session for persona '{persona}'")
+        else:
+            print(f"  Creating session for persona '{persona}'...")
+            import asyncio
+
+            asyncio.run(manager.create_session(persona))
+            print(f"  Session created for '{persona}'")
+
     def run_crud_tests(
         self,
         suite: GeneratedTestSuite,
         category: str | None = None,
         entity: str | None = None,
         test_id: str | None = None,
+        persona: str | None = None,
     ) -> TestRunResult:
         """Run CRUD and state machine tests."""
 
@@ -335,6 +352,7 @@ class UnifiedTestRunner:
             self.ui_port,
             api_url=self.api_url,
             ui_url=self.ui_url,
+            persona=persona,
         )
 
         # Merge generated tests with existing tests
@@ -402,6 +420,7 @@ class UnifiedTestRunner:
         category: str | None = None,
         entity: str | None = None,
         test_id: str | None = None,
+        persona: str | None = None,
     ) -> UnifiedTestResult:
         """Run all tests."""
         result = UnifiedTestResult(
@@ -436,9 +455,13 @@ class UnifiedTestRunner:
                     result.completed_at = datetime.now()
                     return result
 
+            # Authenticate as persona if requested
+            if persona:
+                self._authenticate_persona(persona)
+
             # Run CRUD tests
             result.crud_result = self.run_crud_tests(
-                suite, category=category, entity=entity, test_id=test_id
+                suite, category=category, entity=entity, test_id=test_id, persona=persona
             )
 
             # Run event tests

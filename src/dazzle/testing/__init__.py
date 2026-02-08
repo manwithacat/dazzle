@@ -70,6 +70,11 @@ from dazzle.testing.playwright_codegen import (
     generate_test_module,
     generate_tests_for_app,
 )
+from dazzle.testing.session_manager import (
+    PersonaSession,
+    SessionManager,
+    SessionManifest,
+)
 
 # Test runner
 from dazzle.testing.test_runner import (
@@ -138,6 +143,10 @@ __all__ = [
     "E2ERunResult",
     "E2EFlowResult",
     "format_e2e_report",
+    # Session Manager
+    "SessionManager",
+    "PersonaSession",
+    "SessionManifest",
     # Tier 2 Playwright Generator
     "DazzleSelector",
     "PlaywrightStep",

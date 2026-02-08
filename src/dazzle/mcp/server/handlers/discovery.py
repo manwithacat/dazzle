@@ -161,6 +161,37 @@ def _build_mission_summary(
     return result
 
 
+def _get_persona_session_info(project_path: Path, persona: str, base_url: str) -> dict[str, Any]:
+    """Load or create a persona session, returning session metadata for the response."""
+    try:
+        from dazzle.testing.session_manager import SessionManager
+
+        manager = SessionManager(project_path, base_url=base_url)
+        session = manager.load_session(persona)
+        if session and session.session_token:
+            return {
+                "authenticated": True,
+                "persona": persona,
+                "session_source": "stored",
+                "cookie": {"dazzle_session": session.session_token},
+            }
+        # Try to create a session
+        import asyncio
+
+        asyncio.run(manager.create_session(persona))
+        session = manager.load_session(persona)
+        if session and session.session_token:
+            return {
+                "authenticated": True,
+                "persona": persona,
+                "session_source": "created",
+                "cookie": {"dazzle_session": session.session_token},
+            }
+    except Exception as e:
+        logger.debug("Could not load/create persona session: %s", e)
+    return {"authenticated": False, "persona": persona}
+
+
 def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Build and describe a discovery mission (non-executing).
@@ -240,9 +271,16 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         mission, mode, appspec, kg_store, base_url, persona=persona if mode == "persona" else None
     )
 
+    # Include persona session info for authenticated discovery
+    if mode == "persona":
+        session_info = _get_persona_session_info(project_path, persona, base_url)
+        result["session"] = session_info
+
     result["instructions"] = (
         "Mission is ready. To execute, run the discovery agent against a live app:\n"
-        f"  dazzle discover --mode {mode} --url {base_url}\n"
+        f"  dazzle discover --mode {mode} --url {base_url}"
+        + (f" --persona {persona}" if mode == "persona" else "")
+        + "\n"
         "Or programmatically:\n"
         "  from dazzle.agent import DazzleAgent\n"
         "  from dazzle.agent.observer import HttpObserver\n"

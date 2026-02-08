@@ -22,6 +22,7 @@ Usage:
     transcript = await agent.run(mission)
 """
 
+from .client_factory import create_persona_client
 from .compiler import NarrativeCompiler, Proposal
 from .core import AgentTool, DazzleAgent, Mission
 from .emitter import DslEmitter, EmitContext, EmitResult, EntityFieldInfo
@@ -62,4 +63,6 @@ __all__ = [
     "EmitContext",
     "EmitResult",
     "EntityFieldInfo",
+    # Client factory
+    "create_persona_client",
 ]

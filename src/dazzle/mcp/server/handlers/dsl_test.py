@@ -114,6 +114,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         category = args.get("category")
         entity = args.get("entity")
         test_id = args.get("test_id")
+        persona = args.get("persona")
 
         # Create runner and run all tests
         runner = UnifiedTestRunner(project_root, base_url=base_url)
@@ -123,25 +124,100 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             category=category,
             entity=entity,
             test_id=test_id,
+            persona=persona,
         )
 
         # Return summary
-        summary = result.get_summary()
-        return json.dumps(
-            {
-                "project": result.project_name,
-                "summary": summary,
-                "dsl_hash": result.dsl_hash[:12],
-                "tests_generated": result.tests_generated,
-            },
-            indent=2,
-        )
+        response: dict[str, Any] = {
+            "project": result.project_name,
+            "summary": result.get_summary(),
+            "dsl_hash": result.dsl_hash[:12],
+            "tests_generated": result.tests_generated,
+        }
+        if persona:
+            response["persona"] = persona
+        return json.dumps(response, indent=2)
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
     except Exception as e:
         logger.exception("Error running DSL tests")
         return json.dumps({"error": f"Failed to run tests: {e}"}, indent=2)
+
+
+def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Create authenticated sessions for all DSL-defined personas."""
+    import asyncio
+
+    try:
+        from dazzle.core.project import load_project
+        from dazzle.testing.session_manager import SessionManager
+
+        base_url = args.get("base_url", "http://localhost:8000")
+        force = args.get("force", False)
+
+        appspec = load_project(project_root)
+        manager = SessionManager(project_root, base_url=base_url)
+        manifest = asyncio.run(manager.create_all_sessions(appspec, force=force))
+
+        return json.dumps(
+            {
+                "project": manifest.project_name,
+                "base_url": manifest.base_url,
+                "created_at": manifest.created_at,
+                "personas": {
+                    pid: {
+                        "user_id": s.user_id,
+                        "email": s.email,
+                        "role": s.role,
+                        "has_token": bool(s.session_token),
+                    }
+                    for pid, s in manifest.sessions.items()
+                },
+                "total_sessions": len(manifest.sessions),
+            },
+            indent=2,
+        )
+
+    except ImportError as e:
+        return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
+    except Exception as e:
+        logger.exception("Error creating sessions")
+        return json.dumps({"error": f"Failed to create sessions: {e}"}, indent=2)
+
+
+def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Compare route responses across personas."""
+    import asyncio
+
+    try:
+        from dazzle.testing.session_manager import SessionManager
+
+        base_url: str = args.get("base_url", "http://localhost:8000")
+        route: str | None = args.get("route")
+        routes: list[str] | None = args.get("routes")
+        persona_ids: list[str] | None = args.get("persona_ids")
+
+        if not route and not routes:
+            return json.dumps(
+                {"error": "Either 'route' or 'routes' parameter is required"},
+                indent=2,
+            )
+
+        manager = SessionManager(project_root, base_url=base_url)
+
+        if route:
+            result = asyncio.run(manager.diff_route(route, persona_ids))
+            return json.dumps(result, indent=2)
+        else:
+            results = asyncio.run(manager.diff_routes(routes or [], persona_ids))
+            return json.dumps({"diffs": results}, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
+    except Exception as e:
+        logger.exception("Error running differential analysis")
+        return json.dumps({"error": f"Failed to diff personas: {e}"}, indent=2)
 
 
 def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:

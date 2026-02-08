@@ -2244,3 +2244,178 @@ def test_run_all(
     # Exit with error if failures
     if total_failed > 0:
         raise typer.Exit(code=1)
+
+
+@test_app.command("create-sessions")
+def test_create_sessions(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    base_url: str = typer.Option(
+        "http://localhost:8000",
+        "--base-url",
+        help="Base URL of the running application",
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        "-f",
+        help="Recreate sessions even if they exist and are fresh",
+    ),
+    cleanup: bool = typer.Option(
+        False,
+        "--cleanup",
+        help="Remove all stored sessions and exit",
+    ),
+) -> None:
+    """
+    Create authenticated sessions for all DSL-defined personas.
+
+    Sessions are stored in .dazzle/test_sessions/ and reused across test runs,
+    discovery sessions, and differential analysis.
+
+    Examples:
+        dazzle test create-sessions                         # Create all persona sessions
+        dazzle test create-sessions --base-url http://...   # Against specific server
+        dazzle test create-sessions --force                 # Recreate all sessions
+        dazzle test create-sessions --cleanup               # Remove stored sessions
+    """
+    import asyncio
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from dazzle.testing.session_manager import SessionManager
+    except ImportError as e:
+        typer.echo(f"Session manager not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    manager = SessionManager(root, base_url=base_url)
+
+    if cleanup:
+        count = manager.cleanup()
+        typer.echo(f"Removed {count} session files")
+        return
+
+    try:
+        from dazzle.core.project import load_project
+
+        appspec = load_project(root)
+    except Exception as e:
+        typer.echo(f"Failed to load DSL: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    personas = appspec.personas if hasattr(appspec, "personas") else []
+    if not personas:
+        typer.echo("No personas defined in DSL", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Creating sessions for {len(personas)} personas against {base_url}...")
+
+    try:
+        manifest_result = asyncio.run(manager.create_all_sessions(appspec, force=force))
+    except Exception as e:
+        typer.echo(f"Error creating sessions: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    for pid, _session in manifest_result.sessions.items():
+        typer.secho(f"  {pid}: ", nl=False, bold=True)
+        typer.secho("OK", fg=typer.colors.GREEN)
+
+    failed = len(personas) - len(manifest_result.sessions)
+    if failed > 0:
+        typer.secho(f"\n{failed} persona(s) failed to authenticate", fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"\nSessions stored in {manager.sessions_dir}")
+
+
+@test_app.command("diff-personas")
+def test_diff_personas(
+    route: str = typer.Argument(..., help="Route to compare (e.g. /contacts)"),
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    base_url: str = typer.Option(
+        "http://localhost:8000",
+        "--base-url",
+        help="Base URL of the running application",
+    ),
+    personas: str = typer.Option(
+        None,
+        "--personas",
+        "-p",
+        help="Comma-separated persona IDs (default: all stored sessions)",
+    ),
+) -> None:
+    """
+    Compare route responses across personas (differential analysis).
+
+    Fetches the same route as each persona and compares HTTP status, content
+    length, table rows, and regions. Useful for ACL verification.
+
+    Examples:
+        dazzle test diff-personas /contacts
+        dazzle test diff-personas /workspaces/admin_dashboard
+        dazzle test diff-personas /contacts --personas admin,agent,customer
+    """
+    import asyncio
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    if not (root / "dazzle.toml").exists():
+        typer.echo(f"No dazzle.toml found in {root}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        from dazzle.testing.session_manager import SessionManager
+    except ImportError as e:
+        typer.echo(f"Session manager not available: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    manager = SessionManager(root, base_url=base_url)
+
+    persona_ids = personas.split(",") if personas else None
+    if not persona_ids:
+        persona_ids = manager.list_sessions()
+
+    if not persona_ids:
+        typer.echo("No persona sessions found. Run 'dazzle test create-sessions' first.", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"Route: {route}")
+    typer.echo(f"Personas: {', '.join(persona_ids)}")
+    typer.echo()
+
+    try:
+        result = asyncio.run(manager.diff_route(route, persona_ids))
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    # Display results as a table
+    for pid, info in result.get("personas", {}).items():
+        status = info.get("status", "?")
+        if status == 200:
+            status_str = typer.style("200", fg=typer.colors.GREEN)
+        elif status == 403:
+            status_str = typer.style("403 Forbidden", fg=typer.colors.RED)
+        elif status == 0:
+            status_str = typer.style(f"ERROR: {info.get('error', '?')}", fg=typer.colors.RED)
+        else:
+            status_str = typer.style(str(status), fg=typer.colors.YELLOW)
+
+        details = []
+        if info.get("table_rows", 0) > 0:
+            details.append(f"{info['table_rows']} rows")
+        if info.get("regions", 0) > 0:
+            details.append(f"{info['regions']} regions")
+        if info.get("line_count", 0) > 0:
+            details.append(f"{info['line_count']} lines")
+        if info.get("redirected"):
+            details.append(f"-> {info['final_url']}")
+
+        detail_str = f" ({', '.join(details)})" if details else ""
+        typer.echo(f"  {pid:20s} {status_str}{detail_str}")

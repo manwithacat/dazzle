@@ -377,6 +377,8 @@ def handle_process(arguments: dict[str, Any]) -> str:
 def handle_dsl_test(arguments: dict[str, Any]) -> str:
     """Handle consolidated DSL test operations."""
     from .handlers.dsl_test import (
+        create_sessions_handler,
+        diff_personas_handler,
         generate_dsl_tests_handler,
         get_dsl_test_coverage_handler,
         list_dsl_tests_handler,
@@ -397,6 +399,10 @@ def handle_dsl_test(arguments: dict[str, Any]) -> str:
         return get_dsl_test_coverage_handler(project_path, arguments)
     elif operation == "list":
         return list_dsl_tests_handler(project_path, arguments)
+    elif operation == "create_sessions":
+        return create_sessions_handler(project_path, arguments)
+    elif operation == "diff_personas":
+        return diff_personas_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown DSL test operation: {operation}"})
 

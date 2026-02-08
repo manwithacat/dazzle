@@ -423,6 +423,7 @@ class TestRunner:
         ui_port: int = 3000,
         api_url: str | None = None,
         ui_url: str | None = None,
+        persona: str | None = None,
     ):
         self.project_path = project_path
         self.api_port = api_port
@@ -432,6 +433,31 @@ class TestRunner:
         self.designs_path = project_path / "dsl" / "tests" / "designs.json"
         self.client: DazzleClient | None = None
         self._server_process: subprocess.Popen[str] | None = None
+        self._persona = persona
+
+    def _inject_persona_session(self) -> None:
+        """Inject stored persona session cookie into the client."""
+        if not self._persona or not self.client:
+            return
+        try:
+            from .session_manager import SessionManager
+
+            manager = SessionManager(self.project_path, base_url=self.api_url)
+            cookies = manager.get_cookies(self._persona)
+            if cookies:
+                for key, value in cookies.items():
+                    self.client.client.cookies.set(key, value)
+                print(f"    Authenticated as persona '{self._persona}' (stored session)")
+            else:
+                # Fall back to /__test__/authenticate
+                if self.client.authenticate(self._persona):
+                    print(f"    Authenticated as persona '{self._persona}' (test endpoint)")
+                else:
+                    print(f"    WARNING: Could not authenticate as persona '{self._persona}'")
+        except ImportError:
+            # Session manager not available, use test endpoint
+            if self.client.authenticate(self._persona):
+                print(f"    Authenticated as persona '{self._persona}' (test endpoint)")
 
     def load_designs(self) -> list[dict[str, Any]]:
         """Load test designs from JSON file."""
@@ -600,6 +626,10 @@ class TestRunner:
 
         # Initialize client
         self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
+
+        # Inject persona session cookie if configured
+        if self._persona:
+            self._inject_persona_session()
 
         # Wait for server
         if not self.client.wait_for_ready(max_wait=20):
