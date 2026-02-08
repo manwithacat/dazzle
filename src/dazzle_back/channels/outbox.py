@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -181,9 +180,7 @@ class OutboxRepository:
                 f"ON {self.TABLE_NAME}(recipient, channel_name)"
             )
 
-    def create(
-        self, message: OutboxMessage, conn: sqlite3.Connection | None = None
-    ) -> OutboxMessage:
+    def create(self, message: OutboxMessage, conn: Any | None = None) -> OutboxMessage:
         """Create a new outbox message.
 
         Args:
@@ -195,7 +192,8 @@ class OutboxRepository:
         """
         data = message.to_dict()
         columns = ", ".join(data.keys())
-        placeholders = ", ".join("?" * len(data))
+        ph = self.db.placeholder
+        placeholders = ", ".join(ph for _ in data)
         sql = f"INSERT INTO {self.TABLE_NAME} ({columns}) VALUES ({placeholders})"
 
         if conn:
@@ -211,7 +209,8 @@ class OutboxRepository:
 
     def get(self, message_id: str) -> OutboxMessage | None:
         """Get a message by ID."""
-        sql = f"SELECT * FROM {self.TABLE_NAME} WHERE id = ?"
+        ph = self.db.placeholder
+        sql = f"SELECT * FROM {self.TABLE_NAME} WHERE id = {ph}"
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (message_id,))
             row = cursor.fetchone()
@@ -234,19 +233,20 @@ class OutboxRepository:
         Returns:
             List of pending messages
         """
+        ph = self.db.placeholder
         now = datetime.now(UTC).isoformat()
         sql = f"""
             SELECT * FROM {self.TABLE_NAME}
             WHERE status = 'pending'
-            AND (scheduled_for IS NULL OR scheduled_for <= ?)
+            AND (scheduled_for IS NULL OR scheduled_for <= {ph})
         """
         params: list[Any] = [now]
 
         if channel_name:
-            sql += " AND channel_name = ?"
+            sql += f" AND channel_name = {ph}"
             params.append(channel_name)
 
-        sql += " ORDER BY created_at ASC LIMIT ?"
+        sql += f" ORDER BY created_at ASC LIMIT {ph}"
         params.append(limit)
 
         with self.db.connection() as conn:
@@ -265,10 +265,11 @@ class OutboxRepository:
         Returns:
             True if successfully claimed, False if already claimed
         """
+        ph = self.db.placeholder
         sql = f"""
             UPDATE {self.TABLE_NAME}
-            SET status = 'processing', updated_at = ?
-            WHERE id = ? AND status = 'pending'
+            SET status = 'processing', updated_at = {ph}
+            WHERE id = {ph} AND status = 'pending'
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
@@ -276,10 +277,11 @@ class OutboxRepository:
 
     def mark_sent(self, message_id: str) -> None:
         """Mark a message as successfully sent."""
+        ph = self.db.placeholder
         sql = f"""
             UPDATE {self.TABLE_NAME}
-            SET status = 'sent', updated_at = ?, attempts = attempts + 1
-            WHERE id = ?
+            SET status = 'sent', updated_at = {ph}, attempts = attempts + 1
+            WHERE id = {ph}
         """
         with self.db.connection() as conn:
             conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
@@ -307,10 +309,11 @@ class OutboxRepository:
                 f"Outbox message {message_id} failed (attempt {new_attempts}/{message.max_attempts}): {error}"
             )
 
+        ph = self.db.placeholder
         sql = f"""
             UPDATE {self.TABLE_NAME}
-            SET status = ?, updated_at = ?, attempts = ?, last_error = ?
-            WHERE id = ?
+            SET status = {ph}, updated_at = {ph}, attempts = {ph}, last_error = {ph}
+            WHERE id = {ph}
         """
         with self.db.connection() as conn:
             conn.execute(
@@ -320,11 +323,12 @@ class OutboxRepository:
 
     def get_dead_letters(self, limit: int = 100) -> list[OutboxMessage]:
         """Get messages that have failed permanently."""
+        ph = self.db.placeholder
         sql = f"""
             SELECT * FROM {self.TABLE_NAME}
             WHERE status = 'dead_letter'
             ORDER BY updated_at DESC
-            LIMIT ?
+            LIMIT {ph}
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (limit,))
@@ -339,10 +343,11 @@ class OutboxRepository:
 
         Resets the message to pending status with fresh attempts.
         """
+        ph = self.db.placeholder
         sql = f"""
             UPDATE {self.TABLE_NAME}
-            SET status = 'pending', updated_at = ?, attempts = 0, last_error = NULL
-            WHERE id = ? AND status = 'dead_letter'
+            SET status = 'pending', updated_at = {ph}, attempts = 0, last_error = NULL
+            WHERE id = {ph} AND status = 'dead_letter'
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
@@ -368,10 +373,11 @@ class OutboxRepository:
         Returns:
             List of recent messages, newest first
         """
+        ph = self.db.placeholder
         sql = f"""
             SELECT * FROM {self.TABLE_NAME}
             ORDER BY created_at DESC
-            LIMIT ?
+            LIMIT {ph}
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (limit,))
@@ -393,9 +399,10 @@ class OutboxRepository:
         from datetime import timedelta
 
         cutoff = (datetime.now(UTC) - timedelta(days=older_than_days)).isoformat()
+        ph = self.db.placeholder
         sql = f"""
             DELETE FROM {self.TABLE_NAME}
-            WHERE status = 'sent' AND updated_at < ?
+            WHERE status = 'sent' AND updated_at < {ph}
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (cutoff,))

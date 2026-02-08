@@ -515,7 +515,8 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                         from dazzle_back.runtime.query_builder import quote_identifier
 
                         table = quote_identifier(ref_entity)
-                        sql = f'SELECT 1 FROM {table} WHERE "id" = ? LIMIT 1'
+                        ph = db.placeholder
+                        sql = f'SELECT 1 FROM {table} WHERE "id" = {ph} LIMIT 1'
                         cursor = conn.execute(sql, (ref_id,))
                         exists = cursor.fetchone() is not None
 

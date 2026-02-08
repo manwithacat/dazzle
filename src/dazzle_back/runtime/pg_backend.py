@@ -37,7 +37,11 @@ class PgConnectionWrapper:
         self._conn = conn
 
     def execute(self, sql: str, params: Any = None) -> Any:
-        """Execute SQL via a new cursor and return it (sqlite3 compat)."""
+        """Execute SQL via a new cursor and return it (sqlite3 compat).
+
+        Translates ``?`` placeholders to ``%s`` for PostgreSQL compatibility.
+        """
+        sql = sql.replace("?", "%s")
         cursor = self._conn.cursor()
         cursor.execute(sql, params or ())
         return cursor

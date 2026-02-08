@@ -6,7 +6,6 @@ Handles loading related entities and building nested response objects.
 
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -149,12 +148,14 @@ class RelationLoader:
     registry: RelationRegistry
     entity_map: dict[str, EntitySpec]
     _conn_factory: Any = None  # Function that returns a connection
+    _placeholder: str = "?"
 
     def __init__(
         self,
         registry: RelationRegistry,
         entities: list[EntitySpec],
         conn_factory: Any = None,
+        placeholder: str = "?",
     ):
         """
         Initialize the relation loader.
@@ -162,18 +163,20 @@ class RelationLoader:
         Args:
             registry: Relation registry
             entities: List of entity specs
-            conn_factory: Function that returns a SQLite connection
+            conn_factory: Function that returns a database connection
+            placeholder: SQL placeholder style ("?" for SQLite, "%s" for Postgres)
         """
         self.registry = registry
         self.entity_map = {e.name: e for e in entities}
         self._conn_factory = conn_factory
+        self._placeholder = placeholder
 
     def load_relations(
         self,
         entity_name: str,
         rows: list[dict[str, Any]],
         include: list[str],
-        conn: sqlite3.Connection | None = None,
+        conn: Any | None = None,
     ) -> list[dict[str, Any]]:
         """
         Load relations for a list of entity rows.
@@ -182,7 +185,7 @@ class RelationLoader:
             entity_name: Name of the entity
             rows: List of entity data dicts
             include: List of relation names to include
-            conn: Optional SQLite connection
+            conn: Optional database connection
 
         Returns:
             Rows with nested relation data
@@ -212,7 +215,7 @@ class RelationLoader:
         self,
         relation: RelationInfo,
         rows: list[dict[str, Any]],
-        conn: sqlite3.Connection,
+        conn: Any,
     ) -> list[dict[str, Any]]:
         """
         Load a to-one relation (many-to-one or one-to-one).
@@ -230,11 +233,10 @@ class RelationLoader:
             return rows
 
         # Batch load related entities
-        placeholders = ", ".join("?" * len(fk_values))
+        placeholders = ", ".join(self._placeholder for _ in fk_values)
         sql = f"SELECT * FROM {relation.to_entity} WHERE id IN ({placeholders})"
 
         cursor = conn.execute(sql, list(fk_values))
-        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
         related_rows = cursor.fetchall()
 
         # Build lookup by ID
@@ -254,7 +256,7 @@ class RelationLoader:
         self,
         relation: RelationInfo,
         rows: list[dict[str, Any]],
-        conn: sqlite3.Connection,
+        conn: Any,
     ) -> list[dict[str, Any]]:
         """
         Load a to-many relation (one-to-many or many-to-many).
@@ -271,11 +273,10 @@ class RelationLoader:
 
         # The FK on the related entity points back to us
         fk_field = relation.foreign_key_field
-        placeholders = ", ".join("?" * len(ids))
+        placeholders = ", ".join(self._placeholder for _ in ids)
         sql = f"SELECT * FROM {relation.to_entity} WHERE {fk_field} IN ({placeholders})"
 
         cursor = conn.execute(sql, list(ids))
-        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
         related_rows = cursor.fetchall()
 
         # Group by FK

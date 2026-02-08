@@ -17,8 +17,6 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-import aiosqlite
-
 
 class ProcessingResult(StrEnum):
     """Result of processing an event."""
@@ -83,23 +81,32 @@ class EventInbox:
                 await inbox.mark_error(conn, event_id, "my-consumer", str(e))
     """
 
-    def __init__(self, table_name: str = "_dazzle_event_inbox") -> None:
+    def __init__(
+        self,
+        table_name: str = "_dazzle_event_inbox",
+        placeholder: str = "?",
+        backend_type: str = "sqlite",
+    ) -> None:
         """
         Initialize the inbox.
 
         Args:
             table_name: Name of the inbox table
+            placeholder: SQL placeholder style ("?" for SQLite, "%s" for Postgres)
+            backend_type: Database backend type ("sqlite" or "postgres")
         """
         self._table = table_name
+        self._ph = placeholder
+        self._backend_type = backend_type
 
-    async def create_table(self, conn: aiosqlite.Connection) -> None:
+    async def create_table(self, conn: Any) -> None:
         """Create the inbox table if it doesn't exist."""
         await conn.executescript(CREATE_INBOX_TABLE + CREATE_INBOX_INDEXES)
         await conn.commit()
 
     async def is_processed(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
     ) -> bool:
@@ -114,10 +121,11 @@ class EventInbox:
         Returns:
             True if already processed, False otherwise
         """
+        ph = self._ph
         cursor = await conn.execute(
             f"""
             SELECT 1 FROM {self._table}
-            WHERE event_id = ? AND consumer_name = ?
+            WHERE event_id = {ph} AND consumer_name = {ph}
             """,
             (str(event_id), consumer_name),
         )
@@ -126,7 +134,7 @@ class EventInbox:
 
     async def should_process(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
     ) -> bool:
@@ -147,7 +155,7 @@ class EventInbox:
 
     async def mark_processed(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
         *,
@@ -157,8 +165,8 @@ class EventInbox:
         """
         Mark an event as processed.
 
-        Uses INSERT OR IGNORE to be idempotent - multiple calls with the
-        same event_id + consumer_name are safe.
+        Uses INSERT with conflict handling to be idempotent - multiple calls
+        with the same event_id + consumer_name are safe.
 
         Args:
             conn: Database connection
@@ -173,13 +181,24 @@ class EventInbox:
         import json
 
         result_json = json.dumps(result_data) if result_data else None
+        ph = self._ph
+
+        if self._backend_type == "postgres":
+            sql = f"""
+                INSERT INTO {self._table}
+                (event_id, consumer_name, processed_at, result, result_data)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
+                ON CONFLICT DO NOTHING
+            """
+        else:
+            sql = f"""
+                INSERT OR IGNORE INTO {self._table}
+                (event_id, consumer_name, processed_at, result, result_data)
+                VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
+            """
 
         cursor = await conn.execute(
-            f"""
-            INSERT OR IGNORE INTO {self._table}
-            (event_id, consumer_name, processed_at, result, result_data)
-            VALUES (?, ?, ?, ?, ?)
-            """,
+            sql,
             (
                 str(event_id),
                 consumer_name,
@@ -194,7 +213,7 @@ class EventInbox:
 
     async def mark_error(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
         error_message: str,
@@ -224,19 +243,25 @@ class EventInbox:
 
     async def get_entry(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
     ) -> InboxEntry | None:
         """Get an inbox entry if it exists."""
         import json
 
-        conn.row_factory = aiosqlite.Row
+        try:
+            import aiosqlite
 
+            conn.row_factory = aiosqlite.Row
+        except ImportError:
+            pass
+
+        ph = self._ph
         cursor = await conn.execute(
             f"""
             SELECT * FROM {self._table}
-            WHERE event_id = ? AND consumer_name = ?
+            WHERE event_id = {ph} AND consumer_name = {ph}
             """,
             (str(event_id), consumer_name),
         )
@@ -255,7 +280,7 @@ class EventInbox:
 
     async def delete_entry(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         event_id: UUID,
         consumer_name: str,
     ) -> bool:
@@ -267,10 +292,11 @@ class EventInbox:
         Returns:
             True if entry was deleted, False if not found
         """
+        ph = self._ph
         cursor = await conn.execute(
             f"""
             DELETE FROM {self._table}
-            WHERE event_id = ? AND consumer_name = ?
+            WHERE event_id = {ph} AND consumer_name = {ph}
             """,
             (str(event_id), consumer_name),
         )
@@ -279,7 +305,7 @@ class EventInbox:
 
     async def get_stats(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         consumer_name: str | None = None,
     ) -> dict[str, Any]:
         """
@@ -292,14 +318,20 @@ class EventInbox:
         Returns:
             Statistics dict with counts by result
         """
-        conn.row_factory = aiosqlite.Row
+        try:
+            import aiosqlite
 
+            conn.row_factory = aiosqlite.Row
+        except ImportError:
+            pass
+
+        ph = self._ph
         if consumer_name:
             cursor = await conn.execute(
                 f"""
                 SELECT result, COUNT(*) as count
                 FROM {self._table}
-                WHERE consumer_name = ?
+                WHERE consumer_name = {ph}
                 GROUP BY result
                 """,
                 (consumer_name,),
@@ -328,7 +360,7 @@ class EventInbox:
 
     async def cleanup_old_entries(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         *,
         older_than_days: int = 7,
     ) -> int:
@@ -342,18 +374,23 @@ class EventInbox:
         Returns:
             Number of entries deleted
         """
+        from datetime import timedelta
+
+        cutoff = (datetime.now(UTC) - timedelta(days=older_than_days)).isoformat()
+        ph = self._ph
         cursor = await conn.execute(
             f"""
             DELETE FROM {self._table}
-            WHERE processed_at < datetime('now', '-{older_than_days} days')
-            """
+            WHERE processed_at < {ph}
+            """,
+            (cutoff,),
         )
         await conn.commit()
         return int(cursor.rowcount)
 
     async def get_recent_entries(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
         consumer_name: str,
         *,
         limit: int = 100,
@@ -361,14 +398,20 @@ class EventInbox:
         """Get recent entries for a consumer."""
         import json
 
-        conn.row_factory = aiosqlite.Row
+        try:
+            import aiosqlite
 
+            conn.row_factory = aiosqlite.Row
+        except ImportError:
+            pass
+
+        ph = self._ph
         cursor = await conn.execute(
             f"""
             SELECT * FROM {self._table}
-            WHERE consumer_name = ?
+            WHERE consumer_name = {ph}
             ORDER BY processed_at DESC
-            LIMIT ?
+            LIMIT {ph}
             """,
             (consumer_name, limit),
         )
@@ -389,7 +432,7 @@ class EventInbox:
 
     async def list_consumers(
         self,
-        conn: aiosqlite.Connection,
+        conn: Any,
     ) -> list[str]:
         """Get list of all consumer names that have processed events."""
         cursor = await conn.execute(
