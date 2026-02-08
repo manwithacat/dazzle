@@ -50,13 +50,26 @@ class ConstraintViolationError(Exception):
         super().__init__(message)
 
 
-def _parse_constraint_error(error_str: str, table_name: str) -> tuple[str, str | None]:
+def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str, str | None]:
     """Parse a constraint error message to extract type and field.
+
+    Accepts either a string or an exception object. For psycopg2 exceptions,
+    uses ``pgerror`` and ``diag.detail`` to extract field-level information
+    that may not appear in ``str(exc)``.
 
     Returns:
         (constraint_type, field_name_or_none)
     """
-    err = str(error_str)
+    # Extract the fullest error text available
+    if isinstance(exc, str):
+        err = exc
+        detail = ""
+    else:
+        err = getattr(exc, "pgerror", None) or str(exc)
+        detail = getattr(getattr(exc, "diag", None), "detail", None) or ""
+
+    # Combine err + detail for matching
+    full_text = f"{err} {detail}".strip()
 
     # SQLite: "UNIQUE constraint failed: Task.slug"
     if "UNIQUE constraint failed:" in err:
@@ -70,15 +83,18 @@ def _parse_constraint_error(error_str: str, table_name: str) -> tuple[str, str |
         return "foreign_key", None
 
     # PostgreSQL: "duplicate key value violates unique constraint"
-    if "duplicate key" in err and "unique constraint" in err:
+    if "duplicate key" in full_text and "unique constraint" in full_text:
         # Try to extract column from detail: Key (slug)=(value)
-        detail_match = re.search(r"Key \((\w+)\)", err)
+        detail_match = re.search(r"Key \((\w+)\)", full_text)
         pg_field: str | None = detail_match.group(1) if detail_match else None
         return "unique", pg_field
 
     # PostgreSQL: "violates foreign key constraint"
-    if "foreign key constraint" in err:
-        return "foreign_key", None
+    if "foreign key constraint" in full_text:
+        # Extract field from DETAIL: Key (assigned_to)=(uuid) is not present in table "User"
+        fk_match = re.search(r"Key \((\w+)\)", full_text)
+        fk_field: str | None = fk_match.group(1) if fk_match else None
+        return "foreign_key", fk_field
 
     return "integrity", None
 
@@ -221,6 +237,7 @@ class DatabaseManager:
         """
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
         try:
             yield conn
             conn.commit()
@@ -240,6 +257,7 @@ class DatabaseManager:
         if self._connection is None:
             self._connection = sqlite3.connect(str(self.db_path))
             self._connection.row_factory = sqlite3.Row
+            self._connection.execute("PRAGMA foreign_keys = ON")
         return self._connection
 
     def close(self) -> None:
@@ -248,14 +266,15 @@ class DatabaseManager:
             self._connection.close()
             self._connection = None
 
-    def create_table(self, entity: EntitySpec) -> None:
+    def create_table(self, entity: EntitySpec, *, registry: Any = None) -> None:
         """
         Create a table for an entity if it doesn't exist.
 
         Args:
             entity: Entity specification
+            registry: Optional RelationRegistry for FK constraints
         """
-        columns = self._build_columns(entity)
+        columns = self._build_columns(entity, registry=registry)
         table = quote_identifier(entity.name)
         sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
 
@@ -270,7 +289,14 @@ class DatabaseManager:
                     index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
                     cursor.execute(index_sql)
 
-    def _build_columns(self, entity: EntitySpec) -> str:
+            # Create FK indexes
+            if registry is not None:
+                from dazzle_back.runtime.relation_loader import get_foreign_key_indexes
+
+                for fk_idx_sql in get_foreign_key_indexes(entity, registry):
+                    cursor.execute(fk_idx_sql)
+
+    def _build_columns(self, entity: EntitySpec, *, registry: Any = None) -> str:
         """Build column definitions for CREATE TABLE."""
         columns = []
 
@@ -282,6 +308,13 @@ class DatabaseManager:
         for field in entity.fields:
             col_def = self._build_column(field)
             columns.append(col_def)
+
+        # Append FK constraints from the relation registry
+        if registry is not None:
+            from dazzle_back.runtime.relation_loader import get_foreign_key_constraints
+
+            fk_clauses = get_foreign_key_constraints(entity, registry)
+            columns.extend(fk_clauses)
 
         return ", ".join(columns)
 
@@ -315,8 +348,11 @@ class DatabaseManager:
         Args:
             entities: List of entity specifications
         """
+        from dazzle_back.runtime.relation_loader import RelationRegistry
+
+        registry = RelationRegistry.from_entities(entities)
         for entity in entities:
-            self.create_table(entity)
+            self.create_table(entity, registry=registry)
 
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""
@@ -447,7 +483,7 @@ class SQLiteRepository(Generic[T]):
                 cursor.execute(sql, values)
         except (sqlite3.IntegrityError, Exception) as exc:
             if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
-                ctype, field = _parse_constraint_error(str(exc), self.table_name)
+                ctype, field = _parse_constraint_error(exc, self.table_name)
                 if ctype == "unique":
                     msg = (
                         f"A {self.table_name} with this {field} already exists"
@@ -455,7 +491,11 @@ class SQLiteRepository(Generic[T]):
                         else f"Duplicate value violates unique constraint on {self.table_name}"
                     )
                 elif ctype == "foreign_key":
-                    msg = f"Referenced record does not exist for {self.table_name}"
+                    msg = (
+                        f"Referenced record not found for field '{field}' on {self.table_name}"
+                        if field
+                        else f"Referenced record does not exist for {self.table_name}"
+                    )
                 else:
                     msg = f"Integrity constraint violated on {self.table_name}: {exc}"
                 raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc
@@ -550,7 +590,7 @@ class SQLiteRepository(Generic[T]):
                 rowcount = cursor.rowcount
         except (sqlite3.IntegrityError, Exception) as exc:
             if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
-                ctype, field = _parse_constraint_error(str(exc), self.table_name)
+                ctype, field = _parse_constraint_error(exc, self.table_name)
                 if ctype == "unique":
                     msg = (
                         f"A {self.table_name} with this {field} already exists"
@@ -558,7 +598,11 @@ class SQLiteRepository(Generic[T]):
                         else f"Duplicate value violates unique constraint on {self.table_name}"
                     )
                 elif ctype == "foreign_key":
-                    msg = f"Referenced record does not exist for {self.table_name}"
+                    msg = (
+                        f"Referenced record not found for field '{field}' on {self.table_name}"
+                        if field
+                        else f"Referenced record does not exist for {self.table_name}"
+                    )
                 else:
                     msg = f"Integrity constraint violated on {self.table_name}: {exc}"
                 raise ConstraintViolationError(msg, field=field, constraint_type=ctype) from exc

@@ -1,7 +1,8 @@
-"""Tests for constraint violation error handling (#133 + #134)."""
+"""Tests for constraint violation error handling (#133 + #134 + #146)."""
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -15,7 +16,7 @@ from dazzle_back.runtime.repository import (
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 # ---------------------------------------------------------------------------
-# _parse_constraint_error
+# _parse_constraint_error — string inputs (backwards-compatible)
 # ---------------------------------------------------------------------------
 
 
@@ -46,7 +47,8 @@ class TestParseConstraintError:
         assert ctype == "unique"
         assert field == "slug"
 
-    def test_postgres_foreign_key(self):
+    def test_postgres_foreign_key_no_detail(self):
+        """FK error without DETAIL still returns foreign_key type."""
         ctype, field = _parse_constraint_error(
             'insert or update on table "task" violates foreign key constraint '
             '"task_project_id_fkey"',
@@ -62,7 +64,99 @@ class TestParseConstraintError:
 
 
 # ---------------------------------------------------------------------------
-# Repository integration
+# _parse_constraint_error — exception objects (psycopg2-style)
+# ---------------------------------------------------------------------------
+
+
+class TestParseConstraintErrorPsycopg2:
+    """Test FK/unique parsing from psycopg2 exception objects with pgerror/diag."""
+
+    @staticmethod
+    def _make_pg_exc(
+        pgerror: str | None = None,
+        detail: str | None = None,
+        str_repr: str = "",
+    ) -> Exception:
+        """Build a mock psycopg2-style exception."""
+        exc = Exception(str_repr)
+        if pgerror is not None:
+            exc.pgerror = pgerror  # type: ignore[attr-defined]
+        diag = MagicMock()
+        diag.detail = detail
+        exc.diag = diag  # type: ignore[attr-defined]
+        return exc
+
+    def test_pg_unique_via_pgerror(self):
+        exc = self._make_pg_exc(
+            pgerror=(
+                'ERROR:  duplicate key value violates unique constraint "task_slug_key"\n'
+                "DETAIL:  Key (slug)=(my-slug) already exists.\n"
+            ),
+            detail="Key (slug)=(my-slug) already exists.",
+        )
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "unique"
+        assert field == "slug"
+
+    def test_pg_fk_with_detail_extracts_field(self):
+        """FK error with DETAIL extracts field name and referenced table."""
+        exc = self._make_pg_exc(
+            pgerror=(
+                'ERROR:  insert or update on table "task" violates foreign key constraint '
+                '"task_assigned_to_fkey"\n'
+                "DETAIL:  Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
+                'is not present in table "User".\n'
+            ),
+            detail=(
+                "Key (assigned_to)=(550e8400-e29b-41d4-a716-446655440000) "
+                'is not present in table "User".'
+            ),
+        )
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "foreign_key"
+        assert field == "assigned_to"
+
+    def test_pg_fk_detail_only_on_diag(self):
+        """When pgerror is missing, fall back to str(exc) + diag.detail."""
+        exc = self._make_pg_exc(
+            pgerror=None,
+            detail='Key (project_id)=(abc) is not present in table "Project".',
+            str_repr=(
+                'insert or update on table "task" violates foreign key constraint '
+                '"task_project_id_fkey"'
+            ),
+        )
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "foreign_key"
+        assert field == "project_id"
+
+    def test_pg_fk_no_detail_at_all(self):
+        """FK error with no DETAIL still returns foreign_key with field=None."""
+        exc = self._make_pg_exc(
+            pgerror=(
+                'ERROR:  insert or update on table "task" violates foreign key constraint '
+                '"task_project_id_fkey"\n'
+            ),
+            detail=None,
+        )
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "foreign_key"
+        assert field is None
+
+    def test_pg_unique_detail_from_diag_only(self):
+        """Unique error where Key() is only in diag.detail, not in str(exc)."""
+        exc = self._make_pg_exc(
+            pgerror=None,
+            detail="Key (email)=(a@b.com) already exists.",
+            str_repr='duplicate key value violates unique constraint "user_email_key"',
+        )
+        ctype, field = _parse_constraint_error(exc, "User")
+        assert ctype == "unique"
+        assert field == "email"
+
+
+# ---------------------------------------------------------------------------
+# Repository integration — unique constraints
 # ---------------------------------------------------------------------------
 
 
@@ -150,3 +244,104 @@ async def test_normal_create_succeeds(db_and_repo):
     _, repo = db_and_repo
     result = await repo.create({"id": uuid4(), "slug": "ok", "title": "Fine"})
     assert result.slug == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Repository integration — FK constraints (SQLite with PRAGMA foreign_keys)
+# ---------------------------------------------------------------------------
+
+
+def _make_parent_child_specs() -> tuple[EntitySpec, EntitySpec]:
+    """Create parent (Team) and child (Player) entity specs with an FK relation."""
+    team = EntitySpec(
+        name="Team",
+        description="Team entity",
+        fields=[
+            FieldSpec(
+                name="id",
+                type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                required=True,
+            ),
+            FieldSpec(
+                name="name",
+                type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                required=True,
+            ),
+        ],
+    )
+    player = EntitySpec(
+        name="Player",
+        description="Player entity",
+        fields=[
+            FieldSpec(
+                name="id",
+                type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                required=True,
+            ),
+            FieldSpec(
+                name="team_id",
+                type=FieldType(kind="ref", ref_entity="Team"),
+                required=True,
+            ),
+            FieldSpec(
+                name="name",
+                type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                required=True,
+            ),
+        ],
+    )
+    return team, player
+
+
+@pytest.fixture()
+def fk_db_and_repos(tmp_path):
+    """Create DB with FK-constrained tables and repos for Team + Player."""
+    from uuid import UUID as UUIDType
+
+    from pydantic import BaseModel, Field
+
+    class TeamModel(BaseModel):
+        id: UUIDType | None = Field(default=None)
+        name: str
+
+    class PlayerModel(BaseModel):
+        id: UUIDType | None = Field(default=None)
+        team_id: UUIDType | None = Field(default=None)
+        name: str
+
+    db = DatabaseManager(db_path=tmp_path / "fk_test.db")
+    team_spec, player_spec = _make_parent_child_specs()
+
+    # Use create_all_tables which builds a registry with FK constraints
+    db.create_all_tables([team_spec, player_spec])
+
+    team_repo: SQLiteRepository = SQLiteRepository(  # type: ignore[type-arg]
+        db_manager=db, entity_spec=team_spec, model_class=TeamModel
+    )
+    player_repo: SQLiteRepository = SQLiteRepository(  # type: ignore[type-arg]
+        db_manager=db, entity_spec=player_spec, model_class=PlayerModel
+    )
+    return db, team_repo, player_repo
+
+
+@pytest.mark.asyncio
+async def test_fk_violation_on_create(fk_db_and_repos):
+    """Inserting a child with a non-existent parent FK raises ConstraintViolationError."""
+    _, _team_repo, player_repo = fk_db_and_repos
+    fake_team_id = uuid4()
+
+    with pytest.raises(ConstraintViolationError) as exc_info:
+        await player_repo.create({"id": uuid4(), "team_id": fake_team_id, "name": "Ghost Player"})
+
+    assert exc_info.value.constraint_type == "foreign_key"
+
+
+@pytest.mark.asyncio
+async def test_fk_valid_reference_succeeds(fk_db_and_repos):
+    """Inserting a child with a valid parent FK works fine."""
+    _, team_repo, player_repo = fk_db_and_repos
+    team_id = uuid4()
+    await team_repo.create({"id": team_id, "name": "Red Team"})
+
+    result = await player_repo.create({"id": uuid4(), "team_id": team_id, "name": "Alice"})
+    assert result.name == "Alice"

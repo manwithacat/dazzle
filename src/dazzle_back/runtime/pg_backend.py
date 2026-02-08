@@ -183,9 +183,9 @@ class PostgresBackend:
     def placeholder(self) -> str:
         return "%s"
 
-    def create_table(self, entity: EntitySpec) -> None:
+    def create_table(self, entity: EntitySpec, *, registry: Any = None) -> None:
         """Create a table for an entity if it doesn't exist."""
-        columns = self._build_columns(entity)
+        columns = self._build_columns(entity, registry=registry)
         table = quote_identifier(entity.name)
         sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
 
@@ -200,7 +200,14 @@ class PostgresBackend:
                     index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
                     cursor.execute(index_sql)
 
-    def _build_columns(self, entity: EntitySpec) -> str:
+            # Create FK indexes
+            if registry is not None:
+                from dazzle_back.runtime.relation_loader import get_foreign_key_indexes
+
+                for fk_idx_sql in get_foreign_key_indexes(entity, registry):
+                    cursor.execute(fk_idx_sql)
+
+    def _build_columns(self, entity: EntitySpec, *, registry: Any = None) -> str:
         """Build column definitions for CREATE TABLE."""
         columns = []
         has_id = any(f.name == "id" for f in entity.fields)
@@ -210,6 +217,13 @@ class PostgresBackend:
         for field in entity.fields:
             col_def = self._build_column(field)
             columns.append(col_def)
+
+        # Append FK constraints from the relation registry
+        if registry is not None:
+            from dazzle_back.runtime.relation_loader import get_foreign_key_constraints
+
+            fk_clauses = get_foreign_key_constraints(entity, registry)
+            columns.extend(fk_clauses)
 
         return ", ".join(columns)
 
@@ -240,8 +254,11 @@ class PostgresBackend:
 
     def create_all_tables(self, entities: list[EntitySpec]) -> None:
         """Create tables for all entities."""
+        from dazzle_back.runtime.relation_loader import RelationRegistry
+
+        registry = RelationRegistry.from_entities(entities)
         for entity in entities:
-            self.create_table(entity)
+            self.create_table(entity, registry=registry)
 
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""

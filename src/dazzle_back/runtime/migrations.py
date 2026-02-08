@@ -182,12 +182,15 @@ class MigrationPlanner:
         Returns:
             Migration plan with steps and warnings
         """
+        from dazzle_back.runtime.relation_loader import RelationRegistry
+
         steps: list[MigrationStep] = []
         warnings: list[str] = []
+        registry = RelationRegistry.from_entities(entities)
 
         with self.db.connection() as conn:
             for entity in entities:
-                entity_steps, entity_warnings = self._plan_entity_migration(conn, entity)
+                entity_steps, entity_warnings = self._plan_entity_migration(conn, entity, registry)
                 steps.extend(entity_steps)
                 warnings.extend(entity_warnings)
 
@@ -200,7 +203,10 @@ class MigrationPlanner:
         )
 
     def _plan_entity_migration(
-        self, conn: Any, entity: EntitySpec
+        self,
+        conn: Any,
+        entity: EntitySpec,
+        registry: Any = None,
     ) -> tuple[list[MigrationStep], list[str]]:
         """Plan migration for a single entity."""
         steps: list[MigrationStep] = []
@@ -223,7 +229,7 @@ class MigrationPlanner:
 
         if not table_exists:
             # New table - create it
-            sql = self._generate_create_table_sql(entity)
+            sql = self._generate_create_table_sql(entity, registry=registry)
             steps.append(
                 MigrationStep(
                     action=MigrationAction.CREATE_TABLE,
@@ -241,6 +247,18 @@ class MigrationPlanner:
                             table=entity.name,
                             column=field.name,
                             sql=index_sql,
+                        )
+                    )
+            # Add FK indexes
+            if registry is not None:
+                from dazzle_back.runtime.relation_loader import get_foreign_key_indexes
+
+                for fk_idx_sql in get_foreign_key_indexes(entity, registry):
+                    steps.append(
+                        MigrationStep(
+                            action=MigrationAction.ADD_INDEX,
+                            table=entity.name,
+                            sql=fk_idx_sql,
                         )
                     )
             return steps, warnings
@@ -334,7 +352,7 @@ class MigrationPlanner:
 
         return steps, warnings
 
-    def _generate_create_table_sql(self, entity: EntitySpec) -> str:
+    def _generate_create_table_sql(self, entity: EntitySpec, registry: Any = None) -> str:
         """Generate CREATE TABLE SQL."""
         columns = []
 
@@ -346,6 +364,13 @@ class MigrationPlanner:
         for field in entity.fields:
             col_def = self._generate_column_def(field)
             columns.append(col_def)
+
+        # Append FK constraints from the relation registry
+        if registry is not None:
+            from dazzle_back.runtime.relation_loader import get_foreign_key_constraints
+
+            fk_clauses = get_foreign_key_constraints(entity, registry)
+            columns.extend(fk_clauses)
 
         table = quote_identifier(entity.name)
         return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(columns)})"
