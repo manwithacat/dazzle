@@ -44,6 +44,7 @@ class MigrationAction(StrEnum):
     CREATE_TABLE = "create_table"
     ADD_COLUMN = "add_column"
     ADD_INDEX = "add_index"
+    DROP_NOT_NULL = "drop_not_null"
     # These are detected but not auto-applied (require manual intervention)
     DROP_COLUMN = "drop_column"
     CHANGE_TYPE = "change_type"
@@ -295,6 +296,27 @@ class MigrationPlanner:
                     )
                 )
 
+                # If orphaned col "price" has NOT NULL, and expected fields
+                # contain "price_minor" + "price_currency", this is a money
+                # expansion → DROP NOT NULL on the old column so INSERTs
+                # don't crash.  (Postgres only — SQLite doesn't support
+                # ALTER COLUMN.)
+                if (
+                    col.not_null
+                    and f"{col.name}_minor" in expected_fields
+                    and f"{col.name}_currency" in expected_fields
+                    and self._is_postgres
+                ):
+                    steps.append(
+                        MigrationStep(
+                            action=MigrationAction.DROP_NOT_NULL,
+                            table=entity.name,
+                            column=col.name,
+                            sql=self._generate_drop_not_null_sql(entity.name, col.name),
+                            is_destructive=False,
+                        )
+                    )
+
         # Find new indexes
         for field in entity.fields:
             if field.indexed:
@@ -420,6 +442,12 @@ class MigrationPlanner:
         elif field.type.kind == "enum" and field.type.enum_values:
             return field.type.enum_values[0]
         return None
+
+    def _generate_drop_not_null_sql(self, table_name: str, column_name: str) -> str:
+        """Generate ALTER TABLE ... ALTER COLUMN ... DROP NOT NULL SQL (Postgres only)."""
+        table = quote_identifier(table_name)
+        col = quote_identifier(column_name)
+        return f"ALTER TABLE {table} ALTER COLUMN {col} DROP NOT NULL"
 
     def _generate_index_sql(self, table_name: str, column_name: str) -> str:
         """Generate CREATE INDEX SQL."""

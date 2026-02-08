@@ -7,10 +7,12 @@ Tests schema change detection and migration execution.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from dazzle_back.runtime.migrations import (
+    ColumnInfo,
     MigrationAction,
     MigrationExecutor,
     MigrationHistory,
@@ -551,3 +553,170 @@ class TestMultipleEntities:
 
         assert "title" in task_columns
         assert "title" not in user_columns
+
+
+# =============================================================================
+# Money Expansion Migration Tests
+# =============================================================================
+
+
+class TestMoneyExpansionMigration:
+    """Test DROP NOT NULL migration for money(GBP) expansion orphaned columns."""
+
+    def _make_money_entity(self) -> EntitySpec:
+        """Entity after money expansion — has price_minor + price_currency but no price."""
+        return EntitySpec(
+            name="Product",
+            label="Product",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                    required=True,
+                ),
+                FieldSpec(
+                    name="name",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200),
+                    required=True,
+                ),
+                FieldSpec(
+                    name="price_minor",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.INT),
+                    required=True,
+                ),
+                FieldSpec(
+                    name="price_currency",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=3),
+                    required=True,
+                    default="GBP",
+                ),
+            ],
+        )
+
+    def test_postgres_detects_drop_not_null(self) -> None:
+        """On Postgres, orphaned NOT NULL 'price' column triggers DROP NOT NULL step."""
+        db = MagicMock()
+        db.backend_type = "postgres"
+
+        # Simulate existing DB schema: table exists with NOT NULL 'price' column
+        existing_columns = [
+            ColumnInfo(name="id", type="UUID", not_null=True, default=None, is_pk=True),
+            ColumnInfo(name="name", type="TEXT", not_null=True, default=None, is_pk=False),
+            ColumnInfo(name="price", type="TEXT", not_null=True, default=None, is_pk=False),
+        ]
+
+        entity = self._make_money_entity()
+
+        planner = MigrationPlanner(db)
+
+        with (
+            patch(
+                "dazzle_back.runtime.migrations._get_pg_table_schema",
+                return_value=existing_columns,
+            ),
+            patch(
+                "dazzle_back.runtime.migrations._get_pg_table_indexes",
+                return_value=[],
+            ),
+        ):
+            # Patch table existence check
+            mock_cursor = MagicMock()
+            mock_cursor.fetchone.return_value = ("Product",)
+            mock_conn = MagicMock()
+            mock_conn.cursor.return_value = mock_cursor
+            db.connection.return_value.__enter__ = MagicMock(return_value=mock_conn)
+            db.connection.return_value.__exit__ = MagicMock(return_value=False)
+
+            plan = planner.plan_migrations([entity])
+
+        drop_null_steps = [s for s in plan.steps if s.action == MigrationAction.DROP_NOT_NULL]
+        assert len(drop_null_steps) == 1
+        step = drop_null_steps[0]
+        assert step.table == "Product"
+        assert step.column == "price"
+        assert step.is_destructive is False
+        assert step.sql is not None
+        assert "DROP NOT NULL" in step.sql
+        assert '"price"' in step.sql
+
+    def test_nullable_column_skipped(self) -> None:
+        """If the orphaned column is already nullable, no DROP NOT NULL step is needed."""
+        db = MagicMock()
+        db.backend_type = "postgres"
+
+        # price is nullable (not_null=False)
+        existing_columns = [
+            ColumnInfo(name="id", type="UUID", not_null=True, default=None, is_pk=True),
+            ColumnInfo(name="name", type="TEXT", not_null=True, default=None, is_pk=False),
+            ColumnInfo(name="price", type="TEXT", not_null=False, default=None, is_pk=False),
+        ]
+
+        entity = self._make_money_entity()
+
+        planner = MigrationPlanner(db)
+
+        with (
+            patch(
+                "dazzle_back.runtime.migrations._get_pg_table_schema",
+                return_value=existing_columns,
+            ),
+            patch(
+                "dazzle_back.runtime.migrations._get_pg_table_indexes",
+                return_value=[],
+            ),
+        ):
+            mock_cursor = MagicMock()
+            mock_cursor.fetchone.return_value = ("Product",)
+            mock_conn = MagicMock()
+            mock_conn.cursor.return_value = mock_cursor
+            db.connection.return_value.__enter__ = MagicMock(return_value=mock_conn)
+            db.connection.return_value.__exit__ = MagicMock(return_value=False)
+
+            plan = planner.plan_migrations([entity])
+
+        drop_null_steps = [s for s in plan.steps if s.action == MigrationAction.DROP_NOT_NULL]
+        assert len(drop_null_steps) == 0
+
+    def test_sqlite_skipped(self) -> None:
+        """On SQLite, no DROP NOT NULL step is emitted (ALTER COLUMN unsupported)."""
+        db = MagicMock()
+        db.backend_type = "sqlite"
+
+        # Create a real SQLite table with NOT NULL 'price' column
+        entity_v1 = EntitySpec(
+            name="Product",
+            label="Product",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                    required=True,
+                ),
+                FieldSpec(
+                    name="name",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200),
+                    required=True,
+                ),
+                FieldSpec(
+                    name="price",
+                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                    required=True,
+                ),
+            ],
+        )
+
+        # Use a real SQLite db for this test
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "test.db"
+            real_db = DatabaseManager(db_path)
+            real_db.create_table(entity_v1)
+
+            entity_v2 = self._make_money_entity()
+            planner = MigrationPlanner(real_db)
+            plan = planner.plan_migrations([entity_v2])
+
+        drop_null_steps = [s for s in plan.steps if s.action == MigrationAction.DROP_NOT_NULL]
+        assert len(drop_null_steps) == 0
