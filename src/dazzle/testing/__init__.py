@@ -100,6 +100,19 @@ from dazzle.testing.unified_runner import (
     UnifiedTestRunner,
     format_unified_report,
 )
+from dazzle.testing.viewport import (
+    VIEWPORT_MATRIX,
+    ComponentPattern,
+    ViewportAssertion,
+    ViewportAssertionResult,
+    ViewportReport,
+    derive_patterns_from_appspec,
+)
+from dazzle.testing.viewport_runner import (
+    ViewportRunner,
+    ViewportRunOptions,
+    ViewportRunResult,
+)
 
 __all__ = [
     # Curl test generator
@@ -154,4 +167,14 @@ __all__ = [
     "generate_tier2_tests",
     "generate_tier2_test_file",
     "generate_tier2_tests_for_app",
+    # Viewport Testing
+    "VIEWPORT_MATRIX",
+    "ViewportAssertion",
+    "ComponentPattern",
+    "ViewportAssertionResult",
+    "ViewportReport",
+    "derive_patterns_from_appspec",
+    "ViewportRunOptions",
+    "ViewportRunResult",
+    "ViewportRunner",
 ]

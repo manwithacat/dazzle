@@ -459,6 +459,14 @@ def handle_e2e_test(arguments: dict[str, Any]) -> str:
             tag=arguments.get("tag"),
             limit=arguments.get("limit", 20),
         )
+    elif operation == "run_viewport":
+        from .handlers.viewport_testing import run_viewport_tests_handler
+
+        return run_viewport_tests_handler(
+            project_path=str(project_path),
+            headless=arguments.get("headless", True),
+            viewports=arguments.get("viewports"),
+        )
     else:
         return json.dumps({"error": f"Unknown E2E test operation: {operation}"})
 

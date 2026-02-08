@@ -631,7 +631,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="e2e_test",
-            description="E2E test operations: check_infra, run, run_agent, coverage, list_flows, tier_guidance",
+            description="E2E test operations: check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -644,6 +644,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "coverage",
                             "list_flows",
                             "tier_guidance",
+                            "run_viewport",
                         ],
                         "description": "Operation to perform",
                     },
@@ -675,6 +676,11 @@ def get_consolidated_tools() -> list[Tool]:
                     "scenario": {
                         "type": "string",
                         "description": "Test scenario description (for tier_guidance)",
+                    },
+                    "viewports": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Viewport names to test (for run_viewport, e.g. ['mobile', 'desktop'])",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
