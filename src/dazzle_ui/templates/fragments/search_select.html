@@ -1,6 +1,7 @@
-{# Search-select fragment: debounced search input with dropdown results #}
+{# Search-select fragment — debounced search with dropdown results, no Alpine #}
+{# Uses native focus/blur + HTMX. Dropdown closes on click-outside via focusout. #}
 
-<div class="relative w-full" x-data="{ open: false }">
+<div class="relative w-full" data-dz-toggleable>
   {# Hidden input stores the selected value #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
          data-dazzle-field="{{ field.name }}" value="" />
@@ -17,8 +18,8 @@
          hx-indicator="#search-spinner-{{ field.name }}"
          hx-params="q"
          {% if field.source.min_chars %}hx-vals='{"min_chars": {{ field.source.min_chars }}}'{% endif %}
-         @focus="open = true"
-         @click.outside="setTimeout(() => open = false, 200)" />
+         onfocus="this.closest('[data-dz-toggleable]').querySelector('[data-dz-show]').style.display=''"
+         onblur="setTimeout(()=>{const c=this.closest('[data-dz-toggleable]');const d=c.querySelector('[data-dz-show]');if(d)d.style.display='none'},200)" />
 
   {# Loading indicator #}
   <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3">
@@ -27,7 +28,8 @@
 
   {# Dropdown results container #}
   <div id="search-results-{{ field.name }}"
-       x-show="open"
+       data-dz-show
+       style="display:none;"
        class="absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
     {# Empty state shown before any search #}
     <div class="p-3 text-sm text-base-content/50">

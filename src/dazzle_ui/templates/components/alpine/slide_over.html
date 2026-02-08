@@ -1,39 +1,23 @@
-{# Slide-over panel - loads content via HTMX into a side panel #}
+{# Slide-over panel — no Alpine, uses data-dz-slide-over + CSS transitions #}
 {# Parameters: panel_id (optional, default: 'slide-over') #}
 {% set panel_id = panel_id | default('slide-over') %}
-<div x-data="{ open: false }"
-     @open-slide-over.window="open = true"
-     @keydown.escape.window="open = false"
-     id="{{ panel_id }}">
+<div data-dz-toggleable data-dz-slide-over id="{{ panel_id }}">
 
   {# Backdrop #}
-  <div x-show="open"
-       x-transition:enter="transition-opacity ease-out duration-200"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition-opacity ease-in duration-150"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"
-       @click="open = false"
+  <div data-dz-show="backdrop" data-dz-close
        class="fixed inset-0 bg-black/30 z-40"
-       style="display: none;">
+       style="display:none;">
   </div>
 
   {# Panel #}
-  <div x-show="open"
-       x-transition:enter="transition-transform ease-out duration-200"
-       x-transition:enter-start="translate-x-full"
-       x-transition:enter-end="translate-x-0"
-       x-transition:leave="transition-transform ease-in duration-150"
-       x-transition:leave-start="translate-x-0"
-       x-transition:leave-end="translate-x-full"
+  <div data-dz-show="panel"
        class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-base-100 shadow-xl overflow-y-auto"
-       style="display: none;">
+       style="display:none;">
 
     {# Header #}
     <div class="flex items-center justify-between p-4 border-b border-base-300">
       <h3 class="text-lg font-semibold" id="{{ panel_id }}-title">Details</h3>
-      <button @click="open = false" class="btn btn-ghost btn-sm btn-circle">&times;</button>
+      <button data-dz-close class="btn btn-ghost btn-sm btn-circle">&times;</button>
     </div>
 
     {# Content - HTMX swaps into here #}

@@ -1,20 +1,15 @@
-{# Alpine.js dropdown component #}
+{# Dropdown component — no Alpine, uses data-dz-toggleable + CSS transitions #}
 {# Usage: {% include 'components/alpine/dropdown.html' with context %} #}
 {# Expects: dropdown_label (str), dropdown_items (list of {label, href?, action?}) #}
-<div x-data="{ open: false }" @click.away="open = false" class="relative">
-  <button @click="open = !open" class="btn btn-ghost btn-sm gap-1">
+<div data-dz-toggleable class="relative">
+  <button data-dz-toggle class="btn btn-ghost btn-sm gap-1">
     {{ dropdown_label | default("Actions") }}
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" :class="{ 'rotate-180': open }">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+         class="w-4 h-4 stroke-current transition-transform" data-dz-rotate>
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
     </svg>
   </button>
-  <ul x-show="open"
-      x-transition:enter="transition ease-out duration-150"
-      x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
-      x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-      x-transition:leave="transition ease-in duration-100"
-      x-transition:leave-start="opacity-100 scale-100"
-      x-transition:leave-end="opacity-0 scale-95"
+  <ul data-dz-show="dropdown" style="display:none;"
       class="absolute right-0 mt-1 menu p-1 shadow-md bg-base-100 rounded-lg border border-base-300 w-40 z-50">
     {% for item in dropdown_items | default([]) %}
     <li>
@@ -28,7 +23,7 @@
         {{ item.label }}
       </button>
       {% else %}
-      <a @click="{{ item.action | default('') }}" class="{{ item.class | default('') }}">{{ item.label }}</a>
+      <a href="#" class="{{ item.class | default('') }}">{{ item.label }}</a>
       {% endif %}
     </li>
     {% endfor %}

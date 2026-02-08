@@ -1,51 +1,30 @@
-{# Alpine.js confirmation dialog component #}
-{# Usage: Include once in the page, trigger with Alpine events #}
-{# Example: <button @click="$dispatch('confirm-action', { message: 'Delete?', action: '/api/tasks/1', method: 'delete' })">Delete</button> #}
-<div x-data="{
-  show: false,
-  message: '',
-  actionUrl: '',
-  actionMethod: 'delete',
-  processing: false
-}"
-  @confirm-action.window="show = true; message = $event.detail.message; actionUrl = $event.detail.action; actionMethod = $event.detail.method || 'delete'"
-  x-show="show"
-  x-transition
-  class="fixed inset-0 z-50 flex items-center justify-center"
-  style="display: none;">
-
-  {# Backdrop #}
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="show = false"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0"
-       x-transition:enter-end="opacity-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100"
-       x-transition:leave-end="opacity-0"></div>
-
-  {# Dialog #}
-  <div class="modal-box relative z-10"
-       x-transition:enter="transition ease-out duration-200"
-       x-transition:enter-start="opacity-0 scale-95"
-       x-transition:enter-end="opacity-100 scale-100"
-       x-transition:leave="transition ease-in duration-150"
-       x-transition:leave-start="opacity-100 scale-100"
-       x-transition:leave-end="opacity-0 scale-95">
+{# Confirmation dialog — native <dialog> element, no Alpine #}
+{# Uses htmx.ajax() for the confirmed action (stays in htmx lifecycle). #}
+{# #}
+{# Usage: Include once in page. Trigger with: #}
+{#   <button data-dz-dialog="confirm-dialog" #}
+{#           data-dz-confirm-message="Delete this item?" #}
+{#           data-dz-confirm-action="/api/tasks/1" #}
+{#           data-dz-confirm-method="delete" #}
+{#           data-dz-confirm-target="closest tr" #}
+{#           data-dz-confirm-swap="outerHTML swap:300ms"> #}
+{#     Delete #}
+{#   </button> #}
+{# #}
+{# If target/swap are omitted, defaults to the trigger's nearest <tr> #}
+{# (outerHTML swap:300ms) or body (innerHTML) as fallback. #}
+<dialog id="confirm-dialog" class="modal">
+  <div class="modal-box">
     <h3 class="font-bold text-lg">Confirm Action</h3>
-    <p class="py-4" x-text="message"></p>
+    <p class="py-4" data-dz-dialog-message></p>
     <div class="modal-action">
-      <button class="btn btn-ghost" @click="show = false" :disabled="processing">Cancel</button>
-      <button class="btn btn-error"
-              :disabled="processing"
-              :class="{ 'loading': processing }"
-              @click="
-                processing = true;
-                fetch(actionUrl, { method: actionMethod })
-                  .then(() => { show = false; processing = false; window.location.reload(); })
-                  .catch(() => { processing = false; })
-              ">
+      <form method="dialog">
+        <button class="btn btn-ghost">Cancel</button>
+      </form>
+      <button class="btn btn-error" data-dz-dialog-confirm>
         Confirm
       </button>
     </div>
   </div>
-</div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>

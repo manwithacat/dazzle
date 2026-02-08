@@ -163,7 +163,7 @@ The DSL is parsed into an immutable IR called `AppSpec`:
 The Dazzle Runtime uses server-rendered HTMX templates:
 - Jinja2 templates produce HTML with `hx-*` attributes
 - HTMX handles server interactions (search, forms, pagination)
-- Alpine.js manages ephemeral UI state (toggles, selections, transitions)
+- dz.js micro-runtime manages ephemeral UI state (toggles, selections, transitions)
 - DaisyUI provides Tailwind CSS components
 - No build step — three CDN script tags, zero node_modules
 

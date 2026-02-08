@@ -1,0 +1,88 @@
+/*
+ * dz.css — Transition and state classes for the Dazzle micro-runtime.
+ * Replaces Alpine.js x-transition with CSS-only animations.
+ * ~40 lines. Works with Tailwind/DaisyUI.
+ */
+
+/* ── Toggle show/hide with fade ─────────────────────────────────────── */
+
+[data-dz-show] {
+  transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+
+[data-dz-toggleable]:not([data-dz-open]) [data-dz-show] {
+  display: none;
+}
+
+/* ── Dropdown animation ─────────────────────────────────────────────── */
+
+[data-dz-show="dropdown"] {
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  transform-origin: top right;
+}
+
+[data-dz-toggleable][data-dz-open] [data-dz-show="dropdown"] {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+/* ── Slide-over panel ───────────────────────────────────────────────── */
+
+[data-dz-slide-over] [data-dz-show="backdrop"] {
+  transition: opacity 200ms ease-out;
+}
+
+[data-dz-slide-over] [data-dz-show="panel"] {
+  transition: transform 200ms ease-out;
+  transform: translateX(100%);
+}
+
+[data-dz-slide-over][data-dz-open] [data-dz-show="panel"] {
+  transform: translateX(0);
+}
+
+/* ── Bulk actions bar ───────────────────────────────────────────────── */
+
+[data-dz-bulk-bar] {
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+/* ── Toast notifications ────────────────────────────────────────────── */
+
+.dz-toast-enter {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+.dz-toast-leave {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+
+#dz-toast .alert {
+  transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+
+/* ── Native dialog backdrop ─────────────────────────────────────────── */
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+dialog[open] {
+  animation: dz-dialog-in 200ms ease-out;
+}
+
+@keyframes dz-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

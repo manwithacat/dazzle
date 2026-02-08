@@ -1,7 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light"
-      x-data="{ darkMode: localStorage.getItem('dz-dark-mode') === 'true' }"
-      x-init="$watch('darkMode', val => { localStorage.setItem('dz-dark-mode', val); document.documentElement.setAttribute('data-theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val) }); if (darkMode) { document.documentElement.setAttribute('data-theme', 'dark'); document.documentElement.classList.add('dark') }">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,8 +18,9 @@
   <script src="https://unpkg.com/htmx.org@2.0.3"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 
-  {# Alpine.js #}
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
+  {# Dazzle micro-runtime — replaces Alpine.js #}
+  <link rel="stylesheet" href="/static/css/dz.css">
+  <script defer src="/static/js/dz.js"></script>
 
   {# Design token CSS custom properties #}
   <style>
@@ -46,7 +45,6 @@
     }
   </style>
 
-  {# Theme CSS from existing theme system #}
   {% if theme_css %}
   <style>{{ theme_css }}</style>
   {% endif %}
@@ -57,19 +55,8 @@
   {% block body %}
   {% endblock %}
 
-  {# Toast notifications area #}
-  <div id="dz-toast"
-       class="toast toast-end toast-top"
-       aria-live="polite"
-       x-data="{ toasts: [] }"
-       @dz-toast.window="toasts.push({...$event.detail, id: Date.now()}); setTimeout(() => toasts.shift(), 4000)"
-  >
-    <template x-for="t in toasts" :key="t.id">
-      <div class="alert" :class="'alert-' + (t.type || 'info')">
-        <span x-text="t.message"></span>
-      </div>
-    </template>
-  </div>
+  {# Toast notifications area — no Alpine, just a container for dz.toast() #}
+  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"></div>
 
   {# Dazzle Bar (dev mode only) #}
   {% if dev_mode %}

@@ -1,15 +1,20 @@
-{# Table rows fragment - swapped by HTMX on search/filter/page change #}
+{# Table rows fragment — no Alpine, column visibility via data-dz-col #}
 {% if table and table.rows %}
 {% for item in table.rows %}
-<tr class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}"
+<tr class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}" data-dz-row-id="{{ item.id }}"
     {% if table.detail_url_template %}
     hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
     hx-push-url="true"
     hx-target="body"
     hx-swap="innerHTML"
     {% endif %}>
+  {% if table.bulk_actions %}
+  <td>
+    <input type="checkbox" class="checkbox checkbox-sm" data-dz-row-select />
+  </td>
+  {% endif %}
   {% for col in table.columns %}
-  <td x-show="isVisible('{{ col.key }}')">
+  <td data-dz-col="{{ col.key }}">
     {% if col.type == "badge" %}
       <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
     {% elif col.type == "bool" %}
@@ -26,11 +31,12 @@
   </td>
   {% endfor %}
   <td>
-    <div class="dropdown dropdown-end" x-data="{ open: false }" @click.stop>
-      <button @click="open = !open" class="btn btn-ghost btn-xs">
+    {# Row action dropdown — uses DaisyUI details-based dropdown, no JS #}
+    <details class="dropdown dropdown-end" onclick="event.stopPropagation()">
+      <summary class="btn btn-ghost btn-xs list-none">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
-      </button>
-      <ul x-show="open" @click.away="open = false" x-transition class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
+      </summary>
+      <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
         {% if table.detail_url_template %}
         <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}">View</a></li>
         {% endif %}
@@ -46,7 +52,7 @@
           </button>
         </li>
       </ul>
-    </div>
+    </details>
   </td>
 </tr>
 {% endfor %}

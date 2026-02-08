@@ -71,7 +71,7 @@ FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "params": ["field_name", "field_value", "endpoint", "field_type"],
         "emits": [],
         "listens": [],
-        "description": "Click-to-edit field with Alpine.js state and HTMX save.",
+        "description": "Click-to-edit field with inline event handlers and HTMX save.",
     },
     "bulk_actions": {
         "template": "fragments/bulk_actions.html",

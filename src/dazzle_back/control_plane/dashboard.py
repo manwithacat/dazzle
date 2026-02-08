@@ -1,7 +1,7 @@
 """
 Dashboard routes and templates for Dazzle Control Plane.
 
-Uses HTMX + Alpine.js + DaisyUI (matching Dazzle's frontend stack).
+Uses HTMX + DaisyUI (matching Dazzle's frontend stack).
 """
 
 from __future__ import annotations
@@ -22,9 +22,7 @@ router = APIRouter(tags=["Dashboard"])
 def _base_template(title: str, content: str, user: str = "") -> str:
     """Base HTML template matching Dazzle's stack."""
     return f"""<!DOCTYPE html>
-<html lang="en" x-data="{{ darkMode: localStorage.getItem('darkMode') === 'true' }}"
-      x-init="$watch('darkMode', val => localStorage.setItem('darkMode', val))"
-      :class="{{ 'dark': darkMode }}">
+<html lang="en" id="cp-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,9 +35,6 @@ def _base_template(title: str, content: str, user: str = "") -> str:
     <!-- HTMX (matching Dazzle) -->
     <script src="https://unpkg.com/htmx.org@2.0.3"></script>
     <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-
-    <!-- Alpine.js (matching Dazzle) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.3/dist/cdn.min.js"></script>
 
     <!-- Chart.js for metrics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -54,6 +49,31 @@ def _base_template(title: str, content: str, user: str = "") -> str:
                     }}
                 }}
             }}
+        }}
+
+        // Dark mode — replaces Alpine x-data/x-init/$watch
+        ;(function() {{
+            var dark = localStorage.getItem('darkMode') === 'true';
+            if (dark) document.documentElement.classList.add('dark');
+        }})();
+        function toggleDarkMode() {{
+            var root = document.documentElement;
+            var isDark = root.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+            var cb = document.getElementById('cp-dark-toggle');
+            if (cb) cb.checked = isDark;
+        }}
+
+        // Toast — replaces Alpine x-for/x-text toast system
+        function cpToast(message, type) {{
+            var container = document.getElementById('dz-toast');
+            if (!container) return;
+            var cls = type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info';
+            var div = document.createElement('div');
+            div.className = 'alert ' + cls;
+            div.textContent = message;
+            container.appendChild(div);
+            setTimeout(function() {{ div.remove(); }}, 5000);
         }}
     </script>
 </head>
@@ -83,24 +103,24 @@ def _base_template(title: str, content: str, user: str = "") -> str:
                  class="font-mono">
                 --:--:--
             </div>
-            <div class="dropdown dropdown-end" x-data="{{ open: false }}">
-                <label tabindex="0" class="btn btn-ghost btn-circle" @click="open = !open">
+            <details class="dropdown dropdown-end">
+                <summary tabindex="0" class="btn btn-ghost btn-circle list-none">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                </label>
-                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-base-content"
-                    x-show="open" @click.away="open = false" x-transition>
+                </summary>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52 text-base-content">
                     <li class="menu-title"><span>{user or "User"}</span></li>
                     <li>
                         <label class="flex items-center gap-2">
-                            <input type="checkbox" class="toggle toggle-sm" x-model="darkMode" />
+                            <input type="checkbox" id="cp-dark-toggle" class="toggle toggle-sm"
+                                   onchange="toggleDarkMode()" />
                             Dark Mode
                         </label>
                     </li>
                     <li><a href="/logout">Logout</a></li>
                 </ul>
-            </div>
+            </details>
         </div>
     </div>
 
@@ -110,13 +130,7 @@ def _base_template(title: str, content: str, user: str = "") -> str:
     </main>
 
     <!-- Toast container for notifications -->
-    <div id="toast-container" class="toast toast-end" x-data="{{ toasts: [] }}">
-        <template x-for="toast in toasts" :key="toast.id">
-            <div class="alert" :class="toast.type" x-transition>
-                <span x-text="toast.message"></span>
-            </div>
-        </template>
-    </div>
+    <div id="dz-toast" class="toast toast-end"></div>
 
     <!-- Detail Modal -->
     <dialog id="detail-modal" class="modal">
@@ -135,6 +149,12 @@ def _base_template(title: str, content: str, user: str = "") -> str:
     </dialog>
 
     <script>
+        // Initialize dark mode checkbox state
+        ;(function() {{
+            var cb = document.getElementById('cp-dark-toggle');
+            if (cb) cb.checked = localStorage.getItem('darkMode') === 'true';
+        }})();
+
         function showModal(title, contentUrl) {{
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').innerHTML = '<span class="loading loading-spinner loading-lg"></span>';
@@ -178,18 +198,15 @@ def _dashboard_content() -> str:
     </div>
 
     <!-- Tabs for different views -->
-    <div x-data="{ activeTab: 'logs' }" class="mb-6">
-        <div class="tabs tabs-boxed bg-base-100 p-2 mb-4">
-            <a class="tab" :class="{ 'tab-active': activeTab === 'logs' }"
-               @click="activeTab = 'logs'">Logs</a>
-            <a class="tab" :class="{ 'tab-active': activeTab === 'processes' }"
-               @click="activeTab = 'processes'">Processes</a>
-            <a class="tab" :class="{ 'tab-active': activeTab === 'metrics' }"
-               @click="activeTab = 'metrics'">Metrics</a>
+    <div class="mb-6">
+        <div class="tabs tabs-boxed bg-base-100 p-2 mb-4" id="cp-tabs">
+            <a class="tab tab-active" onclick="cpSwitchTab(this, 'logs')">Logs</a>
+            <a class="tab" onclick="cpSwitchTab(this, 'processes')">Processes</a>
+            <a class="tab" onclick="cpSwitchTab(this, 'metrics')">Metrics</a>
         </div>
 
         <!-- Logs Panel -->
-        <div x-show="activeTab === 'logs'" x-transition class="card bg-base-100 shadow-xl">
+        <div id="cp-tab-logs" class="card bg-base-100 shadow-xl">
             <div class="card-body">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="card-title">Recent Logs</h2>
@@ -217,7 +234,7 @@ def _dashboard_content() -> str:
         </div>
 
         <!-- Processes Panel -->
-        <div x-show="activeTab === 'processes'" x-transition class="card bg-base-100 shadow-xl">
+        <div id="cp-tab-processes" class="card bg-base-100 shadow-xl" style="display:none;">
             <div class="card-body">
                 <h2 class="card-title">Active Processes</h2>
                 <div id="processes-container"
@@ -232,7 +249,7 @@ def _dashboard_content() -> str:
         </div>
 
         <!-- Metrics Panel -->
-        <div x-show="activeTab === 'metrics'" x-transition class="card bg-base-100 shadow-xl">
+        <div id="cp-tab-metrics" class="card bg-base-100 shadow-xl" style="display:none;">
             <div class="card-body">
                 <h2 class="card-title">Available Metrics</h2>
                 <div id="metrics-container"
@@ -246,6 +263,19 @@ def _dashboard_content() -> str:
             </div>
         </div>
     </div>
+
+    <script>
+        function cpSwitchTab(el, name) {
+            document.querySelectorAll('#cp-tabs .tab').forEach(function(t) {
+                t.classList.remove('tab-active');
+            });
+            el.classList.add('tab-active');
+            ['logs', 'processes', 'metrics'].forEach(function(n) {
+                var panel = document.getElementById('cp-tab-' + n);
+                if (panel) panel.style.display = (n === name) ? '' : 'none';
+            });
+        }
+    </script>
 
     <!-- Chart initialization script -->
     <script>

@@ -1,19 +1,19 @@
 {% extends "console/base_console.html" %}
 
 {% block content %}
-<div class="space-y-6" x-data="{ step: 1 }">
+<div class="space-y-6">
   <h2 class="text-2xl font-bold">Deploy</h2>
   <p class="text-sm opacity-70">Deployment pipeline: Preflight, Generate, Deploy.</p>
 
   {# Steps indicator #}
-  <ul class="steps w-full">
-    <li class="step" :class="step >= 1 && 'step-primary'">Preflight</li>
-    <li class="step" :class="step >= 2 && 'step-primary'">Generate</li>
-    <li class="step" :class="step >= 3 && 'step-primary'">Deploy</li>
+  <ul class="steps w-full" id="deploy-steps">
+    <li class="step step-primary" data-step="1">Preflight</li>
+    <li class="step" data-step="2">Generate</li>
+    <li class="step" data-step="3">Deploy</li>
   </ul>
 
   {# Step 1: Preflight #}
-  <div x-show="step === 1" class="space-y-4">
+  <div class="deploy-step" data-deploy-step="1">
     <div class="card bg-base-100 shadow-sm border border-base-300">
       <div class="card-body">
         <h3 class="card-title text-lg">Pre-Flight Checks</h3>
@@ -28,42 +28,42 @@
             <span id="preflight-spinner" class="loading loading-spinner loading-sm htmx-indicator"></span>
             Run Preflight
           </button>
-          <button class="btn btn-ghost" @click="step = 2">Skip to Generate</button>
+          <button class="btn btn-ghost" onclick="goToStep(2)">Skip to Generate</button>
         </div>
       </div>
     </div>
   </div>
 
   {# Step 2: Generate #}
-  <div x-show="step === 2" class="space-y-4">
+  <div class="deploy-step" data-deploy-step="2" style="display:none;">
     <div class="card bg-base-100 shadow-sm border border-base-300">
       <div class="card-body">
         <h3 class="card-title text-lg">Generate Stacks</h3>
         <p class="text-sm opacity-70">Generate CDK infrastructure from your DSL.</p>
         <div id="generate-results"></div>
         <div class="card-actions justify-end mt-4">
-          <button class="btn btn-ghost" @click="step = 1">Back</button>
+          <button class="btn btn-ghost" onclick="goToStep(1)">Back</button>
           <button class="btn btn-primary"
                   hx-post="/_console/api/generate"
                   hx-target="#generate-results"
                   hx-swap="innerHTML">
             Generate
           </button>
-          <button class="btn btn-ghost" @click="step = 3">Next</button>
+          <button class="btn btn-ghost" onclick="goToStep(3)">Next</button>
         </div>
       </div>
     </div>
   </div>
 
   {# Step 3: Deploy #}
-  <div x-show="step === 3" class="space-y-4">
+  <div class="deploy-step" data-deploy-step="3" style="display:none;">
     <div class="card bg-base-100 shadow-sm border border-base-300">
       <div class="card-body">
         <h3 class="card-title text-lg">Deploy</h3>
         <p class="text-sm opacity-70">Execute deployment to your environment.</p>
         <div id="deploy-results"></div>
         <div class="card-actions justify-end mt-4">
-          <button class="btn btn-ghost" @click="step = 2">Back</button>
+          <button class="btn btn-ghost" onclick="goToStep(2)">Back</button>
           <button class="btn btn-error"
                   hx-post="/_console/api/deploy"
                   hx-target="#deploy-results"
@@ -87,4 +87,16 @@
     </div>
   </div>
 </div>
+
+<script>
+function goToStep(n) {
+  document.querySelectorAll('.deploy-step').forEach(s => s.style.display = 'none');
+  const target = document.querySelector('[data-deploy-step="' + n + '"]');
+  if (target) target.style.display = '';
+  document.querySelectorAll('#deploy-steps .step').forEach(s => {
+    const stepNum = parseInt(s.getAttribute('data-step'));
+    s.classList.toggle('step-primary', stepNum <= n);
+  });
+}
+</script>
 {% endblock %}

@@ -40,7 +40,7 @@ cognition_tips = [
     "All behavior is visible in HTML attributes - no hidden JavaScript",
     "Server is source of truth; client just displays rendered HTML",
     "Use hx-indicator for loading states, hx-confirm for destructive actions",
-    "Combine with Alpine.js for UI-only state (dropdowns, modals)"
+    "Combine with dz.js micro-runtime for UI-only state (dropdowns, modals)"
 ]
 mcp_resource = "dazzle://docs/htmx-templates"
 

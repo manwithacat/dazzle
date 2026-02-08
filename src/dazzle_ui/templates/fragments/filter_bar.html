@@ -14,7 +14,7 @@
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
             hx-trigger="change"
-            hx-include="closest [x-data]"
+            hx-include="closest [data-dz-table]"
             hx-headers='{"Accept": "text/html"}'
             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
       <option value="">All</option>
@@ -35,7 +35,7 @@
            hx-target="{{ tbody_target }}"
            hx-swap="innerHTML"
            hx-trigger="keyup changed delay:300ms"
-           hx-include="closest [x-data]"
+           hx-include="closest [data-dz-table]"
            hx-headers='{"Accept": "text/html"}'
            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading" />
     {% endif %}

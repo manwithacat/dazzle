@@ -6,19 +6,18 @@
   <p class="text-sm opacity-70">Explore your DSL entities, surfaces, and integrations.</p>
 
   {# Tabs #}
-  <div x-data="{ tab: 'entities' }" class="space-y-4">
-    <div role="tablist" class="tabs tabs-boxed">
-      <a role="tab" class="tab" :class="tab === 'entities' && 'tab-active'"
-         @click="tab = 'entities'">Entities</a>
-      <a role="tab" class="tab" :class="tab === 'surfaces' && 'tab-active'"
-         @click="tab = 'surfaces'">Surfaces</a>
-      <a role="tab" class="tab" :class="tab === 'integrations' && 'tab-active'"
-         @click="tab = 'integrations'">Integrations</a>
+  <div class="space-y-4">
+    <div role="tablist" class="tabs tabs-boxed" id="app-map-tabs">
+      <a role="tab" class="tab tab-active" data-tab="entities"
+         onclick="switchTab(this, 'entities')">Entities</a>
+      <a role="tab" class="tab" data-tab="surfaces"
+         onclick="switchTab(this, 'surfaces')">Surfaces</a>
+      <a role="tab" class="tab" data-tab="integrations"
+         onclick="switchTab(this, 'integrations')">Integrations</a>
     </div>
 
     {# Entity tab #}
-    <div x-show="tab === 'entities'"
-         id="entities-panel"
+    <div id="entities-panel" class="tab-panel"
          hx-get="/_console/partials/entities"
          hx-trigger="load"
          hx-swap="innerHTML">
@@ -28,8 +27,7 @@
     </div>
 
     {# Surfaces tab #}
-    <div x-show="tab === 'surfaces'"
-         id="surfaces-panel"
+    <div id="surfaces-panel" class="tab-panel" style="display:none;"
          hx-get="/_console/partials/surfaces"
          hx-trigger="intersect once"
          hx-swap="innerHTML">
@@ -39,8 +37,7 @@
     </div>
 
     {# Integrations tab #}
-    <div x-show="tab === 'integrations'"
-         id="integrations-panel"
+    <div id="integrations-panel" class="tab-panel" style="display:none;"
          hx-get="/_console/partials/integrations"
          hx-trigger="intersect once"
          hx-swap="innerHTML">
@@ -50,4 +47,13 @@
     </div>
   </div>
 </div>
+
+<script>
+function switchTab(el, name) {
+  document.querySelectorAll('#app-map-tabs .tab').forEach(t => t.classList.remove('tab-active'));
+  el.classList.add('tab-active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.getElementById(name + '-panel').style.display = '';
+}
+</script>
 {% endblock %}

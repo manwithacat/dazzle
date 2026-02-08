@@ -1,7 +1,7 @@
 """
 Founder Console Routes.
 
-HTMX + Alpine.js + DaisyUI control plane for founders:
+HTMX + DaisyUI control plane for founders:
 - Health dashboard
 - App map (entities, surfaces, integrations)
 - Spec versioning and change tracking

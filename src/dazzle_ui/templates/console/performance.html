@@ -1,15 +1,14 @@
 {% extends "console/base_console.html" %}
 
 {% block content %}
-<div class="space-y-6" x-data="{ hours: 24 }">
+<div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
       <h2 class="text-2xl font-bold">Performance</h2>
       <p class="text-sm opacity-70">API performance, errors, and cost monitoring.</p>
     </div>
-    <select class="select select-bordered select-sm"
-            x-model="hours"
-            @change="htmx.trigger('#api-perf-section', 'refresh');
+    <select id="hours-select" class="select select-bordered select-sm"
+            onchange="htmx.trigger('#api-perf-section', 'refresh');
                      htmx.trigger('#error-section', 'refresh');
                      htmx.trigger('#cost-section', 'refresh')">
       <option value="1">Last 1 hour</option>
@@ -25,7 +24,7 @@
        hx-get="/_console/partials/api-perf?hours=24"
        hx-trigger="load, refresh"
        hx-swap="innerHTML"
-       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+       hx-vals='js:{"hours": document.getElementById("hours-select")?.value || 24}'>
     <div class="flex items-center justify-center p-8">
       <span class="loading loading-spinner loading-md"></span>
     </div>
@@ -36,7 +35,7 @@
        hx-get="/_console/partials/errors?hours=24"
        hx-trigger="load, refresh"
        hx-swap="innerHTML"
-       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+       hx-vals='js:{"hours": document.getElementById("hours-select")?.value || 24}'>
     <div class="flex items-center justify-center p-8">
       <span class="loading loading-spinner loading-md"></span>
     </div>
@@ -47,7 +46,7 @@
        hx-get="/_console/partials/costs?hours=24"
        hx-trigger="load, refresh"
        hx-swap="innerHTML"
-       hx-vals='js:{"hours": document.querySelector("[x-model=hours]")?.value || 24}'>
+       hx-vals='js:{"hours": document.getElementById("hours-select")?.value || 24}'>
     <div class="flex items-center justify-center p-8">
       <span class="loading loading-spinner loading-md"></span>
     </div>

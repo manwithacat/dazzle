@@ -1,25 +1,25 @@
-{# Reusable search input fragment with debounced HTMX search #}
+{# Reusable search input with debounced HTMX search — no Alpine #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional) #}
 {% set placeholder = placeholder | default('Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
-<div x-data="{ query: '' }" class="form-control">
+<div data-dz-search class="form-control">
   <div class="relative">
     <input type="text"
            name="search"
-           x-model="query"
+           data-dz-search-input
            placeholder="{{ placeholder }}"
            class="input input-bordered input-sm w-full max-w-xs pr-8"
            hx-get="{{ endpoint }}"
            hx-target="{{ target }}"
            hx-trigger="keyup changed delay:300ms"
            hx-swap="innerHTML"
-           hx-include="closest [x-data='dazzleTable']"
+           hx-include="closest [data-dz-table]"
            hx-headers='{"Accept": "text/html"}'
            hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .htmx-indicator{% endif %}" />
-    {# Clear button #}
-    <button x-show="query.length > 0"
-            @click="query = ''; $refs ? null : null; htmx.trigger($el.previousElementSibling, 'keyup')"
+    {# Clear button — shown/hidden by dz.js on input event #}
+    <button data-dz-search-clear
             type="button"
+            style="display:none;"
             class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle">
       &times;
     </button>
