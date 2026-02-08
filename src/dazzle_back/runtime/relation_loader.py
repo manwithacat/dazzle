@@ -124,10 +124,15 @@ class RelationRegistry:
 
 
 def _infer_fk_field(relation: RelationSpec, entity_name: str) -> str:
-    """Infer the foreign key field name from a relation."""
+    """Infer the foreign key field name from a relation.
+
+    For many_to_one/one_to_one, the FK column is the relation name itself
+    (e.g. ``assigned_to: ref User`` creates column ``assigned_to``).
+    For one_to_many, the FK lives on the *other* entity as ``{entity}_id``.
+    """
     if relation.kind.value in ("many_to_one", "one_to_one"):
-        # FK is on this entity
-        return f"{relation.name}_id"
+        # FK is on this entity — column name matches the relation/field name
+        return relation.name
     else:
         # FK is on the other entity
         return f"{entity_name.lower()}_id"
