@@ -297,6 +297,26 @@ const dz = (() => {
     });
   }
 
+  // ── HTMX Server Events ──────────────────────────────────────────────
+
+  function initHtmxEvents() {
+    // Listen for HX-Trigger events from server responses.
+    // The server sends JSON triggers like:
+    //   {"showToast": {"message": "...", "type": "success"}, "entityCreated": {"entity": "Task"}}
+    // HTMX automatically fires these as DOM events on the triggering element,
+    // but we listen on the body so we catch them all.
+
+    /** @param {Event} e */
+    function handleShowToast(e) {
+      const detail = /** @type {CustomEvent} */ (e).detail;
+      if (detail && detail.message) {
+        toast(detail.message, detail.type || "success");
+      }
+    }
+
+    document.body.addEventListener("showToast", handleShowToast);
+  }
+
   // ── Inline Edit ──────────────────────────────────────────────────────
 
   function initInlineEdit() {
@@ -612,6 +632,7 @@ const dz = (() => {
     initDialogs();
     initSlideOver();
     initToasts();
+    initHtmxEvents();
     initInlineEdit();
     initSearchInputs();
     initFormLoading();

@@ -25,9 +25,10 @@ if TYPE_CHECKING:
 try:
     from fastapi import APIRouter as _APIRouter
     from fastapi import Depends, HTTPException, Query, Request
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, JSONResponse
 
     from dazzle_back.runtime.auth import AuthContext
+    from dazzle_back.runtime.htmx_response import htmx_trigger_headers
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -38,6 +39,7 @@ except ImportError:
     Request = None  # type: ignore
     Depends = None  # type: ignore
     HTMLResponse = None  # type: ignore
+    JSONResponse = None  # type: ignore
     AuthContext = None  # type: ignore
 
 
@@ -48,6 +50,28 @@ def _is_htmx_request(request: Any) -> bool:
     return bool(
         request.headers.get("HX-Request") == "true" or request.headers.get("Accept") == "text/html"
     )
+
+
+def _with_htmx_triggers(request: Any, result: Any, entity_name: str, action: str) -> Any:
+    """Wrap a mutation result with HX-Trigger headers for HTMX requests.
+
+    For non-HTMX requests, returns the result unchanged (JSON serialized by FastAPI).
+    For HTMX requests, returns a JSONResponse with HX-Trigger headers so the client
+    can react to entity mutations (show toasts, refresh lists, etc.).
+    """
+    if not _is_htmx_request(request):
+        return result
+
+    from fastapi.responses import JSONResponse as _JSONResponse
+
+    # Serialize Pydantic models
+    if hasattr(result, "model_dump"):
+        body = result.model_dump(mode="json")
+    else:
+        body = result
+
+    headers = htmx_trigger_headers(entity_name, action)
+    return _JSONResponse(content=body, headers=headers)
 
 
 async def _parse_request_body(request: Any) -> dict[str, Any]:
@@ -308,6 +332,7 @@ def create_create_handler(
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
+    entity_name: str = "Item",
 ) -> Callable[..., Any]:
     """Create a handler for create operations."""
 
@@ -319,7 +344,7 @@ def create_create_handler(
             body = await _parse_request_body(request)
             data = input_schema.model_validate(body)
             result = await service.execute(operation="create", data=data)
-            return result
+            return _with_htmx_triggers(request, result, entity_name, "created")
 
         _create_auth.__annotations__ = {
             "request": Request,
@@ -332,7 +357,7 @@ def create_create_handler(
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
-        return result
+        return _with_htmx_triggers(request, result, entity_name, "created")
 
     _create_noauth.__annotations__ = {"request": Request, "return": Any}
     return _create_noauth
@@ -344,6 +369,7 @@ def create_update_handler(
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
+    entity_name: str = "Item",
 ) -> Callable[..., Any]:
     """Create a handler for update operations."""
 
@@ -357,7 +383,7 @@ def create_update_handler(
             result = await service.execute(operation="update", id=id, data=data)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
-            return result
+            return _with_htmx_triggers(request, result, entity_name, "updated")
 
         _update_auth.__annotations__ = {
             "id": UUID,
@@ -373,7 +399,7 @@ def create_update_handler(
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
-        return result
+        return _with_htmx_triggers(request, result, entity_name, "updated")
 
     _update_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return _update_noauth
@@ -383,6 +409,7 @@ def create_delete_handler(
     service: Any,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
+    entity_name: str = "Item",
 ) -> Callable[..., Any]:
     """Create a handler for delete operations."""
 
@@ -390,27 +417,27 @@ def create_delete_handler(
 
         async def _delete_auth(
             id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
-        ) -> dict[str, bool]:
+        ) -> Any:
             result = await service.execute(operation="delete", id=id)
             if not result:
                 raise HTTPException(status_code=404, detail="Not found")
-            return {"deleted": True}
+            return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
 
         _delete_auth.__annotations__ = {
             "id": UUID,
             "request": Request,
             "auth_context": AuthContext,
-            "return": dict[str, bool],
+            "return": Any,
         }
         return _delete_auth
 
-    async def _delete_noauth(id: UUID, request: Request) -> dict[str, bool]:
+    async def _delete_noauth(id: UUID, request: Request) -> Any:
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
-        return {"deleted": True}
+        return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
 
-    _delete_noauth.__annotations__ = {"id": UUID, "request": Request, "return": dict[str, bool]}
+    _delete_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return _delete_noauth
 
 
@@ -533,6 +560,7 @@ class RouteGenerator:
                     model,
                     auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
+                    entity_name=entity_name or "Item",
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -578,6 +606,7 @@ class RouteGenerator:
                     model,
                     auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
+                    entity_name=entity_name or "Item",
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -589,6 +618,7 @@ class RouteGenerator:
                 service,
                 auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
+                entity_name=entity_name or "Item",
             )
             self._add_route(endpoint, handler, response_model=None)
 
@@ -717,25 +747,26 @@ def generate_crud_routes(
 
     # Create
     @router.post(prefix, tags=tags, summary=f"Create {entity_name}", response_model=model)
-    async def create_item(data: create_schema) -> Any:  # type: ignore
-        return await service.execute(operation="create", data=data)
+    async def create_item(request: Request, data: create_schema) -> Any:  # type: ignore
+        result = await service.execute(operation="create", data=data)
+        return _with_htmx_triggers(request, result, entity_name, "created")
 
     # Update
     @router.put(
         f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model
     )
-    async def update_item(id: UUID, data: update_schema) -> Any:  # type: ignore
+    async def update_item(id: UUID, request: Request, data: update_schema) -> Any:  # type: ignore
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
-        return result
+        return _with_htmx_triggers(request, result, entity_name, "updated")
 
     # Delete
     @router.delete(f"{prefix}/{{id}}", tags=tags, summary=f"Delete {entity_name}")
-    async def delete_item(id: UUID) -> dict[str, bool]:
+    async def delete_item(id: UUID, request: Request) -> Any:
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
-        return {"deleted": True}
+        return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
 
     return router

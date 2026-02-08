@@ -6,6 +6,9 @@ Provides centralized exception handling for:
 - Invariant violations
 - Pydantic validation errors
 - Custom 404 pages for site rendering
+
+HTMX-aware: when HX-Request header is present, validation errors return
+rendered HTML fragments with HX-Retarget instead of raw JSON.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
+    from fastapi.responses import Response
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -24,14 +28,19 @@ def register_exception_handlers(app: FastAPI) -> None:
     - TransitionError: State machine transition failures (422)
     - InvariantViolationError: Business rule violations (422)
     - ValidationError: Pydantic validation errors (422)
+    - ConstraintViolationError: Database constraint violations (422)
+
+    For HTMX requests, validation errors return rendered HTML fragments
+    targeted at #form-errors instead of raw JSON.
 
     Args:
         app: FastAPI application instance
     """
     from fastapi import Request
-    from fastapi.responses import JSONResponse
+    from fastapi.responses import JSONResponse as _JSONResponse
     from pydantic import ValidationError
 
+    from dazzle_back.runtime.htmx_response import is_htmx_request, json_or_htmx_error
     from dazzle_back.runtime.invariant_evaluator import InvariantViolationError
     from dazzle_back.runtime.repository import ConstraintViolationError
     from dazzle_back.runtime.state_machine import TransitionError
@@ -39,8 +48,14 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ConstraintViolationError)
     async def constraint_violation_handler(
         request: Request, exc: ConstraintViolationError
-    ) -> JSONResponse:
+    ) -> Response:
         """Convert database constraint violations to 422 Unprocessable Entity."""
+        if is_htmx_request(request):
+            return json_or_htmx_error(
+                request,
+                [{"loc": [exc.field] if exc.field else [], "msg": str(exc)}],
+                error_type="constraint_violation",
+            )
         detail: dict[str, Any] = {
             "detail": str(exc),
             "type": "constraint_violation",
@@ -48,29 +63,45 @@ def register_exception_handlers(app: FastAPI) -> None:
         }
         if exc.field:
             detail["field"] = exc.field
-        return JSONResponse(status_code=422, content=detail)
+        return _JSONResponse(status_code=422, content=detail)
 
     @app.exception_handler(TransitionError)
-    async def transition_error_handler(request: Request, exc: TransitionError) -> JSONResponse:
+    async def transition_error_handler(request: Request, exc: TransitionError) -> Response:
         """Convert state machine errors to 422 Unprocessable Entity."""
-        return JSONResponse(
+        if is_htmx_request(request):
+            return json_or_htmx_error(
+                request,
+                [{"loc": [], "msg": str(exc)}],
+                error_type="transition_error",
+            )
+        return _JSONResponse(
             status_code=422,
             content={"detail": str(exc), "type": "transition_error"},
         )
 
     @app.exception_handler(InvariantViolationError)
-    async def invariant_error_handler(
-        request: Request, exc: InvariantViolationError
-    ) -> JSONResponse:
+    async def invariant_error_handler(request: Request, exc: InvariantViolationError) -> Response:
         """Convert invariant violations to 422 Unprocessable Entity."""
-        return JSONResponse(
+        if is_htmx_request(request):
+            return json_or_htmx_error(
+                request,
+                [{"loc": [], "msg": str(exc)}],
+                error_type="invariant_violation",
+            )
+        return _JSONResponse(
             status_code=422,
             content={"detail": str(exc), "type": "invariant_violation"},
         )
 
     @app.exception_handler(ValidationError)
-    async def validation_error_handler(request: Request, exc: ValidationError) -> JSONResponse:
-        """Convert validation errors to 422 Unprocessable Entity with field details."""
+    async def validation_error_handler(request: Request, exc: ValidationError) -> Response:
+        """Convert validation errors to 422 Unprocessable Entity with field details.
+
+        For HTMX requests: renders form_errors.html fragment with HX-Retarget
+        to #form-errors so the error displays in-place without destroying the form.
+
+        For API requests: returns JSON with structured error details.
+        """
         # Pydantic errors() can contain non-serializable objects in ctx
         # (e.g. raw ValueError instances from AfterValidator). Sanitize them.
         errors: list[dict[str, Any]] = []
@@ -82,10 +113,8 @@ def register_exception_handlers(app: FastAPI) -> None:
                 else:
                     clean[k] = v
             errors.append(clean)
-        return JSONResponse(
-            status_code=422,
-            content={"detail": errors, "type": "validation_error"},
-        )
+
+        return json_or_htmx_error(request, errors, error_type="validation_error")
 
 
 def register_site_404_handler(app: FastAPI, sitespec_data: dict[str, Any]) -> None:
