@@ -345,3 +345,67 @@ async def test_fk_valid_reference_succeeds(fk_db_and_repos):
 
     result = await player_repo.create({"id": uuid4(), "team_id": team_id, "name": "Alice"})
     assert result.name == "Alice"
+
+
+# ---------------------------------------------------------------------------
+# psycopg2 subclass detection via MRO (#151)
+# ---------------------------------------------------------------------------
+
+
+class TestPsycopg2SubclassDetection:
+    """Verify that psycopg2 IntegrityError subclasses are caught via MRO check.
+
+    psycopg2 raises ForeignKeyViolation and UniqueViolation which inherit from
+    IntegrityError but whose __name__ does NOT contain 'IntegrityError'.
+    The MRO-based check must walk the inheritance chain.
+    """
+
+    @staticmethod
+    def _make_subclass(name: str, base_name: str = "IntegrityError") -> type:
+        """Create a fake exception class hierarchy mimicking psycopg2."""
+        # psycopg2.IntegrityError → psycopg2.DatabaseError → psycopg2.Error → Exception
+        pg_error = type("Error", (Exception,), {})
+        db_error = type("DatabaseError", (pg_error,), {})
+        integrity = type(base_name, (db_error,), {})
+        subclass = type(name, (integrity,), {})
+        return subclass
+
+    def test_foreign_key_violation_detected(self):
+        """ForeignKeyViolation (subclass of IntegrityError) is caught."""
+        FKV = self._make_subclass("ForeignKeyViolation")
+        exc = FKV("FOREIGN KEY constraint failed")
+        assert any("IntegrityError" in cls.__name__ for cls in type(exc).__mro__)
+
+    def test_unique_violation_detected(self):
+        """UniqueViolation (subclass of IntegrityError) is caught."""
+        UV = self._make_subclass("UniqueViolation")
+        exc = UV("UNIQUE constraint failed: Task.slug")
+        assert any("IntegrityError" in cls.__name__ for cls in type(exc).__mro__)
+
+    def test_direct_integrity_error_detected(self):
+        """Direct IntegrityError (not a subclass) is still caught."""
+        IE = self._make_subclass("IntegrityError", base_name="DatabaseError")
+        # IE itself is named IntegrityError
+        IE = type("IntegrityError", (Exception,), {})
+        exc = IE("some error")
+        assert any("IntegrityError" in cls.__name__ for cls in type(exc).__mro__)
+
+    def test_unrelated_exception_not_detected(self):
+        """A normal Exception should NOT match the IntegrityError check."""
+        exc = ValueError("not an integrity error")
+        assert not any("IntegrityError" in cls.__name__ for cls in type(exc).__mro__)
+
+    def test_parse_constraint_error_with_subclass(self):
+        """_parse_constraint_error works with psycopg2-style subclass exceptions."""
+        FKV = self._make_subclass("ForeignKeyViolation")
+        exc = FKV("FOREIGN KEY constraint failed")
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "foreign_key"
+
+    def test_parse_constraint_error_unique_subclass(self):
+        """_parse_constraint_error parses unique violations from subclass."""
+        UV = self._make_subclass("UniqueViolation")
+        exc = UV("UNIQUE constraint failed: Task.slug")
+        ctype, field = _parse_constraint_error(exc, "Task")
+        assert ctype == "unique"
+        assert field == "slug"

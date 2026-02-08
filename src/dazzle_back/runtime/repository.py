@@ -482,7 +482,9 @@ class SQLiteRepository(Generic[T]):
                 cursor = conn.cursor()
                 cursor.execute(sql, values)
         except (sqlite3.IntegrityError, Exception) as exc:
-            if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
+            if isinstance(exc, sqlite3.IntegrityError) or any(
+                "IntegrityError" in cls.__name__ for cls in type(exc).__mro__
+            ):
                 ctype, field = _parse_constraint_error(exc, self.table_name)
                 if ctype == "unique":
                     msg = (
@@ -589,7 +591,9 @@ class SQLiteRepository(Generic[T]):
                 cursor.execute(sql, values)
                 rowcount = cursor.rowcount
         except (sqlite3.IntegrityError, Exception) as exc:
-            if isinstance(exc, sqlite3.IntegrityError) or "IntegrityError" in type(exc).__name__:
+            if isinstance(exc, sqlite3.IntegrityError) or any(
+                "IntegrityError" in cls.__name__ for cls in type(exc).__mro__
+            ):
                 ctype, field = _parse_constraint_error(exc, self.table_name)
                 if ctype == "unique":
                     msg = (
