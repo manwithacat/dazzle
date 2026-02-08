@@ -33,7 +33,7 @@ def _base_template(title: str, content: str, user: str = "") -> str:
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- HTMX (matching Dazzle) -->
-    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.8"></script>
     <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 
     <!-- Chart.js for metrics -->
@@ -378,7 +378,7 @@ def _login_page() -> str:
     <title>Login - Dazzle Control Plane</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.8"></script>
 </head>
 <body class="min-h-screen bg-base-200 flex items-center justify-center">
     <div class="card w-96 bg-base-100 shadow-xl">
