@@ -153,7 +153,7 @@ class ServerConfig:
 # Runtime import
 try:
     from fastapi import FastAPI as _FastAPI
-    from fastapi import Request
+    from fastapi import HTTPException, Request
     from fastapi.middleware.cors import CORSMiddleware
 
     from dazzle_back.runtime.route_generator import RouteGenerator
@@ -753,6 +753,10 @@ class DNRBackendApp:
             ]
             ws_app_name = getattr(spec, "title", "") or spec.name.replace("_", " ").title()
 
+            # Auth enforcement: require auth for workspace routes when auth is
+            # enabled and test mode is off (same policy as entity routes).
+            require_auth = self._enable_auth and not self._enable_test_mode
+
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, spec)
                 ws_name = workspace.name
@@ -777,6 +781,10 @@ class DNRBackendApp:
                             auth_ctx = auth_middleware.get_auth_context(request)
                         except Exception:
                             pass
+
+                    # Enforce authentication (#145)
+                    if require_auth and not (auth_ctx and auth_ctx.is_authenticated):
+                        raise HTTPException(status_code=401, detail="Authentication required")
 
                     html = render_fragment(
                         "workspace/workspace.html",
@@ -836,6 +844,19 @@ class DNRBackendApp:
                     ) -> Any:
                         """Return rendered HTML for a workspace region."""
                         from fastapi.responses import HTMLResponse
+
+                        # Enforce authentication (#145)
+                        if require_auth:
+                            auth_ctx = None
+                            if auth_middleware:
+                                try:
+                                    auth_ctx = auth_middleware.get_auth_context(request)
+                                except Exception:
+                                    pass
+                            if not (auth_ctx and auth_ctx.is_authenticated):
+                                raise HTTPException(
+                                    status_code=401, detail="Authentication required"
+                                )
 
                         # Query the source entity
                         items: list[dict[str, Any]] = []

@@ -13,6 +13,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # Step 1 — Nav routes point to /workspaces/{name}
 # ---------------------------------------------------------------------------
@@ -282,3 +284,108 @@ class TestSortSpecConversion:
         ]
         result = [s.field if s.direction == "asc" else f"-{s.field}" for s in specs]
         assert result == ["status", "-created_at"]
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — Workspace routes enforce auth (#145)
+# ---------------------------------------------------------------------------
+
+try:
+    import fastapi  # noqa: F401
+
+    _FASTAPI_AVAILABLE = True
+except ImportError:
+    _FASTAPI_AVAILABLE = False
+
+
+@pytest.mark.skipif(not _FASTAPI_AVAILABLE, reason="FastAPI required")
+class TestWorkspaceAuthEnforcement:
+    """Workspace page routes must require authentication when auth is enabled."""
+
+    def _make_spec(self) -> Any:
+        """Build a BackendSpec with one workspace."""
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec, FieldType, ScalarType
+
+        return BackendSpec(
+            name="test_app",
+            version="1.0.0",
+            entities=[
+                EntitySpec(
+                    name="Task",
+                    fields=[
+                        FieldSpec(
+                            name="id",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                            required=True,
+                        ),
+                        FieldSpec(
+                            name="title",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+            workspaces=[
+                WorkspaceSpec(
+                    name="admin_dashboard",
+                    title="Admin Dashboard",
+                    regions=[
+                        WorkspaceRegion(name="tasks", source="Task"),
+                    ],
+                ),
+            ],
+        )
+
+    @pytest.fixture
+    def app_with_auth(self, tmp_path: Any) -> Any:
+        """Build a FastAPI app with auth enabled and one workspace."""
+        from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
+
+        config = ServerConfig(
+            db_path=tmp_path / "test.db",
+            use_database=True,
+            enable_auth=True,
+            enable_test_mode=False,
+        )
+        builder = DNRBackendApp(self._make_spec(), config=config)
+        return builder.build()
+
+    @pytest.fixture
+    def app_without_auth(self, tmp_path: Any) -> Any:
+        """Build a FastAPI app with auth disabled and one workspace."""
+        from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
+
+        config = ServerConfig(
+            db_path=tmp_path / "test.db",
+            use_database=True,
+            enable_auth=False,
+            enable_test_mode=False,
+        )
+        builder = DNRBackendApp(self._make_spec(), config=config)
+        return builder.build()
+
+    def test_workspace_returns_401_without_session(self, app_with_auth: Any) -> None:
+        """Workspace route returns 401 when auth is enabled and no session cookie."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app_with_auth, raise_server_exceptions=False)
+        resp = client.get("/workspaces/admin_dashboard")
+        assert resp.status_code == 401
+
+    def test_workspace_region_returns_401_without_session(self, app_with_auth: Any) -> None:
+        """Workspace region data returns 401 when auth is enabled and no session cookie."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app_with_auth, raise_server_exceptions=False)
+        resp = client.get("/api/workspaces/admin_dashboard/regions/tasks")
+        assert resp.status_code == 401
+
+    def test_workspace_accessible_without_auth_when_disabled(self, app_without_auth: Any) -> None:
+        """Workspace route returns 200 when auth is not enabled."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app_without_auth, raise_server_exceptions=False)
+        resp = client.get("/workspaces/admin_dashboard")
+        assert resp.status_code == 200
