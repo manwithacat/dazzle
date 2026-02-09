@@ -8,7 +8,6 @@ Requires DATABASE_URL (PostgreSQL) for integration tests.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -41,15 +40,21 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture
-def temp_db_path(tmp_path: Path) -> Path:
-    """Create a temporary database path."""
-    return tmp_path / "test.db"
-
-
-@pytest.fixture
-def db_manager(temp_db_path: Path) -> DatabaseManager:
-    """Create a database manager with temporary database."""
-    return DatabaseManager(temp_db_path)
+def db_manager() -> DatabaseManager:
+    """Create a database manager using DATABASE_URL with clean tables."""
+    database_url = os.environ.get("DATABASE_URL", "")
+    manager = DatabaseManager(database_url)
+    # Drop tables used by migration tests for isolation
+    try:
+        with manager.connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DROP TABLE IF EXISTS "Task" CASCADE')
+            cursor.execute('DROP TABLE IF EXISTS "User" CASCADE')
+            cursor.execute('DROP TABLE IF EXISTS "Product" CASCADE')
+            cursor.execute("DROP TABLE IF EXISTS _dazzle_migration_history CASCADE")
+    except Exception:
+        pass
+    return manager
 
 
 @pytest.fixture
@@ -618,11 +623,11 @@ class TestMoneyExpansionMigration:
 
         with (
             patch(
-                "dazzle_back.runtime.migrations._get_pg_table_schema",
+                "dazzle_back.runtime.migrations.get_table_schema",
                 return_value=existing_columns,
             ),
             patch(
-                "dazzle_back.runtime.migrations._get_pg_table_indexes",
+                "dazzle_back.runtime.migrations.get_table_indexes",
                 return_value=[],
             ),
         ):
@@ -664,11 +669,11 @@ class TestMoneyExpansionMigration:
 
         with (
             patch(
-                "dazzle_back.runtime.migrations._get_pg_table_schema",
+                "dazzle_back.runtime.migrations.get_table_schema",
                 return_value=existing_columns,
             ),
             patch(
-                "dazzle_back.runtime.migrations._get_pg_table_indexes",
+                "dazzle_back.runtime.migrations.get_table_indexes",
                 return_value=[],
             ),
         ):
@@ -684,12 +689,8 @@ class TestMoneyExpansionMigration:
         drop_null_steps = [s for s in plan.steps if s.action == MigrationAction.DROP_NOT_NULL]
         assert len(drop_null_steps) == 0
 
-    def test_sqlite_skipped(self) -> None:
-        """On SQLite, no DROP NOT NULL step is emitted (ALTER COLUMN unsupported)."""
-        db = MagicMock()
-        db.backend_type = "sqlite"
-
-        # Create a real SQLite table with NOT NULL 'price' column
+    def test_drop_not_null_on_real_db(self, db_manager: DatabaseManager) -> None:
+        """On PostgreSQL, orphaned NOT NULL column emits DROP NOT NULL step."""
         entity_v1 = EntitySpec(
             name="Product",
             label="Product",
@@ -712,18 +713,12 @@ class TestMoneyExpansionMigration:
             ],
         )
 
-        # Use a real SQLite db for this test
-        import tempfile
-        from pathlib import Path
+        db_manager.create_table(entity_v1)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "test.db"
-            real_db = DatabaseManager(db_path)
-            real_db.create_table(entity_v1)
-
-            entity_v2 = self._make_money_entity()
-            planner = MigrationPlanner(real_db)
-            plan = planner.plan_migrations([entity_v2])
+        entity_v2 = self._make_money_entity()
+        planner = MigrationPlanner(db_manager)
+        plan = planner.plan_migrations([entity_v2])
 
         drop_null_steps = [s for s in plan.steps if s.action == MigrationAction.DROP_NOT_NULL]
-        assert len(drop_null_steps) == 0
+        assert len(drop_null_steps) == 1
+        assert drop_null_steps[0].column == "price"

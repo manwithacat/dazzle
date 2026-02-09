@@ -14,9 +14,12 @@ The module deliberately uses **SQLAlchemy Core only** — no ORM, no Session.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+
+if TYPE_CHECKING:
+    import sqlalchemy
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +136,7 @@ def _field_to_column(
 # ---------------------------------------------------------------------------
 
 
-def build_metadata(entities: list[EntitySpec]) -> Any:
+def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
     """Convert a list of EntitySpec into a SQLAlchemy ``MetaData``.
 
     Each entity becomes a ``Table`` with columns derived from its fields.
@@ -148,7 +151,7 @@ def build_metadata(entities: list[EntitySpec]) -> Any:
         A populated ``sqlalchemy.MetaData`` instance.
     """
     sa = _ensure_sa()
-    metadata = sa.MetaData()
+    metadata: sqlalchemy.MetaData = cast("sqlalchemy.MetaData", sa.MetaData())
     entity_names = {e.name for e in entities}
 
     for entity in entities:

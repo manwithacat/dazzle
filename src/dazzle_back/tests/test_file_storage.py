@@ -53,17 +53,42 @@ def local_storage(temp_storage_path: Any) -> Any:
 
 
 @pytest.fixture
-def metadata_store(temp_db_path: Any) -> Any:
-    """Create a file metadata store."""
-    return FileMetadataStore(temp_db_path)
+def metadata_store() -> Any:
+    """Create a file metadata store with clean table."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL not set")
+    store = FileMetadataStore(database_url=database_url)
+    # Clean table before each test for isolation
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+
+    try:
+        db = PostgresBackend(database_url)
+        with db.connection() as conn:
+            conn.execute("DELETE FROM dazzle_files")
+    except Exception:
+        pass
+    return store
 
 
 @pytest.fixture
-def file_service(temp_storage_path: Any, temp_db_path: Any) -> Any:
-    """Create a file service."""
+def file_service(temp_storage_path: Any) -> Any:
+    """Create a file service with clean table."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL not set")
+    # Clean table before each test for isolation
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+
+    try:
+        db = PostgresBackend(database_url)
+        with db.connection() as conn:
+            conn.execute("DELETE FROM dazzle_files")
+    except Exception:
+        pass
     return create_local_file_service(
         base_path=temp_storage_path,
-        db_path=temp_db_path,
+        database_url=database_url,
     )
 
 
@@ -576,7 +601,7 @@ class TestFactoryFunctions:
         """Test creating local file service."""
         service = create_local_file_service(
             base_path=tmp_path / "uploads",
-            db_path=tmp_path / "files.db",
+            database_url=os.environ["DATABASE_URL"],
             base_url="/uploads",
             max_size=5 * 1024 * 1024,
             allowed_types=["image/*", "application/pdf"],

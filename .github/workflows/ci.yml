@@ -289,6 +289,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+      DAZZLE_SKIP_INFRA_CHECK: "1"
 
     steps:
     - uses: actions/checkout@v6

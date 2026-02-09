@@ -185,12 +185,14 @@ async def get_user_personas_from_membership(
                 )
 
             row = cursor.fetchone()
-            if row and row[0]:
+            if row:
                 import json
 
-                # Personas stored as JSON array
-                personas = json.loads(row[0]) if isinstance(row[0], str) else row[0]
-                return personas if isinstance(personas, list) else []
+                val = row["personas"] if isinstance(row, dict) else row[0]
+                if val:
+                    # Personas stored as JSON array
+                    personas = json.loads(val) if isinstance(val, str) else val
+                    return personas if isinstance(personas, list) else []
 
         return []
     except Exception:

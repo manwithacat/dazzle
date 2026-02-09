@@ -13,7 +13,7 @@ import re
 import time
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, TypeAlias, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -411,7 +411,7 @@ class Repository(Generic[T]):
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("delete", latency_ms, rows=rowcount)
 
-        return rowcount > 0
+        return bool(rowcount and rowcount > 0)
 
     async def list(
         self,
@@ -565,12 +565,14 @@ class Repository(Generic[T]):
 SQLiteRepository = Repository
 """Deprecated alias for :class:`Repository`. Use ``Repository`` directly."""
 
-DatabaseManager: type
-"""Deprecated — use :class:`~dazzle_back.runtime.pg_backend.PostgresBackend`."""
 try:
-    from dazzle_back.runtime.pg_backend import PostgresBackend as DatabaseManager  # noqa: F811
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+
+    DatabaseManager: TypeAlias = PostgresBackend
 except ImportError:
-    DatabaseManager = None  # type: ignore[assignment,misc]
+    PostgresBackend = None  # type: ignore[assignment,misc]
+    DatabaseManager: TypeAlias = Any  # type: ignore[no-redef,misc]
+"""Deprecated — use :class:`~dazzle_back.runtime.pg_backend.PostgresBackend`."""
 
 
 # =============================================================================

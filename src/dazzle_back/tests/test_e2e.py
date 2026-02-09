@@ -125,10 +125,19 @@ class TestE2EEndpoints:
 
     @pytest.fixture
     def client(self, task_spec: BackendSpec) -> TestClient:
-        """Create a test client."""
+        """Create a test client with clean database."""
         import os
 
+        from dazzle_back.runtime.pg_backend import PostgresBackend
+
         database_url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
+        # Clean Task table before each test for isolation
+        try:
+            db = PostgresBackend(database_url)
+            with db.connection() as conn:
+                conn.execute('DELETE FROM "Task"')
+        except Exception:
+            pass
         app = create_app(task_spec, database_url=database_url)
         return _TestClient(app)
 
@@ -248,5 +257,5 @@ class TestE2EEndpoints:
         response = client.get("/db-info")
         assert response.status_code == 200
         data = response.json()
-        assert data["database_enabled"] is True
+        assert data["database_backend"] == "postgresql"
         assert "Task" in data["tables"]

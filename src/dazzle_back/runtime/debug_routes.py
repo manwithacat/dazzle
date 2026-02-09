@@ -302,25 +302,19 @@ def create_debug_routes(
         tables: list[dict[str, Any]] = []
 
         with db_manager.connection() as conn:
-            # Get all tables — use backend-appropriate catalog query
-            is_pg = getattr(db_manager, "backend_type", "sqlite") == "postgres"
-            if is_pg:
-                cursor = conn.execute(
-                    "SELECT tablename AS name FROM pg_tables "
-                    "WHERE schemaname = 'public' ORDER BY tablename"
-                )
-            else:
-                cursor = conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-                )
-            table_names = [row[0] for row in cursor.fetchall()]
+            # Get all tables from PostgreSQL catalog
+            cursor = conn.execute(
+                "SELECT tablename AS name FROM pg_tables "
+                "WHERE schemaname = 'public' ORDER BY tablename"
+            )
+            table_names = [row["name"] for row in cursor.fetchall()]
 
             for table_name in table_names:
                 try:
                     tbl = quote_identifier(table_name)
                     count_cursor = conn.execute(f"SELECT COUNT(*) FROM {tbl}")
                     row = count_cursor.fetchone()
-                    count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
+                    count = next(iter(row.values())) if row else 0
                     tables.append({"name": table_name, "count": count})
                 except Exception:
                     tables.append({"name": table_name, "count": -1, "error": "unreadable"})

@@ -32,8 +32,12 @@ def db_manager():
 
 @pytest.fixture
 def outbox_repo(db_manager):
-    """Create an outbox repository."""
-    return OutboxRepository(db_manager)
+    """Create an outbox repository with clean table."""
+    repo = OutboxRepository(db_manager)
+    # Clean outbox table before each test to ensure isolation
+    with db_manager.connection() as conn:
+        conn.execute("DELETE FROM _dazzle_outbox")
+    return repo
 
 
 class TestOutboxMessage:
@@ -118,7 +122,8 @@ class TestOutboxRepository:
         """Test that outbox table is created."""
         with db_manager.connection() as conn:
             cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='_dazzle_outbox'"
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_name = '_dazzle_outbox'"
             )
             assert cursor.fetchone() is not None
 
@@ -356,7 +361,7 @@ class TestOutboxRepository:
         with db_manager.connection() as conn:
             outbox_repo.create(msg, conn=conn)
             # Message should be visible within transaction
-            cursor = conn.execute("SELECT id FROM _dazzle_outbox WHERE id = ?", (msg.id,))
+            cursor = conn.execute("SELECT id FROM _dazzle_outbox WHERE id = %s", (msg.id,))
             assert cursor.fetchone() is not None
 
         # Verify still there after commit

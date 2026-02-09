@@ -1,15 +1,12 @@
 """
 Tests for full-text search functionality.
 
-Tests FTS5 table creation, indexing, and search queries.
-These tests use SQLite directly (FTS5 is SQLite-specific).
+Tests PostgreSQL tsvector/GIN index creation, search queries, and snippets.
 """
 
 from __future__ import annotations
 
-import sqlite3
-import tempfile
-from pathlib import Path
+import os
 from typing import Any
 from uuid import uuid4
 
@@ -28,6 +25,14 @@ from dazzle_back.specs.entity import (
     ScalarType,
 )
 
+_requires_pg = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="FTS tests require PostgreSQL (DATABASE_URL)",
+)
+
+# Use a unique table name to avoid collisions with other test files
+_FTS_TABLE = "FTSTask"
+
 # =============================================================================
 # Test Fixtures
 # =============================================================================
@@ -37,7 +42,7 @@ from dazzle_back.specs.entity import (
 def task_entity() -> Any:
     """Create a Task entity with searchable fields."""
     return EntitySpec(
-        name="Task",
+        name=_FTS_TABLE,
         fields=[
             FieldSpec(
                 name="id",
@@ -62,36 +67,33 @@ def task_entity() -> Any:
 
 
 @pytest.fixture
-def test_db(task_entity: Any) -> Any:
-    """Create a test database with Task table."""
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
-        db_path = f.name
+def pg_conn() -> Any:
+    """Get a PostgreSQL connection with a clean FTSTask table."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL not set")
 
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    from dazzle_back.runtime.pg_backend import PostgresBackend
 
-    # Create Task table
-    conn.execute("""
-        CREATE TABLE Task (
-            rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-            id TEXT UNIQUE NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT,
-            priority INTEGER
-        )
-    """)
-
-    conn.commit()
-
-    yield conn
-
-    conn.close()
-    Path(db_path).unlink(missing_ok=True)
+    db = PostgresBackend(database_url)
+    with db.connection() as conn:
+        cursor = conn.cursor()
+        # Drop and recreate table for isolation
+        cursor.execute(f'DROP TABLE IF EXISTS "{_FTS_TABLE}" CASCADE')
+        cursor.execute(f"""
+            CREATE TABLE "{_FTS_TABLE}" (
+                "id" TEXT PRIMARY KEY,
+                "title" TEXT NOT NULL,
+                "description" TEXT,
+                "priority" INTEGER
+            )
+        """)
+        yield conn
 
 
 @pytest.fixture
-def populated_db(test_db: Any) -> Any:
-    """Database with test data."""
+def populated_conn(pg_conn: Any) -> Any:
+    """PostgreSQL connection with test data."""
     test_data = [
         ("Fix urgent bug in login page", "Users cannot login after update"),
         ("Add new dashboard feature", "Create a dashboard with charts and metrics"),
@@ -100,15 +102,15 @@ def populated_db(test_db: Any) -> Any:
         ("Bug fix: email validation", "Fix email validation regex pattern"),
     ]
 
+    cursor = pg_conn.cursor()
     for title, desc in test_data:
         task_id = str(uuid4())
-        test_db.execute(
-            "INSERT INTO Task (id, title, description) VALUES (?, ?, ?)",
+        cursor.execute(
+            f'INSERT INTO "{_FTS_TABLE}" ("id", "title", "description") VALUES (%s, %s, %s)',
             (task_id, title, desc),
         )
 
-    test_db.commit()
-    return test_db
+    return pg_conn
 
 
 # =============================================================================
@@ -162,7 +164,6 @@ class TestFTSManagerRegistration:
         config = manager.register_entity(task_entity, searchable_fields=["title"])
 
         assert config is not None
-        assert config is not None
         assert config.searchable_fields == ["title"]
 
     def test_register_entity_auto_detect(self, task_entity: Any) -> None:
@@ -171,12 +172,9 @@ class TestFTSManagerRegistration:
         config = manager.register_entity(task_entity)
 
         assert config is not None
-        assert config is not None
         assert "title" in config.searchable_fields
-        assert config is not None
         assert "description" in config.searchable_fields
         # priority is INT, should not be included
-        assert config is not None
         assert "priority" not in config.searchable_fields
 
     def test_register_entity_no_text_fields(self) -> None:
@@ -205,7 +203,7 @@ class TestFTSManagerRegistration:
         manager = FTSManager()
         manager.register_entity(task_entity)
 
-        assert manager.is_enabled("Task") is True
+        assert manager.is_enabled(_FTS_TABLE) is True
         assert manager.is_enabled("Unknown") is False
 
     def test_get_config(self, task_entity: Any) -> None:
@@ -213,150 +211,128 @@ class TestFTSManagerRegistration:
         manager = FTSManager()
         manager.register_entity(task_entity, searchable_fields=["title"])
 
-        config = manager.get_config("Task")
+        config = manager.get_config(_FTS_TABLE)
         assert config is not None
-        assert config.entity_name == "Task"
+        assert config.entity_name == _FTS_TABLE
 
 
 # =============================================================================
-# FTS Table Creation Tests
+# FTS Index Creation Tests
 # =============================================================================
 
 
-class TestFTSTableCreation:
-    """Tests for FTS table creation."""
+@_requires_pg
+class TestFTSIndexCreation:
+    """Tests for GIN index creation."""
 
-    def test_create_fts_table(self, task_entity: Any, test_db: Any) -> None:
-        """Test FTS table creation."""
+    def test_create_fts_index(self, task_entity: Any, pg_conn: Any) -> None:
+        """Test GIN index creation."""
         manager = FTSManager()
         manager.register_entity(task_entity, searchable_fields=["title", "description"])
 
-        manager.create_fts_table(test_db, "Task")
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
 
-        # Check FTS table exists
-        cursor = test_db.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='Task_fts'"
+        # Check GIN index exists
+        cursor = pg_conn.cursor()
+        cursor.execute(
+            "SELECT indexname FROM pg_indexes WHERE tablename = %s AND indexname LIKE %s",
+            (_FTS_TABLE, f"idx_{_FTS_TABLE}_fts%"),
         )
         assert cursor.fetchone() is not None
 
-    def test_create_fts_table_idempotent(self, task_entity: Any, test_db: Any) -> None:
-        """Test that creating FTS table twice is safe."""
+    def test_create_fts_index_idempotent(self, task_entity: Any, pg_conn: Any) -> None:
+        """Test that creating GIN index twice is safe."""
         manager = FTSManager()
         manager.register_entity(task_entity)
 
-        # Create twice
-        manager.create_fts_table(test_db, "Task")
-        manager.create_fts_table(test_db, "Task")
-
-        # Should not raise error
-
-    def test_create_triggers(self, task_entity: Any, test_db: Any) -> None:
-        """Test that sync triggers are created."""
-        manager = FTSManager()
-        manager.register_entity(task_entity)
-        manager.create_fts_table(test_db, "Task")
-
-        # Check triggers exist
-        cursor = test_db.execute(
-            "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'Task_fts%'"
-        )
-        triggers = [row[0] for row in cursor.fetchall()]
-
-        assert "Task_fts_insert" in triggers
-        assert "Task_fts_update" in triggers
-        assert "Task_fts_delete" in triggers
+        # Create twice — should not raise
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
+        # Reset _initialized so it tries again
+        manager._initialized.discard(_FTS_TABLE)
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
 
 
 # =============================================================================
-# FTS Sync Tests
+# FTS Auto-Sync Tests (GIN indexes auto-maintain on INSERT/UPDATE/DELETE)
 # =============================================================================
 
 
+@_requires_pg
 class TestFTSSync:
-    """Tests for FTS synchronization with triggers."""
+    """Tests for GIN auto-sync on data changes."""
 
-    def test_insert_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
-        """Test that inserts sync to FTS."""
+    def test_insert_searchable(self, task_entity: Any, pg_conn: Any) -> None:
+        """Test that inserted data is searchable via tsvector."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(test_db, "Task")
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
 
         # Insert a task
         task_id = str(uuid4())
-        test_db.execute(
-            "INSERT INTO Task (id, title, description) VALUES (?, ?, ?)",
+        cursor = pg_conn.cursor()
+        cursor.execute(
+            f'INSERT INTO "{_FTS_TABLE}" ("id", "title", "description") VALUES (%s, %s, %s)',
             (task_id, "Test Task", "Task description"),
         )
-        test_db.commit()
 
-        # Check FTS has the entry
-        cursor = test_db.execute(
-            "SELECT id FROM Task_fts WHERE Task_fts MATCH ?",
-            ('"Test Task"',),
-        )
-        result = cursor.fetchone()
-        assert result is not None
-        assert result[0] == task_id
+        # Search via FTSManager
+        ids, total = manager.search(pg_conn, _FTS_TABLE, "Test Task")
 
-    def test_update_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
-        """Test that updates sync to FTS."""
+        assert total == 1
+        assert task_id in ids
+
+    def test_update_searchable(self, task_entity: Any, pg_conn: Any) -> None:
+        """Test that updated data reflects in search results."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(test_db, "Task")
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
 
         # Insert
         task_id = str(uuid4())
-        test_db.execute(
-            "INSERT INTO Task (id, title) VALUES (?, ?)",
+        cursor = pg_conn.cursor()
+        cursor.execute(
+            f'INSERT INTO "{_FTS_TABLE}" ("id", "title") VALUES (%s, %s)',
             (task_id, "Original Title"),
         )
-        test_db.commit()
 
         # Update
-        test_db.execute(
-            "UPDATE Task SET title = ? WHERE id = ?",
+        cursor.execute(
+            f'UPDATE "{_FTS_TABLE}" SET "title" = %s WHERE "id" = %s',
             ("Updated Title", task_id),
         )
-        test_db.commit()
 
         # Search for new title
-        cursor = test_db.execute(
-            "SELECT id FROM Task_fts WHERE Task_fts MATCH ?",
-            ('"Updated Title"',),
-        )
-        assert cursor.fetchone() is not None
+        ids, total = manager.search(pg_conn, _FTS_TABLE, "Updated")
+        assert total == 1
 
         # Old title should not be found
-        cursor = test_db.execute(
-            "SELECT id FROM Task_fts WHERE Task_fts MATCH ?",
-            ('"Original Title"',),
-        )
-        assert cursor.fetchone() is None
+        ids, total = manager.search(pg_conn, _FTS_TABLE, "Original")
+        assert total == 0
 
-    def test_delete_syncs_to_fts(self, task_entity: Any, test_db: Any) -> None:
-        """Test that deletes sync to FTS."""
+    def test_delete_removes_from_search(self, task_entity: Any, pg_conn: Any) -> None:
+        """Test that deleted data disappears from search."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(test_db, "Task")
+        manager.create_fts_table(pg_conn, _FTS_TABLE)
 
         # Insert
         task_id = str(uuid4())
-        test_db.execute(
-            "INSERT INTO Task (id, title) VALUES (?, ?)",
+        cursor = pg_conn.cursor()
+        cursor.execute(
+            f'INSERT INTO "{_FTS_TABLE}" ("id", "title") VALUES (%s, %s)',
             (task_id, "Delete Me"),
         )
-        test_db.commit()
+
+        # Verify findable
+        ids, total = manager.search(pg_conn, _FTS_TABLE, "Delete")
+        assert total == 1
 
         # Delete
-        test_db.execute("DELETE FROM Task WHERE id = ?", (task_id,))
-        test_db.commit()
+        cursor.execute(f'DELETE FROM "{_FTS_TABLE}" WHERE "id" = %s', (task_id,))
 
         # Should not be found
-        cursor = test_db.execute(
-            "SELECT id FROM Task_fts WHERE Task_fts MATCH ?",
-            ('"Delete Me"',),
-        )
-        assert cursor.fetchone() is None
+        ids, total = manager.search(pg_conn, _FTS_TABLE, "Delete")
+        assert total == 0
 
 
 # =============================================================================
@@ -364,81 +340,75 @@ class TestFTSSync:
 # =============================================================================
 
 
+@_requires_pg
 class TestFTSSearch:
     """Tests for FTS search functionality."""
 
-    def test_search_single_word(self, task_entity: Any, populated_db: Any) -> None:
+    def test_search_single_word(self, task_entity: Any, populated_conn: Any) -> None:
         """Test searching for a single word."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        # Rebuild index from existing data
-        manager.rebuild_index(populated_db, "Task")
-
-        ids, total = manager.search(populated_db, "Task", "bug")
+        ids, total = manager.search(populated_conn, _FTS_TABLE, "bug")
 
         assert total == 2  # "urgent bug" and "Bug fix"
         assert len(ids) == 2
 
-    def test_search_multiple_words(self, task_entity: Any, populated_db: Any) -> None:
-        """Test searching for multiple words (OR)."""
+    def test_search_multiple_words(self, task_entity: Any, populated_conn: Any) -> None:
+        """Test searching for multiple words."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        ids, total = manager.search(populated_db, "Task", "dashboard charts")
+        ids, total = manager.search(populated_conn, _FTS_TABLE, "dashboard charts")
 
         assert total >= 1
 
-    def test_search_with_limit(self, task_entity: Any, populated_db: Any) -> None:
+    def test_search_with_limit(self, task_entity: Any, populated_conn: Any) -> None:
         """Test search with limit."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        ids, total = manager.search(populated_db, "Task", "fix", limit=1)
+        ids, total = manager.search(populated_conn, _FTS_TABLE, "fix", limit=1)
 
         # Total should reflect all matches
         assert total >= 1
         # But only 1 returned
         assert len(ids) == 1
 
-    def test_search_with_offset(self, task_entity: Any, populated_db: Any) -> None:
+    def test_search_with_offset(self, task_entity: Any, populated_conn: Any) -> None:
         """Test search with offset."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
         # Get all results
-        all_ids, total = manager.search(populated_db, "Task", "bug")
+        all_ids, total = manager.search(populated_conn, _FTS_TABLE, "bug")
 
         # Get with offset
-        offset_ids, _ = manager.search(populated_db, "Task", "bug", offset=1)
+        offset_ids, _ = manager.search(populated_conn, _FTS_TABLE, "bug", offset=1)
 
         if total > 1:
             assert len(offset_ids) == total - 1
 
-    def test_search_no_results(self, task_entity: Any, populated_db: Any) -> None:
+    def test_search_no_results(self, task_entity: Any, populated_conn: Any) -> None:
         """Test search with no matches."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        ids, total = manager.search(populated_db, "Task", "nonexistent12345")
+        ids, total = manager.search(populated_conn, _FTS_TABLE, "nonexistent12345")
 
         assert total == 0
         assert ids == []
 
-    def test_search_unregistered_entity(self, populated_db: Any) -> None:
+    def test_search_unregistered_entity(self, populated_conn: Any) -> None:
         """Test searching unregistered entity returns empty."""
         manager = FTSManager()
 
-        ids, total = manager.search(populated_db, "Unknown", "test")
+        ids, total = manager.search(populated_conn, "Unknown", "test")
 
         assert ids == []
         assert total == 0
@@ -449,24 +419,25 @@ class TestFTSSearch:
 # =============================================================================
 
 
+@_requires_pg
 class TestFTSRebuild:
     """Tests for FTS index rebuilding."""
 
-    def test_rebuild_index(self, task_entity: Any, populated_db: Any) -> None:
+    def test_rebuild_index(self, task_entity: Any, populated_conn: Any) -> None:
         """Test rebuilding index from main table."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        count = manager.rebuild_index(populated_db, "Task")
+        count = manager.rebuild_index(populated_conn, _FTS_TABLE)
 
         assert count == 5  # 5 test records
 
-    def test_rebuild_unregistered_entity(self, populated_db: Any) -> None:
+    def test_rebuild_unregistered_entity(self, populated_conn: Any) -> None:
         """Test rebuilding unregistered entity returns 0."""
         manager = FTSManager()
 
-        count = manager.rebuild_index(populated_db, "Unknown")
+        count = manager.rebuild_index(populated_conn, "Unknown")
 
         assert count == 0
 
@@ -476,17 +447,17 @@ class TestFTSRebuild:
 # =============================================================================
 
 
+@_requires_pg
 class TestFTSSnippets:
     """Tests for search with highlighted snippets."""
 
-    def test_search_with_snippets(self, task_entity: Any, populated_db: Any) -> None:
+    def test_search_with_snippets(self, task_entity: Any, populated_conn: Any) -> None:
         """Test search returning snippets."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        results = manager.search_with_snippets(populated_db, "Task", "bug")
+        results = manager.search_with_snippets(populated_conn, _FTS_TABLE, "bug")
 
         assert len(results) >= 1
         # Should have snippet columns
@@ -507,28 +478,31 @@ class TestConvenienceFunctions:
         """Test create_fts_manager function."""
         manager = create_fts_manager([task_entity])
 
-        assert manager.is_enabled("Task")
+        assert manager.is_enabled(_FTS_TABLE)
 
     def test_create_fts_manager_with_explicit_fields(self, task_entity: Any) -> None:
         """Test create_fts_manager with explicit fields."""
         manager = create_fts_manager(
             [task_entity],
-            searchable_entities={"Task": ["title"]},
+            searchable_entities={_FTS_TABLE: ["title"]},
         )
 
-        config = manager.get_config("Task")
+        config = manager.get_config(_FTS_TABLE)
         assert config is not None
         assert config.searchable_fields == ["title"]
 
-    def test_init_fts_tables(self, task_entity: Any, test_db: Any) -> None:
+    @_requires_pg
+    def test_init_fts_tables(self, task_entity: Any, pg_conn: Any) -> None:
         """Test init_fts_tables function."""
         manager = create_fts_manager([task_entity])
 
-        init_fts_tables(test_db, manager, [task_entity])
+        init_fts_tables(pg_conn, manager, [task_entity])
 
-        # Check table exists
-        cursor = test_db.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='Task_fts'"
+        # Check GIN index exists
+        cursor = pg_conn.cursor()
+        cursor.execute(
+            "SELECT indexname FROM pg_indexes WHERE tablename = %s AND indexname LIKE %s",
+            (_FTS_TABLE, f"idx_{_FTS_TABLE}_fts%"),
         )
         assert cursor.fetchone() is not None
 
@@ -538,29 +512,28 @@ class TestConvenienceFunctions:
 # =============================================================================
 
 
+@_requires_pg
 class TestQueryEscaping:
     """Tests for query escaping."""
 
-    def test_escape_special_characters(self, task_entity: Any, populated_db: Any) -> None:
+    def test_escape_special_characters(self, task_entity: Any, populated_conn: Any) -> None:
         """Test that special characters are escaped."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        # This should not raise an error
-        ids, total = manager.search(populated_db, "Task", 'test "quoted" text')
+        # This should not raise an error (plainto_tsquery handles special chars)
+        ids, total = manager.search(populated_conn, _FTS_TABLE, 'test "quoted" text')
 
         # May or may not have results, but should not error
 
-    def test_escape_operators(self, task_entity: Any, populated_db: Any) -> None:
+    def test_escape_operators(self, task_entity: Any, populated_conn: Any) -> None:
         """Test that FTS operators are escaped."""
         manager = FTSManager()
         manager.register_entity(task_entity)
-        manager.create_fts_table(populated_db, "Task")
-        manager.rebuild_index(populated_db, "Task")
+        manager.create_fts_table(populated_conn, _FTS_TABLE)
 
-        # These should not raise errors
-        manager.search(populated_db, "Task", "test AND this")
-        manager.search(populated_db, "Task", "test OR that")
-        manager.search(populated_db, "Task", "NOT something")
+        # These should not raise errors (plainto_tsquery ignores operators)
+        manager.search(populated_conn, _FTS_TABLE, "test AND this")
+        manager.search(populated_conn, _FTS_TABLE, "test OR that")
+        manager.search(populated_conn, _FTS_TABLE, "NOT something")

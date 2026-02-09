@@ -155,7 +155,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
         sql, params = cond.to_sql()
 
-        assert sql == '"status" = ?'
+        assert sql == '"status" = %s'
         assert params == ["active"]
 
     def test_to_sql_contains(self) -> None:
@@ -163,7 +163,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="title", operator=FilterOperator.CONTAINS, value="urgent")
         sql, params = cond.to_sql()
 
-        assert sql == '"title" LIKE ?'
+        assert sql == '"title" LIKE %s'
         assert params == ["%urgent%"]
 
     def test_to_sql_startswith(self) -> None:
@@ -171,7 +171,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="name", operator=FilterOperator.STARTSWITH, value="Bug:")
         sql, params = cond.to_sql()
 
-        assert sql == '"name" LIKE ?'
+        assert sql == '"name" LIKE %s'
         assert params == ["Bug:%"]
 
     def test_to_sql_endswith(self) -> None:
@@ -179,7 +179,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="email", operator=FilterOperator.ENDSWITH, value="@test.com")
         sql, params = cond.to_sql()
 
-        assert sql == '"email" LIKE ?'
+        assert sql == '"email" LIKE %s'
         assert params == ["%@test.com"]
 
     def test_to_sql_in(self) -> None:
@@ -187,7 +187,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.IN, value=["a", "b", "c"])
         sql, params = cond.to_sql()
 
-        assert sql == '"status" IN (?, ?, ?)'
+        assert sql == '"status" IN (%s, %s, %s)'
         assert params == ["a", "b", "c"]
 
     def test_to_sql_isnull_true(self) -> None:
@@ -211,7 +211,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="status", operator=FilterOperator.EQ, value="active")
         sql, params = cond.to_sql(table_alias="t")
 
-        assert sql == 't."status" = ?'
+        assert sql == 't."status" = %s'
         assert params == ["active"]
 
     def test_to_sql_uuid_conversion(self) -> None:
@@ -220,7 +220,7 @@ class TestFilterCondition:
         cond = FilterCondition(field="user_id", operator=FilterOperator.EQ, value=uuid_val)
         sql, params = cond.to_sql()
 
-        assert sql == '"user_id" = ?'
+        assert sql == '"user_id" = %s'
         assert params == [str(uuid_val)]
 
 
@@ -312,8 +312,8 @@ class TestQueryBuilder:
         sql, params = builder.build_select()
 
         assert "WHERE" in sql
-        assert '"status" = ?' in sql
-        assert '"priority" >= ?' in sql
+        assert '"status" = %s' in sql
+        assert '"priority" >= %s' in sql
         assert "active" in params
         assert 5 in params
 
@@ -336,7 +336,7 @@ class TestQueryBuilder:
 
         sql, params = builder.build_select()
 
-        assert "LIMIT ? OFFSET ?" in sql
+        assert "LIMIT %s OFFSET %s" in sql
         assert 10 in params  # page_size
         assert 20 in params  # offset = (3-1) * 10
 
@@ -513,7 +513,7 @@ class TestEdgeCases:
         )
         sql, params = cond.to_sql()
 
-        assert sql == '"created_at" BETWEEN ? AND ?'
+        assert sql == '"created_at" BETWEEN %s AND %s'
         assert params == ["2024-01-01", "2024-12-31"]
 
     def test_between_operator_invalid_value(self) -> None:

@@ -26,6 +26,12 @@ def db_manager():
     if not database_url:
         pytest.skip("DATABASE_URL not set")
     manager = PostgresBackend(database_url)
+    # Clean outbox table before each test to ensure isolation
+    try:
+        with manager.connection() as conn:
+            conn.execute("DELETE FROM _dazzle_outbox")
+    except Exception:
+        pass  # Table may not exist yet
     yield manager
 
 

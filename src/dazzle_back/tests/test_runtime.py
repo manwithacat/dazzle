@@ -504,8 +504,8 @@ class TestServerWithDatabase:
         # Check for database manager
         assert app_builder._db_manager is not None
 
-    def test_server_without_database(self, simple_backend_spec: BackendSpec) -> None:
-        """Test that server works without database_url (no persistence)."""
+    def test_server_without_database_raises(self, simple_backend_spec: BackendSpec) -> None:
+        """Test that server raises ValueError without database_url."""
         import os
 
         from dazzle_back.runtime.server import DNRBackendApp
@@ -514,10 +514,8 @@ class TestServerWithDatabase:
         saved = os.environ.pop("DATABASE_URL", None)
         try:
             app_builder = DNRBackendApp(simple_backend_spec)
-            app_builder.build()
-
-            # Database manager should not be set
-            assert app_builder._db_manager is None
+            with pytest.raises(ValueError, match="database_url is required"):
+                app_builder.build()
         finally:
             if saved is not None:
                 os.environ["DATABASE_URL"] = saved

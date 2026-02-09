@@ -132,6 +132,14 @@ class PostgresBackend:
         self.search_path = search_path
         self._connection: Any = None
 
+    @property
+    def _sa_url(self) -> str:
+        """Return a SQLAlchemy-compatible URL using psycopg (v3) driver."""
+        url = self.database_url
+        if url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return url
+
     @contextmanager
     def connection(self) -> Iterator[Any]:
         """
@@ -267,7 +275,7 @@ class PostgresBackend:
         from dazzle_back.runtime.sa_schema import build_metadata
 
         metadata = build_metadata(entities)
-        engine = create_engine(self.database_url)
+        engine = create_engine(self._sa_url)
         try:
             metadata.create_all(engine, checkfirst=True)
         finally:

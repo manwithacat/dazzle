@@ -13,6 +13,7 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+import sqlalchemy
 from alembic import context
 
 # ---------------------------------------------------------------------------
@@ -34,7 +35,7 @@ if _src not in sys.path:
     sys.path.insert(0, _src)
 
 
-def _load_target_metadata():  # type: ignore[no-untyped-def]
+def _load_target_metadata() -> sqlalchemy.MetaData:
     """Lazily load target metadata from the active Dazzle project.
 
     Falls back to an empty MetaData if no project entities are available
@@ -78,11 +79,15 @@ target_metadata = _load_target_metadata()
 
 
 def _get_url() -> str:
-    """Get database URL from env or alembic config."""
-    url = os.environ.get("DATABASE_URL")
-    if url:
-        return url
-    return config.get_main_option("sqlalchemy.url", "")
+    """Get database URL from env or alembic config.
+
+    Ensures the URL uses the psycopg (v3) driver for SQLAlchemy.
+    """
+    url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url", "")
+    # Ensure SQLAlchemy uses psycopg v3, not psycopg2
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
 
 
 # ---------------------------------------------------------------------------

@@ -215,8 +215,7 @@ class OutboxRepository:
             cursor = conn.execute(sql, (message_id,))
             row = cursor.fetchone()
             if row:
-                columns = [desc[0] for desc in cursor.description]
-                return OutboxMessage.from_dict(dict(zip(columns, row, strict=False)))
+                return OutboxMessage.from_dict(dict(row))
         return None
 
     def get_pending(
@@ -251,11 +250,7 @@ class OutboxRepository:
 
         with self.db.connection() as conn:
             cursor = conn.execute(sql, params)
-            columns = [desc[0] for desc in cursor.description]
-            return [
-                OutboxMessage.from_dict(dict(zip(columns, row, strict=False)))
-                for row in cursor.fetchall()
-            ]
+            return [OutboxMessage.from_dict(dict(row)) for row in cursor.fetchall()]
 
     def mark_processing(self, message_id: str) -> bool:
         """Mark a message as processing (claim it).
@@ -273,7 +268,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount and cursor.rowcount > 0)
 
     def mark_sent(self, message_id: str) -> None:
         """Mark a message as successfully sent."""
@@ -332,11 +327,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (limit,))
-            columns = [desc[0] for desc in cursor.description]
-            return [
-                OutboxMessage.from_dict(dict(zip(columns, row, strict=False)))
-                for row in cursor.fetchall()
-            ]
+            return [OutboxMessage.from_dict(dict(row)) for row in cursor.fetchall()]
 
     def retry_dead_letter(self, message_id: str) -> bool:
         """Retry a dead letter message.
@@ -351,7 +342,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount and cursor.rowcount > 0)
 
     def get_stats(self) -> dict[str, int]:
         """Get outbox statistics by status."""
@@ -362,7 +353,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql)
-            return {row[0]: row[1] for row in cursor.fetchall()}
+            return {row["status"]: row["count"] for row in cursor.fetchall()}
 
     def get_recent(self, limit: int = 20) -> list[OutboxMessage]:
         """Get recent messages across all statuses.
@@ -381,11 +372,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (limit,))
-            columns = [desc[0] for desc in cursor.description]
-            return [
-                OutboxMessage.from_dict(dict(zip(columns, row, strict=False)))
-                for row in cursor.fetchall()
-            ]
+            return [OutboxMessage.from_dict(dict(row)) for row in cursor.fetchall()]
 
     def cleanup_sent(self, older_than_days: int = 7) -> int:
         """Remove old sent messages.
@@ -406,7 +393,7 @@ class OutboxRepository:
         """
         with self.db.connection() as conn:
             cursor = conn.execute(sql, (cutoff,))
-            count = cursor.rowcount
+            count = cursor.rowcount or 0
 
         if count > 0:
             logger.info(f"Cleaned up {count} sent messages older than {older_than_days} days")

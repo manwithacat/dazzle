@@ -199,7 +199,7 @@ class SpecVersionStore:
         with self.ops_db.connection() as conn:
             cursor = conn.execute("SELECT COUNT(*) FROM spec_versions")
             row = cursor.fetchone()
-            return row[0] if row else 0
+            return next(iter(row.values())) if row else 0
 
     def get_diff(self, version_id: str) -> dict[str, Any]:
         """Get the diff for a specific version."""

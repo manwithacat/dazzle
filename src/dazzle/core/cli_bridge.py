@@ -407,9 +407,13 @@ def db_migrate_json(
         # Convert to backend spec
         backend_spec = convert_appspec_to_backend(app_spec)
 
-        # Get database path
-        db_path = project_path / ".dazzle" / "data.db"
-        db_manager = DatabaseManager(db_path)
+        # Get database URL
+        import os
+
+        database_url = os.environ.get("DATABASE_URL", "")
+        if not database_url:
+            raise RuntimeError("DATABASE_URL environment variable is required")
+        db_manager = DatabaseManager(database_url)
 
         if dry_run:
             # Plan only
@@ -461,8 +465,13 @@ def db_seed_json(
             raise RuntimeError(f"Dazzle backend not available: {e}") from e
 
         backend_spec = convert_appspec_to_backend(app_spec)
-        db_path = project_path / ".dazzle" / "data.db"
-        db_manager = DatabaseManager(db_path)
+
+        import os
+
+        database_url = os.environ.get("DATABASE_URL", "")
+        if not database_url:
+            raise RuntimeError("DATABASE_URL environment variable is required")
+        db_manager = DatabaseManager(database_url)
 
         counts = seed_demo_data(db_manager, backend_spec.entities)
         return {
@@ -499,15 +508,19 @@ def db_reset_json(
             raise RuntimeError(f"Dazzle backend not available: {e}") from e
 
         backend_spec = convert_appspec_to_backend(app_spec)
-        db_path = project_path / ".dazzle" / "data.db"
 
-        # Delete existing database
-        if db_path.exists():
-            db_path.unlink()
+        import os
 
-        # Create fresh database with schema
-        db_manager = DatabaseManager(db_path)
-        db_manager.initialize_schema(backend_spec.entities)
+        database_url = os.environ.get("DATABASE_URL", "")
+        if not database_url:
+            raise RuntimeError("DATABASE_URL environment variable is required")
+
+        # Drop and recreate all entity tables
+        db_manager = DatabaseManager(database_url)
+        with db_manager.connection() as conn:
+            for entity in backend_spec.entities:
+                conn.execute(f'DROP TABLE IF EXISTS "{entity.name}" CASCADE')
+        db_manager.create_all_tables(backend_spec.entities)
 
         return {
             "reset": True,

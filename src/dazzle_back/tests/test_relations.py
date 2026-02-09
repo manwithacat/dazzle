@@ -328,7 +328,7 @@ class TestRelationLoader:
         """Test loading a to-one relation."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         # Create task rows
         rows = [{"id": ids["task_id"], "title": "Test Task", "owner_id": ids["user_id"]}]
@@ -345,7 +345,7 @@ class TestRelationLoader:
         """Test loading to-one relation with null FK."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         # Create task row with no owner_id
         rows = [{"id": str(uuid4()), "title": "Orphan Task", "owner_id": None}]
@@ -372,7 +372,7 @@ class TestRelationLoader:
             ),
         )
 
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         rows = [{"id": ids["task_id"], "title": "Test Task"}]
         result = loader.load_relations("Task", rows, ["comments"], conn)
@@ -399,7 +399,7 @@ class TestRelationLoader:
             ),
         )
 
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         # Create a task with no comments
         new_task_id = str(uuid4())
@@ -431,7 +431,7 @@ class TestRelationLoader:
             ),
         )
 
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         rows = [{"id": ids["task_id"], "title": "Test Task", "owner_id": ids["user_id"]}]
         result = loader.load_relations("Task", rows, ["owner", "comments"], conn)
@@ -443,7 +443,7 @@ class TestRelationLoader:
         """Test loading unknown relation is ignored."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         rows = [{"id": ids["task_id"], "title": "Test Task"}]
         result = loader.load_relations("Task", rows, ["nonexistent"], conn)
@@ -455,7 +455,7 @@ class TestRelationLoader:
         """Test loading relations on empty rows list."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         result = loader.load_relations("Task", [], ["owner"], conn)
 
@@ -465,7 +465,7 @@ class TestRelationLoader:
         """Test that multiple rows are batch-loaded efficiently."""
         conn, ids = test_db
         registry = RelationRegistry.from_entities(all_entities)
-        loader = RelationLoader(registry, all_entities)
+        loader = RelationLoader(registry, all_entities, placeholder="?")
 
         # Create another task for the same user
         task2_id = str(uuid4())

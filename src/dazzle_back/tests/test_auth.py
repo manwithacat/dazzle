@@ -42,6 +42,27 @@ from dazzle_back.runtime.auth_detection import (
     should_enable_auth,
 )
 
+
+@pytest.fixture(autouse=True)
+def _clean_auth_tables() -> Any:
+    """Clean auth tables before each test to ensure isolation."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        yield
+        return
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+
+    db = PostgresBackend(database_url)
+    try:
+        with db.connection() as conn:
+            conn.execute("DELETE FROM sessions")
+            conn.execute("DELETE FROM password_reset_tokens")
+            conn.execute("DELETE FROM users")
+    except Exception:
+        pass  # Tables may not exist yet
+    yield
+
+
 # =============================================================================
 # Password Hashing Tests
 # =============================================================================
@@ -766,7 +787,7 @@ class TestServerAuthIntegration:
         data = response.json()
 
         assert data["auth_enabled"] is True
-        assert data["auth_database_path"] is not None
+        assert data["database_backend"] == "postgresql"
 
 
 # =============================================================================

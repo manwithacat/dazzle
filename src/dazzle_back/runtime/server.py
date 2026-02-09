@@ -31,6 +31,8 @@ from dazzle_back.specs import BackendSpec
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+    from dazzle_back.runtime.pg_backend import PostgresBackend
+
 import re
 
 # Regex for aggregate expressions like count(Task) or count(Task where status = open)
@@ -247,7 +249,7 @@ class DNRBackendApp:
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
         self._repositories: dict[str, Any] = {}
-        self._db_manager: Any | None = None  # PostgresBackend instance
+        self._db_manager: PostgresBackend | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
         # Social auth (OAuth2)
@@ -1372,7 +1374,7 @@ class DNRBackendApp:
             record_history=True,
         )
 
-        repo_factory = RepositoryFactory(self._db_manager, self._models)  # type: ignore[arg-type]
+        repo_factory = RepositoryFactory(self._db_manager, self._models)
         self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
         # Extract state machines from entities
@@ -1476,7 +1478,7 @@ class DNRBackendApp:
             from dazzle_back.runtime.test_routes import create_test_routes
 
             test_router = create_test_routes(
-                db_manager=self._db_manager,  # type: ignore[arg-type]
+                db_manager=self._db_manager,
                 repositories=self._repositories,
                 entities=self.spec.entities,
                 auth_store=self._auth_store,
@@ -1488,7 +1490,7 @@ class DNRBackendApp:
             from dazzle_back.runtime.control_plane import create_control_plane_routes
 
             control_plane_router = create_control_plane_routes(
-                db_manager=self._db_manager,  # type: ignore[arg-type]
+                db_manager=self._db_manager,
                 repositories=self._repositories if self._db_manager else None,
                 entities=self.spec.entities,
                 personas=self._personas,
@@ -1507,7 +1509,7 @@ class DNRBackendApp:
             self._start_time = datetime.now()
             debug_router = create_debug_routes(
                 spec=self.spec,
-                db_manager=self._db_manager,  # type: ignore[arg-type]
+                db_manager=self._db_manager,
                 entities=self.spec.entities,
                 start_time=self._start_time,
             )
