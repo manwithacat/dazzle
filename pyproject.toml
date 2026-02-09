@@ -39,6 +39,10 @@ dependencies = [
     "jinja2>=3.1",
     "pyyaml>=6.0",
     "markdown>=3.5",
+    "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
 ]
 
 [project.optional-dependencies]
@@ -72,13 +76,8 @@ dev = [
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
 ]
-# PostgreSQL database backend (v0.27.0 - Heroku deployment)
-postgres = [
-    "psycopg[binary]>=3.2",
-    "psycopg-pool>=3.2",
-    "sqlalchemy>=2.0",
-    "alembic>=1.14",
-]
+# PostgreSQL deps moved to core dependencies (v0.28.0 — PG is the sole backend)
+postgres = []
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [
     "temporalio>=1.4.0",

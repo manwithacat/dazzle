@@ -42,7 +42,7 @@ def _ensure_sa() -> Any:
         except ImportError as exc:
             raise RuntimeError(
                 "sqlalchemy is required for the SA schema bridge.  "
-                "Install it with:  pip install dazzle[postgres]"
+                "Install it with:  pip install dazzle"
             ) from exc
         _sa_imported = True
     return _sa

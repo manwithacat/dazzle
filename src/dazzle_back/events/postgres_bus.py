@@ -179,7 +179,7 @@ class PostgresBus(EventBus):
         """
         if not ASYNCPG_AVAILABLE:
             raise ImportError(
-                "psycopg is required for PostgresBus. Install with: pip install dazzle[postgres]"
+                "psycopg is required for PostgresBus. Install with: pip install dazzle"
             )
 
         self._config = config

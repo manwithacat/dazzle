@@ -237,8 +237,7 @@ def _create_postgres_bus(config: TierConfig) -> PostgresBus:
 
     if not ASYNCPG_AVAILABLE:
         raise ImportError(
-            "psycopg is required for PostgreSQL event bus. "
-            "Install with: pip install dazzle[postgres]"
+            "psycopg is required for PostgreSQL event bus. Install with: pip install dazzle"
         )
 
     dsn = config.postgres_url or os.getenv("DATABASE_URL")
@@ -337,7 +336,7 @@ def get_tier_info() -> dict[str, Any]:
             "postgres": {
                 "available": ASYNCPG_AVAILABLE,
                 "description": "PostgreSQL (Heroku pilots)",
-                "install": "pip install dazzle[postgres]",
+                "install": "pip install dazzle",
             },
             "redis": {
                 "available": REDIS_AVAILABLE,
