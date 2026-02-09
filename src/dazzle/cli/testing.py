@@ -1343,7 +1343,7 @@ def tier2_generate(
     Generated tests:
     - CRUD flows for surfaces (create, edit, view, list modes)
     - Delete confirmation flows
-    - Scenario-based state setup via Dazzle Bar
+    - Scenario-based state setup via dev control plane
 
     Selectors use data-dazzle-* attributes:
     - data-dazzle-view="surface_name"

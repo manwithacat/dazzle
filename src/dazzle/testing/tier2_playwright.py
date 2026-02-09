@@ -23,11 +23,6 @@ Rows:      data-dazzle-row="row_id"
 Nav:       data-dazzle-nav="target" data-dazzle-nav-target="/path"
 Dialog:    data-dazzle-dialog="name" data-dazzle-dialog-open="true|false"
 
-Dazzle Bar Controls:
-  data-dazzle-control="persona-select"
-  data-dazzle-control="scenario-select"
-  data-dazzle-action="reset"
-
 Auth Elements:
   data-dazzle-auth-user
   data-dazzle-auth-action="login|logout"
@@ -159,12 +154,12 @@ class DazzleSelector:
 
     @staticmethod
     def scenario_select() -> str:
-        """Select the scenario dropdown in the Dazzle Bar."""
+        """Select the scenario dropdown in the dev control plane."""
         return '[data-dazzle-control="scenario-select"]'
 
     @staticmethod
     def persona_select() -> str:
-        """Select the persona dropdown in the Dazzle Bar."""
+        """Select the persona dropdown in the dev control plane."""
         return '[data-dazzle-control="persona-select"]'
 
 
@@ -203,7 +198,7 @@ class PlaywrightTest:
     steps: list[PlaywrightStep] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     scenario: str | None = None  # Scenario to seed before test
-    persona: str | None = None  # Persona to use (Dazzle Bar)
+    persona: str | None = None  # Persona to use (dev control plane)
     priority: str = "medium"
 
     def add_step(self, code: str, comment: str | None = None) -> None:
@@ -559,14 +554,14 @@ def generate_delete_flow(
 
 
 def generate_scenario_setup(scenario_id: str) -> list[PlaywrightStep]:
-    """Generate steps to set up a scenario via the Dazzle Bar."""
+    """Generate steps to set up a scenario via the dev control plane."""
     steps = []
 
-    # First navigate to app root to access the Dazzle Bar
+    # First navigate to app root to access the dev control plane
     steps.append(
         PlaywrightStep(
             code="page.goto(base_url)",
-            comment="Navigate to app to access Dazzle Bar",
+            comment="Navigate to app to access dev control plane",
         )
     )
     steps.append(
@@ -579,7 +574,7 @@ def generate_scenario_setup(scenario_id: str) -> list[PlaywrightStep]:
     steps.append(
         PlaywrightStep(
             code=f"page.locator('{S.scenario_select()}').select_option('{scenario_id}')",
-            comment=f"Set scenario to '{scenario_id}' via Dazzle Bar",
+            comment=f"Set scenario to '{scenario_id}' via dev control plane",
         )
     )
     steps.append(
@@ -592,13 +587,13 @@ def generate_scenario_setup(scenario_id: str) -> list[PlaywrightStep]:
 
 
 def generate_persona_setup(persona_id: str) -> list[PlaywrightStep]:
-    """Generate steps to set persona via the Dazzle Bar."""
+    """Generate steps to set persona via the dev control plane."""
     steps = []
 
     steps.append(
         PlaywrightStep(
             code=f"page.locator('{S.persona_select()}').select_option('{persona_id}')",
-            comment=f"Set persona to '{persona_id}' via Dazzle Bar",
+            comment=f"Set persona to '{persona_id}' via dev control plane",
         )
     )
     steps.append(
@@ -684,7 +679,7 @@ Usage:
 
 With scenario seeding:
     Tests that specify a scenario will automatically seed data
-    via the Dazzle Bar before executing.
+    via the dev control plane before executing.
 
 Note:
     The base_url is provided by pytest-playwright. Set via:

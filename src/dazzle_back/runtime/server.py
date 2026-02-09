@@ -119,7 +119,7 @@ class ServerConfig:
     enable_test_mode: bool = False
     services_dir: Path = field(default_factory=lambda: Path("services"))
 
-    # Dazzle Bar control plane (v0.8.5)
+    # Dev control plane
     enable_dev_mode: bool = False
     personas: list[dict[str, Any]] = field(default_factory=list)
     scenarios: list[dict[str, Any]] = field(default_factory=list)
@@ -187,7 +187,7 @@ class DNRBackendApp:
         files_path: str | Path | None = None,
         enable_test_mode: bool | None = None,
         services_dir: str | Path | None = None,
-        # Dazzle Bar control plane (v0.8.5)
+        # Dev control plane
         enable_dev_mode: bool | None = None,
         personas: list[dict[str, Any]] | None = None,
         scenarios: list[dict[str, Any]] | None = None,
@@ -207,9 +207,9 @@ class DNRBackendApp:
             files_path: Path for file storage (default: .dazzle/uploads)
             enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
             services_dir: Path to domain service stubs directory (default: services/)
-            enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-            personas: List of persona configurations for Dazzle Bar
-            scenarios: List of scenario configurations for Dazzle Bar
+            enable_dev_mode: Enable dev control plane (default: False)
+            personas: List of persona configurations for dev mode
+            scenarios: List of scenario configurations for dev mode
             sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
             project_root: Project root for content file loading (v0.16.0)
         """
@@ -235,7 +235,7 @@ class DNRBackendApp:
             enable_test_mode if enable_test_mode is not None else config.enable_test_mode
         )
         self._services_dir = Path(services_dir) if services_dir else config.services_dir
-        # Dazzle Bar control plane (v0.8.5)
+        # Dev control plane
         self._enable_dev_mode = (
             enable_dev_mode if enable_dev_mode is not None else config.enable_dev_mode
         )
@@ -1547,7 +1547,7 @@ class DNRBackendApp:
             )
             self._app.include_router(test_router)
 
-        # Initialize Dazzle Bar control plane if dev mode enabled (v0.8.5)
+        # Initialize dev control plane if dev mode enabled
         if self._enable_dev_mode or self._enable_test_mode:
             from dazzle_back.runtime.control_plane import create_control_plane_routes
 
@@ -1778,7 +1778,7 @@ class DNRBackendApp:
 
     @property
     def dev_mode_enabled(self) -> bool:
-        """Check if dev mode (Dazzle Bar) is enabled."""
+        """Check if dev mode is enabled."""
         return self._enable_dev_mode
 
     @property
@@ -1847,9 +1847,9 @@ def create_app(
         files_path: Path for file storage (default: .dazzle/uploads)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
-        enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-        personas: List of persona configurations for Dazzle Bar
-        scenarios: List of scenario configurations for Dazzle Bar
+        enable_dev_mode: Enable dev control plane (default: False)
+        personas: List of persona configurations for dev mode
+        scenarios: List of scenario configurations for dev mode
 
     Returns:
         FastAPI application
@@ -1904,9 +1904,9 @@ def run_app(
         files_path: Path for file storage (default: .dazzle/uploads)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
-        enable_dev_mode: Enable Dazzle Bar control plane (default: False)
-        personas: List of persona configurations for Dazzle Bar
-        scenarios: List of scenario configurations for Dazzle Bar
+        enable_dev_mode: Enable dev control plane (default: False)
+        personas: List of persona configurations for dev mode
+        scenarios: List of scenario configurations for dev mode
 
     Example:
         >>> from dazzle_back.specs import BackendSpec
@@ -2087,7 +2087,7 @@ def create_app_factory(
         except Exception as e:
             logger.warning(f"Failed to load sitespec.yaml: {e}")
 
-    # Extract personas for Dazzle Bar (if enabled)
+    # Extract personas for dev mode (if enabled)
     personas = (
         [
             {
@@ -2218,7 +2218,7 @@ def create_app_factory(
     logger.info(f"  Environment: {dazzle_env}")
     logger.info("  Database: PostgreSQL")
     if enable_dev_mode:
-        logger.info("  Dazzle Bar: enabled")
+        logger.info("  Dev mode: enabled")
 
     # Add custom 404 handler for site pages (v0.28.0 - extracted to exception_handlers.py)
     if sitespec_data:

@@ -107,8 +107,8 @@ class AppSpec(BaseModel):
     tests: list[TestSpec] = Field(default_factory=list)
     e2e_flows: list[FlowSpec] = Field(default_factory=list)  # Semantic E2E flows (v0.3.2)
     fixtures: list[FixtureSpec] = Field(default_factory=list)  # Test fixtures (v0.3.2)
-    personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
-    scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5 Dazzle Bar
+    personas: list[PersonaSpec] = Field(default_factory=list)  # v0.8.5
+    scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)

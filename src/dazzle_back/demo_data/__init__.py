@@ -1,5 +1,5 @@
 """
-Demo data generation for Dazzle Bar (v0.8.5).
+Demo data generation for scenarios and dev mode.
 
 Provides Faker-based demo data generation and scenario-aware seeding.
 """

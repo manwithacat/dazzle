@@ -291,7 +291,7 @@ If you didn't request this, you can safely ignore this email.
                 {% endif %}
 
                 <p style="margin: 20px 0 0 0; color: #999; font-size: 12px;">
-                    Sent from {{ app_name }} Dazzle Bar
+                    Sent from {{ app_name }}
                 </p>
             </td>
         </tr>
@@ -320,7 +320,7 @@ Additional Context:
 {% endif %}
 
 ---
-Sent from {{ app_name }} Dazzle Bar
+Sent from {{ app_name }}
         """,
         description="Feedback notification email for developers",
         category="notification",

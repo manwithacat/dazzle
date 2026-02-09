@@ -1,4 +1,4 @@
-"""Tests for Dazzle Bar IR types (v0.8.5)."""
+"""Tests for persona and scenario IR types (v0.8.5)."""
 
 from pathlib import Path
 

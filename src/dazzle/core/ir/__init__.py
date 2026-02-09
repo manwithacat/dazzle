@@ -347,7 +347,7 @@ from .money import (
     to_money,
 )
 
-# Personas (v0.8.5 Dazzle Bar)
+# Personas (v0.8.5)
 from .personas import (
     PersonaSpec,
 )
@@ -374,7 +374,7 @@ from .process import (
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
 
-# Scenarios (v0.8.5 Dazzle Bar)
+# Scenarios (v0.8.5)
 from .scenarios import (
     DemoFixture,
     PersonaScenarioEntry,
@@ -680,7 +680,7 @@ __all__ = [
     "NotExpr",
     "InvariantExpr",
     "InvariantSpec",
-    # Personas (v0.8.5 Dazzle Bar)
+    # Personas (v0.8.5)
     "PersonaSpec",
     # Process Workflows (v0.23.0)
     "CompensationSpec",
@@ -701,7 +701,7 @@ __all__ = [
     "ProcessTriggerSpec",
     "RetryConfig",
     "ScheduleSpec",
-    # Scenarios (v0.8.5 Dazzle Bar)
+    # Scenarios (v0.8.5)
     "DemoFixture",
     "PersonaScenarioEntry",
     "ScenarioSpec",

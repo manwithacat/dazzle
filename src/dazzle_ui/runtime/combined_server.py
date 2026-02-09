@@ -90,7 +90,7 @@ def run_unified_server(
     Run a unified Dazzle server on a single port.
 
     Builds a FastAPI app with:
-    - Backend API routes (entities, auth, files, dev bar, etc.)
+    - Backend API routes (entities, auth, files, etc.)
     - Server-rendered app pages (/app/*)
     - Site pages (/, /about, /pricing, etc.) if sitespec exists
     - Static file serving (/static/*)
@@ -101,15 +101,15 @@ def run_unified_server(
         port: Port to bind to
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
-        enable_dev_mode: Enable Dazzle Bar
+        enable_dev_mode: Enable dev control plane
         enable_auth: Enable authentication endpoints (/auth/*)
         auth_config: Full auth configuration from manifest
         host: Host to bind to
         enable_watch: Enable hot reload file watching (currently unused)
         watch_source: Also watch framework source files (currently unused)
         project_root: Project root directory
-        personas: List of persona configurations for Dazzle Bar
-        scenarios: List of scenario configurations for Dazzle Bar
+        personas: List of persona configurations
+        scenarios: List of scenario configurations
         sitespec_data: SiteSpec data as dict for public site pages
         theme_preset: Theme preset name
         theme_overrides: Custom theme token overrides
@@ -304,7 +304,7 @@ def run_backend_only(
         port: Port to bind to
         db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
-        enable_dev_mode: Enable Dazzle Bar control plane
+        enable_dev_mode: Enable dev control plane
         enable_graphql: Enable GraphQL endpoint at /graphql
         sitespec_data: SiteSpec data as dict for public site shell
         project_root: Project root directory for content file loading

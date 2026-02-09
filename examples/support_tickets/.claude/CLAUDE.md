@@ -221,7 +221,7 @@ This project defines three testing personas:
 
 Access the developer dashboard for system health and metrics:
 
-- **Health Panel**: Click the health indicator in the Dazzle Bar
+- **Health Panel**: Click the health indicator in the dev toolbar
 - **Full Dashboard**: Open http://localhost:8000/dazzle/dev/dashboard
 
 ### Triage Workflow

@@ -120,7 +120,7 @@ persona member "Team Member":
   default_route: "/my-work"
 
 # =============================================================================
-# Scenarios - demo states for the Dazzle Bar
+# Scenarios - demo states for dev mode
 # =============================================================================
 
 scenario empty "Empty State":

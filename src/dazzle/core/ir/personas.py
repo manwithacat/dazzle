@@ -1,9 +1,9 @@
 """
 Persona specification types for DAZZLE IR.
 
-This module contains formal persona definitions for the Dazzle Bar
-developer overlay. Personas represent different user roles that can
-be impersonated during development and testing.
+This module contains formal persona definitions. Personas represent
+different user roles that can be impersonated during development
+and testing.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class PersonaSpec(BaseModel):
     """
-    Formal persona definition for Dazzle Bar.
+    Formal persona definition.
 
     Represents a user role that can be impersonated during development.
     Used for persona switching, route selection, and fixture loading.

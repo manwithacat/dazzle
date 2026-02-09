@@ -59,16 +59,6 @@
   {# Toast notifications area — no Alpine, just a container for dz.toast() #}
   <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"></div>
 
-  {# Dazzle Bar (dev mode only) #}
-  {% if dev_mode %}
-  <div id="dazzle-bar-container"
-       hx-get="/dazzle/dev/bar"
-       hx-trigger="load"
-       hx-swap="innerHTML">
-  </div>
-  <style>body { padding-bottom: 3rem; }</style>
-  {% endif %}
-
   {% block scripts_extra %}{% endblock %}
 </body>
 </html>

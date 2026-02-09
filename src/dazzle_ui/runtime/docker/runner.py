@@ -289,7 +289,7 @@ def run_in_docker(
         frontend_port: Frontend server port
         api_port: Backend API port
         test_mode: Enable test endpoints
-        dev_mode: Enable Dazzle Bar
+        dev_mode: Enable dev mode
         auth_enabled: Enable authentication endpoints
         rebuild: Force rebuild of Docker image
         detach: Run in background

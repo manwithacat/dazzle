@@ -235,7 +235,7 @@ def api_client(api_url: str) -> Generator[APIClient, None, None]:
 
 @pytest.fixture(scope="session")
 def control_plane(api_url: str) -> Generator[ControlPlaneClient, None, None]:
-    """Create a control plane client for Dazzle Bar operations."""
+    """Create a control plane client for dev mode operations."""
     client = ControlPlaneClient(api_url)
     yield client
     client.close()

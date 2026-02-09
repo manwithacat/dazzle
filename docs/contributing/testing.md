@@ -219,7 +219,7 @@ pytest tests/e2e/test_simple_task_generated.py -v
 | `test_access_control.py` | 23 | Persona permission tests |
 | `test_state_machines.py` | 20 | State transition tests |
 | `test_invariants.py` | 18 | Business rule validation |
-| `test_dazzle_bar.py` | 17 | Developer toolbar tests |
+| `test_dev_controls.py` | 17 | Developer control tests |
 | `test_computed_fields.py` | 11 | Computed field tests |
 
 **Not in CI** - Manual execution for demo evaluation.
@@ -241,7 +241,7 @@ pytest tests/e2e/ -m story           # User stories
 pytest tests/e2e/ -m access_control  # Permissions
 pytest tests/e2e/ -m state_machine   # State transitions
 pytest tests/e2e/ -m invariant       # Business rules
-pytest tests/e2e/ -m dazzle_bar      # Dazzle Bar
+pytest tests/e2e/ -m dev_controls     # Dev controls
 pytest tests/e2e/ -m computed        # Computed fields
 ```
 
@@ -336,7 +336,7 @@ Runs on push to main/develop and pull requests:
 @pytest.mark.access_control # Permission tests
 @pytest.mark.state_machine  # State transition tests
 @pytest.mark.invariant      # Business rule tests
-@pytest.mark.dazzle_bar     # Dazzle Bar tests
+@pytest.mark.dev_controls    # Dev control tests
 @pytest.mark.computed       # Computed field tests
 ```
 

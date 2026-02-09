@@ -5,7 +5,7 @@ The ChannelManager is the main entry point for:
 - Resolving channels at startup
 - Managing outbox processing
 - Sending messages through channels
-- Providing status for Dazzle Bar
+- Providing status for dev control plane
 
 Example:
     manager = ChannelManager(db_manager, channels)

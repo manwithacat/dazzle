@@ -10,7 +10,7 @@ Usage:
 
 With scenario seeding:
     Tests that specify a scenario will automatically seed data
-    via the Dazzle Bar before executing.
+    via the dev control plane before executing.
 
 Note:
     The base_url is provided by pytest-playwright. Set via:
@@ -60,10 +60,10 @@ def test_task_list_list(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, list, task
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to Task List
@@ -86,10 +86,10 @@ def test_task_detail_view(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, view, task
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to list view first
@@ -156,10 +156,10 @@ def test_task_edit_edit(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, edit, task
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to list view
@@ -192,10 +192,10 @@ def test_user_list_list(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, list, user
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to Team Members
@@ -259,10 +259,10 @@ def test_task_delete(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, delete, task
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to list view
@@ -297,10 +297,10 @@ def test_user_delete(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, delete, user
     """
-    # Navigate to app to access Dazzle Bar
+    # Navigate to app to access dev control plane
     page.goto(base_url)
     page.wait_for_load_state("networkidle")
-    # Set scenario to 'busy_sprint' via Dazzle Bar
+    # Set scenario to 'busy_sprint' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("busy_sprint")
     page.wait_for_load_state("networkidle")
     # Navigate to list view

@@ -203,8 +203,8 @@ A discrete unit of work to be completed by a team member.
 - **Access control**: Row-level security based on user role
 - **Attention signals**: Visual alerts for overdue/urgent tasks
 
-### Dazzle Bar Integration
-The development environment includes the Dazzle Bar overlay for:
+### Dev Mode Integration
+The development environment includes a dev control plane for:
 - Switching between personas to test role-based views
 - Loading different scenarios to test data states
 - Resetting/regenerating demo data

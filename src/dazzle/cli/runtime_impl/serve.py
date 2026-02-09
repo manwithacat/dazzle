@@ -118,7 +118,7 @@ def serve_command(
     dev_mode: bool | None = typer.Option(
         None,
         "--dev-mode/--no-dev-mode",
-        help="Enable Dazzle Bar. Default based on DAZZLE_ENV (enabled in development only).",
+        help="Enable dev control plane. Default based on DAZZLE_ENV (enabled in development only).",
     ),
     watch: bool = typer.Option(
         False,
@@ -435,7 +435,7 @@ def serve_command(
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
 
-    # Extract personas and scenarios for Dazzle Bar (v0.8.5)
+    # Extract personas and scenarios for dev control plane (v0.8.5)
     # Compute default routes from workspace access rules (v0.23.0)
     persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
     personas = [
@@ -468,9 +468,9 @@ def serve_command(
     ]
 
     if personas:
-        typer.echo(f"  • {len(personas)} personas (Dazzle Bar)")
+        typer.echo(f"  • {len(personas)} personas")
     if scenarios:
-        typer.echo(f"  • {len(scenarios)} scenarios (Dazzle Bar)")
+        typer.echo(f"  • {len(scenarios)} scenarios")
 
     typer.echo()
 
@@ -478,9 +478,7 @@ def serve_command(
     # Show environment and mode status (v0.24.0)
     typer.echo(f"  • Environment: {env.value.upper()}")
     if enable_dev_mode:
-        typer.echo(
-            "  • Dazzle Bar: ENABLED (use --no-dev-mode or DAZZLE_ENV=production to disable)"
-        )
+        typer.echo("  • Dev mode: ENABLED (use --no-dev-mode or DAZZLE_ENV=production to disable)")
     if enable_test_mode:
         typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
 
