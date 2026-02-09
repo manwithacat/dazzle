@@ -508,8 +508,8 @@ class TestForeignKeyConstraints:
 
         sql = build_foreign_key_constraint(info, "Task")
 
-        assert "FOREIGN KEY (owner_id)" in sql
-        assert "REFERENCES User(id)" in sql
+        assert 'FOREIGN KEY ("owner_id")' in sql
+        assert 'REFERENCES "User"("id")' in sql
         assert "ON DELETE CASCADE" in sql
 
     def test_build_fk_constraint_restrict(self) -> None:
@@ -555,7 +555,7 @@ class TestForeignKeyConstraints:
         assert len(constraints) == 2
         combined = " ".join(constraints)
         assert "owner_id" in combined
-        assert "REFERENCES User(id)" in combined
+        assert 'REFERENCES "User"("id")' in combined
 
     def test_get_fk_indexes(self, task_entity: Any, all_entities: Any) -> None:
         """Test getting FK index statements.

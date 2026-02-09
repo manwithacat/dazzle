@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from dazzle_back.runtime.query_builder import quote_identifier
+
 if TYPE_CHECKING:
     from dazzle_back.specs.entity import EntitySpec, RelationSpec
 
@@ -415,8 +417,8 @@ def build_foreign_key_constraint(
     on_delete = on_delete_map.get(relation.on_delete.lower(), "RESTRICT")
 
     return (
-        f"FOREIGN KEY ({relation.foreign_key_field}) "
-        f"REFERENCES {relation.to_entity}(id) ON DELETE {on_delete}"
+        f"FOREIGN KEY ({quote_identifier(relation.foreign_key_field)}) "
+        f"REFERENCES {quote_identifier(relation.to_entity)}({quote_identifier('id')}) ON DELETE {on_delete}"
     )
 
 
@@ -465,7 +467,7 @@ def get_foreign_key_indexes(
             idx_name = f"idx_{entity.name}_{relation.foreign_key_field}"
             sql = (
                 f"CREATE INDEX IF NOT EXISTS {idx_name} "
-                f"ON {entity.name}({relation.foreign_key_field})"
+                f"ON {quote_identifier(entity.name)}({quote_identifier(relation.foreign_key_field)})"
             )
             indexes.append(sql)
 
