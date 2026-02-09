@@ -66,28 +66,29 @@ class DNRLocalServerManager:
     This is the default and most reliable mode for E2E tests.
     """
 
-    def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
+    def __init__(self, example_dir: Path, port: int = 3000):
         self.example_dir = example_dir
-        self.api_port = api_port
-        self.ui_port = ui_port
+        self.port = port
         self.process: subprocess.Popen | None = None
-        self.api_url = f"http://127.0.0.1:{api_port}"
-        self.ui_url = f"http://127.0.0.1:{ui_port}"
+        # Unified server: API and UI on the same port
+        self.api_url = f"http://127.0.0.1:{port}"
+        self.ui_url = f"http://127.0.0.1:{port}"
 
     def __enter__(self) -> DNRLocalServerManager:
         # Start the DNR server locally
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
-        # Clear any existing runtime file and database from previous runs
+        # Forward DATABASE_URL to subprocess (PostgreSQL-first)
+        database_url = os.environ.get("DATABASE_URL", "")
+        if database_url:
+            env["DATABASE_URL"] = database_url
+
+        # Clear any existing runtime file from previous runs
         dazzle_dir = self.example_dir / ".dazzle"
         runtime_file = dazzle_dir / "runtime.json"
         if runtime_file.exists():
             runtime_file.unlink()
-        # Clear database for clean test state
-        data_db = dazzle_dir / "data.db"
-        if data_db.exists():
-            data_db.unlink()
 
         # Platform-specific process group handling
         kwargs: dict = {}
@@ -104,9 +105,7 @@ class DNRLocalServerManager:
                 "serve",
                 "--local",  # Explicitly use local mode
                 "--port",
-                str(self.ui_port),
-                "--api-port",
-                str(self.api_port),
+                str(self.port),
                 "--host",
                 "127.0.0.1",
                 "--test-mode",
@@ -126,11 +125,10 @@ class DNRLocalServerManager:
                     import json
 
                     data = json.loads(runtime_file.read_text())
-                    # Update URLs to use actual allocated ports
-                    self.api_port = data["api_port"]
-                    self.ui_port = data["ui_port"]
-                    self.api_url = f"http://127.0.0.1:{self.api_port}"
-                    self.ui_url = f"http://127.0.0.1:{self.ui_port}"
+                    # Update URLs to use actual allocated port (unified server)
+                    self.port = data.get("ui_port", data.get("port", self.port))
+                    self.api_url = f"http://127.0.0.1:{self.port}"
+                    self.ui_url = f"http://127.0.0.1:{self.port}"
                     break
                 except (json.JSONDecodeError, KeyError):
                     pass
@@ -176,8 +174,8 @@ def simple_task_server(
     if not example_dir.exists():
         pytest.skip(f"Example directory not found: {example_dir}")
 
-    # Use unique ports to avoid conflicts with other running servers
-    with DNRLocalServerManager(example_dir, api_port=8001, ui_port=3001) as server:
+    # Use unique port to avoid conflicts with other running servers
+    with DNRLocalServerManager(example_dir, port=3001) as server:
         yield server
 
 
