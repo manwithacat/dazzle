@@ -233,6 +233,11 @@ def convert_surface_to_endpoint(
     else:
         path = f"/{surface.name.replace('_', '-')}"
 
+    # Propagate persona-based access control from DSL surface spec
+    require_roles: list[str] = []
+    if surface.access and surface.access.allow_personas:
+        require_roles = list(surface.access.allow_personas)
+
     return EndpointSpec(
         name=f"{surface.name}_endpoint",
         service=service_name,
@@ -240,6 +245,7 @@ def convert_surface_to_endpoint(
         path=path,
         description=surface.title,
         tags=[entity] if surface.entity_ref else [],
+        require_roles=require_roles,
     )
 
 
@@ -261,7 +267,8 @@ def convert_surfaces_to_services(
     endpoints: list[EndpointSpec] = []
 
     # Track entities that have list surfaces (for adding DELETE endpoints)
-    entities_with_list = set()
+    # Maps entity_name -> list of require_roles from surfaces
+    entities_with_list: dict[str, list[str]] = {}
 
     for surface in surfaces:
         # Get entity if available
@@ -279,11 +286,14 @@ def convert_surfaces_to_services(
 
         # Track entities with list surfaces for DELETE endpoint generation
         if surface.mode == ir.SurfaceMode.LIST and surface.entity_ref:
-            entities_with_list.add(surface.entity_ref)
+            require_roles: list[str] = []
+            if surface.access and surface.access.allow_personas:
+                require_roles = list(surface.access.allow_personas)
+            entities_with_list[surface.entity_ref] = require_roles
 
     # Add DELETE endpoints for entities that have list surfaces
     # This enables CRUD delete operations on entity tables
-    for entity_name in entities_with_list:
+    for entity_name, delete_require_roles in entities_with_list.items():
         entity_lower = entity_name.lower()
 
         # Create delete service
@@ -300,7 +310,7 @@ def convert_surfaces_to_services(
         )
         services.append(delete_service)
 
-        # Create delete endpoint
+        # Create delete endpoint (inherits access from the list surface)
         delete_endpoint = EndpointSpec(
             name=f"delete_{entity_lower}_endpoint",
             service=f"delete_{entity_lower}",
@@ -308,6 +318,7 @@ def convert_surfaces_to_services(
             path=f"/{entity_lower}s/{{id}}",
             description=f"Delete {entity_name}",
             tags=[entity_name],
+            require_roles=delete_require_roles,
         )
         endpoints.append(delete_endpoint)
 

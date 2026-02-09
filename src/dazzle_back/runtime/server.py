@@ -740,6 +740,7 @@ class DNRBackendApp:
                 {
                     "label": ws.title or ws.name.replace("_", " ").title(),
                     "route": f"/workspaces/{ws.name}",
+                    "allow_personas": list(ws.access.allow_personas) if ws.access else [],
                 }
                 for ws in workspaces
             ]
@@ -756,12 +757,14 @@ class DNRBackendApp:
                 # Capture in closure
                 _ws_ctx = ws_ctx
                 _ws_route = f"/workspaces/{ws_name}"
+                _ws_access = workspace.access  # WorkspaceAccessSpec or None
 
                 @app.get(f"/workspaces/{ws_name}", tags=["Workspaces"])
                 async def workspace_page(
                     request: Request,
                     _ctx: Any = _ws_ctx,
                     _route: str = _ws_route,
+                    _access: Any = _ws_access,
                 ) -> Any:
                     """Render workspace page."""
                     from fastapi.responses import HTMLResponse
@@ -778,10 +781,25 @@ class DNRBackendApp:
                     if require_auth and not (auth_ctx and auth_ctx.is_authenticated):
                         raise HTTPException(status_code=401, detail="Authentication required")
 
+                    # RBAC: enforce persona restrictions from WorkspaceAccessSpec
+                    if _access and _access.allow_personas and auth_ctx:
+                        user_roles = auth_ctx.roles if auth_ctx.is_authenticated else []
+                        if not any(r in _access.allow_personas for r in user_roles):
+                            raise HTTPException(status_code=403, detail="Workspace access denied")
+
+                    # Filter nav items by user's roles
+                    user_roles = auth_ctx.roles if auth_ctx and auth_ctx.is_authenticated else []
+                    visible_nav = [
+                        {"label": item["label"], "route": item["route"]}
+                        for item in ws_nav_items
+                        if not item["allow_personas"]
+                        or any(r in item["allow_personas"] for r in user_roles)
+                    ]
+
                     html = render_fragment(
                         "workspace/workspace.html",
                         workspace=_ctx,
-                        nav_items=ws_nav_items,
+                        nav_items=visible_nav,
                         app_name=ws_app_name,
                         current_route=_route,
                         is_authenticated=bool(auth_ctx and auth_ctx.is_authenticated),
@@ -818,6 +836,8 @@ class DNRBackendApp:
                                     _attention_signals = list(ux.attention_signals)
                                     break
 
+                    _region_ws_access = _ws_access  # Capture workspace access for region
+
                     @app.get(
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
                         tags=["Workspaces"],
@@ -833,6 +853,7 @@ class DNRBackendApp:
                         _s: str = _source,
                         _espec: Any = _entity_spec,
                         _attn: list[Any] = _attention_signals,  # noqa: B006
+                        _raccess: Any = _region_ws_access,
                     ) -> Any:
                         """Return rendered HTML for a workspace region."""
                         from fastapi.responses import HTMLResponse
@@ -849,6 +870,14 @@ class DNRBackendApp:
                                 raise HTTPException(
                                     status_code=401, detail="Authentication required"
                                 )
+
+                            # RBAC: enforce workspace persona restrictions on region data
+                            if _raccess and _raccess.allow_personas and auth_ctx:
+                                if not any(r in _raccess.allow_personas for r in auth_ctx.roles):
+                                    raise HTTPException(
+                                        status_code=403,
+                                        detail="Workspace access denied",
+                                    )
 
                         # Query the source entity
                         items: list[dict[str, Any]] = []
@@ -1444,6 +1473,7 @@ class DNRBackendApp:
             auth_dep=auth_dep,
             optional_auth_dep=optional_auth_dep,
             require_auth_by_default=self._enable_auth and not self._enable_test_mode,
+            auth_store=self._auth_store,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,

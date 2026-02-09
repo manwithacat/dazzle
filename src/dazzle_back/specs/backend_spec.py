@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.ir.personas import PersonaSpec
 from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle_back.specs.auth import AuthRuleSpec, RoleSpec, TenancyRuleSpec
 from dazzle_back.specs.channel import ChannelSpec, MessageSpec
@@ -82,6 +83,11 @@ class BackendSpec(BaseModel):
     # Workspaces (v0.20)
     workspaces: list[WorkspaceSpec] = Field(
         default_factory=list, description="Workspace specifications (dashboard layouts)"
+    )
+
+    # Personas (v0.26)
+    personas: list[PersonaSpec] = Field(
+        default_factory=list, description="Persona definitions from DSL"
     )
 
     # Additional metadata

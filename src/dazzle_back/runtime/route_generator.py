@@ -488,6 +488,7 @@ class RouteGenerator:
         auth_dep: Callable[..., Any] | None = None,
         optional_auth_dep: Callable[..., Any] | None = None,
         require_auth_by_default: bool = False,
+        auth_store: Any | None = None,
     ):
         """
         Initialize the route generator.
@@ -500,6 +501,7 @@ class RouteGenerator:
             auth_dep: FastAPI dependency that requires authentication (raises 401)
             optional_auth_dep: FastAPI dependency for optional auth (returns empty AuthContext)
             require_auth_by_default: If True, require auth for all routes when no access spec
+            auth_store: AuthStore instance for creating per-route role-based dependencies
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -511,6 +513,7 @@ class RouteGenerator:
         self.auth_dep = auth_dep
         self.optional_auth_dep = optional_auth_dep
         self.require_auth_by_default = require_auth_by_default
+        self.auth_store = auth_store
         self._router = _APIRouter()
 
     def generate_route(
@@ -658,6 +661,13 @@ class RouteGenerator:
 
         if response_model:
             route_kwargs["response_model"] = response_model
+
+        # Add role-based dependency if endpoint requires specific roles (RBAC)
+        if endpoint.require_roles and self.auth_store:
+            from dazzle_back.runtime.auth import create_auth_dependency
+
+            role_dep = create_auth_dependency(self.auth_store, require_roles=endpoint.require_roles)
+            route_kwargs["dependencies"] = [Depends(role_dep)]
 
         # Add the route
         router_method(path, **route_kwargs)(handler)
