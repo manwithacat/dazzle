@@ -1758,6 +1758,11 @@ def test_agent(
         "--report-dir",
         help="Directory for reports (default: dsl/tests/reports)",
     ),
+    base_url: str = typer.Option(
+        None,
+        "--base-url",
+        help="Base URL of already-running server (skip auto-start)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
     """
@@ -1776,6 +1781,7 @@ def test_agent(
         dazzle test agent --headless         # Run headless (faster)
         dazzle test agent -t WS_MY_WORK_NAV  # Run specific test
         dazzle test agent --no-report        # Skip HTML report generation
+        dazzle test agent --base-url http://localhost:3000  # Use running server
     """
     import asyncio
 
@@ -1802,6 +1808,7 @@ def test_agent(
                 test_ids=test_ids,
                 headless=headless,
                 model=model,
+                base_url=base_url,
             )
         )
 

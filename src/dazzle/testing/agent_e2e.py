@@ -251,6 +251,7 @@ async def run_agent_tests(
     test_ids: list[str] | None = None,
     headless: bool = False,
     model: str | None = None,
+    base_url: str | None = None,
 ) -> list[AgentTestResult]:
     """
     Run agent-based E2E tests for a project.
@@ -260,6 +261,7 @@ async def run_agent_tests(
         test_ids: Specific test IDs to run (None = all E2E tests)
         headless: Run browser in headless mode
         model: LLM model to use
+        base_url: External server URL (skip server startup if provided)
 
     Returns:
         List of test results
@@ -275,9 +277,9 @@ async def run_agent_tests(
 
     from dazzle.testing.unified_runner import UnifiedTestRunner
 
-    runner = UnifiedTestRunner(project_path)
+    runner = UnifiedTestRunner(project_path, base_url=base_url)
 
-    if not runner.start_server():
+    if not runner.base_url and not runner.start_server():
         raise RuntimeError("Failed to start server")
 
     try:
@@ -292,19 +294,20 @@ async def run_agent_tests(
 
         def is_tier3_test(test: dict[str, Any]) -> bool:
             tags = set(test.get("tags", []))
-            return bool(tags & {"tier3", "agent"})
-
-        agent_tests = [d for d in data.get("designs", []) if is_tier3_test(d)]
+            return bool(tags & {"tier3", "agent", "workspace", "persona", "navigation"})
 
         if test_ids:
-            agent_tests = [t for t in agent_tests if t.get("test_id") in test_ids]
+            # When specific tests are requested, skip tag filtering
+            agent_tests = [t for t in data.get("designs", []) if t.get("test_id") in test_ids]
+        else:
+            agent_tests = [d for d in data.get("designs", []) if is_tier3_test(d)]
 
         if not agent_tests:
             logger.info("No Tier 3 (agent) tests to run")
             return []
 
         results: list[AgentTestResult] = []
-        base_url = f"http://localhost:{runner.ui_port}"
+        base_url = runner.ui_url or runner.base_url or f"http://localhost:{runner.ui_port}"
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=headless)
@@ -317,8 +320,11 @@ async def run_agent_tests(
                     result = await agent.run_test(page, test, base_url)
                     results.append(result)
 
-                    await page.evaluate("localStorage.clear()")
-                    await page.evaluate("sessionStorage.clear()")
+                    try:
+                        await page.evaluate("localStorage.clear()")
+                        await page.evaluate("sessionStorage.clear()")
+                    except Exception:
+                        pass  # localStorage may not be available on all pages
 
             await browser.close()
 
