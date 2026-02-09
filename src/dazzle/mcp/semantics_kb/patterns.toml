@@ -2,7 +2,7 @@
 # Auto-generated from semantics.py
 
 [meta]
-pattern_count = 24
+pattern_count = 25
 
 
 [patterns.adapter_result]
@@ -118,6 +118,48 @@ entity Ticket "Support Ticket":
 '''
 use_cases = ["Workflow systems (tickets, orders, approvals)", "Document lifecycle management", "Multi-role applications with row-level security", "Data integrity enforcement at the model level"]
 related = ["state_machine", "invariant", "computed_field", "access_rules"]
+
+[patterns.cedar_rbac]
+name = "Cedar-Style RBAC Pattern"
+description = "Role-based entity access using permit/forbid/audit blocks with NIST SP 800-162 alignment. Supports separation of duty, least privilege, default-deny, and audit trail requirements."
+v0_21_feature = true
+components = ["Role hierarchy via role() conditions", "Separation of duty via forbid: blocks", "Data segregation via entity-level policies", "Immutability of audit records", "Default-deny evaluation (FORBID > PERMIT > deny)", "Audit trail via audit: blocks"]
+example = '''
+# Cedar-style RBAC for a medical clinic
+entity Prescription "Prescription":
+  id: uuid pk
+  patient: ref Patient required
+  prescriber: ref Doctor required
+  medication: str(200) required
+  dosage: str(100) required
+  status: enum[draft,active,dispensed,cancelled]=draft
+
+  # Permit: who CAN perform actions
+  permit:
+    read: role(doctor) or role(pharmacist) or role(nurse)
+    prescribe: role(doctor)
+    dispense: role(pharmacist)
+    cancel: role(doctor) or role(pharmacist)
+
+  # Forbid: separation of duty overrides
+  forbid:
+    prescribe: role(pharmacist)
+    dispense: role(doctor)
+
+  # Audit: compliance logging
+  audit:
+    read: role(admin)
+    prescribe: role(compliance_officer)
+    dispense: role(compliance_officer)
+    cancel: role(compliance_officer)
+
+  transitions:
+    draft -> active: role(doctor)
+    active -> dispensed: role(pharmacist)
+    active -> cancelled: role(doctor) or role(pharmacist)
+'''
+use_cases = ["Healthcare (HIPAA, prescription workflows)", "Finance (SOX compliance, transaction approval)", "Government (clearance-based access)", "Any domain requiring separation of duty or audit trails"]
+related = ["access_rules", "role_based_access", "business_logic_pattern", "rbac_validation"]
 
 [patterns.crud]
 name = "CRUD Pattern"

@@ -7,19 +7,34 @@ concept_count = 4
 
 [concepts.access_rules]
 category = "Business Logic (v0.7)"
-definition = "Inline access control rules on entities defining read/write permissions. Maps to visibility and permission rules at runtime."
+definition = "Inline access control rules on entities. Legacy syntax uses access: blocks with read/write permissions. Cedar-style syntax (v0.21+) uses permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment. Evaluation order: FORBID > PERMIT > default-deny."
 syntax = '''
+# Legacy access: block (read/write permissions)
 access:
   read: <condition>
   write: <condition>
+
+# Cedar-style blocks (v0.21+)
+permit:
+  <action>: <condition>
+
+forbid:
+  <action>: <condition>
+
+audit:
+  <action>: <condition>
 
 # Expressions:
 # field = current_user - Field matches logged-in user
 # role(<name>) - User has the specified role
 # field = value - Field equals literal value
 # Combine with: and, or
+
+# Cedar-style actions: read, write, create, update, delete, approve, prescribe, etc.
+# Cedar evaluation: FORBID rules override PERMIT; default is deny
 '''
 example = '''
+# Legacy style
 entity Document "Document":
   owner: ref User required
   is_public: bool = false
@@ -27,10 +42,31 @@ entity Document "Document":
   access:
     read: owner = current_user or is_public = true or role(admin)
     write: owner = current_user or role(admin)
+
+# Cedar-style (v0.21+) - fine-grained RBAC
+entity Prescription "Prescription":
+  patient: ref Patient required
+  prescriber: ref Doctor required
+  status: enum[draft,active,dispensed,cancelled]=draft
+
+  permit:
+    read: role(doctor) or role(pharmacist) or role(nurse)
+    prescribe: role(doctor)
+    dispense: role(pharmacist)
+
+  forbid:
+    prescribe: role(pharmacist)
+    dispense: role(doctor)
+
+  audit:
+    read: role(admin)
+    prescribe: role(compliance_officer)
+    dispense: role(compliance_officer)
 '''
-related = ["entity", "persona", "invariant"]
+related = ["entity", "persona", "invariant", "cedar_rbac"]
 v0_7_changes = "Enhanced in v0.7 with refined syntax"
-best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, expand as needed", "Use role() for administrative access", "Combine with persona scopes for UI filtering"]
+v0_21_changes = "Cedar-style permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment"
+best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, expand as needed", "Use role() for administrative access", "Combine with persona scopes for UI filtering", "Cedar evaluation order: FORBID > PERMIT > default-deny", "Use audit: blocks for compliance logging of sensitive actions", "Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)"]
 
 [concepts.computed_field]
 category = "Business Logic (v0.7)"

@@ -18,7 +18,7 @@ from .store import KnowledgeGraph
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 1
+SEED_SCHEMA_VERSION = 2
 
 
 def compute_seed_version() -> str:

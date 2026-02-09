@@ -3,7 +3,7 @@
 
 [meta]
 file = "testing"
-concept_count = 6
+concept_count = 7
 
 [concepts.e2e_testing]
 category = "Testing"
@@ -50,3 +50,8 @@ related = ["capability_discovery", "workflow_coherence"]
 category = "Testing"
 definition = "Discovery mode that statically analyzes process and story integrity. Checks that process human_task steps reference existing surfaces, subprocess steps reference existing processes, triggers match entities with state machines, and stories have implementing processes. Use: discovery(operation='run', mode='workflow_coherence')."
 related = ["capability_discovery", "entity_completeness"]
+
+[concepts.rbac_validation]
+category = "Testing"
+definition = "NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: examples/rbac_validation/ and tests/unit/test_rbac_validation.py."
+related = ["capability_discovery", "e2e_testing", "access_rules"]

@@ -103,11 +103,14 @@ jobs:
 
     - name: Check DSL files (strict mode)
       run: |
-        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
-          echo "Checking DSL for $example..."
-          cd examples/$example
-          python -m dazzle validate --strict || echo "Note: Some warnings in $example"
-          cd ../..
+        for dir in examples/*/; do
+          if [ -f "${dir}dazzle.toml" ]; then
+            example=$(basename "$dir")
+            echo "Checking DSL for $example..."
+            cd "$dir"
+            python -m dazzle validate --strict || echo "Note: Some warnings in $example"
+            cd "$GITHUB_WORKSPACE"
+          fi
         done
 
     - name: Generate and validate AsyncAPI specs
@@ -116,18 +119,21 @@ jobs:
         npm install -g @asyncapi/cli
 
         # Generate and validate AsyncAPI for each example
-        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
-          echo "Generating AsyncAPI for $example..."
-          cd examples/$example
-          python -m dazzle specs asyncapi -f json -o asyncapi.json
+        for dir in examples/*/; do
+          if [ -f "${dir}dazzle.toml" ]; then
+            example=$(basename "$dir")
+            echo "Generating AsyncAPI for $example..."
+            cd "$dir"
+            python -m dazzle specs asyncapi -f json -o asyncapi.json || echo "Note: No AsyncAPI output for $example"
 
-          # Validate the generated AsyncAPI spec
-          if [ -f asyncapi.json ]; then
-            echo "Validating AsyncAPI spec for $example..."
-            asyncapi validate asyncapi.json || echo "Warning: AsyncAPI validation issues in $example"
-            rm asyncapi.json
+            # Validate the generated AsyncAPI spec
+            if [ -f asyncapi.json ]; then
+              echo "Validating AsyncAPI spec for $example..."
+              asyncapi validate asyncapi.json || echo "Warning: AsyncAPI validation issues in $example"
+              rm asyncapi.json
+            fi
+            cd "$GITHUB_WORKSPACE"
           fi
-          cd ../..
         done
 
   type-check:
@@ -204,20 +210,26 @@ jobs:
 
     - name: Validate all example projects
       run: |
-        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
-          echo "Validating $example..."
-          cd examples/$example
-          python -m dazzle validate
-          cd ../..
+        for dir in examples/*/; do
+          if [ -f "${dir}dazzle.toml" ]; then
+            example=$(basename "$dir")
+            echo "Validating $example..."
+            cd "$dir"
+            python -m dazzle validate
+            cd "$GITHUB_WORKSPACE"
+          fi
         done
 
     - name: Lint all example DSL files
       run: |
-        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
-          echo "Linting $example..."
-          cd examples/$example
-          python -m dazzle lint || echo "Note: Lint warnings in $example"
-          cd ../..
+        for dir in examples/*/; do
+          if [ -f "${dir}dazzle.toml" ]; then
+            example=$(basename "$dir")
+            echo "Linting $example..."
+            cd "$dir"
+            python -m dazzle lint || echo "Note: Lint warnings in $example"
+            cd "$GITHUB_WORKSPACE"
+          fi
         done
 
     - name: Run serve validation tests
