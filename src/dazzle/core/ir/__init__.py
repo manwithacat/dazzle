@@ -493,6 +493,30 @@ from .tests import (
     TestSpec,
 )
 
+# ThemeSpec YAML (v0.25.0 Declarative Theme)
+from .themespec import (
+    AttentionMapSpec,
+    AttentionRule,
+    ColorMode,
+    DensityEnum,
+    FontStackSpec,
+    ImagerySpec,
+    ImageryVocabulary,
+    LayoutCompositionSpec,
+    PaletteSpec,
+    SemanticColorOverrides,
+    ShadowPreset,
+    ShapePreset,
+    ShapeSpec,
+    SpacingSpec,
+    SurfaceCompositionRule,
+    ThemeMetaSpec,
+    ThemeSpecYAML,
+    TypographyRatioPreset,
+    TypographySpec,
+    VisualTreatment,
+)
+
 # UX Semantic Layer
 from .ux import (
     AttentionSignal,
@@ -841,6 +865,27 @@ __all__ = [
     "TenantIsolationSpec",
     "TenantProvisioningSpec",
     "TopicNamespaceMode",
+    # ThemeSpec YAML (v0.25.0 Declarative Theme)
+    "AttentionMapSpec",
+    "AttentionRule",
+    "ColorMode",
+    "DensityEnum",
+    "FontStackSpec",
+    "ImagerySpec",
+    "ImageryVocabulary",
+    "LayoutCompositionSpec",
+    "PaletteSpec",
+    "SemanticColorOverrides",
+    "ShadowPreset",
+    "ShapePreset",
+    "ShapeSpec",
+    "SpacingSpec",
+    "SurfaceCompositionRule",
+    "ThemeMetaSpec",
+    "ThemeSpecYAML",
+    "TypographyRatioPreset",
+    "TypographySpec",
+    "VisualTreatment",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

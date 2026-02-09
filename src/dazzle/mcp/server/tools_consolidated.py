@@ -387,7 +387,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness).",
+            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -401,12 +401,17 @@ def get_consolidated_tools() -> list[Tool]:
                             "scaffold_copy",
                             "review_copy",
                             "coherence",
+                            "get_theme",
+                            "scaffold_theme",
+                            "validate_theme",
+                            "generate_tokens",
+                            "generate_imagery_prompts",
                         ],
                         "description": "Operation to perform",
                     },
                     "use_defaults": {
                         "type": "boolean",
-                        "description": "Use defaults when missing (for get)",
+                        "description": "Use defaults when missing (for get, get_theme)",
                     },
                     "check_content_files": {
                         "type": "boolean",
@@ -418,11 +423,19 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "overwrite": {
                         "type": "boolean",
-                        "description": "Overwrite existing (for scaffold, scaffold_copy)",
+                        "description": "Overwrite existing (for scaffold, scaffold_copy, scaffold_theme)",
                     },
                     "business_context": {
                         "type": "string",
                         "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
+                    },
+                    "brand_hue": {
+                        "type": "number",
+                        "description": "Brand hue 0-360 on OKLCH wheel (for scaffold_theme)",
+                    },
+                    "brand_chroma": {
+                        "type": "number",
+                        "description": "Brand chroma 0-0.4 (for scaffold_theme)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

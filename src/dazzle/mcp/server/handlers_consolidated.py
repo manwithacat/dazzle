@@ -255,12 +255,17 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
     """Handle consolidated sitespec operations."""
     from .handlers.sitespec import (
         coherence_handler,
+        generate_imagery_prompts_handler,
+        generate_tokens_handler,
         get_copy_handler,
         get_sitespec_handler,
+        get_theme_handler,
         review_copy_handler,
         scaffold_copy_handler,
         scaffold_site_handler,
+        scaffold_theme_handler,
         validate_sitespec_handler,
+        validate_theme_handler,
     )
 
     operation = arguments.get("operation")
@@ -283,6 +288,16 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         return review_copy_handler(project_path, arguments)
     elif operation == "coherence":
         return coherence_handler(project_path, arguments)
+    elif operation == "get_theme":
+        return get_theme_handler(project_path, arguments)
+    elif operation == "scaffold_theme":
+        return scaffold_theme_handler(project_path, arguments)
+    elif operation == "validate_theme":
+        return validate_theme_handler(project_path, arguments)
+    elif operation == "generate_tokens":
+        return generate_tokens_handler(project_path, arguments)
+    elif operation == "generate_imagery_prompts":
+        return generate_imagery_prompts_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown sitespec operation: {operation}"})
 
