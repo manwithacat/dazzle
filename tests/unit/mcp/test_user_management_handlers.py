@@ -83,6 +83,24 @@ def auth_store(temp_project):
     return AuthStore(db_path=db_path)
 
 
+@pytest.fixture(autouse=True)
+def _clear_database_url():
+    """Ensure handlers fall back to the test project's SQLite store.
+
+    Without this, when DATABASE_URL is set (e.g. PostgreSQL CI job),
+    ``_get_auth_store`` would connect to the PG database which has no
+    test users, causing assertion failures.  Individual tests that need
+    to simulate PostgreSQL (e.g. ``test_get_config_postgres``) use their
+    own ``patch.dict("os.environ", ...)`` which takes precedence.
+    """
+    import os
+
+    old = os.environ.pop("DATABASE_URL", None)
+    yield
+    if old is not None:
+        os.environ["DATABASE_URL"] = old
+
+
 @pytest.fixture
 def test_user(auth_store):
     """Create a test user in the auth store."""

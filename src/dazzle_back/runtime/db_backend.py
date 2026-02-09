@@ -195,6 +195,7 @@ class AsyncDualBackendMixin:
         else:
             import aiosqlite
 
+            assert self._async_db_path is not None
             conn = await aiosqlite.connect(self._async_db_path)
             conn.row_factory = aiosqlite.Row
             return conn

@@ -83,7 +83,7 @@ def is_htmx_request(request: Any) -> bool:
     """Check if the incoming request is from HTMX."""
     if not hasattr(request, "headers"):
         return False
-    return request.headers.get("HX-Request") == "true"
+    return bool(request.headers.get("HX-Request") == "true")
 
 
 def htmx_error_response(

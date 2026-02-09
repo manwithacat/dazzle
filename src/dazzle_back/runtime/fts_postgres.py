@@ -175,4 +175,4 @@ class PostgresFTSBackend:
         cursor = conn.cursor()
         cursor.execute(f"SELECT COUNT(*) FROM {table}")
         row = cursor.fetchone()
-        return row[0] if isinstance(row, (tuple, list)) else row.get("count", 0)
+        return int(row[0] if isinstance(row, (tuple, list)) else row.get("count", 0))

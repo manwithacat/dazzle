@@ -5,6 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
+# Pillow is an optional dependency (viewport extra); skip entire module when absent.
+pytest.importorskip("PIL", reason="Pillow not installed (optional viewport dependency)")
+
 from dazzle.testing.viewport_screenshot import (
     BASELINES_DIR,
     ScreenshotResult,

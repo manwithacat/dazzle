@@ -371,7 +371,7 @@ class DeviceRegistry(DualBackendMixin):
                     (self._bool_to_db(False), device_id),
                 )
             conn.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
 
     def mark_device_used(self, device_id: str) -> bool:
         """Update last_used_at timestamp."""
@@ -382,7 +382,7 @@ class DeviceRegistry(DualBackendMixin):
                 (datetime.now(UTC).isoformat(), device_id),
             )
             conn.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
 
     def invalidate_token(self, push_token: str) -> int:
         """
@@ -403,7 +403,7 @@ class DeviceRegistry(DualBackendMixin):
                 (self._bool_to_db(False), push_token),
             )
             conn.commit()
-            return cursor.rowcount
+            return int(cursor.rowcount)
 
     def cleanup_inactive(self, older_than_days: int = 90) -> int:
         """
@@ -429,7 +429,7 @@ class DeviceRegistry(DualBackendMixin):
                 (self._bool_to_db(False), cutoff.isoformat()),
             )
             conn.commit()
-            return cursor.rowcount
+            return int(cursor.rowcount)
 
 
 # =============================================================================

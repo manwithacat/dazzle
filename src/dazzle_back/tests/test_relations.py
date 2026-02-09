@@ -543,21 +543,32 @@ class TestForeignKeyConstraints:
         assert "ON DELETE SET NULL" in sql
 
     def test_get_fk_constraints(self, task_entity: Any, all_entities: Any) -> None:
-        """Test getting all FK constraints for an entity."""
+        """Test getting all FK constraints for an entity.
+
+        Task has both an explicit ``owner`` relation (FK inferred as "owner")
+        and an implicit relation from the ``owner_id`` ref field (FK = "owner_id"),
+        so two constraints are generated.
+        """
         registry = RelationRegistry.from_entities(all_entities)
         constraints = get_foreign_key_constraints(task_entity, registry)
 
-        assert len(constraints) == 1
-        assert "owner_id" in constraints[0]
+        assert len(constraints) == 2
+        combined = " ".join(constraints)
+        assert "owner_id" in combined
+        assert "REFERENCES User(id)" in combined
 
     def test_get_fk_indexes(self, task_entity: Any, all_entities: Any) -> None:
-        """Test getting FK index statements."""
+        """Test getting FK index statements.
+
+        Both the explicit and implicit owner relations produce indexes.
+        """
         registry = RelationRegistry.from_entities(all_entities)
         indexes = get_foreign_key_indexes(task_entity, registry)
 
-        assert len(indexes) == 1
-        assert "CREATE INDEX" in indexes[0]
-        assert "owner_id" in indexes[0]
+        assert len(indexes) == 2
+        combined = " ".join(indexes)
+        assert "CREATE INDEX" in combined
+        assert "owner_id" in combined
 
 
 # =============================================================================

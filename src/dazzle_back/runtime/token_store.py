@@ -297,7 +297,7 @@ class TokenStore(DualBackendMixin):
                 (now.isoformat(), token_hash),
             )
             conn.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
 
     def rotate_token(
         self,
@@ -363,7 +363,7 @@ class TokenStore(DualBackendMixin):
                 (now.isoformat(), token_hash),
             )
             conn.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
 
     def revoke_user_tokens(self, user_id: UUID, except_token: str | None = None) -> int:
         """
@@ -401,7 +401,7 @@ class TokenStore(DualBackendMixin):
                     (now.isoformat(), str(user_id)),
                 )
             conn.commit()
-            return cursor.rowcount
+            return int(cursor.rowcount)
 
     def revoke_device_tokens(self, user_id: UUID, device_id: str) -> int:
         """
@@ -427,7 +427,7 @@ class TokenStore(DualBackendMixin):
                 (now.isoformat(), str(user_id), device_id),
             )
             conn.commit()
-            return cursor.rowcount
+            return int(cursor.rowcount)
 
     def get_user_tokens(self, user_id: UUID) -> list[RefreshTokenRecord]:
         """
@@ -486,4 +486,4 @@ class TokenStore(DualBackendMixin):
                 (datetime.now(UTC).isoformat(), cutoff.isoformat()),
             )
             conn.commit()
-            return cursor.rowcount
+            return int(cursor.rowcount)

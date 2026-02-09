@@ -370,7 +370,7 @@ class FTSManager:
             LIMIT ?
         """
         cursor = conn.execute(sql, (escaped_query, limit))
-        cursor.row_factory = sqlite3.Row  # type: ignore[assignment]
+        cursor.row_factory = sqlite3.Row
 
         results = []
         for row in cursor.fetchall():

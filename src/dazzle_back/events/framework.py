@@ -396,7 +396,7 @@ class EventFramework:
                 self._consumers[f"{topic}:{group_id}"] = consumer
 
         # Start bus consumer loops
-        await self._bus.start_consumer_loop(poll_interval=self._config.consumer_poll_interval)
+        await self._bus.start_consumer_loop(poll_interval=self._config.consumer_poll_interval)  # type: ignore[attr-defined]
 
     async def drain_outbox(self, *, timeout: float = 30.0) -> int:
         """

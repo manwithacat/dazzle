@@ -324,6 +324,9 @@ class EventBus(ABC):
         async for event in self.replay(topic):
             yield event
 
+    async def close(self) -> None:
+        """Close the event bus and release resources."""
+
 
 class EventBusError(Exception):
     """Base exception for EventBus errors."""

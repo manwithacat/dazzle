@@ -7,7 +7,7 @@ name = "dazzle"
 version = "0.21.2"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "DAZZLE Contributors"}
@@ -28,7 +28,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Code Generators",
     "Topic :: Software Development :: Compilers",
@@ -217,7 +216,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
