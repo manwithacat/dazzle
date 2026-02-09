@@ -564,6 +564,65 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Batch verify all accepted stories against API tests.
+
+    Loads all accepted stories, maps each to its entity tests via scope,
+    runs them, and returns a structured pass/fail report — the automated UAT.
+    """
+    try:
+        from dazzle.core.ir.stories import StoryStatus
+        from dazzle.core.stories_persistence import get_stories_by_status
+
+        from .dsl_test import verify_story_handler
+
+        base_url = args.get("base_url")
+
+        # Load accepted stories
+        stories = get_stories_by_status(project_path, StoryStatus.ACCEPTED)
+        if not stories:
+            return json.dumps(
+                {
+                    "status": "no_stories",
+                    "message": "No accepted stories found. Use story(operation='propose') and accept them first.",
+                },
+                indent=2,
+            )
+
+        # Run verify_story for all stories at once (the handler handles batching)
+        all_ids = [s.story_id for s in stories]
+        verify_args: dict[str, Any] = {
+            "story_ids": all_ids,
+        }
+        if base_url:
+            verify_args["base_url"] = base_url
+
+        raw_result = verify_story_handler(project_path, verify_args)
+        result_data = json.loads(raw_result)
+
+        # Wrap with discovery-specific metadata
+        if "error" in result_data:
+            return raw_result
+
+        response: dict[str, Any] = {
+            "operation": "verify_all_stories",
+            "total_accepted_stories": len(stories),
+            **result_data,
+            "summary": (
+                f"{result_data.get('stories_passed', 0)}/{len(stories)} stories verified successfully"
+            ),
+        }
+
+        return json.dumps(response, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"error": f"Module not available: {e}"}, indent=2)
+    except Exception as e:
+        logger.exception("Error verifying all stories")
+        return json.dumps({"error": f"Failed to verify stories: {e}"}, indent=2)
+
+
 def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Check discovery infrastructure status.

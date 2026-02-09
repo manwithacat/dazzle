@@ -13,6 +13,141 @@ from typing import Any
 logger = logging.getLogger("dazzle.mcp")
 
 
+def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Verify a story by mapping it to entity tests, running them, and returning a verdict.
+
+    Maps story → scope entities → test IDs, runs only those tests, and returns
+    a per-story pass/fail verdict with test details.
+    """
+    try:
+        from dazzle.core.stories_persistence import load_stories
+        from dazzle.testing.dsl_test_generator import generate_tests_from_dsl
+        from dazzle.testing.unified_runner import UnifiedTestRunner
+
+        story_id = args.get("story_id")
+        story_ids_list: list[str] = args.get("story_ids") or []
+        if story_id:
+            story_ids_list = [story_id]
+        if not story_ids_list:
+            return json.dumps({"error": "story_id or story_ids is required"}, indent=2)
+
+        base_url = args.get("base_url")
+
+        # Load all stories
+        all_stories = load_stories(project_root)
+        story_map = {s.story_id: s for s in all_stories}
+
+        # Resolve requested stories
+        requested = [story_map[sid] for sid in story_ids_list if sid in story_map]
+        missing = [sid for sid in story_ids_list if sid not in story_map]
+
+        if not requested:
+            return json.dumps(
+                {
+                    "error": f"No stories found for IDs: {story_ids_list}",
+                    "available": [s.story_id for s in all_stories[:20]],
+                },
+                indent=2,
+            )
+
+        # Generate test suite to find tests related to story entities
+        test_suite = generate_tests_from_dsl(project_root)
+
+        # Build entity→test mapping
+        entity_to_tests: dict[str, list[dict[str, Any]]] = {}
+        for design in test_suite.designs:
+            for entity in design.get("entities", []):
+                entity_to_tests.setdefault(entity, []).append(design)
+
+        # For each story, find related tests via scope entities
+        story_results: list[dict[str, Any]] = []
+
+        # Create runner once (reuse for all stories)
+        runner = UnifiedTestRunner(project_root, base_url=base_url)
+
+        for story in requested:
+            scope_entities = story.scope or []
+            related_tests: list[dict[str, Any]] = []
+            for entity in scope_entities:
+                related_tests.extend(entity_to_tests.get(entity, []))
+            # Deduplicate by test_id
+            seen_ids: set[str] = set()
+            unique_tests: list[dict[str, Any]] = []
+            for t in related_tests:
+                tid = t.get("test_id", "")
+                if tid not in seen_ids:
+                    seen_ids.add(tid)
+                    unique_tests.append(t)
+
+            if not unique_tests:
+                story_results.append(
+                    {
+                        "story_id": story.story_id,
+                        "title": story.title,
+                        "entities": scope_entities,
+                        "verdict": "NO_TESTS",
+                        "message": f"No tests map to entities {scope_entities}",
+                    }
+                )
+                continue
+
+            # Run only the related tests by filtering entity
+            # Use per-entity runs and aggregate
+            passed: list[str] = []
+            failed: list[dict[str, Any]] = []
+
+            for entity in scope_entities:
+                entity_result = runner.run_all(
+                    generate=True,
+                    entity=entity,
+                )
+                if entity_result.crud_result:
+                    for tc in entity_result.crud_result.tests:
+                        if tc.result.value == "passed":
+                            passed.append(tc.test_id)
+                        elif tc.result.value in ("failed", "error"):
+                            fail_entry: dict[str, Any] = {
+                                "test_id": tc.test_id,
+                                "result": tc.result.value,
+                                "error": tc.error_message,
+                            }
+                            failed.append(fail_entry)
+
+            verdict = "PASS" if not failed else "FAIL"
+
+            story_results.append(
+                {
+                    "story_id": story.story_id,
+                    "title": story.title,
+                    "status": story.status.value,
+                    "entities": scope_entities,
+                    "verdict": verdict,
+                    "tests_passed": len(passed),
+                    "tests_failed": len(failed),
+                    "passed_ids": passed,
+                    "failed_tests": failed if failed else None,
+                }
+            )
+
+        response: dict[str, Any] = {
+            "stories_verified": len(story_results),
+            "stories_passed": sum(1 for r in story_results if r["verdict"] == "PASS"),
+            "stories_failed": sum(1 for r in story_results if r["verdict"] == "FAIL"),
+            "stories_no_tests": sum(1 for r in story_results if r["verdict"] == "NO_TESTS"),
+            "results": story_results,
+        }
+        if missing:
+            response["missing_story_ids"] = missing
+
+        return json.dumps(response, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+    except Exception as e:
+        logger.exception("Error verifying stories")
+        return json.dumps({"error": f"Failed to verify stories: {e}"}, indent=2)
+
+
 def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate tests from DSL/AppSpec definitions."""
     try:
@@ -102,6 +237,121 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     return script
+
+
+def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Run ALL DSL-driven tests without filtering, returning a structured batch report.
+
+    Designed for autonomous agent loops: single call, structured JSON output with
+    by_category breakdown, failed test details, and overall summary.
+    """
+    try:
+        from dazzle.testing.unified_runner import UnifiedTestRunner
+
+        base_url = args.get("base_url")
+        regenerate = args.get("regenerate", False)
+
+        runner = UnifiedTestRunner(project_root, base_url=base_url)
+        result = runner.run_all(generate=True, force_generate=regenerate)
+
+        # Build structured response optimized for LLM consumption
+        summary = result.get_summary()
+        response: dict[str, Any] = {
+            "project": result.project_name,
+            "summary": summary,
+            "dsl_hash": result.dsl_hash[:12],
+            "tests_generated": result.tests_generated,
+        }
+
+        # Categorize results
+        by_category: dict[str, dict[str, int]] = {}
+        failed_tests: list[dict[str, Any]] = []
+        passed_tests: list[str] = []
+
+        if result.crud_result:
+            for tc in result.crud_result.tests:
+                # Determine category from tags
+                cat = "other"
+                if hasattr(tc, "tags"):
+                    tags = tc.tags if isinstance(tc.tags, list) else []
+                    cat = next(
+                        (t for t in tags if t not in ("generated", "dsl-derived")),
+                        "crud",
+                    )
+                else:
+                    # Infer from test_id prefix
+                    tid = tc.test_id or ""
+                    if tid.startswith("CRUD_"):
+                        cat = "crud"
+                    elif tid.startswith("SM_"):
+                        cat = "state_machine"
+                    elif tid.startswith("VAL_"):
+                        cat = "validation"
+                    elif tid.startswith("ACL_"):
+                        cat = "persona"
+                    elif tid.startswith("WS_"):
+                        cat = "workspace"
+
+                if cat not in by_category:
+                    by_category[cat] = {"passed": 0, "failed": 0, "total": 0}
+                by_category[cat]["total"] += 1
+
+                if tc.result.value in ("failed", "error"):
+                    by_category[cat]["failed"] += 1
+                    entry: dict[str, Any] = {
+                        "test_id": tc.test_id,
+                        "title": tc.title,
+                        "category": cat,
+                        "result": tc.result.value,
+                        "error": tc.error_message,
+                    }
+                    for step in tc.steps:
+                        if step.result.value in ("failed", "error"):
+                            entry["failed_step"] = {
+                                "action": step.action,
+                                "target": step.target,
+                                "message": step.message,
+                            }
+                            break
+                    failed_tests.append(entry)
+                elif tc.result.value == "passed":
+                    by_category[cat]["passed"] += 1
+                    passed_tests.append(tc.test_id)
+
+        if result.event_result:
+            cat = "event"
+            if cat not in by_category:
+                by_category[cat] = {"passed": 0, "failed": 0, "total": 0}
+            for etc in result.event_result.tests:
+                by_category[cat]["total"] += 1
+                if etc.result.value in ("failed", "error"):
+                    by_category[cat]["failed"] += 1
+                    evt_entry: dict[str, Any] = {
+                        "test_id": etc.test_id,
+                        "title": etc.title,
+                        "category": cat,
+                        "result": etc.result.value,
+                        "error": etc.error_message,
+                    }
+                    if etc.details:
+                        evt_entry["details"] = etc.details[:3]
+                    failed_tests.append(evt_entry)
+                elif etc.result.value == "passed":
+                    by_category[cat]["passed"] += 1
+                    passed_tests.append(etc.test_id)
+
+        response["by_category"] = by_category
+        if failed_tests:
+            response["failed_tests"] = failed_tests
+        response["passed_count"] = len(passed_tests)
+
+        return json.dumps(response, indent=2)
+
+    except ImportError as e:
+        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+    except Exception as e:
+        logger.exception("Error running all DSL tests")
+        return json.dumps({"error": f"Failed to run tests: {e}"}, indent=2)
 
 
 def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:

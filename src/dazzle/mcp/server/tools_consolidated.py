@@ -550,7 +550,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl_test",
-            description="DSL test operations: generate, run, coverage, list, create_sessions, diff_personas",
+            description="DSL test operations: generate, run, run_all, coverage, list, create_sessions, diff_personas, verify_story",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -559,10 +559,12 @@ def get_consolidated_tools() -> list[Tool]:
                         "enum": [
                             "generate",
                             "run",
+                            "run_all",
                             "coverage",
                             "list",
                             "create_sessions",
                             "diff_personas",
+                            "verify_story",
                         ],
                         "description": "Operation to perform",
                     },
@@ -620,6 +622,15 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Persona IDs to compare (for diff_personas, default: all)",
+                    },
+                    "story_id": {
+                        "type": "string",
+                        "description": "Story ID to verify (for verify_story)",
+                    },
+                    "story_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Story IDs to verify (for verify_story, alternative to single story_id)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -1212,13 +1223,20 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
+            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness), verify_all_stories (batch verify accepted stories against API tests). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["run", "report", "compile", "emit", "status"],
+                        "enum": [
+                            "run",
+                            "report",
+                            "compile",
+                            "emit",
+                            "status",
+                            "verify_all_stories",
+                        ],
                         "description": "Operation to perform",
                     },
                     "mode": {
@@ -1255,6 +1273,39 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Specific proposal IDs to emit (for emit, default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
+        # Pipeline (batch quality audit)
+        # =====================================================================
+        Tool(
+            name="pipeline",
+            description=(
+                "Full deterministic quality audit in a single call. "
+                "Chains: validate → lint → fidelity → test_generate → test_coverage → "
+                "story_coverage → process_coverage → test_design_gaps → semantics. "
+                "If base_url is provided, also runs all API tests. "
+                "Returns structured JSON with per-step results and overall summary."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["run"],
+                        "description": "Operation to perform",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Server URL — if provided, also runs dsl_test(run_all) as final step",
+                    },
+                    "stop_on_error": {
+                        "type": "boolean",
+                        "description": "Stop pipeline on first error (default: false, continues collecting results)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
