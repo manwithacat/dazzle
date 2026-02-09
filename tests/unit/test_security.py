@@ -11,6 +11,7 @@ Tests:
 
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -295,91 +296,106 @@ class TestSurfaceAccess:
 
 
 # =============================================================================
-# Tenant Isolation Tests
+# Tenant Isolation Tests (PostgreSQL schema-based)
 # =============================================================================
 
 
 class TestTenantIsolation:
-    """Tests for tenant database isolation."""
+    """Tests for tenant database isolation using PostgreSQL schemas."""
 
-    def test_tenant_path_generation(self) -> None:
-        """Test tenant database path generation."""
+    def test_tenant_schema_generation(self) -> None:
+        """Test tenant schema name generation."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
-            path = manager._get_tenant_path("tenant-123")
+        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
+        schema = manager._get_tenant_schema("tenant-123")
 
-            assert "tenant-123" in str(path)
-            assert path.name == "data.db"
+        assert "tenant-123" in schema
+        assert schema == "tenant_tenant-123"
 
-    def test_tenant_path_sanitization(self) -> None:
-        """Test tenant ID is sanitized to prevent path traversal."""
+    def test_tenant_schema_sanitization(self) -> None:
+        """Test tenant ID is sanitized to prevent injection."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
+        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
 
-            # Should work with alphanumeric and dashes
-            path = manager._get_tenant_path("tenant-123-abc")
-            assert "tenant-123-abc" in str(path)
+        # Should work with alphanumeric and dashes
+        schema = manager._get_tenant_schema("tenant-123-abc")
+        assert "tenant-123-abc" in schema
 
-            # Path traversal characters are stripped, path is sanitized
-            # The sanitization removes special chars, so "../../../etc/passwd" becomes "etcpasswd"
-            path = manager._get_tenant_path("../../../etc/passwd")
-            # Should NOT contain any path traversal
-            assert ".." not in str(path)
-            assert "/" not in path.name
+        # Path traversal characters are stripped
+        schema = manager._get_tenant_schema("../../../etc/passwd")
+        # Should NOT contain path traversal
+        assert ".." not in schema
+        assert "/" not in schema
 
-            # Empty string should raise
-            with pytest.raises(ValueError):
-                manager._get_tenant_path("")
+        # Empty string should raise
+        with pytest.raises(ValueError):
+            manager._get_tenant_schema("")
 
-    def test_list_tenants_empty(self) -> None:
+    @patch("psycopg.connect")
+    def test_list_tenants_empty(self, mock_connect) -> None:
         """Test listing tenants when none exist."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
-            tenants = manager.list_tenants()
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchall.return_value = []
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
 
-            assert tenants == []
+        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
+        tenants = manager.list_tenants()
 
-    def test_tenant_exists_false(self) -> None:
+        assert tenants == []
+
+    @patch("psycopg.connect")
+    def test_tenant_exists_false(self, mock_connect) -> None:
         """Test tenant_exists returns False for non-existent tenant."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = None
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
 
-            assert manager.tenant_exists("tenant-123") is False
+        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
 
-    def test_delete_nonexistent_tenant(self) -> None:
+        assert manager.tenant_exists("tenant-123") is False
+
+    @patch("psycopg.connect")
+    def test_delete_nonexistent_tenant(self, mock_connect) -> None:
         """Test deleting non-existent tenant returns False."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.fetchone.return_value = None
+        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
 
-            assert manager.delete_tenant("tenant-123") is False
+        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
+
+        assert manager.delete_tenant("tenant-123") is False
 
     def test_get_tenant_manager_creates_manager(self) -> None:
-        """Test get_tenant_manager creates a DatabaseManager."""
+        """Test get_tenant_manager creates a PostgresBackend."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
+        with patch("dazzle_back.runtime.tenant_isolation.PostgresBackend") as mock_pg:
+            manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
             tenant_db = manager.get_tenant_manager("tenant-123")
 
             assert tenant_db is not None
-            assert "tenant-123" in str(tenant_db.db_path)
+            mock_pg.assert_called_once()
+            # Verify search_path was set for tenant isolation
+            call_args = mock_pg.call_args
+            assert "tenant_tenant-123" in str(call_args)
 
     def test_get_tenant_manager_cached(self) -> None:
         """Test get_tenant_manager returns cached manager."""
         from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manager = TenantDatabaseManager(base_dir=tmpdir)
+        with patch("dazzle_back.runtime.tenant_isolation.PostgresBackend"):
+            manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
             db1 = manager.get_tenant_manager("tenant-123")
             db2 = manager.get_tenant_manager("tenant-123")
 
@@ -396,8 +412,6 @@ class TestSecurityDocs:
 
     def test_generate_basic_security_md(self) -> None:
         """Test generating SECURITY.md for basic profile."""
-        from unittest.mock import MagicMock
-
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
         from dazzle.specs.security_docs import generate_security_md
 
@@ -415,8 +429,6 @@ class TestSecurityDocs:
 
     def test_generate_strict_security_md(self) -> None:
         """Test generating SECURITY.md for strict profile."""
-        from unittest.mock import MagicMock
-
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
         from dazzle.specs.security_docs import generate_security_md
 
@@ -438,8 +450,6 @@ class TestSecurityDocs:
 
     def test_generate_protected_surfaces_table(self) -> None:
         """Test generating protected surfaces table."""
-        from unittest.mock import MagicMock
-
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
         from dazzle.specs.security_docs import generate_security_md
 
@@ -467,8 +477,6 @@ class TestSecurityDocs:
 
     def test_write_security_md(self) -> None:
         """Test writing SECURITY.md to file."""
-        from unittest.mock import MagicMock
-
         from dazzle.core.ir.security import SecurityConfig, SecurityProfile
         from dazzle.specs.security_docs import write_security_md
 

@@ -2,7 +2,7 @@
 Unit tests for password reset flow and SSR rendering.
 
 Tests cover:
-- Password reset token creation and validation
+- Password reset token creation and validation (e2e — requires PostgreSQL)
 - Forgot-password / reset-password endpoints (via auth routes)
 - Server-side rendering of sitespec pages
 - OG meta tag generation
@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import time
 from datetime import timedelta
-from pathlib import Path
 
 import pytest
 
@@ -21,9 +20,9 @@ from dazzle_back.runtime.auth import AuthStore
 
 
 @pytest.fixture
-def auth_store(tmp_path: Path) -> AuthStore:
-    """Create an AuthStore backed by a temporary SQLite database."""
-    return AuthStore(db_path=tmp_path / "auth.db")
+def auth_store() -> AuthStore:
+    """Create an AuthStore backed by a PostgreSQL test database."""
+    return AuthStore(database_url="postgresql://mock/test")
 
 
 @pytest.fixture
@@ -36,6 +35,7 @@ def test_user(auth_store: AuthStore):
     )
 
 
+@pytest.mark.e2e
 class TestPasswordResetTokens:
     """Tests for AuthStore password reset token methods."""
 
@@ -103,6 +103,7 @@ class TestPasswordResetTokens:
         assert user2.email == "test@example.com"
 
 
+@pytest.mark.e2e
 class TestAuthMiddlewareExclusions:
     """Test that password reset paths are excluded from auth."""
 

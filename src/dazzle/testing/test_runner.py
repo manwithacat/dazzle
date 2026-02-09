@@ -110,6 +110,7 @@ class DazzleClient:
         self.ui_url = ui_url.rstrip("/")
         self.client = httpx.Client(timeout=timeout)
         self._auth_token: str | None = None
+        self._test_routes_available: bool | None = None  # None = unknown
 
     def close(self) -> None:
         self.client.close()
@@ -132,9 +133,19 @@ class DazzleClient:
         return False
 
     def reset_database(self) -> bool:
-        """Reset the database to a clean state."""
+        """Reset the database to a clean state.
+
+        Calls ``/__test__/reset`` when available (DAZZLE_ENV=test).
+        Gracefully skips when test routes are not available (e.g. live sites).
+        """
+        if self._test_routes_available is False:
+            return False
         try:
             resp = self.client.post(f"{self.api_url}/__test__/reset")
+            if resp.status_code == 404:
+                self._test_routes_available = False
+                return False
+            self._test_routes_available = True
             return resp.status_code == 200
         except Exception:
             return False
@@ -207,20 +218,67 @@ class DazzleClient:
     def authenticate(self, persona: str) -> bool:
         """Authenticate as a persona for testing.
 
-        Calls ``/__test__/authenticate`` which returns a real session token
-        when auth is enabled.  The token is stored both as a cookie (for
-        session-based auth) and as a Bearer token (for API auth).
+        Tries (in order):
+        1. ``/__test__/authenticate`` — fast path when DAZZLE_ENV=test
+        2. ``/auth/login`` with credentials from DAZZLE_TEST_EMAIL /
+           DAZZLE_TEST_PASSWORD environment variables — works on live sites
         """
+        # Try test endpoint first (unless we know it's unavailable)
+        if self._test_routes_available is not False:
+            try:
+                resp = self.client.post(
+                    f"{self.api_url}/__test__/authenticate",
+                    json={"role": persona, "username": f"test_{persona}"},
+                )
+                if resp.status_code == 200:
+                    self._test_routes_available = True
+                    data = resp.json()
+                    token = data.get("token") or data.get("session_token")
+                    self._auth_token = token
+                    if token:
+                        self.client.cookies.set("dazzle_session", token)
+                    return True
+                if resp.status_code == 404:
+                    self._test_routes_available = False
+            except Exception:
+                pass
+
+        # Fallback: real auth via /auth/login
+        return self._login_with_credentials()
+
+    def _login_with_credentials(self) -> bool:
+        """Authenticate using real credentials from environment variables.
+
+        Reads DAZZLE_TEST_EMAIL and DAZZLE_TEST_PASSWORD from the environment.
+        Falls back to .dazzle/test_credentials.json if env vars are not set.
+        """
+        email = os.environ.get("DAZZLE_TEST_EMAIL")
+        password = os.environ.get("DAZZLE_TEST_PASSWORD")
+
+        if not email or not password:
+            # Try credentials file
+            creds_path = Path(".dazzle/test_credentials.json")
+            if creds_path.exists():
+                try:
+                    creds = json.loads(creds_path.read_text())
+                    email = creds.get("email")
+                    password = creds.get("password")
+                except Exception:
+                    pass
+
+        if not email or not password:
+            return False
+
         try:
             resp = self.client.post(
-                f"{self.api_url}/__test__/authenticate",
-                json={"role": persona, "username": f"test_{persona}"},
+                f"{self.api_url}/auth/login",
+                json={"email": email, "password": password},
             )
             if resp.status_code == 200:
+                # Session cookie is auto-captured by httpx from Set-Cookie
                 data = resp.json()
                 token = data.get("token") or data.get("session_token")
                 self._auth_token = token
-                # Also store as session cookie for cookie-based auth
                 if token:
                     self.client.cookies.set("dazzle_session", token)
                 return True
@@ -231,27 +289,53 @@ class DazzleClient:
     def get_entities(self, entity_name: str) -> list[dict[str, Any]]:
         """Get all entities of a type."""
         try:
-            resp = self.client.get(f"{self.api_url}/__test__/entity/{entity_name}")
+            # Prefer test endpoint (returns raw JSON)
+            if self._test_routes_available is not False:
+                resp = self.client.get(
+                    f"{self.api_url}/__test__/entity/{entity_name}",
+                    headers=self._auth_headers(),
+                )
+                if resp.status_code == 200:
+                    return list(resp.json())
+                if resp.status_code == 404:
+                    self._test_routes_available = False
+
+            # Fallback to standard list endpoint
+            endpoint = self._entity_endpoint(entity_name)
+            resp = self.client.get(
+                f"{self.api_url}{endpoint}",
+                headers=self._auth_headers(),
+            )
             if resp.status_code == 200:
-                return list(resp.json())
+                data = resp.json()
+                # List endpoint may return {items: [...]} or [...] directly
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict) and "items" in data:
+                    return list(data["items"])
             return []
         except Exception:
             return []
 
     def create_entity(self, entity_name: str, data: dict[str, Any]) -> dict[str, Any] | None:
-        """Create a new entity using the test seed endpoint."""
+        """Create a new entity, preferring ``/__test__/seed`` then standard CRUD."""
         try:
-            # Use __test__/seed endpoint to bypass auth
-            fixture_id = f"test-{entity_name.lower()}-{int(time.time())}"
-            fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
-            resp = self.client.post(f"{self.api_url}/__test__/seed", json={"fixtures": fixtures})
-            if resp.status_code == 200:
-                result: dict[str, Any] = resp.json()
-                created: dict[str, Any] = result.get("created", {})
-                return created.get(fixture_id)
+            # Use __test__/seed when available (bypasses auth)
+            if self._test_routes_available is not False:
+                fixture_id = f"test-{entity_name.lower()}-{int(time.time())}"
+                fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
+                resp = self.client.post(
+                    f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
+                )
+                if resp.status_code == 200:
+                    result: dict[str, Any] = resp.json()
+                    created: dict[str, Any] = result.get("created", {})
+                    return created.get(fixture_id)
+                if resp.status_code == 404:
+                    self._test_routes_available = False
 
-            # Fallback to standard endpoint
-            endpoint = f"/{entity_name.lower()}s"
+            # Standard CRUD endpoint with auth
+            endpoint = self._entity_endpoint(entity_name)
             resp = self.client.post(
                 f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
@@ -261,6 +345,14 @@ class DazzleClient:
         except Exception as e:
             print(f"    Create error: {e}")
             return None
+
+    def _entity_endpoint(self, entity_name: str) -> str:
+        """Derive the REST endpoint for an entity name.
+
+        Dazzle uses lowercase-no-separator entity routes:
+        Contact -> /contacts, VATReturn -> /vatreturns
+        """
+        return f"/{entity_name.lower()}s"
 
     def update_entity(
         self, entity_name: str, entity_id: str, data: dict[str, Any]

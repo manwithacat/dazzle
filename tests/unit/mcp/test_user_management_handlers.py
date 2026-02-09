@@ -1,5 +1,5 @@
 """
-Unit tests for MCP user_management handlers.
+Tests for MCP user_management handlers.
 
 Tests all 9 handler operations:
 - list_users_handler
@@ -11,15 +11,18 @@ Tests all 9 handler operations:
 - list_sessions_handler
 - revoke_session_handler
 - get_auth_config_handler
+
+Requires PostgreSQL — run with: pytest -m e2e
 """
 
 from __future__ import annotations
 
 import importlib.util
+import os
 import string
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -66,7 +69,7 @@ _um = _import_user_management()
 
 @pytest.fixture
 def temp_project(tmp_path):
-    """Create a temporary project directory with auth database."""
+    """Create a temporary project directory."""
     project_dir = tmp_path / "test_project"
     project_dir.mkdir()
     dazzle_dir = project_dir / ".dazzle"
@@ -75,30 +78,30 @@ def temp_project(tmp_path):
 
 
 @pytest.fixture
-def auth_store(temp_project):
+def database_url():
+    """Get PostgreSQL URL from environment."""
+    return os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
+
+
+@pytest.fixture
+def auth_store(database_url):
     """Create an AuthStore instance for testing."""
     from dazzle_back.runtime.auth import AuthStore
 
-    db_path = temp_project / ".dazzle" / "auth.db"
-    return AuthStore(db_path=db_path)
+    store = AuthStore(database_url=database_url)
+    return store
 
 
 @pytest.fixture(autouse=True)
-def _clear_database_url():
-    """Ensure handlers fall back to the test project's SQLite store.
-
-    Without this, when DATABASE_URL is set (e.g. PostgreSQL CI job),
-    ``_get_auth_store`` would connect to the PG database which has no
-    test users, causing assertion failures.  Individual tests that need
-    to simulate PostgreSQL (e.g. ``test_get_config_postgres``) use their
-    own ``patch.dict("os.environ", ...)`` which takes precedence.
-    """
-    import os
-
-    old = os.environ.pop("DATABASE_URL", None)
+def _set_database_url(database_url):
+    """Ensure DATABASE_URL is set for handlers to find PostgreSQL."""
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = database_url
     yield
     if old is not None:
         os.environ["DATABASE_URL"] = old
+    else:
+        os.environ.pop("DATABASE_URL", None)
 
 
 @pytest.fixture
@@ -125,6 +128,7 @@ def admin_user(auth_store):
     )
 
 
+@pytest.mark.e2e
 class TestListUsersHandler:
     """Tests for list_users_handler."""
 
@@ -153,8 +157,8 @@ class TestListUsersHandler:
         """Test that active_only filter works."""
         # Deactivate user
         auth_store._execute_modify(
-            "UPDATE users SET is_active = ? WHERE id = ?",
-            (auth_store._bool_to_db(False), str(test_user.id)),
+            "UPDATE users SET is_active = %s WHERE id = %s",
+            (False, str(test_user.id)),
         )
 
         # With active_only=True (default)
@@ -187,6 +191,7 @@ class TestListUsersHandler:
         assert result["filters"]["offset"] == 2
 
 
+@pytest.mark.e2e
 class TestCreateUserHandler:
     """Tests for create_user_handler."""
 
@@ -244,6 +249,7 @@ class TestCreateUserHandler:
         assert result["user"]["is_superuser"] is True
 
 
+@pytest.mark.e2e
 class TestGetUserHandler:
     """Tests for get_user_handler."""
 
@@ -290,6 +296,7 @@ class TestGetUserHandler:
         assert "Must provide either" in result["error"]
 
 
+@pytest.mark.e2e
 class TestUpdateUserHandler:
     """Tests for update_user_handler."""
 
@@ -354,6 +361,7 @@ class TestUpdateUserHandler:
         assert "No updates provided" in result["error"]
 
 
+@pytest.mark.e2e
 class TestResetPasswordHandler:
     """Tests for reset_password_handler."""
 
@@ -397,6 +405,7 @@ class TestResetPasswordHandler:
         assert "not found" in result["error"]
 
 
+@pytest.mark.e2e
 class TestDeactivateUserHandler:
     """Tests for deactivate_user_handler."""
 
@@ -424,8 +433,8 @@ class TestDeactivateUserHandler:
         """Test deactivating an already inactive user."""
         # Deactivate first
         auth_store._execute_modify(
-            "UPDATE users SET is_active = ? WHERE id = ?",
-            (auth_store._bool_to_db(False), str(test_user.id)),
+            "UPDATE users SET is_active = %s WHERE id = %s",
+            (False, str(test_user.id)),
         )
 
         result = await _um.deactivate_user_handler(
@@ -448,6 +457,7 @@ class TestDeactivateUserHandler:
         assert "not found" in result["error"]
 
 
+@pytest.mark.e2e
 class TestListSessionsHandler:
     """Tests for list_sessions_handler."""
 
@@ -495,6 +505,7 @@ class TestListSessionsHandler:
         assert result["count"] == 1
 
 
+@pytest.mark.e2e
 class TestRevokeSessionHandler:
     """Tests for revoke_session_handler."""
 
@@ -528,45 +539,24 @@ class TestRevokeSessionHandler:
         assert "not found" in result["error"]
 
 
+@pytest.mark.e2e
 class TestGetAuthConfigHandler:
     """Tests for get_auth_config_handler."""
 
     @pytest.mark.asyncio
-    async def test_get_config_sqlite(self, temp_project, test_user, admin_user, auth_store):
-        """Test getting auth config for SQLite backend."""
+    async def test_get_config(self, temp_project, test_user, admin_user, auth_store):
+        """Test getting auth config for PostgreSQL backend."""
         # Create a session
         auth_store.create_session(test_user)
 
         result = await _um.get_auth_config_handler(project_path=str(temp_project))
 
-        assert result["database_type"] == "sqlite"
+        assert result["database_type"] == "postgresql"
         assert result["total_users"] == 2
         assert result["active_users"] == 2
         assert result["active_sessions"] == 1
         assert "admin" in result["roles_in_use"]
         assert "user" in result["roles_in_use"]
-
-    @pytest.mark.asyncio
-    async def test_get_config_postgres(self, temp_project):
-        """Test getting auth config for PostgreSQL backend."""
-        # Mock the environment to simulate PostgreSQL
-        with patch.dict("os.environ", {"DATABASE_URL": "postgresql://localhost/test"}):
-            with patch("dazzle_back.runtime.auth.AuthStore._init_db"):
-                with patch("dazzle_back.runtime.auth.AuthStore._execute") as mock_execute:
-                    # Mock the queries that get_auth_config_handler makes
-                    mock_execute.side_effect = [
-                        [{"count": 10}],  # user count
-                        [{"count": 8}],  # active user count
-                        [{"count": 5}],  # session count
-                        [{"roles": '["admin"]'}, {"roles": '["user"]'}],  # roles
-                    ]
-
-                    result = await _um.get_auth_config_handler(project_path=str(temp_project))
-
-        assert result["database_type"] == "postgresql"
-        assert result["total_users"] == 10
-        assert result["active_users"] == 8
-        assert result["active_sessions"] == 5
 
 
 class TestHelperFunctions:

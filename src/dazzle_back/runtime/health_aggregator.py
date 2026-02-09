@@ -325,23 +325,18 @@ class HealthAggregator:
 
 
 def create_database_check(
-    db_path: str,
+    database_url: str,
     name: str = "database",
-    database_url: str | None = None,
+    db_path: str | None = None,  # Deprecated, ignored
 ) -> HealthCheckFn:
     """Create a database connectivity health check."""
 
     async def check() -> ComponentHealth:
         start = time.monotonic()
         try:
-            if database_url:
-                import psycopg
+            import psycopg
 
-                conn: Any = psycopg.connect(database_url)
-            else:
-                import sqlite3
-
-                conn = sqlite3.connect(db_path)
+            conn: Any = psycopg.connect(database_url)
             cursor = conn.cursor()
             cursor.execute("SELECT 1")
             cursor.fetchone()

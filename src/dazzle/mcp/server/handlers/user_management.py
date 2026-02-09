@@ -2,11 +2,7 @@
 MCP handlers for user management.
 
 Provides tools for LLM agents to create, list, update, and manage users
-in Dazzle applications. Supports both SQLite and PostgreSQL backends.
-
-User data is stored in:
-- .dazzle/auth.db (SQLite, default for local development)
-- DATABASE_URL (PostgreSQL, for production deployments)
+in Dazzle applications. Requires PostgreSQL via DATABASE_URL.
 """
 
 from __future__ import annotations
@@ -31,8 +27,7 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
     """
     Get an AuthStore instance for the project.
 
-    Checks for DATABASE_URL environment variable first (PostgreSQL),
-    falls back to .dazzle/auth.db (SQLite).
+    Requires DATABASE_URL environment variable (PostgreSQL).
     """
     from dazzle_back.runtime.auth import AuthStore
 
@@ -41,14 +36,11 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
         if not project_path:
             raise ValueError("No active project. Select a project first.")
 
-    # Check for PostgreSQL URL in environment
     database_url = os.environ.get("DATABASE_URL")
-    if database_url:
-        return AuthStore(database_url=database_url)
+    if not database_url:
+        database_url = "postgresql://localhost:5432/dazzle"
 
-    # Fall back to SQLite
-    db_path = project_path / ".dazzle" / "auth.db"
-    return AuthStore(db_path=db_path)
+    return AuthStore(database_url=database_url)
 
 
 def _user_to_dict(user: Any, include_hash: bool = False) -> dict[str, Any]:
@@ -503,8 +495,8 @@ async def get_auth_config_handler(
         all_roles.update(roles)
 
     return {
-        "database_type": "postgresql" if auth_store._use_postgres else "sqlite",
-        "database_path": ("[PostgreSQL]" if auth_store._use_postgres else str(auth_store.db_path)),
+        "database_type": "postgresql",
+        "database_path": "[PostgreSQL]",
         "total_users": user_count[0]["count"] if user_count else 0,
         "active_users": active_user_count[0]["count"] if active_user_count else 0,
         "active_sessions": session_count[0]["count"] if session_count else 0,

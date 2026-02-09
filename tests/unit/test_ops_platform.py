@@ -35,15 +35,16 @@ from dazzle_back.runtime.ops_database import (
 )
 from dazzle_back.runtime.ops_integration import OpsConfig, OpsPlatform
 
+pytestmark = pytest.mark.e2e
+
 
 class TestOpsDatabase:
     """Tests for OpsDatabase."""
 
     @pytest.fixture
-    def ops_db(self, tmp_path: Path) -> OpsDatabase:
-        """Create a temporary ops database."""
-        db_path = tmp_path / "ops.db"
-        return OpsDatabase(db_path=db_path)
+    def ops_db(self) -> OpsDatabase:
+        """Create an ops database for testing."""
+        return OpsDatabase(database_url="postgresql://mock/test")
 
     def test_record_health_check(self, ops_db: OpsDatabase) -> None:
         """Test recording a health check."""
@@ -121,9 +122,9 @@ class TestEmailTemplateEngine:
     """Tests for EmailTemplateEngine."""
 
     @pytest.fixture
-    def engine(self, tmp_path: Path) -> EmailTemplateEngine:
+    def engine(self) -> EmailTemplateEngine:
         """Create an email template engine."""
-        ops_db = OpsDatabase(db_path=tmp_path / "ops.db")
+        ops_db = OpsDatabase(database_url="postgresql://mock/test")
         brand = BrandConfig(
             name="Test App",
             tagline="Testing made easy",
@@ -293,9 +294,9 @@ class TestEmailDashboardEndpoints:
     """Tests for email dashboard API endpoints."""
 
     @pytest.fixture
-    def ops_db(self, tmp_path: Path) -> OpsDatabase:
-        """Create a temporary ops database with email events."""
-        db = OpsDatabase(db_path=tmp_path / "ops.db")
+    def ops_db(self) -> OpsDatabase:
+        """Create an ops database with email events."""
+        db = OpsDatabase(database_url="postgresql://mock/test")
 
         # Record some email events
         for i in range(5):
@@ -377,9 +378,9 @@ class TestHealthAggregator:
     """Tests for HealthAggregator."""
 
     @pytest.fixture
-    def ops_db(self, tmp_path: Path) -> OpsDatabase:
-        """Create a temporary ops database."""
-        return OpsDatabase(db_path=tmp_path / "ops.db")
+    def ops_db(self) -> OpsDatabase:
+        """Create an ops database for testing."""
+        return OpsDatabase(database_url="postgresql://mock/test")
 
     @pytest.mark.asyncio
     async def test_check_all(self, ops_db: OpsDatabase) -> None:
@@ -460,11 +461,11 @@ class TestApiTracker:
     """Tests for API call tracking."""
 
     @pytest.fixture
-    def tracker(self, tmp_path: Path):
+    def tracker(self):
         """Create an API tracker."""
         from dazzle_back.runtime.api_tracker import ApiTracker
 
-        ops_db = OpsDatabase(db_path=tmp_path / "ops.db")
+        ops_db = OpsDatabase(database_url="postgresql://mock/test")
         return ApiTracker(ops_db=ops_db)
 
     @pytest.mark.asyncio

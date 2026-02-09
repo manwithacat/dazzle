@@ -4,6 +4,8 @@ Regression test for issue where sitespec_data parameter was being
 overwritten by config defaults in DNRBackendApp.__init__.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 # Skip if FastAPI not installed
@@ -67,7 +69,6 @@ class TestDNRBackendAppSitespec:
         app_builder = DNRBackendApp(
             spec,
             sitespec_data=sitespec_data,
-            use_database=False,  # Don't need DB for this test
         )
 
         # Verify sitespec_data was preserved
@@ -88,18 +89,27 @@ class TestDNRBackendAppSitespec:
         }
 
         config = ServerConfig(sitespec_data=config_sitespec)
-        app_builder = DNRBackendApp(spec, config=config, use_database=False)
+        app_builder = DNRBackendApp(
+            spec,
+            config=config,
+        )
 
         assert app_builder._sitespec_data == config_sitespec
 
     def test_sitespec_data_none_when_not_provided(self) -> None:
         """Test that sitespec_data is None when not provided anywhere."""
         spec = _create_minimal_backend_spec()
-        app_builder = DNRBackendApp(spec, use_database=False)
+        app_builder = DNRBackendApp(
+            spec,
+        )
 
         assert app_builder._sitespec_data is None
 
-    def test_site_routes_registered_when_sitespec_provided(self) -> None:
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle_back.runtime.migrations.auto_migrate")
+    def test_site_routes_registered_when_sitespec_provided(
+        self, mock_migrate: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test that /_site/* routes are registered when sitespec_data provided."""
         spec = _create_minimal_backend_spec()
 
@@ -113,7 +123,7 @@ class TestDNRBackendAppSitespec:
         app_builder = DNRBackendApp(
             spec,
             sitespec_data=sitespec_data,
-            use_database=False,
+            database_url="postgresql://mock/test",
         )
         app = app_builder.build()
 
@@ -123,11 +133,18 @@ class TestDNRBackendAppSitespec:
         assert "/_site/pages" in route_paths, "/_site/pages route should be registered"
         assert "/_site/page/{route:path}" in route_paths, "/_site/page route should be registered"
 
-    def test_site_routes_not_registered_when_no_sitespec(self) -> None:
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
+    @patch("dazzle_back.runtime.migrations.auto_migrate")
+    def test_site_routes_not_registered_when_no_sitespec(
+        self, mock_migrate: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test that /_site/* routes are NOT registered when no sitespec_data."""
         spec = _create_minimal_backend_spec()
 
-        app_builder = DNRBackendApp(spec, use_database=False)
+        app_builder = DNRBackendApp(
+            spec,
+            database_url="postgresql://mock/test",
+        )
         app = app_builder.build()
 
         # Check that site routes were NOT registered

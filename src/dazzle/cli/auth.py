@@ -2,7 +2,7 @@
 Authentication management commands for DAZZLE CLI.
 
 Manage users and sessions directly against the auth database
-(SQLite or PostgreSQL) without requiring a running server.
+(PostgreSQL) without requiring a running server.
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ import os
 import secrets
 import string
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -38,7 +37,7 @@ def auth_callback(
         typer.Option(
             "--database-url",
             envvar="DATABASE_URL",
-            help="Database URL (PostgreSQL or SQLite path). Defaults to .dazzle/auth.db",
+            help="PostgreSQL database URL. Defaults to postgresql://localhost:5432/dazzle",
         ),
     ] = None,
 ) -> None:
@@ -48,15 +47,13 @@ def auth_callback(
 
 
 def _get_auth_store(database_url: str | None = None) -> Any:
-    """Get an AuthStore instance."""
+    """Get an AuthStore instance. Requires PostgreSQL via DATABASE_URL."""
     from dazzle_back.runtime.auth import AuthStore
 
     url = database_url or _database_url_override or os.environ.get("DATABASE_URL")
-    if url:
-        return AuthStore(database_url=url)
-
-    db_path = Path(".dazzle/auth.db")
-    return AuthStore(db_path=db_path)
+    if not url:
+        url = "postgresql://localhost:5432/dazzle"
+    return AuthStore(database_url=url)
 
 
 def _generate_temp_password(length: int = 16) -> str:

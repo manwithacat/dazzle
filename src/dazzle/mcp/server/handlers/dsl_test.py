@@ -127,7 +127,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             persona=persona,
         )
 
-        # Return summary
+        # Return summary + individual test results for LLM agents
         response: dict[str, Any] = {
             "project": result.project_name,
             "summary": result.get_summary(),
@@ -136,6 +136,53 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         }
         if persona:
             response["persona"] = persona
+
+        # Include individual test results so agents can diagnose failures
+        failed_tests: list[dict[str, Any]] = []
+        passed_tests: list[str] = []
+
+        if result.crud_result:
+            for tc in result.crud_result.tests:
+                if tc.result.value in ("failed", "error"):
+                    entry: dict[str, Any] = {
+                        "test_id": tc.test_id,
+                        "title": tc.title,
+                        "result": tc.result.value,
+                        "error": tc.error_message,
+                    }
+                    # Include first failed step for context
+                    for step in tc.steps:
+                        if step.result.value in ("failed", "error"):
+                            entry["failed_step"] = {
+                                "action": step.action,
+                                "target": step.target,
+                                "message": step.message,
+                            }
+                            break
+                    failed_tests.append(entry)
+                elif tc.result.value == "passed":
+                    passed_tests.append(tc.test_id)
+
+        if result.event_result:
+            for tc in result.event_result.tests:
+                if tc.result.value in ("failed", "error"):
+                    entry = {
+                        "test_id": tc.test_id,
+                        "title": tc.title,
+                        "result": tc.result.value,
+                        "error": tc.error_message,
+                    }
+                    if tc.details:
+                        entry["details"] = tc.details[:3]  # First 3 detail lines
+                    failed_tests.append(entry)
+                elif tc.result.value == "passed":
+                    passed_tests.append(tc.test_id)
+
+        if failed_tests:
+            response["failed_tests"] = failed_tests
+        if passed_tests:
+            response["passed_tests"] = passed_tests
+
         return json.dumps(response, indent=2)
 
     except ImportError as e:

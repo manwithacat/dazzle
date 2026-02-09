@@ -2,13 +2,13 @@
 File storage backend for DNR.
 
 Provides local and S3-compatible storage for file uploads.
+Metadata is stored in PostgreSQL via psycopg.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import sqlite3
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -429,16 +429,19 @@ class S3StorageBackend(StorageBackend):
 
 
 # =============================================================================
-# File Metadata Store (SQLite or PostgreSQL)
+# File Metadata Store (PostgreSQL)
 # =============================================================================
 
 
 class FileMetadataStore:
     """
-    File metadata storage using SQLite or PostgreSQL.
+    File metadata storage using PostgreSQL.
 
     Tracks uploaded files and their associations with entities.
-    Supports both SQLite (default, local dev) and PostgreSQL (production).
+
+    Args:
+        database_url: PostgreSQL connection URL (required).
+        db_path: Deprecated, ignored. Accepted for backward compatibility.
     """
 
     def __init__(
@@ -450,74 +453,26 @@ class FileMetadataStore:
         Initialize metadata store.
 
         Args:
-            db_path: Path to SQLite database (default: .dazzle/files.db)
-            database_url: PostgreSQL connection URL (takes precedence over db_path)
+            db_path: Deprecated, ignored. Accepted for backward compatibility.
+            database_url: PostgreSQL connection URL.
         """
-        self._database_url = database_url
-        self._use_postgres = bool(database_url)
-
-        if self._use_postgres:
-            # Parse and store PostgreSQL URL
-            self._pg_url = database_url
-            # Normalize Heroku's postgres:// to postgresql://
-            if self._pg_url and self._pg_url.startswith("postgres://"):
-                self._pg_url = self._pg_url.replace("postgres://", "postgresql://", 1)
-        else:
-            self.db_path = Path(db_path) if db_path else Path(".dazzle/files.db")
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
+        if database_url is None:
+            raise ValueError("database_url is required. SQLite is no longer supported.")
+        # Normalize Heroku's postgres:// to postgresql://
+        pg_url = database_url
+        if pg_url.startswith("postgres://"):
+            pg_url = pg_url.replace("postgres://", "postgresql://", 1)
+        self._pg_url: str = pg_url
         self._init_db()
 
     def _get_connection(self) -> Any:
-        """Get a database connection (SQLite or PostgreSQL)."""
-        if self._use_postgres:
-            import psycopg
-            from psycopg.rows import dict_row
+        """Get a PostgreSQL connection with dict_row factory."""
+        import psycopg
+        from psycopg.rows import dict_row
 
-            assert self._pg_url is not None
-            return psycopg.connect(self._pg_url, row_factory=dict_row)
-        else:
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row
-            return conn
+        return psycopg.connect(self._pg_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
-        """Initialize database tables."""
-        if self._use_postgres:
-            self._init_postgres_db()
-        else:
-            self._init_sqlite_db()
-
-    def _init_sqlite_db(self) -> None:
-        """Initialize SQLite tables."""
-        with self._get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS dazzle_files (
-                    id TEXT PRIMARY KEY,
-                    filename TEXT NOT NULL,
-                    content_type TEXT NOT NULL,
-                    size INTEGER NOT NULL,
-                    storage_key TEXT NOT NULL,
-                    storage_backend TEXT NOT NULL,
-                    entity_name TEXT,
-                    entity_id TEXT,
-                    field_name TEXT,
-                    thumbnail_key TEXT,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT
-                )
-            """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_files_entity
-                ON dazzle_files(entity_name, entity_id)
-            """)
-            conn.execute("""
-                CREATE INDEX IF NOT EXISTS idx_files_field
-                ON dazzle_files(entity_name, field_name)
-            """)
-            conn.commit()
-
-    def _init_postgres_db(self) -> None:
         """Initialize PostgreSQL tables."""
         conn = self._get_connection()
         try:
@@ -566,73 +521,48 @@ class FileMetadataStore:
             metadata.created_at.isoformat(),
         )
 
-        if self._use_postgres:
-            conn = self._get_connection()
-            try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT INTO dazzle_files
-                    (id, filename, content_type, size, storage_key, storage_backend,
-                     entity_name, entity_id, field_name, thumbnail_key, created_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (id) DO UPDATE SET
-                        filename = EXCLUDED.filename,
-                        content_type = EXCLUDED.content_type,
-                        size = EXCLUDED.size,
-                        storage_key = EXCLUDED.storage_key,
-                        storage_backend = EXCLUDED.storage_backend,
-                        entity_name = EXCLUDED.entity_name,
-                        entity_id = EXCLUDED.entity_id,
-                        field_name = EXCLUDED.field_name,
-                        thumbnail_key = EXCLUDED.thumbnail_key,
-                        updated_at = EXCLUDED.created_at
-                    """,
-                    params,
-                )
-                conn.commit()
-            finally:
-                conn.close()
-        else:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO dazzle_files
-                    (id, filename, content_type, size, storage_key, storage_backend,
-                     entity_name, entity_id, field_name, thumbnail_key, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    params,
-                )
-                conn.commit()
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO dazzle_files
+                (id, filename, content_type, size, storage_key, storage_backend,
+                 entity_name, entity_id, field_name, thumbnail_key, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                    filename = EXCLUDED.filename,
+                    content_type = EXCLUDED.content_type,
+                    size = EXCLUDED.size,
+                    storage_key = EXCLUDED.storage_key,
+                    storage_backend = EXCLUDED.storage_backend,
+                    entity_name = EXCLUDED.entity_name,
+                    entity_id = EXCLUDED.entity_id,
+                    field_name = EXCLUDED.field_name,
+                    thumbnail_key = EXCLUDED.thumbnail_key,
+                    updated_at = EXCLUDED.created_at
+                """,
+                params,
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     def get(self, file_id: UUID | str) -> FileMetadata | None:
         """Get file metadata by ID."""
-        if self._use_postgres:
-            conn = self._get_connection()
-            try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT * FROM dazzle_files WHERE id = %s",
-                    (str(file_id),),
-                )
-                row = cursor.fetchone()
-                if not row:
-                    return None
-                return self._row_to_metadata(dict(row))
-            finally:
-                conn.close()
-        else:
-            with self._get_connection() as conn:
-                row = conn.execute(
-                    "SELECT * FROM dazzle_files WHERE id = ?",
-                    (str(file_id),),
-                ).fetchone()
-
-                if not row:
-                    return None
-
-                return self._row_to_metadata(dict(row))
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM dazzle_files WHERE id = %s",
+                (str(file_id),),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return self._row_to_metadata(dict(row))
+        finally:
+            conn.close()
 
     def get_by_entity(
         self,
@@ -641,74 +571,44 @@ class FileMetadataStore:
         field_name: str | None = None,
     ) -> list[FileMetadata]:
         """Get files associated with an entity."""
-        if self._use_postgres:
-            conn = self._get_connection()
-            try:
-                cursor = conn.cursor()
-                if field_name:
-                    cursor.execute(
-                        """
-                        SELECT * FROM dazzle_files
-                        WHERE entity_name = %s AND entity_id = %s AND field_name = %s
-                        """,
-                        (entity_name, entity_id, field_name),
-                    )
-                else:
-                    cursor.execute(
-                        """
-                        SELECT * FROM dazzle_files
-                        WHERE entity_name = %s AND entity_id = %s
-                        """,
-                        (entity_name, entity_id),
-                    )
-                rows = cursor.fetchall()
-                return [self._row_to_metadata(dict(row)) for row in rows]
-            finally:
-                conn.close()
-        else:
-            with self._get_connection() as conn:
-                if field_name:
-                    rows = conn.execute(
-                        """
-                        SELECT * FROM dazzle_files
-                        WHERE entity_name = ? AND entity_id = ? AND field_name = ?
-                        """,
-                        (entity_name, entity_id, field_name),
-                    ).fetchall()
-                else:
-                    rows = conn.execute(
-                        """
-                        SELECT * FROM dazzle_files
-                        WHERE entity_name = ? AND entity_id = ?
-                        """,
-                        (entity_name, entity_id),
-                    ).fetchall()
-
-                return [self._row_to_metadata(dict(row)) for row in rows]
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            if field_name:
+                cursor.execute(
+                    """
+                    SELECT * FROM dazzle_files
+                    WHERE entity_name = %s AND entity_id = %s AND field_name = %s
+                    """,
+                    (entity_name, entity_id, field_name),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT * FROM dazzle_files
+                    WHERE entity_name = %s AND entity_id = %s
+                    """,
+                    (entity_name, entity_id),
+                )
+            rows = cursor.fetchall()
+            return [self._row_to_metadata(dict(row)) for row in rows]
+        finally:
+            conn.close()
 
     def delete(self, file_id: UUID | str) -> bool:
         """Delete file metadata."""
-        if self._use_postgres:
-            conn = self._get_connection()
-            try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "DELETE FROM dazzle_files WHERE id = %s",
-                    (str(file_id),),
-                )
-                rowcount = cursor.rowcount
-                conn.commit()
-                return bool(rowcount > 0)
-            finally:
-                conn.close()
-        else:
-            with self._get_connection() as conn:
-                cursor = conn.execute(
-                    "DELETE FROM dazzle_files WHERE id = ?",
-                    (str(file_id),),
-                )
-                conn.commit()
-                return bool(cursor.rowcount > 0)
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM dazzle_files WHERE id = %s",
+                (str(file_id),),
+            )
+            rowcount = cursor.rowcount
+            conn.commit()
+            return bool(rowcount > 0)
+        finally:
+            conn.close()
 
     def update_entity_association(
         self,
@@ -726,37 +626,23 @@ class FileMetadataStore:
             str(file_id),
         )
 
-        if self._use_postgres:
-            conn = self._get_connection()
-            try:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    UPDATE dazzle_files
-                    SET entity_name = %s, entity_id = %s, field_name = %s,
-                        updated_at = %s
-                    WHERE id = %s
-                    """,
-                    params,
-                )
-                rowcount = cursor.rowcount
-                conn.commit()
-                return bool(rowcount > 0)
-            finally:
-                conn.close()
-        else:
-            with self._get_connection() as conn:
-                cursor = conn.execute(
-                    """
-                    UPDATE dazzle_files
-                    SET entity_name = ?, entity_id = ?, field_name = ?,
-                        updated_at = ?
-                    WHERE id = ?
-                    """,
-                    params,
-                )
-                conn.commit()
-                return bool(cursor.rowcount > 0)
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE dazzle_files
+                SET entity_name = %s, entity_id = %s, field_name = %s,
+                    updated_at = %s
+                WHERE id = %s
+                """,
+                params,
+            )
+            rowcount = cursor.rowcount
+            conn.commit()
+            return bool(rowcount > 0)
+        finally:
+            conn.close()
 
     def _row_to_metadata(self, row: dict[str, Any]) -> FileMetadata:
         """Convert database row to FileMetadata."""
@@ -1158,33 +1044,35 @@ class FileService:
 
 def create_local_file_service(
     base_path: str | Path = ".dazzle/uploads",
-    db_path: str | Path = ".dazzle/files.db",
+    db_path: str | Path | None = None,
     base_url: str = "/files",
     max_size: int = 10 * 1024 * 1024,
     allowed_types: list[str] | None = None,
+    database_url: str | None = None,
 ) -> FileService:
     """
     Create a file service with local storage.
 
     Args:
         base_path: Directory for file storage
-        db_path: Path to metadata database
+        db_path: Deprecated, ignored. Accepted for backward compatibility.
         base_url: Base URL for file access
         max_size: Maximum file size
         allowed_types: Allowed MIME types
+        database_url: PostgreSQL connection URL (required).
 
     Returns:
         Configured FileService
     """
     storage = LocalStorageBackend(base_path, base_url)
-    metadata_store = FileMetadataStore(db_path)
+    metadata_store = FileMetadataStore(database_url=database_url)
     validator = FileValidator(max_size, allowed_types)
     return FileService(storage, metadata_store, validator)
 
 
 def create_s3_file_service(
     bucket: str,
-    db_path: str | Path = ".dazzle/files.db",
+    db_path: str | Path | None = None,
     region: str = "us-east-1",
     endpoint_url: str | None = None,
     access_key: str | None = None,
@@ -1192,13 +1080,14 @@ def create_s3_file_service(
     public_url: str | None = None,
     max_size: int = 10 * 1024 * 1024,
     allowed_types: list[str] | None = None,
+    database_url: str | None = None,
 ) -> FileService:
     """
     Create a file service with S3 storage.
 
     Args:
         bucket: S3 bucket name
-        db_path: Path to metadata database
+        db_path: Deprecated, ignored. Accepted for backward compatibility.
         region: AWS region
         endpoint_url: Custom endpoint for MinIO etc.
         access_key: AWS access key
@@ -1206,11 +1095,12 @@ def create_s3_file_service(
         public_url: CDN URL prefix
         max_size: Maximum file size
         allowed_types: Allowed MIME types
+        database_url: PostgreSQL connection URL (required).
 
     Returns:
         Configured FileService
     """
     storage = S3StorageBackend(bucket, region, endpoint_url, access_key, secret_key, public_url)
-    metadata_store = FileMetadataStore(db_path)
+    metadata_store = FileMetadataStore(database_url=database_url)
     validator = FileValidator(max_size, allowed_types)
     return FileService(storage, metadata_store, validator)

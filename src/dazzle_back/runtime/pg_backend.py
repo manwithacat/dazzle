@@ -125,15 +125,17 @@ class PostgresBackend:
     instead of SQLite. Parses DATABASE_URL for connection parameters.
     """
 
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str, search_path: str | None = None):
         """
         Initialize the PostgreSQL backend.
 
         Args:
             database_url: PostgreSQL connection URL
                           (e.g. postgresql://user:pass@host:5432/dbname)
+            search_path: Optional schema search path (e.g. 'tenant_abc')
         """
         self.database_url = database_url
+        self.search_path = search_path
         self._connection: Any = None
 
     @contextmanager
@@ -150,6 +152,8 @@ class PostgresBackend:
 
         conn = psycopg.connect(self.database_url, row_factory=dict_row)
         try:
+            if self.search_path:
+                conn.execute(f"SET search_path TO {self.search_path}, public")
             yield PgConnectionWrapper(conn)
             conn.commit()
         except Exception:
@@ -169,6 +173,8 @@ class PostgresBackend:
 
         if self._connection is None or self._connection.closed:
             raw = psycopg.connect(self.database_url, row_factory=dict_row)
+            if self.search_path:
+                raw.execute(f"SET search_path TO {self.search_path}, public")
             self._connection = PgConnectionWrapper(raw)
         return self._connection
 

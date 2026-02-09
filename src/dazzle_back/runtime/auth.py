@@ -1,5 +1,5 @@
 """
-Authentication runtime for DNR Backend.
+Authentication runtime for DNR Backend (PostgreSQL-only).
 
 Provides session-based authentication with cookie management.
 """
@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-import sqlite3
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+import psycopg
+from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
 
 # FastAPI is optional - import for type hints and runtime
@@ -113,119 +114,42 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 
 # =============================================================================
-# Auth Store (SQLite or PostgreSQL)
+# Auth Store (PostgreSQL)
 # =============================================================================
 
 
 class AuthStore:
     """
-    Authentication store using SQLite or PostgreSQL.
+    Authentication store using PostgreSQL.
 
     Manages users and sessions in a separate auth database.
-    Supports both SQLite (default, local dev) and PostgreSQL (production).
     """
 
     def __init__(
         self,
-        db_path: str | Path | None = None,
-        database_url: str | None = None,
+        database_url: str,
+        db_path: str | Path | None = None,  # Deprecated, ignored. Kept for backward compat.
     ):
         """
         Initialize the auth store.
 
         Args:
-            db_path: Path to SQLite database (default: .dazzle/auth.db)
-            database_url: PostgreSQL connection URL (takes precedence over db_path)
+            database_url: PostgreSQL connection URL
+            db_path: Deprecated, ignored. Kept for backward compatibility.
         """
         self._database_url = database_url
-        self._use_postgres = bool(database_url)
-
-        if self._use_postgres:
-            # Parse and store PostgreSQL URL
-            self._pg_url = database_url
-            # Normalize Heroku's postgres:// to postgresql://
-            if self._pg_url and self._pg_url.startswith("postgres://"):
-                self._pg_url = self._pg_url.replace("postgres://", "postgresql://", 1)
-        else:
-            self.db_path = Path(db_path) if db_path else Path(".dazzle/auth.db")
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        # Normalize Heroku's postgres:// to postgresql://
+        if self._database_url.startswith("postgres://"):
+            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
 
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection | Any:
-        """Get a database connection (SQLite or PostgreSQL)."""
-        if self._use_postgres:
-            import psycopg
-            from psycopg.rows import dict_row
-
-            assert self._pg_url is not None
-            return psycopg.connect(self._pg_url, row_factory=dict_row)
-        else:
-            conn = sqlite3.connect(str(self.db_path))
-            conn.row_factory = sqlite3.Row
-            return conn
-
-    def _placeholder(self, index: int = 0) -> str:
-        """Get the parameter placeholder for the current backend."""
-        return "%s" if self._use_postgres else "?"
-
-    def _bool_to_db(self, value: bool) -> int | bool:
-        """Convert boolean to database value."""
-        return value if self._use_postgres else (1 if value else 0)
-
-    def _db_to_bool(self, value: object) -> bool:
-        """Convert database value to boolean."""
-        return bool(value)
+    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
+        """Get a PostgreSQL database connection."""
+        return psycopg.connect(self._database_url, row_factory=dict_row)
 
     def _init_db(self) -> None:
         """Initialize database tables."""
-        if self._use_postgres:
-            self._init_postgres_db()
-        else:
-            self._init_sqlite_db()
-
-    def _init_sqlite_db(self) -> None:
-        """Initialize SQLite tables."""
-        with self._get_connection() as conn:
-            conn.executescript("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    username TEXT,
-                    is_active INTEGER DEFAULT 1,
-                    is_superuser INTEGER DEFAULT 0,
-                    roles TEXT DEFAULT '[]',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                );
-
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    ip_address TEXT,
-                    user_agent TEXT
-                );
-
-                CREATE TABLE IF NOT EXISTS password_reset_tokens (
-                    token TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    used INTEGER DEFAULT 0
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-                CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-                CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
-                CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id);
-            """)
-            conn.commit()
-
-    def _init_postgres_db(self) -> None:
-        """Initialize PostgreSQL tables."""
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
@@ -261,7 +185,6 @@ class AuthStore:
                     used BOOLEAN DEFAULT FALSE
                 )
             """)
-            # Create indexes (PostgreSQL syntax)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
             cursor.execute(
@@ -276,27 +199,14 @@ class AuthStore:
 
     def _execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
         """Execute a query and return results as list of dicts."""
-        # Convert ? placeholders to %s for PostgreSQL
-        if self._use_postgres:
-            query = query.replace("?", "%s")
-
         conn = self._get_connection()
         try:
-            if self._use_postgres:
-                cursor = conn.cursor()
-                cursor.execute(query, params)
-                if cursor.description:
-                    # RealDictCursor returns dict-like rows, just convert to dict
-                    return [dict(row) for row in cursor.fetchall()]
-                conn.commit()
-                return []
-            else:
-                # SQLite
-                cursor = conn.execute(query, params)
-                if cursor.description:
-                    return [dict(row) for row in cursor.fetchall()]
-                conn.commit()
-                return []
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            if cursor.description:
+                return [dict(row) for row in cursor.fetchall()]
+            conn.commit()
+            return []
         finally:
             conn.close()
 
@@ -307,24 +217,13 @@ class AuthStore:
 
     def _execute_modify(self, query: str, params: tuple[object, ...] = ()) -> int:
         """Execute a modification query and return rowcount."""
-        # Convert ? placeholders to %s for PostgreSQL
-        if self._use_postgres:
-            query = query.replace("?", "%s")
-
         conn = self._get_connection()
         try:
-            if self._use_postgres:
-                cursor = conn.cursor()
-                cursor.execute(query, params)
-                rowcount: int = cursor.rowcount
-                conn.commit()
-                return rowcount
-            else:
-                # SQLite
-                cursor = conn.execute(query, params)
-                rowcount_sqlite: int = cursor.rowcount
-                conn.commit()
-                return rowcount_sqlite
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            rowcount: int = cursor.rowcount
+            conn.commit()
+            return rowcount
         finally:
             conn.close()
 
@@ -367,15 +266,15 @@ class AuthStore:
             """
             INSERT INTO users (id, email, password_hash, username, is_active,
                                is_superuser, roles, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 str(user.id),
                 user.email,
                 user.password_hash,
                 user.username,
-                self._bool_to_db(user.is_active),
-                self._bool_to_db(user.is_superuser),
+                user.is_active,
+                user.is_superuser,
                 json.dumps(user.roles),
                 user.created_at.isoformat(),
                 user.updated_at.isoformat(),
@@ -393,8 +292,8 @@ class AuthStore:
             email=row["email"],
             password_hash=row["password_hash"],
             username=row["username"],
-            is_active=self._db_to_bool(row["is_active"]),
-            is_superuser=self._db_to_bool(row["is_superuser"]),
+            is_active=bool(row["is_active"]),
+            is_superuser=bool(row["is_superuser"]),
             roles=json.loads(row["roles"]),
             created_at=datetime.fromisoformat(row["created_at"]),
             updated_at=datetime.fromisoformat(row["updated_at"]),
@@ -402,12 +301,12 @@ class AuthStore:
 
     def get_user_by_email(self, email: str) -> UserRecord | None:
         """Get user by email."""
-        row = self._execute_one("SELECT * FROM users WHERE email = ?", (email,))
+        row = self._execute_one("SELECT * FROM users WHERE email = %s", (email,))
         return self._row_to_user(row) if row else None
 
     def get_user_by_id(self, user_id: UUID) -> UserRecord | None:
         """Get user by ID."""
-        row = self._execute_one("SELECT * FROM users WHERE id = ?", (str(user_id),))
+        row = self._execute_one("SELECT * FROM users WHERE id = %s", (str(user_id),))
         return self._row_to_user(row) if row else None
 
     def authenticate(self, email: str, password: str) -> UserRecord | None:
@@ -428,8 +327,8 @@ class AuthStore:
         rowcount = self._execute_modify(
             """
             UPDATE users
-            SET password_hash = ?, updated_at = ?
-            WHERE id = ?
+            SET password_hash = %s, updated_at = %s
+            WHERE id = %s
             """,
             (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
         )
@@ -458,16 +357,16 @@ class AuthStore:
 
         # Invalidate any existing unused tokens for this user
         self._execute_modify(
-            "UPDATE password_reset_tokens SET used = ? WHERE user_id = ? AND used = ?",
-            (self._bool_to_db(True), str(user_id), self._bool_to_db(False)),
+            "UPDATE password_reset_tokens SET used = TRUE WHERE user_id = %s AND used = FALSE",
+            (str(user_id),),
         )
 
         self._execute_modify(
             """
             INSERT INTO password_reset_tokens (token, user_id, created_at, expires_at, used)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, FALSE)
             """,
-            (token, str(user_id), now.isoformat(), expires_at.isoformat(), self._bool_to_db(False)),
+            (token, str(user_id), now.isoformat(), expires_at.isoformat()),
         )
 
         return token
@@ -478,7 +377,7 @@ class AuthStore:
         Returns None if the token is invalid, expired, or already used.
         """
         rows = self._execute(
-            "SELECT * FROM password_reset_tokens WHERE token = ?",
+            "SELECT * FROM password_reset_tokens WHERE token = %s",
             (token,),
         )
 
@@ -486,7 +385,7 @@ class AuthStore:
             return None
 
         row = rows[0]
-        if row.get("used") in (1, True, "1"):
+        if row.get("used") is True:
             return None
 
         expires_at = datetime.fromisoformat(row["expires_at"])
@@ -502,8 +401,8 @@ class AuthStore:
         Returns True if the token was successfully consumed.
         """
         rowcount = self._execute_modify(
-            "UPDATE password_reset_tokens SET used = ? WHERE token = ? AND used = ?",
-            (self._bool_to_db(True), token, self._bool_to_db(False)),
+            "UPDATE password_reset_tokens SET used = TRUE WHERE token = %s AND used = FALSE",
+            (token,),
         )
         return rowcount > 0
 
@@ -530,10 +429,10 @@ class AuthStore:
         params: list[object] = []
 
         if active_only:
-            conditions.append(f"is_active = {self._bool_to_db(True)}")
+            conditions.append("is_active = TRUE")
 
         where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-        query = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        query = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params.extend([limit, offset])
 
         rows = self._execute(query, tuple(params))
@@ -574,29 +473,29 @@ class AuthStore:
         params: list[object] = []
 
         if username is not None:
-            updates.append("username = ?")
+            updates.append("username = %s")
             params.append(username)
 
         if roles is not None:
-            updates.append("roles = ?")
+            updates.append("roles = %s")
             params.append(json.dumps(roles))
 
         if is_active is not None:
-            updates.append("is_active = ?")
-            params.append(self._bool_to_db(is_active))
+            updates.append("is_active = %s")
+            params.append(is_active)
 
         if is_superuser is not None:
-            updates.append("is_superuser = ?")
-            params.append(self._bool_to_db(is_superuser))
+            updates.append("is_superuser = %s")
+            params.append(is_superuser)
 
         if not updates:
             return None
 
-        updates.append("updated_at = ?")
+        updates.append("updated_at = %s")
         params.append(datetime.now(UTC).isoformat())
         params.append(str(user_id))
 
-        query = f"UPDATE users SET {', '.join(updates)} WHERE id = ?"
+        query = f"UPDATE users SET {', '.join(updates)} WHERE id = %s"
         rowcount = self._execute_modify(query, tuple(params))
 
         if rowcount == 0:
@@ -615,7 +514,7 @@ class AuthStore:
             Number of active sessions
         """
         rows = self._execute(
-            "SELECT COUNT(*) as count FROM sessions WHERE user_id = ? AND expires_at > ?",
+            "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
             (str(user_id), datetime.now(UTC).isoformat()),
         )
         return rows[0]["count"] if rows else 0
@@ -653,7 +552,7 @@ class AuthStore:
         self._execute(
             """
             INSERT INTO sessions (id, user_id, created_at, expires_at, ip_address, user_agent)
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """,
             (
                 session.id,
@@ -669,7 +568,7 @@ class AuthStore:
 
     def get_session(self, session_id: str) -> SessionRecord | None:
         """Get session by ID."""
-        row = self._execute_one("SELECT * FROM sessions WHERE id = ?", (session_id,))
+        row = self._execute_one("SELECT * FROM sessions WHERE id = %s", (session_id,))
 
         if row:
             return SessionRecord(
@@ -715,17 +614,17 @@ class AuthStore:
 
     def delete_session(self, session_id: str) -> bool:
         """Delete a session."""
-        rowcount = self._execute_modify("DELETE FROM sessions WHERE id = ?", (session_id,))
+        rowcount = self._execute_modify("DELETE FROM sessions WHERE id = %s", (session_id,))
         return rowcount > 0
 
     def delete_user_sessions(self, user_id: UUID) -> int:
         """Delete all sessions for a user."""
-        return self._execute_modify("DELETE FROM sessions WHERE user_id = ?", (str(user_id),))
+        return self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),))
 
     def cleanup_expired_sessions(self) -> int:
         """Delete all expired sessions."""
         return self._execute_modify(
-            "DELETE FROM sessions WHERE expires_at < ?",
+            "DELETE FROM sessions WHERE expires_at < %s",
             (datetime.now(UTC).isoformat(),),
         )
 

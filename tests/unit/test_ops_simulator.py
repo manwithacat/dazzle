@@ -7,21 +7,22 @@ Tests the synthetic event generation for dashboard demonstration.
 from __future__ import annotations
 
 import asyncio
-from pathlib import Path
 
 import pytest
 
 from dazzle_back.runtime.ops_database import OpsDatabase
 from dazzle_back.runtime.ops_simulator import OpsSimulator
 
+pytestmark = pytest.mark.e2e
+
 
 class TestOpsSimulator:
     """Tests for OpsSimulator."""
 
     @pytest.fixture
-    def ops_db(self, tmp_path: Path) -> OpsDatabase:
-        """Create a temporary ops database."""
-        return OpsDatabase(db_path=tmp_path / "ops.db")
+    def ops_db(self) -> OpsDatabase:
+        """Create an ops database for testing."""
+        return OpsDatabase(database_url="postgresql://mock/test")
 
     @pytest.fixture
     def simulator(self, ops_db: OpsDatabase) -> OpsSimulator:
@@ -133,9 +134,9 @@ class TestOpsSimulatorDataVariety:
     """Tests for synthetic data variety."""
 
     @pytest.fixture
-    def ops_db(self, tmp_path: Path) -> OpsDatabase:
-        """Create a temporary ops database."""
-        return OpsDatabase(db_path=tmp_path / "ops.db")
+    def ops_db(self) -> OpsDatabase:
+        """Create an ops database for testing."""
+        return OpsDatabase(database_url="postgresql://mock/test")
 
     @pytest.fixture
     def simulator(self, ops_db: OpsDatabase) -> OpsSimulator:

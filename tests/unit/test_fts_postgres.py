@@ -1,8 +1,7 @@
-"""Tests for PostgreSQL FTS backend and FTSManager routing."""
+"""Tests for PostgreSQL FTS backend and FTSManager."""
 
 from __future__ import annotations
 
-import sqlite3
 from unittest.mock import MagicMock
 
 from dazzle_back.runtime.fts_manager import FTSConfig, FTSManager, create_fts_manager
@@ -249,30 +248,20 @@ class TestPostgresFTSBackendRebuildIndex:
 
 
 # ===========================================================================
-# FTSManager routing tests
+# FTSManager tests (PostgreSQL-only)
 # ===========================================================================
 
 
-class TestFTSManagerRouting:
-    def test_no_database_url_uses_sqlite(self):
+class TestFTSManager:
+    def test_default_creates_pg_backend(self):
         manager = FTSManager()
-        assert not manager._use_postgres
-        assert manager._pg_backend is None
-
-    def test_postgres_url_creates_backend(self):
-        manager = FTSManager(database_url="postgresql://localhost/test")
-        assert manager._use_postgres
         assert isinstance(manager._pg_backend, PostgresFTSBackend)
 
-    def test_postgres_scheme_variant(self):
-        manager = FTSManager(database_url="postgres://localhost/test")
-        assert manager._use_postgres
+    def test_with_database_url(self):
+        manager = FTSManager(database_url="postgresql://localhost/test")
+        assert isinstance(manager._pg_backend, PostgresFTSBackend)
 
-    def test_sqlite_url_does_not_create_backend(self):
-        manager = FTSManager(database_url="sqlite:///test.db")
-        assert not manager._use_postgres
-
-    def test_create_fts_table_routes_to_postgres(self):
+    def test_create_fts_table_uses_gin_index(self):
         manager = FTSManager(database_url="postgresql://localhost/test")
         manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
         conn, cursor = _make_mock_conn()
@@ -284,25 +273,7 @@ class TestFTSManagerRouting:
         assert "USING GIN" in sql
         assert "Task" in manager._initialized
 
-    def test_create_fts_table_routes_to_sqlite(self, tmp_path):
-        manager = FTSManager()
-        manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
-        db = tmp_path / "test.db"
-        conn = sqlite3.connect(str(db))
-
-        # Need the main table for triggers
-        conn.execute('CREATE TABLE "Task" ("id" TEXT, "title" TEXT)')
-
-        manager.create_fts_table(conn, "Task")
-
-        # Verify FTS5 table was created
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='Task_fts'"
-        )
-        assert cursor.fetchone() is not None
-        conn.close()
-
-    def test_search_routes_to_postgres(self):
+    def test_search_uses_postgres_backend(self):
         manager = FTSManager(database_url="postgresql://localhost/test")
         manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
         conn, cursor = _make_mock_conn(fetchone_val=(0,), fetchall_val=[])
@@ -310,11 +281,11 @@ class TestFTSManagerRouting:
         ids, total = manager.search(conn, "Task", "hello")
         assert total == 0
         assert ids == []
-        # Should use plainto_tsquery, not FTS5 MATCH
+        # Should use plainto_tsquery
         sql = cursor.execute.call_args_list[0][0][0]
         assert "plainto_tsquery" in sql
 
-    def test_search_with_snippets_routes_to_postgres(self):
+    def test_search_with_snippets_uses_postgres_backend(self):
         manager = FTSManager(database_url="postgresql://localhost/test")
         manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
         conn, cursor = _make_mock_conn(fetchall_val=[])
@@ -324,7 +295,7 @@ class TestFTSManagerRouting:
         sql = cursor.execute.call_args[0][0]
         assert "ts_headline" in sql
 
-    def test_rebuild_index_routes_to_postgres(self):
+    def test_rebuild_index_uses_postgres_backend(self):
         manager = FTSManager(database_url="postgresql://localhost/test")
         manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
         conn, cursor = _make_mock_conn(fetchone_val=(5,))
@@ -357,14 +328,14 @@ class TestCreateFTSManager:
         entity = _make_entity_spec("Task", ["title"])
         manager = create_fts_manager([entity], database_url="postgresql://localhost/db")
 
-        assert manager._use_postgres
+        assert isinstance(manager._pg_backend, PostgresFTSBackend)
         assert manager.is_enabled("Task")
 
     def test_without_database_url(self):
         entity = _make_entity_spec("Task", ["title"])
         manager = create_fts_manager([entity])
 
-        assert not manager._use_postgres
+        assert isinstance(manager._pg_backend, PostgresFTSBackend)
         assert manager.is_enabled("Task")
 
     def test_with_searchable_entities(self):
@@ -378,56 +349,3 @@ class TestCreateFTSManager:
         config = manager.get_config("Task")
         assert config is not None
         assert config.searchable_fields == ["title"]
-
-
-# ===========================================================================
-# SQLite functional tests (FTSManager, no mocking)
-# ===========================================================================
-
-
-class TestFTSManagerSQLiteFunctional:
-    def test_sqlite_search_works(self, tmp_path):
-        """Full round-trip: create table, insert, search."""
-        db = tmp_path / "test.db"
-        conn = sqlite3.connect(str(db))
-
-        # Create main table and insert data
-        conn.execute('CREATE TABLE "Task" ("id" TEXT, "title" TEXT)')
-        conn.execute('INSERT INTO "Task" VALUES (?, ?)', ("1", "Buy groceries"))
-        conn.execute('INSERT INTO "Task" VALUES (?, ?)', ("2", "Walk the dog"))
-        conn.execute('INSERT INTO "Task" VALUES (?, ?)', ("3", "Buy milk"))
-        conn.commit()
-
-        manager = FTSManager()
-        manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
-        manager.create_fts_table(conn, "Task")
-
-        # Rebuild to populate FTS from existing rows
-        count = manager.rebuild_index(conn, "Task")
-        assert count == 3
-
-        # Search
-        ids, total = manager.search(conn, "Task", "buy")
-        assert total == 2
-        assert set(ids) == {"1", "3"}
-
-        conn.close()
-
-    def test_sqlite_snippets_work(self, tmp_path):
-        db = tmp_path / "test.db"
-        conn = sqlite3.connect(str(db))
-
-        conn.execute('CREATE TABLE "Task" ("id" TEXT, "title" TEXT)')
-        conn.execute('INSERT INTO "Task" VALUES (?, ?)', ("1", "Buy groceries"))
-        conn.commit()
-
-        manager = FTSManager()
-        manager._configs["Task"] = FTSConfig(entity_name="Task", searchable_fields=["title"])
-        manager.create_fts_table(conn, "Task")
-        manager.rebuild_index(conn, "Task")
-
-        results = manager.search_with_snippets(conn, "Task", "buy")
-        assert len(results) == 1
-        assert "<mark>" in results[0]["title_snippet"]
-
-        conn.close()

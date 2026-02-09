@@ -7,7 +7,6 @@ Tests for jwt_auth.py, jwt_middleware.py, and token_store.py.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -162,15 +161,16 @@ class TestJWTService:
 # =============================================================================
 
 
+@pytest.mark.e2e
 class TestTokenStore:
     """Test TokenStore class."""
 
     @pytest.fixture
-    def token_store(self, tmp_path: Path):
-        """Create token store with temp database."""
+    def token_store(self):
+        """Create token store with PostgreSQL test database."""
         from dazzle_back.runtime.token_store import TokenStore
 
-        return TokenStore(db_path=tmp_path / "tokens.db")
+        return TokenStore(database_url="postgresql://mock/test")
 
     @pytest.fixture
     def user(self):
@@ -372,15 +372,16 @@ class TestJWTMiddleware:
 # =============================================================================
 
 
+@pytest.mark.e2e
 class TestDeviceRegistry:
     """Test DeviceRegistry class."""
 
     @pytest.fixture
-    def registry(self, tmp_path: Path):
-        """Create device registry with temp database."""
+    def registry(self):
+        """Create device registry with PostgreSQL test database."""
         from dazzle_back.runtime.device_registry import DeviceRegistry
 
-        return DeviceRegistry(db_path=tmp_path / "devices.db")
+        return DeviceRegistry(database_url="postgresql://mock/test")
 
     def test_register_device(self, registry) -> None:
         """Should register a device."""

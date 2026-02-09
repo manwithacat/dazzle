@@ -1,7 +1,7 @@
 """
 Auto-migration system for DNR Backend.
 
-Detects schema changes between EntitySpec and existing SQLite tables,
+Detects schema changes between EntitySpec and existing PostgreSQL tables,
 and applies migrations automatically.
 
 Supported operations:
@@ -17,21 +17,16 @@ Not supported (requires manual migration):
 
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
 from dazzle_back.runtime.query_builder import quote_identifier
-from dazzle_back.runtime.repository import (
-    _field_type_to_sqlite,
-    _python_to_sqlite,
-)
 from dazzle_back.specs.entity import EntitySpec, FieldSpec
 
-# Type alias: db_manager can be DatabaseManager (SQLite) or PostgresBackend
-DatabaseBackend = Any  # Union[DatabaseManager, PostgresBackend]
+# Type alias: db_manager is PostgresBackend (duck-typed .connection() context manager)
+DatabaseBackend = Any  # PostgresBackend
 
 # =============================================================================
 # Migration Types
@@ -96,30 +91,7 @@ class ColumnInfo:
     is_pk: bool
 
 
-def get_table_schema(conn: sqlite3.Connection, table_name: str) -> list[ColumnInfo]:
-    """Get column information for a table."""
-    cursor = conn.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
-    columns = []
-    for row in cursor.fetchall():
-        columns.append(
-            ColumnInfo(
-                name=row[1],
-                type=row[2],
-                not_null=bool(row[3]),
-                default=row[4],
-                is_pk=bool(row[5]),
-            )
-        )
-    return columns
-
-
-def get_table_indexes(conn: sqlite3.Connection, table_name: str) -> list[str]:
-    """Get index names for a table."""
-    cursor = conn.execute(f"PRAGMA index_list({quote_identifier(table_name)})")
-    return [row[1] for row in cursor.fetchall()]
-
-
-def _get_pg_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
+def get_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
     """Get column information for a PostgreSQL table."""
     cursor = conn.cursor()
     cursor.execute(
@@ -131,7 +103,6 @@ def _get_pg_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
     )
     columns = []
     for row in cursor.fetchall():
-        # row is a RealDictRow
         r = dict(row)
         columns.append(
             ColumnInfo(
@@ -139,13 +110,13 @@ def _get_pg_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
                 type=r["data_type"].upper(),
                 not_null=r["is_nullable"] == "NO",
                 default=r["column_default"],
-                is_pk=False,  # Simplified — PK detection via pg_constraint if needed
+                is_pk=False,  # PK detection via pg_constraint if needed
             )
         )
     return columns
 
 
-def _get_pg_table_indexes(conn: Any, table_name: str) -> list[str]:
+def get_table_indexes(conn: Any, table_name: str) -> list[str]:
     """Get index names for a PostgreSQL table."""
     cursor = conn.cursor()
     cursor.execute(
@@ -167,10 +138,6 @@ class MigrationPlanner:
 
     def __init__(self, db_manager: DatabaseBackend):
         self.db = db_manager
-
-    @property
-    def _is_postgres(self) -> bool:
-        return getattr(self.db, "backend_type", "sqlite") == "postgres"
 
     def plan_migrations(self, entities: list[EntitySpec]) -> MigrationPlan:
         """
@@ -213,19 +180,12 @@ class MigrationPlanner:
         warnings: list[str] = []
 
         # Check if table exists
-        if self._is_postgres:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = %s",
-                (entity.name,),
-            )
-            table_exists = cursor.fetchone() is not None
-        else:
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-                (entity.name,),
-            )
-            table_exists = cursor.fetchone() is not None
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = %s",
+            (entity.name,),
+        )
+        table_exists = cursor.fetchone() is not None
 
         if not table_exists:
             # New table - create it
@@ -264,14 +224,9 @@ class MigrationPlanner:
             return steps, warnings
 
         # Table exists - compare columns
-        if self._is_postgres:
-            existing_columns = _get_pg_table_schema(conn, entity.name)
-            existing_column_names = {c.name for c in existing_columns}
-            existing_indexes = set(_get_pg_table_indexes(conn, entity.name))
-        else:
-            existing_columns = get_table_schema(conn, entity.name)
-            existing_column_names = {c.name for c in existing_columns}
-            existing_indexes = set(get_table_indexes(conn, entity.name))
+        existing_columns = get_table_schema(conn, entity.name)
+        existing_column_names = {c.name for c in existing_columns}
+        existing_indexes = set(get_table_indexes(conn, entity.name))
 
         # Build expected columns from entity
         expected_fields = {f.name: f for f in entity.fields}
@@ -316,14 +271,12 @@ class MigrationPlanner:
 
                 # If orphaned col "price" has NOT NULL, and expected fields
                 # contain "price_minor" + "price_currency", this is a money
-                # expansion → DROP NOT NULL on the old column so INSERTs
-                # don't crash.  (Postgres only — SQLite doesn't support
-                # ALTER COLUMN.)
+                # expansion -> DROP NOT NULL on the old column so INSERTs
+                # don't crash.
                 if (
                     col.not_null
                     and f"{col.name}_minor" in expected_fields
                     and f"{col.name}_currency" in expected_fields
-                    and self._is_postgres
                 ):
                     steps.append(
                         MigrationStep(
@@ -376,12 +329,10 @@ class MigrationPlanner:
         return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(columns)})"
 
     def _get_column_type(self, field: FieldSpec) -> str:
-        """Get the appropriate column type for the current backend."""
-        if self._is_postgres:
-            from dazzle_back.runtime.pg_backend import _field_type_to_postgres
+        """Get the appropriate PostgreSQL column type."""
+        from dazzle_back.runtime.pg_backend import _field_type_to_postgres
 
-            return _field_type_to_postgres(field.type)
-        return _field_type_to_sqlite(field.type)
+        return _field_type_to_postgres(field.type)
 
     def _generate_column_def(self, field: FieldSpec) -> str:
         """Generate column definition for a field."""
@@ -409,12 +360,10 @@ class MigrationPlanner:
         return " ".join(parts)
 
     def _convert_default(self, value: Any, field_type: Any) -> Any:
-        """Convert a default value for the current backend."""
-        if self._is_postgres:
-            from dazzle_back.runtime.pg_backend import _python_to_postgres
+        """Convert a default value for PostgreSQL."""
+        from dazzle_back.runtime.pg_backend import _python_to_postgres
 
-            return _python_to_postgres(value, field_type)
-        return _python_to_sqlite(value, field_type)
+        return _python_to_postgres(value, field_type)
 
     def _generate_add_column_sql(self, table_name: str, field: FieldSpec) -> str:
         """Generate ALTER TABLE ADD COLUMN SQL."""
@@ -422,11 +371,6 @@ class MigrationPlanner:
         table = quote_identifier(table_name)
         col_name = quote_identifier(field.name)
         parts = [f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"]
-
-        # SQLite has restrictions on ALTER TABLE:
-        # - Cannot add NOT NULL without default
-        # - Cannot add PRIMARY KEY
-        # So we make new columns nullable or provide defaults
 
         if field.default is not None:
             default_val = self._convert_default(field.default, field.type)
@@ -452,12 +396,12 @@ class MigrationPlanner:
         if field.type.kind == "scalar" and field.type.scalar_type:
             from dazzle_back.specs.entity import ScalarType
 
-            defaults = {
+            defaults: dict[ScalarType, Any] = {
                 ScalarType.STR: "",
                 ScalarType.TEXT: "",
                 ScalarType.INT: 0,
                 ScalarType.DECIMAL: 0.0,
-                ScalarType.BOOL: 0,
+                ScalarType.BOOL: False,
                 ScalarType.UUID: "",
                 ScalarType.EMAIL: "",
                 ScalarType.URL: "",
@@ -469,7 +413,7 @@ class MigrationPlanner:
         return None
 
     def _generate_drop_not_null_sql(self, table_name: str, column_name: str) -> str:
-        """Generate ALTER TABLE ... ALTER COLUMN ... DROP NOT NULL SQL (Postgres only)."""
+        """Generate ALTER TABLE ... ALTER COLUMN ... DROP NOT NULL SQL."""
         table = quote_identifier(table_name)
         col = quote_identifier(column_name)
         return f"ALTER TABLE {table} ALTER COLUMN {col} DROP NOT NULL"
@@ -538,7 +482,7 @@ class MigrationError(Exception):
 
 
 # =============================================================================
-# Migration History (Optional)
+# Migration History
 # =============================================================================
 
 
@@ -555,36 +499,19 @@ class MigrationHistory:
         self.db = db_manager
         self._ensure_table()
 
-    @property
-    def _is_postgres(self) -> bool:
-        return getattr(self.db, "backend_type", "sqlite") == "postgres"
-
     def _ensure_table(self) -> None:
         """Ensure migrations table exists."""
-        if self._is_postgres:
-            sql = f"""
-            CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
-                id SERIAL PRIMARY KEY,
-                applied_at TEXT NOT NULL,
-                action TEXT NOT NULL,
-                table_name TEXT NOT NULL,
-                column_name TEXT,
-                sql_executed TEXT,
-                details TEXT
-            )
-            """
-        else:
-            sql = f"""
-            CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                applied_at TEXT NOT NULL,
-                action TEXT NOT NULL,
-                table_name TEXT NOT NULL,
-                column_name TEXT,
-                sql_executed TEXT,
-                details TEXT
-            )
-            """
+        sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
+            id SERIAL PRIMARY KEY,
+            applied_at TEXT NOT NULL,
+            action TEXT NOT NULL,
+            table_name TEXT NOT NULL,
+            column_name TEXT,
+            sql_executed TEXT,
+            details TEXT
+        )
+        """
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
@@ -593,11 +520,10 @@ class MigrationHistory:
         """Record an executed migration step."""
         import json
 
-        ph = getattr(self.db, "placeholder", "?")
         sql = f"""
         INSERT INTO {self.TABLE_NAME}
         (applied_at, action, table_name, column_name, sql_executed, details)
-        VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
         params = (
             datetime.now(UTC).isoformat(),
@@ -617,11 +543,7 @@ class MigrationHistory:
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(sql)
-            if self._is_postgres:
-                return [dict(row) for row in cursor.fetchall()]
-            else:
-                columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
+            return [dict(row) for row in cursor.fetchall()]
 
 
 # =============================================================================
@@ -640,7 +562,7 @@ def auto_migrate(
     This is the main entry point for auto-migration.
 
     Args:
-        db_manager: Database manager instance
+        db_manager: Database manager instance (PostgresBackend)
         entities: List of entity specifications
         record_history: Whether to record migration history
 
@@ -674,7 +596,7 @@ def plan_migrations(
     Useful for previewing what would happen.
 
     Args:
-        db_manager: Database manager instance
+        db_manager: Database manager instance (PostgresBackend)
         entities: List of entity specifications
 
     Returns:

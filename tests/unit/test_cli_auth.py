@@ -10,14 +10,15 @@ from typer.testing import CliRunner
 
 from dazzle_back.runtime.auth import AuthStore
 
+pytestmark = pytest.mark.e2e
+
 runner = CliRunner()
 
 
 @pytest.fixture()
-def auth_store(tmp_path):
-    """Create a real SQLite AuthStore in a temp directory."""
-    db_path = tmp_path / "auth.db"
-    return AuthStore(db_path=db_path)
+def auth_store():
+    """Create an AuthStore backed by a PostgreSQL test database."""
+    return AuthStore(database_url="postgresql://mock/test")
 
 
 @pytest.fixture()

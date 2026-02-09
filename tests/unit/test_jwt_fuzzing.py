@@ -387,23 +387,20 @@ class TestHeaderFuzzing:
 # =============================================================================
 
 
+@pytest.mark.e2e
 class TestTokenStoreFuzzing:
     """Fuzz test token store operations."""
 
     @given(token=st.text(min_size=0, max_size=1000))
     @settings(max_examples=100, suppress_health_check=[HealthCheck.function_scoped_fixture])
-    def test_validate_random_token_no_crash(self, token: str, tmp_path) -> None:
+    def test_validate_random_token_no_crash(self, token: str) -> None:
         """Token store should handle random validation queries."""
-        # Use unique path per test to avoid collisions
-        import tempfile
-
         from dazzle_back.runtime.token_store import TokenStore
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store = TokenStore(db_path=f"{tmpdir}/tokens.db")
-            result = store.validate_token(token)
-            # Should return None for invalid tokens
-            assert result is None
+        store = TokenStore(database_url="postgresql://mock/test")
+        result = store.validate_token(token)
+        # Should return None for invalid tokens
+        assert result is None
 
     @given(
         ip=st.one_of(st.none(), st.text(min_size=0, max_size=50)),
@@ -416,31 +413,27 @@ class TestTokenStoreFuzzing:
         ip: str | None,
         ua: str | None,
         device: str | None,
-        tmp_path,
     ) -> None:
         """Token creation should handle various metadata combinations."""
-        import tempfile
-
         from dazzle_back.runtime.auth import UserRecord
         from dazzle_back.runtime.token_store import TokenStore
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            store = TokenStore(db_path=f"{tmpdir}/tokens.db")
-            user = UserRecord(
-                id=uuid4(),
-                email="test@example.com",
-                password_hash="hash",
-                roles=["user"],
-            )
+        store = TokenStore(database_url="postgresql://mock/test")
+        user = UserRecord(
+            id=uuid4(),
+            email="test@example.com",
+            password_hash="hash",
+            roles=["user"],
+        )
 
-            token = store.create_token(
-                user,
-                ip_address=ip,
-                user_agent=ua,
-                device_id=device,
-            )
+        token = store.create_token(
+            user,
+            ip_address=ip,
+            user_agent=ua,
+            device_id=device,
+        )
 
-            assert token
-            record = store.validate_token(token)
-            assert record is not None
-            assert record.user_id == user.id
+        assert token
+        record = store.validate_token(token)
+        assert record is not None
+        assert record.user_id == user.id

@@ -6,7 +6,7 @@ Tests the complete flow from spec to running API.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -120,10 +120,12 @@ class TestE2EEndpoints:
     """End-to-end endpoint tests."""
 
     @pytest.fixture
-    def client(self, task_spec: BackendSpec, tmp_path: Any) -> TestClient:
+    def client(self, task_spec: BackendSpec) -> TestClient:
         """Create a test client."""
-        db_path = tmp_path / "test.db"
-        app = create_app(task_spec, db_path=db_path, use_database=True)
+        import os
+
+        database_url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
+        app = create_app(task_spec, database_url=database_url, use_database=True)
         return _TestClient(app)
 
     def test_health_endpoint(self, client: TestClient) -> None:

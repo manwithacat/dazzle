@@ -71,18 +71,40 @@ def minimal_backend_spec() -> BackendSpec:
     )
 
 
+# Shared decorator stack for tests that call .build() with auth enabled
+_MOCK_BUILD_AUTH = [
+    patch("dazzle_back.runtime.auth.AuthStore._init_db"),
+    patch("dazzle_back.runtime.server.auto_migrate"),
+    patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
+]
+
+# Shared decorator stack for tests that call .build() without auth
+_MOCK_BUILD = [
+    patch("dazzle_back.runtime.server.auto_migrate"),
+    patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
+]
+
+
 class TestSocialAuthWiring:
     """Tests for social auth route wiring."""
 
+    @patch("dazzle_back.runtime.auth.AuthStore._init_db")
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_no_oauth_config_no_social_routes(
-        self, minimal_backend_spec: BackendSpec, tmp_path
+        self,
+        _mock_pg,
+        _mock_migrate,
+        _mock_auth_init,
+        minimal_backend_spec: BackendSpec,
+        tmp_path,
     ) -> None:
         """Server starts normally without OAuth config."""
         from dazzle_back.runtime.server import DNRBackendApp
 
         app_builder = DNRBackendApp(
             minimal_backend_spec,
-            db_path=tmp_path / "data.db",
+            database_url="postgresql://mock/test",
             enable_auth=True,
             auth_config=None,  # No auth config
         )
@@ -93,8 +115,16 @@ class TestSocialAuthWiring:
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
+    @patch("dazzle_back.runtime.auth.AuthStore._init_db")
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_empty_oauth_providers_no_social_routes(
-        self, minimal_backend_spec: BackendSpec, tmp_path
+        self,
+        _mock_pg,
+        _mock_migrate,
+        _mock_auth_init,
+        minimal_backend_spec: BackendSpec,
+        tmp_path,
     ) -> None:
         """Server starts normally with empty oauth_providers list."""
         from dazzle_back.runtime.server import DNRBackendApp
@@ -106,7 +136,7 @@ class TestSocialAuthWiring:
 
         app_builder = DNRBackendApp(
             minimal_backend_spec,
-            db_path=tmp_path / "data.db",
+            database_url="postgresql://mock/test",
             enable_auth=True,
             auth_config=auth_config,
         )
@@ -117,8 +147,18 @@ class TestSocialAuthWiring:
         social_routes = [r for r in routes if "/auth/social" in r]
         assert len(social_routes) == 0, "Social routes should not be present"
 
+    @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle_back.runtime.auth.AuthStore._init_db")
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_oauth_config_with_env_vars_creates_social_routes(
-        self, minimal_backend_spec: BackendSpec, tmp_path
+        self,
+        _mock_pg,
+        _mock_migrate,
+        _mock_auth_init,
+        _mock_token_init,
+        minimal_backend_spec: BackendSpec,
+        tmp_path,
     ) -> None:
         """Social routes are created when OAuth is configured with valid env vars."""
         from dazzle_back.runtime.server import DNRBackendApp
@@ -138,7 +178,7 @@ class TestSocialAuthWiring:
         with patch.dict(os.environ, {"TEST_GOOGLE_CLIENT_ID": "test-client-id"}):
             app_builder = DNRBackendApp(
                 minimal_backend_spec,
-                db_path=tmp_path / "data.db",
+                database_url="postgresql://mock/test",
                 enable_auth=True,
                 auth_config=auth_config,
             )
@@ -149,8 +189,19 @@ class TestSocialAuthWiring:
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
+    @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle_back.runtime.auth.AuthStore._init_db")
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_missing_env_vars_logs_warning_but_does_not_crash(
-        self, minimal_backend_spec: BackendSpec, tmp_path, caplog
+        self,
+        _mock_pg,
+        _mock_migrate,
+        _mock_auth_init,
+        _mock_token_init,
+        minimal_backend_spec: BackendSpec,
+        tmp_path,
+        caplog,
     ) -> None:
         """Missing env vars log warning but server still starts."""
         from dazzle_back.runtime.server import DNRBackendApp
@@ -171,7 +222,7 @@ class TestSocialAuthWiring:
         with patch.dict(os.environ, env_without_google, clear=True):
             app_builder = DNRBackendApp(
                 minimal_backend_spec,
-                db_path=tmp_path / "data.db",
+                database_url="postgresql://mock/test",
                 enable_auth=True,
                 auth_config=auth_config,
             )
@@ -181,8 +232,18 @@ class TestSocialAuthWiring:
             # Server should still be usable
             assert app is not None
 
+    @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
+    @patch("dazzle_back.runtime.auth.AuthStore._init_db")
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_multiple_providers_configured(
-        self, minimal_backend_spec: BackendSpec, tmp_path
+        self,
+        _mock_pg,
+        _mock_migrate,
+        _mock_auth_init,
+        _mock_token_init,
+        minimal_backend_spec: BackendSpec,
+        tmp_path,
     ) -> None:
         """Multiple OAuth providers can be configured."""
         from dazzle_back.runtime.server import DNRBackendApp
@@ -212,7 +273,7 @@ class TestSocialAuthWiring:
         with patch.dict(os.environ, env_vars):
             app_builder = DNRBackendApp(
                 minimal_backend_spec,
-                db_path=tmp_path / "data.db",
+                database_url="postgresql://mock/test",
                 enable_auth=True,
                 auth_config=auth_config,
             )
@@ -223,8 +284,10 @@ class TestSocialAuthWiring:
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
+    @patch("dazzle_back.runtime.server.auto_migrate")
+    @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_auth_disabled_no_social_routes(
-        self, minimal_backend_spec: BackendSpec, tmp_path
+        self, _mock_pg, _mock_migrate, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """When auth is disabled, no social routes even if OAuth is configured."""
         from dazzle_back.runtime.server import DNRBackendApp
@@ -243,7 +306,7 @@ class TestSocialAuthWiring:
         with patch.dict(os.environ, {"TEST_GOOGLE_ID": "test-id"}):
             app_builder = DNRBackendApp(
                 minimal_backend_spec,
-                db_path=tmp_path / "data.db",
+                database_url="postgresql://mock/test",
                 enable_auth=False,  # Auth disabled
                 auth_config=auth_config,
             )
@@ -267,7 +330,7 @@ class TestBuildSocialAuthConfig:
 
         app_builder = DNRBackendApp(
             spec,
-            db_path=tmp_path / "data.db",
+            database_url="postgresql://mock/test",
             enable_auth=True,
         )
 
@@ -294,7 +357,7 @@ class TestBuildSocialAuthConfig:
 
         app_builder = DNRBackendApp(
             spec,
-            db_path=tmp_path / "data.db",
+            database_url="postgresql://mock/test",
             enable_auth=True,
         )
 
@@ -326,7 +389,7 @@ class TestBuildSocialAuthConfig:
 
         app_builder = DNRBackendApp(
             spec,
-            db_path=tmp_path / "data.db",
+            database_url="postgresql://mock/test",
             enable_auth=True,
         )
 

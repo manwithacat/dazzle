@@ -15,14 +15,14 @@ from pydantic import BaseModel
 
 from dazzle_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
 from dazzle_back.runtime.file_routes import create_file_routes, create_static_file_routes
-from dazzle_back.runtime.file_storage import FileService, create_local_file_service
+from dazzle_back.runtime.file_storage import FileService
 from dazzle_back.runtime.migrations import MigrationPlan, auto_migrate
 from dazzle_back.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
     generate_update_schema,
 )
-from dazzle_back.runtime.repository import DatabaseManager, RepositoryFactory
+from dazzle_back.runtime.repository import RepositoryFactory
 from dazzle_back.runtime.service_generator import CRUDService, ServiceFactory
 from dazzle_back.runtime.service_loader import ServiceLoader
 from dazzle_back.specs import BackendSpec
@@ -103,20 +103,15 @@ class ServerConfig:
     """
 
     # Database settings
-    db_path: Path = field(default_factory=lambda: Path(".dazzle/data.db"))
     database_url: str | None = None  # PostgreSQL URL (e.g. postgresql://user:pass@host/db)
-    use_database: bool = True
 
     # Authentication settings
     enable_auth: bool = False
-    auth_db_path: Path = field(default_factory=lambda: Path(".dazzle/auth.db"))
-    auth_database_url: str | None = None  # PostgreSQL URL for auth DB (separate from main DB)
     auth_config: Any = None  # AuthConfig from manifest (for OAuth providers)
 
     # File upload settings
     enable_files: bool = False
     files_path: Path = field(default_factory=lambda: Path(".dazzle/uploads"))
-    files_db_path: Path = field(default_factory=lambda: Path(".dazzle/files.db"))
 
     # Development/testing settings
     enable_test_mode: bool = False
@@ -140,7 +135,6 @@ class ServerConfig:
 
     # Process/workflow support (v0.24.0)
     enable_processes: bool = True  # Enable process workflow execution
-    process_db_path: Path = field(default_factory=lambda: Path(".dazzle/processes.db"))
     process_adapter_class: type | None = None  # Custom ProcessAdapter (default: LiteProcessAdapter)
 
     # Fragment sources from DSL source= annotations (v0.25.1)
@@ -184,15 +178,11 @@ class DNRBackendApp:
         spec: BackendSpec,
         config: ServerConfig | None = None,
         *,
-        # Legacy parameters for backwards compatibility
-        db_path: str | Path | None = None,
-        use_database: bool | None = None,
+        database_url: str | None = None,
         enable_auth: bool | None = None,
-        auth_db_path: str | Path | None = None,
         auth_config: Any = None,  # AuthConfig from manifest (for OAuth providers)
         enable_files: bool | None = None,
         files_path: str | Path | None = None,
-        files_db_path: str | Path | None = None,
         enable_test_mode: bool | None = None,
         services_dir: str | Path | None = None,
         # Dazzle Bar control plane (v0.8.5)
@@ -209,15 +199,10 @@ class DNRBackendApp:
         Args:
             spec: Backend specification
             config: Server configuration object (preferred)
-
-            Legacy parameters (use config instead):
-            db_path: Path to SQLite database (default: .dazzle/data.db)
-            use_database: Whether to use SQLite persistence (default: True)
+            database_url: PostgreSQL connection URL (or set DATABASE_URL env var)
             enable_auth: Whether to enable authentication (default: False)
-            auth_db_path: Path to auth database (default: .dazzle/auth.db)
             enable_files: Whether to enable file uploads (default: False)
             files_path: Path for file storage (default: .dazzle/uploads)
-            files_db_path: Path to file metadata database (default: .dazzle/files.db)
             enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
             services_dir: Path to domain service stubs directory (default: services/)
             enable_dev_mode: Enable Dazzle Bar control plane (default: False)
@@ -235,18 +220,15 @@ class DNRBackendApp:
         if config is None:
             config = ServerConfig()
 
-        # Override config with any explicit legacy parameters
+        import os
+
+        # Override config with any explicit parameters
         self.spec = spec
-        self._db_path = Path(db_path) if db_path else config.db_path
-        self._database_url = config.database_url
-        self._use_database = use_database if use_database is not None else config.use_database
+        self._database_url = database_url or config.database_url or os.environ.get("DATABASE_URL")
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
-        self._auth_db_path = Path(auth_db_path) if auth_db_path else config.auth_db_path
-        self._auth_database_url = config.auth_database_url
         self._auth_config = auth_config if auth_config is not None else config.auth_config
         self._enable_files = enable_files if enable_files is not None else config.enable_files
         self._files_path = Path(files_path) if files_path else config.files_path
-        self._files_db_path = Path(files_db_path) if files_db_path else config.files_db_path
         self._enable_test_mode = (
             enable_test_mode if enable_test_mode is not None else config.enable_test_mode
         )
@@ -265,7 +247,7 @@ class DNRBackendApp:
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
         self._repositories: dict[str, Any] = {}
-        self._db_manager: DatabaseManager | None = None
+        self._db_manager: Any | None = None  # PostgresBackend instance
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
         # Social auth (OAuth2)
@@ -288,7 +270,6 @@ class DNRBackendApp:
         # with proper parameter precedence over config defaults
         # Process/workflow support (v0.24.0)
         self._enable_processes = config.enable_processes
-        self._process_db_path = config.process_db_path
         self._process_adapter_class = config.process_adapter_class  # Custom adapter class
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
@@ -470,12 +451,10 @@ class DNRBackendApp:
             jwt_config_kwargs["secret_key"] = jwt_secret
         self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
 
-        # Create token store
-        token_db_path = self._auth_db_path.parent / "tokens.db"
+        # Create token store (PostgreSQL-only)
         self._token_store = TokenStore(
-            db_path=token_db_path,
+            database_url=self._database_url,
             token_lifetime_days=refresh_days,
-            database_url=self._auth_database_url,
         )
 
         # Build social auth config from manifest + environment
@@ -572,7 +551,6 @@ class DNRBackendApp:
 
             # Create event framework with same database as app
             config = EventFrameworkConfig(
-                db_path=str(self._db_path),
                 auto_start_publisher=True,
                 auto_start_consumers=True,
                 database_url=self._database_url,
@@ -614,9 +592,8 @@ class DNRBackendApp:
             from dazzle_back.runtime.rollback_manager import RollbackManager
             from dazzle_back.runtime.spec_versioning import SpecVersionStore
 
-            # Create ops database for console (reuse path convention)
+            # Create ops database for console (PostgreSQL)
             ops_db = OpsDatabase(
-                db_path=self._db_path.parent / "ops.db",
                 database_url=self._database_url,
             )
             spec_version_store = SpecVersionStore(ops_db)
@@ -1208,7 +1185,7 @@ class DNRBackendApp:
 
             # Create the ProcessAdapter - use custom class if configured
             adapter_class = self._process_adapter_class or LiteProcessAdapter
-            self._process_adapter = adapter_class(db_path=str(self._process_db_path))
+            self._process_adapter = adapter_class(database_url=self._database_url)
 
             # Create ProcessManager
             self._process_manager = ProcessManager(adapter=self._process_adapter)
@@ -1238,9 +1215,7 @@ class DNRBackendApp:
 
             import logging
 
-            logging.getLogger("dazzle.server").info(
-                f"Process manager initialized with DB: {self._process_db_path}"
-            )
+            logging.getLogger("dazzle.server").info("Process manager initialized")
 
         except ImportError as e:
             # Process module not available - skip
@@ -1356,24 +1331,26 @@ class DNRBackendApp:
                 "update": generate_update_schema(entity),
             }
 
-        # Initialize database if enabled
-        if self._use_database:
-            if self._database_url:
-                from dazzle_back.runtime.pg_backend import PostgresBackend
-
-                self._db_manager = PostgresBackend(self._database_url)  # type: ignore[assignment]
-            else:
-                self._db_manager = DatabaseManager(self._db_path)
-
-            # Auto-migrate: creates tables and applies schema changes
-            self._last_migration = auto_migrate(
-                self._db_manager,
-                self.spec.entities,
-                record_history=True,
+        # Initialize database (PostgreSQL required)
+        if not self._database_url:
+            raise ValueError(
+                "database_url is required. Set DATABASE_URL environment variable "
+                "or pass database_url to ServerConfig/DNRBackendApp."
             )
 
-            repo_factory = RepositoryFactory(self._db_manager, self._models)  # type: ignore[arg-type]
-            self._repositories = repo_factory.create_all_repositories(self.spec.entities)
+        from dazzle_back.runtime.pg_backend import PostgresBackend
+
+        self._db_manager = PostgresBackend(self._database_url)
+
+        # Auto-migrate: creates tables and applies schema changes
+        self._last_migration = auto_migrate(
+            self._db_manager,
+            self.spec.entities,
+            record_history=True,
+        )
+
+        repo_factory = RepositoryFactory(self._db_manager, self._models)  # type: ignore[arg-type]
+        self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
         # Extract state machines from entities
         state_machines = {
@@ -1394,7 +1371,7 @@ class DNRBackendApp:
 
         # Wire up repositories to services
         # Match services to repositories by their target entity
-        if self._use_database:
+        if self._db_manager:
             for _service_name, service in self._services.items():
                 if isinstance(service, CRUDService):
                     # Get the entity name from the service
@@ -1408,8 +1385,7 @@ class DNRBackendApp:
         optional_auth_dep = None
         if self._enable_auth:
             self._auth_store = AuthStore(
-                db_path=self._auth_db_path,
-                database_url=self._auth_database_url,
+                database_url=self._database_url,
             )
             self._auth_middleware = AuthMiddleware(self._auth_store)
             auth_router = create_auth_routes(self._auth_store)
@@ -1454,11 +1430,16 @@ class DNRBackendApp:
 
         # Initialize file uploads if enabled
         if self._enable_files:
-            self._file_service = create_local_file_service(
-                base_path=self._files_path,
-                db_path=self._files_db_path,
-                base_url="/files",
+            from dazzle_back.runtime.file_storage import (
+                FileMetadataStore,
+                FileValidator,
+                LocalStorageBackend,
             )
+
+            storage = LocalStorageBackend(self._files_path, "/files")
+            metadata_store = FileMetadataStore(database_url=self._database_url)
+            validator = FileValidator()
+            self._file_service = FileService(storage, metadata_store, validator)
             create_file_routes(self._app, self._file_service)
             create_static_file_routes(
                 self._app,
@@ -1467,7 +1448,7 @@ class DNRBackendApp:
             )
 
         # Initialize test routes if enabled
-        if self._enable_test_mode and self._use_database and self._db_manager:
+        if self._enable_test_mode and self._db_manager:
             # Lazy import to avoid FastAPI dependency at module load
             from dazzle_back.runtime.test_routes import create_test_routes
 
@@ -1485,7 +1466,7 @@ class DNRBackendApp:
 
             control_plane_router = create_control_plane_routes(
                 db_manager=self._db_manager,
-                repositories=self._repositories if self._use_database else None,
+                repositories=self._repositories if self._db_manager else None,
                 entities=self.spec.entities,
                 personas=self._personas,
                 scenarios=self._scenarios,
@@ -1494,11 +1475,10 @@ class DNRBackendApp:
             self._app.include_router(control_plane_router)
 
         # Initialize event framework (v0.18.0)
-        if self._use_database:
-            self._init_event_framework()
+        self._init_event_framework()
 
         # Initialize debug routes (always available when database is enabled)
-        if self._use_database and self._db_manager:
+        if self._db_manager:
             from dazzle_back.runtime.debug_routes import create_debug_routes
 
             self._start_time = datetime.now()
@@ -1608,10 +1588,16 @@ class DNRBackendApp:
             return self.spec.model_dump()
 
         # Add database info endpoint
-        db_path = str(self._db_path) if self._use_database else None
-        auth_db_path = str(self._auth_db_path) if self._enable_auth else None
-        files_path = str(self._files_path) if self._enable_files else None
-        files_db_path = str(self._files_db_path) if self._enable_files else None
+        def _mask_database_url(url: str | None) -> str | None:
+            """Mask password in database URL for safe display."""
+            if not url:
+                return None
+            import re as _re
+
+            return _re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", url)
+
+        masked_db_url = _mask_database_url(self._database_url)
+        files_path_str = str(self._files_path) if self._enable_files else None
         last_migration = self._last_migration
         auth_enabled = self._enable_auth
         files_enabled = self._enable_files
@@ -1626,15 +1612,13 @@ class DNRBackendApp:
                     "has_pending_destructive": last_migration.has_destructive,
                 }
             return {
-                "database_enabled": self._use_database,
-                "database_path": db_path,
+                "database_url": masked_db_url,
+                "database_backend": "postgresql",
                 "tables": [e.name for e in self.spec.entities],
                 "last_migration": migration_info,
                 "auth_enabled": auth_enabled,
-                "auth_database_path": auth_db_path,
                 "files_enabled": files_enabled,
-                "files_path": files_path,
-                "files_database_path": files_db_path,
+                "files_path": files_path_str,
             }
 
         # Mount static files from project dir (images etc.) + framework dir (dz.js, dz.css)
@@ -1753,13 +1737,10 @@ class DNRBackendApp:
 
 def create_app(
     spec: BackendSpec,
-    db_path: str | Path | None = None,
-    use_database: bool = True,
+    database_url: str | None = None,
     enable_auth: bool = False,
-    auth_db_path: str | Path | None = None,
     enable_files: bool = False,
     files_path: str | Path | None = None,
-    files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
     enable_dev_mode: bool = False,
@@ -1773,13 +1754,10 @@ def create_app(
 
     Args:
         spec: Backend specification
-        db_path: Path to SQLite database (default: .dazzle/data.db)
-        use_database: Whether to use SQLite persistence (default: True)
+        database_url: PostgreSQL connection URL (or set DATABASE_URL env var)
         enable_auth: Whether to enable authentication (default: False)
-        auth_db_path: Path to auth database (default: .dazzle/auth.db)
         enable_files: Whether to enable file uploads (default: False)
         files_path: Path for file storage (default: .dazzle/uploads)
-        files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
         enable_dev_mode: Enable Dazzle Bar control plane (default: False)
@@ -1792,18 +1770,15 @@ def create_app(
     Example:
         >>> from dazzle_back.specs import BackendSpec
         >>> spec = BackendSpec(name="my_app", ...)
-        >>> app = create_app(spec)
+        >>> app = create_app(spec, database_url="postgresql://...")
         >>> # Run with uvicorn: uvicorn mymodule:app
     """
     builder = DNRBackendApp(
         spec,
-        db_path=db_path,
-        use_database=use_database,
+        database_url=database_url,
         enable_auth=enable_auth,
-        auth_db_path=auth_db_path,
         enable_files=enable_files,
         files_path=files_path,
-        files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
         enable_dev_mode=enable_dev_mode,
@@ -1818,13 +1793,10 @@ def run_app(
     host: str = "127.0.0.1",
     port: int = 8000,
     reload: bool = False,
-    db_path: str | Path | None = None,
-    use_database: bool = True,
+    database_url: str | None = None,
     enable_auth: bool = False,
-    auth_db_path: str | Path | None = None,
     enable_files: bool = False,
     files_path: str | Path | None = None,
-    files_db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     services_dir: str | Path | None = None,
     enable_dev_mode: bool = False,
@@ -1839,13 +1811,10 @@ def run_app(
         host: Host to bind to
         port: Port to bind to
         reload: Enable auto-reload (for development)
-        db_path: Path to SQLite database (default: .dazzle/data.db)
-        use_database: Whether to use SQLite persistence (default: True)
+        database_url: PostgreSQL connection URL (or set DATABASE_URL env var)
         enable_auth: Whether to enable authentication (default: False)
-        auth_db_path: Path to auth database (default: .dazzle/auth.db)
         enable_files: Whether to enable file uploads (default: False)
         files_path: Path for file storage (default: .dazzle/uploads)
-        files_db_path: Path to file metadata database (default: .dazzle/files.db)
         enable_test_mode: Whether to enable /__test__/* endpoints (default: False)
         services_dir: Path to domain service stubs directory (default: services/)
         enable_dev_mode: Enable Dazzle Bar control plane (default: False)
@@ -1855,7 +1824,7 @@ def run_app(
     Example:
         >>> from dazzle_back.specs import BackendSpec
         >>> spec = BackendSpec(name="my_app", ...)
-        >>> run_app(spec)  # Starts server on http://127.0.0.1:8000
+        >>> run_app(spec, database_url="postgresql://...")
     """
     try:
         import uvicorn
@@ -1864,13 +1833,10 @@ def run_app(
 
     app = create_app(
         spec,
-        db_path=db_path,
-        use_database=use_database,
+        database_url=database_url,
         enable_auth=enable_auth,
-        auth_db_path=auth_db_path,
         enable_files=enable_files,
         files_path=files_path,
-        files_db_path=files_db_path,
         enable_test_mode=enable_test_mode,
         services_dir=services_dir,
         enable_dev_mode=enable_dev_mode,
@@ -2000,12 +1966,6 @@ def create_app_factory(
         database_url = database_url.replace("postgres://", "postgresql://", 1)
         logger.info("Converted postgres:// to postgresql:// for SQLAlchemy compatibility")
 
-    # Parse AUTH_DATABASE_URL (separate auth DB, defaults to DATABASE_URL)
-    # Allows auth data to live in a separate database for scaling/security
-    auth_database_url = os.environ.get("AUTH_DATABASE_URL", "") or database_url
-    if auth_database_url.startswith("postgres://"):
-        auth_database_url = auth_database_url.replace("postgres://", "postgresql://", 1)
-
     # Parse REDIS_URL (Heroku format: redis://h:password@host:port)
     redis_url = os.environ.get("REDIS_URL", "")
     if redis_url:
@@ -2082,15 +2042,10 @@ def create_app_factory(
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
-        db_path=project_root / ".dazzle" / "data.db",
-        use_database=True,
         enable_auth=manifest.auth.enabled,
         auth_config=manifest.auth if manifest.auth.enabled else None,
-        auth_db_path=project_root / ".dazzle" / "auth.db",
-        auth_database_url=auth_database_url if auth_database_url else None,
         enable_files=True,
         files_path=project_root / ".dazzle" / "uploads",
-        files_db_path=project_root / ".dazzle" / "files.db",
         enable_test_mode=enable_test_mode,
         services_dir=project_root / "services",
         enable_dev_mode=enable_dev_mode,
@@ -2099,7 +2054,6 @@ def create_app_factory(
         sitespec_data=sitespec_data,
         project_root=project_root,
         enable_processes=enable_processes,
-        process_db_path=project_root / ".dazzle" / "processes.db",
         process_adapter_class=resolved_adapter_class,
         enable_console=enable_dev_mode,
     )
@@ -2162,9 +2116,7 @@ def create_app_factory(
     logger.info(f"  Entities: {len(backend_spec.entities)}")
     logger.info(f"  Endpoints: {len(backend_spec.endpoints)}")
     logger.info(f"  Environment: {dazzle_env}")
-    logger.info(f"  Database: {'PostgreSQL' if database_url else 'SQLite'}")
-    if manifest.auth.enabled:
-        logger.info(f"  Auth DB: {'PostgreSQL' if auth_database_url else 'SQLite'}")
+    logger.info("  Database: PostgreSQL")
     if enable_dev_mode:
         logger.info("  Dazzle Bar: enabled")
 

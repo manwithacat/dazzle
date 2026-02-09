@@ -341,30 +341,41 @@ class TestWorkspaceAuthEnforcement:
     @pytest.fixture
     def app_with_auth(self, tmp_path: Any) -> Any:
         """Build a FastAPI app with auth enabled and one workspace."""
+        from unittest.mock import patch
+
         from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
 
         config = ServerConfig(
-            db_path=tmp_path / "test.db",
-            use_database=True,
+            database_url="postgresql://mock/test",
             enable_auth=True,
             enable_test_mode=False,
         )
-        builder = DNRBackendApp(self._make_spec(), config=config)
-        return builder.build()
+        with (
+            patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("dazzle_back.runtime.auth.AuthStore._init_db"),
+        ):
+            builder = DNRBackendApp(self._make_spec(), config=config)
+            return builder.build()
 
     @pytest.fixture
     def app_without_auth(self, tmp_path: Any) -> Any:
         """Build a FastAPI app with auth disabled and one workspace."""
+        from unittest.mock import patch
+
         from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
 
         config = ServerConfig(
-            db_path=tmp_path / "test.db",
-            use_database=True,
+            database_url="postgresql://mock/test",
             enable_auth=False,
             enable_test_mode=False,
         )
-        builder = DNRBackendApp(self._make_spec(), config=config)
-        return builder.build()
+        with (
+            patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle_back.runtime.server.auto_migrate"),
+        ):
+            builder = DNRBackendApp(self._make_spec(), config=config)
+            return builder.build()
 
     def test_workspace_returns_401_without_session(self, app_with_auth: Any) -> None:
         """Workspace route returns 401 when auth is enabled and no session cookie."""
