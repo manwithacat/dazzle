@@ -13,7 +13,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Stage only the relevant changed files by name (never `git add -A` or `git add .`).
 - Do NOT stage files that look like secrets (.env, credentials, tokens).
 - Write a concise commit message that explains *why* the change was made, following the conventional commit style used in recent history (`git log --oneline -10`).
-- End the commit message with: `Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>`
+- End the commit message with: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
 - Use a HEREDOC to pass the message to `git commit -m`.
 
 ## 3. Push

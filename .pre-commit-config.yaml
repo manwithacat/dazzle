@@ -1,5 +1,7 @@
 # Pre-commit hooks for DAZZLE
 # See https://pre-commit.com for more information
+# Slow hooks (bandit, pytest, parser-corpus, pra-unit, mcp-verify) moved to CI.
+# Use `/check` for on-demand quality gate.
 
 default_language_version:
   python: python3
@@ -32,75 +34,9 @@ repos:
       # Run the formatter
       - id: ruff-format
 
-  # Type checking - disabled in pre-commit, CI handles this properly
-  # mypy follows imports which causes it to check files outside the pattern
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.13.0
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies:
-  #         - pydantic>=2.0
-  #         - typer>=0.9
-  #         - types-PyYAML
-  #       args: ['--config-file=pyproject.toml', '--ignore-missing-imports']
-  #       files: ^src/dazzle/(core|cli|mcp)/
-
-  # Security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.6
-    hooks:
-      - id: bandit
-        args: ['-c', 'pyproject.toml']
-        additional_dependencies: ['bandit[toml]']
-        exclude: ^tests/
-
-  # DSL validation
+  # Local hooks (fast only)
   - repo: local
     hooks:
-      - id: dsl-validate
-        name: dsl-validate
-        entry: bash -c 'exit_code=0; for f in "$@"; do dir=$(dirname "$f"); while [ "$dir" != "." ] && [ ! -f "$dir/dsl/app.dsl" ]; do dir=$(dirname "$dir"); done; if [ -f "$dir/dsl/app.dsl" ]; then (cd "$dir" && python -m dazzle validate) || exit_code=1; fi; done; exit $exit_code' --
-        language: system
-        files: \.dsl$
-        exclude: (templates/|_archive/)
-        pass_filenames: true
-
-      # Run fast unit tests on Python changes
-      - id: pytest-fast
-        name: pytest-fast
-        entry: pytest tests/unit -x -q --tb=short -m "not slow"
-        language: system
-        files: ^src/dazzle/.*\.py$
-        pass_filenames: false
-        stages: [pre-commit]
-
-      # Parser corpus snapshot tests (catches parser regressions)
-      - id: parser-corpus
-        name: parser-corpus
-        entry: pytest tests/parser_corpus/ -x -q --tb=short
-        language: system
-        files: ^(src/dazzle/core/dsl_parser.*\.py|tests/parser_corpus/|tests/corpora/)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      # PRA unit tests (catches PRA regressions before CI stress tests)
-      - id: pra-unit
-        name: pra-unit
-        entry: bash -c 'pytest tests/unit/test_pra*.py -x -q --tb=short -m "not slow"'
-        language: system
-        files: ^(src/dazzle_dnr_back/pra/|src/dazzle_dnr_back/events/|src/dazzle_dnr_back/metrics/|tests/unit/test_pra)
-        pass_filenames: false
-        stages: [pre-commit]
-
-      # Verify MCP server functionality (tools are published correctly)
-      - id: mcp-verify
-        name: mcp-verify
-        entry: python scripts/verify-mcp.py
-        language: system
-        files: ^src/dazzle/mcp/.*\.py$
-        pass_filenames: false
-        stages: [pre-commit]
-
       # Validate Homebrew formula syntax
       - id: homebrew-validate
         name: homebrew-validate
