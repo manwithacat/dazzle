@@ -1261,6 +1261,45 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Policy Analysis (RBAC access control)
+        # =====================================================================
+        Tool(
+            name="policy",
+            description=(
+                "Policy analysis operations for RBAC access control. "
+                "Operations: analyze (find entities without access rules), "
+                "conflicts (detect contradictory permit/forbid rules), "
+                "coverage (permission matrix: persona x entity x operation), "
+                "simulate (trace which rules fire for a given persona + entity + operation)"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["analyze", "conflicts", "coverage", "simulate"],
+                        "description": "Operation to perform",
+                    },
+                    "entity_names": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter to specific entity names (optional)",
+                    },
+                    "persona": {
+                        "type": "string",
+                        "description": "Persona ID (required for simulate)",
+                    },
+                    "operation_kind": {
+                        "type": "string",
+                        "enum": ["create", "read", "update", "delete", "list"],
+                        "description": "CRUD operation to simulate (required for simulate)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

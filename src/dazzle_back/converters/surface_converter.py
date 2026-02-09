@@ -235,8 +235,11 @@ def convert_surface_to_endpoint(
 
     # Propagate persona-based access control from DSL surface spec
     require_roles: list[str] = []
+    deny_roles: list[str] = []
     if surface.access and surface.access.allow_personas:
         require_roles = list(surface.access.allow_personas)
+    if surface.access and surface.access.deny_personas:
+        deny_roles = list(surface.access.deny_personas)
 
     return EndpointSpec(
         name=f"{surface.name}_endpoint",
@@ -246,6 +249,7 @@ def convert_surface_to_endpoint(
         description=surface.title,
         tags=[entity] if surface.entity_ref else [],
         require_roles=require_roles,
+        deny_roles=deny_roles,
     )
 
 

@@ -39,7 +39,9 @@ entity Task "Task":
 
         assert task.access is not None
         assert len(task.access.visibility) == 1
-        assert len(task.access.permissions) == 0
+        # read: now also creates a PERMIT READ permission (Cedar-style)
+        assert len(task.access.permissions) == 1
+        assert task.access.permissions[0].operation == PermissionKind.READ
 
         # Check visibility rule
         vis = task.access.visibility[0]
@@ -110,8 +112,8 @@ entity Task "Task":
 
         assert task.access is not None
         assert len(task.access.visibility) == 1
-        # v0.7.0: write: only creates CREATE and UPDATE (not DELETE)
-        assert len(task.access.permissions) == 2
+        # read: creates PERMIT READ + write: creates CREATE and UPDATE = 3 permissions
+        assert len(task.access.permissions) == 3
 
         # Check read rule has compound condition
         vis = task.access.visibility[0]
@@ -144,9 +146,9 @@ entity Document "Document":
         vis = doc.access.visibility[0]
         assert vis.condition.operator == LogicalOperator.OR
 
-        # Write has AND with NOT_EQUALS
-        perm = doc.access.permissions[0]
-        assert perm.condition.operator == LogicalOperator.AND
+        # Write has AND with NOT_EQUALS (permissions[0] is PERMIT READ from read:)
+        write_perms = [p for p in doc.access.permissions if p.operation != PermissionKind.READ]
+        assert write_perms[0].condition.operator == LogicalOperator.AND
 
 
 class TestAccessBlockWithExistingRules:
@@ -203,10 +205,11 @@ entity Task "Task":
         task = fragment.entities[0]
 
         assert task.access is not None
-        # Should have 3 permission rules:
+        # Should have 4 permission rules:
         # - 1 from permissions: (DELETE)
+        # - 1 from access: read: (READ)
         # - 2 from access: write: (CREATE, UPDATE)
-        assert len(task.access.permissions) == 3
+        assert len(task.access.permissions) == 4
 
 
 class TestAccessBlockErrors:
@@ -266,12 +269,13 @@ entity Task "Task":
         task = fragment.entities[0]
 
         assert task.access is not None
-        # 1 visibility + 3 permissions (CREATE, UPDATE, DELETE)
+        # 1 visibility + 4 permissions (READ, CREATE, UPDATE, DELETE)
         assert len(task.access.visibility) == 1
-        assert len(task.access.permissions) == 3
+        assert len(task.access.permissions) == 4
 
         operations = {r.operation for r in task.access.permissions}
         assert operations == {
+            PermissionKind.READ,
             PermissionKind.CREATE,
             PermissionKind.UPDATE,
             PermissionKind.DELETE,

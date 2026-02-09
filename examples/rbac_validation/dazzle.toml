@@ -1,0 +1,16 @@
+[project]
+name = "rbac_validation"
+version = "0.1.0"
+root = "clinic"
+type = "benchmark"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = true
+provider = "session"
+allow_registration = false

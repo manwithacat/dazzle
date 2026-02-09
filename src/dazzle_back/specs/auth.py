@@ -178,6 +178,14 @@ class AccessOperationKind(StrEnum):
     CREATE = "create"
     UPDATE = "update"
     DELETE = "delete"
+    LIST = "list"
+
+
+class AccessPolicyEffect(StrEnum):
+    """Policy effect for Cedar-style access rules."""
+
+    PERMIT = "permit"
+    FORBID = "forbid"
 
 
 class AccessConditionSpec(BaseModel):
@@ -247,20 +255,30 @@ class VisibilityRuleSpec(BaseModel):
 
 class PermissionRuleSpec(BaseModel):
     """
-    Permission rule for entity write access.
+    Permission rule for entity access control (Cedar-style).
 
-    Defines when users can create/update/delete entities.
+    Defines when users can perform operations on entities.
+    Supports permit/forbid semantics for Cedar-style policy evaluation.
 
     Examples:
         - Only owner can update: owner_id = current_user
         - Only admin can delete: role(admin)
+        - Interns cannot delete: effect=FORBID, role(intern)
     """
 
-    operation: AccessOperationKind = Field(description="Operation type (create/update/delete)")
+    operation: AccessOperationKind = Field(description="Operation type")
     require_auth: bool = Field(default=True, description="Require authentication")
     condition: AccessConditionSpec | None = Field(
         default=None,
         description="Condition for permission (None = always allowed if authenticated)",
+    )
+    effect: AccessPolicyEffect = Field(
+        default=AccessPolicyEffect.PERMIT,
+        description="Cedar-style effect (permit/forbid)",
+    )
+    personas: list[str] = Field(
+        default_factory=list,
+        description="Persona scope (empty = any authenticated user)",
     )
 
     model_config = ConfigDict(frozen=True)

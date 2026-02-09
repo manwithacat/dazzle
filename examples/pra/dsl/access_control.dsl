@@ -44,6 +44,14 @@
 # ROLE CHECKS:
 # - [x] role(role_name) in conditions
 #
+# CEDAR-STYLE POLICY BLOCKS (v0.21):
+# - [x] permit: block with role-based conditions
+# - [x] forbid: block with role-based conditions
+# - [x] audit: all
+# - [x] audit: [create, update, delete]
+# - [x] audit: false
+# - [x] Coexistence of permissions: + permit:/forbid: blocks
+#
 # =============================================================================
 
 module pra.access_control
@@ -82,6 +90,8 @@ entity PublicArticle "Public Article":
     create: authenticated
     update: author = current_user
     delete: author = current_user
+
+  audit: [create, update, delete]
 
 # =============================================================================
 # OWNER-ONLY ACCESS
@@ -167,6 +177,14 @@ entity AdminSetting "Admin Setting":
     update: role(admin)
     delete: role(admin)
 
+  # Cedar-style: explicitly forbid support role from admin settings
+  forbid:
+    create: role(support)
+    update: role(support)
+    delete: role(support)
+
+  audit: all
+
 # =============================================================================
 # MIXED ROLE AND OWNERSHIP
 # =============================================================================
@@ -196,6 +214,15 @@ entity SensitiveRecord "Sensitive Record":
     create: authenticated
     update: owner = current_user or reviewer = current_user or role(admin)
     delete: owner = current_user or role(admin)
+
+  # Cedar-style: mirror existing permits and add forbid for restricted classification
+  permit:
+    read: role(admin) or role(compliance)
+
+  forbid:
+    delete: classification = restricted
+
+  audit: all
 
 # =============================================================================
 # COMPOUND CONDITIONS WITH AND/OR
@@ -421,3 +448,5 @@ entity ComplexAccessRecord "Complex Access Record":
     create: role(editor) or role(admin)
     update: ((owner = current_user and status in [draft, active]) or (delegate = current_user and status = active) or (role(manager) and priority in [high, critical]) or role(admin))
     delete: (owner = current_user and status = draft) or role(admin)
+
+  audit: [create, update, delete]

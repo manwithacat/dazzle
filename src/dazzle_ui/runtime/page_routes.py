@@ -31,6 +31,7 @@ def create_page_routes(
     backend_url: str = "http://127.0.0.1:8000",
     theme_css: str = "",
     get_auth_context: Callable | None = None,
+    app_prefix: str = "",
 ) -> APIRouter:
     """
     Create FastAPI page routes from an AppSpec.
@@ -42,6 +43,7 @@ def create_page_routes(
         backend_url: URL of the backend API for data fetching.
         theme_css: Pre-compiled theme CSS to inject.
         get_auth_context: Optional callable(request) -> AuthContext for user info.
+        app_prefix: URL prefix for page routes (e.g. "/app").
 
     Returns:
         FastAPI router with page routes.
@@ -60,7 +62,7 @@ def create_page_routes(
     router = APIRouter()
 
     # Compile all surfaces to template contexts
-    page_contexts = compile_appspec_to_templates(appspec)
+    page_contexts = compile_appspec_to_templates(appspec, app_prefix=app_prefix)
 
     # Build route -> access config mapping from surface specs
     access_configs: dict[str, SurfaceAccessConfig] = {}

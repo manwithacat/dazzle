@@ -66,29 +66,45 @@ class VisibilityRule(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class PolicyEffect(StrEnum):
+    """Effect of a policy rule (Cedar-inspired)."""
+
+    PERMIT = "permit"
+    FORBID = "forbid"
+
+
 class PermissionKind(StrEnum):
     """Types of operations that can have permission rules."""
 
     CREATE = "create"
+    READ = "read"
     UPDATE = "update"
     DELETE = "delete"
+    LIST = "list"
 
 
 class PermissionRule(BaseModel):
     """
     Permission rule for a specific operation.
 
-    Defines who can perform create/update/delete operations.
+    Defines who can perform CRUD operations with Cedar-style permit/forbid semantics.
 
     Examples:
         - create: authenticated
         - update: created_by = current_user or assigned_to = current_user
         - delete: created_by = current_user
+
+    Cedar semantics:
+        - effect=PERMIT: Grants access if condition matches
+        - effect=FORBID: Denies access if condition matches (overrides permits)
+        - Default (no matching rule): Deny
     """
 
     operation: PermissionKind
     require_auth: bool = True  # If True, must be authenticated
     condition: ConditionExpr | None = None  # Additional row-level check
+    effect: PolicyEffect = PolicyEffect.PERMIT  # Cedar-style effect
+    personas: list[str] = Field(default_factory=list)  # Persona scope (empty = any)
 
     model_config = ConfigDict(frozen=True)
 
@@ -122,6 +138,23 @@ class AccessSpec(BaseModel):
             if rule.operation == operation:
                 return rule
         return None
+
+
+class AuditConfig(BaseModel):
+    """
+    Audit logging configuration for an entity.
+
+    Controls which operations are logged to the audit trail.
+
+    Attributes:
+        enabled: Whether audit logging is enabled
+        operations: Operations to audit (empty = all operations)
+    """
+
+    enabled: bool = False
+    operations: list[PermissionKind] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
 
 
 class ExampleRecord(BaseModel):
@@ -182,6 +215,7 @@ class EntitySpec(BaseModel):
     invariants: list[InvariantSpec] = Field(default_factory=list)
     constraints: list[Constraint] = Field(default_factory=list)
     access: AccessSpec | None = None
+    audit: AuditConfig | None = None
     state_machine: StateMachineSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
     # v0.18.0: Event publishing

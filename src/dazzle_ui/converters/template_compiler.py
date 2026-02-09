@@ -298,6 +298,7 @@ def _build_form_fields(
 def compile_surface_to_context(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
+    app_prefix: str = "",
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -308,6 +309,7 @@ def compile_surface_to_context(
     Args:
         surface: IR surface specification.
         entity: Optional entity specification for field metadata.
+        app_prefix: URL prefix for page routes (e.g. "/app"). Not applied to API paths.
 
     Returns:
         PageContext ready for template rendering.
@@ -332,8 +334,8 @@ def compile_surface_to_context(
                 title=surface.title or f"{entity_name}s",
                 columns=columns,
                 api_endpoint=api_endpoint,
-                create_url=f"/{entity_slug}/create",
-                detail_url_template=f"/{entity_slug}/{{id}}",
+                create_url=f"{app_prefix}/{entity_slug}/create",
+                detail_url_template=f"{app_prefix}/{entity_slug}/{{id}}",
                 search_enabled=bool(search_fields),
                 default_sort_field=default_sort_field,
                 default_sort_dir=default_sort_dir,
@@ -357,7 +359,7 @@ def compile_surface_to_context(
                 action_url=api_endpoint,
                 method="post",
                 mode="create",
-                cancel_url=f"/{entity_slug}",
+                cancel_url=f"{app_prefix}/{entity_slug}",
             ),
         )
 
@@ -373,7 +375,7 @@ def compile_surface_to_context(
                 action_url=f"{api_endpoint}/{{id}}",
                 method="put",
                 mode="edit",
-                cancel_url=f"/{entity_slug}/{{id}}",
+                cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
             ),
         )
 
@@ -404,9 +406,9 @@ def compile_surface_to_context(
                 entity_name=entity_name,
                 title=surface.title or f"{entity_name} Details",
                 fields=fields,
-                edit_url=f"/{entity_slug}/{{id}}/edit",
+                edit_url=f"{app_prefix}/{entity_slug}/{{id}}/edit",
                 delete_url=f"{api_endpoint}/{{id}}",
-                back_url=f"/{entity_slug}",
+                back_url=f"{app_prefix}/{entity_slug}",
                 transitions=transitions,
                 status_field=status_field,
             ),
@@ -422,6 +424,7 @@ def compile_surface_to_context(
 
 def compile_appspec_to_templates(
     appspec: ir.AppSpec,
+    app_prefix: str = "",
 ) -> dict[str, PageContext]:
     """
     Compile all surfaces in an AppSpec to PageContexts.
@@ -430,6 +433,7 @@ def compile_appspec_to_templates(
 
     Args:
         appspec: Complete application specification.
+        app_prefix: URL prefix for page routes (e.g. "/app"). Not applied to API paths.
 
     Returns:
         Dictionary mapping URL paths to PageContext objects.
@@ -440,7 +444,7 @@ def compile_appspec_to_templates(
     # Build nav items from workspaces
     nav_items: list[NavItemContext] = []
     for ws in appspec.workspaces:
-        route = f"/workspaces/{ws.name}"
+        route = f"{app_prefix}/workspaces/{ws.name}"
         nav_items.append(
             NavItemContext(
                 label=ws.title or ws.name.replace("_", " ").title(),
@@ -453,7 +457,7 @@ def compile_appspec_to_templates(
         if domain and surface.entity_ref:
             entity = domain.get_entity(surface.entity_ref)
 
-        ctx = compile_surface_to_context(surface, entity)
+        ctx = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
         ctx.view_name = surface.name
@@ -463,10 +467,10 @@ def compile_appspec_to_templates(
         entity_slug = entity_name.lower().replace("_", "-")
 
         route_map = {
-            SurfaceMode.LIST: f"/{entity_slug}",
-            SurfaceMode.CREATE: f"/{entity_slug}/create",
-            SurfaceMode.EDIT: f"/{entity_slug}/{{id}}/edit",
-            SurfaceMode.VIEW: f"/{entity_slug}/{{id}}",
+            SurfaceMode.LIST: f"{app_prefix}/{entity_slug}",
+            SurfaceMode.CREATE: f"{app_prefix}/{entity_slug}/create",
+            SurfaceMode.EDIT: f"{app_prefix}/{entity_slug}/{{id}}/edit",
+            SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
         }
         route = route_map.get(surface.mode, f"/{surface.name}")
         contexts[route] = ctx
@@ -478,7 +482,7 @@ def compile_appspec_to_templates(
         entity = None
         if domain and first_list.entity_ref:
             entity = domain.get_entity(first_list.entity_ref)
-        root_ctx = compile_surface_to_context(first_list, entity)
+        root_ctx = compile_surface_to_context(first_list, entity, app_prefix=app_prefix)
         root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         root_ctx.nav_items = nav_items
         root_ctx.view_name = first_list.name

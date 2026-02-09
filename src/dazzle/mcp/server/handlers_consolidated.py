@@ -1397,6 +1397,22 @@ def handle_user_profile(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Policy Handler
+# =============================================================================
+
+
+def handle_policy(arguments: dict[str, Any]) -> str:
+    """Handle policy analysis operations."""
+    from .handlers.policy import handle_policy as _handle
+
+    project_path = _resolve_project(arguments)
+    if project_path is None:
+        return _project_error()
+
+    return _handle(project_path, arguments)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1422,6 +1438,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "graph": handle_graph,
     "discovery": handle_discovery,
     "user_profile": handle_user_profile,
+    "policy": handle_policy,
 }
 
 

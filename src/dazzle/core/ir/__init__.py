@@ -66,6 +66,7 @@ from .demo_blueprint import (
 # Domain
 from .domain import (
     AccessSpec,
+    AuditConfig,
     AuthContext,
     Constraint,
     ConstraintKind,
@@ -74,6 +75,7 @@ from .domain import (
     ExampleRecord,
     PermissionKind,
     PermissionRule,
+    PolicyEffect,
     VisibilityRule,
 )
 
@@ -537,8 +539,10 @@ __all__ = [
     "Constraint",
     "AuthContext",
     "VisibilityRule",
+    "PolicyEffect",
     "PermissionKind",
     "PermissionRule",
+    "AuditConfig",
     "AccessSpec",
     "ExampleRecord",
     "EntitySpec",

@@ -52,12 +52,21 @@ def _is_htmx_request(request: Any) -> bool:
     )
 
 
-def _with_htmx_triggers(request: Any, result: Any, entity_name: str, action: str) -> Any:
+def _with_htmx_triggers(
+    request: Any, result: Any, entity_name: str, action: str, redirect_url: str | None = None
+) -> Any:
     """Wrap a mutation result with HX-Trigger headers for HTMX requests.
 
     For non-HTMX requests, returns the result unchanged (JSON serialized by FastAPI).
     For HTMX requests, returns a JSONResponse with HX-Trigger headers so the client
     can react to entity mutations (show toasts, refresh lists, etc.).
+
+    Args:
+        request: The incoming request.
+        result: The mutation result.
+        entity_name: Name of the entity (e.g. "Task").
+        action: Mutation action ("created", "updated", "deleted").
+        redirect_url: Optional URL for HX-Redirect header (post-create navigation).
     """
     if not _is_htmx_request(request):
         return result
@@ -71,6 +80,8 @@ def _with_htmx_triggers(request: Any, result: Any, entity_name: str, action: str
         body = result
 
     headers = htmx_trigger_headers(entity_name, action)
+    if redirect_url:
+        headers["HX-Redirect"] = redirect_url
     return _JSONResponse(content=body, headers=headers)
 
 
@@ -295,8 +306,79 @@ def create_read_handler(
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
+    entity_name: str = "Item",
+    audit_logger: Any | None = None,
+    cedar_access_spec: Any | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for read operations."""
+    """Create a handler for read operations with optional Cedar-style access control."""
+
+    # If we have Cedar access spec with READ rules, use optional auth for evaluation
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+
+    if _use_cedar:
+
+        async def _read_cedar(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+        ) -> Any:
+            from dazzle_back.runtime.access_evaluator import (
+                AccessDecision,
+                AccessRuntimeContext,
+                evaluate_permission,
+            )
+            from dazzle_back.specs.auth import AccessOperationKind
+
+            result = await service.execute(operation="read", id=id)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Not found")
+
+            # Build runtime context
+            user = auth_context.user if auth_context.is_authenticated else None
+            ctx = AccessRuntimeContext(
+                user_id=str(user.id) if user else None,
+                roles=list(getattr(user, "roles", [])) if user else [],
+                is_superuser=getattr(user, "is_superuser", False) if user else False,
+            )
+
+            # Evaluate Cedar policy
+            record = (
+                result.model_dump()
+                if hasattr(result, "model_dump")
+                else (result if isinstance(result, dict) else {})
+            )
+            decision: AccessDecision = evaluate_permission(
+                cedar_access_spec, AccessOperationKind.READ, record, ctx
+            )
+
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                audit_ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="read",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow" if decision.allowed else "deny",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user_id=str(user.id) if user else None,
+                    user_email=getattr(user, "email", None) if user else None,
+                    user_roles=list(getattr(user, "roles", [])) if user else None,
+                    **audit_ctx,
+                )
+
+            if not decision.allowed:
+                # Return 404 to prevent enumeration
+                raise HTTPException(status_code=404, detail="Not found")
+            return result
+
+        _read_cedar.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _read_cedar
 
     if require_auth_by_default and auth_dep:
 
@@ -306,6 +388,26 @@ def create_read_handler(
             result = await service.execute(operation="read", id=id)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="read",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow",
+                    matched_policy="authenticated",
+                    policy_effect="permit",
+                    user_id=str(auth_context.user.id) if auth_context.user else None,
+                    user_email=getattr(auth_context.user, "email", None)
+                    if auth_context.user
+                    else None,
+                    user_roles=list(getattr(auth_context.user, "roles", []))
+                    if auth_context.user
+                    else None,
+                    **ctx,
+                )
             return result
 
         _read_auth.__annotations__ = {
@@ -326,6 +428,15 @@ def create_read_handler(
     return _read_noauth
 
 
+def _extract_result_id(result: Any) -> str | None:
+    """Extract the id from a create result (Pydantic model or dict)."""
+    if hasattr(result, "id"):
+        return str(result.id)
+    if isinstance(result, dict) and "id" in result:
+        return str(result["id"])
+    return None
+
+
 def create_create_handler(
     service: Any,
     input_schema: type[BaseModel],
@@ -333,8 +444,79 @@ def create_create_handler(
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
+    entity_slug: str = "",
+    audit_logger: Any | None = None,
+    cedar_access_spec: Any | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for create operations."""
+    """Create a handler for create operations with optional Cedar-style access control."""
+
+    def _build_redirect_url(result: Any) -> str | None:
+        if not entity_slug:
+            return None
+        result_id = _extract_result_id(result)
+        if result_id:
+            return f"/app/{entity_slug}/{result_id}"
+        return None
+
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+
+    if _use_cedar:
+
+        async def _create_cedar(
+            request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+        ) -> Any:
+            from dazzle_back.runtime.access_evaluator import (
+                AccessDecision,
+                AccessRuntimeContext,
+                evaluate_permission,
+            )
+            from dazzle_back.specs.auth import AccessOperationKind
+
+            user = auth_context.user if auth_context.is_authenticated else None
+            ctx = AccessRuntimeContext(
+                user_id=str(user.id) if user else None,
+                roles=list(getattr(user, "roles", [])) if user else [],
+                is_superuser=getattr(user, "is_superuser", False) if user else False,
+            )
+
+            decision: AccessDecision = evaluate_permission(
+                cedar_access_spec, AccessOperationKind.CREATE, None, ctx
+            )
+
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                audit_ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="create",
+                    entity_name=entity_name,
+                    entity_id=None,
+                    decision="allow" if decision.allowed else "deny",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user_id=str(user.id) if user else None,
+                    user_email=getattr(user, "email", None) if user else None,
+                    user_roles=list(getattr(user, "roles", [])) if user else None,
+                    **audit_ctx,
+                )
+
+            if not decision.allowed:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            body = await _parse_request_body(request)
+            data = input_schema.model_validate(body)
+            result = await service.execute(operation="create", data=data)
+            return _with_htmx_triggers(
+                request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
+            )
+
+        _create_cedar.__annotations__ = {
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _create_cedar
 
     if require_auth_by_default and auth_dep:
 
@@ -344,7 +526,29 @@ def create_create_handler(
             body = await _parse_request_body(request)
             data = input_schema.model_validate(body)
             result = await service.execute(operation="create", data=data)
-            return _with_htmx_triggers(request, result, entity_name, "created")
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="create",
+                    entity_name=entity_name,
+                    entity_id=_extract_result_id(result),
+                    decision="allow",
+                    matched_policy="authenticated",
+                    policy_effect="permit",
+                    user_id=str(auth_context.user.id) if auth_context.user else None,
+                    user_email=getattr(auth_context.user, "email", None)
+                    if auth_context.user
+                    else None,
+                    user_roles=list(getattr(auth_context.user, "roles", []))
+                    if auth_context.user
+                    else None,
+                    **ctx,
+                )
+            return _with_htmx_triggers(
+                request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
+            )
 
         _create_auth.__annotations__ = {
             "request": Request,
@@ -357,7 +561,9 @@ def create_create_handler(
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
-        return _with_htmx_triggers(request, result, entity_name, "created")
+        return _with_htmx_triggers(
+            request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
+        )
 
     _create_noauth.__annotations__ = {"request": Request, "return": Any}
     return _create_noauth
@@ -370,8 +576,81 @@ def create_update_handler(
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
+    audit_logger: Any | None = None,
+    cedar_access_spec: Any | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for update operations."""
+    """Create a handler for update operations with optional Cedar-style access control."""
+
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+
+    if _use_cedar:
+
+        async def _update_cedar(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+        ) -> Any:
+            from dazzle_back.runtime.access_evaluator import (
+                AccessDecision,
+                AccessRuntimeContext,
+                evaluate_permission,
+            )
+            from dazzle_back.specs.auth import AccessOperationKind
+
+            # Fetch existing record for condition evaluation
+            existing = await service.execute(operation="read", id=id)
+            if existing is None:
+                raise HTTPException(status_code=404, detail="Not found")
+
+            user = auth_context.user if auth_context.is_authenticated else None
+            ctx = AccessRuntimeContext(
+                user_id=str(user.id) if user else None,
+                roles=list(getattr(user, "roles", [])) if user else [],
+                is_superuser=getattr(user, "is_superuser", False) if user else False,
+            )
+
+            record = (
+                existing.model_dump()
+                if hasattr(existing, "model_dump")
+                else (existing if isinstance(existing, dict) else {})
+            )
+            decision: AccessDecision = evaluate_permission(
+                cedar_access_spec, AccessOperationKind.UPDATE, record, ctx
+            )
+
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                audit_ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="update",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow" if decision.allowed else "deny",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user_id=str(user.id) if user else None,
+                    user_email=getattr(user, "email", None) if user else None,
+                    user_roles=list(getattr(user, "roles", [])) if user else None,
+                    **audit_ctx,
+                )
+
+            if not decision.allowed:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            body = await _parse_request_body(request)
+            data = input_schema.model_validate(body)
+            result = await service.execute(operation="update", id=id, data=data)
+            if result is None:
+                raise HTTPException(status_code=404, detail="Not found")
+            return _with_htmx_triggers(request, result, entity_name, "updated")
+
+        _update_cedar.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _update_cedar
 
     if require_auth_by_default and auth_dep:
 
@@ -383,6 +662,26 @@ def create_update_handler(
             result = await service.execute(operation="update", id=id, data=data)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="update",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow",
+                    matched_policy="authenticated",
+                    policy_effect="permit",
+                    user_id=str(auth_context.user.id) if auth_context.user else None,
+                    user_email=getattr(auth_context.user, "email", None)
+                    if auth_context.user
+                    else None,
+                    user_roles=list(getattr(auth_context.user, "roles", []))
+                    if auth_context.user
+                    else None,
+                    **ctx,
+                )
             return _with_htmx_triggers(request, result, entity_name, "updated")
 
         _update_auth.__annotations__ = {
@@ -410,8 +709,79 @@ def create_delete_handler(
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
+    audit_logger: Any | None = None,
+    cedar_access_spec: Any | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
-    """Create a handler for delete operations."""
+    """Create a handler for delete operations with optional Cedar-style access control."""
+
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+
+    if _use_cedar:
+
+        async def _delete_cedar(
+            id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+        ) -> Any:
+            from dazzle_back.runtime.access_evaluator import (
+                AccessDecision,
+                AccessRuntimeContext,
+                evaluate_permission,
+            )
+            from dazzle_back.specs.auth import AccessOperationKind
+
+            # Fetch existing record for condition evaluation
+            existing = await service.execute(operation="read", id=id)
+            if existing is None:
+                raise HTTPException(status_code=404, detail="Not found")
+
+            user = auth_context.user if auth_context.is_authenticated else None
+            ctx = AccessRuntimeContext(
+                user_id=str(user.id) if user else None,
+                roles=list(getattr(user, "roles", [])) if user else [],
+                is_superuser=getattr(user, "is_superuser", False) if user else False,
+            )
+
+            record = (
+                existing.model_dump()
+                if hasattr(existing, "model_dump")
+                else (existing if isinstance(existing, dict) else {})
+            )
+            decision: AccessDecision = evaluate_permission(
+                cedar_access_spec, AccessOperationKind.DELETE, record, ctx
+            )
+
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                audit_ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="delete",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow" if decision.allowed else "deny",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user_id=str(user.id) if user else None,
+                    user_email=getattr(user, "email", None) if user else None,
+                    user_roles=list(getattr(user, "roles", [])) if user else None,
+                    **audit_ctx,
+                )
+
+            if not decision.allowed:
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            result = await service.execute(operation="delete", id=id)
+            if not result:
+                raise HTTPException(status_code=404, detail="Not found")
+            return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
+
+        _delete_cedar.__annotations__ = {
+            "id": UUID,
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _delete_cedar
 
     if require_auth_by_default and auth_dep:
 
@@ -421,6 +791,26 @@ def create_delete_handler(
             result = await service.execute(operation="delete", id=id)
             if not result:
                 raise HTTPException(status_code=404, detail="Not found")
+            if audit_logger:
+                from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+                ctx = create_audit_context_from_request(request)
+                await audit_logger.log_decision(
+                    operation="delete",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow",
+                    matched_policy="authenticated",
+                    policy_effect="permit",
+                    user_id=str(auth_context.user.id) if auth_context.user else None,
+                    user_email=getattr(auth_context.user, "email", None)
+                    if auth_context.user
+                    else None,
+                    user_roles=list(getattr(auth_context.user, "roles", []))
+                    if auth_context.user
+                    else None,
+                    **ctx,
+                )
             return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
 
         _delete_auth.__annotations__ = {
@@ -489,6 +879,8 @@ class RouteGenerator:
         optional_auth_dep: Callable[..., Any] | None = None,
         require_auth_by_default: bool = False,
         auth_store: Any | None = None,
+        audit_logger: Any | None = None,
+        cedar_access_specs: dict[str, Any] | None = None,
     ):
         """
         Initialize the route generator.
@@ -502,6 +894,8 @@ class RouteGenerator:
             optional_auth_dep: FastAPI dependency for optional auth (returns empty AuthContext)
             require_auth_by_default: If True, require auth for all routes when no access spec
             auth_store: AuthStore instance for creating per-route role-based dependencies
+            audit_logger: Optional AuditLogger for recording access decisions
+            cedar_access_specs: Optional dict of entity_name -> EntityAccessSpec for Cedar evaluation
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -514,6 +908,8 @@ class RouteGenerator:
         self.optional_auth_dep = optional_auth_dep
         self.require_auth_by_default = require_auth_by_default
         self.auth_store = auth_store
+        self.audit_logger = audit_logger
+        self.cedar_access_specs = cedar_access_specs or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -553,6 +949,13 @@ class RouteGenerator:
         # Create appropriate handler based on HTTP method (primary) or operation kind (secondary)
         handler: Callable[..., Any]
 
+        # Derive entity slug for post-create redirect
+        _entity_slug = (entity_name or "").lower().replace("_", "-")
+
+        # Resolve audit logger and Cedar access spec for this entity
+        _audit = self.audit_logger
+        _cedar_spec = self.cedar_access_specs.get(entity_name or "")
+
         # POST -> CREATE
         if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
             create_schema = entity_schemas.get("create", model)
@@ -564,6 +967,10 @@ class RouteGenerator:
                     auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
                     entity_name=entity_name or "Item",
+                    entity_slug=_entity_slug,
+                    audit_logger=_audit,
+                    cedar_access_spec=_cedar_spec,
+                    optional_auth_dep=self.optional_auth_dep,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -578,6 +985,10 @@ class RouteGenerator:
                 model,
                 auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
+                entity_name=entity_name or "Item",
+                audit_logger=_audit,
+                cedar_access_spec=_cedar_spec,
+                optional_auth_dep=self.optional_auth_dep,
             )
             self._add_route(endpoint, handler, response_model=model)
 
@@ -610,6 +1021,9 @@ class RouteGenerator:
                     auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
                     entity_name=entity_name or "Item",
+                    audit_logger=_audit,
+                    cedar_access_spec=_cedar_spec,
+                    optional_auth_dep=self.optional_auth_dep,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -622,6 +1036,9 @@ class RouteGenerator:
                 auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
                 entity_name=entity_name or "Item",
+                audit_logger=_audit,
+                cedar_access_spec=_cedar_spec,
+                optional_auth_dep=self.optional_auth_dep,
             )
             self._add_route(endpoint, handler, response_model=None)
 
@@ -662,12 +1079,22 @@ class RouteGenerator:
         if response_model:
             route_kwargs["response_model"] = response_model
 
-        # Add role-based dependency if endpoint requires specific roles (RBAC)
+        # Add role-based dependencies (RBAC)
+        dependencies: list[Any] = []
         if endpoint.require_roles and self.auth_store:
             from dazzle_back.runtime.auth import create_auth_dependency
 
             role_dep = create_auth_dependency(self.auth_store, require_roles=endpoint.require_roles)
-            route_kwargs["dependencies"] = [Depends(role_dep)]
+            dependencies.append(Depends(role_dep))
+
+        if endpoint.deny_roles and self.auth_store:
+            from dazzle_back.runtime.auth import create_deny_dependency
+
+            deny_dep = create_deny_dependency(self.auth_store, deny_roles=endpoint.deny_roles)
+            dependencies.append(Depends(deny_dep))
+
+        if dependencies:
+            route_kwargs["dependencies"] = dependencies
 
         # Add the route
         router_method(path, **route_kwargs)(handler)

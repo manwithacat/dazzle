@@ -73,6 +73,7 @@ class EntityParserMixin:
         transitions: list[ir.StateTransition] = []
         invariants: list[ir.InvariantSpec] = []
         publishes: list[ir.PublishSpec] = []
+        audit_config: ir.AuditConfig | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -250,23 +251,31 @@ class EntityParserMixin:
                     if self.match(TokenType.DEDENT):
                         break
 
-                    # Parse read:, write:, or delete: rule
+                    # Parse read:, write:, delete:, create:, or list: rule
                     if self.match(TokenType.READ):
                         self.advance()
                         self.expect(TokenType.COLON)
                         condition = self.parse_condition_expr()
-                        # read: maps to visibility rule for authenticated users
+                        # read: maps to both visibility rule AND permit READ
                         visibility_rules.append(
                             ir.VisibilityRule(
                                 context=ir.AuthContext.AUTHENTICATED,
                                 condition=condition,
                             )
                         )
+                        permission_rules.append(
+                            ir.PermissionRule(
+                                operation=ir.PermissionKind.READ,
+                                require_auth=True,
+                                condition=condition,
+                                effect=ir.PolicyEffect.PERMIT,
+                            )
+                        )
                     elif self.match(TokenType.WRITE):
                         self.advance()
                         self.expect(TokenType.COLON)
                         condition = self.parse_condition_expr()
-                        # write: maps to CREATE, UPDATE permissions (not DELETE in v0.7.0)
+                        # write: maps to CREATE, UPDATE permissions
                         for op in [
                             ir.PermissionKind.CREATE,
                             ir.PermissionKind.UPDATE,
@@ -276,25 +285,50 @@ class EntityParserMixin:
                                     operation=op,
                                     require_auth=True,
                                     condition=condition,
+                                    effect=ir.PolicyEffect.PERMIT,
                                 )
                             )
                     elif self.match(TokenType.DELETE):
                         self.advance()
                         self.expect(TokenType.COLON)
                         condition = self.parse_condition_expr()
-                        # delete: maps to DELETE permission only
                         permission_rules.append(
                             ir.PermissionRule(
                                 operation=ir.PermissionKind.DELETE,
                                 require_auth=True,
                                 condition=condition,
+                                effect=ir.PolicyEffect.PERMIT,
+                            )
+                        )
+                    elif self.match(TokenType.CREATE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        condition = self.parse_condition_expr()
+                        permission_rules.append(
+                            ir.PermissionRule(
+                                operation=ir.PermissionKind.CREATE,
+                                require_auth=True,
+                                condition=condition,
+                                effect=ir.PolicyEffect.PERMIT,
+                            )
+                        )
+                    elif self.match(TokenType.LIST):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        condition = self.parse_condition_expr()
+                        permission_rules.append(
+                            ir.PermissionRule(
+                                operation=ir.PermissionKind.LIST,
+                                require_auth=True,
+                                condition=condition,
+                                effect=ir.PolicyEffect.PERMIT,
                             )
                         )
                     else:
                         token = self.current_token()
                         raise make_parse_error(
-                            f"Expected 'read', 'write', or 'delete' in access block, "
-                            f"got {token.type.value}",
+                            f"Expected 'read', 'write', 'create', 'delete', or 'list' "
+                            f"in access block, got {token.type.value}",
                             self.file,
                             token.line,
                             token.column,
@@ -302,6 +336,52 @@ class EntityParserMixin:
                     self.skip_newlines()
 
                 self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
+            # Check for permit: block (Cedar-style explicit permit rules)
+            if self.match(TokenType.PERMIT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    rule = self._parse_policy_rule(ir.PolicyEffect.PERMIT)
+                    permission_rules.append(rule)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
+            # Check for forbid: block (Cedar-style explicit forbid rules)
+            if self.match(TokenType.FORBID):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    rule = self._parse_policy_rule(ir.PolicyEffect.FORBID)
+                    permission_rules.append(rule)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
+            # Check for audit: directive
+            if self.match(TokenType.AUDIT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                audit_config = self._parse_audit_directive()
                 self.skip_newlines()
                 continue
 
@@ -403,6 +483,7 @@ class EntityParserMixin:
             invariants=invariants,
             constraints=constraints,
             access=access,
+            audit=audit_config,
             state_machine=state_machine,
             examples=examples,
             publishes=publishes,
@@ -507,6 +588,141 @@ class EntityParserMixin:
         # Otherwise, parse a condition expression (implies authenticated)
         condition = self.parse_condition_expr()
         return ir.PermissionRule(operation=operation, require_auth=True, condition=condition)
+
+    def _parse_policy_rule(self, effect: ir.PolicyEffect) -> ir.PermissionRule:
+        """
+        Parse a policy rule inside a permit: or forbid: block.
+
+        Syntax:
+            read: role(viewer) or role(admin)
+            create: role(editor) or role(admin)
+            update: owner_id = current_user and role(editor)
+            delete: role(admin)
+            list: authenticated
+        """
+        # Parse operation kind
+        op_map = {
+            TokenType.CREATE: ir.PermissionKind.CREATE,
+            TokenType.READ: ir.PermissionKind.READ,
+            TokenType.UPDATE: ir.PermissionKind.UPDATE,
+            TokenType.DELETE: ir.PermissionKind.DELETE,
+            TokenType.LIST: ir.PermissionKind.LIST,
+        }
+
+        token = self.current_token()
+        operation = None
+        for token_type, kind in op_map.items():
+            if self.match(token_type):
+                self.advance()
+                operation = kind
+                break
+
+        if operation is None:
+            # Try as identifier (e.g. "write" which maps to create+update)
+            if self.match(TokenType.WRITE):
+                raise make_parse_error(
+                    f"'write' is not valid in {effect.value}: blocks. "
+                    f"Use 'create' and 'update' separately.",
+                    self.file,
+                    token.line,
+                    token.column,
+                )
+            raise make_parse_error(
+                f"Expected 'create', 'read', 'update', 'delete', or 'list' "
+                f"in {effect.value}: block, got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        self.expect(TokenType.COLON)
+
+        # Check for simple "authenticated" (no condition)
+        if self.match(TokenType.AUTHENTICATED):
+            self.advance()
+            return ir.PermissionRule(
+                operation=operation,
+                require_auth=True,
+                effect=effect,
+            )
+
+        # Check for "anonymous" (no auth required)
+        if self.match(TokenType.ANONYMOUS):
+            self.advance()
+            return ir.PermissionRule(
+                operation=operation,
+                require_auth=False,
+                condition=None,
+                effect=effect,
+            )
+
+        # Otherwise parse condition expression (implies authenticated)
+        condition = self.parse_condition_expr()
+        return ir.PermissionRule(
+            operation=operation,
+            require_auth=True,
+            condition=condition,
+            effect=effect,
+        )
+
+    def _parse_audit_directive(self) -> ir.AuditConfig:
+        """
+        Parse audit: directive.
+
+        Syntax:
+            audit: all
+            audit: [create, update, delete]
+        """
+        # Check for "all" keyword
+        if self.match(TokenType.ALL):
+            self.advance()
+            return ir.AuditConfig(enabled=True, operations=[])
+
+        # Check for bracket list of operations
+        if self.match(TokenType.LBRACKET):
+            self.advance()
+            operations: list[ir.PermissionKind] = []
+            op_map = {
+                "create": ir.PermissionKind.CREATE,
+                "read": ir.PermissionKind.READ,
+                "update": ir.PermissionKind.UPDATE,
+                "delete": ir.PermissionKind.DELETE,
+                "list": ir.PermissionKind.LIST,
+            }
+
+            while not self.match(TokenType.RBRACKET):
+                token = self.expect_identifier_or_keyword()
+                if token.value not in op_map:
+                    raise make_parse_error(
+                        f"Expected operation name (create/read/update/delete/list), "
+                        f"got '{token.value}'",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                operations.append(op_map[token.value])
+                if self.match(TokenType.COMMA):
+                    self.advance()
+
+            self.expect(TokenType.RBRACKET)
+            return ir.AuditConfig(enabled=True, operations=operations)
+
+        # Single boolean-like: true/false
+        if self.match(TokenType.TRUE):
+            self.advance()
+            return ir.AuditConfig(enabled=True, operations=[])
+        if self.match(TokenType.FALSE):
+            self.advance()
+            return ir.AuditConfig(enabled=False, operations=[])
+
+        token = self.current_token()
+        raise make_parse_error(
+            f"Expected 'all', 'true', 'false', or [operations] after 'audit:', "
+            f"got {token.type.value}",
+            self.file,
+            token.line,
+            token.column,
+        )
 
     def _parse_state_transition(self) -> ir.StateTransition:
         """

@@ -17,6 +17,7 @@
         dict({
           'access': None,
           'archetype_kind': None,
+          'audit': None,
           'computed_fields': list([
           ]),
           'constraints': list([

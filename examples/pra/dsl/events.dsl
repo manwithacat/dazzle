@@ -58,7 +58,7 @@ event_model:
     partition_key: alert_id
 
   # Topic with long retention (weeks)
-  topic audit:
+  topic audit_events:
     retention: 364
     partition_key: entity_id
 
@@ -102,7 +102,7 @@ event_model:
 
   # Audit event
   event AuditEntry:
-    topic: audit
+    topic: audit_events
     payload: AuditLog
 
 # =============================================================================
@@ -193,7 +193,7 @@ project AlertMetrics from dazzle.events.alerts:
 # PROJECT: MULTIPLE HANDLERS
 # =============================================================================
 
-project AuditHistory from audit:
+project AuditHistory from audit_events:
   on AuditEntry:
     upsert with entity_id, action=action, actor=actor
 

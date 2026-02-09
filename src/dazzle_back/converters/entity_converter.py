@@ -12,6 +12,7 @@ from dazzle_back.specs import (
     AccessConditionSpec,
     AccessLogicalKind,
     AccessOperationKind,
+    AccessPolicyEffect,
     AggregateFunctionKind,
     ArithmeticOperatorKind,
     AutoTransitionSpec,
@@ -513,13 +514,21 @@ def _convert_permission_rule(rule: ir.PermissionRule) -> PermissionRuleSpec:
     """Convert IR PermissionRule to BackendSpec PermissionRuleSpec."""
     op_map = {
         ir.PermissionKind.CREATE: AccessOperationKind.CREATE,
+        ir.PermissionKind.READ: AccessOperationKind.READ,
         ir.PermissionKind.UPDATE: AccessOperationKind.UPDATE,
         ir.PermissionKind.DELETE: AccessOperationKind.DELETE,
+        ir.PermissionKind.LIST: AccessOperationKind.LIST,
+    }
+    effect_map = {
+        ir.PolicyEffect.PERMIT: AccessPolicyEffect.PERMIT,
+        ir.PolicyEffect.FORBID: AccessPolicyEffect.FORBID,
     }
     return PermissionRuleSpec(
         operation=op_map[rule.operation],
         require_auth=rule.require_auth,
         condition=_convert_access_condition(rule.condition) if rule.condition else None,
+        effect=effect_map[rule.effect],
+        personas=list(rule.personas),
     )
 
 

@@ -1,8 +1,10 @@
 """
-Access rule evaluator for v0.7.0 enhanced access control.
+Access rule evaluator with Cedar-style permit/forbid semantics.
 
 Evaluates EntityAccessSpec from BackendSpec at runtime, supporting:
+- Cedar three-rule evaluation: FORBID > PERMIT > default-deny
 - Role checks: role(admin)
+- Persona scoping: restrict rules to specific personas
 - Relationship traversal: owner.team_id
 - Logical operators: AND/OR
 - Comparison operators: =, !=, >, <, >=, <=, in, not in
@@ -18,9 +20,41 @@ from dazzle_back.specs import (
     AccessConditionSpec,
     AccessLogicalKind,
     AccessOperationKind,
+    AccessPolicyEffect,
     EntityAccessSpec,
 )
-from dazzle_back.specs.auth import AccessAuthContext
+from dazzle_back.specs.auth import AccessAuthContext, PermissionRuleSpec
+
+# =============================================================================
+# Access Decision
+# =============================================================================
+
+
+class AccessDecision:
+    """
+    Result of an access evaluation.
+
+    Couples the allow/deny decision with the reason, enabling audit logging.
+    """
+
+    __slots__ = ("allowed", "matched_policy", "effect")
+
+    def __init__(
+        self,
+        allowed: bool,
+        matched_policy: str = "",
+        effect: str = "",
+    ):
+        self.allowed = allowed
+        self.matched_policy = matched_policy
+        self.effect = effect
+
+    def __bool__(self) -> bool:
+        return self.allowed
+
+    def __repr__(self) -> str:
+        return f"AccessDecision(allowed={self.allowed}, policy={self.matched_policy!r})"
+
 
 # =============================================================================
 # Access Runtime Context
@@ -93,14 +127,6 @@ def _resolve_dotted_path(
     1. Get record['owner'] or record['owner_id'] (the foreign key)
     2. Use entity_resolver to fetch the Owner entity
     3. Return owner_record['team_id']
-
-    Args:
-        record: Current entity record
-        path: Dotted path like 'owner.team_id'
-        context: Access context with entity resolver
-
-    Returns:
-        The resolved value, or None if not found
     """
     parts = path.split(".")
     current = record
@@ -110,20 +136,15 @@ def _resolve_dotted_path(
             return None
 
         if isinstance(current, dict):
-            # Direct field access
             if part in current:
                 current = current[part]
-            # Try with _id suffix for foreign keys
             elif f"{part}_id" in current:
                 fk_value = current[f"{part}_id"]
-                # Need to resolve the related entity
                 if context.entity_resolver and fk_value:
-                    # Try to resolve - entity name is typically PascalCase of the field
-                    entity_name = part.title()  # "owner" -> "Owner"
+                    entity_name = part.title()
                     resolved = context.entity_resolver(entity_name, fk_value)
                     current = resolved
                 else:
-                    # Can't resolve, return the FK value
                     current = fk_value
             else:
                 return None
@@ -152,27 +173,22 @@ def _evaluate_comparison_condition(
     value_list = condition.value_list
 
     if not field or not op:
-        return True  # No condition = always true
+        return True
 
-    # Resolve the field value (may be dotted path)
     if "." in field:
         record_value = _resolve_dotted_path(record, field, context)
     else:
         record_value = record.get(field)
 
-    # Resolve special values
     resolved_value = value
     if value == "current_user":
         resolved_value = context.user_id
     elif value == "current_team":
-        # Could be extended for team context
         resolved_value = None
 
-    # Normalize for comparison
     record_val_str = _normalize_for_comparison(record_value)
     resolved_val_str = _normalize_for_comparison(resolved_value)
 
-    # Perform comparison
     if op == AccessComparisonKind.EQUALS:
         return record_val_str == resolved_val_str
     elif op == AccessComparisonKind.NOT_EQUALS:
@@ -216,7 +232,6 @@ def _evaluate_comparison_condition(
             return record_val_str not in normalized_list
         return True
     elif op == AccessComparisonKind.IS:
-        # IS is typically for null checks
         if resolved_value is None:
             return record_value is None
         return bool(record_value == resolved_value)
@@ -240,14 +255,6 @@ def evaluate_access_condition(
     - comparison: field op value
     - role_check: role(name)
     - logical: left AND/OR right
-
-    Args:
-        condition: The condition to evaluate
-        record: Entity record to check against
-        context: Runtime context with user info
-
-    Returns:
-        True if condition is satisfied
     """
     if condition.kind == "comparison":
         return _evaluate_comparison_condition(condition, record, context)
@@ -277,6 +284,61 @@ def evaluate_access_condition(
 
 
 # =============================================================================
+# Rule Matching
+# =============================================================================
+
+
+def _rule_matches(
+    rule: PermissionRuleSpec,
+    operation: AccessOperationKind,
+    record: dict[str, Any] | None,
+    context: AccessRuntimeContext,
+) -> bool:
+    """
+    Check if a permission rule matches the current request.
+
+    A rule matches if:
+    1. Its operation matches the requested operation
+    2. Its persona scope matches (empty = any, otherwise user must have one)
+    3. Its auth requirement is met
+    4. Its condition evaluates to true against the record
+    """
+    if rule.operation != operation:
+        return False
+
+    # Check persona scope
+    if rule.personas:
+        if not any(context.has_role(p) for p in rule.personas):
+            return False
+
+    # Check auth requirement
+    if rule.require_auth and not context.is_authenticated:
+        return False
+
+    # If no condition, the rule matches
+    if rule.condition is None:
+        return True
+
+    # For create operations, handle missing record
+    if record is None and operation == AccessOperationKind.CREATE:
+        if rule.condition.kind == "role_check":
+            return evaluate_access_condition(rule.condition, {}, context)
+        return context.is_authenticated
+
+    return evaluate_access_condition(rule.condition, record or {}, context)
+
+
+def _describe_rule(rule: PermissionRuleSpec) -> str:
+    """Generate a human-readable description of a rule for audit logging."""
+    parts = [f"{rule.effect.value} {rule.operation.value}"]
+    if rule.personas:
+        parts.append(f"for [{', '.join(rule.personas)}]")
+    if rule.condition:
+        parts.append(f"when {rule.condition.kind}")
+    return " ".join(parts)
+
+
+# =============================================================================
 # Visibility Evaluation
 # =============================================================================
 
@@ -290,40 +352,26 @@ def evaluate_visibility(
     Evaluate if a record is visible to the user.
 
     Checks visibility rules based on authentication context.
-
-    Args:
-        access_spec: Entity access specification
-        record: Entity record to check
-        context: Runtime context with user info
-
-    Returns:
-        True if record is visible to user
     """
-    # Superusers can see everything
     if context.is_superuser:
         return True
 
-    # Determine auth context
     auth_context = (
         AccessAuthContext.AUTHENTICATED if context.is_authenticated else AccessAuthContext.ANONYMOUS
     )
 
-    # Find matching visibility rule
     for rule in access_spec.visibility:
         if rule.context == auth_context:
             return evaluate_access_condition(rule.condition, record, context)
 
-    # No matching rule - check if any rule exists
-    # If there are visibility rules but none match, deny access
     if access_spec.visibility:
         return False
 
-    # No visibility rules = public access
     return True
 
 
 # =============================================================================
-# Permission Evaluation
+# Cedar-Style Permission Evaluation
 # =============================================================================
 
 
@@ -332,9 +380,15 @@ def evaluate_permission(
     operation: AccessOperationKind,
     record: dict[str, Any] | None,
     context: AccessRuntimeContext,
-) -> bool:
+) -> AccessDecision:
     """
-    Evaluate if user has permission for an operation.
+    Cedar-style three-rule permission evaluation.
+
+    1. If ANY matching FORBID rule fires -> DENY (return forbid rule description)
+    2. If ANY matching PERMIT rule fires -> ALLOW (return permit rule description)
+    3. No matching rules -> DENY (default-deny)
+
+    Superusers bypass all checks.
 
     Args:
         access_spec: Entity access specification
@@ -343,50 +397,91 @@ def evaluate_permission(
         context: Runtime context with user info
 
     Returns:
-        True if operation is permitted
+        AccessDecision with allowed flag and matched policy description
     """
-    # Superusers can do anything
+    # Superusers bypass all checks
     if context.is_superuser:
-        return True
+        return AccessDecision(
+            allowed=True,
+            matched_policy="superuser_bypass",
+            effect="permit",
+        )
 
-    # Find matching permission rule
+    # Collect matching rules
+    matching_forbids: list[PermissionRuleSpec] = []
+    matching_permits: list[PermissionRuleSpec] = []
+
     for rule in access_spec.permissions:
-        if rule.operation == operation:
-            # Check if authentication is required
-            if rule.require_auth and not context.is_authenticated:
-                return False
+        if _rule_matches(rule, operation, record, context):
+            if rule.effect == AccessPolicyEffect.FORBID:
+                matching_forbids.append(rule)
+            else:
+                matching_permits.append(rule)
 
-            # If no condition, just auth requirement matters
-            if rule.condition is None:
-                return True
+    # Rule 1: Any FORBID match -> DENY
+    if matching_forbids:
+        rule = matching_forbids[0]
+        return AccessDecision(
+            allowed=False,
+            matched_policy=_describe_rule(rule),
+            effect="forbid",
+        )
 
-            # Evaluate condition
-            # For create, we may not have a record yet
-            if record is None and operation == AccessOperationKind.CREATE:
-                # For create, conditions are evaluated differently
-                # Most conditions can't be checked without a record
-                # Role checks can still be evaluated
-                if rule.condition.kind == "role_check":
-                    return evaluate_access_condition(rule.condition, {}, context)
-                # For other conditions on create, allow if authenticated
-                return context.is_authenticated
+    # Rule 2: Any PERMIT match -> ALLOW
+    if matching_permits:
+        rule = matching_permits[0]
+        return AccessDecision(
+            allowed=True,
+            matched_policy=_describe_rule(rule),
+            effect="permit",
+        )
 
-            return evaluate_access_condition(rule.condition, record or {}, context)
-
-    # No matching rule - check if there are any permission rules
+    # Rule 3: No matching rules -> default behavior
+    # If there are any rules defined for this entity, default-deny
     if access_spec.permissions:
-        # If there are rules but none for this operation, deny
-        return False
+        return AccessDecision(
+            allowed=False,
+            matched_policy="default_deny",
+            effect="default",
+        )
 
-    # No permission rules = allow if authenticated (for write operations)
+    # No permission rules at all = allow if authenticated (backward compat)
     if operation in (
         AccessOperationKind.CREATE,
         AccessOperationKind.UPDATE,
         AccessOperationKind.DELETE,
     ):
-        return context.is_authenticated
+        if context.is_authenticated:
+            return AccessDecision(
+                allowed=True,
+                matched_policy="no_rules_authenticated",
+                effect="permit",
+            )
+        return AccessDecision(
+            allowed=False,
+            matched_policy="no_rules_unauthenticated",
+            effect="default",
+        )
 
-    return True
+    return AccessDecision(
+        allowed=True,
+        matched_policy="no_rules_default_allow",
+        effect="permit",
+    )
+
+
+def evaluate_permission_bool(
+    access_spec: EntityAccessSpec,
+    operation: AccessOperationKind,
+    record: dict[str, Any] | None,
+    context: AccessRuntimeContext,
+) -> bool:
+    """
+    Backward-compatible boolean wrapper around evaluate_permission.
+
+    Returns True if operation is permitted, False otherwise.
+    """
+    return evaluate_permission(access_spec, operation, record, context).allowed
 
 
 # =============================================================================
@@ -399,8 +494,15 @@ def can_read(
     record: dict[str, Any],
     context: AccessRuntimeContext,
 ) -> bool:
-    """Check if user can read a record."""
-    return evaluate_visibility(access_spec, record, context)
+    """Check if user can read a record (uses visibility rules + READ permissions)."""
+    # First check visibility rules (backward compat)
+    if not evaluate_visibility(access_spec, record, context):
+        return False
+    # Also check READ permission rules if any exist
+    has_read_rules = any(r.operation == AccessOperationKind.READ for r in access_spec.permissions)
+    if has_read_rules:
+        return evaluate_permission(access_spec, AccessOperationKind.READ, record, context).allowed
+    return True
 
 
 def can_create(
@@ -413,7 +515,7 @@ def can_create(
         AccessOperationKind.CREATE,
         None,
         context,
-    )
+    ).allowed
 
 
 def can_update(
@@ -427,7 +529,7 @@ def can_update(
         AccessOperationKind.UPDATE,
         record,
         context,
-    )
+    ).allowed
 
 
 def can_delete(
@@ -441,7 +543,7 @@ def can_delete(
         AccessOperationKind.DELETE,
         record,
         context,
-    )
+    ).allowed
 
 
 def filter_visible_records(
@@ -449,15 +551,5 @@ def filter_visible_records(
     records: list[dict[str, Any]],
     context: AccessRuntimeContext,
 ) -> list[dict[str, Any]]:
-    """
-    Filter a list of records to only those visible to user.
-
-    Args:
-        access_spec: Entity access specification
-        records: List of entity records
-        context: Runtime context with user info
-
-    Returns:
-        Filtered list of visible records
-    """
+    """Filter a list of records to only those visible to user."""
     return [r for r in records if can_read(access_spec, r, context)]

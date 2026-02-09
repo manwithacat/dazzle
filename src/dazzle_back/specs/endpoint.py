@@ -84,6 +84,10 @@ class EndpointSpec(BaseModel):
         default_factory=list,
         description="Roles (persona IDs) required to access this endpoint",
     )
+    deny_roles: list[str] = Field(
+        default_factory=list,
+        description="Roles (persona IDs) denied from accessing this endpoint",
+    )
 
     @field_validator("path")
     @classmethod

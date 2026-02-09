@@ -411,7 +411,7 @@ entity Review "Review":
 
 entity AuditLog "Audit Log":
   intent: "Entity with readonly has_one (immutable references)"
-  domain: audit
+  domain: auditing
 
   id: uuid pk
   action: enum[create,update,delete] required

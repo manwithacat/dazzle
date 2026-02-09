@@ -1462,6 +1462,26 @@ class DNRBackendApp:
             if entity.metadata and "access" in entity.metadata:
                 entity_access_specs[entity.name] = entity.metadata["access"]
 
+        # Build Cedar access specs from backend spec entities (Phase 3: row-level enforcement)
+        cedar_access_specs: dict[str, Any] = {}
+        for entity in self.spec.entities:
+            if entity.access:
+                cedar_access_specs[entity.name] = entity.access
+
+        # Initialize audit logger for entities with access rules or audit directives
+        audit_logger = None
+        _has_auditable_entities = any(
+            (entity.metadata and "access" in entity.metadata)
+            or getattr(entity, "audit", None)
+            or entity.access
+            for entity in self.spec.entities
+        )
+        if _has_auditable_entities and self._database_url:
+            from dazzle_back.runtime.audit_log import AuditLogger
+
+            audit_logger = AuditLogger(database_url=self._database_url)
+            audit_logger.start()
+
         # Generate routes
         # When auth is enabled, require authentication by default (deny-default)
         service_specs = {svc.name: svc for svc in self.spec.services}
@@ -1474,6 +1494,8 @@ class DNRBackendApp:
             optional_auth_dep=optional_auth_dep,
             require_auth_by_default=self._enable_auth and not self._enable_test_mode,
             auth_store=self._auth_store,
+            audit_logger=audit_logger,
+            cedar_access_specs=cedar_access_specs,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
@@ -1482,6 +1504,16 @@ class DNRBackendApp:
 
         # Include router
         self._app.include_router(router)
+
+        # Include audit query routes if audit is enabled
+        if audit_logger:
+            from dazzle_back.runtime.audit_routes import create_audit_routes
+
+            audit_router = create_audit_routes(
+                audit_logger=audit_logger,
+                auth_dep=auth_dep,
+            )
+            self._app.include_router(audit_router)
 
         # Initialize file uploads if enabled
         if self._enable_files:
@@ -2172,6 +2204,7 @@ def create_app_factory(
             backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
             theme_css=theme_css,
             get_auth_context=_page_get_auth_context,
+            app_prefix="/app",
         )
         app.include_router(page_router, prefix="/app")
         logger.info(f"  App pages: {len(appspec.workspaces)} workspaces mounted at /app")

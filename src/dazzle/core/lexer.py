@@ -98,6 +98,9 @@ class TokenType(Enum):
     ACCESS = "access"
     READ = "read"
     WRITE = "write"
+    PERMIT = "permit"
+    FORBID = "forbid"
+    AUDIT = "audit"
 
     # UX Semantic Layer Keywords
     UX = "ux"
