@@ -57,6 +57,7 @@ htmlcov/
 # DAZZLE runtime data
 .dazzle/
 **/.dazzle/
+*.db
 
 # Development Docs (legacy)
 /devdocs
