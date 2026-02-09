@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS {prefix}events (
     event_version VARCHAR(50) NOT NULL DEFAULT '1.0',
     key VARCHAR(255) NOT NULL,
     payload JSONB NOT NULL,
-    headers JSONB DEFAULT '{}',
+    headers JSONB DEFAULT '{{}}',
     correlation_id UUID,
     causation_id UUID,
     timestamp TIMESTAMPTZ NOT NULL,
