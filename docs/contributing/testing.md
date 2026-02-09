@@ -110,26 +110,13 @@ pytest tests/integration/ -v --maxfail=1
 
 ### 3. E2E Tests
 
-#### 3.1 Docker-Based E2E (`tests/e2e/docker/`)
+#### 3.1 Playwright Tests (Local Only)
 
-**Framework:** Playwright (Python) in Docker
-**Execution:** CI (ux-coverage workflow), Manual
+**Location:** `tests/e2e/`
+**Execution:** Manual (not in CI)
 
-Full browser automation with Docker Compose:
-
-```bash
-# Run E2E tests (requires Docker)
-./tests/e2e/docker/run_tests.sh
-
-# With rebuild
-./tests/e2e/docker/run_tests.sh --build
-
-# Interactive mode for debugging
-./tests/e2e/docker/run_tests.sh --interactive
-
-# Cleanup containers
-./tests/e2e/docker/run_tests.sh --cleanup
-```
+Local-only Playwright browser tests for page load, JS errors, and screenshots.
+See `tests/e2e/README.md` for details.
 
 #### 3.2 Semantic DOM Contract Tests
 
@@ -142,15 +129,15 @@ Tests semantic HTML contracts and `data-dazzle-*` attributes:
 pytest tests/e2e/test_semantic_dom_contract.py -v --timeout=60
 ```
 
-#### 3.3 DNR Serve Tests
+#### 3.3 Serve Validation Tests
 
-**Location:** `tests/e2e/test_serve.py`
-**Execution:** CI (runtime-e2e job)
+**Location:** `tests/integration/test_serve_validation.py`
+**Execution:** CI (e2e-smoke job), `pytest -m "not e2e"`
 
-Tests `dazzle serve` command functionality:
+Tests `dazzle validate` and AppSpec-to-BackendSpec conversion (no server needed):
 
 ```bash
-pytest tests/e2e/test_serve.py -v --timeout=120
+pytest tests/integration/test_serve_validation.py -v
 ```
 
 ### 4. DNR Runtime Tests
@@ -319,7 +306,7 @@ Runs on push to main/develop and pull requests:
 | `example-e2e` | After lint | P0 examples (simple_task, contact_manager) |
 | `example-e2e-extended` | main only | P1/P2 examples (warnings only) |
 | `homebrew-validation` | All PRs | Formula validation (macOS) |
-| `ux-coverage` | Separate workflow | UX coverage tracking |
+| `gap-analysis` | Separate workflow | Test gap analysis across examples |
 
 ---
 
@@ -445,15 +432,11 @@ ruff format src/
 SKIP=pytest-fast git commit -m "message"
 ```
 
-### Docker E2E issues
+### E2E Runtime issues
 
 ```bash
-# Cleanup and rebuild
-./tests/e2e/docker/run_tests.sh --cleanup
-./tests/e2e/docker/run_tests.sh --build
-
-# Check container logs
-docker-compose -f tests/e2e/docker/docker-compose.yml logs
+# Run E2E tests locally
+pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=180
 ```
 
 ---
@@ -515,7 +498,7 @@ class TestMyExample:
 |-------|----------|:-----:|:----------:|:--:|
 | Unit | `tests/unit/` | ✅ | ✅ (fast) | ✅ |
 | Integration | `tests/integration/` | ✅ | ❌ | ✅ |
-| E2E (Docker) | `tests/e2e/docker/` | ✅ | ❌ | ✅ |
+| E2E (Playwright) | `tests/e2e/` | ✅ | ❌ | ❌ (local only) |
 | E2E (Semantic) | `tests/e2e/test_semantic_dom_contract.py` | ✅ | ❌ | ✅ |
 | DNR Backend | `src/dazzle_back/tests/` | ✅ | ❌ | ✅ |
 | Dazzle UI | `src/dazzle_ui/tests/` | ✅ | ❌ | ✅ |
