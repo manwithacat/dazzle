@@ -6,6 +6,7 @@ Tests user management, sessions, and auth endpoints.
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -100,14 +101,14 @@ class TestPasswordHashing:
 # =============================================================================
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthStore:
     """Tests for AuthStore class."""
 
     @pytest.fixture
-    def auth_store(self, tmp_path: Any) -> Any:
-        """Create an auth store with temporary database."""
-        db_path = tmp_path / "test_auth.db"
-        return AuthStore(db_path)
+    def auth_store(self) -> Any:
+        """Create an auth store with PostgreSQL database."""
+        return AuthStore(os.environ["DATABASE_URL"])
 
     def test_create_user(self, auth_store: Any) -> None:
         """Test creating a user."""
@@ -209,14 +210,14 @@ class TestAuthStore:
 # =============================================================================
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestSessions:
     """Tests for session management."""
 
     @pytest.fixture
-    def auth_store(self, tmp_path: Any) -> Any:
-        """Create an auth store with temporary database."""
-        db_path = tmp_path / "test_sessions.db"
-        return AuthStore(db_path)
+    def auth_store(self) -> Any:
+        """Create an auth store with PostgreSQL database."""
+        return AuthStore(os.environ["DATABASE_URL"])
 
     @pytest.fixture
     def test_user(self, auth_store: Any) -> Any:
@@ -366,13 +367,14 @@ class TestAuthContext:
 # =============================================================================
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthMiddleware:
     """Tests for AuthMiddleware class."""
 
     @pytest.fixture
-    def auth_store(self, tmp_path: Any) -> Any:
+    def auth_store(self) -> Any:
         """Create an auth store."""
-        return AuthStore(tmp_path / "middleware.db")
+        return AuthStore(os.environ["DATABASE_URL"])
 
     @pytest.fixture
     def middleware(self, auth_store: Any) -> Any:
@@ -415,11 +417,12 @@ class TestAuthMiddleware:
 # =============================================================================
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthRoutes:
     """Integration tests for auth routes."""
 
     @pytest.fixture
-    def app(self, tmp_path: Any) -> Any:
+    def app(self) -> Any:
         """Create a FastAPI app with auth routes."""
         try:
             from fastapi import FastAPI
@@ -427,7 +430,7 @@ class TestAuthRoutes:
         except ImportError:
             pytest.skip("FastAPI not installed")
 
-        auth_store = AuthStore(tmp_path / "routes.db")
+        auth_store = AuthStore(os.environ["DATABASE_URL"])
         app = FastAPI()
         router = create_auth_routes(auth_store)
         app.include_router(router)
@@ -654,6 +657,7 @@ class TestAuthRoutes:
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestServerAuthIntegration:
     """Tests for auth integration with DNRBackendApp."""
 
@@ -689,7 +693,6 @@ class TestServerAuthIntegration:
 
         builder = DNRBackendApp(
             simple_spec,
-            db_path=tmp_path / "noauth.db",
             enable_auth=False,
         )
         builder.build()  # Triggers auth setup
@@ -697,21 +700,22 @@ class TestServerAuthIntegration:
         assert builder.auth_enabled is False
         assert builder.auth_store is None
 
+    @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
     def test_build_with_auth(self, simple_spec: Any, tmp_path: Any) -> None:
         """Test building app with auth enabled."""
         from dazzle_back.runtime.server import DNRBackendApp
 
         builder = DNRBackendApp(
             simple_spec,
-            db_path=tmp_path / "auth.db",
+            database_url=os.environ["DATABASE_URL"],
             enable_auth=True,
-            auth_db_path=tmp_path / "auth_users.db",
         )
         builder.build()  # Triggers auth setup
 
         assert builder.auth_enabled is True
         assert builder.auth_store is not None
 
+    @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
     def test_auth_routes_available(self, simple_spec: Any, tmp_path: Any) -> None:
         """Test auth routes are available when auth is enabled."""
         try:
@@ -723,9 +727,8 @@ class TestServerAuthIntegration:
 
         builder = DNRBackendApp(
             simple_spec,
-            db_path=tmp_path / "routes.db",
+            database_url=os.environ["DATABASE_URL"],
             enable_auth=True,
-            auth_db_path=tmp_path / "routes_auth.db",
         )
         app = builder.build()
         client = TestClient(app)
@@ -741,6 +744,7 @@ class TestServerAuthIntegration:
         # Should return 401 (invalid credentials), not 404
         assert response.status_code == 401
 
+    @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
     def test_db_info_shows_auth(self, simple_spec: Any, tmp_path: Any) -> None:
         """Test db-info endpoint shows auth info."""
         try:
@@ -752,9 +756,8 @@ class TestServerAuthIntegration:
 
         builder = DNRBackendApp(
             simple_spec,
-            db_path=tmp_path / "info.db",
+            database_url=os.environ["DATABASE_URL"],
             enable_auth=True,
-            auth_db_path=tmp_path / "info_auth.db",
         )
         app = builder.build()
         client = TestClient(app)
@@ -1007,11 +1010,12 @@ class TestAuthConfig:
 # =============================================================================
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestAuthDependencies:
     """Tests for auth dependency injection."""
 
     @pytest.fixture
-    def app_with_protected_routes(self, tmp_path: Any) -> Any:
+    def app_with_protected_routes(self) -> Any:
         """Create an app with protected routes."""
         try:
             from fastapi import Depends, FastAPI
@@ -1019,7 +1023,7 @@ class TestAuthDependencies:
         except ImportError:
             pytest.skip("FastAPI not installed")
 
-        auth_store = AuthStore(tmp_path / "deps.db")
+        auth_store = AuthStore(os.environ["DATABASE_URL"])
         app = FastAPI()
 
         # Create auth routes

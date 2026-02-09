@@ -452,6 +452,9 @@ class DNRBackendApp:
         self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
 
         # Create token store (PostgreSQL-only)
+        if not self._database_url:
+            logger.warning("Social auth requires DATABASE_URL for token storage")
+            return
         self._token_store = TokenStore(
             database_url=self._database_url,
             token_lifetime_days=refresh_days,
@@ -593,6 +596,11 @@ class DNRBackendApp:
             from dazzle_back.runtime.spec_versioning import SpecVersionStore
 
             # Create ops database for console (PostgreSQL)
+            if not self._database_url:
+                import logging as _log
+
+                _log.getLogger("dazzle.server").info("Console requires DATABASE_URL — skipping")
+                return
             ops_db = OpsDatabase(
                 database_url=self._database_url,
             )
@@ -1187,20 +1195,20 @@ class DNRBackendApp:
 
             # Create the ProcessAdapter - use custom class if configured
             # Auto-detect Celery when REDIS_URL is set and no explicit class
-            if self._process_adapter_class is None:
+            adapter_cls: type | None = self._process_adapter_class
+            if adapter_cls is None:
                 redis_url = os.environ.get("REDIS_URL")
                 if redis_url:
                     try:
                         from dazzle.core.process import CeleryProcessAdapter
 
-                        adapter_class = CeleryProcessAdapter
+                        self._process_adapter = CeleryProcessAdapter(redis_url=redis_url)
                     except ImportError:
-                        adapter_class = LiteProcessAdapter
+                        self._process_adapter = LiteProcessAdapter(database_url=self._database_url)
                 else:
-                    adapter_class = LiteProcessAdapter
+                    self._process_adapter = LiteProcessAdapter(database_url=self._database_url)
             else:
-                adapter_class = self._process_adapter_class
-            self._process_adapter = adapter_class(database_url=self._database_url)
+                self._process_adapter = adapter_cls(database_url=self._database_url)
 
             # Create ProcessManager
             self._process_manager = ProcessManager(adapter=self._process_adapter)
@@ -1468,7 +1476,7 @@ class DNRBackendApp:
             from dazzle_back.runtime.test_routes import create_test_routes
 
             test_router = create_test_routes(
-                db_manager=self._db_manager,
+                db_manager=self._db_manager,  # type: ignore[arg-type]
                 repositories=self._repositories,
                 entities=self.spec.entities,
                 auth_store=self._auth_store,
@@ -1480,7 +1488,7 @@ class DNRBackendApp:
             from dazzle_back.runtime.control_plane import create_control_plane_routes
 
             control_plane_router = create_control_plane_routes(
-                db_manager=self._db_manager,
+                db_manager=self._db_manager,  # type: ignore[arg-type]
                 repositories=self._repositories if self._db_manager else None,
                 entities=self.spec.entities,
                 personas=self._personas,
@@ -1499,7 +1507,7 @@ class DNRBackendApp:
             self._start_time = datetime.now()
             debug_router = create_debug_routes(
                 spec=self.spec,
-                db_manager=self._db_manager,
+                db_manager=self._db_manager,  # type: ignore[arg-type]
                 entities=self.spec.entities,
                 start_time=self._start_time,
             )

@@ -70,12 +70,13 @@ class OpsConfig:
         sse_heartbeat_interval: float = 30.0,
         brand_config: BrandConfig | None = None,
         tracking_base_url: str | None = None,
+        database_url: str | None = None,
     ):
         """
         Initialize ops configuration.
 
         Args:
-            ops_db_path: Path to ops database. Defaults to .dazzle/ops.db
+            ops_db_path: Deprecated. Path to ops database.
             require_auth: Whether to require authentication for ops routes
             retention: Data retention configuration
             analytics_enabled: Whether to collect analytics
@@ -83,8 +84,10 @@ class OpsConfig:
             sse_heartbeat_interval: Seconds between SSE heartbeats
             brand_config: Brand configuration for email templates
             tracking_base_url: Base URL for email tracking (e.g., https://app.example.com)
+            database_url: PostgreSQL connection URL for ops database
         """
         self.ops_db_path = ops_db_path or Path(".dazzle/ops.db")
+        self.database_url = database_url
         self.require_auth = require_auth
         self.retention = retention or RetentionConfig()
         self.analytics_enabled = analytics_enabled
@@ -107,9 +110,12 @@ class OpsPlatform:
         """Initialize the ops platform."""
         self.config = config or OpsConfig()
 
-        # Core components
+        # Core components — resolve database_url from config or environment
+        import os
+
+        db_url = self.config.database_url or os.environ.get("DATABASE_URL", "")
         self.ops_db = OpsDatabase(
-            db_path=self.config.ops_db_path,
+            database_url=db_url,
             retention=self.config.retention,
         )
 

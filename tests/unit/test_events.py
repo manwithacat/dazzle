@@ -1017,8 +1017,8 @@ class TestConnectFnInjection:
         async with EventFramework(config) as framework:
             health = await framework.health_check()
 
-            assert health["tier"] in ("sqlite", "memory")
-            assert health["bus_type"] in ("DevBrokerSQLite", "DevBusMemory")
+            assert health["tier"] in ("sqlite", "memory", "postgres")
+            assert health["bus_type"] in ("DevBrokerSQLite", "DevBusMemory", "PostgresBus")
             assert health["publisher_running"] is False
             assert health["consumer_count"] == 0
             assert "outbox_depth" in health

@@ -14,9 +14,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-import psycopg
-from psycopg.rows import dict_row
 from pydantic import BaseModel, ConfigDict, Field
+
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+
+    PSYCOPG_AVAILABLE = True
+except ImportError:
+    psycopg = None  # type: ignore[assignment]
+    dict_row = None  # type: ignore[assignment]
+    PSYCOPG_AVAILABLE = False
 
 # FastAPI is optional - import for type hints and runtime
 try:
