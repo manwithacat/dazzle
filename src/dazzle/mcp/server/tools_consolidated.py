@@ -119,6 +119,10 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Filter to a specific surface name (for fidelity)",
                     },
+                    "gaps_only": {
+                        "type": "boolean",
+                        "description": "Omit surfaces with fidelity=1.0 (for fidelity)",
+                    },
                     "format": {
                         "type": "string",
                         "enum": ["markdown", "json"],
@@ -1319,6 +1323,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "stop_on_error": {
                         "type": "boolean",
                         "description": "Stop pipeline on first error (default: false, continues collecting results)",
+                    },
+                    "summary": {
+                        "type": "boolean",
+                        "description": "Return compact metrics instead of full results (default: true). Set false for full detail.",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

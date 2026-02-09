@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,7 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")
+    summary = args.get("summary", True)
 
     pipeline_start = time.monotonic()
     steps: list[dict[str, Any]] = []
@@ -95,7 +97,7 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     result = _run_step(1, "dsl(validate)", validate_dsl, project_path)
     if stop_on_error and result and result["status"] == "error":
-        return _build_pipeline_response(steps, errors, pipeline_start)
+        return _build_pipeline_response(steps, errors, pipeline_start, summary=summary)
 
     # -----------------------------------------------------------------------
     # Step 2: DSL Lint
@@ -216,15 +218,269 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
             {"base_url": base_url},
         )
 
-    return _build_pipeline_response(steps, errors, pipeline_start)
+    return _build_pipeline_response(steps, errors, pipeline_start, summary=summary)
+
+
+# ---------------------------------------------------------------------------
+# Metrics extractors — one per pipeline operation
+# ---------------------------------------------------------------------------
+
+
+def _extract_validate_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl(validate) result."""
+    return {
+        "status": data.get("status", "unknown"),
+        "modules": data.get("module_count", data.get("modules", 0)),
+        "entities": data.get("entity_count", data.get("entities", 0)),
+        "surfaces": data.get("surface_count", data.get("surfaces", 0)),
+    }
+
+
+def _extract_lint_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl(lint) result."""
+    errs = data.get("errors", [])
+    warns = data.get("warnings", [])
+    return {
+        "errors": len(errs) if isinstance(errs, list) else errs,
+        "warnings": len(warns) if isinstance(warns, list) else warns,
+    }
+
+
+def _extract_fidelity_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl(fidelity) result."""
+    surfaces = data.get("surfaces", [])
+    return {
+        "overall_fidelity": data.get("overall_fidelity"),
+        "total_gaps": data.get("total_gaps", 0),
+        "story_coverage": data.get("story_coverage"),
+        "surfaces_scored": len(surfaces),
+    }
+
+
+def _extract_test_generate_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl_test(generate) result."""
+    tests = data.get("tests", [])
+    categories: dict[str, int] = {}
+    for t in tests if isinstance(tests, list) else []:
+        cat = t.get("category", "unknown") if isinstance(t, dict) else "unknown"
+        categories[cat] = categories.get(cat, 0) + 1
+    return {
+        "total_tests": data.get("total_tests", len(tests) if isinstance(tests, list) else 0),
+        "categories": categories or data.get("categories", {}),
+    }
+
+
+def _extract_test_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl_test(coverage) result."""
+    return {
+        "overall_coverage": data.get("overall_coverage", data.get("coverage")),
+        "total_constructs": data.get("total_constructs", 0),
+        "tested_constructs": data.get("tested_constructs", 0),
+    }
+
+
+def _extract_story_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from story(coverage) or process(coverage) result."""
+    return {
+        "total_stories": data.get("total_stories", data.get("total", 0)),
+        "covered": data.get("covered", 0),
+        "partial": data.get("partial", 0),
+        "uncovered": data.get("uncovered", 0),
+        "coverage_percent": data.get("coverage_percent", data.get("coverage", 0)),
+    }
+
+
+def _extract_test_design_gaps_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from test_design(gaps) result."""
+    gaps = data.get("gaps", [])
+    by_severity: dict[str, int] = {}
+    for g in gaps if isinstance(gaps, list) else []:
+        sev = g.get("severity", "unknown") if isinstance(g, dict) else "unknown"
+        by_severity[sev] = by_severity.get(sev, 0) + 1
+    return {
+        "coverage_score": data.get("coverage_score", data.get("coverage")),
+        "gap_count": len(gaps) if isinstance(gaps, list) else data.get("gap_count", 0),
+        "gaps_by_severity": by_severity,
+    }
+
+
+def _extract_semantics_extract_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from semantics(extract) result."""
+    return {
+        "entity_count": data.get("entity_count", len(data.get("entities", []))),
+        "command_count": data.get("command_count", len(data.get("commands", []))),
+        "event_count": data.get("event_count", len(data.get("events", []))),
+    }
+
+
+def _extract_semantics_validate_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from semantics(validate_events) result."""
+    return {
+        "valid": data.get("valid", data.get("status") == "valid"),
+        "error_count": data.get("error_count", len(data.get("errors", []))),
+        "warning_count": data.get("warning_count", len(data.get("warnings", []))),
+    }
+
+
+def _extract_run_all_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from dsl_test(run_all) result."""
+    results = data.get("results", [])
+    by_cat: dict[str, dict[str, int]] = {}
+    for r in results if isinstance(results, list) else []:
+        if not isinstance(r, dict):
+            continue
+        cat = r.get("category", "unknown")
+        if cat not in by_cat:
+            by_cat[cat] = {"passed": 0, "failed": 0}
+        if r.get("status") == "passed" or r.get("passed"):
+            by_cat[cat]["passed"] += 1
+        else:
+            by_cat[cat]["failed"] += 1
+    return {
+        "total": data.get("total", len(results) if isinstance(results, list) else 0),
+        "passed": data.get("passed", 0),
+        "failed": data.get("failed", 0),
+        "by_category": by_cat,
+    }
+
+
+_METRICS_EXTRACTORS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+    "dsl(validate)": _extract_validate_metrics,
+    "dsl(lint)": _extract_lint_metrics,
+    "dsl(fidelity)": _extract_fidelity_metrics,
+    "dsl_test(generate)": _extract_test_generate_metrics,
+    "dsl_test(coverage)": _extract_test_coverage_metrics,
+    "story(coverage)": _extract_story_coverage_metrics,
+    "process(coverage)": _extract_story_coverage_metrics,
+    "test_design(gaps)": _extract_test_design_gaps_metrics,
+    "semantics(extract)": _extract_semantics_extract_metrics,
+    "semantics(validate_events)": _extract_semantics_validate_metrics,
+    "dsl_test(run_all)": _extract_run_all_metrics,
+}
+
+
+def _extract_step_metrics(operation: str, data: Any) -> dict[str, Any]:
+    """Extract compact metrics from a step result.
+
+    Returns an empty dict for unknown operations or non-dict data.
+    """
+    if not isinstance(data, dict):
+        return {}
+    extractor = _METRICS_EXTRACTORS.get(operation)
+    if extractor is None:
+        return {}
+    try:
+        return extractor(data)
+    except Exception:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# Top issues collector
+# ---------------------------------------------------------------------------
+
+
+def _collect_top_issues(
+    steps: list[dict[str, Any]],
+    max_issues: int = 5,
+) -> list[dict[str, Any]]:
+    """Scan full step results for actionable issues, return top N by severity.
+
+    Sources:
+    - lint errors/warnings
+    - fidelity recommendations
+    - test failures
+    - test design gaps
+    """
+    severity_rank = {"critical": 0, "major": 1, "error": 1, "minor": 2, "warning": 3, "info": 4}
+    issues: list[dict[str, Any]] = []
+
+    for step in steps:
+        result = step.get("result")
+        if not isinstance(result, dict):
+            continue
+        op = step.get("operation", "")
+
+        # Lint errors
+        if op == "dsl(lint)":
+            for err in result.get("errors", []) if isinstance(result.get("errors"), list) else []:
+                issues.append(
+                    {
+                        "source": "lint",
+                        "severity": "error",
+                        "message": err if isinstance(err, str) else str(err),
+                    }
+                )
+            for warn in (
+                result.get("warnings", []) if isinstance(result.get("warnings"), list) else []
+            ):
+                issues.append(
+                    {
+                        "source": "lint",
+                        "severity": "warning",
+                        "message": warn if isinstance(warn, str) else str(warn),
+                    }
+                )
+
+        # Fidelity recommendations
+        if op == "dsl(fidelity)":
+            for rec in result.get("top_recommendations", []):
+                if isinstance(rec, dict):
+                    issues.append(
+                        {
+                            "source": "fidelity",
+                            "severity": rec.get("severity", "minor"),
+                            "message": rec.get("recommendation", str(rec)),
+                        }
+                    )
+
+        # Test failures
+        if op == "dsl_test(run_all)":
+            for r in result.get("results", []) if isinstance(result.get("results"), list) else []:
+                if isinstance(r, dict) and (r.get("status") == "failed" or r.get("failed")):
+                    issues.append(
+                        {
+                            "source": "test_failure",
+                            "severity": "error",
+                            "message": r.get("error", r.get("name", str(r))),
+                        }
+                    )
+
+        # Test design gaps
+        if op == "test_design(gaps)":
+            for gap in result.get("gaps", []) if isinstance(result.get("gaps"), list) else []:
+                if isinstance(gap, dict):
+                    issues.append(
+                        {
+                            "source": "test_design",
+                            "severity": gap.get("severity", "minor"),
+                            "message": gap.get("description", gap.get("gap", str(gap))),
+                        }
+                    )
+
+    # Sort by severity rank, then truncate
+    issues.sort(key=lambda i: severity_rank.get(i.get("severity", "info"), 5))
+    return issues[:max_issues]
+
+
+# ---------------------------------------------------------------------------
+# Response builder
+# ---------------------------------------------------------------------------
 
 
 def _build_pipeline_response(
     steps: list[dict[str, Any]],
     errors: list[str],
     start_time: float,
+    *,
+    summary: bool = True,
 ) -> str:
-    """Build the final pipeline response JSON."""
+    """Build the final pipeline response JSON.
+
+    When summary=True (default), replaces full ``result`` payloads with
+    compact ``metrics`` dicts and appends a ``top_issues`` list.
+    When summary=False, returns the original full-detail format.
+    """
     total_ms = (time.monotonic() - start_time) * 1000
 
     passed = sum(1 for s in steps if s.get("status") == "passed")
@@ -233,17 +489,52 @@ def _build_pipeline_response(
 
     status = "passed" if failed == 0 else "failed"
 
-    response: dict[str, Any] = {
-        "status": status,
-        "total_duration_ms": round(total_ms, 1),
-        "summary": {
-            "total_steps": len(steps),
-            "passed": passed,
-            "failed": failed,
-            "skipped": skipped,
-        },
-        "steps": steps,
-    }
+    if summary:
+        summarized_steps: list[dict[str, Any]] = []
+        for step in steps:
+            compact: dict[str, Any] = {
+                "step": step.get("step"),
+                "operation": step.get("operation"),
+                "status": step.get("status"),
+                "duration_ms": step.get("duration_ms"),
+            }
+            if step.get("status") == "error":
+                compact["error"] = step.get("error")
+            elif step.get("status") == "skipped":
+                compact["reason"] = step.get("reason")
+            else:
+                result_data = step.get("result")
+                metrics = _extract_step_metrics(step.get("operation", ""), result_data)
+                if metrics:
+                    compact["metrics"] = metrics
+            summarized_steps.append(compact)
+
+        top_issues = _collect_top_issues(steps)
+
+        response: dict[str, Any] = {
+            "status": status,
+            "total_duration_ms": round(total_ms, 1),
+            "summary": {
+                "total_steps": len(steps),
+                "passed": passed,
+                "failed": failed,
+                "skipped": skipped,
+            },
+            "steps": summarized_steps,
+            "top_issues": top_issues,
+        }
+    else:
+        response = {
+            "status": status,
+            "total_duration_ms": round(total_ms, 1),
+            "summary": {
+                "total_steps": len(steps),
+                "passed": passed,
+                "failed": failed,
+                "skipped": skipped,
+            },
+            "steps": steps,
+        }
 
     if errors:
         response["errors"] = errors
