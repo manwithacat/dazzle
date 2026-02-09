@@ -606,7 +606,7 @@ def _get_api_perf_data(ops_db: Any, hours: int) -> list[dict[str, Any]]:
                     AVG(latency_ms) as avg_ms,
                     MAX(latency_ms) as max_ms
                 FROM api_calls
-                WHERE called_at >= ?
+                WHERE called_at >= %s
                 GROUP BY endpoint, method
                 ORDER BY count DESC
                 LIMIT 50
@@ -638,7 +638,7 @@ def _get_error_data(ops_db: Any, cutoff: str) -> dict[str, Any]:
                 """
                 SELECT endpoint, status_code, COUNT(*) as count
                 FROM api_calls
-                WHERE called_at >= ? AND (status_code >= 400 OR error_message IS NOT NULL)
+                WHERE called_at >= %s AND (status_code >= 400 OR error_message IS NOT NULL)
                 GROUP BY endpoint, status_code
                 ORDER BY count DESC
                 LIMIT 20
@@ -655,7 +655,7 @@ def _get_error_data(ops_db: Any, cutoff: str) -> dict[str, Any]:
                 """
                 SELECT endpoint, method, status_code, error_message, called_at
                 FROM api_calls
-                WHERE called_at >= ? AND (status_code >= 400 OR error_message IS NOT NULL)
+                WHERE called_at >= %s AND (status_code >= 400 OR error_message IS NOT NULL)
                 ORDER BY called_at DESC
                 LIMIT 10
                 """,
@@ -682,7 +682,7 @@ def _get_cost_data(ops_db: Any, hours: int) -> dict[str, Any]:
                     COUNT(*) as calls,
                     SUM(COALESCE(cost_cents, 0)) as cost_cents
                 FROM api_calls
-                WHERE called_at >= ?
+                WHERE called_at >= %s
                 GROUP BY service_name
                 ORDER BY cost_cents DESC
                 """,

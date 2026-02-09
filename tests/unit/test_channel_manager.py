@@ -2,10 +2,10 @@
 Unit tests for DAZZLE ChannelManager (v0.9.0).
 
 Tests channel manager initialization, sending, and status reporting.
+Requires DATABASE_URL (PostgreSQL) for integration tests.
 """
 
-import tempfile
-from pathlib import Path
+import os
 
 import pytest
 
@@ -16,16 +16,17 @@ from dazzle_back.channels import (
 )
 from dazzle_back.channels.detection import DetectionResult, ProviderStatus
 from dazzle_back.channels.outbox import OutboxStatus
-from dazzle_back.runtime.repository import DatabaseManager
+from dazzle_back.runtime.pg_backend import PostgresBackend
 
 
 @pytest.fixture
 def db_manager():
-    """Create a temporary database manager."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        manager = DatabaseManager(str(db_path))
-        yield manager
+    """Create a PostgreSQL backend for testing."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL not set")
+    manager = PostgresBackend(database_url)
+    yield manager
 
 
 @pytest.fixture

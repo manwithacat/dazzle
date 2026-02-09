@@ -1,8 +1,7 @@
 """
 PostgreSQL database backend for DNR Backend.
 
-Provides a PostgreSQL implementation of the database backend interface,
-enabling Heroku Postgres and other PostgreSQL deployments alongside SQLite.
+Provides the PostgreSQL database backend — the sole runtime backend.
 
 Requires: psycopg[binary]>=3.2
 """
@@ -28,8 +27,7 @@ logger = logging.getLogger(__name__)
 class PgConnectionWrapper:
     """Wrapper that adds .execute() convenience method to psycopg connections.
 
-    Translates ``?`` placeholders to ``%s`` for PostgreSQL compatibility
-    and proxies execute through cursor().execute(), returning the cursor.
+    Proxies execute through cursor().execute(), returning the cursor.
     All other attribute access is forwarded to the underlying connection.
     """
 
@@ -37,11 +35,7 @@ class PgConnectionWrapper:
         self._conn = conn
 
     def execute(self, sql: str, params: Any = None) -> Any:
-        """Execute SQL via a new cursor and return it (sqlite3 compat).
-
-        Translates ``?`` placeholders to ``%s`` for PostgreSQL compatibility.
-        """
-        sql = sql.replace("?", "%s")
+        """Execute SQL via a new cursor and return it."""
         cursor = self._conn.cursor()
         cursor.execute(sql, params or ())
         return cursor

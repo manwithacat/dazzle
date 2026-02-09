@@ -2,10 +2,12 @@
 Tests for auto-migration system.
 
 Tests schema change detection and migration execution.
+Requires DATABASE_URL (PostgreSQL) for integration tests.
 """
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -26,6 +28,11 @@ from dazzle_back.specs.entity import (
     FieldSpec,
     FieldType,
     ScalarType,
+)
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping migration tests that require DatabaseManager",
 )
 
 # =============================================================================

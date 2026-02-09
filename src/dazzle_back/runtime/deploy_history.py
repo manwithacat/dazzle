@@ -128,25 +128,25 @@ class DeployHistoryStore:
         )
 
         with self.ops_db.connection() as conn:
-            updates = ["status = ?"]
+            updates = ["status = %s"]
             params: list[Any] = [status.value]
 
             if error_message is not None:
-                updates.append("error_message = ?")
+                updates.append("error_message = %s")
                 params.append(error_message)
             if stacks is not None:
-                updates.append("stacks = ?")
+                updates.append("stacks = %s")
                 params.append(json.dumps(stacks))
             if preflight_result is not None:
-                updates.append("preflight_result = ?")
+                updates.append("preflight_result = %s")
                 params.append(json.dumps(preflight_result))
             if completed_at:
-                updates.append("completed_at = ?")
+                updates.append("completed_at = %s")
                 params.append(completed_at)
 
             params.append(deploy_id)
             conn.execute(
-                f"UPDATE deployment_history SET {', '.join(updates)} WHERE id = ?",
+                f"UPDATE deployment_history SET {', '.join(updates)} WHERE id = %s",
                 params,
             )
 
@@ -157,7 +157,7 @@ class DeployHistoryStore:
                 """
                 SELECT * FROM deployment_history
                 ORDER BY started_at DESC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limit,),
             )
@@ -182,7 +182,7 @@ class DeployHistoryStore:
         """Get a single deployment record."""
         with self.ops_db.connection() as conn:
             cursor = conn.execute(
-                "SELECT * FROM deployment_history WHERE id = ?",
+                "SELECT * FROM deployment_history WHERE id = %s",
                 (deploy_id,),
             )
             row = cursor.fetchone()
@@ -211,7 +211,7 @@ class DeployHistoryStore:
                 INSERT INTO deployment_history
                 (id, spec_version_id, status, environment, stacks, preflight_result,
                  error_message, started_at, completed_at, initiated_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     record.id,

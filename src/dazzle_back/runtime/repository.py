@@ -1,22 +1,18 @@
 """
-SQLite repository - provides persistence layer for DNR Backend.
+Repository — provides persistence layer for DNR Backend.
 
-This module implements the repository pattern for SQLite database access.
-It auto-creates tables from EntitySpec and provides CRUD operations.
-Supports advanced filtering, sorting, pagination, and relation loading.
+This module implements the repository pattern for PostgreSQL database access.
+Provides CRUD operations with advanced filtering, sorting, pagination,
+and relation loading.
 """
 
 from __future__ import annotations
 
 import json
 import re
-import sqlite3
 import time
-from collections.abc import Iterator
-from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 from uuid import UUID
 
@@ -26,17 +22,16 @@ from dazzle_back.runtime.query_builder import quote_identifier
 from dazzle_back.specs.entity import (
     ComputedFieldSpec,
     EntitySpec,
-    FieldSpec,
     FieldType,
     ScalarType,
 )
 
-# Build a tuple of IntegrityError types for both SQLite and PostgreSQL backends.
-_INTEGRITY_ERRORS: tuple[type[Exception], ...] = (sqlite3.IntegrityError,)
+# Build a tuple of IntegrityError types for PostgreSQL.
+_INTEGRITY_ERRORS: tuple[type[Exception], ...] = ()
 try:
     from psycopg import errors as _psycopg_errors
 
-    _INTEGRITY_ERRORS += (_psycopg_errors.IntegrityError,)
+    _INTEGRITY_ERRORS = (_psycopg_errors.IntegrityError,)
 except ImportError:
     pass
 
@@ -80,17 +75,6 @@ def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str,
     # Combine err + detail for matching
     full_text = f"{err} {detail}".strip()
 
-    # SQLite: "UNIQUE constraint failed: Task.slug"
-    if "UNIQUE constraint failed:" in err:
-        parts = err.split("UNIQUE constraint failed:")[-1].strip()
-        # "Task.slug" → "slug", or just "slug"
-        field_name = parts.split(".")[-1].strip() if parts else None
-        return "unique", field_name or None
-
-    # SQLite: "FOREIGN KEY constraint failed"
-    if "FOREIGN KEY constraint failed" in err:
-        return "foreign_key", None
-
     # PostgreSQL: "duplicate key value violates unique constraint"
     if "duplicate key" in full_text and "unique constraint" in full_text:
         # Try to extract column from detail: Key (slug)=(value)
@@ -105,10 +89,19 @@ def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str,
         fk_field: str | None = fk_match.group(1) if fk_match else None
         return "foreign_key", fk_field
 
+    # Legacy SQLite patterns (kept for _parse_constraint_error string-based callers)
+    if "UNIQUE constraint failed:" in err:
+        parts = err.split("UNIQUE constraint failed:")[-1].strip()
+        field_name = parts.split(".")[-1].strip() if parts else None
+        return "unique", field_name or None
+
+    if "FOREIGN KEY constraint failed" in err:
+        return "foreign_key", None
+
     return "integrity", None
 
 
-# Alias to prevent mypy resolving `list` as SQLiteRepository.list inside the class
+# Alias to prevent mypy resolving `list` as Repository.list inside the class
 _list = list
 
 if TYPE_CHECKING:
@@ -124,64 +117,17 @@ T = TypeVar("T", bound=BaseModel)
 
 
 # =============================================================================
-# SQLite Type Mapping
+# Database Value Conversion (PostgreSQL)
 # =============================================================================
 
 
-def _scalar_type_to_sqlite(scalar_type: ScalarType) -> str:
-    """Map scalar types to SQLite types."""
-    mapping: dict[ScalarType, str] = {
-        ScalarType.STR: "TEXT",
-        ScalarType.TEXT: "TEXT",
-        ScalarType.INT: "INTEGER",
-        ScalarType.DECIMAL: "REAL",
-        ScalarType.BOOL: "INTEGER",  # SQLite uses 0/1 for bool
-        ScalarType.DATE: "TEXT",  # ISO format
-        ScalarType.DATETIME: "TEXT",  # ISO format
-        ScalarType.UUID: "TEXT",  # UUID as string
-        ScalarType.EMAIL: "TEXT",
-        ScalarType.URL: "TEXT",
-        ScalarType.JSON: "TEXT",  # JSON as string
-    }
-    return mapping.get(scalar_type, "TEXT")
+def _db_to_python(value: Any, field_type: FieldType | None = None) -> Any:
+    """Convert database value to Python type based on field type.
 
-
-def _field_type_to_sqlite(field_type: FieldType) -> str:
-    """Convert FieldType to SQLite column type."""
-    if field_type.kind == "scalar" and field_type.scalar_type:
-        return _scalar_type_to_sqlite(field_type.scalar_type)
-    elif field_type.kind == "enum":
-        return "TEXT"
-    elif field_type.kind == "ref":
-        return "TEXT"  # Foreign key as UUID string
-    else:
-        return "TEXT"
-
-
-def _python_to_sqlite(value: Any, field_type: FieldType | None = None) -> Any:
-    """Convert Python value to SQLite-compatible value."""
-    if value is None:
-        return None
-    elif isinstance(value, UUID):
-        return str(value)
-    elif isinstance(value, datetime):
-        return value.isoformat()
-    elif isinstance(value, date):
-        return value.isoformat()
-    elif isinstance(value, Decimal):
-        return float(value)
-    elif isinstance(value, bool):
-        return 1 if value else 0
-    elif isinstance(value, dict):
-        return json.dumps(value)
-    elif isinstance(value, list):
-        return json.dumps(value)
-    else:
-        return value
-
-
-def _sqlite_to_python(value: Any, field_type: FieldType | None = None) -> Any:
-    """Convert SQLite value to Python type based on field type."""
+    PostgreSQL with dict_row returns most types correctly, but JSON fields
+    come back as strings and UUIDs/dates may need conversion depending on
+    column type.
+    """
     if value is None:
         return None
     if field_type is None:
@@ -190,204 +136,29 @@ def _sqlite_to_python(value: Any, field_type: FieldType | None = None) -> Any:
     if field_type.kind == "scalar" and field_type.scalar_type:
         scalar = field_type.scalar_type
         if scalar == ScalarType.UUID:
-            return UUID(value) if value else None
+            return UUID(value) if value and not isinstance(value, UUID) else value
         elif scalar == ScalarType.DATETIME:
+            if isinstance(value, datetime):
+                return value
             return datetime.fromisoformat(value) if value else None
         elif scalar == ScalarType.DATE:
+            if isinstance(value, date):
+                return value
             return date.fromisoformat(value) if value else None
         elif scalar == ScalarType.DECIMAL:
             return Decimal(str(value)) if value is not None else None
         elif scalar == ScalarType.BOOL:
             return bool(value)
         elif scalar == ScalarType.JSON:
+            if isinstance(value, (dict, list)):
+                return value
             return json.loads(value) if value else None
         else:
             return value
     elif field_type.kind == "ref":
-        return UUID(value) if value else None
+        return UUID(value) if value and not isinstance(value, UUID) else value
     else:
         return value
-
-
-# =============================================================================
-# Database Manager
-# =============================================================================
-
-
-class DatabaseManager:
-    """
-    Manages SQLite database connection and schema.
-
-    Handles database creation, table creation, and migrations.
-    """
-
-    def __init__(self, db_path: str | Path = ".dazzle/data.db"):
-        """
-        Initialize the database manager.
-
-        Args:
-            db_path: Path to SQLite database file
-        """
-        self.db_path = Path(db_path)
-        self._ensure_directory()
-        self._connection: sqlite3.Connection | None = None
-
-    def _ensure_directory(self) -> None:
-        """Ensure the database directory exists."""
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
-    @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        """
-        Get a database connection context manager.
-
-        Yields:
-            SQLite connection
-        """
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        try:
-            yield conn
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
-
-    def get_persistent_connection(self) -> sqlite3.Connection:
-        """
-        Get a persistent connection for the application lifecycle.
-
-        Returns:
-            SQLite connection (reuses existing if available)
-        """
-        if self._connection is None:
-            self._connection = sqlite3.connect(str(self.db_path))
-            self._connection.row_factory = sqlite3.Row
-            self._connection.execute("PRAGMA foreign_keys = ON")
-        return self._connection
-
-    def close(self) -> None:
-        """Close the persistent connection."""
-        if self._connection:
-            self._connection.close()
-            self._connection = None
-
-    def create_table(self, entity: EntitySpec, *, registry: Any = None) -> None:
-        """
-        Create a table for an entity if it doesn't exist.
-
-        Args:
-            entity: Entity specification
-            registry: Optional RelationRegistry for FK constraints
-        """
-        columns = self._build_columns(entity, registry=registry)
-        table = quote_identifier(entity.name)
-        sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
-
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql)
-
-            # Create indexes
-            for field in entity.fields:
-                if field.indexed:
-                    col = quote_identifier(field.name)
-                    index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
-                    cursor.execute(index_sql)
-
-            # Create FK indexes
-            if registry is not None:
-                from dazzle_back.runtime.relation_loader import get_foreign_key_indexes
-
-                for fk_idx_sql in get_foreign_key_indexes(entity, registry):
-                    cursor.execute(fk_idx_sql)
-
-    def _build_columns(self, entity: EntitySpec, *, registry: Any = None) -> str:
-        """Build column definitions for CREATE TABLE."""
-        columns = []
-
-        # Check if entity has an id field
-        has_id = any(f.name == "id" for f in entity.fields)
-        if not has_id:
-            columns.append('"id" TEXT PRIMARY KEY')
-
-        for field in entity.fields:
-            col_def = self._build_column(field)
-            columns.append(col_def)
-
-        # Append FK constraints from the relation registry
-        if registry is not None:
-            from dazzle_back.runtime.relation_loader import get_foreign_key_constraints
-
-            fk_clauses = get_foreign_key_constraints(entity, registry)
-            columns.extend(fk_clauses)
-
-        return ", ".join(columns)
-
-    def _build_column(self, field: FieldSpec) -> str:
-        """Build a single column definition."""
-        sqlite_type = _field_type_to_sqlite(field.type)
-        col_name = quote_identifier(field.name)
-        parts = [col_name, sqlite_type]
-
-        if field.name == "id":
-            parts.append("PRIMARY KEY")
-        elif field.required:
-            parts.append("NOT NULL")
-
-        if field.unique:
-            parts.append("UNIQUE")
-
-        if field.default is not None:
-            default_val = _python_to_sqlite(field.default, field.type)
-            if isinstance(default_val, str):
-                parts.append(f"DEFAULT '{default_val}'")
-            else:
-                parts.append(f"DEFAULT {default_val}")
-
-        return " ".join(parts)
-
-    def create_all_tables(self, entities: list[EntitySpec]) -> None:
-        """
-        Create tables for all entities.
-
-        Args:
-            entities: List of entity specifications
-        """
-        from dazzle_back.runtime.relation_loader import RelationRegistry
-
-        registry = RelationRegistry.from_entities(entities)
-        for entity in entities:
-            self.create_table(entity, registry=registry)
-
-    def table_exists(self, table_name: str) -> bool:
-        """Check if a table exists."""
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,)
-            )
-            return cursor.fetchone() is not None
-
-    @property
-    def backend_type(self) -> str:
-        """Return the backend type identifier."""
-        return "sqlite"
-
-    @property
-    def placeholder(self) -> str:
-        """Return the SQL placeholder style."""
-        return "?"
-
-    def get_table_columns(self, table_name: str) -> list[str]:
-        """Get column names for a table."""
-        with self.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(f"PRAGMA table_info({quote_identifier(table_name)})")
-            return [row[1] for row in cursor.fetchall()]
 
 
 # =============================================================================
@@ -395,18 +166,18 @@ class DatabaseManager:
 # =============================================================================
 
 
-class SQLiteRepository(Generic[T]):
+class Repository(Generic[T]):
     """
-    SQLite repository for a single entity type.
+    Repository for a single entity type.
 
-    Provides CRUD operations against SQLite database.
+    Provides CRUD operations against PostgreSQL database.
     Supports advanced filtering, sorting, and relation loading.
     Optionally collects query metrics for observability.
     """
 
     def __init__(
         self,
-        db_manager: DatabaseManager,
+        db_manager: Any,
         entity_spec: EntitySpec,
         model_class: type[T],
         relation_loader: RelationLoader | None = None,
@@ -416,7 +187,7 @@ class SQLiteRepository(Generic[T]):
         Initialize the repository.
 
         Args:
-            db_manager: Database manager instance
+            db_manager: Database backend instance (PostgresBackend)
             entity_spec: Entity specification
             model_class: Pydantic model class for the entity
             relation_loader: Optional relation loader for nested data fetching
@@ -446,12 +217,10 @@ class SQLiteRepository(Generic[T]):
             )
 
     def _python_to_db(self, value: Any, field_type: FieldType | None = None) -> Any:
-        """Convert a Python value using the correct backend converter."""
-        if self.db.backend_type == "postgres":
-            from dazzle_back.runtime.pg_backend import _python_to_postgres
+        """Convert a Python value for PostgreSQL storage."""
+        from dazzle_back.runtime.pg_backend import _python_to_postgres
 
-            return _python_to_postgres(value, field_type)
-        return _python_to_sqlite(value, field_type)
+        return _python_to_postgres(value, field_type)
 
     def _model_to_row(self, model: T) -> dict[str, Any]:
         """Convert Pydantic model to row dict for the database."""
@@ -461,7 +230,7 @@ class SQLiteRepository(Generic[T]):
     def _row_to_model(self, row: Any) -> T:
         """Convert database row to Pydantic model."""
         data = dict(row)
-        converted = {k: _sqlite_to_python(v, self._field_types.get(k)) for k, v in data.items()}
+        converted = {k: _db_to_python(v, self._field_types.get(k)) for k, v in data.items()}
         return self.model_class(**converted)
 
     async def create(self, data: dict[str, Any]) -> T:
@@ -760,7 +529,7 @@ class SQLiteRepository(Generic[T]):
                 ]
             else:
                 # Regular field
-                result[k] = _sqlite_to_python(v, self._field_types.get(k))
+                result[k] = _db_to_python(v, self._field_types.get(k))
 
         # Add computed fields
         if self._computed_fields:
@@ -792,6 +561,18 @@ class SQLiteRepository(Generic[T]):
         return result is not None
 
 
+# Backward-compatible aliases
+SQLiteRepository = Repository
+"""Deprecated alias for :class:`Repository`. Use ``Repository`` directly."""
+
+DatabaseManager: type
+"""Deprecated — use :class:`~dazzle_back.runtime.pg_backend.PostgresBackend`."""
+try:
+    from dazzle_back.runtime.pg_backend import PostgresBackend as DatabaseManager  # noqa: F811
+except ImportError:
+    DatabaseManager = None  # type: ignore[assignment,misc]
+
+
 # =============================================================================
 # Repository Factory
 # =============================================================================
@@ -804,7 +585,7 @@ class RepositoryFactory:
 
     def __init__(
         self,
-        db_manager: DatabaseManager,
+        db_manager: Any,
         models: dict[str, type[BaseModel]],
         relation_loader: RelationLoader | None = None,
         metrics_collector: SystemMetricsCollector | None = None,
@@ -813,7 +594,7 @@ class RepositoryFactory:
         Initialize the factory.
 
         Args:
-            db_manager: Database manager
+            db_manager: Database backend (PostgresBackend)
             models: Dictionary mapping entity names to Pydantic models
             relation_loader: Optional relation loader for nested data fetching
             metrics_collector: Optional system metrics collector for query timing
@@ -822,9 +603,9 @@ class RepositoryFactory:
         self.models = models
         self._relation_loader = relation_loader
         self._metrics = metrics_collector
-        self._repositories: dict[str, SQLiteRepository[Any]] = {}
+        self._repositories: dict[str, Repository[Any]] = {}
 
-    def create_repository(self, entity: EntitySpec) -> SQLiteRepository[Any]:
+    def create_repository(self, entity: EntitySpec) -> Repository[Any]:
         """
         Create a repository for an entity.
 
@@ -838,7 +619,7 @@ class RepositoryFactory:
         if not model:
             raise ValueError(f"No model found for entity: {entity.name}")
 
-        repo: SQLiteRepository[Any] = SQLiteRepository(
+        repo: Repository[Any] = Repository(
             db_manager=self.db,
             entity_spec=entity,
             model_class=model,
@@ -848,9 +629,7 @@ class RepositoryFactory:
         self._repositories[entity.name] = repo
         return repo
 
-    def create_all_repositories(
-        self, entities: list[EntitySpec]
-    ) -> dict[str, SQLiteRepository[Any]]:
+    def create_all_repositories(self, entities: list[EntitySpec]) -> dict[str, Repository[Any]]:
         """
         Create repositories for all entities.
 
@@ -864,6 +643,6 @@ class RepositoryFactory:
             self.create_repository(entity)
         return self._repositories
 
-    def get_repository(self, entity_name: str) -> SQLiteRepository[Any] | None:
+    def get_repository(self, entity_name: str) -> Repository[Any] | None:
         """Get a repository by entity name."""
         return self._repositories.get(entity_name)

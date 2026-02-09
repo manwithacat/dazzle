@@ -119,7 +119,7 @@ class SpecVersionStore:
         # Check if this hash already exists
         with self.ops_db.connection() as conn:
             cursor = conn.execute(
-                "SELECT id FROM spec_versions WHERE content_hash = ? LIMIT 1",
+                "SELECT id FROM spec_versions WHERE content_hash = %s LIMIT 1",
                 (content_hash,),
             )
             if cursor.fetchone():
@@ -146,7 +146,7 @@ class SpecVersionStore:
             conn.execute(
                 """
                 INSERT INTO spec_versions (id, version_label, content_hash, spec_snapshot, diff_data, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (
                     sv.id,
@@ -170,7 +170,7 @@ class SpecVersionStore:
                 SELECT id, version_label, content_hash, created_at, diff_data
                 FROM spec_versions
                 ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
                 """,
                 (per_page, offset),
             )
@@ -205,7 +205,7 @@ class SpecVersionStore:
         """Get the diff for a specific version."""
         with self.ops_db.connection() as conn:
             cursor = conn.execute(
-                "SELECT diff_data FROM spec_versions WHERE id = ?",
+                "SELECT diff_data FROM spec_versions WHERE id = %s",
                 (version_id,),
             )
             row = cursor.fetchone()
@@ -217,7 +217,7 @@ class SpecVersionStore:
         """Get the full spec snapshot for a version."""
         with self.ops_db.connection() as conn:
             cursor = conn.execute(
-                "SELECT spec_snapshot FROM spec_versions WHERE id = ?",
+                "SELECT spec_snapshot FROM spec_versions WHERE id = %s",
                 (version_id,),
             )
             row = cursor.fetchone()

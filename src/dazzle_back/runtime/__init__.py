@@ -54,6 +54,7 @@ from dazzle_back.runtime.model_generator import (
 )
 from dazzle_back.runtime.repository import (
     DatabaseManager,
+    Repository,
     RepositoryFactory,
     SQLiteRepository,
 )
@@ -113,6 +114,7 @@ __all__ = [
     "create_app_from_dict",
     "create_app_from_json",
     # Repository
+    "Repository",
     "DatabaseManager",
     "SQLiteRepository",
     "RepositoryFactory",

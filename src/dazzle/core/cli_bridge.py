@@ -507,7 +507,7 @@ def db_reset_json(
 
         # Create fresh database with schema
         db_manager = DatabaseManager(db_path)
-        db_manager.initialize_schema(backend_spec.entities)  # type: ignore[attr-defined]
+        db_manager.initialize_schema(backend_spec.entities)
 
         return {
             "reset": True,

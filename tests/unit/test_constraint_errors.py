@@ -9,8 +9,7 @@ import pytest
 
 from dazzle_back.runtime.repository import (
     ConstraintViolationError,
-    DatabaseManager,
-    SQLiteRepository,
+    Repository,
     _parse_constraint_error,
 )
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
@@ -21,22 +20,7 @@ from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarTyp
 
 
 class TestParseConstraintError:
-    """Test error message parsing for SQLite and PostgreSQL patterns."""
-
-    def test_sqlite_unique_with_field(self):
-        ctype, field = _parse_constraint_error("UNIQUE constraint failed: Task.slug", "Task")
-        assert ctype == "unique"
-        assert field == "slug"
-
-    def test_sqlite_unique_no_table_prefix(self):
-        ctype, field = _parse_constraint_error("UNIQUE constraint failed: slug", "Task")
-        assert ctype == "unique"
-        assert field == "slug"
-
-    def test_sqlite_foreign_key(self):
-        ctype, field = _parse_constraint_error("FOREIGN KEY constraint failed", "Task")
-        assert ctype == "foreign_key"
-        assert field is None
+    """Test error message parsing for PostgreSQL patterns."""
 
     def test_postgres_unique(self):
         ctype, field = _parse_constraint_error(
@@ -156,8 +140,13 @@ class TestParseConstraintErrorPsycopg:
 
 
 # ---------------------------------------------------------------------------
-# Repository integration — unique constraints
+# Repository integration tests — require DATABASE_URL (PostgreSQL)
 # ---------------------------------------------------------------------------
+
+_requires_pg = pytest.mark.skipif(
+    not __import__("os").environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping PostgreSQL integration tests",
+)
 
 
 def _make_entity_spec() -> EntitySpec:
@@ -187,26 +176,33 @@ def _make_entity_spec() -> EntitySpec:
 
 
 @pytest.fixture()
-def db_and_repo(tmp_path):
-    """Create a DB manager, table, and repository."""
+def db_and_repo():
+    """Create a PG backend, table, and repository."""
+    import os
     from uuid import UUID as UUIDType
 
     from pydantic import BaseModel, Field
+
+    from dazzle_back.runtime.pg_backend import PostgresBackend
 
     class WidgetModel(BaseModel):
         id: UUIDType | None = Field(default=None)
         slug: str
         title: str | None = None
 
-    db = DatabaseManager(db_path=tmp_path / "test.db")
+    db = PostgresBackend(os.environ["DATABASE_URL"])
     entity = _make_entity_spec()
     db.create_table(entity)
-    repo: SQLiteRepository = SQLiteRepository(  # type: ignore[type-arg]
+    repo: Repository = Repository(  # type: ignore[type-arg]
         db_manager=db, entity_spec=entity, model_class=WidgetModel
     )
-    return db, repo
+    yield db, repo
+    # Clean up
+    with db.connection() as conn:
+        conn.execute('DROP TABLE IF EXISTS "Widget"')
 
 
+@_requires_pg
 @pytest.mark.asyncio
 async def test_unique_violation_on_create(db_and_repo):
     """Inserting a duplicate unique value raises ConstraintViolationError."""
@@ -223,6 +219,7 @@ async def test_unique_violation_on_create(db_and_repo):
     assert "already exists" in str(exc_info.value)
 
 
+@_requires_pg
 @pytest.mark.asyncio
 async def test_unique_violation_on_update(db_and_repo):
     """Updating to a duplicate unique value raises ConstraintViolationError."""
@@ -238,6 +235,7 @@ async def test_unique_violation_on_update(db_and_repo):
     assert exc_info.value.constraint_type == "unique"
 
 
+@_requires_pg
 @pytest.mark.asyncio
 async def test_normal_create_succeeds(db_and_repo):
     """Normal create without constraint issues works fine."""
@@ -247,7 +245,7 @@ async def test_normal_create_succeeds(db_and_repo):
 
 
 # ---------------------------------------------------------------------------
-# Repository integration — FK constraints (SQLite with PRAGMA foreign_keys)
+# Repository integration — FK constraints (require DATABASE_URL)
 # ---------------------------------------------------------------------------
 
 
@@ -294,11 +292,14 @@ def _make_parent_child_specs() -> tuple[EntitySpec, EntitySpec]:
 
 
 @pytest.fixture()
-def fk_db_and_repos(tmp_path):
-    """Create DB with FK-constrained tables and repos for Team + Player."""
+def fk_db_and_repos():
+    """Create PG DB with FK-constrained tables and repos for Team + Player."""
+    import os
     from uuid import UUID as UUIDType
 
     from pydantic import BaseModel, Field
+
+    from dazzle_back.runtime.pg_backend import PostgresBackend
 
     class TeamModel(BaseModel):
         id: UUIDType | None = Field(default=None)
@@ -309,21 +310,26 @@ def fk_db_and_repos(tmp_path):
         team_id: UUIDType | None = Field(default=None)
         name: str
 
-    db = DatabaseManager(db_path=tmp_path / "fk_test.db")
+    db = PostgresBackend(os.environ["DATABASE_URL"])
     team_spec, player_spec = _make_parent_child_specs()
 
     # Use create_all_tables which builds a registry with FK constraints
     db.create_all_tables([team_spec, player_spec])
 
-    team_repo: SQLiteRepository = SQLiteRepository(  # type: ignore[type-arg]
+    team_repo: Repository = Repository(  # type: ignore[type-arg]
         db_manager=db, entity_spec=team_spec, model_class=TeamModel
     )
-    player_repo: SQLiteRepository = SQLiteRepository(  # type: ignore[type-arg]
+    player_repo: Repository = Repository(  # type: ignore[type-arg]
         db_manager=db, entity_spec=player_spec, model_class=PlayerModel
     )
-    return db, team_repo, player_repo
+    yield db, team_repo, player_repo
+    # Clean up
+    with db.connection() as conn:
+        conn.execute('DROP TABLE IF EXISTS "Player"')
+        conn.execute('DROP TABLE IF EXISTS "Team"')
 
 
+@_requires_pg
 @pytest.mark.asyncio
 async def test_fk_violation_on_create(fk_db_and_repos):
     """Inserting a child with a non-existent parent FK raises ConstraintViolationError."""
@@ -336,6 +342,7 @@ async def test_fk_violation_on_create(fk_db_and_repos):
     assert exc_info.value.constraint_type == "foreign_key"
 
 
+@_requires_pg
 @pytest.mark.asyncio
 async def test_fk_valid_reference_succeeds(fk_db_and_repos):
     """Inserting a child with a valid parent FK works fine."""

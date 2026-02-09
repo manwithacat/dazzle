@@ -2,12 +2,12 @@
 Unit tests for DAZZLE messaging outbox pattern (v0.9.0).
 
 Tests the transactional outbox for reliable message delivery.
+Requires DATABASE_URL (PostgreSQL) for integration tests.
 """
 
 import json
-import tempfile
+import os
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 
 import pytest
 
@@ -17,16 +17,17 @@ from dazzle_back.channels.outbox import (
     OutboxStatus,
     create_outbox_message,
 )
-from dazzle_back.runtime.repository import DatabaseManager
+from dazzle_back.runtime.pg_backend import PostgresBackend
 
 
 @pytest.fixture
 def db_manager():
-    """Create a temporary database manager."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test.db"
-        manager = DatabaseManager(str(db_path))
-        yield manager
+    """Create a PostgreSQL backend for testing."""
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL not set")
+    manager = PostgresBackend(database_url)
+    yield manager
 
 
 @pytest.fixture

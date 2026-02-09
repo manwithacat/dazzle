@@ -1,15 +1,10 @@
 """Tests for _INTEGRITY_ERRORS tuple in repository module."""
 
-import sqlite3
-
 from dazzle_back.runtime.repository import _INTEGRITY_ERRORS
 
 
 class TestIntegrityErrors:
     """Verify _INTEGRITY_ERRORS contains the correct exception types."""
-
-    def test_contains_sqlite_integrity_error(self) -> None:
-        assert sqlite3.IntegrityError in _INTEGRITY_ERRORS
 
     def test_is_tuple(self) -> None:
         assert isinstance(_INTEGRITY_ERRORS, tuple)
@@ -20,14 +15,25 @@ class TestIntegrityErrors:
 
             assert _psycopg_errors.IntegrityError in _INTEGRITY_ERRORS
         except ImportError:
-            # psycopg not installed — only sqlite3 should be present
-            assert len(_INTEGRITY_ERRORS) == 1
+            # psycopg not installed — tuple should be empty
+            assert len(_INTEGRITY_ERRORS) == 0
 
-    def test_catches_sqlite_integrity_error(self) -> None:
-        """Verify the tuple works in an except clause."""
+    def test_catches_psycopg_integrity_error(self) -> None:
+        """Verify the tuple works in an except clause with psycopg errors."""
+        try:
+            from psycopg.errors import IntegrityError
+        except ImportError:
+            return  # psycopg not installed, skip
+
         caught = False
         try:
-            raise sqlite3.IntegrityError("UNIQUE constraint failed: Task.slug")
+            raise IntegrityError("duplicate key value violates unique constraint")
         except _INTEGRITY_ERRORS:
             caught = True
         assert caught
+
+    def test_does_not_contain_sqlite_integrity_error(self) -> None:
+        """SQLite IntegrityError should NOT be in the tuple (PG-only runtime)."""
+        import sqlite3
+
+        assert sqlite3.IntegrityError not in _INTEGRITY_ERRORS

@@ -110,7 +110,6 @@ def serve_command(
         "--backend-only",
         help="Serve backend API only (no frontend UI)",
     ),
-    db_path: str = typer.Option(".dazzle/data.db", "--db", help="SQLite database path"),
     test_mode: bool | None = typer.Option(
         None,
         "--test-mode/--no-test-mode",
@@ -167,7 +166,7 @@ def serve_command(
     Use --local to run without Docker.
 
     Runs:
-    - FastAPI backend on api-port (default 8000) with SQLite persistence
+    - FastAPI backend on api-port (default 8000) with PostgreSQL persistence
     - Jinja2/HTMX frontend on port (default 3000)
     - Auto-migration for schema changes
     - Interactive API docs at http://host:api-port/docs
@@ -182,7 +181,6 @@ def serve_command(
         dazzle serve --port 4000        # Frontend on 4000
         dazzle serve --api-port 9000    # API on 9000
         dazzle serve --ui-only          # Static UI only (no API)
-        dazzle serve --db ./my.db       # Custom database path
         dazzle serve --no-test-mode     # Disable E2E test endpoints
         dazzle serve --graphql          # Enable GraphQL at /graphql
 
@@ -400,10 +398,7 @@ def serve_command(
         typer.echo(f"Starting Dazzle backend for '{appspec.name}'...")
         typer.echo(f"  • {len(backend_spec.entities)} entities")
         typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
-        if database_url:
-            typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
-        else:
-            typer.echo(f"  • Database: {db_path}")
+        typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
         if enable_test_mode:
             typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
         if graphql:
@@ -415,13 +410,9 @@ def serve_command(
             typer.echo(f"GraphQL: http://{host}:{api_port}/graphql")
         typer.echo()
 
-        db_file = Path(db_path)
-        db_file.parent.mkdir(parents=True, exist_ok=True)
-
         run_backend_only(
             backend_spec=backend_spec,
             port=api_port,
-            db_path=db_file,
             enable_test_mode=enable_test_mode,
             enable_dev_mode=enable_dev_mode,
             enable_graphql=graphql,
@@ -442,10 +433,7 @@ def serve_command(
     typer.echo(f"  • {len(backend_spec.entities)} entities")
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
-    if database_url:
-        typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
-    else:
-        typer.echo(f"  • Database: {db_path}")
+    typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
 
     # Extract personas and scenarios for Dazzle Bar (v0.8.5)
     # Compute default routes from workspace access rules (v0.23.0)
@@ -485,10 +473,6 @@ def serve_command(
         typer.echo(f"  • {len(scenarios)} scenarios (Dazzle Bar)")
 
     typer.echo()
-
-    # Ensure database directory exists
-    db_file = Path(db_path)
-    db_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Run combined server
     # Show environment and mode status (v0.24.0)
@@ -533,7 +517,6 @@ def serve_command(
         backend_spec=backend_spec,
         ui_spec=ui_spec,
         port=port,
-        db_path=db_file,
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
         enable_auth=auth_enabled,

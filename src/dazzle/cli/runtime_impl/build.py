@@ -210,17 +210,21 @@ except ImportError as e:
 
 def migrate_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    db: str = typer.Option(".dazzle/data.db", "--db", "-d", help="Path to SQLite database"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show planned changes without applying"),
     force: bool = typer.Option(
         False, "--force", "-f", help="Apply even if destructive changes detected"
+    ),
+    database_url: str = typer.Option(
+        "",
+        "--database-url",
+        help="PostgreSQL URL. Also reads DATABASE_URL env var.",
     ),
 ) -> None:
     """
     Run database migrations for production.
 
     Detects schema changes between entity definitions and the database,
-    then applies safe migrations automatically.
+    then applies safe migrations automatically. Requires DATABASE_URL.
 
     Examples:
         # Preview migrations
@@ -229,12 +233,11 @@ def migrate_command(
         # Apply migrations
         dazzle migrate
 
-        # Use a different database
-        dazzle migrate --db /path/to/prod.db
-
         # Force apply (including destructive changes)
         dazzle migrate --force
     """
+    import os
+
     try:
         from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.runtime.migrations import (
@@ -242,7 +245,7 @@ def migrate_command(
             auto_migrate,
             plan_migrations,
         )
-        from dazzle_back.runtime.repository import DatabaseManager
+        from dazzle_back.runtime.pg_backend import PostgresBackend
     except ImportError as e:
         typer.echo(f"Dazzle packages not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-app-back", err=True)
@@ -275,15 +278,23 @@ def migrate_command(
     # Convert to backend spec
     backend_spec = convert_appspec_to_backend(appspec)
 
-    # Resolve database path
-    db_path = Path(db).resolve()
+    # Resolve database URL
+    if not database_url:
+        database_url = os.environ.get("DATABASE_URL", "")
+    if not database_url:
+        typer.echo("DATABASE_URL is required for migrations.", err=True)
+        typer.echo("Set it in .env or export before running:", err=True)
+        typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
+        raise typer.Exit(code=1)
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-    # Create database manager
-    db_manager = DatabaseManager(db_path)
+    # Create database backend
+    db_manager = PostgresBackend(database_url)
 
     if dry_run:
         # Plan only, don't apply
-        typer.echo(f"Analyzing database: {db_path}")
+        typer.echo(f"Analyzing database: {database_url}")
         typer.echo(f"Entities: {len(backend_spec.entities)}")
         typer.echo()
 
@@ -331,7 +342,7 @@ def migrate_command(
 
     else:
         # Apply migrations
-        typer.echo(f"Migrating database: {db_path}")
+        typer.echo(f"Migrating database: {database_url}")
         typer.echo()
 
         # Note: auto_migrate only applies safe migrations by default

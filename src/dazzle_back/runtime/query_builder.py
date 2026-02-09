@@ -89,22 +89,22 @@ class FilterOperator(StrEnum):
 
 # Operator mapping to SQL
 OPERATOR_SQL: dict[FilterOperator, str] = {
-    FilterOperator.EQ: "{field} = ?",
-    FilterOperator.NE: "{field} != ?",
-    FilterOperator.GT: "{field} > ?",
-    FilterOperator.GTE: "{field} >= ?",
-    FilterOperator.LT: "{field} < ?",
-    FilterOperator.LTE: "{field} <= ?",
-    FilterOperator.CONTAINS: "{field} LIKE ?",
-    FilterOperator.ICONTAINS: "LOWER({field}) LIKE LOWER(?)",
-    FilterOperator.STARTSWITH: "{field} LIKE ?",
-    FilterOperator.ISTARTSWITH: "LOWER({field}) LIKE LOWER(?)",
-    FilterOperator.ENDSWITH: "{field} LIKE ?",
-    FilterOperator.IENDSWITH: "LOWER({field}) LIKE LOWER(?)",
+    FilterOperator.EQ: "{field} = %s",
+    FilterOperator.NE: "{field} != %s",
+    FilterOperator.GT: "{field} > %s",
+    FilterOperator.GTE: "{field} >= %s",
+    FilterOperator.LT: "{field} < %s",
+    FilterOperator.LTE: "{field} <= %s",
+    FilterOperator.CONTAINS: "{field} LIKE %s",
+    FilterOperator.ICONTAINS: "LOWER({field}) LIKE LOWER(%s)",
+    FilterOperator.STARTSWITH: "{field} LIKE %s",
+    FilterOperator.ISTARTSWITH: "LOWER({field}) LIKE LOWER(%s)",
+    FilterOperator.ENDSWITH: "{field} LIKE %s",
+    FilterOperator.IENDSWITH: "LOWER({field}) LIKE LOWER(%s)",
     FilterOperator.IN: "{field} IN ({placeholders})",
     FilterOperator.NOT_IN: "{field} NOT IN ({placeholders})",
     FilterOperator.ISNULL: "{field} IS NULL",
-    FilterOperator.BETWEEN: "{field} BETWEEN ? AND ?",
+    FilterOperator.BETWEEN: "{field} BETWEEN %s AND %s",
 }
 
 
@@ -163,14 +163,14 @@ class FilterCondition:
     def to_sql(
         self,
         table_alias: str | None = None,
-        placeholder_style: str = "?",
+        placeholder_style: str = "%s",
     ) -> tuple[str, list[Any]]:
         """
         Convert condition to SQL fragment and parameters.
 
         Args:
             table_alias: Optional table alias for the field
-            placeholder_style: SQL placeholder ("?" for SQLite, "%s" for Postgres)
+            placeholder_style: SQL placeholder style (default "%s" for PostgreSQL)
 
         Returns:
             Tuple of (sql_fragment, parameters)
@@ -181,9 +181,8 @@ class FilterCondition:
         quoted_field = quote_identifier(self.field)
         field_ref = f"{table_alias}.{quoted_field}" if table_alias else quoted_field
 
-        # Convert value for SQL (pass backend hint for bool handling)
-        is_postgres = placeholder_style == "%s"
-        converted_value = self._convert_value(self.value, is_postgres=is_postgres)
+        # Convert value for SQL
+        converted_value = self._convert_value(self.value)
 
         # Handle special operators
         if self.operator == FilterOperator.ISNULL:
@@ -209,41 +208,36 @@ class FilterCondition:
         elif self.operator == FilterOperator.BETWEEN:
             if not isinstance(converted_value, list | tuple) or len(converted_value) != 2:
                 raise ValueError("BETWEEN operator requires a list of two values")
-            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
-            sql = tmpl.replace("?", ph)
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, list(converted_value)
 
         elif self.operator in (
             FilterOperator.CONTAINS,
             FilterOperator.ICONTAINS,
         ):
-            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
-            sql = tmpl.replace("?", ph)
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, [f"%{converted_value}%"]
 
         elif self.operator in (
             FilterOperator.STARTSWITH,
             FilterOperator.ISTARTSWITH,
         ):
-            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
-            sql = tmpl.replace("?", ph)
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, [f"{converted_value}%"]
 
         elif self.operator in (
             FilterOperator.ENDSWITH,
             FilterOperator.IENDSWITH,
         ):
-            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
-            sql = tmpl.replace("?", ph)
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, [f"%{converted_value}"]
 
         else:
             # Standard operator
-            tmpl = OPERATOR_SQL[self.operator].format(field=field_ref)
-            sql = tmpl.replace("?", ph)
+            sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, [converted_value]
 
-    def _convert_value(self, value: Any, *, is_postgres: bool = False) -> Any:
+    def _convert_value(self, value: Any) -> Any:
         """Convert Python value to database-compatible value."""
         if value is None:
             return None
@@ -256,10 +250,9 @@ class FilterCondition:
         elif isinstance(value, Decimal):
             return float(value)
         elif isinstance(value, bool):
-            # Postgres has native bool; SQLite stores as int
-            return value if is_postgres else (1 if value else 0)
+            return value  # PostgreSQL has native bool
         elif isinstance(value, list | tuple):
-            return [self._convert_value(v, is_postgres=is_postgres) for v in value]
+            return [self._convert_value(v) for v in value]
         else:
             return value
 
@@ -320,7 +313,7 @@ class QueryBuilder:
     """
 
     table_name: str
-    placeholder_style: str = "?"
+    placeholder_style: str = "%s"
     conditions: list[FilterCondition] = field(default_factory=list)
     sorts: list[SortField] = field(default_factory=list)
     page: int = 1

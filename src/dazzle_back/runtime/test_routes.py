@@ -334,7 +334,7 @@ def create_test_routes(
 
         with db_manager.connection() as conn:
             cursor = conn.execute(
-                f"DELETE FROM {entity_name} WHERE id = ?",
+                f"DELETE FROM {entity_name} WHERE id = %s",
                 (entity_id,),
             )
             if cursor.rowcount == 0:

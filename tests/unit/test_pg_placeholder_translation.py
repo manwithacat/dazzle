@@ -1,7 +1,7 @@
 """
-Tests for PostgreSQL placeholder translation and backend compatibility.
+Tests for PostgreSQL backend compatibility.
 
-Verifies that PgConnectionWrapper translates ? → %s in SQL queries,
+Verifies that PgConnectionWrapper passes SQL through to cursor,
 and that outbox/relation_loader use db.placeholder correctly.
 """
 
@@ -12,12 +12,12 @@ from unittest.mock import MagicMock
 from dazzle_back.runtime.pg_backend import PgConnectionWrapper
 
 # =============================================================================
-# PgConnectionWrapper Translation Tests
+# PgConnectionWrapper Tests
 # =============================================================================
 
 
-class TestPgConnectionWrapperTranslation:
-    """Tests for ? → %s placeholder translation in PgConnectionWrapper."""
+class TestPgConnectionWrapper:
+    """Tests for PgConnectionWrapper SQL pass-through."""
 
     def _make_wrapper(self) -> tuple[PgConnectionWrapper, MagicMock]:
         """Create a wrapper with a mock connection."""
@@ -27,33 +27,27 @@ class TestPgConnectionWrapperTranslation:
         wrapper = PgConnectionWrapper(mock_conn)
         return wrapper, mock_cursor
 
-    def test_translates_question_marks(self) -> None:
-        """PgConnectionWrapper translates ? to %s."""
+    def test_passes_sql_through_unchanged(self) -> None:
+        """PgConnectionWrapper passes SQL to cursor unchanged."""
         wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id = ? AND name = ?", ("a", "b"))
+        wrapper.execute("SELECT * FROM t WHERE id = %s AND name = %s", ("a", "b"))
         mock_cursor.execute.assert_called_once_with(
             "SELECT * FROM t WHERE id = %s AND name = %s", ("a", "b")
         )
 
-    def test_no_translation_when_no_placeholders(self) -> None:
-        """Queries without ? pass through unchanged."""
+    def test_no_params_query(self) -> None:
+        """Queries without params pass through unchanged."""
         wrapper, mock_cursor = self._make_wrapper()
         wrapper.execute("SELECT * FROM t WHERE id = 1")
         mock_cursor.execute.assert_called_once_with("SELECT * FROM t WHERE id = 1", ())
 
-    def test_translates_in_clause(self) -> None:
-        """IN (?, ?, ?) translates correctly."""
+    def test_in_clause(self) -> None:
+        """IN (%s, %s, %s) passes through correctly."""
         wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id IN (?, ?, ?)", (1, 2, 3))
+        wrapper.execute("SELECT * FROM t WHERE id IN (%s, %s, %s)", (1, 2, 3))
         mock_cursor.execute.assert_called_once_with(
             "SELECT * FROM t WHERE id IN (%s, %s, %s)", (1, 2, 3)
         )
-
-    def test_already_percent_s_unchanged(self) -> None:
-        """Queries already using %s are not double-translated."""
-        wrapper, mock_cursor = self._make_wrapper()
-        wrapper.execute("SELECT * FROM t WHERE id = %s", ("a",))
-        mock_cursor.execute.assert_called_once_with("SELECT * FROM t WHERE id = %s", ("a",))
 
     def test_returns_cursor(self) -> None:
         """execute() returns the cursor for fetchone/fetchall."""
@@ -141,19 +135,19 @@ class TestOutboxPlaceholder:
 class TestRelationLoaderPlaceholder:
     """Verify RelationLoader uses configurable placeholder."""
 
-    def test_default_placeholder_is_question_mark(self) -> None:
-        """Default placeholder is ? for SQLite compat."""
+    def test_default_placeholder_is_percent_s(self) -> None:
+        """Default placeholder is %s for PostgreSQL."""
         from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry
 
         loader = RelationLoader(RelationRegistry(), [])
-        assert loader._placeholder == "?"
+        assert loader._placeholder == "%s"
 
     def test_custom_placeholder(self) -> None:
-        """Placeholder can be set to %s for Postgres."""
+        """Placeholder can be overridden."""
         from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry
 
-        loader = RelationLoader(RelationRegistry(), [], placeholder="%s")
-        assert loader._placeholder == "%s"
+        loader = RelationLoader(RelationRegistry(), [], placeholder="$1")
+        assert loader._placeholder == "$1"
 
 
 # =============================================================================

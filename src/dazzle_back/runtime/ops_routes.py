@@ -524,7 +524,7 @@ def create_ops_routes(
             conditions = []
 
             if service_name:
-                conditions.append("service_name = ?")
+                conditions.append("service_name = %s")
                 params.append(service_name)
 
             if status == "success":
@@ -535,7 +535,7 @@ def create_ops_routes(
             if conditions:
                 query += " WHERE " + " AND ".join(conditions)
 
-            query += " ORDER BY called_at DESC LIMIT ?"
+            query += " ORDER BY called_at DESC LIMIT %s"
             params.append(limit)
 
             cursor = conn.execute(query, params)
@@ -584,7 +584,7 @@ def create_ops_routes(
                         SUM(COALESCE(cost_cents, 0)) as total_cost_cents,
                         COUNT(*) as call_count
                     FROM api_calls
-                    WHERE called_at >= ?
+                    WHERE called_at >= %s
                     GROUP BY DATE(called_at), service_name
                     ORDER BY date DESC, total_cost_cents DESC
                     """,
@@ -599,7 +599,7 @@ def create_ops_routes(
                         COUNT(*) as call_count,
                         AVG(latency_ms) as avg_latency_ms
                     FROM api_calls
-                    WHERE called_at >= ?
+                    WHERE called_at >= %s
                     GROUP BY service_name
                     ORDER BY total_cost_cents DESC
                     """,
@@ -634,13 +634,13 @@ def create_ops_routes(
         with ops_db.connection() as conn:
             query = """
                 SELECT * FROM api_calls
-                WHERE called_at >= ?
+                WHERE called_at >= %s
                 AND (status_code >= 400 OR error_message IS NOT NULL)
             """
             params: list[Any] = [cutoff]
 
             if service_name:
-                query += " AND service_name = ?"
+                query += " AND service_name = %s"
                 params.append(service_name)
 
             query += " ORDER BY called_at DESC LIMIT 100"
@@ -706,8 +706,8 @@ def create_ops_routes(
                     COUNT(*) as views,
                     COUNT(DISTINCT session_id) as sessions
                 FROM analytics_events
-                WHERE tenant_id = ? AND event_type = 'page_view'
-                AND recorded_at >= ?
+                WHERE tenant_id = %s AND event_type = 'page_view'
+                AND recorded_at >= %s
                 GROUP BY DATE(recorded_at)
                 ORDER BY date DESC
                 """,
@@ -722,8 +722,8 @@ def create_ops_routes(
                     event_name as page,
                     COUNT(*) as views
                 FROM analytics_events
-                WHERE tenant_id = ? AND event_type = 'page_view'
-                AND recorded_at >= ?
+                WHERE tenant_id = %s AND event_type = 'page_view'
+                AND recorded_at >= %s
                 GROUP BY event_name
                 ORDER BY views DESC
                 LIMIT 10
@@ -740,8 +740,8 @@ def create_ops_routes(
                     COUNT(*) as total_views,
                     CAST(COUNT(*) AS FLOAT) / MAX(1, COUNT(DISTINCT session_id)) as avg_views_per_session
                 FROM analytics_events
-                WHERE tenant_id = ? AND event_type = 'page_view'
-                AND recorded_at >= ?
+                WHERE tenant_id = %s AND event_type = 'page_view'
+                AND recorded_at >= %s
                 """,
                 (tenant_id, cutoff),
             )
@@ -791,8 +791,8 @@ def create_ops_routes(
                     ) as source,
                     COUNT(*) as views
                 FROM analytics_events
-                WHERE tenant_id = ? AND event_type = 'page_view'
-                AND recorded_at >= ?
+                WHERE tenant_id = %s AND event_type = 'page_view'
+                AND recorded_at >= %s
                 GROUP BY source
                 ORDER BY views DESC
                 """,
@@ -807,9 +807,9 @@ def create_ops_routes(
                     properties,
                     COUNT(*) as count
                 FROM analytics_events
-                WHERE tenant_id = ? AND event_type = 'page_view'
-                AND recorded_at >= ?
-                AND properties LIKE '%utm_%'
+                WHERE tenant_id = %s AND event_type = 'page_view'
+                AND recorded_at >= %s
+                AND properties LIKE '%%utm_%%'
                 GROUP BY properties
                 ORDER BY count DESC
                 LIMIT 10
@@ -964,7 +964,7 @@ def create_ops_routes(
                     COUNT(*) as count
                 FROM events
                 WHERE entity_name = 'email'
-                  AND recorded_at >= ?
+                  AND recorded_at >= %s
                 GROUP BY event_type
                 """,
                 (since_str,),
@@ -986,7 +986,7 @@ def create_ops_routes(
                     COUNT(*) as count
                 FROM events
                 WHERE entity_name = 'email'
-                  AND recorded_at >= ?
+                  AND recorded_at >= %s
                 GROUP BY DATE(recorded_at), event_type
                 ORDER BY date DESC
                 """,
@@ -1047,7 +1047,7 @@ def create_ops_routes(
                 FROM events
                 WHERE entity_name = 'email'
                 ORDER BY recorded_at DESC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (limit,),
             )
@@ -1093,16 +1093,16 @@ def create_ops_routes(
             cursor = conn.execute(
                 """
                 SELECT
-                    json_extract(payload, '$.click_url') as url,
+                    payload::jsonb->>'click_url' as url,
                     COUNT(*) as clicks
                 FROM events
                 WHERE entity_name = 'email'
                   AND event_type = 'email.clicked'
-                  AND recorded_at >= ?
-                  AND json_extract(payload, '$.click_url') IS NOT NULL
-                GROUP BY json_extract(payload, '$.click_url')
+                  AND recorded_at >= %s
+                  AND payload::jsonb->>'click_url' IS NOT NULL
+                GROUP BY payload::jsonb->>'click_url'
                 ORDER BY clicks DESC
-                LIMIT ?
+                LIMIT %s
                 """,
                 (since_str, limit),
             )

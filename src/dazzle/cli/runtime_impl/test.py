@@ -7,7 +7,6 @@ Run tests for a Dazzle application.
 from __future__ import annotations
 
 import json as json_module
-import os
 import subprocess
 import sys
 import time
@@ -144,15 +143,8 @@ def check_command(
     # Start server if requested
     server_process = None
     api_url = f"http://localhost:{port}"
-    temp_db_path: str | None = None
 
     if start_server:
-        # Create a temporary database for test isolation
-        import tempfile
-
-        fd, temp_db_path = tempfile.mkstemp(suffix=".db", prefix="dazzle_test_")
-        os.close(fd)  # Close the file descriptor, we just need the path
-
         # Determine if we need the UI (for E2E or a11y tests)
         need_ui = e2e or a11y
         if need_ui:
@@ -175,8 +167,6 @@ def check_command(
                 "--api-port",
                 str(port),  # API port
                 "--test-mode",
-                "--db",
-                temp_db_path,  # Use ephemeral database for test isolation
                 "-m",
                 str(manifest_path),
             ]
@@ -192,8 +182,6 @@ def check_command(
                 "--port",
                 str(port),  # API port (used as main port in backend-only mode)
                 "--test-mode",
-                "--db",
-                temp_db_path,  # Use ephemeral database for test isolation
                 "-m",
                 str(manifest_path),
             ]
@@ -354,13 +342,6 @@ def check_command(
                 server_process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 server_process.kill()
-
-        # Clean up temporary database
-        if temp_db_path and os.path.exists(temp_db_path):
-            try:
-                os.unlink(temp_db_path)
-            except OSError:
-                pass  # Best effort cleanup
 
     # Summary
     typer.echo()

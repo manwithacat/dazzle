@@ -2,6 +2,7 @@
 Tests for full-text search functionality.
 
 Tests FTS5 table creation, indexing, and search queries.
+These tests use SQLite directly (FTS5 is SQLite-specific).
 """
 
 from __future__ import annotations
