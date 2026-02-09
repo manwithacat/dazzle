@@ -1,5 +1,6 @@
 """Shared pytest fixtures for DAZZLE tests."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,28 @@ from dazzle.core.parser import parse_modules
 # Exclude e2e/docker tests from regular collection
 # These tests require playwright which is only available in Docker containers
 collect_ignore = ["e2e/docker"]
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _skip_infra_check() -> None:
+    """Disable startup infrastructure validation in unit tests."""
+    os.environ.setdefault("DAZZLE_SKIP_INFRA_CHECK", "1")
+
+
+# Suppress deprecation warnings from deprecated adapters used in tests
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "filterwarnings",
+        "ignore:DevBrokerSQLite is deprecated:DeprecationWarning",
+    )
+    config.addinivalue_line(
+        "filterwarnings",
+        "ignore:LiteProcessAdapter is deprecated:DeprecationWarning",
+    )
+    config.addinivalue_line(
+        "filterwarnings",
+        "ignore:SQLite event bus is deprecated:DeprecationWarning",
+    )
 
 
 @pytest.fixture

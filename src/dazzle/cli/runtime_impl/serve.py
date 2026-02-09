@@ -42,6 +42,61 @@ from .ports import (
 )
 
 
+def _validate_infrastructure() -> tuple[str, str]:
+    """Validate that required infrastructure env vars are set.
+
+    Returns:
+        (database_url, redis_url) tuple.
+
+    Raises:
+        SystemExit: If required env vars are missing and
+            DAZZLE_SKIP_INFRA_CHECK is not set.
+    """
+    if os.environ.get("DAZZLE_SKIP_INFRA_CHECK") == "1":
+        return os.environ.get("DATABASE_URL", ""), os.environ.get("REDIS_URL", "")
+
+    missing: list[str] = []
+    database_url = os.environ.get("DATABASE_URL", "")
+    redis_url = os.environ.get("REDIS_URL", "")
+
+    if not database_url:
+        missing.append("DATABASE_URL")
+    if not redis_url:
+        missing.append("REDIS_URL")
+
+    if missing:
+        typer.echo("Dazzle requires PostgreSQL + Redis infrastructure.", err=True)
+        typer.echo(f"Missing environment variables: {', '.join(missing)}", err=True)
+        typer.echo("", err=True)
+        typer.echo("Set them in .env or export before running:", err=True)
+        typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
+        typer.echo("  export REDIS_URL=redis://localhost:6379/0", err=True)
+        typer.echo("", err=True)
+        typer.echo(
+            "Skip this check with DAZZLE_SKIP_INFRA_CHECK=1 (tests only).",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+    # Normalize postgres:// → postgresql://
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+    return database_url, redis_url
+
+
+def _print_infra_banner(
+    database_url: str, redis_url: str, event_tier: str, process_backend: str
+) -> None:
+    """Print infrastructure status banner after validation passes."""
+    typer.echo("Dazzle Infrastructure")
+    typer.echo(f"  PostgreSQL: {database_url}")
+    typer.echo(f"  Redis:      {redis_url}")
+    typer.echo(f"  Event Bus:  {event_tier}")
+    typer.echo(f"  Processes:  {process_backend}")
+    typer.echo()
+
+
 def serve_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
     port: int = typer.Option(None, "--port", "-p", help="Frontend port (auto-assigned if not set)"),
@@ -184,6 +239,13 @@ def serve_command(
         database_url = database_url.replace("postgres://", "postgresql://", 1)
     # Ensure env var is set for subcomponents that read it
     if database_url:
+        os.environ["DATABASE_URL"] = database_url
+
+    # Validate required infrastructure (PostgreSQL + Redis)
+    validated_db_url, redis_url = _validate_infrastructure()
+    # Use validated URL if CLI didn't provide one
+    if not database_url and validated_db_url:
+        database_url = validated_db_url
         os.environ["DATABASE_URL"] = database_url
 
     # Allocate ports based on project name (deterministic hashing)
@@ -366,6 +428,7 @@ def serve_command(
             host=host,
             sitespec_data=sitespec_data,
             project_root=project_root,
+            redis_url=redis_url,
         )
         return
 
@@ -441,6 +504,18 @@ def serve_command(
     if watch:
         typer.echo("  • Hot reload: ENABLED (watching DSL files)")
 
+    # Print infrastructure banner if Redis is available
+    if redis_url:
+        event_tier = "Redis Streams"
+        process_backend = "Celery + Beat"
+    elif database_url:
+        event_tier = "PostgreSQL"
+        process_backend = "Lite (in-process)"
+    else:
+        event_tier = "Memory"
+        process_backend = "Lite (in-process)"
+    _print_infra_banner(database_url, redis_url, event_tier, process_backend)
+
     # Build theme overrides from manifest (v0.16.0)
     theme_overrides: dict[str, Any] = {}
     if mf.theme.colors:
@@ -473,4 +548,5 @@ def serve_command(
         theme_preset=mf.theme.preset,
         theme_overrides=theme_overrides if theme_overrides else None,
         appspec=appspec,
+        redis_url=redis_url,
     )

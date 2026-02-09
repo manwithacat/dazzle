@@ -164,19 +164,19 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
                     passed_tests.append(tc.test_id)
 
         if result.event_result:
-            for tc in result.event_result.tests:
-                if tc.result.value in ("failed", "error"):
-                    entry = {
-                        "test_id": tc.test_id,
-                        "title": tc.title,
-                        "result": tc.result.value,
-                        "error": tc.error_message,
+            for etc in result.event_result.tests:
+                if etc.result.value in ("failed", "error"):
+                    evt_entry: dict[str, Any] = {
+                        "test_id": etc.test_id,
+                        "title": etc.title,
+                        "result": etc.result.value,
+                        "error": etc.error_message,
                     }
-                    if tc.details:
-                        entry["details"] = tc.details[:3]  # First 3 detail lines
-                    failed_tests.append(entry)
-                elif tc.result.value == "passed":
-                    passed_tests.append(tc.test_id)
+                    if etc.details:
+                        evt_entry["details"] = etc.details[:3]  # First 3 detail lines
+                    failed_tests.append(evt_entry)
+                elif etc.result.value == "passed":
+                    passed_tests.append(etc.test_id)
 
         if failed_tests:
             response["failed_tests"] = failed_tests

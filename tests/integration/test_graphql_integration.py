@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Integration tests for GraphQL BFF layer with real queries."""
 
+import os
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 
@@ -18,15 +18,13 @@ try:
 except ImportError:
     STRAWBERRY_AVAILABLE = False
 
+pytestmark = pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+
 
 @pytest.fixture(scope="module")
 def graphql_server():
     """Start a GraphQL server for the simple_task example."""
-    import os
-
-    # Create temp database for test isolation
-    fd, temp_db = tempfile.mkstemp(suffix=".db", prefix="graphql_test_")
-    os.close(fd)  # Close the file descriptor
+    database_url = os.environ["DATABASE_URL"]
 
     # Start server with GraphQL enabled
     example_path = Path(__file__).parent.parent.parent / "examples" / "simple_task"
@@ -41,11 +39,11 @@ def graphql_server():
         "--graphql",
         "--api-port",
         "8765",
-        "--db",
-        temp_db,
         "-m",
         str(example_path / "dazzle.toml"),
     ]
+
+    env = {**os.environ, "DATABASE_URL": database_url}
 
     # Start with stdout/stderr going to devnull to avoid blocking
     proc = subprocess.Popen(
@@ -53,6 +51,7 @@ def graphql_server():
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         cwd=str(example_path),
+        env=env,
     )
 
     # Wait for server to be ready
@@ -78,12 +77,6 @@ def graphql_server():
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
         proc.kill()
-
-    # Remove temp database
-    try:
-        Path(temp_db).unlink()
-    except OSError:
-        pass
 
 
 @pytest.mark.skipif(not STRAWBERRY_AVAILABLE, reason="Strawberry not installed")

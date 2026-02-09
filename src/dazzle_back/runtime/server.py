@@ -1178,13 +1178,28 @@ class DNRBackendApp:
             return
 
         try:
+            import os
+
             from dazzle.core.process import LiteProcessAdapter
             from dazzle_back.runtime.process_manager import ProcessManager
             from dazzle_back.runtime.task_routes import router as task_router
             from dazzle_back.runtime.task_routes import set_process_manager
 
             # Create the ProcessAdapter - use custom class if configured
-            adapter_class = self._process_adapter_class or LiteProcessAdapter
+            # Auto-detect Celery when REDIS_URL is set and no explicit class
+            if self._process_adapter_class is None:
+                redis_url = os.environ.get("REDIS_URL")
+                if redis_url:
+                    try:
+                        from dazzle.core.process import CeleryProcessAdapter
+
+                        adapter_class = CeleryProcessAdapter
+                    except ImportError:
+                        adapter_class = LiteProcessAdapter
+                else:
+                    adapter_class = LiteProcessAdapter
+            else:
+                adapter_class = self._process_adapter_class
             self._process_adapter = adapter_class(database_url=self._database_url)
 
             # Create ProcessManager
@@ -2061,6 +2076,18 @@ def create_app_factory(
     # Build and return the FastAPI app
     builder = DNRBackendApp(backend_spec, config=config)
     app = builder.build()
+
+    # Sync DSL schedules to Celery Beat if using CeleryProcessAdapter
+    if builder._process_adapter is not None:
+        try:
+            from dazzle.core.process.celery_adapter import CeleryProcessAdapter as _CPA
+
+            if isinstance(builder._process_adapter, _CPA) and appspec.schedules:
+                count = builder._process_adapter.sync_schedules_from_appspec(appspec)
+                if count:
+                    logger.info(f"Synced {count} DSL schedules to Celery Beat")
+        except ImportError:
+            pass
 
     # Add site page routes if sitespec exists (landing pages, /site.js)
     if sitespec_data:

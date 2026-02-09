@@ -434,8 +434,12 @@ except ImportError:
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
-class TestServerWithSQLite:
-    """Integration tests for server with SQLite persistence."""
+@pytest.mark.skipif(
+    not __import__("os").environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set",
+)
+class TestServerWithDatabase:
+    """Integration tests for server with PostgreSQL persistence."""
 
     @pytest.fixture
     def simple_backend_spec(self) -> BackendSpec:
@@ -484,53 +488,50 @@ class TestServerWithSQLite:
             ],
         )
 
-    def test_server_creates_database(self, simple_backend_spec: BackendSpec, tmp_path: Any) -> None:
-        """Test that server creates SQLite database."""
+    def test_server_creates_database(self, simple_backend_spec: BackendSpec) -> None:
+        """Test that server creates database manager with PostgreSQL."""
+        import os
+
         from dazzle_back.runtime.server import DNRBackendApp
 
-        db_path = tmp_path / "test.db"
+        database_url = os.environ["DATABASE_URL"]
         app_builder = DNRBackendApp(
             simple_backend_spec,
-            db_path=db_path,
-            use_database=True,
+            database_url=database_url,
         )
-        app_builder.build()  # Triggers database setup
-
-        # Database should be created
-        assert db_path.exists()
+        app_builder.build()
 
         # Check for database manager
         assert app_builder._db_manager is not None
 
-    def test_server_without_database(self, simple_backend_spec: BackendSpec, tmp_path: Any) -> None:
-        """Test that server works without database (in-memory mode)."""
+    def test_server_without_database(self, simple_backend_spec: BackendSpec) -> None:
+        """Test that server works without database_url (no persistence)."""
+        import os
+
         from dazzle_back.runtime.server import DNRBackendApp
 
-        db_path = tmp_path / "no_db.db"
-        app_builder = DNRBackendApp(
-            simple_backend_spec,
-            db_path=db_path,
-            use_database=False,
-        )
-        app_builder.build()  # Build without database
+        # Temporarily clear DATABASE_URL so the builder doesn't pick it up
+        saved = os.environ.pop("DATABASE_URL", None)
+        try:
+            app_builder = DNRBackendApp(simple_backend_spec)
+            app_builder.build()
 
-        # Database should NOT be created
-        assert not db_path.exists()
+            # Database manager should not be set
+            assert app_builder._db_manager is None
+        finally:
+            if saved is not None:
+                os.environ["DATABASE_URL"] = saved
 
-        # Database manager should not be set
-        assert app_builder._db_manager is None
-
-    def test_crud_service_with_repository(
-        self, simple_backend_spec: BackendSpec, tmp_path: Any
-    ) -> None:
+    def test_crud_service_with_repository(self, simple_backend_spec: BackendSpec) -> None:
         """Test that CRUD service is wired up to repository."""
+        import os
+
         from dazzle_back.runtime.server import DNRBackendApp
 
-        db_path = tmp_path / "test.db"
+        database_url = os.environ["DATABASE_URL"]
         app_builder = DNRBackendApp(
             simple_backend_spec,
-            db_path=db_path,
-            use_database=True,
+            database_url=database_url,
         )
         app_builder.build()
 
@@ -543,17 +544,16 @@ class TestServerWithSQLite:
         assert task_service._repository is not None
 
     @pytest.mark.asyncio
-    async def test_crud_operations_persist_to_sqlite(
-        self, simple_backend_spec: BackendSpec, tmp_path: Any
-    ) -> None:
-        """Test that CRUD operations persist data to SQLite."""
+    async def test_crud_operations_persist(self, simple_backend_spec: BackendSpec) -> None:
+        """Test that CRUD operations persist data to PostgreSQL."""
+        import os
+
         from dazzle_back.runtime.server import DNRBackendApp
 
-        db_path = tmp_path / "test.db"
+        database_url = os.environ["DATABASE_URL"]
         app_builder = DNRBackendApp(
             simple_backend_spec,
-            db_path=db_path,
-            use_database=True,
+            database_url=database_url,
         )
         app_builder.build()
 
@@ -577,8 +577,7 @@ class TestServerWithSQLite:
         # Create a new app instance to verify persistence
         app_builder2 = DNRBackendApp(
             simple_backend_spec,
-            db_path=db_path,
-            use_database=True,
+            database_url=database_url,
         )
         app_builder2.build()
 

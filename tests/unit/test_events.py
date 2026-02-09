@@ -914,3 +914,132 @@ class TestEventFramework:
         assert framework._stats.active_subscriptions == 1
 
         await framework.stop()
+
+
+# =============================================================================
+# ConnectFn Injection Tests
+# =============================================================================
+
+
+class TestConnectFnInjection:
+    """Tests for ConnectFn-based connection injection in Publisher and Consumer."""
+
+    @pytest.mark.asyncio
+    async def test_publisher_with_connect_fn(self, tmp_path: Path) -> None:
+        """Verify OutboxPublisher works with connect= kwarg."""
+        db_path = str(tmp_path / "test.db")
+        bus = DevBusMemory()
+        outbox = EventOutbox()
+
+        async def _connect() -> aiosqlite.Connection:
+            conn = await aiosqlite.connect(db_path)
+            await outbox.create_table(conn)
+            return conn
+
+        publisher = OutboxPublisher(
+            bus=bus,
+            outbox=outbox,
+            config=PublisherConfig(poll_interval=0.1),
+            connect=_connect,
+        )
+
+        await publisher.start()
+        assert publisher.is_running
+        await publisher.stop()
+        assert not publisher.is_running
+
+    @pytest.mark.asyncio
+    async def test_consumer_with_connect_fn(self, tmp_path: Path) -> None:
+        """Verify IdempotentConsumer works with connect= kwarg."""
+        db_path = str(tmp_path / "test.db")
+        bus = DevBusMemory()
+        inbox = EventInbox()
+
+        async def _connect() -> aiosqlite.Connection:
+            return await aiosqlite.connect(db_path)
+
+        consumer = IdempotentConsumer(
+            inbox=inbox,
+            config=ConsumerConfig(consumer_name="test_consumer"),
+            bus=bus,
+            connect=_connect,
+        )
+
+        await consumer.connect()
+        assert consumer._conn is not None
+        await consumer.close()
+
+    def test_publisher_db_path_deprecation(self) -> None:
+        """Verify OutboxPublisher(db_path=...) emits DeprecationWarning."""
+        import warnings
+
+        bus = DevBusMemory()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            OutboxPublisher(db_path="test.db", bus=bus)
+            assert len(w) == 1
+            assert issubclass(w[0].category, DeprecationWarning)
+            assert "deprecated" in str(w[0].message).lower()
+
+    def test_consumer_db_path_deprecation(self) -> None:
+        """Verify IdempotentConsumer(db_path=...) emits DeprecationWarning."""
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            IdempotentConsumer(db_path="test.db")
+            assert len(w) == 1
+            assert issubclass(w[0].category, DeprecationWarning)
+            assert "deprecated" in str(w[0].message).lower()
+
+    def test_publisher_requires_connect_or_db_path(self) -> None:
+        """Verify OutboxPublisher raises if neither connect nor db_path provided."""
+        bus = DevBusMemory()
+        with pytest.raises(ValueError, match="connect or db_path"):
+            OutboxPublisher(bus=bus)
+
+    def test_consumer_requires_connect_or_db_path(self) -> None:
+        """Verify IdempotentConsumer raises if neither connect nor db_path provided."""
+        with pytest.raises(ValueError, match="connect or db_path"):
+            IdempotentConsumer()
+
+    @pytest.mark.asyncio
+    async def test_framework_health_check(self, tmp_path: Path) -> None:
+        """Verify health_check() returns expected structure."""
+        db_path = str(tmp_path / "test.db")
+
+        config = EventFrameworkConfig(
+            db_path=db_path,
+            auto_start_publisher=False,
+            auto_start_consumers=False,
+        )
+
+        async with EventFramework(config) as framework:
+            health = await framework.health_check()
+
+            assert health["tier"] in ("sqlite", "memory")
+            assert health["bus_type"] in ("DevBrokerSQLite", "DevBusMemory")
+            assert health["publisher_running"] is False
+            assert health["consumer_count"] == 0
+            assert "outbox_depth" in health
+            assert "last_publish_at" in health
+            assert "last_error" in health
+
+    @pytest.mark.asyncio
+    async def test_connect_fn_failure_logged(self, tmp_path: Path) -> None:
+        """Verify that when connect() raises, an error is logged (not swallowed)."""
+        bus = DevBusMemory()
+        outbox = EventOutbox()
+
+        async def _failing_connect() -> aiosqlite.Connection:
+            raise ConnectionError("test connection failure")
+
+        publisher = OutboxPublisher(
+            bus=bus,
+            outbox=outbox,
+            connect=_failing_connect,
+        )
+
+        with pytest.raises(ConnectionError, match="test connection failure"):
+            await publisher.start()
+        assert not publisher.is_running

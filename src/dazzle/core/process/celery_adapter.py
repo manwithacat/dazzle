@@ -27,9 +27,13 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import ProcessSpec, ScheduleSpec
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
+
 from dazzle.core.process.adapter import (
     ProcessAdapter,
     ProcessRun,
@@ -384,3 +388,26 @@ class CeleryProcessAdapter(ProcessAdapter):
     async def count_active_runs_by_version(self, dsl_version: str) -> int:
         """Count active (non-terminal) runs for a DSL version."""
         return self._store.count_active_runs_by_version(dsl_version)
+
+    def sync_schedules_from_appspec(self, appspec: AppSpec) -> int:
+        """Sync DSL schedule definitions to Celery Beat.
+
+        Iterates appspec.schedules and converts each DSL schedule block
+        to a Celery Beat schedule entry.
+
+        Args:
+            appspec: The application specification containing schedule definitions.
+
+        Returns:
+            Number of schedules registered.
+        """
+        count = 0
+        for schedule in appspec.schedules:
+            self._store.register_schedule(schedule)
+            logger.info(f"Registered schedule '{schedule.name}' for Celery Beat")
+            count += 1
+
+        if count and self._initialized:
+            self._update_beat_schedule()
+
+        return count

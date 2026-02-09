@@ -9,6 +9,7 @@ and availability, allowing seamless switching between development
 from __future__ import annotations
 
 import logging
+import os
 import socket
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,7 +20,7 @@ from .adapter import ProcessAdapter
 logger = logging.getLogger(__name__)
 
 
-BackendType = Literal["auto", "lite", "temporal"]
+BackendType = Literal["auto", "lite", "celery", "temporal"]
 
 
 @dataclass
@@ -29,6 +30,13 @@ class LiteConfig:
     db_path: str = ".dazzle/processes.db"
     poll_interval_seconds: float = 1.0
     scheduler_interval_seconds: float = 60.0
+
+
+@dataclass
+class CeleryConfig:
+    """Configuration for CeleryProcessAdapter."""
+
+    redis_url: str | None = None  # Defaults to REDIS_URL env var
 
 
 @dataclass
@@ -62,6 +70,7 @@ class ProcessConfig:
 
     backend: BackendType = "auto"
     lite: LiteConfig = field(default_factory=LiteConfig)
+    celery: CeleryConfig = field(default_factory=CeleryConfig)
     temporal: TemporalConfig = field(default_factory=TemporalConfig)
 
     # Project root for database paths
@@ -96,6 +105,8 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
 
     if backend == "temporal":
         return _create_temporal_adapter(config)
+    elif backend == "celery":
+        return _create_celery_adapter(config)
     elif backend == "lite":
         return _create_lite_adapter(config)
     else:
@@ -106,25 +117,43 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
     """
     Auto-detect the best available backend.
 
-    Returns "temporal" if SDK is installed and server is reachable,
-    otherwise returns "lite".
+    Detection order:
+    1. Temporal SDK installed + server reachable -> "temporal"
+    2. REDIS_URL in environment -> "celery"
+    3. Fallback -> "lite" (with deprecation warning)
     """
-    # Check if Temporal SDK is installed
+    # Check if Temporal SDK is installed and server reachable
     try:
         import temporalio  # noqa: F401
 
         logger.debug("Temporal SDK is installed")
+        if _temporal_available(config.temporal):
+            logger.debug(
+                f"Temporal server reachable at {config.temporal.host}:{config.temporal.port}"
+            )
+            return "temporal"
+        else:
+            logger.debug("Temporal server not reachable")
     except ImportError:
-        logger.debug("Temporal SDK not installed, using lite backend")
-        return "lite"
+        logger.debug("Temporal SDK not installed")
 
-    # Check if Temporal server is reachable
-    if _temporal_available(config.temporal):
-        logger.debug(f"Temporal server reachable at {config.temporal.host}:{config.temporal.port}")
-        return "temporal"
-    else:
-        logger.debug("Temporal server not reachable, using lite backend")
-        return "lite"
+    # Check for Redis → Celery
+    redis_url = config.celery.redis_url or os.environ.get("REDIS_URL")
+    if redis_url:
+        logger.debug("REDIS_URL set, using Celery backend")
+        return "celery"
+
+    # Fallback to lite with deprecation warning
+    import warnings
+
+    warnings.warn(
+        "LiteProcessAdapter is deprecated for production use. "
+        "Set REDIS_URL to enable CeleryProcessAdapter.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    logger.debug("No Temporal or Redis available, using lite backend")
+    return "lite"
 
 
 def _temporal_available(config: TemporalConfig) -> bool:
@@ -172,6 +201,20 @@ def _create_temporal_adapter(config: ProcessConfig) -> ProcessAdapter:
     )
 
 
+def _create_celery_adapter(config: ProcessConfig) -> ProcessAdapter:
+    """Create CeleryProcessAdapter with configuration."""
+    try:
+        from .celery_adapter import CeleryProcessAdapter
+    except ImportError as e:
+        raise ValueError(
+            "Celery backend requested but celery/redis not installed. "
+            "Install with: pip install dazzle[celery]"
+        ) from e
+
+    redis_url = config.celery.redis_url or os.environ.get("REDIS_URL")
+    return CeleryProcessAdapter(redis_url=redis_url)
+
+
 def _create_lite_adapter(config: ProcessConfig) -> ProcessAdapter:
     """Create LiteProcessAdapter with configuration."""
     from .lite_adapter import LiteProcessAdapter
@@ -198,9 +241,18 @@ def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
     info: dict[str, str | bool] = {
         "configured_backend": config.backend,
         "lite_available": True,  # Always available
+        "celery_available": False,
+        "redis_url_set": bool(os.environ.get("REDIS_URL")),
         "temporal_sdk_installed": False,
         "temporal_server_reachable": False,
     }
+
+    try:
+        import celery as _celery  # noqa: F401
+
+        info["celery_available"] = True
+    except ImportError:
+        pass
 
     try:
         import temporalio  # noqa: F401

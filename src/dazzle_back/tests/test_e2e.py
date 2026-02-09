@@ -125,7 +125,7 @@ class TestE2EEndpoints:
         import os
 
         database_url = os.environ.get("DATABASE_URL", "postgresql://localhost:5432/dazzle_test")
-        app = create_app(task_spec, database_url=database_url, use_database=True)
+        app = create_app(task_spec, database_url=database_url)
         return _TestClient(app)
 
     def test_health_endpoint(self, client: TestClient) -> None:

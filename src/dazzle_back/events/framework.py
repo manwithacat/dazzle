@@ -26,11 +26,10 @@ Or as context manager:
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-
-import aiosqlite
 
 from dazzle_back.events.bus import EventBus, EventHandler
 from dazzle_back.events.consumer import ConsumerConfig, IdempotentConsumer
@@ -39,6 +38,9 @@ from dazzle_back.events.envelope import EventEnvelope
 from dazzle_back.events.inbox import EventInbox
 from dazzle_back.events.outbox import EventOutbox
 from dazzle_back.events.publisher import OutboxPublisher, PublisherConfig
+
+# Connection factory type: async callable returning a connection
+ConnectFn = Callable[[], Awaitable[Any]]
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,9 @@ class EventFrameworkConfig:
 
     # PostgreSQL connection URL (takes precedence over db_path when set)
     database_url: str | None = None
+
+    # Redis connection URL (enables Redis event bus tier)
+    redis_url: str | None = None
 
     # Whether to auto-start the publisher loop
     auto_start_publisher: bool = True
@@ -129,7 +134,7 @@ class EventFramework:
         self._publisher: OutboxPublisher | None = None
 
         # Connection for outbox operations
-        self._conn: aiosqlite.Connection | Any = None
+        self._conn: Any = None
 
         # Registered handlers
         self._handlers: dict[str, list[tuple[str, EventHandler]]] = {}
@@ -139,6 +144,32 @@ class EventFramework:
 
         # Statistics
         self._stats = FrameworkStats()
+
+    def _make_connect_fn(self) -> ConnectFn:
+        """Build an async connection factory based on the configured backend."""
+        if self._use_postgres:
+            database_url = self._config.database_url
+            assert database_url is not None
+            url = database_url
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+
+            async def _pg_connect() -> Any:
+                import psycopg
+                from psycopg.rows import dict_row
+
+                return await psycopg.AsyncConnection.connect(url, row_factory=dict_row)
+
+            return _pg_connect
+        else:
+            db_path = self._config.db_path
+
+            async def _sqlite_connect() -> Any:
+                import aiosqlite
+
+                return await aiosqlite.connect(db_path)
+
+            return _sqlite_connect
 
     @property
     def bus(self) -> EventBus:
@@ -171,64 +202,60 @@ class EventFramework:
         Start the event framework.
 
         Initializes all components and starts background tasks.
+        Uses create_bus() from tier.py for unified bus creation.
         """
         if self._stats.is_running:
             return
 
         logger.info("Starting event framework", extra={"db_path": self._config.db_path})
 
+        connect_fn = self._make_connect_fn()
+
+        # ConnectFn always uses PostgreSQL when database_url is set
+        # (outbox/inbox DB connections are always PostgreSQL regardless of event bus tier)
         if self._use_postgres:
-            # PostgreSQL mode
-            import psycopg
-            from psycopg.rows import dict_row
-
-            from dazzle_back.events.postgres_bus import PostgresBus, PostgresConfig
-
             self._outbox = EventOutbox(use_postgres=True)
             self._inbox = EventInbox(backend_type="postgres", placeholder="%s")
-
-            database_url = self._config.database_url
-            assert database_url is not None
-            if database_url.startswith("postgres://"):
-                database_url = database_url.replace("postgres://", "postgresql://", 1)
-
-            # Connect to database
-            self._conn = await psycopg.AsyncConnection.connect(database_url, row_factory=dict_row)
-
-            # Create tables
-            await self._outbox.create_table(self._conn)
-            await self._inbox.create_table(self._conn)
-
-            # Initialize PostgreSQL event bus
-            pg_config = PostgresConfig(dsn=database_url or "")
-            self._bus = PostgresBus(pg_config)
-            await self._bus.connect()
         else:
-            # SQLite mode (default)
             self._outbox = EventOutbox()
             self._inbox = EventInbox()
 
-            # Connect to database
-            self._conn = await aiosqlite.connect(self._config.db_path)
+        # Connect to database and create tables
+        self._conn = await connect_fn()
+        await self._outbox.create_table(self._conn)
+        await self._inbox.create_table(self._conn)
 
-            # Create tables
-            await self._outbox.create_table(self._conn)
-            await self._inbox.create_table(self._conn)
+        # Create event bus via unified tier factory
+        from dazzle_back.events.tier import EventTier, TierConfig, create_bus
 
-            # Initialize event bus
-            self._bus = DevBrokerSQLite(self._config.db_path)
+        # Determine tier from config values (don't rely on env detection alone)
+        if self._config.redis_url:
+            explicit_tier = EventTier.REDIS
+        elif self._use_postgres:
+            explicit_tier = EventTier.POSTGRES
+        else:
+            explicit_tier = EventTier.AUTO  # Let detect_tier() decide from env
+
+        tier_config = TierConfig(
+            tier=explicit_tier,
+            redis_url=self._config.redis_url,
+            postgres_url=self._config.database_url,
+            sqlite_db_path=self._config.db_path,
+        )
+        self._bus = create_bus(tier_config)
+        if hasattr(self._bus, "connect"):
             await self._bus.connect()
 
         # Start publisher
         if self._config.auto_start_publisher:
             self._publisher = OutboxPublisher(
-                self._config.db_path,
-                self._bus,
-                self._outbox,
+                bus=self._bus,
+                outbox=self._outbox,
                 config=PublisherConfig(
                     poll_interval=self._config.publisher_poll_interval,
                     batch_size=self._config.publisher_batch_size,
                 ),
+                connect=connect_fn,
             )
             await self._publisher.start()
 
@@ -239,7 +266,19 @@ class EventFramework:
         self._stats.is_running = True
         self._stats.started_at = datetime.now(UTC)
 
-        logger.info("Event framework started")
+        bus_type = type(self._bus).__name__
+        tier = (
+            "redis" if self._config.redis_url else ("postgres" if self._use_postgres else "sqlite")
+        )
+        logger.info(
+            "Event framework started",
+            extra={
+                "tier": tier,
+                "bus_type": bus_type,
+                "publisher_running": self._publisher is not None and self._publisher.is_running,
+                "consumer_count": len(self._consumers),
+            },
+        )
 
     async def stop(self) -> None:
         """
@@ -333,7 +372,7 @@ class EventFramework:
 
     async def emit_event(
         self,
-        conn: aiosqlite.Connection | Any,
+        conn: Any,
         envelope: EventEnvelope,
         topic: str | None = None,
     ) -> None:
@@ -354,36 +393,29 @@ class EventFramework:
         await self._outbox.append(conn, envelope, topic)
         self._stats.events_published += 1
 
-    async def get_connection(self) -> aiosqlite.Connection | Any:
+    async def get_connection(self) -> Any:
         """
         Get a database connection for transactional operations.
 
         Returns a new connection that should be used within a transaction.
         """
-        if self._use_postgres:
-            import psycopg
-            from psycopg.rows import dict_row
-
-            database_url = self._config.database_url
-            assert database_url is not None
-            if database_url.startswith("postgres://"):
-                database_url = database_url.replace("postgres://", "postgresql://", 1)
-            return await psycopg.AsyncConnection.connect(database_url, row_factory=dict_row)
-        return await aiosqlite.connect(self._config.db_path)
+        return await self._make_connect_fn()()
 
     async def _start_consumers(self) -> None:
         """Start consumer tasks for registered handlers."""
         if self._bus is None:
             return
 
+        connect_fn = self._make_connect_fn()
+
         for topic, handlers in self._handlers.items():
             for group_id, handler in handlers:
                 # Create idempotent consumer
                 consumer = IdempotentConsumer(
-                    self._config.db_path,
-                    self._inbox,
-                    ConsumerConfig(consumer_name=group_id),
+                    inbox=self._inbox,
+                    config=ConsumerConfig(consumer_name=group_id),
                     bus=self._bus,
+                    connect=connect_fn,
                 )
                 await consumer.connect()
 
@@ -443,6 +475,47 @@ class EventFramework:
             "outbox": outbox_stats,
             "bus": bus_info,
         }
+
+    async def health_check(self) -> dict[str, Any]:
+        """Return a concise health snapshot of the event system."""
+        outbox_depth = 0
+        if self._outbox and self._conn:
+            try:
+                stats = await self._outbox.get_stats(self._conn)
+                outbox_depth = stats.get("pending", 0)
+            except Exception:
+                pass
+
+        publisher_stats = self._publisher.stats if self._publisher else None
+
+        tier = (
+            "redis" if self._config.redis_url else ("postgres" if self._use_postgres else "sqlite")
+        )
+
+        result: dict[str, Any] = {
+            "tier": tier,
+            "bus_type": type(self._bus).__name__ if self._bus else None,
+            "publisher_running": self._publisher.is_running if self._publisher else False,
+            "consumer_count": len(self._consumers),
+            "outbox_depth": outbox_depth,
+            "last_publish_at": (
+                publisher_stats.last_publish_at.isoformat()
+                if publisher_stats and publisher_stats.last_publish_at
+                else None
+            ),
+            "last_error": publisher_stats.last_error if publisher_stats else None,
+        }
+
+        # Add Redis-specific health when Redis tier is active
+        if tier == "redis" and self._bus is not None:
+            try:
+                topics = await self._bus.list_topics()
+                result["redis_connected"] = True
+                result["redis_topics"] = len(topics)
+            except Exception:
+                result["redis_connected"] = False
+
+        return result
 
     async def get_outbox_stats(self) -> dict[str, Any]:
         """Get outbox statistics for the event explorer."""

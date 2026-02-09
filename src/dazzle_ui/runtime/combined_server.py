@@ -84,6 +84,7 @@ def run_unified_server(
     theme_preset: str = "saas-default",
     theme_overrides: dict[str, Any] | None = None,
     appspec: Any = None,
+    redis_url: str = "",
 ) -> None:
     """
     Run a unified Dazzle server on a single port.
@@ -167,10 +168,12 @@ def run_unified_server(
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
+    # Set REDIS_URL in env for subcomponents that read it
+    if redis_url:
+        os.environ.setdefault("REDIS_URL", redis_url)
+
     config = ServerConfig(
-        db_path=db_file,
         database_url=database_url or None,
-        use_database=True,
         enable_test_mode=enable_test_mode,
         enable_auth=enable_auth,
         auth_config=auth_config,
@@ -290,6 +293,7 @@ def run_backend_only(
     enable_graphql: bool = False,
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
+    redis_url: str = "",
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -319,10 +323,17 @@ def run_backend_only(
     print("=" * 60)
     print()
 
+    # Set REDIS_URL in env for subcomponents that read it
+    if redis_url:
+        os.environ.setdefault("REDIS_URL", redis_url)
+
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+
     app_builder = DNRBackendApp(
         backend_spec,
-        db_path=db_path,
-        use_database=True,
+        database_url=database_url or None,
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
         sitespec_data=sitespec_data,

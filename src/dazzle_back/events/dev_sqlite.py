@@ -152,6 +152,13 @@ class DevBrokerSQLite(EventBus):
             db_path: Path to SQLite database file
             auto_create: Create tables on connect if they don't exist
         """
+        import warnings
+
+        warnings.warn(
+            "DevBrokerSQLite is deprecated. Use PostgreSQL or Redis.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._db_path = Path(db_path)
         self._auto_create = auto_create
         self._conn: aiosqlite.Connection | None = None

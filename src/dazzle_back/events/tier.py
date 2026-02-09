@@ -105,19 +105,34 @@ def detect_tier() -> EventTier:
     Auto-detect the appropriate tier based on environment.
 
     Detection order:
-    1. KAFKA_BOOTSTRAP_SERVERS -> Kafka
-    2. REDIS_URL + USE_REDIS_EVENTS=true -> Redis
-    3. DATABASE_URL starting with postgres -> PostgreSQL
-    4. Default -> SQLite
+    1. EVENT_BACKEND explicitly set -> use that tier
+    2. KAFKA_BOOTSTRAP_SERVERS -> Kafka
+    3. REDIS_URL -> Redis (no longer requires EVENT_BACKEND=redis)
+    4. DATABASE_URL starting with postgres -> PostgreSQL
+    5. Default -> Memory (test-only)
     """
+    # Explicit override via EVENT_BACKEND
+    explicit = os.getenv("EVENT_BACKEND", "").lower()
+    if explicit:
+        tier_map = {
+            "memory": EventTier.MEMORY,
+            "sqlite": EventTier.SQLITE,
+            "postgres": EventTier.POSTGRES,
+            "redis": EventTier.REDIS,
+            "kafka": EventTier.KAFKA,
+        }
+        if explicit in tier_map:
+            logger.info(f"Using explicit tier: {explicit} (EVENT_BACKEND={explicit})")
+            return tier_map[explicit]
+
     # Check for Kafka
     if os.getenv("KAFKA_BOOTSTRAP_SERVERS"):
         logger.info("Auto-detected tier: Kafka (KAFKA_BOOTSTRAP_SERVERS set)")
         return EventTier.KAFKA
 
-    # Check for Redis (requires explicit opt-in)
-    if os.getenv("REDIS_URL") and os.getenv("EVENT_BACKEND") == "redis":
-        logger.info("Auto-detected tier: Redis (REDIS_URL and EVENT_BACKEND=redis)")
+    # Check for Redis — auto-select when REDIS_URL is set
+    if os.getenv("REDIS_URL"):
+        logger.info("Auto-detected tier: Redis (REDIS_URL set)")
         return EventTier.REDIS
 
     # Check for PostgreSQL
@@ -126,9 +141,9 @@ def detect_tier() -> EventTier:
         logger.info("Auto-detected tier: PostgreSQL (DATABASE_URL is postgres)")
         return EventTier.POSTGRES
 
-    # Default to SQLite
-    logger.info("Auto-detected tier: SQLite (no external backends configured)")
-    return EventTier.SQLITE
+    # Default to in-memory (test-only)
+    logger.info("Auto-detected tier: Memory (no external backends configured)")
+    return EventTier.MEMORY
 
 
 def create_bus(config: TierConfig | None = None) -> EventBus:
@@ -194,6 +209,13 @@ def _create_memory_bus() -> DevBusMemory:
 
 def _create_sqlite_bus(config: TierConfig) -> DevBrokerSQLite:
     """Create SQLite-backed bus for local development."""
+    import warnings
+
+    warnings.warn(
+        "SQLite event bus is deprecated. Use PostgreSQL or Redis.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
     db_path = config.sqlite_db_path
     if not db_path:
         # Default to data/events.db relative to working directory

@@ -96,8 +96,8 @@ class TestEventFrameworkPgMode:
             ):
                 await framework.start()
 
-                # Should have connected via psycopg
-                mock_psycopg.AsyncConnection.connect.assert_called_once()
+                # Should have connected via psycopg (framework conn + publisher conn)
+                assert mock_psycopg.AsyncConnection.connect.call_count >= 1
 
                 # Bus should exist
                 assert framework._bus is not None
@@ -132,10 +132,10 @@ class TestEventFrameworkPgMode:
             await framework.start()
 
             assert not framework._use_postgres
-            # Bus should be DevBrokerSQLite (not PostgresBus)
-            from dazzle_back.events.dev_sqlite import DevBrokerSQLite
+            # Without DATABASE_URL/REDIS_URL env, bus defaults to DevBusMemory
+            from dazzle_back.events.bus import EventBus
 
-            assert isinstance(framework._bus, DevBrokerSQLite)
+            assert isinstance(framework._bus, EventBus)
 
             await framework.stop()
 

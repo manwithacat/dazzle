@@ -100,6 +100,13 @@ class LiteProcessAdapter(ProcessAdapter):
             scheduler_interval: Seconds between schedule checks
             database_url: PostgreSQL connection URL (takes precedence over db_path)
         """
+        import warnings
+
+        warnings.warn(
+            "LiteProcessAdapter is deprecated. Use CeleryProcessAdapter with Redis.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._db_path = str(db_path)
         self._database_url = database_url
         self._use_postgres = bool(database_url)

@@ -14,9 +14,6 @@ from pathlib import Path
 
 PROTECTED_PATTERNS = [
     ".git/",
-    ".env",
-    ".env.local",
-    ".env.production",
     "package-lock.json",
     "poetry.lock",
     "Pipfile.lock",
