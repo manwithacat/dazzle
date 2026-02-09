@@ -15,12 +15,16 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from dazzle.core.fidelity_scorer import (
+    _check_form_structure,
     _check_story_embodiment,
+    _expand_field_names,
     _load_stories_for_scoring,
     _match_stories_to_surfaces,
     parse_html,
+    score_surface_fidelity,
 )
 from dazzle.core.ir.fidelity import FidelityGapCategory
+from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.stories import (
     StoryCondition,
     StoryException,
@@ -328,3 +332,173 @@ class TestNoStoriesNoEntity:
         story = _make_story()
         gaps = _check_story_embodiment(surface, None, root, None, [story])
         assert len(gaps) == 0
+
+
+def _make_entity(fields: list[FieldSpec]) -> MagicMock:
+    """Create a mock EntitySpec with real FieldSpec objects."""
+    entity = MagicMock()
+    entity.fields = fields
+    return entity
+
+
+class TestMoneyFieldExpansion:
+    """Tests for money field expansion to _minor/_currency in fidelity checks."""
+
+    def test_expand_field_names_helper(self) -> None:
+        """Direct test of _expand_field_names: money fields expand, others don't."""
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+            ]
+        )
+        result = _expand_field_names(["title", "price"], entity)
+        assert result == ["title", "price_minor", "price_currency"]
+
+    def test_expand_money_field_in_form(self) -> None:
+        """CREATE surface with money widget: hidden _minor/_currency inputs → no gap."""
+        surface = _make_surface(
+            name="product_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["title", "price"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+                FieldSpec(
+                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+            ]
+        )
+        html = """
+        <form hx-post="/products">
+            <input name="title" type="text">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="price_minor" data-dz-money-minor>
+                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        root = parse_html(html)
+        gaps = _check_form_structure(surface, entity, root)
+        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
+        assert missing == []
+
+    def test_money_widget_data_attribute_match(self) -> None:
+        """data-dz-money attribute alone satisfies the field check."""
+        surface = _make_surface(
+            name="product_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["price"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+            ]
+        )
+        # Widget with data-dz-money but no named inputs (edge case)
+        html = """
+        <form hx-post="/products">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        root = parse_html(html)
+        gaps = _check_form_structure(surface, entity, root)
+        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
+        assert missing == []
+
+    def test_no_expansion_without_entity(self) -> None:
+        """entity=None: money field name not in inputs → gap reported."""
+        result = _expand_field_names(["price", "title"], None)
+        assert result == ["price", "title"]
+
+    def test_non_money_fields_unchanged(self) -> None:
+        """str/int fields pass through without expansion."""
+        entity = _make_entity(
+            [
+                FieldSpec(name="title", type=FieldType(kind=FieldTypeKind.STR, max_length=200)),
+                FieldSpec(name="count", type=FieldType(kind=FieldTypeKind.INT)),
+            ]
+        )
+        result = _expand_field_names(["title", "count"], entity)
+        assert result == ["title", "count"]
+
+    def test_mixed_money_and_regular_fields(self) -> None:
+        """Surface with both money and regular fields: money widgets satisfy checks."""
+        surface = _make_surface(
+            name="invoice_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["description", "amount", "tax"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="description", type=FieldType(kind=FieldTypeKind.STR, max_length=500)
+                ),
+                FieldSpec(
+                    name="amount", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+                FieldSpec(
+                    name="tax", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+            ]
+        )
+        html = """
+        <form hx-post="/invoices">
+            <input name="description" type="text">
+            <div data-dz-money="amount" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="amount_minor" data-dz-money-minor>
+                <input type="hidden" name="amount_currency" data-dz-money-currency value="GBP">
+            </div>
+            <div data-dz-money="tax" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="tax_minor" data-dz-money-minor>
+                <input type="hidden" name="tax_currency" data-dz-money-currency value="GBP">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        root = parse_html(html)
+        gaps = _check_form_structure(surface, entity, root)
+        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
+        assert missing == []
+
+    def test_money_field_input_type_check_no_false_positive(self) -> None:
+        """Input type check doesn't false-positive on money widget hidden inputs."""
+        surface = _make_surface(
+            name="product_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["price"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+            ]
+        )
+        html = """
+        <form hx-post="/products">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="price_minor" data-dz-money-minor>
+                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []

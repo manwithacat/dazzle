@@ -31,6 +31,7 @@ class ColumnContext(BaseModel):
     filter_type: str = "text"  # text, select
     filter_options: list[dict[str, str]] = Field(default_factory=list)
     hidden: bool = False
+    currency_code: str = ""
 
 
 class FieldSourceContext(BaseModel):
@@ -62,12 +63,15 @@ class FieldContext(BaseModel):
 
     name: str
     label: str
-    type: str = "text"  # text, textarea, select, checkbox, date, datetime, number, email, url
+    type: str = (
+        "text"  # text, textarea, select, checkbox, date, datetime, number, email, url, money
+    )
     required: bool = False
     placeholder: str = ""
     options: list[dict[str, str]] = Field(default_factory=list)  # For select fields
     default: Any = None
     source: FieldSourceContext | None = None  # Dynamic data source (e.g. search_select)
+    extra: dict[str, Any] = Field(default_factory=dict)  # Extra metadata (e.g. money field config)
 
 
 class TableContext(BaseModel):

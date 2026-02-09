@@ -347,7 +347,7 @@ from .money import (
     to_money,
 )
 
-# Personas (v0.8.5 Dazzle Bar)
+# Personas (v0.8.5)
 from .personas import (
     PersonaSpec,
 )
@@ -374,7 +374,7 @@ from .process import (
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
 
-# Scenarios (v0.8.5 Dazzle Bar)
+# Scenarios (v0.8.5)
 from .scenarios import (
     DemoFixture,
     PersonaScenarioEntry,
@@ -491,6 +491,30 @@ from .tests import (
     TestComparisonOperator,
     TestSetupStep,
     TestSpec,
+)
+
+# ThemeSpec YAML (v0.25.0 Declarative Theme)
+from .themespec import (
+    AttentionMapSpec,
+    AttentionRule,
+    ColorMode,
+    DensityEnum,
+    FontStackSpec,
+    ImagerySpec,
+    ImageryVocabulary,
+    LayoutCompositionSpec,
+    PaletteSpec,
+    SemanticColorOverrides,
+    ShadowPreset,
+    ShapePreset,
+    ShapeSpec,
+    SpacingSpec,
+    SurfaceCompositionRule,
+    ThemeMetaSpec,
+    ThemeSpecYAML,
+    TypographyRatioPreset,
+    TypographySpec,
+    VisualTreatment,
 )
 
 # UX Semantic Layer
@@ -680,7 +704,7 @@ __all__ = [
     "NotExpr",
     "InvariantExpr",
     "InvariantSpec",
-    # Personas (v0.8.5 Dazzle Bar)
+    # Personas (v0.8.5)
     "PersonaSpec",
     # Process Workflows (v0.23.0)
     "CompensationSpec",
@@ -701,7 +725,7 @@ __all__ = [
     "ProcessTriggerSpec",
     "RetryConfig",
     "ScheduleSpec",
-    # Scenarios (v0.8.5 Dazzle Bar)
+    # Scenarios (v0.8.5)
     "DemoFixture",
     "PersonaScenarioEntry",
     "ScenarioSpec",
@@ -841,6 +865,27 @@ __all__ = [
     "TenantIsolationSpec",
     "TenantProvisioningSpec",
     "TopicNamespaceMode",
+    # ThemeSpec YAML (v0.25.0 Declarative Theme)
+    "AttentionMapSpec",
+    "AttentionRule",
+    "ColorMode",
+    "DensityEnum",
+    "FontStackSpec",
+    "ImagerySpec",
+    "ImageryVocabulary",
+    "LayoutCompositionSpec",
+    "PaletteSpec",
+    "SemanticColorOverrides",
+    "ShadowPreset",
+    "ShapePreset",
+    "ShapeSpec",
+    "SpacingSpec",
+    "SurfaceCompositionRule",
+    "ThemeMetaSpec",
+    "ThemeSpecYAML",
+    "TypographyRatioPreset",
+    "TypographySpec",
+    "VisualTreatment",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

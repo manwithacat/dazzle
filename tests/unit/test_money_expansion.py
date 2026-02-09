@@ -251,9 +251,9 @@ class TestSurfaceConverterMoney:
 
 
 class TestTemplateCompilerMoney:
-    """Test template compiler handles money field expansion."""
+    """Test template compiler handles money field as single widget."""
 
-    def _make_money_entity(self) -> EntitySpec:
+    def _make_money_entity(self, currency_code: str = "GBP") -> EntitySpec:
         return EntitySpec(
             name="Invoice",
             title="Invoice",
@@ -265,7 +265,7 @@ class TestTemplateCompilerMoney:
                 ),
                 FieldSpec(
                     name="amount",
-                    type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP"),
+                    type=FieldType(kind=FieldTypeKind.MONEY, currency_code=currency_code),
                     modifiers=[FieldModifier.REQUIRED],
                 ),
             ],
@@ -301,31 +301,61 @@ class TestTemplateCompilerMoney:
         amount_col = next(c for c in columns if c.label == "Amount")
         assert amount_col.type == "currency"
 
-    def test_form_fields_expand_money(self):
-        """Form generates _minor and _currency fields for money."""
-        entity = self._make_money_entity()
-        surface = self._make_surface(SurfaceMode.CREATE)
-        fields = _build_form_fields(surface, entity)
-        field_names = [f.name for f in fields]
-        assert "amount_minor" in field_names
-        assert "amount_currency" in field_names
-        assert "amount" not in field_names
+    def test_column_has_currency_code(self):
+        """Table column carries currency_code for the currency filter."""
+        entity = self._make_money_entity("USD")
+        surface = self._make_surface(SurfaceMode.LIST)
+        columns = _build_columns(surface, entity)
+        amount_col = next(c for c in columns if c.label == "Amount")
+        assert amount_col.currency_code == "USD"
 
-    def test_form_minor_is_number(self):
-        """_minor form field is type 'number'."""
+    def test_form_fields_emit_single_money_field(self):
+        """Form emits a single field with type='money' (not two fields)."""
         entity = self._make_money_entity()
         surface = self._make_surface(SurfaceMode.CREATE)
         fields = _build_form_fields(surface, entity)
-        minor = next(f for f in fields if f.name == "amount_minor")
-        assert minor.type == "number"
+        assert len(fields) == 1
+        assert fields[0].name == "amount"
+        assert fields[0].type == "money"
 
-    def test_form_currency_is_text(self):
-        """_currency form field is type 'text'."""
-        entity = self._make_money_entity()
+    def test_money_field_metadata(self):
+        """Money field extra dict contains currency metadata."""
+        entity = self._make_money_entity("GBP")
         surface = self._make_surface(SurfaceMode.CREATE)
         fields = _build_form_fields(surface, entity)
-        curr = next(f for f in fields if f.name == "amount_currency")
-        assert curr.type == "text"
+        field = fields[0]
+        assert field.extra["currency_code"] == "GBP"
+        assert field.extra["currency_fixed"] is True
+        assert field.extra["scale"] == 2
+        assert field.extra["symbol"] == "\u00a3"
+        assert field.extra["currency_options"] == []
+
+    def test_unpinned_money_has_currency_options(self):
+        """Plain money type (no currency_code) gets dropdown options."""
+        entity = EntitySpec(
+            name="Invoice",
+            title="Invoice",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="amount",
+                    type=FieldType(kind=FieldTypeKind.MONEY, currency_code=""),
+                    modifiers=[FieldModifier.REQUIRED],
+                ),
+            ],
+        )
+        surface = self._make_surface(SurfaceMode.CREATE)
+        fields = _build_form_fields(surface, entity)
+        field = fields[0]
+        assert field.extra["currency_fixed"] is False
+        assert len(field.extra["currency_options"]) > 0
+        codes = [opt["code"] for opt in field.extra["currency_options"]]
+        assert "GBP" in codes
+        assert "USD" in codes
 
 
 # =============================================================================
@@ -334,10 +364,10 @@ class TestTemplateCompilerMoney:
 
 
 class TestCurrencyFilter:
-    """Test updated _currency_filter with minor unit support."""
+    """Test _currency_filter with ISO 4217 scale support."""
 
     def test_minor_units_default(self):
-        """By default, minor=True divides by 100."""
+        """By default, minor=True divides by correct scale (100 for GBP)."""
         result = _currency_filter(2900, "GBP", minor=True)
         assert result == "\u00a329.00"
 
@@ -360,6 +390,16 @@ class TestCurrencyFilter:
     def test_zero_value(self):
         result = _currency_filter(0, "GBP", minor=True)
         assert result == "\u00a30.00"
+
+    def test_jpy_zero_decimal(self):
+        """JPY has scale=0, so 1000 minor units = ¥1,000."""
+        result = _currency_filter(1000, "JPY", minor=True)
+        assert result == "\u00a51,000"
+
+    def test_bhd_three_decimal(self):
+        """BHD has scale=3, so 1999 minor units = BHD 1.999."""
+        result = _currency_filter(1999, "BHD", minor=True)
+        assert result == "BHD 1.999"
 
 
 # =============================================================================

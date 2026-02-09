@@ -28,8 +28,8 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
         value: The numeric value.
         currency: ISO 4217 currency code (default GBP).
         minor: If True, value is in minor units (pence/cents) and will be
-            divided by 100 before display.  Defaults to True to match the
-            ``_minor`` column convention.
+            divided by the correct ISO 4217 scale before display.
+            Defaults to True to match the ``_minor`` column convention.
     """
     if value is None:
         return ""
@@ -37,11 +37,37 @@ def _currency_filter(value: Any, currency: str = "GBP", minor: bool = True) -> s
         amount = float(value)
     except (TypeError, ValueError):
         return str(value)
+
+    from dazzle.core.ir.money import get_currency_scale
+
+    scale = get_currency_scale(currency)
     if minor:
-        amount = amount / 100.0
-    symbols = {"GBP": "\u00a3", "USD": "$", "EUR": "\u20ac"}
+        amount = amount / (10**scale)
+
+    symbols: dict[str, str] = {
+        "GBP": "\u00a3",
+        "USD": "$",
+        "EUR": "\u20ac",
+        "AUD": "A$",
+        "CAD": "C$",
+        "CHF": "CHF",
+        "CNY": "\u00a5",
+        "INR": "\u20b9",
+        "NZD": "NZ$",
+        "SGD": "S$",
+        "HKD": "HK$",
+        "SEK": "kr",
+        "NOK": "kr",
+        "DKK": "kr",
+        "ZAR": "R",
+        "MXN": "MX$",
+        "BRL": "R$",
+        "JPY": "\u00a5",
+        "KRW": "\u20a9",
+        "VND": "\u20ab",
+    }
     symbol = symbols.get(currency, currency + " ")
-    return f"{symbol}{amount:,.2f}"
+    return f"{symbol}{amount:,.{scale}f}"
 
 
 def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:

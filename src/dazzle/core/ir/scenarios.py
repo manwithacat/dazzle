@@ -1,9 +1,8 @@
 """
 Scenario specification types for DAZZLE IR.
 
-This module contains scenario definitions for the Dazzle Bar
-developer overlay. Scenarios represent different demo states
-with per-persona configurations.
+This module contains scenario definitions. Scenarios represent
+different demo states with per-persona configurations.
 """
 
 from __future__ import annotations

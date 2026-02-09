@@ -305,8 +305,8 @@ def get_frontend_logger() -> logging.Logger:
     return get_logger("UI", Colors.FRONTEND)
 
 
-def get_dazzle_bar_logger() -> logging.Logger:
-    """Get logger for Dazzle Bar operations."""
+def get_dev_logger() -> logging.Logger:
+    """Get logger for dev control plane operations."""
     return get_logger("Bar", Colors.DAZZLE)
 
 

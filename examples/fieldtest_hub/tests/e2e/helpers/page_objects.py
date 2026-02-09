@@ -434,33 +434,6 @@ class FieldTestHubPage:
             expect(toast).to_contain_text(message)
 
     # =========================================================================
-    # Dazzle Bar Interactions
-    # =========================================================================
-
-    def dazzle_bar(self) -> Locator:
-        """Get the Dazzle Bar component."""
-        return self.page.locator('[data-dazzle-component="dazzle-bar"]')
-
-    def select_persona(self, persona_id: str) -> None:
-        """Select a persona from the Dazzle Bar.
-
-        Args:
-            persona_id: Persona identifier
-        """
-        self.page.locator('[data-dazzle-control="persona-select"]').select_option(persona_id)
-        self.wait_for_navigation()
-
-    def click_reset_data(self) -> None:
-        """Click the reset data button in the Dazzle Bar."""
-        self.page.locator('[data-dazzle-action="reset"]').click()
-        self.wait_for_navigation()
-
-    def click_regenerate_data(self) -> None:
-        """Click the regenerate data button in the Dazzle Bar."""
-        self.page.locator('[data-dazzle-action="regenerate"]').click()
-        self.wait_for_navigation()
-
-    # =========================================================================
     # Screenshots
     # =========================================================================
 

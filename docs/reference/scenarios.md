@@ -265,12 +265,12 @@ scenario inventory_audit "Inventory Audit":
 
 Scenarios are used by:
 
-1. **Dazzle Bar** - Developer overlay for switching personas and scenarios
+1. **Dev Control Plane** - Developer overlay for switching personas and scenarios
 2. **Test Framework** - Automated testing with predefined states
 3. **Demo Mode** - Client demonstrations with realistic data
 4. **Development** - Local development with consistent test data
 
 Select scenarios via:
-- Dazzle Bar UI (development mode)
+- Dev control plane UI (development mode)
 - `dazzle scenario load <scenario_id>` CLI command
 - Test fixtures in automated tests

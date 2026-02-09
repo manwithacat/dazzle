@@ -182,7 +182,6 @@ markers = [
     "access_control: Permission/access control tests (FieldTest Hub)",
     "state_machine: State transition tests (FieldTest Hub)",
     "invariant: Business rule/invariant tests (FieldTest Hub)",
-    "dazzle_bar: Dazzle Bar feature tests (FieldTest Hub)",
     "computed: Computed field tests (FieldTest Hub)",
     "personas: Persona-related tests (FieldTest Hub)",
     "data_management: Data reset/regenerate tests (FieldTest Hub)",

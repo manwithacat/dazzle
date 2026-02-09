@@ -255,12 +255,17 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
     """Handle consolidated sitespec operations."""
     from .handlers.sitespec import (
         coherence_handler,
+        generate_imagery_prompts_handler,
+        generate_tokens_handler,
         get_copy_handler,
         get_sitespec_handler,
+        get_theme_handler,
         review_copy_handler,
         scaffold_copy_handler,
         scaffold_site_handler,
+        scaffold_theme_handler,
         validate_sitespec_handler,
+        validate_theme_handler,
     )
 
     operation = arguments.get("operation")
@@ -283,6 +288,16 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         return review_copy_handler(project_path, arguments)
     elif operation == "coherence":
         return coherence_handler(project_path, arguments)
+    elif operation == "get_theme":
+        return get_theme_handler(project_path, arguments)
+    elif operation == "scaffold_theme":
+        return scaffold_theme_handler(project_path, arguments)
+    elif operation == "validate_theme":
+        return validate_theme_handler(project_path, arguments)
+    elif operation == "generate_tokens":
+        return generate_tokens_handler(project_path, arguments)
+    elif operation == "generate_imagery_prompts":
+        return generate_imagery_prompts_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown sitespec operation: {operation}"})
 
@@ -382,7 +397,9 @@ def handle_dsl_test(arguments: dict[str, Any]) -> str:
         generate_dsl_tests_handler,
         get_dsl_test_coverage_handler,
         list_dsl_tests_handler,
+        run_all_dsl_tests_handler,
         run_dsl_tests_handler,
+        verify_story_handler,
     )
 
     operation = arguments.get("operation")
@@ -395,6 +412,8 @@ def handle_dsl_test(arguments: dict[str, Any]) -> str:
         return generate_dsl_tests_handler(project_path, arguments)
     elif operation == "run":
         return run_dsl_tests_handler(project_path, arguments)
+    elif operation == "run_all":
+        return run_all_dsl_tests_handler(project_path, arguments)
     elif operation == "coverage":
         return get_dsl_test_coverage_handler(project_path, arguments)
     elif operation == "list":
@@ -403,6 +422,8 @@ def handle_dsl_test(arguments: dict[str, Any]) -> str:
         return create_sessions_handler(project_path, arguments)
     elif operation == "diff_personas":
         return diff_personas_handler(project_path, arguments)
+    elif operation == "verify_story":
+        return verify_story_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown DSL test operation: {operation}"})
 
@@ -1362,6 +1383,7 @@ def handle_discovery(arguments: dict[str, Any]) -> str:
         emit_discovery_handler,
         get_discovery_report_handler,
         run_discovery_handler,
+        verify_all_stories_handler,
     )
 
     operation = arguments.get("operation")
@@ -1380,6 +1402,8 @@ def handle_discovery(arguments: dict[str, Any]) -> str:
         return emit_discovery_handler(project_path, arguments)
     elif operation == "status":
         return discovery_status_handler(project_path, arguments)
+    elif operation == "verify_all_stories":
+        return verify_all_stories_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown discovery operation: {operation}"})
 
@@ -1413,6 +1437,27 @@ def handle_policy(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Pipeline Handler
+# =============================================================================
+
+
+def handle_pipeline(arguments: dict[str, Any]) -> str:
+    """Handle pipeline operations."""
+    from .handlers.pipeline import run_pipeline_handler
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "run":
+        return run_pipeline_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown pipeline operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1437,6 +1482,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,
+    "pipeline": handle_pipeline,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
 }

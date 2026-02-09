@@ -1,6 +1,6 @@
 """API client helpers for E2E tests.
 
-Provides HTTP clients for both the backend CRUD API and the Dazzle Bar control plane.
+Provides HTTP clients for both the backend CRUD API and the dev control plane.
 """
 
 from __future__ import annotations
@@ -144,7 +144,7 @@ class APIClient:
 
 
 class ControlPlaneClient:
-    """HTTP client for Dazzle Bar control plane API."""
+    """HTTP client for dev control plane API."""
 
     def __init__(self, base_url: str):
         """Initialize the control plane client.
@@ -160,7 +160,7 @@ class ControlPlaneClient:
         self.client.close()
 
     def get_state(self) -> dict[str, Any]:
-        """Get the current Dazzle Bar state.
+        """Get the current dev control plane state.
 
         Returns:
             State including personas, scenarios, current selections

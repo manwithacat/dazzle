@@ -209,7 +209,7 @@ class TokenType(Enum):
     GIVEN = "given"
     THEN = "then"
 
-    # v0.8.5 Dazzle Bar Keywords
+    # Persona & Scenario Keywords
     SCENARIO = "scenario"
     DEMO = "demo"
     PERSONA = "persona"

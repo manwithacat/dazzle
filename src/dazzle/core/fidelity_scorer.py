@@ -144,6 +144,31 @@ def _field_names_from_surface(surface: SurfaceSpec) -> list[str]:
     return names
 
 
+def _expand_field_names(
+    field_names: list[str],
+    entity: EntitySpec | None,
+) -> list[str]:
+    """Expand money field names to their _minor/_currency HTML equivalents.
+
+    The template compiler expands ``price: money(GBP)`` into two inputs
+    (``price_minor`` and ``price_currency``).  Without this expansion the
+    fidelity scorer reports a false-positive "missing field" gap because it
+    looks for ``<input name="price">`` which never exists.
+    """
+    if entity is None:
+        return field_names
+    entity_field_map = {f.name: f for f in entity.fields}
+    expanded: list[str] = []
+    for fname in field_names:
+        fspec = entity_field_map.get(fname)
+        if fspec and fspec.type.kind == FieldTypeKind.MONEY:
+            expanded.append(f"{fname}_minor")
+            expanded.append(f"{fname}_currency")
+        else:
+            expanded.append(fname)
+    return expanded
+
+
 def _field_labels_from_surface(surface: SurfaceSpec) -> dict[str, str]:
     """Extract field_name → label mapping from surface sections."""
     labels: dict[str, str] = {}
@@ -243,14 +268,25 @@ def _check_form_structure(
         return gaps
 
     form = forms[0]
-    field_names = _field_names_from_surface(surface)
+    field_names = _expand_field_names(_field_names_from_surface(surface), entity)
 
     # Collect all inputs/textareas/selects
     inputs = root.find_all("input") + root.find_all("textarea") + root.find_all("select")
     input_names = {inp.get_attr("name") for inp in inputs}
 
+    # Collect money widget names from data-dz-money attributes
+    money_widget_names: set[str] = set()
+    for el in root.find_all("div") + root.find_all("fieldset"):
+        if el.has_attr("data-dz-money"):
+            widget_name = el.get_attr("data-dz-money")
+            if widget_name:
+                money_widget_names.add(widget_name)
+                # Also count expanded names as covered
+                money_widget_names.add(f"{widget_name}_minor")
+                money_widget_names.add(f"{widget_name}_currency")
+
     for fname in field_names:
-        if fname not in input_names:
+        if fname not in input_names and fname not in money_widget_names:
             gaps.append(
                 FidelityGap(
                     category=FidelityGapCategory.MISSING_FIELD,

@@ -36,7 +36,7 @@ from .presets import (
     get_theme_preset,
     list_theme_presets,
 )
-from .resolver import resolve_theme
+from .resolver import resolve_theme, resolve_theme_from_themespec
 
 __all__ = [
     # Presets
@@ -51,4 +51,5 @@ __all__ = [
     "generate_theme_css",
     # Resolution
     "resolve_theme",
+    "resolve_theme_from_themespec",
 ]

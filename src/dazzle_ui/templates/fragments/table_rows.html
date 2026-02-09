@@ -22,7 +22,7 @@
     {% elif col.type == "date" %}
       {{ item[col.key] | dateformat }}
     {% elif col.type == "currency" %}
-      {{ item[col.key] | currency }}
+      {{ item[col.key] | currency(col.currency_code or "GBP") }}
     {% elif col.type == "percentage" %}
       {{ item[col.key] | default("") }}%
     {% else %}

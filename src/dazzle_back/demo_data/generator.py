@@ -1,5 +1,5 @@
 """
-Faker-based demo data generator for Dazzle Bar (v0.8.5).
+Faker-based demo data generator for scenarios and dev mode.
 
 Generates realistic demo data based on entity schemas.
 """

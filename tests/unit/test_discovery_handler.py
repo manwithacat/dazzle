@@ -83,7 +83,7 @@ class TestDiscoveryRegistration:
         tools = get_consolidated_tools()
         discovery_tool = next(t for t in tools if t.name == "discovery")
         ops = discovery_tool.inputSchema["properties"]["operation"]["enum"]
-        assert set(ops) == {"run", "report", "compile", "emit", "status"}
+        assert set(ops) == {"run", "report", "compile", "emit", "status", "verify_all_stories"}
 
 
 # =============================================================================

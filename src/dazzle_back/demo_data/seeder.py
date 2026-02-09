@@ -1,5 +1,5 @@
 """
-Demo data seeder for Dazzle Bar (v0.8.5).
+Demo data seeder for scenarios and dev mode.
 
 Seeds demo data into the database with scenario and persona awareness.
 """

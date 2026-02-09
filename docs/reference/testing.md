@@ -53,7 +53,7 @@ dazzle test playwright --headed  # Show browser
 ```
 
 **How it works:**
-1. Scenario sets up predictable state via Dazzle Bar
+1. Scenario sets up predictable state via dev control plane
 2. Playwright navigates using `data-dazzle-*` selectors
 3. Auth bypassed via persona switching
 4. Assertions use semantic selectors

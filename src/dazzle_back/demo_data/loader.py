@@ -1,5 +1,5 @@
 """
-Demo data loader for Dazzle Bar (v0.8.5).
+Demo data loader for scenarios and dev mode.
 
 Loads demo data from JSON files or inline DSL demo blocks.
 """

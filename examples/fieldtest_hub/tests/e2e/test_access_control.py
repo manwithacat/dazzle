@@ -5,7 +5,7 @@ Tests that verify persona-based permissions:
 - Field Tester: Limited access (own devices, issues, sessions)
 - Manager: Read-only access to metrics/issues
 
-Uses Dazzle Bar to switch personas and verifies both
+Uses the dev control plane to switch personas and verifies both
 positive (allowed) and negative (denied) access scenarios.
 """
 

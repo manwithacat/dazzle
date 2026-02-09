@@ -118,8 +118,8 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         foreign_models=merged_fragment.foreign_models,
         integrations=merged_fragment.integrations,
         tests=merged_fragment.tests,
-        personas=merged_fragment.personas,  # v0.8.5 Dazzle Bar
-        scenarios=merged_fragment.scenarios,  # v0.8.5 Dazzle Bar
+        personas=merged_fragment.personas,  # v0.8.5
+        scenarios=merged_fragment.scenarios,  # v0.8.5
         stories=merged_fragment.stories,  # v0.22.0 Stories
         security=security_config,  # v0.11.0 Security
         llm_config=merged_fragment.llm_config,  # v0.21.0 LLM Jobs

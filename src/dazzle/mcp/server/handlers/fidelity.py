@@ -108,6 +108,14 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             }
         )
 
+    gaps_only = arguments.get("gaps_only", False)
+    if gaps_only:
+        surface_breakdown = [
+            s
+            for s in surface_breakdown
+            if s["overall"] < 1.0  # type: ignore[operator]
+        ]
+
     # Top 5 recommendations from highest-severity gaps
     all_gaps = []
     for ss in report.surface_scores:

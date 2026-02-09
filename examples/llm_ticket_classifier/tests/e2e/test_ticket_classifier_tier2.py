@@ -10,7 +10,7 @@ Usage:
 
 With scenario seeding:
     Tests that specify a scenario will automatically seed data
-    via the Dazzle Bar before executing.
+    via the dev control plane before executing.
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ def test_ticket_list_list(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, list, ticket
     """
-    # Set scenario to 'active_tickets' via Dazzle Bar
+    # Set scenario to 'active_tickets' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("active_tickets")
     page.wait_for_load_state("networkidle")
     # Navigate to Tickets
@@ -95,7 +95,7 @@ def test_ticket_detail_view(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, view, ticket
     """
-    # Set scenario to 'active_tickets' via Dazzle Bar
+    # Set scenario to 'active_tickets' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("active_tickets")
     page.wait_for_load_state("networkidle")
     # Navigate to list view first
@@ -119,7 +119,7 @@ def test_classification_list_list(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, list, ticketclassification
     """
-    # Set scenario to 'active_tickets' via Dazzle Bar
+    # Set scenario to 'active_tickets' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("active_tickets")
     page.wait_for_load_state("networkidle")
     # Navigate to Classifications
@@ -145,7 +145,7 @@ def test_ticket_delete(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, delete, ticket
     """
-    # Set scenario to 'active_tickets' via Dazzle Bar
+    # Set scenario to 'active_tickets' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("active_tickets")
     page.wait_for_load_state("networkidle")
     # Navigate to list view
@@ -180,7 +180,7 @@ def test_ticketclassification_delete(page: Page, base_url: str) -> None:
 
     Tags: tier2, playwright, crud, delete, ticketclassification
     """
-    # Set scenario to 'active_tickets' via Dazzle Bar
+    # Set scenario to 'active_tickets' via dev control plane
     page.locator('[data-dazzle-control="scenario-select"]').select_option("active_tickets")
     page.wait_for_load_state("networkidle")
     # Navigate to list view

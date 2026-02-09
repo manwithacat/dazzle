@@ -1,8 +1,7 @@
 """
 Scenario and Demo parsing for DAZZLE DSL.
 
-Handles parsing of scenario and demo blocks for the Dazzle Bar
-developer overlay system.
+Handles parsing of scenario and demo blocks.
 """
 
 from typing import TYPE_CHECKING, Any

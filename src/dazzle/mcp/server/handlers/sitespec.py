@@ -504,3 +504,258 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
     except Exception as e:
         logger.exception("Error validating coherence")
         return json.dumps({"error": f"Failed to validate coherence: {e}"}, indent=2)
+
+
+# =============================================================================
+# ThemeSpec Operations (v0.25.0)
+# =============================================================================
+
+
+def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Load and return the ThemeSpec from themespec.yaml."""
+    from dazzle.core.themespec_loader import (
+        ThemeSpecError,
+        load_themespec,
+        themespec_exists,
+    )
+
+    use_defaults = args.get("use_defaults", True)
+
+    try:
+        themespec = load_themespec(project_root, use_defaults=use_defaults)
+
+        result = {
+            "exists": themespec_exists(project_root),
+            "palette": {
+                "brand_hue": themespec.palette.brand_hue,
+                "brand_chroma": themespec.palette.brand_chroma,
+                "mode": themespec.palette.mode.value,
+                "accent_hue_offset": themespec.palette.accent_hue_offset,
+                "neutral_chroma": themespec.palette.neutral_chroma,
+            },
+            "typography": {
+                "base_size_px": themespec.typography.base_size_px,
+                "ratio": themespec.typography.ratio.value,
+                "line_height_body": themespec.typography.line_height_body,
+                "line_height_heading": themespec.typography.line_height_heading,
+                "font_stacks": {
+                    "heading": themespec.typography.font_stacks.heading,
+                    "body": themespec.typography.font_stacks.body,
+                    "mono": themespec.typography.font_stacks.mono,
+                },
+            },
+            "spacing": {
+                "base_unit_px": themespec.spacing.base_unit_px,
+                "density": themespec.spacing.density.value,
+            },
+            "shape": {
+                "radius_preset": themespec.shape.radius_preset.value,
+                "shadow_preset": themespec.shape.shadow_preset.value,
+                "border_width_px": themespec.shape.border_width_px,
+            },
+            "attention_map": {
+                "rule_count": len(themespec.attention_map.rules),
+            },
+            "layout": {
+                "max_columns": themespec.layout.surfaces.max_columns,
+                "sidebar_width_px": themespec.layout.surfaces.sidebar_width_px,
+                "content_max_width_px": themespec.layout.surfaces.content_max_width_px,
+            },
+            "imagery": {
+                "style_keywords": themespec.imagery.vocabulary.style_keywords,
+                "mood_keywords": themespec.imagery.vocabulary.mood_keywords,
+                "default_aspect_ratio": themespec.imagery.default_aspect_ratio,
+                "default_resolution": themespec.imagery.default_resolution,
+            },
+            "meta": {
+                "version": themespec.meta.version,
+                "generated_by": themespec.meta.generated_by,
+                "agent_editable_fields": themespec.meta.agent_editable_fields,
+            },
+        }
+
+        return json.dumps(result, indent=2)
+
+    except ThemeSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error loading themespec")
+        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
+
+
+def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Create a default themespec.yaml file."""
+    from dazzle.core.themespec_loader import scaffold_themespec, themespec_exists
+
+    brand_hue = args.get("brand_hue", 260.0)
+    brand_chroma = args.get("brand_chroma", 0.15)
+    product_name = args.get("product_name", "My App")
+    overwrite = args.get("overwrite", False)
+
+    try:
+        existed = themespec_exists(project_root)
+
+        if existed and not overwrite:
+            return json.dumps(
+                {
+                    "success": False,
+                    "message": "themespec.yaml already exists. Use overwrite=true to regenerate.",
+                },
+                indent=2,
+            )
+
+        # Try to read brand info from sitespec if available
+        try:
+            from dazzle.core.sitespec_loader import load_sitespec
+
+            sitespec = load_sitespec(project_root, use_defaults=False)
+            if product_name == "My App" and sitespec.brand.product_name:
+                product_name = sitespec.brand.product_name
+        except Exception:
+            pass
+
+        created_path = scaffold_themespec(
+            project_root,
+            brand_hue=brand_hue,
+            brand_chroma=brand_chroma,
+            product_name=product_name,
+            overwrite=overwrite,
+        )
+
+        return json.dumps(
+            {
+                "success": True,
+                "path": str(created_path) if created_path else None,
+                "brand_hue": brand_hue,
+                "brand_chroma": brand_chroma,
+                "overwritten": existed and overwrite,
+                "message": f"Created themespec.yaml (hue={brand_hue}, chroma={brand_chroma})",
+                "next_steps": [
+                    "1. Run get_theme to inspect generated values",
+                    "2. Adjust brand_hue/brand_chroma to match your brand",
+                    "3. Run validate_theme to check for issues",
+                    "4. Run generate_tokens for DTCG tokens.json export",
+                ],
+            },
+            indent=2,
+        )
+
+    except Exception as e:
+        logger.exception("Error scaffolding themespec")
+        return json.dumps({"error": f"Failed to scaffold themespec: {e}"}, indent=2)
+
+
+def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Validate the ThemeSpec for semantic correctness."""
+    from dazzle.core.themespec_loader import (
+        ThemeSpecError,
+        load_themespec,
+        validate_themespec,
+    )
+
+    try:
+        themespec = load_themespec(project_root, use_defaults=True)
+        result = validate_themespec(themespec, project_root)
+
+        return json.dumps(
+            {
+                "is_valid": result.is_valid,
+                "error_count": len(result.errors),
+                "warning_count": len(result.warnings),
+                "errors": result.errors,
+                "warnings": result.warnings,
+            },
+            indent=2,
+        )
+
+    except ThemeSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error validating themespec")
+        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
+
+
+def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate DTCG tokens.json from themespec.yaml."""
+    from dazzle.core.dtcg_export import export_dtcg_file, generate_dtcg_tokens
+    from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
+
+    try:
+        themespec = load_themespec(project_root, use_defaults=True)
+        tokens = generate_dtcg_tokens(themespec)
+
+        # Write to project
+        output_path = project_root / "tokens.json"
+        export_dtcg_file(themespec, output_path)
+
+        # Summarize token counts
+        summary: dict[str, int] = {}
+        for group_name, group in tokens.items():
+            if isinstance(group, dict):
+                count = 0
+                for v in group.values():
+                    if isinstance(v, dict) and "$type" in v:
+                        count += 1
+                    elif isinstance(v, dict):
+                        count += len(v)
+                summary[group_name] = count
+
+        return json.dumps(
+            {
+                "success": True,
+                "path": str(output_path),
+                "token_groups": summary,
+                "total_tokens": sum(summary.values()),
+                "format": "W3C DTCG",
+            },
+            indent=2,
+        )
+
+    except ThemeSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error generating tokens")
+        return json.dumps({"error": f"Failed to generate tokens: {e}"}, indent=2)
+
+
+def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate imagery prompts from themespec.yaml."""
+    from dazzle.core.imagery_prompts import generate_imagery_prompts
+    from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
+
+    try:
+        themespec = load_themespec(project_root, use_defaults=True)
+
+        # Try to load sitespec for section context
+        sitespec = None
+        try:
+            from dazzle.core.sitespec_loader import load_sitespec
+
+            sitespec = load_sitespec(project_root, use_defaults=False)
+        except Exception:
+            pass
+
+        prompts = generate_imagery_prompts(themespec, sitespec)
+
+        return json.dumps(
+            {
+                "prompt_count": len(prompts),
+                "prompts": [
+                    {
+                        "section": p.section,
+                        "prompt": p.prompt,
+                        "negative_prompt": p.negative_prompt,
+                        "aspect_ratio": p.aspect_ratio,
+                        "resolution": p.resolution,
+                    }
+                    for p in prompts
+                ],
+            },
+            indent=2,
+        )
+
+    except ThemeSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error generating imagery prompts")
+        return json.dumps({"error": f"Failed to generate imagery prompts: {e}"}, indent=2)

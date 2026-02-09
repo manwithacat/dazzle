@@ -226,7 +226,7 @@ persona supervisor "Support Supervisor":
 
 
 # =============================================================================
-# Scenarios - demo states for the Dazzle Bar
+# Scenarios - demo states for dev mode
 # =============================================================================
 
 scenario empty "Empty State":

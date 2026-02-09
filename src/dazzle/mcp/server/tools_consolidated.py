@@ -119,6 +119,10 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Filter to a specific surface name (for fidelity)",
                     },
+                    "gaps_only": {
+                        "type": "boolean",
+                        "description": "Omit surfaces with fidelity=1.0 (for fidelity)",
+                    },
                     "format": {
                         "type": "string",
                         "enum": ["markdown", "json"],
@@ -387,7 +391,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness).",
+            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -401,12 +405,17 @@ def get_consolidated_tools() -> list[Tool]:
                             "scaffold_copy",
                             "review_copy",
                             "coherence",
+                            "get_theme",
+                            "scaffold_theme",
+                            "validate_theme",
+                            "generate_tokens",
+                            "generate_imagery_prompts",
                         ],
                         "description": "Operation to perform",
                     },
                     "use_defaults": {
                         "type": "boolean",
-                        "description": "Use defaults when missing (for get)",
+                        "description": "Use defaults when missing (for get, get_theme)",
                     },
                     "check_content_files": {
                         "type": "boolean",
@@ -418,11 +427,19 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "overwrite": {
                         "type": "boolean",
-                        "description": "Overwrite existing (for scaffold, scaffold_copy)",
+                        "description": "Overwrite existing (for scaffold, scaffold_copy, scaffold_theme)",
                     },
                     "business_context": {
                         "type": "string",
                         "description": "Business type hint for coherence check (saas, marketplace, agency, ecommerce)",
+                    },
+                    "brand_hue": {
+                        "type": "number",
+                        "description": "Brand hue 0-360 on OKLCH wheel (for scaffold_theme)",
+                    },
+                    "brand_chroma": {
+                        "type": "number",
+                        "description": "Brand chroma 0-0.4 (for scaffold_theme)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -550,7 +567,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="dsl_test",
-            description="DSL test operations: generate, run, coverage, list, create_sessions, diff_personas",
+            description="DSL test operations: generate, run, run_all, coverage, list, create_sessions, diff_personas, verify_story",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -559,10 +576,12 @@ def get_consolidated_tools() -> list[Tool]:
                         "enum": [
                             "generate",
                             "run",
+                            "run_all",
                             "coverage",
                             "list",
                             "create_sessions",
                             "diff_personas",
+                            "verify_story",
                         ],
                         "description": "Operation to perform",
                     },
@@ -620,6 +639,15 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Persona IDs to compare (for diff_personas, default: all)",
+                    },
+                    "story_id": {
+                        "type": "string",
+                        "description": "Story ID to verify (for verify_story)",
+                    },
+                    "story_ids": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Story IDs to verify (for verify_story, alternative to single story_id)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -1212,13 +1240,20 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
+            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness), verify_all_stories (batch verify accepted stories against API tests). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["run", "report", "compile", "emit", "status"],
+                        "enum": [
+                            "run",
+                            "report",
+                            "compile",
+                            "emit",
+                            "status",
+                            "verify_all_stories",
+                        ],
                         "description": "Operation to perform",
                     },
                     "mode": {
@@ -1255,6 +1290,43 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Specific proposal IDs to emit (for emit, default: all)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
+        # Pipeline (batch quality audit)
+        # =====================================================================
+        Tool(
+            name="pipeline",
+            description=(
+                "Full deterministic quality audit in a single call. "
+                "Chains: validate → lint → fidelity → test_generate → test_coverage → "
+                "story_coverage → process_coverage → test_design_gaps → semantics. "
+                "If base_url is provided, also runs all API tests. "
+                "Returns structured JSON with per-step results and overall summary."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["run"],
+                        "description": "Operation to perform",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Server URL — if provided, also runs dsl_test(run_all) as final step",
+                    },
+                    "stop_on_error": {
+                        "type": "boolean",
+                        "description": "Stop pipeline on first error (default: false, continues collecting results)",
+                    },
+                    "summary": {
+                        "type": "boolean",
+                        "description": "Return compact metrics instead of full results (default: true). Set false for full detail.",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

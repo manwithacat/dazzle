@@ -613,6 +613,113 @@ const dz = (() => {
     }
   }
 
+  // ── Money Inputs ───────────────────────────────────────────────────
+
+  /** ISO 4217 currency scales (mirrors money.py CURRENCY_SCALES) */
+  const CURRENCY_SCALES = {
+    GBP: 2, USD: 2, EUR: 2, AUD: 2, CAD: 2, CHF: 2, CNY: 2, INR: 2,
+    NZD: 2, SGD: 2, HKD: 2, SEK: 2, NOK: 2, DKK: 2, ZAR: 2, MXN: 2,
+    BRL: 2, JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0, BHD: 3, KWD: 3,
+    OMR: 3, TND: 3, JOD: 3, IQD: 3, LYD: 3,
+  };
+
+  /**
+   * Initialize a single money field container.
+   * @param {HTMLElement} container — element with [data-dz-money]
+   */
+  function initMoneyField(container) {
+    const displayInput = /** @type {HTMLInputElement|null} */ (
+      container.querySelector("[data-dz-money-display]")
+    );
+    const hiddenMinor = /** @type {HTMLInputElement|null} */ (
+      container.querySelector("[data-dz-money-minor]")
+    );
+    const currencyEl = container.querySelector("[data-dz-money-currency]");
+    if (!displayInput || !hiddenMinor) return;
+
+    function getScale() {
+      // For select-based (unpinned), read from selected option
+      if (currencyEl && currencyEl.tagName === "SELECT") {
+        const opt = /** @type {HTMLSelectElement} */ (currencyEl).selectedOptions[0];
+        if (opt && opt.dataset.scale !== undefined) return parseInt(opt.dataset.scale, 10);
+      }
+      // Fallback: container data-dz-scale or lookup by currency
+      const scaleAttr = container.getAttribute("data-dz-scale");
+      if (scaleAttr !== null) return parseInt(scaleAttr, 10);
+      const code = container.getAttribute("data-dz-currency") || "GBP";
+      return CURRENCY_SCALES[code] !== undefined ? CURRENCY_SCALES[code] : 2;
+    }
+
+    /** @param {string} val @returns {number} */
+    function toMinor(val) {
+      const num = parseFloat(val);
+      if (isNaN(num)) return 0;
+      return Math.round(num * Math.pow(10, getScale()));
+    }
+
+    /** @param {string} val @returns {string} */
+    function toDisplay(val) {
+      const num = parseInt(val, 10);
+      if (isNaN(num)) return "";
+      const scale = getScale();
+      return (num / Math.pow(10, scale)).toFixed(scale);
+    }
+
+    // Populate display from hidden minor on load (edit mode)
+    if (hiddenMinor.value && !displayInput.value) {
+      displayInput.value = toDisplay(hiddenMinor.value);
+    }
+
+    // Sync on input
+    displayInput.addEventListener("input", () => {
+      hiddenMinor.value = String(toMinor(displayInput.value));
+    });
+
+    // Format on blur
+    displayInput.addEventListener("blur", () => {
+      const val = displayInput.value.trim();
+      if (val === "") {
+        hiddenMinor.value = "";
+        return;
+      }
+      const minor = toMinor(val);
+      hiddenMinor.value = String(minor);
+      displayInput.value = toDisplay(String(minor));
+    });
+
+    // Currency dropdown change (unpinned)
+    if (currencyEl && currencyEl.tagName === "SELECT") {
+      currencyEl.addEventListener("change", () => {
+        const opt = /** @type {HTMLSelectElement} */ (currencyEl).selectedOptions[0];
+        // Update container scale attr
+        if (opt && opt.dataset.scale !== undefined) {
+          container.setAttribute("data-dz-scale", opt.dataset.scale);
+        }
+        // Update prefix symbol if present
+        const prefix = container.querySelector(".dz-money-prefix");
+        if (prefix && opt && opt.dataset.symbol) {
+          prefix.textContent = opt.dataset.symbol;
+        }
+        // Re-convert display value with new scale
+        if (displayInput.value) {
+          const minor = toMinor(displayInput.value);
+          hiddenMinor.value = String(minor);
+          displayInput.value = toDisplay(String(minor));
+        }
+      });
+    }
+
+    container.dataset.dzMoneyInit = "1";
+  }
+
+  function initMoneyInputs() {
+    document.querySelectorAll("[data-dz-money]").forEach((el) => {
+      if (!/** @type {HTMLElement} */ (el).dataset.dzMoneyInit) {
+        initMoneyField(/** @type {HTMLElement} */ (el));
+      }
+    });
+  }
+
   // ── Utilities ────────────────────────────────────────────────────────
 
   /** @param {string} str */
@@ -635,13 +742,14 @@ const dz = (() => {
     initInlineEdit();
     initSearchInputs();
     initFormLoading();
+    initMoneyInputs();
 
     // Auto-init data tables
     document.querySelectorAll("[data-dz-table]").forEach((el) => {
       initTable(/** @type {HTMLElement} */ (el));
     });
 
-    // Re-init after HTMX swaps (new content may contain data tables)
+    // Re-init after HTMX swaps (new content may contain data tables or money inputs)
     document.addEventListener("htmx:afterSettle", (e) => {
       const target = /** @type {HTMLElement} */ (
         /** @type {CustomEvent} */ (e).detail.elt
@@ -649,6 +757,11 @@ const dz = (() => {
       target.querySelectorAll("[data-dz-table]").forEach((el) => {
         if (!(/** @type {HTMLElement} */ (el).dataset.dzInitialized)) {
           initTable(/** @type {HTMLElement} */ (el));
+        }
+      });
+      target.querySelectorAll("[data-dz-money]").forEach((el) => {
+        if (!/** @type {HTMLElement} */ (el).dataset.dzMoneyInit) {
+          initMoneyField(/** @type {HTMLElement} */ (el));
         }
       });
     });

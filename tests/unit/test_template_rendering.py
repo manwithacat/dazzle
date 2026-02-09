@@ -262,9 +262,8 @@ class TestCompileSurfaceToContext:
         assert field_map["completed"] == "checkbox"
         assert field_map["due_date"] == "date"
         assert field_map["priority"] == "select"
-        # Money fields expand into _minor (number) + _currency (text)
-        assert field_map["amount_minor"] == "number"
-        assert field_map["amount_currency"] == "text"
+        # Money fields emit a single "money" type widget
+        assert field_map["amount"] == "money"
 
     def test_enum_field_has_options(self) -> None:
         surface = SurfaceSpec(
