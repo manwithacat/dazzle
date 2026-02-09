@@ -362,7 +362,7 @@ def _ssr_hero(section: dict[str, Any]) -> str:
 
     return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-hero{has_media}">
     <div class="dz-section-content">
-        <h1 class="dz-hero-headline">{headline}</h1>
+        <h1 class="dz-hero-text">{headline}</h1>
         {'<p class="dz-subhead">' + subhead + "</p>" if subhead else ""}
         {'<div class="dz-cta-group">' + cta_html + "</div>" if cta_html else ""}
     </div>
@@ -378,7 +378,7 @@ def _ssr_features(section: dict[str, Any]) -> str:
         title = item.get("title", "")
         desc = item.get("description", "")
         icon_html = f'<i data-lucide="{icon}"></i>' if icon else ""
-        items_html += f"""<div class="dz-feature-card card bg-base-100 shadow-sm">
+        items_html += f"""<div class="dz-feature-item card bg-base-100 shadow-sm">
     <div class="card-body">
         {icon_html}
         <h3 class="card-title">{title}</h3>
@@ -389,7 +389,7 @@ def _ssr_features(section: dict[str, Any]) -> str:
     return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-features">
     <div class="dz-section-content">
         {_ssr_section_header(section)}
-        <div class="dz-feature-grid">{items_html}</div>
+        <div class="dz-features-grid">{items_html}</div>
     </div>
 </section>"""
 
@@ -465,7 +465,7 @@ def _ssr_steps(section: dict[str, Any]) -> str:
         title = item.get("title", "")
         desc = item.get("description", "")
         items_html += f"""<li class="step step-primary">
-    <div class="dz-step-content">
+    <div class="dz-step-item">
         <span class="dz-step-number">{i}</span>
         <h3>{title}</h3>
         <p>{desc}</p>
@@ -550,7 +550,7 @@ def _ssr_generic(section: dict[str, Any]) -> str:
     content = section.get("content", "")
     sec_type = section.get("type", "unknown")
 
-    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-{sec_type}">
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-{sec_type.replace("_", "-")}">
     <div class="dz-section-content">
         {_ssr_section_header(section)}
         {f'<div class="prose max-w-none">{content}</div>' if content else ""}
