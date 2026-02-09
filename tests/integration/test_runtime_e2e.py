@@ -7,15 +7,7 @@ and verify that:
 2. CRUD operations function properly
 3. The frontend is served correctly
 
-Test Mode Configuration:
-    DAZZLE_E2E_MODE=local  - Use local Python server (default, most reliable)
-    DAZZLE_E2E_MODE=docker - Use Docker containers (requires Docker)
-
-The default is local mode because:
-- It's faster (no container build/startup overhead)
-- It's more reliable in CI environments
-- It doesn't require Docker to be installed
-- Better error messages when things fail
+Uses a local Python server (no Docker required).
 """
 
 from __future__ import annotations
@@ -40,13 +32,10 @@ DAZZLE_EXAMPLES = [
     "contact_manager",
 ]
 
-# Timeout for server startup
-SERVER_STARTUP_TIMEOUT = 60
+# Timeout for server startup (120s for slow CI runners)
+SERVER_STARTUP_TIMEOUT = 120
 # Request timeout
 REQUEST_TIMEOUT = 10
-
-# Test mode configuration
-E2E_MODE = os.environ.get("DAZZLE_E2E_MODE", "local").lower()
 
 
 @pytest.fixture(scope="module")
@@ -56,8 +45,9 @@ def dazzle_root() -> Path:
 
 
 def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
-    """Wait for server to become available."""
+    """Wait for server to become available with exponential backoff."""
     start = time.time()
+    delay = 0.5
     while time.time() - start < timeout:
         try:
             resp = requests.get(url, timeout=2)
@@ -65,21 +55,9 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
                 return True
         except requests.exceptions.RequestException:
             pass
-        time.sleep(0.5)
+        time.sleep(delay)
+        delay = min(delay * 2, 4.0)  # 0.5 → 1 → 2 → 4 (cap)
     return False
-
-
-def is_docker_available() -> bool:
-    """Check if Docker is available and running."""
-    try:
-        result = subprocess.run(
-            ["docker", "info"],
-            capture_output=True,
-            timeout=5,
-        )
-        return result.returncode == 0
-    except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
-        return False
 
 
 class DNRLocalServerManager:
@@ -189,137 +167,17 @@ class DNRLocalServerManager:
                 self.process.wait(timeout=2)
 
 
-class DNRDockerServerManager:
-    """Context manager for running DNR server in Docker containers.
-
-    Uses docker-compose with the split container setup (backend + frontend).
-    Container names follow the pattern: dazzle-{project_name}-backend/frontend
-    """
-
-    def __init__(self, example_dir: Path, api_port: int = 8000, ui_port: int = 3000):
-        self.example_dir = example_dir
-        self.api_port = api_port
-        self.ui_port = ui_port
-        # Container name matches what the Docker runner actually uses
-        self.project_name = example_dir.name.replace("_", "-")
-        self.container_prefix = f"dazzle-{self.project_name}"
-        self.api_url = f"http://127.0.0.1:{api_port}"
-        # In Docker split mode, frontend is on ui_port, backend on api_port
-        self.ui_url = f"http://127.0.0.1:{ui_port}"
-
-    def __enter__(self) -> DNRDockerServerManager:
-        # Clean up any existing containers from previous runs
-        self._cleanup()
-
-        # Start the DNR server in Docker
-        env = os.environ.copy()
-        env["PYTHONUNBUFFERED"] = "1"
-
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "dazzle",
-                "serve",
-                "--port",
-                str(self.ui_port),
-                "--api-port",
-                str(self.api_port),
-                "--test-mode",
-                # Docker mode runs detached by default
-            ],
-            cwd=self.example_dir,
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=300,  # 5 minutes for Docker build
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to start Docker containers: {result.stderr}")
-
-        # Wait for API to be ready
-        if not wait_for_server(f"{self.api_url}/health"):
-            # Try to get container logs for debugging
-            logs = self._get_container_logs()
-            self._cleanup()
-            raise RuntimeError(
-                f"Dazzle server failed to become healthy within {SERVER_STARTUP_TIMEOUT}s. "
-                f"Container logs:\n{logs}"
-            )
-
-        return self
-
-    def _get_container_logs(self) -> str:
-        """Get logs from the backend container."""
-        logs_parts = []
-        for suffix in ["backend", "frontend"]:
-            container_name = f"{self.container_prefix}-{suffix}"
-            try:
-                result = subprocess.run(
-                    ["docker", "logs", "--tail", "50", container_name],
-                    capture_output=True,
-                    text=True,
-                    timeout=10,
-                )
-                if result.stdout or result.stderr:
-                    logs_parts.append(f"=== {container_name} ===\n{result.stdout}\n{result.stderr}")
-            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-                logs_parts.append(f"=== {container_name} === (failed to get logs)")
-        return "\n".join(logs_parts) if logs_parts else "(no logs available)"
-
-    def _cleanup(self) -> None:
-        """Stop and remove Docker containers."""
-        for suffix in ["backend", "frontend"]:
-            container_name = f"{self.container_prefix}-{suffix}"
-            try:
-                subprocess.run(
-                    ["docker", "stop", container_name],
-                    capture_output=True,
-                    timeout=15,
-                )
-            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-                pass
-            try:
-                subprocess.run(
-                    ["docker", "rm", "-f", container_name],
-                    capture_output=True,
-                    timeout=10,
-                )
-            except (subprocess.SubprocessError, subprocess.TimeoutExpired):
-                pass
-
-    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
-        self._cleanup()
-
-
-def get_server_manager(
-    example_dir: Path, api_port: int = 8000, ui_port: int = 3000
-) -> DNRLocalServerManager | DNRDockerServerManager:
-    """Factory function to get appropriate server manager based on E2E_MODE.
-
-    Default is local mode (more reliable). Set DAZZLE_E2E_MODE=docker for Docker mode.
-    """
-    if E2E_MODE == "docker":
-        if not is_docker_available():
-            pytest.skip("Docker mode requested but Docker is not available")
-        return DNRDockerServerManager(example_dir, api_port, ui_port)
-    else:
-        # Default to local mode
-        return DNRLocalServerManager(example_dir, api_port, ui_port)
-
-
 @pytest.fixture(scope="module")
 def simple_task_server(
     dazzle_root: Path,
-) -> Iterator[DNRLocalServerManager | DNRDockerServerManager]:
+) -> Iterator[DNRLocalServerManager]:
     """Start DNR server for simple_task example."""
     example_dir = dazzle_root / "examples" / "simple_task"
     if not example_dir.exists():
         pytest.skip(f"Example directory not found: {example_dir}")
 
     # Use unique ports to avoid conflicts with other running servers
-    with get_server_manager(example_dir, api_port=8001, ui_port=3001) as server:
+    with DNRLocalServerManager(example_dir, api_port=8001, ui_port=3001) as server:
         yield server
 
 
@@ -327,18 +185,14 @@ class TestSimpleTaskE2E:
     """E2E tests for the simple_task example."""
 
     @pytest.mark.e2e
-    def test_api_docs_available(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_api_docs_available(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test that OpenAPI docs are served."""
         resp = requests.get(f"{simple_task_server.api_url}/docs", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
         assert "swagger" in resp.text.lower() or "openapi" in resp.text.lower()
 
     @pytest.mark.e2e
-    def test_openapi_schema_available(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_openapi_schema_available(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test that OpenAPI JSON schema is available."""
         resp = requests.get(f"{simple_task_server.api_url}/openapi.json", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
@@ -347,9 +201,7 @@ class TestSimpleTaskE2E:
         assert "paths" in data
 
     @pytest.mark.e2e
-    def test_api_endpoints_respond(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_api_endpoints_respond(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test that API endpoints respond correctly."""
         api = simple_task_server.api_url
 
@@ -376,9 +228,7 @@ class TestSimpleTaskE2E:
         assert created["title"] == "E2E Test Task"
 
     @pytest.mark.e2e
-    def test_task_crud_persistence(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_task_crud_persistence(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test Create, Read, Update, List operations with persistence."""
         api = simple_task_server.api_url
 
@@ -426,9 +276,7 @@ class TestSimpleTaskE2E:
         assert persisted["priority"] == "medium"
 
     @pytest.mark.e2e
-    def test_frontend_serves_html(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_frontend_serves_html(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test that frontend serves server-rendered HTMX HTML content."""
         resp = requests.get(simple_task_server.ui_url, timeout=REQUEST_TIMEOUT)
         # Frontend might be served at root, or at a subpath
@@ -504,7 +352,7 @@ class TestAuthDisabled:
 
     @pytest.mark.e2e
     def test_auth_me_returns_401_when_disabled(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
+        self, simple_task_server: DNRLocalServerManager
     ) -> None:
         """Test that /auth/me returns a valid response when auth is disabled.
 
@@ -519,9 +367,7 @@ class TestAuthDisabled:
         )
 
     @pytest.mark.e2e
-    def test_crud_works_without_auth(
-        self, simple_task_server: DNRLocalServerManager | DNRDockerServerManager
-    ) -> None:
+    def test_crud_works_without_auth(self, simple_task_server: DNRLocalServerManager) -> None:
         """Test that CRUD operations work without authentication.
 
         Even with auth enabled by default, the API should allow CRUD

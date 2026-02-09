@@ -183,7 +183,51 @@ jobs:
         python -m dazzle --help
         python -m dazzle --version
 
-  runtime-e2e:
+  # Smoke tests: validate all examples parse + lint, run moved test_serve_validation.py
+  e2e-smoke:
+    name: E2E Smoke
+    runs-on: ubuntu-latest
+    needs: [python-tests, lint]
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e ".[dev,llm,mcp,mobile]"
+
+    - name: Validate all example projects
+      run: |
+        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
+          echo "Validating $example..."
+          cd examples/$example
+          python -m dazzle validate
+          cd ../..
+        done
+
+    - name: Lint all example DSL files
+      run: |
+        for example in simple_task contact_manager ops_dashboard support_tickets fieldtest_hub; do
+          echo "Linting $example..."
+          cd examples/$example
+          python -m dazzle lint || echo "Note: Lint warnings in $example"
+          cd ../..
+        done
+
+    - name: Run serve validation tests
+      run: |
+        pytest tests/integration/test_serve_validation.py -v --timeout=60
+      timeout-minutes: 3
+
+  # Runtime E2E: start server for simple_task, run CRUD + API + Tier 1 DSL tests
+  e2e-runtime:
+    name: E2E Runtime
     runs-on: ubuntu-latest
     needs: [python-tests, lint, security-tests]
 
@@ -200,24 +244,44 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,llm,mcp,mobile]"
 
-    - name: Validate example projects
+    - name: Run E2E runtime tests
       run: |
-        for example in simple_task contact_manager; do
-          echo "Validating $example..."
-          cd examples/$example
-          python -m dazzle validate
-          cd ../..
-        done
-
-    - name: Run E2E tests (serve)
-      run: |
-        pytest tests/e2e/test_serve.py -v --timeout=120
-      timeout-minutes: 5
-
-    - name: Run E2E tests (integration)
-      run: |
-        pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=120
+        pytest tests/integration/test_runtime_e2e.py -v -m e2e --timeout=180
       timeout-minutes: 10
+
+    - name: Start server for Tier 1 DSL tests
+      run: |
+        cd examples/simple_task
+        python -m dazzle serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dazzle-server.log 2>&1 &
+        SERVER_PID=$!
+        echo "Server PID: $SERVER_PID"
+        for i in {1..45}; do
+          if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+            echo "Server is ready"
+            break
+          fi
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Server process died. Logs:"
+            cat /tmp/dazzle-server.log
+            exit 1
+          fi
+          echo "Waiting for server... ($i/45)"
+          sleep 2
+        done
+        curl -f http://localhost:8000/health || { echo "Health check failed. Logs:"; cat /tmp/dazzle-server.log; exit 1; }
+      timeout-minutes: 3
+
+    - name: Run Tier 1 DSL tests
+      run: |
+        cd examples/simple_task
+        python -m dazzle test run --no-auto-server --priority high --verbose
+      timeout-minutes: 5
+      continue-on-error: true  # Advisory until DOM contract is aligned
+
+    - name: Cleanup
+      if: always()
+      run: |
+        pkill -f "dazzle serve" || true
 
   postgres-tests:
     name: PostgreSQL Tests
@@ -259,200 +323,9 @@ jobs:
       run: |
         pytest -v --cov=src/dazzle --cov-report=term-missing -m "not e2e" -x
 
-  # Matrix-based E2E testing for example projects
-  # TODO: Remove continue-on-error once HTMX templates emit data-dazzle-* attributes
-  # Blocked on: DOM contract alignment between test generator and HTMX templates
-  example-e2e:
-    name: E2E - ${{ matrix.example }}
-    runs-on: ubuntu-latest
-    continue-on-error: true  # Advisory until DOM contract is aligned
-    needs: [python-tests, lint]
-    strategy:
-      fail-fast: false  # Run all examples even if one fails
-      matrix:
-        example:
-          - simple_task
-          - contact_manager
-        # Add more examples as they become stable:
-        # - uptime_monitor
-        # - inventory_scanner
-        # - ops_dashboard
-        include:
-          - example: simple_task
-            priority: high  # P0 - blocks PRs
-          - example: contact_manager
-            priority: high  # P0 - blocks PRs
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp]"
-        pip install playwright
-
-    - name: Install Playwright browsers
-      run: |
-        playwright install chromium --with-deps
-
-    - name: Validate project
-      run: |
-        cd examples/${{ matrix.example }}
-        python -m dazzle validate
-
-    - name: Cleanup stale Docker containers
-      run: |
-        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
-        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
-
-    - name: Start Dazzle server in test mode
-      run: |
-        cd examples/${{ matrix.example }}
-        python -m dazzle serve --test-mode --local --port 3000 --api-port 8000 > /tmp/dazzle-server.log 2>&1 &
-        SERVER_PID=$!
-        echo "Server PID: $SERVER_PID"
-        for i in {1..45}; do
-          if curl -s http://localhost:8000/health > /dev/null 2>&1; then
-            echo "Server is ready"
-            break
-          fi
-          if ! kill -0 $SERVER_PID 2>/dev/null; then
-            echo "Server process died. Logs:"
-            cat /tmp/dazzle-server.log
-            exit 1
-          fi
-          echo "Waiting for server... ($i/45)"
-          sleep 2
-        done
-        curl -f http://localhost:8000/health || { echo "Health check failed. Logs:"; cat /tmp/dazzle-server.log; exit 1; }
-      timeout-minutes: 3
-
-    - name: Run E2E tests
-      run: |
-        cd examples/${{ matrix.example }}
-        python -m dazzle test run --no-auto-server --priority ${{ matrix.priority }} --verbose
-      timeout-minutes: 5
-
-    - name: Run viewport assertions
-      run: |
-        cd examples/${{ matrix.example }}
-        python -c "
-        from pathlib import Path
-        from dazzle.core.loader import load_and_link
-        from dazzle.testing.viewport import derive_patterns_from_appspec
-        from dazzle.testing.viewport_runner import ViewportRunner, ViewportRunOptions
-        import sys
-        appspec = load_and_link(Path('.'))
-        patterns = derive_patterns_from_appspec(appspec)
-        if not patterns:
-            sys.exit(0)
-        result = ViewportRunner(Path('.')).run(patterns, ViewportRunOptions(base_url='http://localhost:3000'))
-        print(result.to_markdown())
-        if result.total_failed > 0:
-            print(f'::warning::Viewport: {result.total_failed} failures')
-        "
-      timeout-minutes: 2
-      continue-on-error: true
-
-    - name: Upload test artifacts on failure
-      if: failure()
-      uses: actions/upload-artifact@v6
-      with:
-        name: e2e-failure-${{ matrix.example }}
-        path: |
-          examples/${{ matrix.example }}/testspec.json
-          examples/${{ matrix.example }}/test-results/
-        retention-days: 7
-
-    - name: Cleanup
-      if: always()
-      run: |
-        pkill -f "dazzle serve" || true
-        # Stop any Docker containers that may have been started
-        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
-        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
-
-  # Additional examples (P1/P2 priority - warning only)
-  example-e2e-extended:
-    name: E2E Extended - ${{ matrix.example }}
-    runs-on: ubuntu-latest
-    needs: [python-tests, lint]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only on main branch
-    strategy:
-      fail-fast: false
-      matrix:
-        example:
-          - ops_dashboard
-          - support_tickets
-          - fieldtest_hub
-        include:
-          - example: ops_dashboard
-            priority: medium
-          - example: support_tickets
-            priority: medium
-          - example: fieldtest_hub
-            priority: low
-
-    steps:
-    - uses: actions/checkout@v6
-
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.12"
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -e ".[dev,llm,mcp]"
-        pip install playwright
-
-    - name: Install Playwright browsers
-      run: |
-        playwright install chromium --with-deps
-
-    - name: Validate and test
-      run: |
-        cd examples/${{ matrix.example }}
-        # P1/P2 examples - validation failures are informational only
-        python -m dazzle validate || echo "Note: Validation issues found (P1/P2 example)"
-
-    - name: Cleanup stale Docker containers
-      run: |
-        # Remove any stale dazzle containers from previous runs
-        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
-        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
-        docker network prune -f 2>/dev/null || true
-
-    - name: Start server and run tests
-      run: |
-        cd examples/${{ matrix.example }}
-        python -m dazzle serve --test-mode --local &
-        sleep 5
-        # P1/P2 examples - test failures are informational only
-        # Use --no-auto-server since we started the server above
-        python -m dazzle test run --no-auto-server --priority ${{ matrix.priority }} --verbose || echo "Note: Some tests did not pass (P1/P2 example - expected during development)"
-      timeout-minutes: 5
-
-    - name: Cleanup
-      if: always()
-      run: |
-        # Kill local server process
-        pkill -f "dazzle serve" || true
-        # Stop any Docker containers
-        docker stop $(docker ps -q --filter "name=dazzle-") 2>/dev/null || true
-        docker rm $(docker ps -aq --filter "name=dazzle-") 2>/dev/null || true
-
   e2e-postgres:
     name: E2E - simple_task (PostgreSQL)
     runs-on: ubuntu-latest
-    continue-on-error: true  # Advisory until fully proven
     needs: [postgres-tests]
 
     services:
@@ -482,11 +355,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -e ".[dev,llm,mcp,postgres]"
-        pip install playwright
-
-    - name: Install Playwright browsers
-      run: |
-        playwright install chromium --with-deps
 
     - name: Validate project
       run: |

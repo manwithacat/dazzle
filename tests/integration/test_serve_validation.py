@@ -1,15 +1,11 @@
 """
-E2E tests for Dazzle serve functionality.
+Validation and backend spec conversion tests (formerly in tests/e2e/test_serve.py).
 
-These tests verify that `dazzle serve` produces a working application:
-1. Server starts without errors
-2. HTML is served correctly
-3. JavaScript files are valid (no syntax errors)
-4. API endpoints respond correctly
+These tests verify:
+1. Project validation works (dazzle validate)
+2. AppSpec-to-BackendSpec entity conversion is correct
 
-These tests catch the bugs fixed in v0.3.1:
-- Bug 1: ES module export block conversion failure
-- Bug 2: HTML script tag malformation
+No server is started — these are pure integration tests.
 """
 
 import subprocess
@@ -156,7 +152,3 @@ class TestAPIGeneration:
         # Verify field types
         title_field = next(f for f in entity.fields if f.name == "title")
         assert title_field.required is True
-
-
-# Mark all tests in this module as e2e
-pytestmark = pytest.mark.e2e
