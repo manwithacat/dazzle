@@ -1,0 +1,65 @@
+palette:
+  brand_hue: 220.0
+  brand_chroma: 0.18
+  mode: light
+  accent_hue_offset: 30.0
+  neutral_chroma: 0.02
+  semantic_overrides:
+    success_hue: null
+    warning_hue: null
+    danger_hue: null
+    info_hue: null
+typography:
+  base_size_px: 16
+  ratio: major_third
+  line_height_body: 1.6
+  line_height_heading: 1.2
+  font_stacks:
+    heading: Inter, system-ui, sans-serif
+    body: Inter, system-ui, sans-serif
+    mono: '''JetBrains Mono'', ''Fira Code'', monospace'
+spacing:
+  base_unit_px: 4
+  density: comfortable
+shape:
+  radius_preset: subtle
+  shadow_preset: medium
+  border_width_px: 1
+attention_map:
+  rules: []
+layout:
+  surfaces:
+    max_columns: 3
+    sidebar_width_px: 260
+    content_max_width_px: 1200
+imagery:
+  vocabulary:
+    style_keywords:
+    - clean
+    - professional
+    - modern
+    mood_keywords:
+    - confident
+    - approachable
+    exclusions:
+    - text
+    - watermark
+    - logo
+    color_reference: brand palette
+  default_aspect_ratio: '16:9'
+  default_resolution: 1024x576
+meta:
+  version: 1
+  generated_by: dazzle scaffold
+  generated_at: '2026-02-09T15:26:19.852631+00:00'
+  agent_editable_fields:
+  - palette.brand_hue
+  - palette.brand_chroma
+  - palette.mode
+  - typography.ratio
+  - typography.base_size_px
+  - spacing.density
+  - shape.radius_preset
+  - shape.shadow_preset
+  - imagery.vocabulary.style_keywords
+  - imagery.vocabulary.mood_keywords
