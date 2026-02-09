@@ -240,7 +240,8 @@ class FTSManager:
 
         # Get count
         cursor = conn.execute(f"SELECT COUNT(*) FROM {fts_table}")
-        return int(cursor.fetchone()[0])
+        row = cursor.fetchone()
+        return int(row[0] if isinstance(row, (tuple, list)) else next(iter(row.values())))
 
     def search(
         self,
@@ -300,7 +301,8 @@ class FTSManager:
             WHERE {fts_name} MATCH ?
         """
         cursor = conn.execute(count_sql, (escaped_query,))
-        total = cursor.fetchone()[0]
+        row = cursor.fetchone()
+        total = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
 
         # Get matching IDs
         search_sql = f"""

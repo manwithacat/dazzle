@@ -695,7 +695,8 @@ class SQLiteRepository(Generic[T]):
         with self.db.connection() as conn:
             cursor = conn.cursor()
             cursor.execute(count_sql, count_params)
-            total = cursor.fetchone()[0]
+            row = cursor.fetchone()
+            total = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("count", latency_ms)
 

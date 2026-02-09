@@ -308,7 +308,8 @@ def create_test_routes(
         with db_manager.connection() as conn:
             try:
                 cursor = conn.execute(f"SELECT COUNT(*) FROM {entity_name}")
-                count = cursor.fetchone()[0]
+                row = cursor.fetchone()
+                count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
                 return {"count": count}
             except Exception:
                 return {"count": 0}

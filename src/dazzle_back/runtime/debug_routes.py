@@ -181,7 +181,8 @@ def create_debug_routes(
             for entity in entities:
                 try:
                     cursor = conn.execute(f"SELECT COUNT(*) FROM {entity.name}")
-                    count = cursor.fetchone()[0]
+                    row = cursor.fetchone()
+                    count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
 
                     # Check for FTS table
                     has_fts = False
@@ -279,7 +280,8 @@ def create_debug_routes(
         with db_manager.connection() as conn:
             try:
                 cursor = conn.execute(f"SELECT COUNT(*) FROM {entity_name}")
-                count = cursor.fetchone()[0]
+                row = cursor.fetchone()
+                count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
             except Exception:
                 pass
 
@@ -317,7 +319,8 @@ def create_debug_routes(
                 try:
                     tbl = quote_identifier(table_name)
                     count_cursor = conn.execute(f"SELECT COUNT(*) FROM {tbl}")
-                    count = count_cursor.fetchone()[0]
+                    row = count_cursor.fetchone()
+                    count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
                     tables.append({"name": table_name, "count": count})
                 except Exception:
                     tables.append({"name": table_name, "count": -1, "error": "unreadable"})
