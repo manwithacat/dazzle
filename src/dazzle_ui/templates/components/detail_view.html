@@ -56,8 +56,8 @@
               {{ value | bool_icon }}
             {% elif field.type == "date" %}
               {{ value | dateformat }}
-            {% elif field.type == "currency" %}
-              {{ value | currency }}
+            {% elif field.type == "currency" or field.type == "money" %}
+              {{ value | currency(field.extra.get('currency_code', 'GBP') if field.extra else 'GBP') }}
             {% else %}
               {{ value | default("—") }}
             {% endif %}

@@ -274,8 +274,19 @@ def _check_form_structure(
     inputs = root.find_all("input") + root.find_all("textarea") + root.find_all("select")
     input_names = {inp.get_attr("name") for inp in inputs}
 
+    # Collect money widget names from data-dz-money attributes
+    money_widget_names: set[str] = set()
+    for el in root.find_all("div") + root.find_all("fieldset"):
+        if el.has_attr("data-dz-money"):
+            widget_name = el.get_attr("data-dz-money")
+            if widget_name:
+                money_widget_names.add(widget_name)
+                # Also count expanded names as covered
+                money_widget_names.add(f"{widget_name}_minor")
+                money_widget_names.add(f"{widget_name}_currency")
+
     for fname in field_names:
-        if fname not in input_names:
+        if fname not in input_names and fname not in money_widget_names:
             gaps.append(
                 FidelityGap(
                     category=FidelityGapCategory.MISSING_FIELD,

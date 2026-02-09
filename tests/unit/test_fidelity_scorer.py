@@ -358,7 +358,7 @@ class TestMoneyFieldExpansion:
         assert result == ["title", "price_minor", "price_currency"]
 
     def test_expand_money_field_in_form(self) -> None:
-        """CREATE surface with money field: _minor/_currency inputs → no gap."""
+        """CREATE surface with money widget: hidden _minor/_currency inputs → no gap."""
         surface = _make_surface(
             name="product_create",
             mode=SurfaceMode.CREATE,
@@ -375,8 +375,39 @@ class TestMoneyFieldExpansion:
         html = """
         <form hx-post="/products">
             <input name="title" type="text">
-            <input name="price_minor" type="number">
-            <input name="price_currency" type="text">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="price_minor" data-dz-money-minor>
+                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+            </div>
+            <button type="submit">Save</button>
+        </form>
+        """
+        root = parse_html(html)
+        gaps = _check_form_structure(surface, entity, root)
+        missing = [g for g in gaps if g.category == FidelityGapCategory.MISSING_FIELD]
+        assert missing == []
+
+    def test_money_widget_data_attribute_match(self) -> None:
+        """data-dz-money attribute alone satisfies the field check."""
+        surface = _make_surface(
+            name="product_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["price"],
+        )
+        entity = _make_entity(
+            [
+                FieldSpec(
+                    name="price", type=FieldType(kind=FieldTypeKind.MONEY, currency_code="GBP")
+                ),
+            ]
+        )
+        # Widget with data-dz-money but no named inputs (edge case)
+        html = """
+        <form hx-post="/products">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+            </div>
             <button type="submit">Save</button>
         </form>
         """
@@ -402,7 +433,7 @@ class TestMoneyFieldExpansion:
         assert result == ["title", "count"]
 
     def test_mixed_money_and_regular_fields(self) -> None:
-        """Surface with both money and regular fields: only money fields expand."""
+        """Surface with both money and regular fields: money widgets satisfy checks."""
         surface = _make_surface(
             name="invoice_create",
             mode=SurfaceMode.CREATE,
@@ -424,10 +455,16 @@ class TestMoneyFieldExpansion:
         html = """
         <form hx-post="/invoices">
             <input name="description" type="text">
-            <input name="amount_minor" type="number">
-            <input name="amount_currency" type="text">
-            <input name="tax_minor" type="number">
-            <input name="tax_currency" type="text">
+            <div data-dz-money="amount" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="amount_minor" data-dz-money-minor>
+                <input type="hidden" name="amount_currency" data-dz-money-currency value="GBP">
+            </div>
+            <div data-dz-money="tax" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="tax_minor" data-dz-money-minor>
+                <input type="hidden" name="tax_currency" data-dz-money-currency value="GBP">
+            </div>
             <button type="submit">Save</button>
         </form>
         """
@@ -437,7 +474,7 @@ class TestMoneyFieldExpansion:
         assert missing == []
 
     def test_money_field_input_type_check_no_false_positive(self) -> None:
-        """Input type check doesn't false-positive on _minor inputs (type=number)."""
+        """Input type check doesn't false-positive on money widget hidden inputs."""
         surface = _make_surface(
             name="product_create",
             mode=SurfaceMode.CREATE,
@@ -452,8 +489,11 @@ class TestMoneyFieldExpansion:
         )
         html = """
         <form hx-post="/products">
-            <input name="price_minor" type="number">
-            <input name="price_currency" type="text">
+            <div data-dz-money="price" data-dz-currency="GBP" data-dz-scale="2">
+                <input type="text" inputmode="decimal" data-dz-money-display>
+                <input type="hidden" name="price_minor" data-dz-money-minor>
+                <input type="hidden" name="price_currency" data-dz-money-currency value="GBP">
+            </div>
             <button type="submit">Save</button>
         </form>
         """

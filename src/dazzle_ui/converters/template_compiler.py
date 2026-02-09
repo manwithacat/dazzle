@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
 from dazzle.core.ir import FieldTypeKind, SurfaceMode
+from dazzle.core.ir.money import CURRENCY_SCALES, get_currency_scale
 from dazzle.core.strings import to_api_plural
 from dazzle_ui.runtime.template_context import (
     ColumnContext,
@@ -27,6 +28,85 @@ from dazzle_ui.runtime.template_context import (
 
 if TYPE_CHECKING:
     pass
+
+# ── Currency metadata ─────────────────────────────────────────────────
+
+CURRENCY_SYMBOLS: dict[str, str] = {
+    "GBP": "\u00a3",
+    "USD": "$",
+    "EUR": "\u20ac",
+    "AUD": "A$",
+    "CAD": "C$",
+    "CHF": "CHF",
+    "CNY": "\u00a5",
+    "INR": "\u20b9",
+    "NZD": "NZ$",
+    "SGD": "S$",
+    "HKD": "HK$",
+    "SEK": "kr",
+    "NOK": "kr",
+    "DKK": "kr",
+    "ZAR": "R",
+    "MXN": "MX$",
+    "BRL": "R$",
+    "JPY": "\u00a5",
+    "KRW": "\u20a9",
+    "VND": "\u20ab",
+    "CLP": "CLP",
+    "ISK": "kr",
+    "BHD": "BHD",
+    "KWD": "KWD",
+    "OMR": "OMR",
+    "TND": "TND",
+    "JOD": "JOD",
+    "IQD": "IQD",
+    "LYD": "LYD",
+}
+
+# Default currencies shown in unpinned money dropdowns
+_DEFAULT_CURRENCY_OPTIONS = [
+    "GBP",
+    "USD",
+    "EUR",
+    "AUD",
+    "CAD",
+    "CHF",
+    "JPY",
+    "CNY",
+    "INR",
+    "SGD",
+    "HKD",
+    "SEK",
+    "NOK",
+    "DKK",
+    "NZD",
+]
+
+
+def _build_currency_options(
+    selected_code: str = "GBP",
+) -> list[dict[str, Any]]:
+    """Build currency option dicts for unpinned money field dropdown."""
+    options: list[dict[str, Any]] = []
+    for code in _DEFAULT_CURRENCY_OPTIONS:
+        options.append(
+            {
+                "code": code,
+                "scale": CURRENCY_SCALES.get(code, 2),
+                "symbol": CURRENCY_SYMBOLS.get(code, code),
+            }
+        )
+    # Ensure selected_code is in the list
+    if selected_code not in _DEFAULT_CURRENCY_OPTIONS:
+        options.insert(
+            0,
+            {
+                "code": selected_code,
+                "scale": CURRENCY_SCALES.get(selected_code, 2),
+                "symbol": CURRENCY_SYMBOLS.get(selected_code, selected_code),
+            },
+        )
+    return options
 
 
 def _field_type_to_column_type(field_spec: ir.FieldSpec | None) -> str:
@@ -56,7 +136,7 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
         FieldTypeKind.DATETIME: "datetime",
         FieldTypeKind.INT: "number",
         FieldTypeKind.DECIMAL: "number",
-        FieldTypeKind.MONEY: "number",
+        FieldTypeKind.MONEY: "money",
         FieldTypeKind.TEXT: "textarea",
         FieldTypeKind.EMAIL: "email",
         FieldTypeKind.URL: "text",
@@ -130,8 +210,10 @@ def _build_columns(
                 )
                 # Money fields: use expanded _minor column key
                 col_key = element.field_name
+                col_currency = ""
                 if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{element.field_name}_minor"
+                    col_currency = field_spec.type.currency_code or "GBP"
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -141,6 +223,7 @@ def _build_columns(
                         filterable=filterable,
                         filter_type=filter_type,
                         filter_options=filter_options,
+                        currency_code=col_currency,
                     )
                 )
     elif entity and entity.fields:
@@ -152,8 +235,10 @@ def _build_columns(
                 )
                 # Money fields: use expanded _minor column key
                 col_key = field.name
+                col_currency = ""
                 if field.type and field.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{field.name}_minor"
+                    col_currency = field.type.currency_code or "GBP"
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -163,6 +248,7 @@ def _build_columns(
                         filterable=filterable,
                         filter_type=filter_type,
                         filter_options=filter_options,
+                        currency_code=col_currency,
                     )
                 )
 
@@ -191,28 +277,31 @@ def _build_form_fields(
                 fields_to_process.append((field.name, None, field, {}))
 
     for field_name, label, field_spec, element_options in fields_to_process:
-        # Money fields expand into _minor (number) + _currency (text) pair
+        # Money fields: single widget with major-unit display + hidden minor-unit value
         if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
-            currency_code = field_spec.type.currency_code or "GBP"
+            currency_code = field_spec.type.currency_code or ""
+            currency_fixed = bool(currency_code)
+            if not currency_code:
+                currency_code = "GBP"  # default for unpinned
+            scale = get_currency_scale(currency_code)
+            symbol = CURRENCY_SYMBOLS.get(currency_code, currency_code)
             display_label = label or field_name.replace("_", " ").title()
+            extra: dict[str, Any] = {
+                "currency_code": currency_code,
+                "currency_fixed": currency_fixed,
+                "scale": scale,
+                "symbol": symbol,
+                "currency_options": (
+                    _build_currency_options(currency_code) if not currency_fixed else []
+                ),
+            }
             fields.append(
                 FieldContext(
-                    name=f"{field_name}_minor",
-                    label=f"{display_label} (Minor Units)",
-                    type="number",
+                    name=field_name,
+                    label=display_label,
+                    type="money",
                     required=bool(field_spec.is_required),
-                    placeholder="Amount in minor units (e.g. pence)",
-                    options=[],
-                )
-            )
-            fields.append(
-                FieldContext(
-                    name=f"{field_name}_currency",
-                    label=f"{display_label} Currency",
-                    type="text",
-                    required=False,
-                    placeholder=currency_code,
-                    options=[],
+                    extra=extra,
                 )
             )
             continue
