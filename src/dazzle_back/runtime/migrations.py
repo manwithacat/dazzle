@@ -143,6 +143,10 @@ class MigrationPlanner:
         """
         Create a migration plan for all entities.
 
+        Tables are ordered topologically by FK dependencies using SQLAlchemy's
+        MetaData.sorted_tables so that CREATE TABLE statements for referenced
+        tables come before their dependents.
+
         Args:
             entities: List of entity specifications
 
@@ -150,13 +154,29 @@ class MigrationPlanner:
             Migration plan with steps and warnings
         """
         from dazzle_back.runtime.relation_loader import RelationRegistry
+        from dazzle_back.runtime.sa_schema import build_metadata
 
         steps: list[MigrationStep] = []
         warnings: list[str] = []
         registry = RelationRegistry.from_entities(entities)
 
+        # Build SA metadata for topological ordering
+        metadata = build_metadata(entities)
+        entity_map = {e.name: e for e in entities}
+
+        # sorted_tables gives us FK-dependency order
+        sorted_names = [t.name for t in metadata.sorted_tables]
+
+        # Also include any entities not captured (shouldn't happen, but safe)
+        for e in entities:
+            if e.name not in sorted_names:
+                sorted_names.append(e.name)
+
         with self.db.connection() as conn:
-            for entity in entities:
+            for name in sorted_names:
+                entity = entity_map.get(name)
+                if entity is None:
+                    continue
                 entity_steps, entity_warnings = self._plan_entity_migration(conn, entity, registry)
                 steps.extend(entity_steps)
                 warnings.extend(entity_warnings)

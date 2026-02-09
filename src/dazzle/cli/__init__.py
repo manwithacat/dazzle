@@ -15,6 +15,7 @@ This package contains the main CLI application and modularized sub-commands:
 - story.py: Story commands
 - events.py: Event system commands
 - migrate.py: Migration commands
+- db.py: Database migration commands (Alembic)
 - pitch.py: Pitch deck commands
 - utils.py: Shared utilities
 """
@@ -114,6 +115,7 @@ app.command(name="check")(check_command)
 # Sub-apps
 # =============================================================================
 from dazzle.cli.auth import auth_app  # noqa: E402
+from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
@@ -128,6 +130,7 @@ from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
 app.add_typer(auth_app, name="auth")
+app.add_typer(db_app, name="db")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")

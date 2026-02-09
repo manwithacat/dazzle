@@ -76,6 +76,8 @@ dev = [
 postgres = [
     "psycopg[binary]>=3.2",
     "psycopg-pool>=3.2",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
 ]
 # Process execution backends (v0.24.0 - Issue #45)
 temporal = [

@@ -262,12 +262,41 @@ class PostgresBackend:
         return " ".join(parts)
 
     def create_all_tables(self, entities: list[EntitySpec]) -> None:
-        """Create tables for all entities."""
-        from dazzle_back.runtime.relation_loader import RelationRegistry
+        """Create tables for all entities in topological (FK-dependency) order.
+
+        Uses SQLAlchemy MetaData.create_all() which internally sorts tables
+        by foreign key dependencies, preventing errors when a table references
+        another that hasn't been created yet.
+        """
+        from sqlalchemy import create_engine
+
+        from dazzle_back.runtime.sa_schema import build_metadata
+
+        metadata = build_metadata(entities)
+        engine = create_engine(self.database_url)
+        try:
+            metadata.create_all(engine, checkfirst=True)
+        finally:
+            engine.dispose()
+
+        # Create application-level indexes (not in SA schema)
+        from dazzle_back.runtime.relation_loader import (
+            RelationRegistry,
+            get_foreign_key_indexes,
+        )
 
         registry = RelationRegistry.from_entities(entities)
-        for entity in entities:
-            self.create_table(entity, registry=registry)
+        with self.connection() as conn:
+            cursor = conn.cursor()
+            for entity in entities:
+                for field in entity.fields:
+                    if field.indexed:
+                        col = quote_identifier(field.name)
+                        table = quote_identifier(entity.name)
+                        index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
+                        cursor.execute(index_sql)
+                for fk_idx_sql in get_foreign_key_indexes(entity, registry):
+                    cursor.execute(fk_idx_sql)
 
     def table_exists(self, table_name: str) -> bool:
         """Check if a table exists."""

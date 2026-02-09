@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import string
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -388,6 +389,10 @@ class TestHeaderFuzzing:
 
 
 @pytest.mark.e2e
+@pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — TokenStore requires real PostgreSQL",
+)
 class TestTokenStoreFuzzing:
     """Fuzz test token store operations."""
 

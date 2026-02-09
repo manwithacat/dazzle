@@ -116,6 +116,10 @@ def task_spec() -> BackendSpec:
 
 
 @pytest.mark.skipif(not TESTCLIENT_AVAILABLE, reason="TestClient not available")
+@pytest.mark.skipif(
+    not __import__("os").environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — E2E tests require PostgreSQL",
+)
 class TestE2EEndpoints:
     """End-to-end endpoint tests."""
 

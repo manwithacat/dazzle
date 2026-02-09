@@ -6,6 +6,7 @@ Tests local storage, metadata store, validation, and file service.
 
 from __future__ import annotations
 
+import os
 from datetime import UTC, datetime
 from io import BytesIO
 from typing import Any
@@ -298,6 +299,10 @@ class TestLocalStorageBackend:
 # =============================================================================
 
 
+@pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — FileMetadataStore requires PostgreSQL",
+)
 class TestFileMetadataStore:
     """Tests for FileMetadataStore."""
 
@@ -424,6 +429,10 @@ class TestFileMetadataStore:
 # =============================================================================
 
 
+@pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — FileService requires PostgreSQL",
+)
 class TestFileService:
     """Tests for FileService."""
 
@@ -556,6 +565,10 @@ class TestFileService:
 # =============================================================================
 
 
+@pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — factory functions require PostgreSQL",
+)
 class TestFactoryFunctions:
     """Tests for factory functions."""
 
