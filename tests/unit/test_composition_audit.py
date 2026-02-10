@@ -431,6 +431,60 @@ class TestEvaluateRule:
         assert result is not None
         assert "Imbalance" in result["detail"]
 
+    def test_balance_escalates_with_media_hero(self) -> None:
+        """Balance violation escalates to HIGH when hero_image is present."""
+        rule = {
+            "id": "hero-balance",
+            "type": "balance",
+            "left": ["h1", "subhead"],
+            "right": ["hero_image"],
+            "max_imbalance": 0.30,
+            "severity": "low",
+            "escalate_with_media": "high",
+            "message": "Left/right total weight within 30%",
+        }
+        roles = {"h1", "subhead", "hero_image"}
+        # Force high imbalance: left=17.9, right=4.6
+        weights = {"h1": 12.0, "subhead": 5.9, "hero_image": 4.6}
+        result = evaluate_rule(rule, roles, weights)
+        assert result is not None
+        assert result["severity"] == "high"
+
+    def test_balance_no_escalation_without_escalate_field(self) -> None:
+        """Balance violation stays LOW when escalate_with_media is absent."""
+        rule = {
+            "id": "b1",
+            "type": "balance",
+            "left": ["h1", "h2"],
+            "right": ["caption"],
+            "max_imbalance": 0.10,
+            "severity": "low",
+            "message": "test",
+        }
+        roles = {"h1", "h2", "caption"}
+        weights = {"h1": 7.30, "h2": 5.51, "caption": 1.07}
+        result = evaluate_rule(rule, roles, weights)
+        assert result is not None
+        assert result["severity"] == "low"
+
+    def test_balance_escalates_with_split_image(self) -> None:
+        """Balance violation also escalates when split_image is in roles."""
+        rule = {
+            "id": "split-balance",
+            "type": "balance",
+            "left": ["h1", "subhead"],
+            "right": ["split_image"],
+            "max_imbalance": 0.30,
+            "severity": "low",
+            "escalate_with_media": "high",
+            "message": "Text/image balance within 30%",
+        }
+        roles = {"h1", "subhead", "split_image"}
+        weights = {"h1": 12.0, "subhead": 5.9, "split_image": 4.6}
+        result = evaluate_rule(rule, roles, weights)
+        assert result is not None
+        assert result["severity"] == "high"
+
 
 # ── Page Rule Tests ──────────────────────────────────────────────────
 

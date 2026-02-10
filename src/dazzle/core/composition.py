@@ -190,6 +190,7 @@ DEFAULT_SECTION_RULES: dict[str, list[dict[str, Any]]] = {
             "right": ["hero_image"],
             "max_imbalance": 0.30,
             "severity": "low",
+            "escalate_with_media": "high",
             "message": "Left/right total weight within 30%",
         },
     ],
@@ -388,9 +389,16 @@ def evaluate_rule(
             return None
         imbalance = abs(left_total - right_total) / total
         if imbalance > rule["max_imbalance"]:
+            severity = rule["severity"]
+            # Escalate when media is declared — a two-column hero with high
+            # imbalance means the image isn't rendering side-by-side.
+            media_roles = {"hero_image", "split_image"}
+            escalate = rule.get("escalate_with_media")
+            if escalate and media_roles & roles:
+                severity = escalate
             return {
                 "rule_id": rule["id"],
-                "severity": rule["severity"],
+                "severity": severity,
                 "message": rule["message"],
                 "detail": (
                     f"Imbalance {imbalance:.1%} > max {rule['max_imbalance']:.0%} "
