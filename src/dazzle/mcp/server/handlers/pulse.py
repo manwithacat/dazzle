@@ -6,7 +6,9 @@ metrics into a single, plain-language briefing suitable for non-technical
 founders and product owners.
 
 Operations:
-  run — Generate a full health report
+  run     — Generate a full health report
+  radar   — Compact 6-axis readiness radar chart
+  persona — View app through a specific persona's eyes
 """
 
 from __future__ import annotations
@@ -92,6 +94,131 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
+def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Return just the 6-axis readiness radar with plain-language axis labels.
+
+    Lighter than ``run`` — skips narrative generation, returns radar scores
+    and a compact ASCII chart suitable for quick status checks.
+    """
+    business_context = args.get("business_context")
+
+    t0 = time.monotonic()
+
+    pipeline_data = _collect_pipeline(project_path)
+    stories_data = _collect_stories(project_path)
+    coherence_data = _collect_coherence(project_path, business_context)
+    policy_data = _collect_policy(project_path)
+    compliance_data = _collect_compliance(project_path)
+
+    radar = _compute_radar(
+        pipeline_data, stories_data, coherence_data, policy_data, compliance_data
+    )
+    health_score = _composite_health(radar)
+    project_name = _extract_project_name(pipeline_data, project_path)
+
+    # Render a compact radar chart
+    chart_lines = [f"{project_name} — {health_score:.0f}% Launch Ready", ""]
+    for axis in _RADAR_AXES:
+        score = radar.get(axis, 0)
+        bar = _progress_bar(score)
+        label = _AXIS_LABELS.get(axis, axis.title())
+        chart_lines.append(f"  {label:24s} {bar} {score:.0f}%")
+
+    duration_ms = (time.monotonic() - t0) * 1000
+
+    return json.dumps(
+        {
+            "status": "complete",
+            "project_name": project_name,
+            "health_score": round(health_score, 1),
+            "radar": radar,
+            "chart": "\n".join(chart_lines),
+            "duration_ms": round(duration_ms, 1),
+        },
+        indent=2,
+    )
+
+
+def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Show the app through a specific persona's eyes.
+
+    Lists what this persona can do (covered stories), what's partially
+    working, and what's not started — all in plain language.
+    """
+    persona_name = args.get("persona")
+    if not persona_name:
+        return json.dumps({"error": "persona parameter is required"})
+
+    t0 = time.monotonic()
+
+    # Story list has actor field; coverage has per-story status
+    story_list_data = _collect_story_list(project_path)
+    coverage_data = _collect_stories(project_path)
+
+    # Get all stories for this persona (exact match first, then partial)
+    all_stories: list[dict[str, Any]] = story_list_data.get("stories", [])
+    persona_stories = [s for s in all_stories if s.get("actor", "").lower() == persona_name.lower()]
+
+    if not persona_stories and all_stories:
+        persona_stories = [
+            s for s in all_stories if persona_name.lower() in s.get("actor", "").lower()
+        ]
+
+    # Build coverage map from coverage handler (story_id -> covered/partial/uncovered)
+    coverage_map: dict[str, str] = {}
+    for item in coverage_data.get("stories", []):
+        coverage_map[item.get("story_id", "")] = item.get("status", "unknown")
+
+    working: list[str] = []
+    partial: list[str] = []
+    not_started: list[str] = []
+    for story in persona_stories:
+        sid = story.get("story_id", "")
+        title = story.get("title", sid)
+        cov_status = coverage_map.get(sid, "uncovered")
+        if cov_status == "covered":
+            working.append(title)
+        elif cov_status == "partial":
+            partial.append(title)
+        else:
+            not_started.append(title)
+
+    total = len(persona_stories)
+    working_count = len(working)
+    experience_score = round((working_count / total * 100) if total > 0 else 0, 1)
+
+    # Render persona-view markdown
+    md_lines = [f"Viewing as: {persona_name}", ""]
+    if working:
+        for title in working:
+            md_lines.append(f"  [ok] {title}")
+    if partial:
+        for title in partial:
+            md_lines.append(f"  [..] {title}")
+    if not_started:
+        for title in not_started:
+            md_lines.append(f"  [  ] {title}")
+    md_lines.append("")
+    md_lines.append(f"{persona_name}'s experience: {experience_score:.0f}/100")
+
+    duration_ms = (time.monotonic() - t0) * 1000
+
+    return json.dumps(
+        {
+            "status": "complete",
+            "persona": persona_name,
+            "experience_score": experience_score,
+            "total_stories": total,
+            "working": working,
+            "partial": partial,
+            "not_started": not_started,
+            "markdown": "\n".join(md_lines),
+            "duration_ms": round(duration_ms, 1),
+        },
+        indent=2,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Data collectors — each calls one handler and returns a parsed dict.
 # Failures are captured as {"error": "..."} so the pulse never crashes.
@@ -161,11 +288,33 @@ def _collect_compliance(project_path: Path) -> dict[str, Any]:
         return {"error": str(e)}
 
 
+def _collect_story_list(project_path: Path) -> dict[str, Any]:
+    """Fetch the story list (with actor/persona info) for persona filtering."""
+    from .stories import get_stories_handler
+
+    try:
+        raw = get_stories_handler(project_path, {"status_filter": "accepted"})
+        result: dict[str, Any] = json.loads(raw)
+        return result
+    except Exception as e:
+        logger.warning("pulse: story list failed: %s", e)
+        return {"error": str(e)}
+
+
 # ---------------------------------------------------------------------------
 # Metric synthesis
 # ---------------------------------------------------------------------------
 
 _RADAR_AXES = ("quality", "coverage", "content", "security", "compliance", "ux")
+
+_AXIS_LABELS = {
+    "quality": "Quality & Testing",
+    "coverage": "Feature Completion",
+    "content": "Site Content",
+    "security": "Security & Access",
+    "compliance": "Compliance",
+    "ux": "User Experience",
+}
 
 
 def _compute_radar(

@@ -1464,7 +1464,7 @@ def handle_pipeline(arguments: dict[str, Any]) -> str:
 
 def handle_pulse(arguments: dict[str, Any]) -> str:
     """Handle pulse (founder-ready health report) operations."""
-    from .handlers.pulse import run_pulse_handler
+    from .handlers.pulse import persona_pulse_handler, radar_pulse_handler, run_pulse_handler
 
     operation = arguments.get("operation")
     project_path = _resolve_project(arguments)
@@ -1474,6 +1474,10 @@ def handle_pulse(arguments: dict[str, Any]) -> str:
 
     if operation == "run":
         return run_pulse_handler(project_path, arguments)
+    elif operation == "radar":
+        return radar_pulse_handler(project_path, arguments)
+    elif operation == "persona":
+        return persona_pulse_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown pulse operation: {operation}"})
 

@@ -20,6 +20,8 @@ from dazzle.mcp.server.handlers.pulse import (
     _render_markdown,
     _security_score,
     _ux_score,
+    persona_pulse_handler,
+    radar_pulse_handler,
     run_pulse_handler,
 )
 
@@ -473,3 +475,285 @@ class TestRunPulseHandler:
         assert data["status"] == "complete"
         assert data["health_score"] == 0.0
         assert all(v == 0.0 for v in data["radar"].values())
+
+
+# ---------------------------------------------------------------------------
+# Radar operation
+# ---------------------------------------------------------------------------
+
+
+def _story_list_data(stories: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """Mock data matching get_stories_handler output."""
+    if stories is None:
+        stories = [
+            {
+                "story_id": "ST-001",
+                "title": "Login",
+                "actor": "admin",
+                "status": "accepted",
+                "scope": "auth",
+            },
+            {
+                "story_id": "ST-002",
+                "title": "View Dashboard",
+                "actor": "admin",
+                "status": "accepted",
+                "scope": "ui",
+            },
+            {
+                "story_id": "ST-003",
+                "title": "Submit Order",
+                "actor": "customer",
+                "status": "accepted",
+                "scope": "orders",
+            },
+            {
+                "story_id": "ST-004",
+                "title": "Track Shipment",
+                "actor": "customer",
+                "status": "accepted",
+                "scope": "shipping",
+            },
+        ]
+    return {"filter": "accepted", "count": len(stories), "stories": stories}
+
+
+def _story_coverage_data(
+    stories: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Mock data matching stories_coverage_handler output (per-story coverage)."""
+    if stories is None:
+        stories = [
+            {"story_id": "ST-001", "title": "Login", "status": "covered"},
+            {"story_id": "ST-002", "title": "View Dashboard", "status": "partial"},
+            {"story_id": "ST-003", "title": "Submit Order", "status": "covered"},
+            {"story_id": "ST-004", "title": "Track Shipment", "status": "uncovered"},
+        ]
+    return {
+        "total_stories": len(stories),
+        "covered": sum(1 for s in stories if s["status"] == "covered"),
+        "partial": sum(1 for s in stories if s["status"] == "partial"),
+        "uncovered": sum(1 for s in stories if s["status"] == "uncovered"),
+        "coverage_percent": (
+            sum(1 for s in stories if s["status"] == "covered") / len(stories) * 100
+            if stories
+            else 0
+        ),
+        "stories": stories,
+    }
+
+
+class TestRadarPulseHandler:
+    """Test the radar operation."""
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_compliance")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    def test_returns_chart(
+        self,
+        mock_pipeline: Any,
+        mock_stories: Any,
+        mock_coherence: Any,
+        mock_policy: Any,
+        mock_compliance: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_pipeline.return_value = _pipeline_data()
+        mock_stories.return_value = _stories_data()
+        mock_coherence.return_value = _coherence_data()
+        mock_policy.return_value = _policy_data()
+        mock_compliance.return_value = _compliance_data()
+
+        result = radar_pulse_handler(tmp_path, {"operation": "radar"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert "chart" in data
+        assert "radar" in data
+        assert "health_score" in data
+        assert "Launch Ready" in data["chart"]
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_compliance")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    def test_chart_contains_axis_labels(
+        self,
+        mock_pipeline: Any,
+        mock_stories: Any,
+        mock_coherence: Any,
+        mock_policy: Any,
+        mock_compliance: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_pipeline.return_value = _pipeline_data()
+        mock_stories.return_value = _stories_data()
+        mock_coherence.return_value = _coherence_data()
+        mock_policy.return_value = _policy_data()
+        mock_compliance.return_value = _compliance_data()
+
+        result = radar_pulse_handler(tmp_path, {"operation": "radar"})
+        data = json.loads(result)
+        chart = data["chart"]
+
+        assert "Quality & Testing" in chart
+        assert "Feature Completion" in chart
+        assert "User Experience" in chart
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_compliance")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    def test_no_markdown_field(
+        self,
+        mock_pipeline: Any,
+        mock_stories: Any,
+        mock_coherence: Any,
+        mock_policy: Any,
+        mock_compliance: Any,
+        tmp_path: Any,
+    ) -> None:
+        """Radar is lighter than run — no full markdown narrative."""
+        mock_pipeline.return_value = _pipeline_data()
+        mock_stories.return_value = _stories_data()
+        mock_coherence.return_value = _coherence_data()
+        mock_policy.return_value = _policy_data()
+        mock_compliance.return_value = _compliance_data()
+
+        result = radar_pulse_handler(tmp_path, {"operation": "radar"})
+        data = json.loads(result)
+
+        assert "markdown" not in data
+
+
+# ---------------------------------------------------------------------------
+# Persona operation
+# ---------------------------------------------------------------------------
+
+
+class TestPersonaPulseHandler:
+    """Test the persona operation."""
+
+    def test_missing_persona_returns_error(self, tmp_path: Any) -> None:
+        result = persona_pulse_handler(tmp_path, {"operation": "persona"})
+        data = json.loads(result)
+        assert "error" in data
+        assert "persona" in data["error"]
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_filters_by_persona(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_story_list.return_value = _story_list_data()
+        mock_coverage.return_value = _story_coverage_data()
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "admin"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert data["persona"] == "admin"
+        assert data["total_stories"] == 2  # ST-001 and ST-002
+        assert "Login" in data["working"]  # ST-001 is covered
+        assert "View Dashboard" in data["partial"]  # ST-002 is partial
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_experience_score(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_story_list.return_value = _story_list_data()
+        mock_coverage.return_value = _story_coverage_data()
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "customer"})
+        data = json.loads(result)
+
+        # customer has ST-003 (covered) and ST-004 (uncovered) → 1/2 = 50%
+        assert data["experience_score"] == 50.0
+        assert data["total_stories"] == 2
+        assert len(data["working"]) == 1
+        assert len(data["not_started"]) == 1
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_partial_name_match(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        """When exact match fails, tries partial match."""
+        mock_story_list.return_value = _story_list_data()
+        mock_coverage.return_value = _story_coverage_data()
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "cust"})
+        data = json.loads(result)
+
+        # "cust" partially matches "customer"
+        assert data["total_stories"] == 2
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_no_matching_persona(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_story_list.return_value = _story_list_data()
+        mock_coverage.return_value = _story_coverage_data()
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "nobody"})
+        data = json.loads(result)
+
+        assert data["total_stories"] == 0
+        assert data["experience_score"] == 0.0
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_markdown_output(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_story_list.return_value = _story_list_data()
+        mock_coverage.return_value = _story_coverage_data()
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "admin"})
+        data = json.loads(result)
+
+        md = data["markdown"]
+        assert "Viewing as: admin" in md
+        assert "[ok] Login" in md
+        assert "[..] View Dashboard" in md
+        assert "admin's experience:" in md
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    def test_handles_errors_gracefully(
+        self,
+        mock_story_list: Any,
+        mock_coverage: Any,
+        tmp_path: Any,
+    ) -> None:
+        """When data sources fail, persona still returns a valid response."""
+        mock_story_list.return_value = {"error": "no stories"}
+        mock_coverage.return_value = {"error": "no coverage"}
+
+        result = persona_pulse_handler(tmp_path, {"operation": "persona", "persona": "admin"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert data["total_stories"] == 0
+        assert data["experience_score"] == 0.0
