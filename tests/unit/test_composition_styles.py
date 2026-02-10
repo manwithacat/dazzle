@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -9,6 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from dazzle.core.composition_styles import DEFAULT_PROPERTIES
+
+_has_playwright = importlib.util.find_spec("playwright") is not None
 
 # ── Default Properties Tests ────────────────────────────────────────
 
@@ -184,6 +187,7 @@ class TestInspectStylesHandler:
 # ── Core Function Tests ─────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_playwright, reason="Playwright not installed")
 class TestInspectComputedStyles:
     """Test the core inspect_computed_styles function."""
 
