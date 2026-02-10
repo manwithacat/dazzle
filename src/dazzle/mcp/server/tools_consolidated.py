@@ -1435,19 +1435,22 @@ def get_consolidated_tools() -> list[Tool]:
             description=(
                 "Composition analysis: audit (DOM-level visual hierarchy audit), "
                 "capture (Playwright section-level screenshots), "
-                "analyze (LLM visual evaluation of captured screenshots). "
+                "analyze (LLM visual evaluation of captured screenshots), "
+                "report (combined audit+capture+analyze with merged scoring). "
                 "Audit computes attention weights using a 5-factor model and evaluates "
                 "composition rules. Capture takes section-level screenshots from a "
                 "running app. Analyze uses Claude vision to evaluate screenshots for "
                 "rendering fidelity, icon/media issues, color consistency, layout "
-                "overflow, visual hierarchy, and responsive fidelity."
+                "overflow, visual hierarchy, and responsive fidelity. Report runs "
+                "audit (always) + visual pipeline (when base_url given) and merges "
+                "into a combined score."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["audit", "capture", "analyze"],
+                        "enum": ["audit", "capture", "analyze", "report"],
                         "description": "Operation to perform",
                     },
                     "base_url": {

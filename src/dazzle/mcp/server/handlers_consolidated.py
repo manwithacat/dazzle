@@ -1505,6 +1505,7 @@ def handle_composition(arguments: dict[str, Any]) -> str:
         analyze_composition_handler,
         audit_composition_handler,
         capture_composition_handler,
+        report_composition_handler,
     )
 
     operation = arguments.get("operation")
@@ -1519,6 +1520,8 @@ def handle_composition(arguments: dict[str, Any]) -> str:
         return capture_composition_handler(project_path, arguments)
     elif operation == "analyze":
         return analyze_composition_handler(project_path, arguments)
+    elif operation == "report":
+        return report_composition_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown composition operation: {operation}"})
 

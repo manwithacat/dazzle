@@ -6,6 +6,7 @@ Operations:
 - ``audit`` — deterministic sitespec-based composition analysis
 - ``capture`` — Playwright section-level screenshot pipeline
 - ``analyze`` — LLM visual evaluation of captured screenshots
+- ``report`` — combined audit + capture + analyze with merged scoring
 """
 
 from __future__ import annotations
@@ -227,3 +228,222 @@ def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
             page_map[key].total_tokens_est += tokens
 
     return list(page_map.values())
+
+
+def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run combined composition report: audit + optional capture + analyze.
+
+    Always runs the deterministic DOM audit.  When ``base_url`` is provided,
+    also runs Playwright capture and LLM visual evaluation, then merges both
+    scores into a combined report.
+    """
+    from dazzle.core.composition import run_composition_audit
+    from dazzle.core.sitespec_loader import load_sitespec_with_copy
+
+    base_url: str | None = args.get("base_url")
+    routes_filter: list[str] | None = args.get("pages")
+    viewports: list[str] | None = args.get("viewports")
+    focus: list[str] | None = args.get("focus")
+    token_budget: int = args.get("token_budget", 50_000)
+
+    # Step 1: DOM audit (always runs)
+    try:
+        sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
+    except Exception as e:
+        logger.exception("Failed to load sitespec")
+        return json.dumps({"error": f"Failed to load sitespec: {e}"})
+
+    if not sitespec.pages:
+        return json.dumps(
+            {
+                "dom_score": 100,
+                "visual_score": None,
+                "combined_score": 100,
+                "summary": "No pages defined in sitespec",
+                "markdown": "# Composition Report\n\nNo pages to evaluate.",
+            }
+        )
+
+    try:
+        dom_result = run_composition_audit(sitespec, routes_filter=routes_filter)
+    except Exception as e:
+        logger.exception("DOM audit failed in report")
+        return json.dumps({"error": f"DOM audit failed: {e}"})
+
+    dom_score = dom_result.get("overall_score", 100)
+
+    # Step 2: Visual evaluation (only when base_url provided)
+    visual_report: dict[str, Any] | None = None
+    visual_score: int | None = None
+
+    if base_url:
+        try:
+            visual_report = _run_visual_pipeline(
+                project_path=project_path,
+                base_url=base_url,
+                sitespec=sitespec,
+                routes_filter=routes_filter,
+                viewports=viewports,
+                focus=focus,
+                token_budget=token_budget,
+            )
+            visual_score = visual_report.get("visual_score")
+        except Exception as e:
+            logger.warning("Visual pipeline failed, report will use DOM-only: %s", e)
+            visual_report = {"error": str(e)}
+
+    # Step 3: Combine scores
+    if visual_score is not None:
+        # Weighted average: DOM 40%, Visual 60% (visual catches rendering bugs)
+        combined_score = int(dom_score * 0.4 + visual_score * 0.6)
+    else:
+        combined_score = dom_score
+
+    # Build severity counts across both layers
+    dom_violations: dict[str, int] = {}
+    for page in dom_result.get("pages", []):
+        for sev, count in page.get("violations_count", {}).items():
+            dom_violations[sev] = dom_violations.get(sev, 0) + count
+
+    visual_findings = visual_report.get("findings_by_severity", {}) if visual_report else {}
+
+    total_findings = {
+        "high": dom_violations.get("high", 0) + visual_findings.get("high", 0),
+        "medium": dom_violations.get("medium", 0) + visual_findings.get("medium", 0),
+        "low": dom_violations.get("low", 0) + visual_findings.get("low", 0),
+    }
+
+    # Build summary
+    visual_part = (
+        f", visual {visual_score}/100"
+        if visual_score is not None
+        else " (visual: not run — provide base_url)"
+    )
+    summary = (
+        f"DOM {dom_score}/100{visual_part}, "
+        f"combined {combined_score}/100. "
+        f"Findings: {total_findings['high']} high, "
+        f"{total_findings['medium']} medium, {total_findings['low']} low"
+    )
+
+    # Build markdown
+    markdown = _build_combined_markdown(
+        dom_result, visual_report, dom_score, visual_score, combined_score
+    )
+
+    report = {
+        "dom_score": dom_score,
+        "visual_score": visual_score,
+        "combined_score": combined_score,
+        "findings_by_severity": total_findings,
+        "dom_report": dom_result,
+        "visual_report": visual_report,
+        "tokens_used": visual_report.get("tokens_used", 0) if visual_report else 0,
+        "summary": summary,
+        "markdown": markdown,
+    }
+
+    return json.dumps(report, indent=2)
+
+
+def _run_visual_pipeline(
+    *,
+    project_path: Path,
+    base_url: str,
+    sitespec: Any,
+    routes_filter: list[str] | None,
+    viewports: list[str] | None,
+    focus: list[str] | None,
+    token_budget: int,
+) -> dict[str, Any]:
+    """Run capture + analyze pipeline, returning the visual report dict."""
+    from dazzle.core.composition_capture import capture_page_sections
+    from dazzle.core.composition_visual import (
+        DIMENSIONS,
+        build_visual_report,
+        evaluate_captures,
+    )
+
+    output_dir = project_path / ".dazzle" / "composition" / "captures"
+
+    # Capture
+    captures = capture_page_sections(
+        base_url,
+        sitespec,
+        output_dir=output_dir,
+        viewports=viewports,
+        routes_filter=routes_filter,
+    )
+
+    if not captures:
+        return {
+            "visual_score": 100,
+            "findings_by_severity": {"high": 0, "medium": 0, "low": 0},
+            "tokens_used": 0,
+            "pages": [],
+            "summary": "No sections captured",
+            "markdown": "",
+        }
+
+    # Analyze
+    dimensions: list[str] | None = None
+    if focus:
+        dimensions = [d for d in DIMENSIONS if d in focus]
+
+    results = evaluate_captures(
+        captures,
+        dimensions=dimensions,
+        token_budget=token_budget,
+    )
+
+    return build_visual_report(results)
+
+
+def _build_combined_markdown(
+    dom_result: dict[str, Any],
+    visual_report: dict[str, Any] | None,
+    dom_score: int,
+    visual_score: int | None,
+    combined_score: int,
+) -> str:
+    """Build combined markdown report."""
+    lines = [
+        "# Composition Report",
+        "",
+        f"**Combined Score: {combined_score}/100**",
+        "",
+    ]
+
+    # DOM section
+    lines.append(f"## DOM Audit: {dom_score}/100")
+    lines.append("")
+    dom_md = dom_result.get("markdown", "")
+    if dom_md:
+        # Strip the top-level heading from DOM markdown (we have our own)
+        for line in dom_md.split("\n"):
+            if line.startswith("# "):
+                continue
+            lines.append(line)
+    lines.append("")
+
+    # Visual section
+    if visual_score is not None and visual_report:
+        lines.append(f"## Visual Evaluation: {visual_score}/100")
+        lines.append("")
+        visual_md = visual_report.get("markdown", "")
+        if visual_md:
+            for line in visual_md.split("\n"):
+                if line.startswith("# "):
+                    continue
+                lines.append(line)
+    elif visual_report and "error" in visual_report:
+        lines.append("## Visual Evaluation: Skipped")
+        lines.append("")
+        lines.append(f"Error: {visual_report['error']}")
+    else:
+        lines.append("## Visual Evaluation: Not Run")
+        lines.append("")
+        lines.append("Provide `base_url` to enable visual evaluation.")
+
+    lines.append("")
+    return "\n".join(lines)
