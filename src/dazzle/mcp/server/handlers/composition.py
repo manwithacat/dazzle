@@ -5,6 +5,7 @@ Provides visual hierarchy auditing via the ``composition`` MCP tool.
 Operations:
 - ``audit`` — deterministic sitespec-based composition analysis
 - ``capture`` — Playwright section-level screenshot pipeline
+- ``analyze`` — LLM visual evaluation of captured screenshots
 """
 
 from __future__ import annotations
@@ -107,3 +108,122 @@ def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str
     except Exception as e:
         logger.exception("Composition capture failed")
         return json.dumps({"error": str(e)})
+
+
+def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run LLM visual evaluation on previously captured screenshots.
+
+    Loads captures from ``.dazzle/composition/captures/``, applies
+    dimension-specific preprocessing, and submits to Claude's vision API.
+    Requires ``ANTHROPIC_API_KEY`` environment variable or a running
+    capture to evaluate.
+    """
+    from dazzle.core.composition_visual import (
+        DIMENSIONS,
+        build_visual_report,
+        evaluate_captures,
+    )
+
+    focus: list[str] | None = args.get("focus")
+    token_budget: int = args.get("token_budget", 50_000)
+    captures_dir = project_path / ".dazzle" / "composition" / "captures"
+
+    if not captures_dir.exists():
+        return json.dumps(
+            {
+                "error": (
+                    "No captures found. Run composition(operation='capture') first "
+                    "to take screenshots."
+                )
+            }
+        )
+
+    # Reconstruct captures from saved files
+    captures = _load_captures_from_dir(captures_dir)
+    if not captures:
+        return json.dumps({"error": "No capture files found in " + str(captures_dir)})
+
+    # Filter dimensions if focus specified
+    dimensions: list[str] | None = None
+    if focus:
+        dimensions = [d for d in DIMENSIONS if d in focus]
+        if not dimensions:
+            return json.dumps(
+                {"error": f"No valid dimensions in focus: {focus}. Valid: {DIMENSIONS}"}
+            )
+
+    try:
+        results = evaluate_captures(
+            captures,
+            dimensions=dimensions,
+            token_budget=token_budget,
+        )
+        report = build_visual_report(results)
+        return json.dumps(report, indent=2)
+    except ImportError as e:
+        return json.dumps({"error": str(e)})
+    except Exception as e:
+        logger.exception("Visual evaluation failed")
+        return json.dumps({"error": str(e)})
+
+
+def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
+    """Reconstruct CapturedPage objects from screenshot files on disk.
+
+    Groups files by route-viewport and builds CapturedPage/CapturedSection
+    objects from the naming convention: ``{slug}-{viewport}-{section}.png``.
+    """
+    from dazzle.core.composition_capture import CapturedPage, CapturedSection
+
+    # Group PNG files by route-viewport prefix
+    png_files = sorted(captures_dir.glob("*.png"))
+    if not png_files:
+        return []
+
+    # Parse filenames: {slug}-{viewport}-{section_type}.png
+    # or {slug}-{viewport}-full.png for full-page captures
+    page_map: dict[tuple[str, str], CapturedPage] = {}
+
+    for f in png_files:
+        stem = f.stem
+        # Skip preprocessed variants
+        if stem.endswith(("-opt", "-blur", "-edges", "-mono", "-quant")):
+            continue
+
+        parts = stem.rsplit("-", 2)
+        if len(parts) < 3:
+            continue
+
+        slug, viewport, section_type = parts[0], parts[1], parts[2]
+        route = "/" if slug == "index" else f"/{slug.replace('-', '/')}"
+        key = (route, viewport)
+
+        if key not in page_map:
+            page_map[key] = CapturedPage(route=route, viewport=viewport)
+
+        if section_type == "full":
+            page_map[key].full_page = str(f)
+        else:
+            try:
+                from PIL import Image
+
+                with Image.open(f) as img:
+                    w, h = img.size
+            except (ImportError, Exception):
+                w, h = 1280, 400  # fallback
+
+            from dazzle.core.composition_capture import estimate_tokens
+
+            tokens = estimate_tokens(w, h)
+            page_map[key].sections.append(
+                CapturedSection(
+                    section_type=section_type,
+                    path=str(f),
+                    width=w,
+                    height=h,
+                    tokens_est=tokens,
+                )
+            )
+            page_map[key].total_tokens_est += tokens
+
+    return list(page_map.values())

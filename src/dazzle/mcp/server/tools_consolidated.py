@@ -1428,23 +1428,26 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
-        # Composition (deterministic visual hierarchy audit)
+        # Composition (visual hierarchy audit + LLM evaluation)
         # =====================================================================
         Tool(
             name="composition",
             description=(
                 "Composition analysis: audit (DOM-level visual hierarchy audit), "
-                "capture (Playwright section-level screenshots). "
+                "capture (Playwright section-level screenshots), "
+                "analyze (LLM visual evaluation of captured screenshots). "
                 "Audit computes attention weights using a 5-factor model and evaluates "
                 "composition rules. Capture takes section-level screenshots from a "
-                "running app for visual evaluation."
+                "running app. Analyze uses Claude vision to evaluate screenshots for "
+                "rendering fidelity, icon/media issues, color consistency, layout "
+                "overflow, visual hierarchy, and responsive fidelity."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["audit", "capture"],
+                        "enum": ["audit", "capture", "analyze"],
                         "description": "Operation to perform",
                     },
                     "base_url": {
@@ -1460,6 +1463,19 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": 'Viewport names for capture (default: ["desktop"]). Options: desktop, mobile',
+                    },
+                    "focus": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "Visual eval dimensions to focus on (for analyze). "
+                            "Options: content_rendering, icon_media, color_consistency, "
+                            "layout_overflow, visual_hierarchy, responsive_fidelity"
+                        ),
+                    },
+                    "token_budget": {
+                        "type": "integer",
+                        "description": "Max tokens for visual analysis (default: 50000)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
