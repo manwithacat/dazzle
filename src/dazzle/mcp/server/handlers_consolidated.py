@@ -1458,6 +1458,27 @@ def handle_pipeline(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Pulse (founder-ready health report)
+# =============================================================================
+
+
+def handle_pulse(arguments: dict[str, Any]) -> str:
+    """Handle pulse (founder-ready health report) operations."""
+    from .handlers.pulse import run_pulse_handler
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "run":
+        return run_pulse_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown pulse operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1485,6 +1506,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "pipeline": handle_pipeline,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
+    "pulse": handle_pulse,
 }
 
 

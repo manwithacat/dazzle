@@ -1372,6 +1372,40 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Pulse (founder-ready health report)
+        # =====================================================================
+        Tool(
+            name="pulse",
+            description=(
+                "Founder-ready project health report. "
+                "Chains pipeline, story coverage, site coherence, policy coverage, "
+                "and compliance into a single plain-language briefing. "
+                "Returns a Launch Readiness score, 6-axis radar, "
+                "decisions needing founder input, recent wins, and blockers. "
+                "Output: structured JSON with a 'markdown' field containing "
+                "the human-readable report."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["run"],
+                        "description": "Operation to perform",
+                    },
+                    "business_context": {
+                        "type": "string",
+                        "description": (
+                            "Business type hint for coherence check "
+                            "(saas, marketplace, agency, ecommerce)"
+                        ),
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 
