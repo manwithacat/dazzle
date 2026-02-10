@@ -1506,6 +1506,7 @@ async def handle_composition(arguments: dict[str, Any]) -> str:
         audit_composition_handler,
         bootstrap_composition_handler,
         capture_composition_handler,
+        inspect_styles_handler,
         report_composition_handler,
     )
 
@@ -1525,6 +1526,8 @@ async def handle_composition(arguments: dict[str, Any]) -> str:
         return await report_composition_handler(project_path, arguments)
     elif operation == "bootstrap":
         return bootstrap_composition_handler(project_path, arguments)
+    elif operation == "inspect_styles":
+        return await inspect_styles_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown composition operation: {operation}"})
 

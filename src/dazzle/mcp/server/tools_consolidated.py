@@ -1445,14 +1445,23 @@ def get_consolidated_tools() -> list[Tool]:
                 "overflow, visual hierarchy, and responsive fidelity. Report runs "
                 "audit (always) + visual pipeline (when base_url given) and merges "
                 "into a combined score. Bootstrap generates synthetic reference images "
-                "for few-shot visual evaluation prompts."
+                "for few-shot visual evaluation prompts. Inspect_styles extracts "
+                "computed CSS styles via Playwright getComputedStyle() for agent-driven "
+                "layout diagnosis (zero LLM tokens)."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["audit", "capture", "analyze", "report", "bootstrap"],
+                        "enum": [
+                            "audit",
+                            "capture",
+                            "analyze",
+                            "report",
+                            "bootstrap",
+                            "inspect_styles",
+                        ],
                         "description": "Operation to perform",
                     },
                     "base_url": {
@@ -1481,6 +1490,27 @@ def get_consolidated_tools() -> list[Tool]:
                     "token_budget": {
                         "type": "integer",
                         "description": "Max tokens for visual analysis (default: 50000)",
+                    },
+                    "route": {
+                        "type": "string",
+                        "description": 'Page route to inspect (for inspect_styles, default: "/")',
+                    },
+                    "selectors": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": (
+                            "Label-to-CSS-selector mapping (for inspect_styles). "
+                            'E.g. {"hero": ".dz-hero-with-media", "media": ".dz-hero-media"}'
+                        ),
+                    },
+                    "properties": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "CSS properties to inspect (for inspect_styles). "
+                            "Defaults to layout properties: display, flex-direction, position, "
+                            "width, height, overflow, gap, etc."
+                        ),
                     },
                     "overwrite": {
                         "type": "boolean",

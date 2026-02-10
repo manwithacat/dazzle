@@ -8,6 +8,7 @@ Operations:
 - ``analyze`` — LLM visual evaluation of captured screenshots
 - ``report`` — combined audit + capture + analyze with merged scoring
 - ``bootstrap`` — generate synthetic reference library for few-shot visual evaluation
+- ``inspect_styles`` — extract computed CSS styles via Playwright for diagnosis
 """
 
 from __future__ import annotations
@@ -533,6 +534,61 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
                 f"across {len(by_section)} section types (~{tokens:,} tokens). "
                 f"Stored in {ref_dir}"
             ),
+        },
+        indent=2,
+    )
+
+
+async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> str:
+    """Extract computed CSS styles from a running app via Playwright.
+
+    Diagnostic tool for agents investigating layout issues detected by
+    the geometry audit.  Zero LLM tokens — pure ``getComputedStyle()``.
+    """
+    from dazzle.core.composition_styles import inspect_computed_styles
+
+    base_url: str | None = args.get("base_url")
+    if not base_url:
+        return json.dumps(
+            {"error": "base_url is required for inspect_styles (e.g. http://localhost:3000)"}
+        )
+
+    route: str = args.get("route", "/")
+    selectors: dict[str, str] | None = args.get("selectors")
+    if not selectors:
+        return json.dumps({"error": "selectors is required — dict mapping label to CSS selector"})
+
+    properties: list[str] | None = args.get("properties")
+
+    try:
+        results = await inspect_computed_styles(
+            base_url=base_url,
+            route=route,
+            selectors=selectors,
+            properties=properties,
+        )
+    except ImportError as e:
+        return json.dumps({"error": str(e)})
+    except RuntimeError as e:
+        return json.dumps({"error": str(e)})
+    except Exception as e:
+        logger.exception("Style inspection failed")
+        return json.dumps({"error": str(e)})
+
+    not_found = [label for label, styles in results.items() if styles is None]
+    found = {label: styles for label, styles in results.items() if styles is not None}
+
+    summary_parts = [f"Inspected {len(found)}/{len(selectors)} selectors on {route}"]
+    if not_found:
+        summary_parts.append(f"Not found: {', '.join(not_found)}")
+
+    return json.dumps(
+        {
+            "styles": results,
+            "route": route,
+            "properties_inspected": properties or [],
+            "selectors_not_found": not_found,
+            "summary": ". ".join(summary_parts),
         },
         indent=2,
     )
