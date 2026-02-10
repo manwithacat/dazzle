@@ -390,6 +390,28 @@ class TestBuildVisualReport:
         report = build_visual_report(results)
         assert report["visual_score"] == 90  # (80+100)//2
 
+    def test_report_includes_skip_diagnostics(self) -> None:
+        result = PageVisualResult(
+            route="/",
+            viewport="desktop",
+            visual_score=100,
+            tokens_used=0,
+            dimensions_skipped=[
+                {"dimension": "hero:content_rendering", "reason": "evaluation_failed"},
+                {"dimension": "hero:icon_media", "reason": "evaluation_failed"},
+            ],
+        )
+        report = build_visual_report([result])
+        assert report["dimensions_skipped_total"] == 2
+        assert "2 dimension(s) skipped" in report["summary"]
+        assert report["pages"][0]["dimensions_skipped"] == result.dimensions_skipped
+
+    def test_report_omits_skip_fields_when_none_skipped(self) -> None:
+        result = PageVisualResult(route="/", viewport="desktop", visual_score=100, tokens_used=500)
+        report = build_visual_report([result])
+        assert "dimensions_skipped_total" not in report
+        assert "dimensions_skipped" not in report["pages"][0]
+
 
 # ── Evaluate Captures Tests ──────────────────────────────────────────
 
@@ -513,12 +535,29 @@ class TestEvaluateCaptures:
             ],
         )
 
-        evaluate_captures(
+        results = evaluate_captures(
             [capture],
             dimensions=["content_rendering"],
         )
 
         assert not mock_api.called
+        assert results[0].dimensions_evaluated == []
+        assert len(results[0].dimensions_skipped) == 1
+        assert results[0].dimensions_skipped[0]["dimension"] == "hero:content_rendering"
+
+    @patch("dazzle.core.composition_visual._call_vision_api")
+    def test_api_failure_tracked_as_skipped(self, mock_api: Any, tmp_path: Any) -> None:
+        mock_api.side_effect = RuntimeError("API key not set")
+        capture = self._make_capture(tmp_path)
+
+        results = evaluate_captures(
+            [capture],
+            dimensions=["content_rendering"],
+        )
+
+        assert results[0].dimensions_evaluated == []
+        assert len(results[0].dimensions_skipped) == 1
+        assert results[0].tokens_used == 0
 
 
 # ── MCP Handler Tests ────────────────────────────────────────────────

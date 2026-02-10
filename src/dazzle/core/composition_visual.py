@@ -47,6 +47,7 @@ class PageVisualResult:
     visual_score: int = 100
     tokens_used: int = 0
     dimensions_evaluated: list[str] = field(default_factory=list)
+    dimensions_skipped: list[dict[str, str]] = field(default_factory=list)
 
 
 # ── Evaluation Dimensions ────────────────────────────────────────────
@@ -444,6 +445,7 @@ def evaluate_captures(
                     )
                     break
 
+                dim_label = f"{section.section_type}:{dim}"
                 findings, tokens = _evaluate_section_dimension(
                     section=section,
                     dimension=dim,
@@ -453,10 +455,15 @@ def evaluate_captures(
                     model=model,
                 )
 
-                page_result.findings.extend(findings)
-                page_result.dimensions_evaluated.append(f"{section.section_type}:{dim}")
-                total_tokens_used += tokens
-                page_result.tokens_used += tokens
+                if tokens > 0:
+                    page_result.findings.extend(findings)
+                    page_result.dimensions_evaluated.append(dim_label)
+                    total_tokens_used += tokens
+                    page_result.tokens_used += tokens
+                else:
+                    page_result.dimensions_skipped.append(
+                        {"dimension": dim_label, "reason": "evaluation_failed"}
+                    )
 
         # Score: deduct points per finding by severity
         page_result.visual_score = _score_findings(page_result.findings)
@@ -491,7 +498,7 @@ def _evaluate_section_dimension(
     """
     img_path = Path(section.path)
     if not img_path.exists():
-        logger.warning("Screenshot not found: %s", img_path)
+        logger.warning("Screenshot not found: %s — skipping evaluation", img_path)
         return [], 0
 
     # Apply dimension-specific preprocessing
@@ -501,7 +508,7 @@ def _evaluate_section_dimension(
     # Build prompt
     prompt_builder = DIMENSION_PROMPT_BUILDERS.get(dimension)
     if not prompt_builder:
-        logger.warning("No prompt builder for dimension: %s", dimension)
+        logger.warning("No prompt builder for dimension: %s — skipping", dimension)
         return [], 0
 
     prompt = prompt_builder(section.section_type, spec_context)
@@ -547,9 +554,10 @@ def _evaluate_section_dimension(
         return findings, tokens
     except Exception as e:
         logger.error(
-            "Visual evaluation failed for %s/%s: %s",
+            "Visual evaluation failed for %s/%s: %s: %s",
             section.section_type,
             dimension,
+            type(e).__name__,
             e,
         )
         return [], 0
@@ -572,20 +580,23 @@ def build_visual_report(results: list[PageVisualResult]) -> dict[str, Any]:
     pages_data = []
     all_findings: list[VisualFinding] = []
     total_tokens = 0
+    total_skipped = 0
 
     for page in results:
         all_findings.extend(page.findings)
         total_tokens += page.tokens_used
-        pages_data.append(
-            {
-                "route": page.route,
-                "viewport": page.viewport,
-                "visual_score": page.visual_score,
-                "findings": [asdict(f) for f in page.findings],
-                "tokens_used": page.tokens_used,
-                "dimensions_evaluated": page.dimensions_evaluated,
-            }
-        )
+        total_skipped += len(page.dimensions_skipped)
+        page_dict: dict[str, Any] = {
+            "route": page.route,
+            "viewport": page.viewport,
+            "visual_score": page.visual_score,
+            "findings": [asdict(f) for f in page.findings],
+            "tokens_used": page.tokens_used,
+            "dimensions_evaluated": page.dimensions_evaluated,
+        }
+        if page.dimensions_skipped:
+            page_dict["dimensions_skipped"] = page.dimensions_skipped
+        pages_data.append(page_dict)
 
     # Overall score: average of page scores (or 100 if no pages)
     if results:
@@ -607,10 +618,12 @@ def build_visual_report(results: list[PageVisualResult]) -> dict[str, Any]:
         f"visual score {overall_score}/100, "
         f"~{total_tokens:,} tokens used"
     )
+    if total_skipped:
+        summary += f", {total_skipped} dimension(s) skipped"
 
     markdown = _build_visual_markdown(pages_data, overall_score, severity_counts)
 
-    return {
+    report: dict[str, Any] = {
         "pages": pages_data,
         "visual_score": overall_score,
         "findings_by_severity": severity_counts,
@@ -618,6 +631,9 @@ def build_visual_report(results: list[PageVisualResult]) -> dict[str, Any]:
         "summary": summary,
         "markdown": markdown,
     }
+    if total_skipped:
+        report["dimensions_skipped_total"] = total_skipped
+    return report
 
 
 def _build_visual_markdown(
