@@ -16,9 +16,9 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = None  # type: ignore[misc, assignment]
-    Depends = None  # type: ignore[misc, assignment]
+    Depends = None  # type: ignore[assignment]
     HTTPException = None  # type: ignore[misc, assignment]
-    Query = None  # type: ignore[misc, assignment]
+    Query = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.audit_log import AuditLogger

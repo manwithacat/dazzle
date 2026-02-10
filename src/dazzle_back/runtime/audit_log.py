@@ -45,7 +45,7 @@ class AuditLogger:
         self._stopped = False
         self._init_db()
 
-    def _get_connection(self) -> Any:
+    def _get_connection(self) -> tuple[Any, str]:
         """Get a database connection."""
         try:
             import psycopg
@@ -58,9 +58,9 @@ class AuditLogger:
 
         import sqlite3
 
-        conn = sqlite3.connect(self._database_url.replace("sqlite:///", ""))
-        conn.row_factory = sqlite3.Row
-        return conn, "sqlite"
+        sq_conn = sqlite3.connect(self._database_url.replace("sqlite:///", ""))
+        sq_conn.row_factory = sqlite3.Row
+        return sq_conn, "sqlite"
 
     def _init_db(self) -> None:
         """Create the audit log table if it doesn't exist."""

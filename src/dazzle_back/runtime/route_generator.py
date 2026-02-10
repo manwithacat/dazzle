@@ -346,6 +346,7 @@ def create_read_handler(
                 if hasattr(result, "model_dump")
                 else (result if isinstance(result, dict) else {})
             )
+            assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
                 cedar_access_spec, AccessOperationKind.READ, record, ctx
             )
@@ -480,6 +481,7 @@ def create_create_handler(
                 is_superuser=getattr(user, "is_superuser", False) if user else False,
             )
 
+            assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
                 cedar_access_spec, AccessOperationKind.CREATE, None, ctx
             )
@@ -613,6 +615,7 @@ def create_update_handler(
                 if hasattr(existing, "model_dump")
                 else (existing if isinstance(existing, dict) else {})
             )
+            assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
                 cedar_access_spec, AccessOperationKind.UPDATE, record, ctx
             )
@@ -746,6 +749,7 @@ def create_delete_handler(
                 if hasattr(existing, "model_dump")
                 else (existing if isinstance(existing, dict) else {})
             )
+            assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
                 cedar_access_spec, AccessOperationKind.DELETE, record, ctx
             )

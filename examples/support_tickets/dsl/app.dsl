@@ -51,7 +51,7 @@ entity Ticket "Support Ticket":
   # extends: Timestamped
   intent: "Track customer issues through resolution with SLA awareness"
   domain: support
-  patterns: lifecycle, workflow, audit
+  patterns: lifecycle, workflow, audit_trail
 
   id: uuid pk
   ticket_number: str(20) unique
@@ -96,7 +96,7 @@ entity Ticket "Support Ticket":
 entity Comment "Comment":
   intent: "Enable threaded communication on tickets with internal notes for agents"
   domain: support
-  patterns: audit, messaging
+  patterns: audit_trail, messaging
 
   id: uuid pk
   ticket: ref Ticket required
