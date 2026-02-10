@@ -29,16 +29,16 @@
   pointer-events: none;
 }
 
-/* Hero with Media Image */
-.dz-hero-with-media .dz-section-content {
+/* Hero with Media Image — flex on the section to create two columns */
+.dz-hero-with-media {
   display: flex;
   align-items: center;
   gap: 3rem;
-  text-align: left;
 }
 
-.dz-hero-text {
+.dz-hero-with-media .dz-section-content {
   flex: 1;
+  text-align: left;
 }
 
 .dz-hero-with-media .dz-cta-group {
@@ -58,8 +58,12 @@
 }
 
 @media (max-width: 768px) {
-  .dz-hero-with-media .dz-section-content {
+  .dz-hero-with-media {
     flex-direction: column;
+    text-align: center;
+  }
+
+  .dz-hero-with-media .dz-section-content {
     text-align: center;
   }
 
