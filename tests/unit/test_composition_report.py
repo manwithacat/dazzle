@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # ── Report Handler Tests ─────────────────────────────────────────────
 
@@ -29,7 +31,8 @@ class TestReportCompositionHandler:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    def test_dom_only_report(self, mock_audit: Any, mock_load: Any, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_dom_only_report(self, mock_audit: Any, mock_load: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             report_composition_handler,
         )
@@ -48,7 +51,7 @@ class TestReportCompositionHandler:
             "markdown": "# Composition Audit\n\nScore: 95/100",
         }
 
-        result = report_composition_handler(tmp_path, {"operation": "report"})
+        result = await report_composition_handler(tmp_path, {"operation": "report"})
         data = json.loads(result)
 
         assert data["dom_score"] == 95
@@ -58,14 +61,15 @@ class TestReportCompositionHandler:
         assert "visual: not run" in data["summary"]
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
-    def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             report_composition_handler,
         )
 
         mock_load.return_value = self._mock_sitespec(with_pages=False)
 
-        result = report_composition_handler(tmp_path, {"operation": "report"})
+        result = await report_composition_handler(tmp_path, {"operation": "report"})
         data = json.loads(result)
 
         assert data["dom_score"] == 100
@@ -74,8 +78,12 @@ class TestReportCompositionHandler:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    @patch("dazzle.mcp.server.handlers.composition._run_visual_pipeline")
-    def test_combined_report_with_visual(
+    @patch(
+        "dazzle.mcp.server.handlers.composition._run_visual_pipeline",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_combined_report_with_visual(
         self,
         mock_visual: Any,
         mock_audit: Any,
@@ -108,7 +116,7 @@ class TestReportCompositionHandler:
             "markdown": "# Visual Evaluation\n\nScore: 80/100",
         }
 
-        result = report_composition_handler(
+        result = await report_composition_handler(
             tmp_path,
             {"operation": "report", "base_url": "http://localhost:3000"},
         )
@@ -124,8 +132,12 @@ class TestReportCompositionHandler:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    @patch("dazzle.mcp.server.handlers.composition._run_visual_pipeline")
-    def test_visual_pipeline_failure_degrades_gracefully(
+    @patch(
+        "dazzle.mcp.server.handlers.composition._run_visual_pipeline",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_visual_pipeline_failure_degrades_gracefully(
         self,
         mock_visual: Any,
         mock_audit: Any,
@@ -151,7 +163,7 @@ class TestReportCompositionHandler:
         }
         mock_visual.side_effect = ImportError("Playwright not installed")
 
-        result = report_composition_handler(
+        result = await report_composition_handler(
             tmp_path,
             {"operation": "report", "base_url": "http://localhost:3000"},
         )
@@ -164,7 +176,10 @@ class TestReportCompositionHandler:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    def test_passes_routes_filter(self, mock_audit: Any, mock_load: Any, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_passes_routes_filter(
+        self, mock_audit: Any, mock_load: Any, tmp_path: Any
+    ) -> None:
         from dazzle.mcp.server.handlers.composition import (
             report_composition_handler,
         )
@@ -177,7 +192,7 @@ class TestReportCompositionHandler:
             "markdown": "",
         }
 
-        report_composition_handler(
+        await report_composition_handler(
             tmp_path,
             {"operation": "report", "pages": ["/about"]},
         )
@@ -264,8 +279,12 @@ class TestScoreCombination:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    @patch("dazzle.mcp.server.handlers.composition._run_visual_pipeline")
-    def test_perfect_scores(
+    @patch(
+        "dazzle.mcp.server.handlers.composition._run_visual_pipeline",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_perfect_scores(
         self,
         mock_visual: Any,
         mock_audit: Any,
@@ -292,7 +311,7 @@ class TestScoreCombination:
             "markdown": "",
         }
 
-        result = report_composition_handler(
+        result = await report_composition_handler(
             tmp_path,
             {"operation": "report", "base_url": "http://localhost:3000"},
         )
@@ -301,8 +320,12 @@ class TestScoreCombination:
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
-    @patch("dazzle.mcp.server.handlers.composition._run_visual_pipeline")
-    def test_dom_100_visual_0(
+    @patch(
+        "dazzle.mcp.server.handlers.composition._run_visual_pipeline",
+        new_callable=AsyncMock,
+    )
+    @pytest.mark.asyncio
+    async def test_dom_100_visual_0(
         self,
         mock_visual: Any,
         mock_audit: Any,
@@ -329,7 +352,7 @@ class TestScoreCombination:
             "markdown": "",
         }
 
-        result = report_composition_handler(
+        result = await report_composition_handler(
             tmp_path,
             {"operation": "report", "base_url": "http://localhost:3000"},
         )

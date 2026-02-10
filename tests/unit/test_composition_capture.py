@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from dazzle.core.composition_capture import (
     CapturedPage,
@@ -184,19 +186,21 @@ class TestCapturedModels:
 class TestCaptureCompositionHandler:
     """Test the capture MCP handler."""
 
-    def test_requires_base_url(self, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_requires_base_url(self, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             capture_composition_handler,
         )
 
-        result = capture_composition_handler(tmp_path, {})
+        result = await capture_composition_handler(tmp_path, {})
         data = json.loads(result)
         assert "error" in data
         assert "base_url" in data["error"]
 
-    @patch("dazzle.core.composition_capture.capture_page_sections")
+    @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
-    def test_returns_capture_data(
+    @pytest.mark.asyncio
+    async def test_returns_capture_data(
         self,
         mock_load: Any,
         mock_capture: Any,
@@ -219,7 +223,7 @@ class TestCaptureCompositionHandler:
             )
         ]
 
-        result = capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
+        result = await capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
         data = json.loads(result)
 
         assert data["total_sections"] == 2
@@ -228,19 +232,21 @@ class TestCaptureCompositionHandler:
         assert len(data["captures"]) == 1
 
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
-    def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             capture_composition_handler,
         )
 
         mock_load.return_value = MagicMock(pages=[])
-        result = capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
+        result = await capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
         data = json.loads(result)
         assert data["captures"] == []
 
-    @patch("dazzle.core.composition_capture.capture_page_sections")
+    @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
-    def test_passes_filters(
+    @pytest.mark.asyncio
+    async def test_passes_filters(
         self,
         mock_load: Any,
         mock_capture: Any,
@@ -253,7 +259,7 @@ class TestCaptureCompositionHandler:
         mock_load.return_value = MagicMock(pages=[MagicMock()])
         mock_capture.return_value = []
 
-        capture_composition_handler(
+        await capture_composition_handler(
             tmp_path,
             {
                 "base_url": "http://localhost:3000",
@@ -266,7 +272,8 @@ class TestCaptureCompositionHandler:
         assert call_kwargs.kwargs["routes_filter"] == ["/about"]
         assert call_kwargs.kwargs["viewports"] == ["mobile"]
 
-    def test_playwright_import_error(self, tmp_path: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_playwright_import_error(self, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             capture_composition_handler,
         )
@@ -275,11 +282,14 @@ class TestCaptureCompositionHandler:
             patch("dazzle.core.sitespec_loader.load_sitespec_with_copy") as mock_load,
             patch(
                 "dazzle.core.composition_capture.capture_page_sections",
+                new_callable=AsyncMock,
                 side_effect=ImportError("Playwright not installed"),
             ),
         ):
             mock_load.return_value = MagicMock(pages=[MagicMock()])
-            result = capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
+            result = await capture_composition_handler(
+                tmp_path, {"base_url": "http://localhost:3000"}
+            )
             data = json.loads(result)
             assert "error" in data
             assert "Playwright" in data["error"]

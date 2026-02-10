@@ -1499,7 +1499,7 @@ def handle_pulse(arguments: dict[str, Any]) -> str:
         return json.dumps({"error": f"Unknown pulse operation: {operation}"})
 
 
-def handle_composition(arguments: dict[str, Any]) -> str:
+async def handle_composition(arguments: dict[str, Any]) -> str:
     """Handle composition analysis operations."""
     from .handlers.composition import (
         analyze_composition_handler,
@@ -1518,11 +1518,11 @@ def handle_composition(arguments: dict[str, Any]) -> str:
     if operation == "audit":
         return audit_composition_handler(project_path, arguments)
     elif operation == "capture":
-        return capture_composition_handler(project_path, arguments)
+        return await capture_composition_handler(project_path, arguments)
     elif operation == "analyze":
         return analyze_composition_handler(project_path, arguments)
     elif operation == "report":
-        return report_composition_handler(project_path, arguments)
+        return await report_composition_handler(project_path, arguments)
     elif operation == "bootstrap":
         return bootstrap_composition_handler(project_path, arguments)
     else:

@@ -104,7 +104,7 @@ DEFAULT_VIEWPORTS: dict[str, dict[str, int]] = {
 }
 
 
-def capture_page_sections(
+async def capture_page_sections(
     base_url: str,
     sitespec: SiteSpec,
     *,
@@ -115,7 +115,7 @@ def capture_page_sections(
 ) -> list[CapturedPage]:
     """Capture section-level screenshots from a running Dazzle app.
 
-    Uses Playwright's sync API to navigate to each page, locate
+    Uses Playwright's async API to navigate to each page, locate
     ``section.dz-section.dz-section-{type}`` elements, and capture
     clipped screenshots of each section.
 
@@ -134,7 +134,7 @@ def capture_page_sections(
         ImportError: If Playwright is not installed.
     """
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.async_api import async_playwright
     except ImportError:
         raise ImportError(
             "Playwright is required for composition capture. "
@@ -145,18 +145,18 @@ def capture_page_sections(
     output_dir.mkdir(parents=True, exist_ok=True)
     results: list[CapturedPage] = []
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
 
         for vp_name in vp_names:
             vp_size = DEFAULT_VIEWPORTS.get(vp_name, DEFAULT_VIEWPORTS["desktop"])
-            context = browser.new_context(
+            context = await browser.new_context(
                 viewport={
                     "width": vp_size["width"],
                     "height": vp_size["height"],
                 }
             )
-            page = context.new_page()
+            page = await context.new_page()
             page.set_default_timeout(15000)
 
             for spec_page in sitespec.pages:
@@ -164,7 +164,7 @@ def capture_page_sections(
                 if routes_filter and route not in routes_filter:
                     continue
 
-                captured = _capture_single_page(
+                captured = await _capture_single_page(
                     page=page,
                     base_url=base_url,
                     route=route,
@@ -175,14 +175,14 @@ def capture_page_sections(
                 )
                 results.append(captured)
 
-            context.close()
+            await context.close()
 
-        browser.close()
+        await browser.close()
 
     return results
 
 
-def _capture_single_page(
+async def _capture_single_page(
     *,
     page: Any,
     base_url: str,
@@ -197,9 +197,9 @@ def _capture_single_page(
     result = CapturedPage(route=route, viewport=viewport_name)
 
     try:
-        page.goto(url, wait_until="networkidle", timeout=15000)
+        await page.goto(url, wait_until="networkidle", timeout=15000)
         # Extra wait for dynamic content (icons, lazy images)
-        page.wait_for_timeout(1500)
+        await page.wait_for_timeout(1500)
     except Exception as e:
         logger.warning("Failed to navigate to %s: %s", url, e)
         return result
@@ -208,7 +208,7 @@ def _capture_single_page(
     slug = route.strip("/").replace("/", "-") or "index"
     full_path = output_dir / f"{slug}-{viewport_name}-full.png"
     try:
-        page.screenshot(path=str(full_path), full_page=True)
+        await page.screenshot(path=str(full_path), full_page=True)
         result.full_page = str(full_path)
     except Exception as e:
         logger.warning("Full page screenshot failed for %s: %s", route, e)
@@ -216,7 +216,7 @@ def _capture_single_page(
     # Capture each section
     for section in spec_page.sections:
         sec_type = section.type.value if hasattr(section.type, "value") else str(section.type)
-        captured = _capture_section(
+        captured = await _capture_section(
             page=page,
             section_type=sec_type,
             slug=slug,
@@ -231,7 +231,7 @@ def _capture_single_page(
     return result
 
 
-def _capture_section(
+async def _capture_section(
     *,
     page: Any,
     section_type: str,
@@ -244,12 +244,12 @@ def _capture_section(
     selector = f"section.dz-section.dz-section-{section_type}"
 
     try:
-        element = page.query_selector(selector)
+        element = await page.query_selector(selector)
         if not element:
             logger.debug("Section %s not found on page", section_type)
             return None
 
-        bbox = element.bounding_box()
+        bbox = await element.bounding_box()
         if not bbox:
             return None
 
@@ -264,7 +264,7 @@ def _capture_section(
 
         filename = f"{slug}-{viewport_name}-{section_type}.png"
         filepath = output_dir / filename
-        page.screenshot(path=str(filepath), clip=clip)
+        await page.screenshot(path=str(filepath), clip=clip)
 
         width = int(clip["width"])
         height = int(clip["height"])

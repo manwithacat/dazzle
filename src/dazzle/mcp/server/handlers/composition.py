@@ -51,7 +51,7 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)})
 
 
-def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
+async def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Capture section-level screenshots from a running Dazzle app.
 
     Requires a ``base_url`` pointing to the running app.  Uses Playwright
@@ -79,7 +79,7 @@ def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str
         if not sitespec.pages:
             return json.dumps({"captures": [], "summary": "No pages to capture"})
 
-        captures = capture_page_sections(
+        captures = await capture_page_sections(
             base_url,
             sitespec,
             output_dir=output_dir,
@@ -231,7 +231,7 @@ def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
     return list(page_map.values())
 
 
-def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
+async def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run combined composition report: audit + optional capture + analyze.
 
     Always runs the deterministic DOM audit.  When ``base_url`` is provided,
@@ -279,7 +279,7 @@ def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     if base_url:
         try:
-            visual_report = _run_visual_pipeline(
+            visual_report = await _run_visual_pipeline(
                 project_path=project_path,
                 base_url=base_url,
                 sitespec=sitespec,
@@ -347,7 +347,7 @@ def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps(report, indent=2)
 
 
-def _run_visual_pipeline(
+async def _run_visual_pipeline(
     *,
     project_path: Path,
     base_url: str,
@@ -368,7 +368,7 @@ def _run_visual_pipeline(
     output_dir = project_path / ".dazzle" / "composition" / "captures"
 
     # Capture
-    captures = capture_page_sections(
+    captures = await capture_page_sections(
         base_url,
         sitespec,
         output_dir=output_dir,
