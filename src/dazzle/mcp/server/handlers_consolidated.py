@@ -1499,6 +1499,22 @@ def handle_pulse(arguments: dict[str, Any]) -> str:
         return json.dumps({"error": f"Unknown pulse operation: {operation}"})
 
 
+def handle_composition(arguments: dict[str, Any]) -> str:
+    """Handle composition analysis operations."""
+    from .handlers.composition import audit_composition_handler
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "audit":
+        return audit_composition_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown composition operation: {operation}"})
+
+
 # =============================================================================
 # Main Dispatcher
 # =============================================================================
@@ -1528,6 +1544,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "user_profile": handle_user_profile,
     "policy": handle_policy,
     "pulse": handle_pulse,
+    "composition": handle_composition,
 }
 
 

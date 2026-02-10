@@ -1427,6 +1427,36 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Composition (deterministic visual hierarchy audit)
+        # =====================================================================
+        Tool(
+            name="composition",
+            description=(
+                "Composition analysis: audit (DOM-level visual hierarchy audit). "
+                "Computes attention weights for page elements using a 5-factor model "
+                "(font size, area, contrast, distinctness, interactivity) and evaluates "
+                "composition rules (ratio, ordering, consistency, minimum, balance) "
+                "to score visual hierarchy and layout quality."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["audit"],
+                        "description": "Operation to perform",
+                    },
+                    "pages": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": 'Filter to specific page routes (e.g. ["/", "/about"])',
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 
