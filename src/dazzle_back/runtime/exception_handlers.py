@@ -13,6 +13,7 @@ rendered HTML fragments with HX-Retarget instead of raw JSON.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -117,7 +118,11 @@ def register_exception_handlers(app: FastAPI) -> None:
         return json_or_htmx_error(request, errors, error_type="validation_error")
 
 
-def register_site_404_handler(app: FastAPI, sitespec_data: dict[str, Any]) -> None:
+def register_site_404_handler(
+    app: FastAPI,
+    sitespec_data: dict[str, Any],
+    project_root: Path | None = None,
+) -> None:
     """
     Register custom 404 handler for site pages.
 
@@ -127,10 +132,15 @@ def register_site_404_handler(app: FastAPI, sitespec_data: dict[str, Any]) -> No
     Args:
         app: FastAPI application instance
         sitespec_data: SiteSpec configuration dictionary
+        project_root: Project root for detecting custom CSS
     """
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
     from dazzle_ui.runtime.site_renderer import render_404_page_html
+
+    has_custom_css = bool(
+        project_root and (project_root / "static" / "css" / "custom.css").is_file()
+    )
 
     @app.exception_handler(StarletteHTTPException)
     async def custom_404_handler(request: Any, exc: StarletteHTTPException) -> Any:
@@ -142,7 +152,9 @@ def register_site_404_handler(app: FastAPI, sitespec_data: dict[str, Any]) -> No
             accept = request.headers.get("accept", "")
             if "text/html" in accept:
                 return HTMLResponse(
-                    content=render_404_page_html(sitespec_data, str(request.url.path)),
+                    content=render_404_page_html(
+                        sitespec_data, str(request.url.path), custom_css=has_custom_css
+                    ),
                     status_code=404,
                 )
 

@@ -2177,7 +2177,7 @@ def create_app_factory(
         logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
 
         # Auth pages (/login, /signup)
-        auth_page_router = create_auth_page_routes(sitespec_data)
+        auth_page_router = create_auth_page_routes(sitespec_data, project_root=project_root)
         app.include_router(auth_page_router)
         logger.info("  Auth pages: /login, /signup")
 
@@ -2224,6 +2224,6 @@ def create_app_factory(
     if sitespec_data:
         from dazzle_back.runtime.exception_handlers import register_site_404_handler
 
-        register_site_404_handler(app, sitespec_data)
+        register_site_404_handler(app, sitespec_data, project_root=project_root)
 
     return app

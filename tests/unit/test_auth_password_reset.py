@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import time
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
@@ -508,3 +509,120 @@ class TestAuthPageRenderers:
         html = render_auth_page_html(sitespec, "signup")
 
         assert "Forgot password?" not in html
+
+
+class TestCustomCssOverride:
+    """Tests for project-level custom CSS override (#187)."""
+
+    def test_get_shared_head_html_includes_custom_css_when_enabled(self) -> None:
+        """custom_css=True adds a link to /static/css/custom.css."""
+        from dazzle_ui.runtime.site_renderer import get_shared_head_html
+
+        html = get_shared_head_html("Test Page", custom_css=True)
+        assert "/static/css/custom.css" in html
+        # Must appear after dazzle.css
+        dazzle_pos = html.index("/styles/dazzle.css")
+        custom_pos = html.index("/static/css/custom.css")
+        assert custom_pos > dazzle_pos
+
+    def test_get_shared_head_html_no_custom_css_by_default(self) -> None:
+        """custom_css defaults to False — no custom.css link."""
+        from dazzle_ui.runtime.site_renderer import get_shared_head_html
+
+        html = get_shared_head_html("Test Page")
+        assert "/static/css/custom.css" not in html
+
+    def test_render_site_page_html_passes_custom_css(self) -> None:
+        """render_site_page_html propagates custom_css to head."""
+        from dazzle_ui.runtime.site_renderer import render_site_page_html
+
+        sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
+        html = render_site_page_html(sitespec, "/", custom_css=True)
+        assert "/static/css/custom.css" in html
+
+    def test_render_auth_page_html_passes_custom_css(self) -> None:
+        """render_auth_page_html propagates custom_css to head."""
+        from dazzle_ui.runtime.site_renderer import render_auth_page_html
+
+        sitespec: dict = {"brand": {"product_name": "TestApp"}}
+        html = render_auth_page_html(sitespec, "login", custom_css=True)
+        assert "/static/css/custom.css" in html
+
+    def test_render_404_page_html_passes_custom_css(self) -> None:
+        """render_404_page_html propagates custom_css to head."""
+        from dazzle_ui.runtime.site_renderer import render_404_page_html
+
+        sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
+        html = render_404_page_html(sitespec, "/missing", custom_css=True)
+        assert "/static/css/custom.css" in html
+
+    def test_render_forgot_password_html_passes_custom_css(self) -> None:
+        """render_forgot_password_page_html propagates custom_css to head."""
+        from dazzle_ui.runtime.site_renderer import render_forgot_password_page_html
+
+        sitespec: dict = {"brand": {"product_name": "TestApp"}}
+        html = render_forgot_password_page_html(sitespec, custom_css=True)
+        assert "/static/css/custom.css" in html
+
+    def test_render_reset_password_html_passes_custom_css(self) -> None:
+        """render_reset_password_page_html propagates custom_css to head."""
+        from dazzle_ui.runtime.site_renderer import render_reset_password_page_html
+
+        sitespec: dict = {"brand": {"product_name": "TestApp"}}
+        html = render_reset_password_page_html(sitespec, custom_css=True)
+        assert "/static/css/custom.css" in html
+
+    def test_create_site_page_routes_detects_custom_css(self, tmp_path: Path) -> None:
+        """create_site_page_routes enables custom_css when file exists."""
+
+        from dazzle_back.runtime.site_routes import create_site_page_routes
+
+        # Create the custom.css file
+        css_dir = tmp_path / "static" / "css"
+        css_dir.mkdir(parents=True)
+        (css_dir / "custom.css").write_text("body { color: red; }")
+
+        sitespec: dict = {
+            "brand": {"product_name": "TestApp"},
+            "layout": {},
+            "pages": [{"route": "/", "type": "landing", "sections": []}],
+            "legal": {},
+        }
+
+        router = create_site_page_routes(sitespec, project_root=tmp_path)
+
+        # Inspect the route handler to verify custom_css is passed
+        # Find the serve_page route and call it
+        from fastapi import FastAPI
+        from starlette.testclient import TestClient
+
+        app = FastAPI()
+        # Need dazzle.css route to exist
+        app.include_router(router)
+        client = TestClient(app)
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert "/static/css/custom.css" in resp.text
+
+    def test_create_site_page_routes_no_custom_css_without_file(self, tmp_path: Path) -> None:
+        """create_site_page_routes omits custom_css when file doesn't exist."""
+        from dazzle_back.runtime.site_routes import create_site_page_routes
+
+        sitespec: dict = {
+            "brand": {"product_name": "TestApp"},
+            "layout": {},
+            "pages": [{"route": "/", "type": "landing", "sections": []}],
+            "legal": {},
+        }
+
+        router = create_site_page_routes(sitespec, project_root=tmp_path)
+
+        from fastapi import FastAPI
+        from starlette.testclient import TestClient
+
+        app = FastAPI()
+        app.include_router(router)
+        client = TestClient(app)
+        resp = client.get("/")
+        assert resp.status_code == 200
+        assert "/static/css/custom.css" not in resp.text

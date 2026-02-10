@@ -288,6 +288,11 @@ def create_site_page_routes(
 
     router = APIRouter()
 
+    # Check once whether the project provides a custom CSS override
+    has_custom_css = bool(
+        project_root and (project_root / "static" / "css" / "custom.css").is_file()
+    )
+
     # Serve the site JavaScript (required for page rendering)
     @router.get("/site.js", include_in_schema=False)
     async def serve_site_js() -> Response:
@@ -328,7 +333,9 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve a site page as HTML with SSR content."""
-            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
+            return render_site_page_html(
+                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+            )
 
     # Create routes for legal pages
     if legal.get("terms"):
@@ -340,7 +347,9 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the terms of service page."""
-            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
+            return render_site_page_html(
+                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+            )
 
     if legal.get("privacy"):
         privacy_route = legal["privacy"].get("route", "/privacy")
@@ -351,7 +360,9 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the privacy policy page."""
-            return render_site_page_html(sitespec, r, page_data=page_data_cache.get(r))
+            return render_site_page_html(
+                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+            )
 
     return router
 
@@ -394,6 +405,7 @@ def create_site_404_handler(
 
 def create_auth_page_routes(
     sitespec_data: dict[str, Any],
+    project_root: Path | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes for authentication pages.
@@ -402,6 +414,7 @@ def create_auth_page_routes(
 
     Args:
         sitespec_data: SiteSpec as dict
+        project_root: Project root for detecting custom CSS
 
     Returns:
         FastAPI router with auth page routes
@@ -417,24 +430,28 @@ def create_auth_page_routes(
 
     router = APIRouter()
 
+    has_custom_css = bool(
+        project_root and (project_root / "static" / "css" / "custom.css").is_file()
+    )
+
     @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
     async def login_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the login page."""
-        return render_auth_page_html(sitespec, "login")
+        return render_auth_page_html(sitespec, "login", custom_css=has_custom_css)
 
     @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
     async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the signup page."""
-        return render_auth_page_html(sitespec, "signup")
+        return render_auth_page_html(sitespec, "signup", custom_css=has_custom_css)
 
     @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
     async def forgot_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the forgot-password page."""
-        return render_forgot_password_page_html(sitespec)
+        return render_forgot_password_page_html(sitespec, custom_css=has_custom_css)
 
     @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the reset-password page."""
-        return render_reset_password_page_html(sitespec)
+        return render_reset_password_page_html(sitespec, custom_css=has_custom_css)
 
     return router

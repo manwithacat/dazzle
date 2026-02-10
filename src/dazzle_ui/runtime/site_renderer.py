@@ -14,7 +14,7 @@ from typing import Any
 from dazzle_ui.runtime.task_context import TaskContext
 
 
-def get_shared_head_html(title: str) -> str:
+def get_shared_head_html(title: str, *, custom_css: bool = False) -> str:
     """
     Return shared <head> content for all DNR pages.
 
@@ -23,10 +23,18 @@ def get_shared_head_html(title: str) -> str:
 
     Args:
         title: Page title
+        custom_css: If True, include a link to ``/static/css/custom.css`` after
+            the Dazzle design-system stylesheet.  The caller is responsible for
+            checking that the file actually exists on disk.
 
     Returns:
         HTML string for the <head> section (without opening/closing tags)
     """
+    custom_css_link = (
+        '\n    <!-- Project custom CSS -->\n    <link rel="stylesheet" href="/static/css/custom.css">'
+        if custom_css
+        else ""
+    )
     return f"""<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
@@ -40,7 +48,7 @@ def get_shared_head_html(title: str) -> str:
     <!-- Tailwind Browser - minimal utilities for layout -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- DAZZLE design system layer -->
-    <link rel="stylesheet" href="/styles/dazzle.css">
+    <link rel="stylesheet" href="/styles/dazzle.css">{custom_css_link}
     <!-- Lucide icons for feature/section icons -->
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>"""
 
@@ -49,6 +57,8 @@ def render_site_page_html(
     sitespec_data: dict[str, Any],
     path: str,
     page_data: dict[str, Any] | None = None,
+    *,
+    custom_css: bool = False,
 ) -> str:
     """
     Render a site page with server-side rendered content.
@@ -61,6 +71,7 @@ def render_site_page_html(
         sitespec_data: Site specification data.
         path: Current page route.
         page_data: Pre-resolved page data (sections, title, etc.) for SSR.
+        custom_css: Include project-level ``/static/css/custom.css`` link.
 
     Returns:
         Complete HTML page string.
@@ -102,7 +113,7 @@ def render_site_page_html(
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(page_title)}
+    {get_shared_head_html(page_title, custom_css=custom_css)}
     {og_meta}
 </head>
 <body class="dz-site bg-base-100">
@@ -136,6 +147,8 @@ def render_site_page_html(
 def render_404_page_html(
     sitespec_data: dict[str, Any],
     path: str = "/",
+    *,
+    custom_css: bool = False,
 ) -> str:
     """
     Render a styled 404 page with site chrome (nav, footer).
@@ -143,6 +156,7 @@ def render_404_page_html(
     Args:
         sitespec_data: Site specification data
         path: The path that was not found
+        custom_css: Include project-level ``/static/css/custom.css`` link.
 
     Returns:
         Complete HTML page string
@@ -161,7 +175,7 @@ def render_404_page_html(
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(f"Page Not Found - {product_name}")}
+    {get_shared_head_html(f"Page Not Found - {product_name}", custom_css=custom_css)}
 </head>
 <body class="dz-site bg-base-100">
     <header class="dz-site-header">
@@ -739,6 +753,8 @@ _SSR_RENDERERS: dict[str, Any] = {
 def render_auth_page_html(
     sitespec_data: dict[str, Any],
     page_type: str,
+    *,
+    custom_css: bool = False,
 ) -> str:
     """
     Render an authentication page (login/signup).
@@ -746,6 +762,7 @@ def render_auth_page_html(
     Args:
         sitespec_data: Site specification data
         page_type: Either "login" or "signup"
+        custom_css: Include project-level ``/static/css/custom.css`` link.
 
     Returns:
         Complete HTML page string
@@ -766,7 +783,7 @@ def render_auth_page_html(
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(f"{title} - {product_name}")}
+    {get_shared_head_html(f"{title} - {product_name}", custom_css=custom_css)}
 </head>
 <body class="dz-site dz-auth-page bg-base-200">
     <div class="dz-auth-container">
@@ -880,11 +897,16 @@ def _get_auth_form_script() -> str:
     })();"""
 
 
-def render_forgot_password_page_html(sitespec_data: dict[str, Any]) -> str:
+def render_forgot_password_page_html(
+    sitespec_data: dict[str, Any],
+    *,
+    custom_css: bool = False,
+) -> str:
     """Render the forgot-password page.
 
     Args:
         sitespec_data: Site specification data.
+        custom_css: Include project-level ``/static/css/custom.css`` link.
 
     Returns:
         Complete HTML page string.
@@ -895,7 +917,7 @@ def render_forgot_password_page_html(sitespec_data: dict[str, Any]) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(f"Reset Password - {product_name}")}
+    {get_shared_head_html(f"Reset Password - {product_name}", custom_css=custom_css)}
 </head>
 <body class="dz-site dz-auth-page bg-base-200">
     <div class="dz-auth-container">
@@ -939,11 +961,16 @@ def render_forgot_password_page_html(sitespec_data: dict[str, Any]) -> str:
 </html>"""
 
 
-def render_reset_password_page_html(sitespec_data: dict[str, Any]) -> str:
+def render_reset_password_page_html(
+    sitespec_data: dict[str, Any],
+    *,
+    custom_css: bool = False,
+) -> str:
     """Render the reset-password page (with token from query string).
 
     Args:
         sitespec_data: Site specification data.
+        custom_css: Include project-level ``/static/css/custom.css`` link.
 
     Returns:
         Complete HTML page string.
@@ -954,7 +981,7 @@ def render_reset_password_page_html(sitespec_data: dict[str, Any]) -> str:
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    {get_shared_head_html(f"Set New Password - {product_name}")}
+    {get_shared_head_html(f"Set New Password - {product_name}", custom_css=custom_css)}
 </head>
 <body class="dz-site dz-auth-page bg-base-200">
     <div class="dz-auth-container">
