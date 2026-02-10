@@ -1501,7 +1501,10 @@ def handle_pulse(arguments: dict[str, Any]) -> str:
 
 def handle_composition(arguments: dict[str, Any]) -> str:
     """Handle composition analysis operations."""
-    from .handlers.composition import audit_composition_handler
+    from .handlers.composition import (
+        audit_composition_handler,
+        capture_composition_handler,
+    )
 
     operation = arguments.get("operation")
     project_path = _resolve_project(arguments)
@@ -1511,6 +1514,8 @@ def handle_composition(arguments: dict[str, Any]) -> str:
 
     if operation == "audit":
         return audit_composition_handler(project_path, arguments)
+    elif operation == "capture":
+        return capture_composition_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown composition operation: {operation}"})
 

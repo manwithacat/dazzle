@@ -1433,24 +1433,33 @@ def get_consolidated_tools() -> list[Tool]:
         Tool(
             name="composition",
             description=(
-                "Composition analysis: audit (DOM-level visual hierarchy audit). "
-                "Computes attention weights for page elements using a 5-factor model "
-                "(font size, area, contrast, distinctness, interactivity) and evaluates "
-                "composition rules (ratio, ordering, consistency, minimum, balance) "
-                "to score visual hierarchy and layout quality."
+                "Composition analysis: audit (DOM-level visual hierarchy audit), "
+                "capture (Playwright section-level screenshots). "
+                "Audit computes attention weights using a 5-factor model and evaluates "
+                "composition rules. Capture takes section-level screenshots from a "
+                "running app for visual evaluation."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["audit"],
+                        "enum": ["audit", "capture"],
                         "description": "Operation to perform",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Server URL (required for capture, e.g. http://localhost:3000)",
                     },
                     "pages": {
                         "type": "array",
                         "items": {"type": "string"},
                         "description": 'Filter to specific page routes (e.g. ["/", "/about"])',
+                    },
+                    "viewports": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": 'Viewport names for capture (default: ["desktop"]). Options: desktop, mobile',
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
