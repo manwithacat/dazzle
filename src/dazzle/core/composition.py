@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .composition_capture import SectionGeometry
+    from .composition_capture import CapturedPage, SectionGeometry
     from .ir.sitespec import SectionSpec, SiteSpec
 
 logger = logging.getLogger(__name__)
@@ -726,3 +726,85 @@ def evaluate_geometry(
             violations.append(v)
 
     return violations
+
+
+# ── Geometry Audit (cross-check captures vs sitespec) ────────────
+
+
+def _match_sitespec_section(
+    sitespec: SiteSpec,
+    route: str,
+    section_type: str,
+) -> Any | None:
+    """Find the SectionSpec matching *route* + *section_type*, or None."""
+    for page in sitespec.pages:
+        if page.route != route:
+            continue
+        for section in page.sections:
+            st = section.type.value if hasattr(section.type, "value") else str(section.type)
+            if st == section_type:
+                return section
+    return None
+
+
+def run_geometry_audit(
+    captures: list[CapturedPage],
+    sitespec: SiteSpec,
+) -> dict[str, Any]:
+    """Cross-check captured geometry against sitespec declarations.
+
+    Runs ``evaluate_geometry()`` on every captured section, then checks
+    whether sitespec-declared media actually rendered (has a bounding
+    box in the capture geometry).
+
+    Args:
+        captures: Capture results from Playwright pipeline.
+        sitespec: Loaded SiteSpec for intent comparison.
+
+    Returns:
+        Dict with ``violations`` list and ``geometry_score``.
+    """
+    all_violations: list[dict[str, Any]] = []
+
+    for cap in captures:
+        for sec in cap.sections:
+            # Run deterministic geometry checks
+            if sec.geometry:
+                geo_violations = evaluate_geometry(sec.geometry, sec.section_type)
+                for v in geo_violations:
+                    v["route"] = cap.route
+                    v["viewport"] = cap.viewport
+                    v["section_type"] = sec.section_type
+                all_violations.extend(geo_violations)
+
+            # Cross-check: sitespec declares media but capture has no media bbox
+            spec_section = _match_sitespec_section(sitespec, cap.route, sec.section_type)
+            if spec_section and getattr(spec_section, "media", None):
+                has_media_geo = sec.geometry and sec.geometry.media
+                if not has_media_geo:
+                    all_violations.append(
+                        {
+                            "rule_id": "media-declared-no-render",
+                            "severity": "high",
+                            "message": (
+                                f"Sitespec declares media for {sec.section_type} "
+                                f"but no media element was rendered"
+                            ),
+                            "route": cap.route,
+                            "viewport": cap.viewport,
+                            "section_type": sec.section_type,
+                        }
+                    )
+
+    severity_counts = {"high": 0, "medium": 0, "low": 0}
+    for v in all_violations:
+        sev = v.get("severity", "low")
+        severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+    score = score_violations(all_violations)
+
+    return {
+        "violations": all_violations,
+        "violations_count": severity_counts,
+        "geometry_score": score,
+    }

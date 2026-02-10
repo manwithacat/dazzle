@@ -359,3 +359,122 @@ class TestScoreCombination:
         data = json.loads(result)
         # 100*0.4 + 0*0.6 = 40
         assert data["combined_score"] == 40
+
+
+# ── Geometry Audit Integration Tests ────────────────────────────
+
+
+class TestGeometryInVisualPipeline:
+    """Test that geometry audit is wired into _run_visual_pipeline."""
+
+    @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
+    @patch("dazzle.core.composition_visual.evaluate_captures")
+    @patch("dazzle.core.composition_visual.build_visual_report")
+    @patch("dazzle.core.composition.run_geometry_audit")
+    @pytest.mark.asyncio
+    async def test_geometry_audit_called(
+        self,
+        mock_geo_audit: Any,
+        mock_build: Any,
+        mock_evaluate: Any,
+        mock_capture: Any,
+        tmp_path: Any,
+    ) -> None:
+        from dazzle.mcp.server.handlers.composition import _run_visual_pipeline
+
+        sitespec = MagicMock(pages=[MagicMock()])
+        mock_capture.return_value = [MagicMock(sections=[])]
+        mock_evaluate.return_value = []
+        mock_build.return_value = {
+            "visual_score": 90,
+            "findings_by_severity": {"high": 0, "medium": 0, "low": 0},
+            "tokens_used": 1000,
+            "markdown": "",
+        }
+        mock_geo_audit.return_value = {
+            "violations": [],
+            "violations_count": {"high": 0, "medium": 0, "low": 0},
+            "geometry_score": 100,
+        }
+
+        result = await _run_visual_pipeline(
+            project_path=tmp_path,
+            base_url="http://localhost:3000",
+            sitespec=sitespec,
+            routes_filter=None,
+            viewports=None,
+            focus=None,
+            token_budget=50000,
+        )
+
+        mock_geo_audit.assert_called_once()
+        assert "geometry" in result
+        assert result["geometry"]["geometry_score"] == 100
+
+    @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
+    @patch("dazzle.core.composition_visual.evaluate_captures")
+    @patch("dazzle.core.composition_visual.build_visual_report")
+    @patch("dazzle.core.composition.run_geometry_audit")
+    @pytest.mark.asyncio
+    async def test_geometry_findings_merged(
+        self,
+        mock_geo_audit: Any,
+        mock_build: Any,
+        mock_evaluate: Any,
+        mock_capture: Any,
+        tmp_path: Any,
+    ) -> None:
+        from dazzle.mcp.server.handlers.composition import _run_visual_pipeline
+
+        sitespec = MagicMock(pages=[MagicMock()])
+        mock_capture.return_value = [MagicMock(sections=[])]
+        mock_evaluate.return_value = []
+        mock_build.return_value = {
+            "visual_score": 85,
+            "findings_by_severity": {"high": 1, "medium": 0, "low": 0},
+            "tokens_used": 2000,
+            "markdown": "",
+        }
+        mock_geo_audit.return_value = {
+            "violations": [{"rule_id": "stacked-media", "severity": "high"}],
+            "violations_count": {"high": 1, "medium": 0, "low": 0},
+            "geometry_score": 80,
+        }
+
+        result = await _run_visual_pipeline(
+            project_path=tmp_path,
+            base_url="http://localhost:3000",
+            sitespec=sitespec,
+            routes_filter=None,
+            viewports=None,
+            focus=None,
+            token_budget=50000,
+        )
+
+        # Geometry HIGH (1) merged with visual HIGH (1) = 2
+        assert result["findings_by_severity"]["high"] == 2
+
+    @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
+    @pytest.mark.asyncio
+    async def test_no_captures_returns_clean_geometry(
+        self,
+        mock_capture: Any,
+        tmp_path: Any,
+    ) -> None:
+        from dazzle.mcp.server.handlers.composition import _run_visual_pipeline
+
+        sitespec = MagicMock(pages=[MagicMock()])
+        mock_capture.return_value = []
+
+        result = await _run_visual_pipeline(
+            project_path=tmp_path,
+            base_url="http://localhost:3000",
+            sitespec=sitespec,
+            routes_filter=None,
+            viewports=None,
+            focus=None,
+            token_budget=50000,
+        )
+
+        assert result["geometry"]["geometry_score"] == 100
+        assert result["geometry"]["violations"] == []

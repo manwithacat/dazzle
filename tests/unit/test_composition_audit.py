@@ -7,6 +7,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 from dazzle.core.composition import (
+    _match_sitespec_section,
     audit_page,
     audit_section,
     check_below_fold,
@@ -18,9 +19,15 @@ from dazzle.core.composition import (
     evaluate_page_rule,
     evaluate_rule,
     run_composition_audit,
+    run_geometry_audit,
     score_violations,
 )
-from dazzle.core.composition_capture import ElementGeometry, SectionGeometry
+from dazzle.core.composition_capture import (
+    CapturedPage,
+    CapturedSection,
+    ElementGeometry,
+    SectionGeometry,
+)
 
 # ── Attention Weight Tests ───────────────────────────────────────────
 
@@ -1137,3 +1144,252 @@ class TestEvaluateGeometry:
         assert "stacked-media" in ids
         # split_content doesn't check below-fold (only hero does)
         assert "below-fold" not in ids
+
+
+# ── Sitespec Section Matching Tests ─────────────────────────────
+
+
+class TestMatchSitespecSection:
+    """Test _match_sitespec_section helper."""
+
+    def _mock_sitespec(self) -> MagicMock:
+        hero = MagicMock()
+        hero.type = MagicMock(value="hero")
+        hero.media = MagicMock()  # has media
+        features = MagicMock()
+        features.type = MagicMock(value="features")
+        features.media = None
+        page = MagicMock()
+        page.route = "/"
+        page.sections = [hero, features]
+        sitespec = MagicMock()
+        sitespec.pages = [page]
+        return sitespec
+
+    def test_finds_matching_section(self) -> None:
+        sitespec = self._mock_sitespec()
+        result = _match_sitespec_section(sitespec, "/", "hero")
+        assert result is not None
+        assert result.type.value == "hero"
+
+    def test_finds_second_section(self) -> None:
+        sitespec = self._mock_sitespec()
+        result = _match_sitespec_section(sitespec, "/", "features")
+        assert result is not None
+        assert result.type.value == "features"
+
+    def test_no_match_wrong_route(self) -> None:
+        sitespec = self._mock_sitespec()
+        result = _match_sitespec_section(sitespec, "/about", "hero")
+        assert result is None
+
+    def test_no_match_wrong_type(self) -> None:
+        sitespec = self._mock_sitespec()
+        result = _match_sitespec_section(sitespec, "/", "cta")
+        assert result is None
+
+
+# ── Geometry Audit Tests ────────────────────────────────────────
+
+
+class TestRunGeometryAudit:
+    """Test run_geometry_audit cross-check function."""
+
+    def _mock_sitespec(self, *, media: bool = True) -> MagicMock:
+        hero = MagicMock()
+        hero.type = MagicMock(value="hero")
+        hero.media = MagicMock() if media else None
+        page = MagicMock()
+        page.route = "/"
+        page.sections = [hero]
+        sitespec = MagicMock()
+        sitespec.pages = [page]
+        return sitespec
+
+    def test_media_declared_but_not_rendered(self) -> None:
+        """Sitespec declares media but capture has no media bbox."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=400,
+                        tokens_est=682,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 1280, 400),
+                            content=ElementGeometry(0, 0, 1280, 400),
+                            media=None,  # no media rendered
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=True))
+        ids = [v["rule_id"] for v in result["violations"]]
+        assert "media-declared-no-render" in ids
+        assert result["violations_count"]["high"] >= 1
+
+    def test_media_declared_and_rendered(self) -> None:
+        """Sitespec declares media and capture has media bbox — no violation."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=400,
+                        tokens_est=682,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 1280, 400),
+                            content=ElementGeometry(0, 0, 640, 400),
+                            media=ElementGeometry(640, 0, 640, 400),
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=True))
+        ids = [v["rule_id"] for v in result["violations"]]
+        assert "media-declared-no-render" not in ids
+
+    def test_no_media_declared_no_violation(self) -> None:
+        """Sitespec has no media — no cross-check violation even without bbox."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=400,
+                        tokens_est=682,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 1280, 400),
+                            media=None,
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=False))
+        ids = [v["rule_id"] for v in result["violations"]]
+        assert "media-declared-no-render" not in ids
+
+    def test_geometry_violations_included(self) -> None:
+        """Geometry checks (e.g. stacked-media) are included in results."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=600,
+                        tokens_est=1024,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 1280, 600),
+                            content=ElementGeometry(0, 0, 1280, 300),
+                            media=ElementGeometry(0, 300, 1280, 300),
+                            viewport_height=720,
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=True))
+        ids = [v["rule_id"] for v in result["violations"]]
+        assert "stacked-media" in ids
+        # media IS rendered so no cross-check violation
+        assert "media-declared-no-render" not in ids
+
+    def test_no_geometry_on_capture(self) -> None:
+        """Section with no geometry data — only cross-check runs."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=400,
+                        tokens_est=682,
+                        geometry=None,
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=True))
+        ids = [v["rule_id"] for v in result["violations"]]
+        # No geometry → no geometry checks, but media cross-check fires
+        assert "media-declared-no-render" in ids
+
+    def test_violations_annotated_with_route(self) -> None:
+        """All violations include route, viewport, section_type."""
+        captures = [
+            CapturedPage(
+                route="/about",
+                viewport="mobile",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=375,
+                        height=5,
+                        tokens_est=2,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 375, 5),
+                            viewport_height=812,
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=False))
+        for v in result["violations"]:
+            assert v["route"] == "/about"
+            assert v["viewport"] == "mobile"
+            assert v["section_type"] == "hero"
+
+    def test_score_reflects_violations(self) -> None:
+        """Geometry score is computed from violations."""
+        captures = [
+            CapturedPage(
+                route="/",
+                viewport="desktop",
+                sections=[
+                    CapturedSection(
+                        section_type="hero",
+                        path="/tmp/hero.png",
+                        width=1280,
+                        height=400,
+                        tokens_est=682,
+                        geometry=SectionGeometry(
+                            section=ElementGeometry(0, 0, 1280, 400),
+                            content=ElementGeometry(0, 0, 640, 400),
+                            media=ElementGeometry(640, 0, 640, 400),
+                        ),
+                    )
+                ],
+            )
+        ]
+        result = run_geometry_audit(captures, self._mock_sitespec(media=True))
+        assert result["geometry_score"] == 100  # No violations = perfect
+
+    def test_empty_captures(self) -> None:
+        """Empty captures list produces clean result."""
+        result = run_geometry_audit([], self._mock_sitespec())
+        assert result["violations"] == []
+        assert result["geometry_score"] == 100

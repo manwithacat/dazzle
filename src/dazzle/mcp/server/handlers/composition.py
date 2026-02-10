@@ -357,7 +357,11 @@ async def _run_visual_pipeline(
     focus: list[str] | None,
     token_budget: int,
 ) -> dict[str, Any]:
-    """Run capture + analyze pipeline, returning the visual report dict."""
+    """Run capture + analyze + geometry audit pipeline.
+
+    Returns the visual report dict with geometry findings merged in.
+    """
+    from dazzle.core.composition import run_geometry_audit
     from dazzle.core.composition_capture import capture_page_sections
     from dazzle.core.composition_visual import (
         DIMENSIONS,
@@ -382,11 +386,19 @@ async def _run_visual_pipeline(
             "findings_by_severity": {"high": 0, "medium": 0, "low": 0},
             "tokens_used": 0,
             "pages": [],
+            "geometry": {
+                "violations": [],
+                "violations_count": {"high": 0, "medium": 0, "low": 0},
+                "geometry_score": 100,
+            },
             "summary": "No sections captured",
             "markdown": "",
         }
 
-    # Analyze
+    # Geometry audit (zero-cost — no LLM tokens)
+    geometry_result = run_geometry_audit(captures, sitespec)
+
+    # LLM visual analysis
     dimensions: list[str] | None = None
     if focus:
         dimensions = [d for d in DIMENSIONS if d in focus]
@@ -397,7 +409,16 @@ async def _run_visual_pipeline(
         token_budget=token_budget,
     )
 
-    return build_visual_report(results)
+    report = build_visual_report(results)
+    report["geometry"] = geometry_result
+
+    # Merge geometry severity counts into visual findings
+    for sev in ("high", "medium", "low"):
+        report.setdefault("findings_by_severity", {})[sev] = report.get(
+            "findings_by_severity", {}
+        ).get(sev, 0) + geometry_result["violations_count"].get(sev, 0)
+
+    return report
 
 
 def _build_combined_markdown(
