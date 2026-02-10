@@ -27,6 +27,8 @@ def _make_entity(
     field_names: list[str] | None = None,
     states: list[str] | None = None,
     transitions: list[Any] | None = None,
+    patterns: list[str] | None = None,
+    access: Any | None = None,
 ) -> SimpleNamespace:
     fields = [_make_field(n) for n in (field_names or ["id", "title"])]
     sm = None
@@ -35,7 +37,14 @@ def _make_entity(
             states=states,
             transitions=transitions or [],
         )
-    return SimpleNamespace(name=name, title=title, fields=fields, state_machine=sm)
+    return SimpleNamespace(
+        name=name,
+        title=title,
+        fields=fields,
+        state_machine=sm,
+        patterns=patterns or [],
+        access=access,
+    )
 
 
 def _make_surface(
@@ -466,3 +475,109 @@ class TestBuildEntityCompletenessMission:
                 )
             )
         assert completion(action, history) is False
+
+
+# =============================================================================
+# Helpers for RBAC fixtures
+# =============================================================================
+
+
+def _make_forbid_rule(operation: str) -> SimpleNamespace:
+    """Create a forbid permission rule that applies to all personas."""
+    return SimpleNamespace(operation=operation, effect="forbid", personas=[])
+
+
+def _make_access(permissions: list[Any] | None = None) -> SimpleNamespace:
+    return SimpleNamespace(permissions=permissions or [])
+
+
+# =============================================================================
+# Tests: System-Managed Entity Filtering
+# =============================================================================
+
+
+class TestSystemManagedEntities:
+    def test_system_managed_by_name_skips_create_edit(self) -> None:
+        """Entity named 'AuditLog' with only list surface -> no missing_create/missing_edit."""
+        appspec = _make_appspec(
+            entities=[_make_entity("AuditLog", "Audit Log")],
+            surfaces=[_make_surface("audit_list", "Audit Log List", "list", "AuditLog")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_create" not in gap_types
+        assert "missing_edit" not in gap_types
+
+    def test_system_managed_by_pattern_skips_create_edit(self) -> None:
+        """Entity with patterns=['audit'] -> skip create/edit gaps."""
+        appspec = _make_appspec(
+            entities=[_make_entity("RecordKeeper", "Record Keeper", patterns=["audit"])],
+            surfaces=[_make_surface("rk_list", "Records", "list", "RecordKeeper")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_create" not in gap_types
+        assert "missing_edit" not in gap_types
+
+    def test_system_managed_still_flags_missing_list(self) -> None:
+        """System-managed entity with no list surface -> still flagged."""
+        appspec = _make_appspec(
+            entities=[_make_entity("AuditLog", "Audit Log")],
+            surfaces=[_make_surface("audit_view", "Audit Detail", "view", "AuditLog")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_list" in gap_types
+
+    def test_normal_entity_still_flags_create_edit(self) -> None:
+        """Normal entity 'Task' -> missing_create and missing_edit still present."""
+        appspec = _make_appspec(
+            entities=[_make_entity("Task", "Task")],
+            surfaces=[_make_surface("task_list", "Tasks", "list", "Task")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_create" in gap_types
+        assert "missing_edit" in gap_types
+
+    def test_forbid_create_skips_missing_create(self) -> None:
+        """Entity with forbid create rule -> no missing_create gap."""
+        access = _make_access(permissions=[_make_forbid_rule("create")])
+        appspec = _make_appspec(
+            entities=[_make_entity("Ledger", "Ledger", access=access)],
+            surfaces=[_make_surface("ledger_list", "Ledger", "list", "Ledger")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_create" not in gap_types
+        # edit is not forbidden, so it should still be flagged
+        assert "missing_edit" in gap_types
+
+    def test_forbid_update_skips_missing_edit(self) -> None:
+        """Entity with forbid update rule -> no missing_edit gap."""
+        access = _make_access(permissions=[_make_forbid_rule("update")])
+        appspec = _make_appspec(
+            entities=[_make_entity("Ledger", "Ledger", access=access)],
+            surfaces=[_make_surface("ledger_list", "Ledger", "list", "Ledger")],
+        )
+        report = _static_entity_analysis(appspec)
+        gap_types = [g.gap_type for g in report.gaps]
+        assert "missing_edit" not in gap_types
+        # create is not forbidden, so it should still be flagged
+        assert "missing_create" in gap_types
+
+    def test_coverage_includes_system_managed_flag(self) -> None:
+        """report.entity_coverage includes is_system_managed key."""
+        appspec = _make_appspec(
+            entities=[
+                _make_entity("AuditLog", "Audit Log"),
+                _make_entity("Task", "Task"),
+            ],
+            surfaces=[
+                _make_surface("audit_list", "Audit Logs", "list", "AuditLog"),
+                _make_surface("task_list", "Tasks", "list", "Task"),
+            ],
+        )
+        report = _static_entity_analysis(appspec)
+        assert report.entity_coverage["AuditLog"]["is_system_managed"] is True
+        assert report.entity_coverage["Task"]["is_system_managed"] is False

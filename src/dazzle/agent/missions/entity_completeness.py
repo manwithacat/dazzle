@@ -15,6 +15,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from dazzle.core.patterns import SYSTEM_MANAGED_PATTERNS
+
 from ..core import AgentTool, Mission
 from ._shared import (
     build_dsl_summary,
@@ -71,6 +73,50 @@ class EntityCompletenessReport:
 # =============================================================================
 
 
+def _is_system_managed(entity: Any) -> bool:
+    """Check if an entity is system-managed (read-only) based on patterns or name.
+
+    Wraps the patterns check with getattr safety so SimpleNamespace test fixtures
+    (which lack .patterns) don't crash.
+    """
+    # Check explicit patterns
+    entity_patterns = {p.lower() for p in getattr(entity, "patterns", [])}
+    if entity_patterns & SYSTEM_MANAGED_PATTERNS:
+        return True
+
+    # Heuristic: check entity name for common system-managed patterns
+    name_lower = getattr(entity, "name", "").lower()
+    name_hints = ["log", "event", "audit", "notification", "history", "activity"]
+    return any(hint in name_lower for hint in name_hints)
+
+
+def _is_operation_forbidden(entity: Any, operation: str) -> bool:
+    """Check if an entity has a blanket forbid rule for a given operation.
+
+    Returns True when the entity's access spec contains a FORBID rule for the
+    operation that applies to all personas (empty personas list).
+
+    Args:
+        entity: EntitySpec or SimpleNamespace with optional .access attribute
+        operation: One of "create", "update", "delete"
+    """
+    access = getattr(entity, "access", None)
+    if not access:
+        return False
+    permissions = getattr(access, "permissions", []) or []
+    for rule in permissions:
+        rule_op = str(getattr(rule, "operation", ""))
+        rule_effect = str(getattr(rule, "effect", ""))
+        rule_personas = getattr(rule, "personas", []) or []
+        if (
+            rule_op == operation
+            and rule_effect in ("forbid", "FORBID", "PolicyEffect.FORBID")
+            and not rule_personas
+        ):
+            return True
+    return False
+
+
 def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
     """
     Analyze DSL spec for entity CRUD coverage gaps.
@@ -115,6 +161,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
     for entity in entities:
         coverage = entity_surface_map.get(entity.name, {})
         has_any_surface = bool(coverage)
+        is_sys = _is_system_managed(entity)
 
         # Store coverage info
         report.entity_coverage[entity.name] = {
@@ -123,6 +170,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
             "edit": bool(coverage.get("edit")),
             "view": bool(coverage.get("view")),
             "surfaces": [s for modes in coverage.values() for s in modes],
+            "is_system_managed": is_sys,
         }
 
         # Check: no surface at all
@@ -151,7 +199,11 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
                 )
             )
 
-        if not coverage.get("create"):
+        # Skip create/edit gaps for system-managed entities or RBAC-forbidden ops
+        skip_create = is_sys or _is_operation_forbidden(entity, "create")
+        skip_edit = is_sys or _is_operation_forbidden(entity, "update")
+
+        if not coverage.get("create") and not skip_create:
             report.gaps.append(
                 EntityCoverageGap(
                     entity_name=entity.name,
@@ -161,7 +213,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
                 )
             )
 
-        if not coverage.get("edit"):
+        if not coverage.get("edit") and not skip_edit:
             report.gaps.append(
                 EntityCoverageGap(
                     entity_name=entity.name,
