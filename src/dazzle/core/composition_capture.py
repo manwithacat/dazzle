@@ -82,16 +82,16 @@ def preprocess_standard(img_path: Path, *, max_edge: int = 1568) -> Path:
         logger.warning("Pillow not available — skipping preprocessing")
         return img_path
 
-    opened = Image.open(img_path)
-    w, h = opened.size
+    img: Image.Image = Image.open(img_path)
+    w, h = img.size
 
     if max(w, h) > max_edge:
         scale = max_edge / max(w, h)
         new_w, new_h = int(w * scale), int(h * scale)
-        opened = opened.resize((new_w, new_h), Image.Resampling.LANCZOS)  # type: ignore[assignment]
+        img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
     out_path = img_path.with_stem(img_path.stem + "-opt")
-    opened.save(out_path, optimize=True)
+    img.save(out_path, optimize=True)
     return out_path
 
 
