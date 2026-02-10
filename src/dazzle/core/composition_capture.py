@@ -21,6 +21,26 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class ElementGeometry:
+    """Bounding box for a single DOM element."""
+
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+@dataclass
+class SectionGeometry:
+    """Layout geometry for a section and its key child elements."""
+
+    section: ElementGeometry
+    content: ElementGeometry | None = None
+    media: ElementGeometry | None = None
+    viewport_height: int = 0
+
+
+@dataclass
 class CapturedSection:
     """A captured screenshot of a single page section."""
 
@@ -29,6 +49,7 @@ class CapturedSection:
     width: int
     height: int
     tokens_est: int
+    geometry: SectionGeometry | None = None
 
 
 @dataclass
@@ -40,6 +61,7 @@ class CapturedPage:
     sections: list[CapturedSection] = field(default_factory=list)
     full_page: str | None = None
     total_tokens_est: int = 0
+    viewport_height: int = 0
 
 
 # ── Token Estimation ─────────────────────────────────────────────────
@@ -194,7 +216,8 @@ async def _capture_single_page(
 ) -> CapturedPage:
     """Capture sections for a single page."""
     url = base_url.rstrip("/") + route
-    result = CapturedPage(route=route, viewport=viewport_name)
+    vp_height = page.viewport_size.get("height", 0) if page.viewport_size else 0
+    result = CapturedPage(route=route, viewport=viewport_name, viewport_height=vp_height)
 
     try:
         await page.goto(url, wait_until="networkidle", timeout=15000)
@@ -231,6 +254,29 @@ async def _capture_single_page(
     return result
 
 
+async def _extract_child_bbox(element: Any, selector: str) -> ElementGeometry | None:
+    """Query a child element and return its bounding box, or None."""
+    try:
+        child = await element.query_selector(selector)
+        if not child:
+            return None
+        box = await child.bounding_box()
+        if not box:
+            return None
+        return ElementGeometry(x=box["x"], y=box["y"], width=box["width"], height=box["height"])
+    except Exception:
+        return None
+
+
+# Selectors for key child elements within sections.
+_CONTENT_SELECTOR = ".dz-section-content"
+_MEDIA_SELECTORS = (
+    ".dz-hero-media",
+    ".dz-split-image",
+    "img.dz-hero-image",
+)
+
+
 async def _capture_section(
     *,
     page: Any,
@@ -252,6 +298,24 @@ async def _capture_section(
         bbox = await element.bounding_box()
         if not bbox:
             return None
+
+        # Extract geometry for the section and its key children
+        vp_height = page.viewport_size.get("height", 0) if page.viewport_size else 0
+        section_geo = ElementGeometry(
+            x=bbox["x"], y=bbox["y"], width=bbox["width"], height=bbox["height"]
+        )
+        content_geo = await _extract_child_bbox(element, _CONTENT_SELECTOR)
+        media_geo: ElementGeometry | None = None
+        for media_sel in _MEDIA_SELECTORS:
+            media_geo = await _extract_child_bbox(element, media_sel)
+            if media_geo:
+                break
+        geometry = SectionGeometry(
+            section=section_geo,
+            content=content_geo,
+            media=media_geo,
+            viewport_height=vp_height,
+        )
 
         # Add vertical padding for context
         vp_width = page.viewport_size["width"]
@@ -291,6 +355,7 @@ async def _capture_section(
             width=width,
             height=height,
             tokens_est=tokens,
+            geometry=geometry,
         )
 
     except Exception as e:

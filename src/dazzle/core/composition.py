@@ -12,6 +12,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from .composition_capture import SectionGeometry
     from .ir.sitespec import SectionSpec, SiteSpec
 
 logger = logging.getLogger(__name__)
@@ -625,3 +626,103 @@ def _build_markdown(pages: list[dict[str, Any]], overall_score: int) -> str:
             lines.append("")
 
     return "\n".join(lines)
+
+
+# ── Geometry-Based Layout Checks ────────────────────────────────────
+
+
+def check_stacked_media(geometry: SectionGeometry) -> dict[str, Any] | None:
+    """Detect media stacking below content instead of side-by-side.
+
+    Returns a violation dict (HIGH) when ``media.y`` is fully below
+    ``content.y + content.height``, meaning the two-column layout
+    collapsed into a single stack.
+    """
+    if not geometry.content or not geometry.media:
+        return None
+    content_bottom = geometry.content.y + geometry.content.height
+    if geometry.media.y >= content_bottom - 1:
+        return {
+            "rule_id": "stacked-media",
+            "severity": "high",
+            "message": "Media stacked below content instead of side-by-side",
+            "detail": (
+                f"content bottom={content_bottom:.0f}px, media top={geometry.media.y:.0f}px"
+            ),
+        }
+    return None
+
+
+def check_below_fold(geometry: SectionGeometry) -> dict[str, Any] | None:
+    """Detect a section whose top edge starts below the viewport fold.
+
+    Returns a violation dict (MEDIUM) when the section starts below the
+    viewport height — meaning it's entirely off-screen on initial load.
+    """
+    if geometry.viewport_height <= 0:
+        return None
+    if geometry.section.y >= geometry.viewport_height:
+        return {
+            "rule_id": "below-fold",
+            "severity": "medium",
+            "message": "Section starts below the viewport fold",
+            "detail": (
+                f"section top={geometry.section.y:.0f}px, "
+                f"viewport height={geometry.viewport_height}px"
+            ),
+        }
+    return None
+
+
+def check_zero_height(geometry: SectionGeometry) -> dict[str, Any] | None:
+    """Detect a section with effectively zero height (content failed to load).
+
+    Returns a violation dict (HIGH) when the section height is under
+    10 pixels — indicating the section is invisible/empty.
+    """
+    if geometry.section.height < 10:
+        return {
+            "rule_id": "zero-height",
+            "severity": "high",
+            "message": "Section has near-zero height (content may not have loaded)",
+            "detail": f"section height={geometry.section.height:.0f}px",
+        }
+    return None
+
+
+def evaluate_geometry(
+    geometry: SectionGeometry,
+    section_type: str,
+) -> list[dict[str, Any]]:
+    """Run all geometry-based layout checks on a section.
+
+    These checks are deterministic and cost zero tokens — they operate
+    purely on bounding-box coordinates extracted during capture.
+
+    Args:
+        geometry: Bounding-box data for the section and its children.
+        section_type: Section type (e.g. ``"hero"``).
+
+    Returns:
+        List of violation dicts (may be empty).
+    """
+    violations: list[dict[str, Any]] = []
+
+    v = check_zero_height(geometry)
+    if v:
+        violations.append(v)
+        return violations  # No further checks make sense for invisible sections
+
+    # Stacked-media only applies to sections that should have two-column layout
+    if section_type in ("hero", "split_content"):
+        v = check_stacked_media(geometry)
+        if v:
+            violations.append(v)
+
+    # Below-fold: only flag the hero (first-impression section)
+    if section_type == "hero":
+        v = check_below_fold(geometry)
+        if v:
+            violations.append(v)
+
+    return violations

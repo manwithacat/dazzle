@@ -12,6 +12,8 @@ import pytest
 from dazzle.core.composition_capture import (
     CapturedPage,
     CapturedSection,
+    ElementGeometry,
+    SectionGeometry,
     estimate_tokens,
     preprocess_standard,
 )
@@ -183,6 +185,63 @@ class TestCapturedModels:
         assert data["route"] == "/"
         assert len(data["sections"]) == 1
         assert data["sections"][0]["section_type"] == "hero"
+
+    def test_element_geometry_fields(self) -> None:
+        geo = ElementGeometry(x=0, y=100, width=1280, height=400)
+        assert geo.x == 0
+        assert geo.y == 100
+        assert geo.width == 1280
+        assert geo.height == 400
+
+    def test_section_geometry_defaults(self) -> None:
+        sec_geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 400))
+        assert sec_geo.content is None
+        assert sec_geo.media is None
+        assert sec_geo.viewport_height == 0
+
+    def test_section_geometry_with_children(self) -> None:
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            content=ElementGeometry(0, 0, 640, 400),
+            media=ElementGeometry(640, 0, 640, 400),
+            viewport_height=720,
+        )
+        assert geo.content is not None
+        assert geo.media is not None
+        assert geo.viewport_height == 720
+
+    def test_captured_section_with_geometry(self) -> None:
+        geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 400))
+        sec = CapturedSection(
+            section_type="hero",
+            path="/tmp/hero.png",
+            width=1280,
+            height=400,
+            tokens_est=682,
+            geometry=geo,
+        )
+        assert sec.geometry is not None
+        assert sec.geometry.section.width == 1280
+
+    def test_captured_section_geometry_serialization(self) -> None:
+        from dataclasses import asdict
+
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 100, 1280, 400),
+            content=ElementGeometry(0, 100, 640, 380),
+            media=ElementGeometry(640, 100, 640, 380),
+            viewport_height=720,
+        )
+        sec = CapturedSection("hero", "/tmp/hero.png", 1280, 400, 682, geometry=geo)
+        data = asdict(sec)
+        assert data["geometry"]["section"]["x"] == 0
+        assert data["geometry"]["content"]["width"] == 640
+        assert data["geometry"]["media"]["x"] == 640
+        assert data["geometry"]["viewport_height"] == 720
+
+    def test_captured_page_viewport_height(self) -> None:
+        page = CapturedPage(route="/", viewport="desktop", viewport_height=720)
+        assert page.viewport_height == 720
 
 
 # ── MCP Handler Tests ────────────────────────────────────────────────

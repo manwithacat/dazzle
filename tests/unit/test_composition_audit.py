@@ -9,13 +9,18 @@ from unittest.mock import MagicMock, patch
 from dazzle.core.composition import (
     audit_page,
     audit_section,
+    check_below_fold,
+    check_stacked_media,
+    check_zero_height,
     compute_attention_weight,
     derive_section_roles,
+    evaluate_geometry,
     evaluate_page_rule,
     evaluate_rule,
     run_composition_audit,
     score_violations,
 )
+from dazzle.core.composition_capture import ElementGeometry, SectionGeometry
 
 # ── Attention Weight Tests ───────────────────────────────────────────
 
@@ -944,3 +949,191 @@ class TestMarkdownReport:
         result = run_composition_audit(sitespec)
         md = result["markdown"]
         assert "Page-level violations:" in md
+
+
+# ── Geometry Layout Check Tests ──────────────────────────────────────
+
+
+class TestCheckStackedMedia:
+    """Test stacked-media detection from bounding boxes."""
+
+    def test_side_by_side_passes(self) -> None:
+        """Media beside content — no violation."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            content=ElementGeometry(0, 0, 640, 400),
+            media=ElementGeometry(640, 0, 640, 400),
+        )
+        assert check_stacked_media(geo) is None
+
+    def test_stacked_below_fails(self) -> None:
+        """Media starts below content bottom — stacked."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 800),
+            content=ElementGeometry(0, 0, 1280, 400),
+            media=ElementGeometry(0, 400, 1280, 400),
+        )
+        result = check_stacked_media(geo)
+        assert result is not None
+        assert result["rule_id"] == "stacked-media"
+        assert result["severity"] == "high"
+
+    def test_no_media_passes(self) -> None:
+        """No media element — check not applicable."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            content=ElementGeometry(0, 0, 1280, 400),
+        )
+        assert check_stacked_media(geo) is None
+
+    def test_no_content_passes(self) -> None:
+        """No content element — check not applicable."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            media=ElementGeometry(0, 0, 640, 400),
+        )
+        assert check_stacked_media(geo) is None
+
+    def test_overlapping_passes(self) -> None:
+        """Media overlaps content vertically — not stacked."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 500),
+            content=ElementGeometry(0, 0, 640, 400),
+            media=ElementGeometry(640, 50, 640, 400),
+        )
+        assert check_stacked_media(geo) is None
+
+
+class TestCheckBelowFold:
+    """Test below-fold detection."""
+
+    def test_above_fold_passes(self) -> None:
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            viewport_height=720,
+        )
+        assert check_below_fold(geo) is None
+
+    def test_below_fold_fails(self) -> None:
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 800, 1280, 400),
+            viewport_height=720,
+        )
+        result = check_below_fold(geo)
+        assert result is not None
+        assert result["rule_id"] == "below-fold"
+        assert result["severity"] == "medium"
+
+    def test_no_viewport_height_skips(self) -> None:
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 800, 1280, 400),
+            viewport_height=0,
+        )
+        assert check_below_fold(geo) is None
+
+    def test_partially_visible_passes(self) -> None:
+        """Section starts at viewport edge — still partially visible."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 700, 1280, 400),
+            viewport_height=720,
+        )
+        assert check_below_fold(geo) is None
+
+
+class TestCheckZeroHeight:
+    """Test zero-height section detection."""
+
+    def test_normal_height_passes(self) -> None:
+        geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 400))
+        assert check_zero_height(geo) is None
+
+    def test_zero_height_fails(self) -> None:
+        geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 0))
+        result = check_zero_height(geo)
+        assert result is not None
+        assert result["rule_id"] == "zero-height"
+        assert result["severity"] == "high"
+
+    def test_tiny_height_fails(self) -> None:
+        geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 5))
+        result = check_zero_height(geo)
+        assert result is not None
+
+    def test_threshold_boundary_passes(self) -> None:
+        """Exactly 10px is acceptable."""
+        geo = SectionGeometry(section=ElementGeometry(0, 0, 1280, 10))
+        assert check_zero_height(geo) is None
+
+
+class TestEvaluateGeometry:
+    """Test the combined geometry evaluation orchestrator."""
+
+    def test_hero_with_stacked_media(self) -> None:
+        """Hero with stacked media produces HIGH violation."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 800),
+            content=ElementGeometry(0, 0, 1280, 400),
+            media=ElementGeometry(0, 400, 1280, 400),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "hero")
+        ids = [v["rule_id"] for v in violations]
+        assert "stacked-media" in ids
+
+    def test_hero_below_fold(self) -> None:
+        """Hero below fold produces MEDIUM violation."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 800, 1280, 400),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "hero")
+        ids = [v["rule_id"] for v in violations]
+        assert "below-fold" in ids
+
+    def test_features_no_stacked_check(self) -> None:
+        """Features section doesn't check stacked-media."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            content=ElementGeometry(0, 0, 1280, 200),
+            media=ElementGeometry(0, 200, 1280, 200),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "features")
+        assert all(v["rule_id"] != "stacked-media" for v in violations)
+
+    def test_zero_height_short_circuits(self) -> None:
+        """Zero-height section returns only the zero-height violation."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 0),
+            content=ElementGeometry(0, 0, 1280, 0),
+            media=ElementGeometry(0, 0, 1280, 0),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "hero")
+        assert len(violations) == 1
+        assert violations[0]["rule_id"] == "zero-height"
+
+    def test_healthy_hero_no_violations(self) -> None:
+        """Well-formed hero with side-by-side media — no violations."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 0, 1280, 400),
+            content=ElementGeometry(0, 0, 640, 400),
+            media=ElementGeometry(640, 0, 640, 400),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "hero")
+        assert violations == []
+
+    def test_split_content_stacked_check(self) -> None:
+        """split_content also checks for stacked media."""
+        geo = SectionGeometry(
+            section=ElementGeometry(0, 800, 1280, 600),
+            content=ElementGeometry(0, 800, 1280, 300),
+            media=ElementGeometry(0, 1100, 1280, 300),
+            viewport_height=720,
+        )
+        violations = evaluate_geometry(geo, "split_content")
+        ids = [v["rule_id"] for v in violations]
+        assert "stacked-media" in ids
+        # split_content doesn't check below-fold (only hero does)
+        assert "below-fold" not in ids
