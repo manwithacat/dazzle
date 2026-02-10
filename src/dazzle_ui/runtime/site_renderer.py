@@ -512,22 +512,23 @@ def _ssr_pricing(section: dict[str, Any]) -> str:
         period = tier.get("period", "/month")
         features = tier.get("features", [])
         cta = tier.get("cta")
-        highlighted = "border-primary" if tier.get("highlighted") else "border-base-300"
+        highlighted_cls = " dz-pricing-highlighted" if tier.get("highlighted") else ""
+        btn_cls = "btn btn-secondary" if tier.get("highlighted") else "btn btn-primary"
 
         features_html = "".join(f"<li>{f}</li>" for f in features)
         cta_html = ""
         if cta:
             href = cta.get("href", "#")
             label = cta.get("label", "Choose Plan")
-            cta_html = f'<a href="{href}" class="btn btn-primary w-full">{label}</a>'
+            cta_html = f'<a href="{href}" class="{btn_cls}">{label}</a>'
 
-        tiers_html += f"""<div class="card bg-base-100 border-2 {highlighted}">
-    <div class="card-body text-center">
-        <h3 class="card-title justify-center">{name}</h3>
-        <p class="text-3xl font-bold">{price}<span class="text-sm font-normal opacity-70">{period}</span></p>
-        <ul class="dz-pricing-features text-left">{features_html}</ul>
-        {cta_html}
+        tiers_html += f"""<div class="dz-pricing-tier{highlighted_cls}">
+    <h3>{name}</h3>
+    <div class="dz-pricing-price">
+        <span class="dz-price">{price}</span><span class="dz-period">{period}</span>
     </div>
+    <ul class="dz-pricing-features">{features_html}</ul>
+    {cta_html}
 </div>"""
 
     return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-pricing">

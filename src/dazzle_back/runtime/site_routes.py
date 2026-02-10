@@ -130,14 +130,19 @@ def _format_page_response(page: dict[str, Any], project_root: Path | None) -> di
     if project_root:
         for section in sections:
             source = section.get("source")
-            if section.get("type") == "markdown" and source:
+            sec_type = section.get("type")
+            if source and sec_type in ("markdown", "split_content"):
                 raw = _load_content_file(
                     project_root,
                     source.get("path", ""),
                 )
                 if raw:
                     fmt = source.get("format", "md")
-                    section["content"] = _render_content(raw, fmt)
+                    rendered = _render_content(raw, fmt)
+                    if sec_type == "split_content":
+                        section["body"] = rendered
+                    else:
+                        section["content"] = rendered
 
     response: dict[str, Any] = {
         "route": page.get("route"),

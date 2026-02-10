@@ -199,7 +199,8 @@ class TestSiteRendererSSR:
         assert "$29" in html
         assert "Unlimited users" in html
         assert "Buy Now" in html
-        assert "border-primary" in html
+        assert "dz-pricing-highlighted" in html
+        assert "btn btn-secondary" in html
 
     def test_render_sections_ssr(self) -> None:
         """Test full SSR rendering of multiple sections."""
