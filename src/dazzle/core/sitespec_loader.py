@@ -761,11 +761,19 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
     """Derive app routes from AppSpec surfaces/workspaces.
 
     Lightweight inline version of frontend_spec_export._build_route_map()
-    to avoid circular imports.
+    to avoid circular imports.  Also includes standalone entity list routes
+    and workspace-prefixed entity routes that the runtime auto-generates.
     """
+    seen: set[str] = set()
     routes: list[str] = []
     mount = sitespec.integrations.app_mount_route.rstrip("/")
 
+    def _add(route: str) -> None:
+        if route not in seen:
+            seen.add(route)
+            routes.append(route)
+
+    # 1. Surface-derived routes (explicit surfaces)
     for surface in appspec.surfaces:
         entity_name = surface.entity_ref or "general"
         slug = to_api_plural(entity_name)
@@ -784,13 +792,27 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
         mode = surface.mode.value
 
         if mode == "list":
-            routes.append(base)
+            _add(base)
         elif mode == "view":
-            routes.append(f"{base}/:id")
+            _add(f"{base}/:id")
         elif mode == "create":
-            routes.append(f"{base}/new")
+            _add(f"{base}/new")
         elif mode == "edit":
-            routes.append(f"{base}/:id/edit")
+            _add(f"{base}/:id/edit")
+
+    # 2. Standalone entity list routes — the runtime auto-generates CRUD
+    #    routes for every entity even without explicit surfaces.
+    for entity in appspec.domain.entities:
+        slug = to_api_plural(entity.name)
+        _add(f"{mount}/{slug}")
+
+    # 3. Workspace-prefixed entity routes — the runtime registers
+    #    /{ws_name}/{entity_plural} redirect routes for each workspace region.
+    for ws in appspec.workspaces:
+        for region in ws.regions:
+            if region.source:
+                slug = to_api_plural(region.source)
+                _add(f"{mount}/{ws.name}/{slug}")
 
     return routes
 

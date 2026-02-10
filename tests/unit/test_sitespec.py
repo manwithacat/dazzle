@@ -486,12 +486,14 @@ class TestNavLinkValidation:
         self,
         surfaces: list[tuple[str, str, str]] | None = None,
         workspaces: list[tuple[str, list[str]]] | None = None,
+        entities: list[str] | None = None,
     ) -> MagicMock:
         """Create a mock AppSpec with surfaces and workspaces.
 
         Args:
             surfaces: List of (name, entity_ref, mode) tuples
             workspaces: List of (name, [entity_sources]) tuples
+            entities: List of entity names (for domain.entities)
         """
         appspec = MagicMock()
 
@@ -519,6 +521,15 @@ class TestNavLinkValidation:
                     ws.regions.append(region)
                 mock_workspaces.append(ws)
         appspec.workspaces = mock_workspaces
+
+        # Build domain entities
+        mock_entities = []
+        if entities:
+            for ent_name in entities:
+                entity = MagicMock()
+                entity.name = ent_name
+                mock_entities.append(entity)
+        appspec.domain.entities = mock_entities
 
         return appspec
 
@@ -642,3 +653,59 @@ class TestNavLinkValidation:
         result = validate_sitespec(spec, check_content_files=False)
         nav_warnings = [w for w in result.warnings if "Navigation link" in w]
         assert len(nav_warnings) == 0
+
+    def test_nav_href_matches_standalone_entity_route(self) -> None:
+        """Nav link matching a standalone entity route (no surface) produces no warning."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    authenticated=[
+                        NavItemSpec(label="Tasks", href="/app/tasks"),
+                    ],
+                ),
+            ),
+        )
+
+        appspec = self._make_mock_appspec(entities=["Task"])
+        result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
+        nav_warnings = [w for w in result.warnings if "/app/tasks" in w]
+        assert len(nav_warnings) == 0
+
+    def test_nav_href_matches_workspace_entity_route_no_surface(self) -> None:
+        """Nav link matching a workspace entity route (no explicit surface) produces no warning."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    authenticated=[
+                        NavItemSpec(label="Tasks", href="/app/dashboard/tasks"),
+                    ],
+                ),
+            ),
+        )
+
+        appspec = self._make_mock_appspec(
+            entities=["Task"],
+            workspaces=[("dashboard", ["Task"])],
+        )
+        result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
+        nav_warnings = [w for w in result.warnings if "/app/dashboard/tasks" in w]
+        assert len(nav_warnings) == 0
+
+    def test_nav_href_entity_route_without_appspec_still_warns(self) -> None:
+        """Without an appspec, entity routes can't be derived so a warning is produced."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            layout=LayoutSpec(
+                nav=NavSpec(
+                    authenticated=[
+                        NavItemSpec(label="Tasks", href="/app/tasks"),
+                    ],
+                ),
+            ),
+        )
+
+        result = validate_sitespec(spec, check_content_files=False)
+        nav_warnings = [w for w in result.warnings if "/app/tasks" in w]
+        assert len(nav_warnings) == 1
