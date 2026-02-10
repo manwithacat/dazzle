@@ -150,8 +150,8 @@ class TestSiteRendererSSR:
             "type": "features",
             "headline": "Features",
             "items": [
-                {"title": "Fast", "description": "Lightning speed", "icon": "zap"},
-                {"title": "Secure", "description": "Bank-grade security"},
+                {"title": "Fast", "body": "Lightning speed", "icon": "zap"},
+                {"title": "Secure", "body": "Bank-grade security"},
             ],
         }
         html = _ssr_features(section)
@@ -238,6 +238,195 @@ class TestSiteRendererSSR:
         assert "og:description" in html
         # Loading placeholder should NOT be present
         assert "dz-loading" not in html
+
+    def test_ssr_features_uses_body_field(self) -> None:
+        """Test that features SSR uses 'body' field (matching Pydantic model)."""
+        from dazzle_ui.runtime.site_renderer import _ssr_features
+
+        section = {
+            "type": "features",
+            "items": [{"title": "Speed", "body": "Very fast indeed"}],
+        }
+        html = _ssr_features(section)
+        assert "Very fast indeed" in html
+
+    def test_ssr_steps_uses_body_field(self) -> None:
+        """Test that steps SSR uses 'body' field (matching Pydantic model)."""
+        from dazzle_ui.runtime.site_renderer import _ssr_steps
+
+        section = {
+            "type": "steps",
+            "items": [{"title": "Sign Up", "body": "Create your account"}],
+        }
+        html = _ssr_steps(section)
+        assert "Create your account" in html
+        assert "1" in html  # step number
+
+    def test_ssr_card_grid(self) -> None:
+        """Test SSR rendering of a card_grid section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_card_grid
+
+        section = {
+            "type": "card_grid",
+            "headline": "Services",
+            "items": [
+                {
+                    "title": "Consulting",
+                    "body": "Expert guidance",
+                    "icon": "briefcase",
+                    "cta": {"label": "Learn More", "href": "/consulting"},
+                },
+                {"title": "Training", "body": "Hands-on workshops"},
+            ],
+        }
+        html = _ssr_card_grid(section)
+        assert "dz-section-card-grid" in html
+        assert "Services" in html
+        assert "Consulting" in html
+        assert "Expert guidance" in html
+        assert 'data-lucide="briefcase"' in html
+        assert "Learn More" in html
+        assert "/consulting" in html
+        assert "Training" in html
+        assert "Hands-on workshops" in html
+
+    def test_ssr_split_content(self) -> None:
+        """Test SSR rendering of a split_content section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_split_content
+
+        section = {
+            "type": "split_content",
+            "headline": "Our Story",
+            "body": "Founded in 2020",
+            "media": {"kind": "image", "src": "/images/team.webp", "alt": "Team photo"},
+            "primary_cta": {"label": "About Us", "href": "/about"},
+            "alignment": "right",
+        }
+        html = _ssr_split_content(section)
+        assert "dz-section-split-content" in html
+        assert "dz-split--reversed" in html
+        assert "Our Story" in html
+        assert "Founded in 2020" in html
+        assert "/images/team.webp" in html
+        assert 'alt="Team photo"' in html
+        assert "About Us" in html
+
+    def test_ssr_split_content_left_alignment(self) -> None:
+        """Test split_content defaults to left alignment (no reversed class)."""
+        from dazzle_ui.runtime.site_renderer import _ssr_split_content
+
+        section = {
+            "type": "split_content",
+            "headline": "Feature",
+            "alignment": "left",
+        }
+        html = _ssr_split_content(section)
+        assert "dz-split--reversed" not in html
+
+    def test_ssr_trust_bar(self) -> None:
+        """Test SSR rendering of a trust_bar section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_trust_bar
+
+        section = {
+            "type": "trust_bar",
+            "items": [
+                {"text": "ICAEW Certified", "icon": "shield-check"},
+                {"text": "GDPR Compliant", "icon": "lock"},
+            ],
+        }
+        html = _ssr_trust_bar(section)
+        assert "dz-section-trust-bar" in html
+        assert "dz-trust-strip" in html
+        assert "ICAEW Certified" in html
+        assert 'data-lucide="shield-check"' in html
+        assert "GDPR Compliant" in html
+
+    def test_ssr_value_highlight(self) -> None:
+        """Test SSR rendering of a value_highlight section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_value_highlight
+
+        section = {
+            "type": "value_highlight",
+            "headline": "Our Commitment",
+            "subhead": "Quality first",
+            "body": "We deliver excellence",
+            "primary_cta": {"label": "Get Started", "href": "/start"},
+        }
+        html = _ssr_value_highlight(section)
+        assert "dz-section-value-highlight" in html
+        assert "dz-value-headline" in html
+        assert "Our Commitment" in html
+        assert "Quality first" in html
+        assert "We deliver excellence" in html
+        assert "Get Started" in html
+
+    def test_ssr_logo_cloud(self) -> None:
+        """Test SSR rendering of a logo_cloud section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_logo_cloud
+
+        section = {
+            "type": "logo_cloud",
+            "headline": "Trusted By",
+            "items": [
+                {"name": "Acme Corp", "src": "/logos/acme.png", "href": "https://acme.com"},
+                {"name": "Globex", "src": "/logos/globex.png"},
+            ],
+        }
+        html = _ssr_logo_cloud(section)
+        assert "dz-section-logo-cloud" in html
+        assert "dz-logos-grid" in html
+        assert "Trusted By" in html
+        assert "Acme Corp" in html
+        assert "/logos/acme.png" in html
+        assert "https://acme.com" in html
+        assert "Globex" in html
+
+    def test_ssr_comparison(self) -> None:
+        """Test SSR rendering of a comparison section."""
+        from dazzle_ui.runtime.site_renderer import _ssr_comparison
+
+        section = {
+            "type": "comparison",
+            "headline": "Plans",
+            "columns": [
+                {"label": "Free", "highlighted": False},
+                {"label": "Pro", "highlighted": True},
+            ],
+            "items": [
+                {"feature": "Users", "cells": ["5", "Unlimited"]},
+                {"feature": "Storage", "cells": ["1 GB", "100 GB"]},
+            ],
+        }
+        html = _ssr_comparison(section)
+        assert "dz-section-comparison" in html
+        assert "dz-comparison-table" in html
+        assert "Plans" in html
+        assert "Free" in html
+        assert "Pro" in html
+        assert "dz-comparison-highlighted" in html
+        assert "Users" in html
+        assert "Unlimited" in html
+        assert "Storage" in html
+
+    def test_ssr_renders_new_section_types_via_dispatch(self) -> None:
+        """Test that _render_sections_ssr dispatches to all new section types."""
+        from dazzle_ui.runtime.site_renderer import _render_sections_ssr
+
+        sections = [
+            {"type": "card_grid", "headline": "Cards", "items": [{"title": "A", "body": "B"}]},
+            {"type": "trust_bar", "items": [{"text": "Trusted", "icon": "check"}]},
+            {"type": "split_content", "headline": "Split"},
+            {"type": "value_highlight", "headline": "Value"},
+            {"type": "logo_cloud", "headline": "Logos", "items": []},
+            {"type": "comparison", "headline": "Compare", "columns": [], "items": []},
+        ]
+        html = _render_sections_ssr(sections)
+        assert "dz-section-card-grid" in html
+        assert "dz-section-trust-bar" in html
+        assert "dz-section-split-content" in html
+        assert "dz-section-value-highlight" in html
+        assert "dz-section-logo-cloud" in html
+        assert "dz-section-comparison" in html
 
     def test_render_site_page_html_without_page_data_shows_loading(self) -> None:
         """Test that render_site_page_html shows loading when no page_data."""

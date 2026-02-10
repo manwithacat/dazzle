@@ -376,13 +376,13 @@ def _ssr_features(section: dict[str, Any]) -> str:
     for item in items:
         icon = item.get("icon", "")
         title = item.get("title", "")
-        desc = item.get("description", "")
+        body = item.get("body", "")
         icon_html = f'<i data-lucide="{icon}"></i>' if icon else ""
         items_html += f"""<div class="dz-feature-item card bg-base-100 shadow-sm">
     <div class="card-body">
         {icon_html}
         <h3 class="card-title">{title}</h3>
-        <p>{desc}</p>
+        <p>{body}</p>
     </div>
 </div>"""
 
@@ -463,12 +463,12 @@ def _ssr_steps(section: dict[str, Any]) -> str:
     items_html = ""
     for i, item in enumerate(items, 1):
         title = item.get("title", "")
-        desc = item.get("description", "")
+        body = item.get("body", "")
         items_html += f"""<li class="step step-primary">
     <div class="dz-step-item">
         <span class="dz-step-number">{i}</span>
         <h3>{title}</h3>
-        <p>{desc}</p>
+        <p>{body}</p>
     </div>
 </li>"""
 
@@ -545,6 +545,163 @@ def _ssr_markdown(section: dict[str, Any]) -> str:
 </section>"""
 
 
+def _ssr_card_grid(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    cards_html = ""
+    for item in items:
+        icon = item.get("icon", "")
+        title = item.get("title", "")
+        body = item.get("body", "")
+        cta = item.get("cta")
+
+        icon_html = f'<div class="dz-card-icon"><i data-lucide="{icon}"></i></div>' if icon else ""
+        cta_html = ""
+        if cta:
+            href = cta.get("href", "#")
+            label = cta.get("label", "Learn More")
+            cta_html = f'<a href="{href}" class="btn btn-primary btn-sm">{label}</a>'
+
+        cards_html += f"""<div class="dz-card-item">
+    {icon_html}
+    <h3>{title}</h3>
+    <p>{body}</p>
+    {cta_html}
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-card-grid">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-card-grid">{cards_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_split_content(section: dict[str, Any]) -> str:
+    headline = section.get("headline", "")
+    body = section.get("body", "")
+    media = section.get("media")
+    primary_cta = section.get("primary_cta")
+    alignment = section.get("alignment", "left")
+
+    cta_html = ""
+    if primary_cta:
+        href = primary_cta.get("href", "#")
+        label = primary_cta.get("label", "Learn More")
+        cta_html = f'<div class="dz-cta-group dz-cta-group--left"><a href="{href}" class="btn btn-primary">{label}</a></div>'
+
+    media_html = ""
+    if media and media.get("kind") == "image" and media.get("src"):
+        alt = media.get("alt", "")
+        media_html = f'<div class="dz-split-media"><img src="{media["src"]}" alt="{alt}" /></div>'
+
+    order_cls = " dz-split--reversed" if alignment == "right" else ""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-split-content{order_cls}">
+    <div class="dz-section-content dz-split-grid">
+        <div class="dz-split-text">
+            <h2>{headline}</h2>
+            {f"<p>{body}</p>" if body else ""}
+            {cta_html}
+        </div>
+        {media_html}
+    </div>
+</section>"""
+
+
+def _ssr_trust_bar(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        icon = item.get("icon", "")
+        text = item.get("text", "")
+        icon_html = f'<i data-lucide="{icon}"></i>' if icon else ""
+        items_html += f"""<div class="dz-trust-item">
+    {icon_html}
+    <span>{text}</span>
+</div>"""
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-trust-bar">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-trust-strip">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_value_highlight(section: dict[str, Any]) -> str:
+    headline = section.get("headline", "")
+    subhead = section.get("subhead", "")
+    body = section.get("body", "")
+    primary_cta = section.get("primary_cta")
+
+    cta_html = ""
+    if primary_cta:
+        href = primary_cta.get("href", "#")
+        label = primary_cta.get("label", "Get Started")
+        cta_html = (
+            f'<div class="dz-cta-group"><a href="{href}" class="btn btn-primary">{label}</a></div>'
+        )
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-value-highlight">
+    <div class="dz-section-content">
+        <h2 class="dz-value-headline">{headline}</h2>
+        {f'<p class="dz-subhead">{subhead}</p>' if subhead else ""}
+        {f'<p class="dz-value-body">{body}</p>' if body else ""}
+        {cta_html}
+    </div>
+</section>"""
+
+
+def _ssr_logo_cloud(section: dict[str, Any]) -> str:
+    items = section.get("items", [])
+    items_html = ""
+    for item in items:
+        name = item.get("name", "")
+        src = item.get("src", "")
+        href = item.get("href", "#")
+        items_html += f'<a href="{href}" class="dz-logo-item" title="{name}"><img src="{src}" alt="{name}"></a>'
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-logo-cloud">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-logos-grid">{items_html}</div>
+    </div>
+</section>"""
+
+
+def _ssr_comparison(section: dict[str, Any]) -> str:
+    columns = section.get("columns", [])
+    items = section.get("items", [])
+
+    th_html = ""
+    for col in columns:
+        cls = ' class="dz-comparison-highlighted"' if col.get("highlighted") else ""
+        th_html += f"<th{cls}>{col.get('label', '')}</th>"
+
+    rows_html = ""
+    for row in items:
+        cells_html = ""
+        for i, cell in enumerate(row.get("cells", [])):
+            col = columns[i] if i < len(columns) else {}
+            cls = ' class="dz-comparison-highlighted"' if col.get("highlighted") else ""
+            cells_html += f"<td{cls}>{cell}</td>"
+        rows_html += (
+            f'<tr><td class="dz-comparison-feature">{row.get("feature", "")}</td>{cells_html}</tr>'
+        )
+
+    return f"""<section{_ssr_section_id(section)} class="dz-section dz-section-comparison">
+    <div class="dz-section-content">
+        {_ssr_section_header(section)}
+        <div class="dz-comparison-wrapper">
+            <table class="dz-comparison-table">
+                <thead><tr><th></th>{th_html}</tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        </div>
+    </div>
+</section>"""
+
+
 def _ssr_generic(section: dict[str, Any]) -> str:
     """Fallback renderer for unknown section types."""
     content = section.get("content", "")
@@ -569,6 +726,12 @@ _SSR_RENDERERS: dict[str, Any] = {
     "testimonials": _ssr_testimonials,
     "pricing": _ssr_pricing,
     "markdown": _ssr_markdown,
+    "card_grid": _ssr_card_grid,
+    "split_content": _ssr_split_content,
+    "trust_bar": _ssr_trust_bar,
+    "value_highlight": _ssr_value_highlight,
+    "logo_cloud": _ssr_logo_cloud,
+    "comparison": _ssr_comparison,
 }
 
 
