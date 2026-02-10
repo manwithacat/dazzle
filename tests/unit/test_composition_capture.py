@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -65,6 +66,10 @@ class TestEstimateTokens:
 # ── Image Preprocessing Tests ────────────────────────────────────────
 
 
+_has_pillow = importlib.util.find_spec("PIL") is not None
+
+
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestPreprocessStandard:
     """Test standard image preprocessing for token efficiency."""
 
