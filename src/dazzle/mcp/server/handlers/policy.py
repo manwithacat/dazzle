@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
 from dazzle.core.ir.domain import (
     AccessSpec,
     EntitySpec,
@@ -224,6 +225,10 @@ def _evaluate_rules(entity: EntitySpec, persona_id: str, op: PermissionKind) -> 
             continue
         if not _rule_matches_persona(rule, persona_id):
             continue
+        # Evaluate condition (role checks, etc.)
+        cond_result = _evaluate_condition(rule.condition, persona_id)
+        if cond_result is False:
+            continue
         if rule.effect == PolicyEffect.FORBID:
             return "deny"
         if rule.effect == PolicyEffect.PERMIT:
@@ -292,6 +297,17 @@ def _simulate(
             rules_evaluated.append(rule_info)
             continue
 
+        # Does this rule's condition match?
+        cond_result = _evaluate_condition(rule.condition, persona)
+        if cond_result is False:
+            rule_info["status"] = "skipped (condition not satisfied)"
+            rules_evaluated.append(rule_info)
+            continue
+        if cond_result is None:
+            rule_info["condition_note"] = (
+                "indeterminate (field comparison — cannot evaluate statically)"
+            )
+
         # Rule matches
         rule_info["status"] = "matched"
         rules_evaluated.append(rule_info)
@@ -343,3 +359,42 @@ def _rule_matches_persona(rule: PermissionRule, persona_id: str) -> bool:
     if not rule.personas:
         return True
     return persona_id in rule.personas
+
+
+def _evaluate_condition(condition: ConditionExpr | None, persona_id: str) -> bool | None:
+    """Evaluate a condition expression for a given persona.
+
+    Returns:
+        True  — condition satisfied
+        False — condition not satisfied
+        None  — can't evaluate statically (field comparison, function call)
+    """
+    if condition is None:
+        return True
+
+    # Compound: left AND/OR right
+    if condition.is_compound:
+        left = _evaluate_condition(condition.left, persona_id)
+        right = _evaluate_condition(condition.right, persona_id)
+        if condition.operator == LogicalOperator.AND:
+            if left is False or right is False:
+                return False
+            if left is True and right is True:
+                return True
+            return None  # one side indeterminate
+        else:  # OR
+            if left is True or right is True:
+                return True
+            if left is False and right is False:
+                return False
+            return None
+
+    # Role check: role(admin)
+    if condition.is_role_check and condition.role_check is not None:
+        return persona_id == condition.role_check.role_name
+
+    # Field comparison / function call — can't evaluate statically
+    if condition.comparison is not None:
+        return None
+
+    return True  # empty condition
