@@ -13,6 +13,8 @@ from dazzle.mcp.server.handlers.pulse import (
     _composite_health,
     _content_score,
     _coverage_score,
+    _decision_queue,
+    _derive_milestones,
     _founder_decisions,
     _progress_bar,
     _quality_score,
@@ -20,9 +22,11 @@ from dazzle.mcp.server.handlers.pulse import (
     _render_markdown,
     _security_score,
     _ux_score,
+    decisions_pulse_handler,
     persona_pulse_handler,
     radar_pulse_handler,
     run_pulse_handler,
+    timeline_pulse_handler,
 )
 
 # ---------------------------------------------------------------------------
@@ -757,3 +761,269 @@ class TestPersonaPulseHandler:
         assert data["status"] == "complete"
         assert data["total_stories"] == 0
         assert data["experience_score"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Milestone derivation (unit tests)
+# ---------------------------------------------------------------------------
+
+
+class TestDeriveMilestones:
+    """Test milestone detection from project state."""
+
+    def test_spec_written_when_validate_passes(self) -> None:
+        pipeline = _pipeline_data()
+        pipeline["steps"][0]["metrics"] = {"entities": 10, "surfaces": 20}
+        ms = _derive_milestones(
+            pipeline, _stories_data(), _story_list_data(), _policy_data(), _coherence_data()
+        )
+        spec_ms = ms[0]
+        assert spec_ms["label"] == "Spec written"
+        assert spec_ms["done"] is True
+        assert "10 entities" in spec_ms["detail"]
+
+    def test_spec_not_written_when_pipeline_empty(self) -> None:
+        ms = _derive_milestones(
+            {}, _stories_data(), _story_list_data(), _policy_data(), _coherence_data()
+        )
+        assert ms[0]["label"] == "Spec written"
+        assert ms[0]["done"] is False
+
+    def test_all_checks_passing(self) -> None:
+        ms = _derive_milestones(
+            _pipeline_data(passed=10, total=10),
+            _stories_data(),
+            _story_list_data(),
+            _policy_data(),
+            _coherence_data(),
+        )
+        checks_ms = ms[1]
+        assert checks_ms["label"] == "All quality checks passing"
+        assert checks_ms["done"] is True
+
+    def test_half_stories_working(self) -> None:
+        ms = _derive_milestones(
+            _pipeline_data(),
+            _stories_data(total=20, covered=12),
+            _story_list_data(),
+            _policy_data(),
+            _coherence_data(),
+        )
+        half_ms = ms[3]
+        assert half_ms["label"] == "Half of stories working"
+        assert half_ms["done"] is True  # 12/20 = 60% >= 50%
+
+    def test_launch_ready_all_done(self) -> None:
+        pipeline = _pipeline_data(passed=10, total=10)
+        pipeline["steps"][0]["metrics"] = {"entities": 5, "surfaces": 10}
+        ms = _derive_milestones(
+            pipeline,
+            _stories_data(total=10, covered=10, partial=0, uncovered=0),
+            _story_list_data(),
+            _policy_data(allow=50),
+            _coherence_data(score=80, errors=0),
+        )
+        launch_ms = ms[-1]
+        assert launch_ms["label"] == "Launch ready"
+        assert launch_ms["done"] is True
+
+    def test_launch_not_ready_when_stories_uncovered(self) -> None:
+        pipeline = _pipeline_data(passed=10, total=10)
+        pipeline["steps"][0]["metrics"] = {"entities": 5, "surfaces": 10}
+        ms = _derive_milestones(
+            pipeline,
+            _stories_data(total=10, covered=5, partial=3, uncovered=2),
+            _story_list_data(),
+            _policy_data(allow=50),
+            _coherence_data(score=80, errors=0),
+        )
+        launch_ms = ms[-1]
+        assert launch_ms["label"] == "Launch ready"
+        assert launch_ms["done"] is False
+
+    def test_milestone_count(self) -> None:
+        ms = _derive_milestones(
+            _pipeline_data(), _stories_data(), _story_list_data(), _policy_data(), _coherence_data()
+        )
+        assert len(ms) == 8
+
+
+# ---------------------------------------------------------------------------
+# Decision queue (unit tests)
+# ---------------------------------------------------------------------------
+
+
+class TestDecisionQueue:
+    """Test the decision queue logic."""
+
+    def test_stories_needing_work(self) -> None:
+        decisions = _decision_queue(
+            _stories_data(partial=5, uncovered=3),
+            _coherence_data(errors=0),
+            _policy_data(),
+            _pipeline_data(),
+        )
+        priority = [d for d in decisions if d["category"] == "priority"]
+        assert len(priority) == 1
+        assert len(priority[0]["options"]) == 3  # A, B, C
+
+    def test_coherence_errors(self) -> None:
+        decisions = _decision_queue(
+            _stories_data(),
+            _coherence_data(errors=3, warnings=2),
+            _policy_data(),
+            _pipeline_data(),
+        )
+        content = [d for d in decisions if d["category"] == "content"]
+        assert len(content) == 1
+        assert "3 broken" in content[0]["question"]
+
+    def test_security_default_deny(self) -> None:
+        decisions = _decision_queue(
+            _stories_data(),
+            _coherence_data(),
+            _policy_data(default_deny=20),
+            _pipeline_data(),
+        )
+        security = [d for d in decisions if d["category"] == "security"]
+        assert len(security) == 1
+
+    def test_pipeline_failures(self) -> None:
+        decisions = _decision_queue(
+            _stories_data(),
+            _coherence_data(),
+            _policy_data(),
+            _pipeline_data(passed=7, total=10),
+        )
+        quality = [d for d in decisions if d["category"] == "quality"]
+        assert len(quality) == 1
+        assert "3 quality check" in quality[0]["question"]
+
+    def test_no_decisions_when_healthy(self) -> None:
+        decisions = _decision_queue(
+            _stories_data(partial=0, uncovered=0),
+            _coherence_data(errors=0),
+            _policy_data(default_deny=5),
+            _pipeline_data(passed=10, total=10),
+        )
+        assert len(decisions) == 0
+
+
+# ---------------------------------------------------------------------------
+# Timeline handler integration
+# ---------------------------------------------------------------------------
+
+
+class TestTimelinePulseHandler:
+    """Test the timeline operation with mocked data."""
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    def test_returns_milestones(
+        self,
+        mock_pipeline: Any,
+        mock_stories: Any,
+        mock_story_list: Any,
+        mock_policy: Any,
+        mock_coherence: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_pipeline.return_value = _pipeline_data()
+        mock_stories.return_value = _stories_data()
+        mock_story_list.return_value = _story_list_data()
+        mock_policy.return_value = _policy_data()
+        mock_coherence.return_value = _coherence_data()
+
+        result = timeline_pulse_handler(tmp_path, {"operation": "timeline"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert "milestones" in data
+        assert data["total"] == 8
+        assert data["done"] > 0
+        assert "Milestone Timeline" in data["markdown"]
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_story_list")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    def test_handles_errors(
+        self,
+        mock_pipeline: Any,
+        mock_stories: Any,
+        mock_story_list: Any,
+        mock_policy: Any,
+        mock_coherence: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_pipeline.return_value = {"error": "no dsl"}
+        mock_stories.return_value = {"error": "no stories"}
+        mock_story_list.return_value = {"error": "no stories"}
+        mock_policy.return_value = {"error": "no policy"}
+        mock_coherence.return_value = {"error": "no sitespec"}
+
+        result = timeline_pulse_handler(tmp_path, {"operation": "timeline"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert data["done"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Decisions handler integration
+# ---------------------------------------------------------------------------
+
+
+class TestDecisionsPulseHandler:
+    """Test the decisions operation with mocked data."""
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    def test_returns_decisions(
+        self,
+        mock_stories: Any,
+        mock_coherence: Any,
+        mock_policy: Any,
+        mock_pipeline: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_stories.return_value = _stories_data(partial=5, uncovered=3)
+        mock_coherence.return_value = _coherence_data(errors=2)
+        mock_policy.return_value = _policy_data(default_deny=20)
+        mock_pipeline.return_value = _pipeline_data(passed=8, total=10)
+
+        result = decisions_pulse_handler(tmp_path, {"operation": "decisions"})
+        data = json.loads(result)
+
+        assert data["status"] == "complete"
+        assert data["count"] == 4  # priority, content, security, quality
+        assert "Decisions waiting (4)" in data["markdown"]
+
+    @patch("dazzle.mcp.server.handlers.pulse._collect_pipeline")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_policy")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_coherence")
+    @patch("dazzle.mcp.server.handlers.pulse._collect_stories")
+    def test_no_decisions_when_healthy(
+        self,
+        mock_stories: Any,
+        mock_coherence: Any,
+        mock_policy: Any,
+        mock_pipeline: Any,
+        tmp_path: Any,
+    ) -> None:
+        mock_stories.return_value = _stories_data(partial=0, uncovered=0)
+        mock_coherence.return_value = _coherence_data(errors=0)
+        mock_policy.return_value = _policy_data(default_deny=5)
+        mock_pipeline.return_value = _pipeline_data(passed=10, total=10)
+
+        result = decisions_pulse_handler(tmp_path, {"operation": "decisions"})
+        data = json.loads(result)
+
+        assert data["count"] == 0
+        assert "No decisions waiting" in data["markdown"]

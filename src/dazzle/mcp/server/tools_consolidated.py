@@ -1392,7 +1392,7 @@ def get_consolidated_tools() -> list[Tool]:
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["run", "radar", "persona"],
+                        "enum": ["run", "radar", "persona", "timeline", "decisions"],
                         "description": "Operation to perform",
                     },
                     "persona": {

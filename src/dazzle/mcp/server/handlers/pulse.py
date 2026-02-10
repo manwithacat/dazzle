@@ -6,9 +6,11 @@ metrics into a single, plain-language briefing suitable for non-technical
 founders and product owners.
 
 Operations:
-  run     — Generate a full health report
-  radar   — Compact 6-axis readiness radar chart
-  persona — View app through a specific persona's eyes
+  run       — Generate a full health report
+  radar     — Compact 6-axis readiness radar chart
+  persona   — View app through a specific persona's eyes
+  timeline  — Auto-detected milestone timeline
+  decisions — Founder decision queue with choices
 """
 
 from __future__ import annotations
@@ -212,6 +214,96 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
             "working": working,
             "partial": partial,
             "not_started": not_started,
+            "markdown": "\n".join(md_lines),
+            "duration_ms": round(duration_ms, 1),
+        },
+        indent=2,
+    )
+
+
+def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Auto-detected milestone timeline.
+
+    Derives milestones from current project state: what has been achieved
+    (filled) and what lies ahead (open). Uses timestamps from stories
+    and test designs where available.
+    """
+    t0 = time.monotonic()
+
+    pipeline_data = _collect_pipeline(project_path)
+    stories_data = _collect_stories(project_path)
+    story_list_data = _collect_story_list(project_path)
+    policy_data = _collect_policy(project_path)
+    coherence_data = _collect_coherence(project_path, args.get("business_context"))
+
+    milestones = _derive_milestones(
+        pipeline_data, stories_data, story_list_data, policy_data, coherence_data
+    )
+
+    # Render timeline markdown
+    md_lines = [f"{_extract_project_name(pipeline_data, project_path)} — Milestone Timeline", ""]
+    done_count = sum(1 for m in milestones if m["done"])
+    total_count = len(milestones)
+    md_lines.append(f"  {done_count} of {total_count} milestones reached")
+    md_lines.append("")
+
+    for m in milestones:
+        marker = "[x]" if m["done"] else "[ ]"
+        line = f"  {marker} {m['label']}"
+        if m.get("detail"):
+            line += f" — {m['detail']}"
+        md_lines.append(line)
+
+    duration_ms = (time.monotonic() - t0) * 1000
+
+    return json.dumps(
+        {
+            "status": "complete",
+            "milestones": milestones,
+            "done": done_count,
+            "total": total_count,
+            "markdown": "\n".join(md_lines),
+            "duration_ms": round(duration_ms, 1),
+        },
+        indent=2,
+    )
+
+
+def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Founder decision queue with actionable choices.
+
+    Returns decisions that require founder judgment — business context,
+    risk tolerance, and taste. Each decision has multiple-choice options.
+    """
+    t0 = time.monotonic()
+
+    stories_data = _collect_stories(project_path)
+    coherence_data = _collect_coherence(project_path, args.get("business_context"))
+    policy_data = _collect_policy(project_path)
+    pipeline_data = _collect_pipeline(project_path)
+
+    decisions = _decision_queue(stories_data, coherence_data, policy_data, pipeline_data)
+
+    # Render decision queue markdown
+    md_lines: list[str] = []
+    if decisions:
+        md_lines.append(f"Decisions waiting ({len(decisions)}):")
+        md_lines.append("")
+        for i, d in enumerate(decisions, 1):
+            md_lines.append(f"  {i}. {d['category'].upper()} — {d['question']}")
+            for opt in d.get("options", []):
+                md_lines.append(f"     [{opt['key']}] {opt['label']}")
+            md_lines.append("")
+    else:
+        md_lines.append("No decisions waiting — the agent has everything it needs.")
+
+    duration_ms = (time.monotonic() - t0) * 1000
+
+    return json.dumps(
+        {
+            "status": "complete",
+            "decisions": decisions,
+            "count": len(decisions),
             "markdown": "\n".join(md_lines),
             "duration_ms": round(duration_ms, 1),
         },
@@ -544,6 +636,211 @@ def _framework_blockers(
                 blockers.append(msg)
 
     return blockers[:5]  # Cap at 5
+
+
+def _derive_milestones(
+    pipeline: dict[str, Any],
+    stories: dict[str, Any],
+    story_list: dict[str, Any],
+    policy: dict[str, Any],
+    coherence: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Derive milestones from current project state.
+
+    Each milestone is {label, done, detail (optional)}.
+    Order: spec → validation → stories → security → content → launch.
+    """
+    milestones: list[dict[str, Any]] = []
+
+    # 1. Spec written (entities exist)
+    has_entities = False
+    for step in pipeline.get("steps", []):
+        if step.get("operation") == "dsl(validate)" and step.get("status") == "passed":
+            metrics = step.get("metrics", step.get("result", {}))
+            entity_count = metrics.get("entities", 0)
+            surface_count = metrics.get("surfaces", 0)
+            has_entities = entity_count > 0
+            milestones.append(
+                {
+                    "label": "Spec written",
+                    "done": True,
+                    "detail": f"{entity_count} entities, {surface_count} surfaces",
+                }
+            )
+            break
+    if not milestones:
+        milestones.append({"label": "Spec written", "done": False, "detail": None})
+
+    # 2. Validation passing
+    pipeline_status = pipeline.get("status", "")
+    summary = pipeline.get("summary", {})
+    passed = int(summary.get("passed", 0))
+    total = int(summary.get("total_steps", 0))
+    if pipeline_status == "passed" and total > 0:
+        milestones.append(
+            {"label": "All quality checks passing", "done": True, "detail": f"{passed}/{total}"}
+        )
+    elif total > 0:
+        milestones.append(
+            {
+                "label": "All quality checks passing",
+                "done": False,
+                "detail": f"{passed} of {total} passing",
+            }
+        )
+    else:
+        milestones.append({"label": "All quality checks passing", "done": False, "detail": None})
+
+    # 3. Stories accepted
+    all_stories: list[dict[str, Any]] = story_list.get("stories", [])
+    story_count = story_list.get("count", len(all_stories))
+    if story_count > 0:
+        milestones.append(
+            {"label": "Customer stories defined", "done": True, "detail": f"{story_count} stories"}
+        )
+    else:
+        milestones.append({"label": "Customer stories defined", "done": False, "detail": None})
+
+    # 4. Story coverage > 50%
+    coverage_pct = stories.get("coverage_percent", 0)
+    covered = stories.get("covered", 0)
+    total_stories = stories.get("total_stories", 0)
+    half_covered = coverage_pct >= 50
+    milestones.append(
+        {
+            "label": "Half of stories working",
+            "done": half_covered,
+            "detail": f"{covered}/{total_stories} covered ({coverage_pct:.0f}%)"
+            if total_stories > 0
+            else None,
+        }
+    )
+
+    # 5. Security configured
+    policy_summary = policy.get("summary", {})
+    allow = int(policy_summary.get("allow", 0))
+    has_security = allow > 0 and has_entities
+    milestones.append(
+        {
+            "label": "Access rules configured",
+            "done": has_security,
+            "detail": f"{allow} permission grants" if has_security else None,
+        }
+    )
+
+    # 6. Site content coherent
+    coherence_score = coherence.get("score", 0)
+    coherence_errors = coherence.get("error_count", 0)
+    content_ready = coherence_score >= 70 and coherence_errors == 0
+    milestones.append(
+        {
+            "label": "Site content ready",
+            "done": content_ready,
+            "detail": f"coherence {coherence_score}%"
+            if not isinstance(coherence_score, str)
+            else None,
+        }
+    )
+
+    # 7. All stories working
+    all_covered = coverage_pct >= 100 and total_stories > 0
+    milestones.append(
+        {
+            "label": "All stories working",
+            "done": all_covered,
+            "detail": f"{covered}/{total_stories}" if total_stories > 0 else None,
+        }
+    )
+
+    # 8. Launch ready (all above done)
+    all_done = all(m["done"] for m in milestones)
+    milestones.append({"label": "Launch ready", "done": all_done, "detail": None})
+
+    return milestones
+
+
+def _decision_queue(
+    stories: dict[str, Any],
+    coherence: dict[str, Any],
+    policy: dict[str, Any],
+    pipeline: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build a decision queue with multiple-choice options for each decision."""
+    decisions: list[dict[str, Any]] = []
+
+    # 1. Partial/uncovered stories need prioritisation
+    partial = int(stories.get("partial", 0))
+    uncovered = int(stories.get("uncovered", 0))
+    total_needing_work = partial + uncovered
+    if total_needing_work > 0:
+        decisions.append(
+            {
+                "category": "priority",
+                "question": f"{total_needing_work} customer stories need work — what's the focus?",
+                "options": [
+                    {
+                        "key": "A",
+                        "label": f"Finish partial stories first ({partial} stories)",
+                    },
+                    {
+                        "key": "B",
+                        "label": f"Start uncovered stories ({uncovered} stories)",
+                    },
+                    {
+                        "key": "C",
+                        "label": "Both in parallel",
+                    },
+                ],
+            }
+        )
+
+    # 2. Coherence errors
+    errors = int(coherence.get("error_count", 0))
+    warnings = int(coherence.get("warning_count", 0))
+    if errors > 0:
+        decisions.append(
+            {
+                "category": "content",
+                "question": f"Your site has {errors} broken element(s) and {warnings} warning(s)",
+                "options": [
+                    {"key": "A", "label": "Fix all issues before launch"},
+                    {"key": "B", "label": "Fix errors only, accept warnings"},
+                    {"key": "C", "label": "Launch as-is, fix later"},
+                ],
+            }
+        )
+
+    # 3. Default-deny permissions
+    policy_summary = policy.get("summary", {})
+    default_deny = int(policy_summary.get("default_deny", 0))
+    if default_deny > 10:
+        decisions.append(
+            {
+                "category": "security",
+                "question": f"{default_deny} permission combinations have no explicit rule",
+                "options": [
+                    {"key": "A", "label": "Review and set explicit rules"},
+                    {"key": "B", "label": "Accept secure defaults (deny by default)"},
+                    {"key": "C", "label": "Open access for now, tighten later"},
+                ],
+            }
+        )
+
+    # 4. Pipeline failures
+    failed = int(pipeline.get("summary", {}).get("failed", 0))
+    if failed > 0:
+        decisions.append(
+            {
+                "category": "quality",
+                "question": f"{failed} quality check(s) failing",
+                "options": [
+                    {"key": "A", "label": "Fix all failures before continuing"},
+                    {"key": "B", "label": "Skip failing checks and continue"},
+                ],
+            }
+        )
+
+    return decisions
 
 
 # ---------------------------------------------------------------------------
