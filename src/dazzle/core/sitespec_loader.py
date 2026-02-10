@@ -1220,11 +1220,26 @@ def merge_copy_into_sitespec(
         old_landing = new_pages[landing_idx]
 
         # MERGE sections: copy.md sections replace same-type sitespec sections,
-        # but sitespec sections NOT in copy.md are preserved (e.g., pricing)
+        # but sitespec sections NOT in copy.md are preserved (e.g., pricing).
+        # Within replaced sections, sitespec fields not provided by copy.md
+        # (e.g., media) are carried forward.
+        orig_by_type = {s.type: s for s in old_landing.sections}
         merged_sections: list[SectionSpec] = []
 
-        # First, add sections from copy.md in their order
-        merged_sections.extend(copy_spec_sections)
+        # First, add sections from copy.md in their order, carrying forward
+        # sitespec-only fields (like media) that the copy parser doesn't produce
+        for copy_sec in copy_spec_sections:
+            orig = orig_by_type.get(copy_sec.type)
+            if orig is not None:
+                carry: dict[str, Any] = {}
+                for field_name in ("media", "id", "body", "source", "columns", "alignment"):
+                    orig_val = getattr(orig, field_name, None)
+                    copy_val = getattr(copy_sec, field_name, None)
+                    if copy_val is None and orig_val is not None:
+                        carry[field_name] = orig_val
+                if carry:
+                    copy_sec = copy_sec.model_copy(update=carry)
+            merged_sections.append(copy_sec)
 
         # Then, add sitespec sections that weren't in copy.md
         for existing_section in old_landing.sections:

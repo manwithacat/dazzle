@@ -568,3 +568,155 @@ class TestMergeCopyIntoSitespec:
         assert len(pricing.tiers) == 1
         assert pricing.tiers[0].name == "Pro"
         assert pricing.tiers[0].price == "49"
+
+    def test_hero_media_preserved_from_sitespec(self) -> None:
+        """Hero media from sitespec.yaml is carried forward when copy.md replaces hero (#179)."""
+        from dazzle.core.ir.sitespec import MediaKind
+        from dazzle.core.sitespec_loader import (
+            MediaSpec,
+            PageSpec,
+            SectionKind,
+            SectionSpec,
+        )
+
+        # sitespec has hero with media
+        sitespec = SiteSpec(
+            pages=[
+                PageSpec(
+                    route="/",
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Old Hero",
+                            media=MediaSpec(
+                                kind=MediaKind.IMAGE,
+                                src="/images/hero.png",
+                                alt="Hero image",
+                            ),
+                        ),
+                    ],
+                )
+            ]
+        )
+
+        # copy.md provides hero text but no media (copy parser doesn't support media)
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {
+                        "headline": "New Hero from copy.md",
+                        "subheadline": "Better tagline",
+                    },
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+
+        hero = landing.sections[0]
+        # Copy text should be applied
+        assert hero.headline == "New Hero from copy.md"
+        assert hero.subhead == "Better tagline"
+        # Media should be preserved from sitespec
+        assert hero.media is not None
+        assert hero.media.kind == MediaKind.IMAGE
+        assert hero.media.src == "/images/hero.png"
+        assert hero.media.alt == "Hero image"
+
+    def test_section_id_preserved_from_sitespec(self) -> None:
+        """Section id from sitespec.yaml is carried forward when copy.md replaces section."""
+        from dazzle.core.sitespec_loader import (
+            PageSpec,
+            SectionKind,
+            SectionSpec,
+        )
+
+        sitespec = SiteSpec(
+            pages=[
+                PageSpec(
+                    route="/",
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            id="main-hero",
+                            headline="Old Hero",
+                        ),
+                    ],
+                )
+            ]
+        )
+
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {"headline": "New Hero"},
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+        landing = next((p for p in result.pages if p.route == "/"), None)
+        assert landing is not None
+
+        hero = landing.sections[0]
+        assert hero.headline == "New Hero"
+        assert hero.id == "main-hero"
+
+    def test_copy_fields_take_precedence_over_sitespec(self) -> None:
+        """Copy.md fields that are set should override sitespec values."""
+        from dazzle.core.sitespec_loader import (
+            CTASpec,
+            PageSpec,
+            SectionKind,
+            SectionSpec,
+        )
+
+        sitespec = SiteSpec(
+            pages=[
+                PageSpec(
+                    route="/",
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Sitespec Headline",
+                            subhead="Sitespec Subhead",
+                            primary_cta=CTASpec(label="Old CTA", href="/old"),
+                        ),
+                    ],
+                )
+            ]
+        )
+
+        copy_data = {
+            "sections": [
+                {
+                    "type": "hero",
+                    "title": "Hero",
+                    "metadata": {
+                        "headline": "Copy Headline",
+                        "subheadline": "Copy Subhead",
+                        "ctas": [{"text": "New CTA", "url": "/new"}],
+                    },
+                    "subsections": [],
+                }
+            ]
+        }
+
+        result = merge_copy_into_sitespec(sitespec, copy_data)
+        hero = result.pages[0].sections[0]
+        # Copy values should win
+        assert hero.headline == "Copy Headline"
+        assert hero.subhead == "Copy Subhead"
+        assert hero.primary_cta is not None
+        assert hero.primary_cta.label == "New CTA"
