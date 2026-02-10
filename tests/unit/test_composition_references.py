@@ -9,12 +9,15 @@ Covers:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
+
+_has_pillow = importlib.util.find_spec("PIL") is not None
 
 # ── ReferenceImage Tests ─────────────────────────────────────────────
 
@@ -398,6 +401,7 @@ class TestEstimateTokens:
 # ── Bootstrap Tests ──────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestBootstrapReferences:
     """Test synthetic reference image generation."""
 
@@ -511,6 +515,7 @@ class TestBootstrapReferences:
 # ── Reference Integration in Visual Eval Tests ──────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestReferenceIntegration:
     """Test that references are passed through the visual eval pipeline."""
 
@@ -728,6 +733,7 @@ class TestReferenceIntegration:
 # ── Bootstrap MCP Handler Tests ──────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestBootstrapHandler:
     """Test the bootstrap MCP operation."""
 
@@ -777,6 +783,7 @@ class TestBootstrapHandler:
 # ── Drawing Helper Tests ─────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestDrawingHelpers:
     """Test PIL drawing helpers don't crash."""
 

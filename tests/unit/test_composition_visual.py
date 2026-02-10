@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
+
+import pytest
 
 from dazzle.core.composition_capture import CapturedPage, CapturedSection
 from dazzle.core.composition_visual import (
@@ -28,9 +31,12 @@ from dazzle.core.composition_visual import (
     image_to_base64,
 )
 
+_has_pillow = importlib.util.find_spec("PIL") is not None
+
 # ── Filter Tests ─────────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestApplyFilter:
     """Test image preprocessing filters."""
 
@@ -388,6 +394,7 @@ class TestBuildVisualReport:
 # ── Evaluate Captures Tests ──────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestEvaluateCaptures:
     """Test the main evaluation entry point (with mocked LLM calls)."""
 
@@ -517,6 +524,7 @@ class TestEvaluateCaptures:
 # ── MCP Handler Tests ────────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestAnalyzeCompositionHandler:
     """Test the analyze MCP handler."""
 
@@ -608,6 +616,7 @@ class TestDimensionConfig:
 # ── Load Captures Tests ──────────────────────────────────────────────
 
 
+@pytest.mark.skipif(not _has_pillow, reason="Pillow not installed")
 class TestLoadCapturesFromDir:
     """Test reconstructing captures from filesystem."""
 
