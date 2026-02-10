@@ -1436,21 +1436,23 @@ def get_consolidated_tools() -> list[Tool]:
                 "Composition analysis: audit (DOM-level visual hierarchy audit), "
                 "capture (Playwright section-level screenshots), "
                 "analyze (LLM visual evaluation of captured screenshots), "
-                "report (combined audit+capture+analyze with merged scoring). "
+                "report (combined audit+capture+analyze with merged scoring), "
+                "bootstrap (generate synthetic reference library for few-shot evaluation). "
                 "Audit computes attention weights using a 5-factor model and evaluates "
                 "composition rules. Capture takes section-level screenshots from a "
                 "running app. Analyze uses Claude vision to evaluate screenshots for "
                 "rendering fidelity, icon/media issues, color consistency, layout "
                 "overflow, visual hierarchy, and responsive fidelity. Report runs "
                 "audit (always) + visual pipeline (when base_url given) and merges "
-                "into a combined score."
+                "into a combined score. Bootstrap generates synthetic reference images "
+                "for few-shot visual evaluation prompts."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["audit", "capture", "analyze", "report"],
+                        "enum": ["audit", "capture", "analyze", "report", "bootstrap"],
                         "description": "Operation to perform",
                     },
                     "base_url": {
@@ -1479,6 +1481,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "token_budget": {
                         "type": "integer",
                         "description": "Max tokens for visual analysis (default: 50000)",
+                    },
+                    "overwrite": {
+                        "type": "boolean",
+                        "description": "Overwrite existing reference library (for bootstrap, default: false)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

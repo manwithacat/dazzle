@@ -7,6 +7,7 @@ Operations:
 - ``capture`` — Playwright section-level screenshot pipeline
 - ``analyze`` — LLM visual evaluation of captured screenshots
 - ``report`` — combined audit + capture + analyze with merged scoring
+- ``bootstrap`` — generate synthetic reference library for few-shot visual evaluation
 """
 
 from __future__ import annotations
@@ -447,3 +448,70 @@ def _build_combined_markdown(
 
     lines.append("")
     return "\n".join(lines)
+
+
+def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Generate the synthetic reference library for few-shot visual evaluation.
+
+    Creates annotated section screenshots using PIL and stores them in
+    ``.dazzle/composition/references/`` with per-section manifest.json files.
+    """
+    from dazzle.core.composition_references import estimate_reference_tokens, load_references
+    from dazzle.core.composition_references_bootstrap import bootstrap_references
+
+    overwrite = args.get("overwrite", False)
+    ref_dir = project_path / ".dazzle" / "composition" / "references"
+
+    # Check if references already exist
+    if ref_dir.exists() and not overwrite:
+        existing = load_references(ref_dir)
+        if existing:
+            total = sum(len(refs) for refs in existing.values())
+            tokens = estimate_reference_tokens(existing)
+            return json.dumps(
+                {
+                    "status": "exists",
+                    "section_types": list(existing.keys()),
+                    "total_references": total,
+                    "estimated_tokens": tokens,
+                    "summary": (
+                        f"Reference library already exists with {total} images "
+                        f"across {len(existing)} section types (~{tokens:,} tokens). "
+                        "Use overwrite=true to regenerate."
+                    ),
+                }
+            )
+
+    try:
+        by_section = bootstrap_references(ref_dir)
+    except ImportError as e:
+        return json.dumps({"error": f"Pillow required for bootstrap: {e}"})
+    except Exception as e:
+        logger.exception("Reference bootstrap failed")
+        return json.dumps({"error": str(e)})
+
+    total = sum(len(refs) for refs in by_section.values())
+    good = sum(1 for refs in by_section.values() for r in refs if r.label == "good")
+    bad = total - good
+
+    # Estimate token cost
+    loaded = load_references(ref_dir)
+    tokens = estimate_reference_tokens(loaded)
+
+    return json.dumps(
+        {
+            "status": "created",
+            "section_types": list(by_section.keys()),
+            "total_references": total,
+            "good": good,
+            "bad": bad,
+            "estimated_tokens": tokens,
+            "output_dir": str(ref_dir),
+            "summary": (
+                f"Bootstrapped {total} reference images ({good} good, {bad} bad) "
+                f"across {len(by_section)} section types (~{tokens:,} tokens). "
+                f"Stored in {ref_dir}"
+            ),
+        },
+        indent=2,
+    )

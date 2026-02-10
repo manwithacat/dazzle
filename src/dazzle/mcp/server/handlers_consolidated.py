@@ -1504,6 +1504,7 @@ def handle_composition(arguments: dict[str, Any]) -> str:
     from .handlers.composition import (
         analyze_composition_handler,
         audit_composition_handler,
+        bootstrap_composition_handler,
         capture_composition_handler,
         report_composition_handler,
     )
@@ -1522,6 +1523,8 @@ def handle_composition(arguments: dict[str, Any]) -> str:
         return analyze_composition_handler(project_path, arguments)
     elif operation == "report":
         return report_composition_handler(project_path, arguments)
+    elif operation == "bootstrap":
+        return bootstrap_composition_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown composition operation: {operation}"})
 

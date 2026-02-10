@@ -388,6 +388,7 @@ def evaluate_captures(
     *,
     dimensions: list[str] | None = None,
     spec_context: dict[str, Any] | None = None,
+    references: dict[str, list[Any]] | None = None,
     api_key: str | None = None,
     model: str = "claude-sonnet-4-5-20250929",
     token_budget: int = 50_000,
@@ -403,6 +404,9 @@ def evaluate_captures(
         spec_context: Per-section spec context for prompt building.
             Keys are section_type strings, values are dicts with fields
             like headline, item_count, icon_count, brand_hue, weights, etc.
+        references: Loaded reference library from composition_references.
+            Maps section_type -> list of ReferenceImage with base64 loaded.
+            When provided, includes few-shot examples in evaluation prompts.
         api_key: Anthropic API key (reads env if None).
         model: Model to use for evaluation.
         token_budget: Maximum total tokens across all evaluations.
@@ -412,6 +416,7 @@ def evaluate_captures(
     """
     dims = dimensions or [d for d in DIMENSIONS if d not in MOBILE_ONLY_DIMENSIONS]
     ctx = spec_context or {}
+    refs = references or {}
     total_tokens_used = 0
     results: list[PageVisualResult] = []
 
@@ -423,6 +428,7 @@ def evaluate_captures(
 
         for section in capture.sections:
             sec_ctx = ctx.get(section.section_type, {})
+            sec_refs = refs.get(section.section_type, [])
 
             for dim in dims:
                 # Skip responsive_fidelity unless mobile viewport
@@ -442,6 +448,7 @@ def evaluate_captures(
                     section=section,
                     dimension=dim,
                     spec_context=sec_ctx,
+                    references=sec_refs,
                     api_key=api_key,
                     model=model,
                 )
@@ -463,10 +470,21 @@ def _evaluate_section_dimension(
     section: CapturedSection,
     dimension: str,
     spec_context: dict[str, Any],
+    references: list[Any] | None = None,
     api_key: str | None,
     model: str,
 ) -> tuple[list[VisualFinding], int]:
     """Evaluate a single section for a single dimension.
+
+    Args:
+        section: The captured section to evaluate.
+        dimension: Evaluation dimension name.
+        spec_context: Spec-derived context for prompt building.
+        references: Optional list of ReferenceImage objects (with base64 loaded)
+            relevant to this section type.  When provided, matching references
+            are included as few-shot examples in the vision API call.
+        api_key: Anthropic API key.
+        model: Model to use.
 
     Returns:
         Tuple of (findings, tokens_used).
@@ -488,12 +506,39 @@ def _evaluate_section_dimension(
 
     prompt = prompt_builder(section.section_type, spec_context)
 
-    # Encode image
+    # Build image list: reference images first (few-shot), then the target
+    images: list[tuple[str, str]] = []
+
+    # Add relevant reference images as few-shot examples
+    ref_labels: list[str] = []
+    if references:
+        for ref in references:
+            if dimension in getattr(ref, "dimensions", []):
+                try:
+                    images.append((ref.base64, "image/png"))
+                    ref_labels.append(f"{ref.label}: {ref.description}")
+                except (ValueError, AttributeError):
+                    continue
+
+    # Add the target image last
     img_b64 = image_to_base64(processed_path)
+    images.append((img_b64, "image/png"))
+
+    # Augment prompt with reference context if we have any
+    if ref_labels:
+        ref_intro = (
+            "The first image(s) are reference examples showing good and bad patterns. "
+            "The LAST image is the one to evaluate.\n\n"
+            "References:\n"
+        )
+        for i, label in enumerate(ref_labels, 1):
+            ref_intro += f"  Image {i}: {label}\n"
+        ref_intro += f"\nNow evaluate Image {len(images)} (the target):\n\n"
+        prompt = ref_intro + prompt
 
     try:
         response_text, tokens = _call_vision_api(
-            images=[(img_b64, "image/png")],
+            images=images,
             prompt=prompt,
             api_key=api_key,
             model=model,
